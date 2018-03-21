@@ -3,8 +3,7 @@ from typing import Dict, List, Tuple
 import torch
 
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
-from allennlp.nn.decoding import DecoderState, RnnState
-from allennlp.semparse.type_declarations import GrammarState
+from allennlp.nn.decoding import DecoderState, GrammarState, RnnState
 
 
 # This syntax is pretty weird and ugly, but it's necessary to make mypy happy with the API that

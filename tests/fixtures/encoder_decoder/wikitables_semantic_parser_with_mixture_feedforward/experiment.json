@@ -18,28 +18,7 @@
         "trainable": true
       }
     },
-    "nonterminal_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "vocab_namespace": "rule_labels",
-        "embedding_dim": 25,
-        "trainable": true
-      }
-    },
-    "terminal_embedder": {
-      "token_characters": {
-        "type": "character_encoding",
-        "embedding": {
-          "embedding_dim": 8
-        },
-        "encoder": {
-          "type": "cnn",
-          "embedding_dim": 8,
-          "num_filters": 25,
-          "ngram_filter_sizes": [3]
-        }
-      }
-    },
+    "action_embedding_dim": 50,
     "mixture_feedforward": {
       "input_dim": 10,
       "num_layers": 3,

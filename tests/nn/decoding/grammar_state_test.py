@@ -2,7 +2,7 @@
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.semparse.type_declarations import GrammarState
+from allennlp.nn.decoding import GrammarState
 
 
 class TestGrammarState(AllenNlpTestCase):

@@ -4,8 +4,7 @@ import torch
 from torch.autograd import Variable
 
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
-from allennlp.nn.decoding import DecoderState, RnnState
-from allennlp.semparse.type_declarations import GrammarState
+from allennlp.nn.decoding import DecoderState, GrammarState, RnnState
 from allennlp.semparse.worlds import NlvrWorld
 
 

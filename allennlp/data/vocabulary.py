@@ -407,6 +407,9 @@ class Vocabulary:
     def get_index_to_token_vocabulary(self, namespace: str = 'tokens') -> Dict[int, str]:
         return self._index_to_token[namespace]
 
+    def get_token_to_index_vocabulary(self, namespace: str = 'tokens') -> Dict[str, int]:
+        return self._token_to_index[namespace]
+
     def get_token_index(self, token: str, namespace: str = 'tokens') -> int:
         if token in self._token_to_index[namespace]:
             return self._token_to_index[namespace][token]

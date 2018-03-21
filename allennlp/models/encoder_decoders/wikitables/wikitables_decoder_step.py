@@ -210,8 +210,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             If there are `no` actions to link, because all actions have an embedding, we return
             `None` here.
         """
-        # This is a (num_global_embeddable_actions, action_embedding_dim) tensor.
-        num_global_embeddable_actions = state.action_embeddings.size(0)
         # A list of `batch_action_indices` for each group element.
         valid_actions = state.get_valid_actions()
         global_valid_actions: List[List[Tuple[int, int]]] = []
@@ -225,11 +223,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         embedded_actions: List[List[int]] = []
         linked_actions: List[List[int]] = []
         for global_action_list in global_valid_actions:
-            global_action_list.sort()
             embedded_actions.append([])
             linked_actions.append([])
             for global_action_index, action_index in global_action_list:
-                if global_action_index >= num_global_embeddable_actions:
+                if global_action_index == -1:
                     linked_actions[-1].append(action_index)
                 else:
                     embedded_actions[-1].append(global_action_index)
@@ -240,18 +237,17 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             linked_actions = None
         considered_actions: List[List[int]] = []
         for global_action_list in global_valid_actions:
-            # The global_valid_action list is already sorted from above.
             considered_actions.append([])
             # First we add the embedded actions to the list.
             for global_action_index, action_index in global_action_list:
-                if global_action_index < num_global_embeddable_actions:
+                if global_action_index != -1:
                     considered_actions[-1].append(action_index)
             # Then we pad that portion.
             while len(considered_actions[-1]) < num_embedded_actions:
                 considered_actions[-1].append(-1)
             # Then we add the linked actions to the list.
             for global_action_index, action_index in global_action_list:
-                if global_action_index >= num_global_embeddable_actions:
+                if global_action_index == -1:
                     considered_actions[-1].append(action_index)
             # Finally, we pad the linked portion.
             while len(considered_actions[-1]) < num_embedded_actions + num_linked_actions:
@@ -466,9 +462,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # index before we get the action embedding.
                 action_embedding_index = sorted_actions[group_index][action_index]
                 action_embedding = action_embeddings[group_index, action_embedding_index, :]
-                left_side = state.possible_actions[batch_index][action]['left'][0]
-                right_side = state.possible_actions[batch_index][action]['right'][0]
-                new_grammar_state = state.grammar_state[group_index].take_action(left_side, right_side)
+                production_rule = state.possible_actions[batch_index][action][0]
+                new_grammar_state = state.grammar_state[group_index].take_action(production_rule)
                 if state.debug_info is not None:
                     debug_info = {
                             'considered_actions': considered_actions[group_index],

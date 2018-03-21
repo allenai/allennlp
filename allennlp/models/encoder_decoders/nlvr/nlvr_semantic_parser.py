@@ -12,13 +12,12 @@ from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
-from allennlp.nn.decoding import DecoderTrainer, ExpectedRiskMinimization, RnnState
+from allennlp.nn.decoding import DecoderTrainer, ExpectedRiskMinimization, GrammarState, RnnState
 from allennlp.nn import util as nn_util
 from allennlp.models.model import Model
 from allennlp.models.encoder_decoders.nlvr.nlvr_decoder_state import NlvrDecoderState
 from allennlp.models.encoder_decoders.nlvr.nlvr_decoder_step import NlvrDecoderStep
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
-from allennlp.semparse.type_declarations import GrammarState
 from allennlp.semparse.worlds import NlvrWorld
 from allennlp.training.metrics import Average
 

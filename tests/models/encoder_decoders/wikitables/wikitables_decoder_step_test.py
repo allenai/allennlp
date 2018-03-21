@@ -8,8 +8,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.encoder_decoders.wikitables.wikitables_decoder_state import WikiTablesDecoderState
 from allennlp.models.encoder_decoders.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
 from allennlp.modules import SimilarityFunction
-from allennlp.nn.decoding import RnnState
-from allennlp.semparse.type_declarations import GrammarState
+from allennlp.nn.decoding import GrammarState, RnnState
 
 
 class WikiTablesDecoderStepTest(AllenNlpTestCase):
@@ -38,16 +37,15 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
                 (1, 2): 2,
                 (1, 3): 3,
                 }
-        self.possible_actions = [
-                [{'left': ('e', True, None), 'right': ('f', False, None)},
-                 {'left': ('e', True, None), 'right': ('g', True, None)},
-                 {'left': ('e', True, None), 'right': ('h', True, None)},
-                 {'left': ('e', True, None), 'right': ('i', True, None)},
-                 {'left': ('e', True, None), 'right': ('j', True, None)}],
-                [{'left': ('e', True, None), 'right': ('q', True, None)},
-                 {'left': ('e', True, None), 'right': ('g', True, None)},
-                 {'left': ('e', True, None), 'right': ('h', True, None)},
-                 {'left': ('e', True, None), 'right': ('i', True, None)}]]
+        self.possible_actions = [[('e -> f', False, None),
+                                  ('e -> g', True, None),
+                                  ('e -> h', True, None),
+                                  ('e -> i', True, None),
+                                  ('e -> j', True, None)],
+                                 [('e -> q', True, None),
+                                  ('e -> g', True, None),
+                                  ('e -> h', True, None),
+                                  ('e -> i', True, None)]]
 
         # (batch_size, num_entities, num_question_tokens) = (2, 5, 3)
         linking_scores = Variable(torch.Tensor([[[.1, .2, .3],
@@ -112,19 +110,32 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         self.state.grammar_state[0] = GrammarState(['e'], {}, valid_actions_1, {})
         self.state.grammar_state[1] = GrammarState(['e'], {}, valid_actions_2, {})
         self.state.grammar_state[2] = GrammarState(['e'], {}, valid_actions_3, {})
-        self.state.action_embeddings = self.state.action_embeddings[:2]
+
+        # We're making a bunch of the actions linked actions here, pretending that there are only
+        # two global actions.
+        self.state.action_indices = {
+                (0, 0): 1,
+                (0, 1): 0,
+                (0, 2): -1,
+                (0, 3): -1,
+                (0, 4): -1,
+                (1, 0): -1,
+                (1, 1): 0,
+                (1, 2): -1,
+                (1, 3): -1,
+                }
+
         considered, to_embed, to_link = WikiTablesDecoderStep._get_actions_to_consider(self.state)
-        # These are _global_ action indices.  They come from actions [[(0, 1), (0, 0)], [(1, 1)], []].
-        expected_to_embed = [[0, 1], [0], []]
+        # These are _global_ action indices.  They come from actions [[(0, 0), (0, 1)], [(1, 1)], []].
+        expected_to_embed = [[1, 0], [0], []]
         assert to_embed == expected_to_embed
-        # These are _batch_ action indices with a _global_ action index above num_global_actions,
-        # sorted by their _global_ action index.
-        # They come from actions [[(0, 2), (0, 4)], [(1, 3), (1, 0)], [(0, 3), (0, 4)]].
-        expected_to_link = [[2, 4], [3, 0], [2, 3, 4]]
+        # These are _batch_ action indices with a _global_ action index of -1.
+        # They come from actions [[(0, 2), (0, 4)], [(1, 0), (1, 3)], [(0, 2), (0, 3), (0, 4)]].
+        expected_to_link = [[2, 4], [0, 3], [2, 3, 4]]
         assert to_link == expected_to_link
-        # These are _batch_ action indices, sorted by _global_ action index, with padding in
-        # between the embedded actions and the linked actions.
-        expected_considered = [[1, 0, 2, 4, -1], [1, -1, 3, 0, -1], [-1, -1, 2, 3, 4]]
+        # These are _batch_ action indices, with padding in between the embedded actions and the
+        # linked actions (and after the linked actions, if necessary).
+        expected_considered = [[0, 1, 2, 4, -1], [1, -1, 0, 3, -1], [-1, -1, 2, 3, 4]]
         assert considered == expected_considered
 
     def test_get_actions_to_consider_returns_none_if_no_linked_actions(self):
@@ -138,15 +149,14 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         considered, to_embed, to_link = WikiTablesDecoderStep._get_actions_to_consider(self.state)
         # These are _global_ action indices.  All of the actions in this case are embedded, so this
         # is just a mapping from the valid actions above to their global ids.
-        expected_to_embed = [[0, 1, 2, 5], [0, 3, 4], [2, 3, 5]]
+        expected_to_embed = [[1, 0, 2, 5], [4, 0, 3], [2, 3, 5]]
         assert to_embed == expected_to_embed
         # There are no linked actions (all of them are embedded), so this should be None.
         assert to_link is None
-        # These are _batch_ action indices, sorted by _global_ action index, with padding in
-        # between the embedded actions and the linked actions.  Because there are no linked
-        # actions, this is basically just the valid_actions for each group element padded with -1s,
-        # and sorted by global action index.
-        expected_considered = [[1, 0, 2, 4], [1, 3, 0, -1], [2, 3, 4, -1]]
+        # These are _batch_ action indices, with padding in between the embedded actions and the
+        # linked actions.  Because there are no linked actions, this is basically just the
+        # valid_actions for each group element padded with -1s.
+        expected_considered = [[0, 1, 2, 4], [0, 1, 3, -1], [2, 3, 4, -1]]
         assert considered == expected_considered
 
     def test_get_action_embeddings(self):
