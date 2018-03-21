@@ -6,9 +6,9 @@ from overrides import overrides
 
 from nltk.sem.logic import Type, BasicType, ANY_TYPE, ComplexType as NltkComplexType
 
-from allennlp.data.semparse.type_declarations.type_declaration import ComplexType
-from allennlp.data.semparse.type_declarations.type_declaration import NamedBasicType
-from allennlp.data.semparse.type_declarations.type_declaration import UnaryOpType
+from allennlp.semparse.type_declarations.type_declaration import ComplexType
+from allennlp.semparse.type_declarations.type_declaration import NamedBasicType
+from allennlp.semparse.type_declarations.type_declaration import UnaryOpType
 
 BOOLEAN_TYPE = NamedBasicType("BOOLEAN")
 DIMENSION_TYPE = NamedBasicType("DIMENSION")

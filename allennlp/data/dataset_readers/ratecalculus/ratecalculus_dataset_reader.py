@@ -42,18 +42,20 @@ class RateCalculusDatasetReader(DatasetReader):
     def __init__(self,
                  lazy: bool = False,
                  tokenizer: Tokenizer = None,
+                 max_dpd_logical_forms: int = 10,
                  question_token_indexers: Dict[str, TokenIndexer] = None,
                  nonterminal_indexers: Dict[str, TokenIndexer] = None,
                  terminal_indexers: Dict[str, TokenIndexer] = None) -> None:
         super().__init__(lazy=lazy)
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
+        self._max_dpd_logical_forms = max_dpd_logical_forms
         self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._nonterminal_indexers = nonterminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
         self._terminal_indexers = terminal_indexers or {"token_characters": TokenCharactersIndexer()}
         self._basic_types = set(str(type_) for type_ in wt_types.BASIC_TYPES)
 
     @overrides
-    def read(self, file_path: str):
+    def _read(self, file_path: str):
         with open(file_path, 'r') as f:
             data = f.read().replace('\r\n', '').replace('\n', '').replace('\t', '')
             questions = json.loads(data)
