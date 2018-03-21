@@ -1,5 +1,5 @@
 """
-Defines all the types in the Linear Algebra domain.
+Defines all the types in the Rate Calculus domain.
 """
 
 from overrides import overrides
