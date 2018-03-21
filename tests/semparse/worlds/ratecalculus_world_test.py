@@ -15,7 +15,7 @@ def check_productions_match(actual_rules: List[str], expected_right_sides: List[
 class TestRateCalculusWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        question_tokens = [Token(x) for x in ['$20', 'unit', 'dollar', 'x', 'y', '50km', '?']]
+        question_tokens = [Token(x) for x in ['I', 'have', 'a', '20', 'dollar', 'bill', 'and', 'a', '50', 'dollar', 'bill']]
         question_knowledge_graph = QuestionKnowledgeGraph.read(question_tokens)
         self.world = RateCalculusWorld(question_knowledge_graph)
 
@@ -64,7 +64,6 @@ class TestRateCalculusWorld(AllenNlpTestCase):
         # This test checks valid actions for each type match
         valid_actions = self.world.get_valid_actions()
 
-        print("VALID ACTIONS: ", valid_actions)
         assert set(valid_actions.keys()) == {
                 '@START@',
                 'b',
