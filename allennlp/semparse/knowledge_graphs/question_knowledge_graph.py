@@ -1,8 +1,5 @@
-import re
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, Tuple, Union
-
-from unidecode import unidecode
+from typing import DefaultDict, Dict, List, Tuple, Union
 
 from allennlp.data.tokenizers import Token
 from allennlp.semparse.knowledge_graphs.knowledge_graph import KnowledgeGraph

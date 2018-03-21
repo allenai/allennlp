@@ -2,7 +2,7 @@
 We store all the information related to a world (i.e. the context in which logical forms will be
 executed) here.
 """
-from typing import Callable, Dict, List, Set
+from typing import Dict, List, Set
 import re
 
 from nltk.sem.logic import Type
@@ -39,8 +39,8 @@ class RateCalculusWorld(World):
     def __init__(self, question_knowledge_graph: QuestionKnowledgeGraph) -> None:
         super(RateCalculusWorld, self).__init__(constant_type_prefixes={"num": types.NUMBER_TYPE},
                                                 global_type_signatures=types.COMMON_TYPE_SIGNATURE,
-                                              global_name_mapping=types.COMMON_NAME_MAPPING,
-                                              num_nested_lambdas=0)
+                                                global_name_mapping=types.COMMON_NAME_MAPPING,
+                                                num_nested_lambdas=0)
         self.question_knowledge_graph = question_knowledge_graph
 
         for entity in question_knowledge_graph.entities:

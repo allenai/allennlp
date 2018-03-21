@@ -2,18 +2,14 @@
 Reader for RateCalculusQuestions.
 """
 
-from typing import Dict, List, Union
-import gzip
+from typing import Dict, List
 import logging
-import os
 import json
 
 from overrides import overrides
 
-from allennlp.common import Params
-from allennlp.common.util import JsonDict
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, IndexField, KnowledgeGraphField, ListField
+from allennlp.data.fields import Field, IndexField, ListField
 from allennlp.data.fields import MetadataField, ProductionRuleField, TextField
 from allennlp.data.instance import Instance
 from allennlp.semparse import ParsingError
@@ -65,10 +61,6 @@ class RateCalculusDatasetReader(DatasetReader):
                 if instance is not None:
                     yield instance
 
-
-    @staticmethod
-    def _should_keep_logical_form(logical_form: str) -> bool:
-        return True
 
     @overrides
     def text_to_instance(self,  # type: ignore
@@ -124,9 +116,6 @@ class RateCalculusDatasetReader(DatasetReader):
 
             action_sequence_fields: List[Field] = []
             for logical_form in dpd_output:
-                if not self._should_keep_logical_form(logical_form):
-                    logger.debug(f'Question was: {question}')
-                    continue
                 try:
                     expression = world.parse_logical_form(logical_form)
                 except ParsingError as error:

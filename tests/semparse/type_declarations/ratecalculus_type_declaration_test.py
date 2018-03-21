@@ -1,10 +1,7 @@
 # pylint: disable=no-self-use
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.type_declarations import type_declaration as base_types
-from allennlp.semparse.type_declarations.type_declaration import (
-        ComplexType,
-        ANY_TYPE,
-        )
+
 from allennlp.semparse.type_declarations.ratecalculus_type_declaration import (
         CONJUNCTION_TYPE,
         BOOLEAN_TYPE

@@ -1,10 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 from typing import List
 
-import pytest
-
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.semparse import ParsingError
 from allennlp.semparse.worlds import RateCalculusWorld
 from allennlp.semparse.knowledge_graphs.question_knowledge_graph import QuestionKnowledgeGraph
 from allennlp.data.tokenizers import Token

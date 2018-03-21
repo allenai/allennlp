@@ -2,10 +2,6 @@
 Defines all the types in the Rate Calculus domain.
 """
 
-from overrides import overrides
-
-from nltk.sem.logic import Type, BasicType, ANY_TYPE, ComplexType as NltkComplexType
-
 from allennlp.semparse.type_declarations.type_declaration import ComplexType
 from allennlp.semparse.type_declarations.type_declaration import NamedBasicType
 from allennlp.semparse.type_declarations.type_declaration import UnaryOpType
@@ -19,8 +15,8 @@ BASIC_TYPES = {BOOLEAN_TYPE, NUMBER_TYPE, DIMENSION_TYPE, OBJECT_TYPE}
 VALUE_TYPE = ComplexType(OBJECT_TYPE,
                          ComplexType(DIMENSION_TYPE, NUMBER_TYPE))
 RATE_TYPE = ComplexType(OBJECT_TYPE,
-                         ComplexType(DIMENSION_TYPE,
-                                     ComplexType(DIMENSION_TYPE, NUMBER_TYPE)))
+                        ComplexType(DIMENSION_TYPE,
+                                    ComplexType(DIMENSION_TYPE, NUMBER_TYPE)))
 UNION_TYPE = ComplexType(OBJECT_TYPE,
                          ComplexType(OBJECT_TYPE, OBJECT_TYPE))
 

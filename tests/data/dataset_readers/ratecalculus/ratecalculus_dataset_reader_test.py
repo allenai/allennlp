@@ -4,7 +4,7 @@ from allennlp.data.dataset_readers import RateCalculusDatasetReader
 from allennlp.semparse.worlds import RateCalculusWorld
 
 expected_actions={
-    0: [
+    0:[
         '@START@ -> b',
         'b -> [<n,<n,b>>, n, n]',
         '<n,<n,b>> -> Equals',
@@ -14,7 +14,7 @@ expected_actions={
         'd -> dollar',
         'n -> 20'
     ],
-    1: [
+    1:[
         '@START@ -> b',
         'b -> [<b,<b,b>>, b, b]',
         '<b,<b,b>> -> And',
