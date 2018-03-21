@@ -30,7 +30,16 @@ def assert_dataset_correct(dataset):
     action_indices = [l.sequence_index for l in action_sequence.field_list]
     actions = [actions[i] for i in action_indices]
 
-    # TODO(ronanlb): Check actions
+    assert actions == [
+            '@START@ -> b',
+            'b -> [<n,<n,b>>, n, n]',
+            '<n,<n,b>> -> Equals',
+            'n -> [<o,<d,n>>, o, d]',
+            '<o,<d,n>> -> Value',
+            'o -> s',
+            'd -> dollar',
+            'n -> 20'
+            ]
 
 
 class RateCalculusDatasetReaderTest(AllenNlpTestCase):
