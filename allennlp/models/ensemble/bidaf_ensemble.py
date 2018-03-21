@@ -84,8 +84,6 @@ class BidafEnsemble(Ensemble):
 
         batch_size = len(subresults[0]["best_span"])
 
-        # TODO(michaels): The response here is a tensor rather than a variable (as in BiDAF).  I think that is
-        # ok because this isn't used for training, but I wanted to ask.
         output = {
                 "best_span": torch.zeros(batch_size, 2).long()
         }
