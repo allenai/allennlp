@@ -17,11 +17,11 @@ class TestEndpointSpanExtractor:
                 })
         extractor = SpanExtractor.from_params(params)
         assert isinstance(extractor, EndpointSpanExtractor)
-        assert extractor.get_output_dim() == 17 # 2 * input_dim + span_width_embedding_dim
+        assert extractor.get_output_dim() == 17  # 2 * input_dim + span_width_embedding_dim
 
     def test_correct_sequence_elements_are_embedded(self):
         sequence_tensor = Variable(torch.randn([2, 5, 7]))
-        # concatentate start and end points together to form our representation.
+        # Concatentate start and end points together to form our representation.
         extractor = EndpointSpanExtractor(7, "x,y")
 
         indices = Variable(torch.LongTensor([[[1, 3],
@@ -82,8 +82,6 @@ class TestEndpointSpanExtractor:
         extractor = EndpointSpanExtractor(8, "x,y", use_exclusive_start_indices=True)
         indices = Variable(torch.LongTensor([[[1, 3],
                                               [2, 4]],
-                                             # This span has an end index at the
-                                             # end of the padded sequence.
                                              [[0, 2],
                                               [0, 1]]]))
         sequence_mask = Variable(torch.LongTensor([[1, 1, 1, 1, 1],

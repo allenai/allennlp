@@ -46,7 +46,7 @@ class EndpointSpanExtractor(SpanExtractor):
         are used to represent exclusive span indices for the elements in the first
         position in the sequence (as the exclusive indices for these elements are outside
         of the the sequence boundary) so that start indices can be exclusive.
-        NOTE: This option can be helpful to avoid the pathalogical case in which you
+        NOTE: This option can be helpful to avoid the pathological case in which you
         want span differences for length 1 spans - if you use inclusive indices, you
         will end up with an ``x - x`` operation for length 1 spans, which is not good.
     """
@@ -123,7 +123,7 @@ class EndpointSpanExtractor(SpanExtractor):
             start_embeddings = util.batched_index_select(sequence_tensor, exclusive_span_starts)
             end_embeddings = util.batched_index_select(sequence_tensor, span_ends)
 
-            # If we're using sentinels, we need to replace all the elements which were
+            # We're using sentinels, so we need to replace all the elements which were
             # outside the dimensions of the sequence_tensor with the start sentinel.
             float_start_sentinel_mask = start_sentinel_mask.float()
             start_embeddings = start_embeddings * (1 - float_start_sentinel_mask) \
