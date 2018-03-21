@@ -4,8 +4,9 @@ from typing import List
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.semparse import ParsingError
-from allennlp.data.semparse.worlds import RateCalculusWorld
+from allennlp.semparse import ParsingError
+from allennlp.semparse.worlds import RateCalculusWorld
+from allennlp.semparse.knowledge_graphs.question_knowledge_graph import QuestionKnowledgeGraph
 from allennlp.data.tokenizers import Token
 
 
@@ -18,7 +19,8 @@ class TestRateCalculusWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         question_tokens = [Token(x) for x in ['$20', 'unit', 'dollar', 'x', 'y', '50km', '?']]
-        self.world = RateCalculusWorld(question_tokens)
+        question_knowledge_graph = QuestionKnowledgeGraph.read(question_tokens)
+        self.world = RateCalculusWorld(question_knowledge_graph)
 
     def test_world_parses_equality(self):
         sempre_form = "(Equals 50 20)"
@@ -45,6 +47,11 @@ class TestRateCalculusWorld(AllenNlpTestCase):
         expression = self.world.parse_logical_form(sempre_form)
         assert str(expression) == "E(R1(X,D,U),num:20)"
 
+    def test_world_parses_union_constraint(self):
+        sempre_form = "(Equals (Value (Union x y) dollar) 20)"
+        expression = self.world.parse_logical_form(sempre_form)
+        assert str(expression) == "E(V1(U1(X,Y),D),num:20)"
+
     def test_world_parses_conjunction(self):
         sempre_form = "(And (Equals 20 20) (Equals 50 50))"
         expression = self.world.parse_logical_form(sempre_form)
@@ -64,6 +71,8 @@ class TestRateCalculusWorld(AllenNlpTestCase):
                 'b',
                 'd',
                 'n',
+                'o',
+                '<o,<o,o>>',
                 '<o,<d,<d,n>>>',
                 '<o,<d,n>>',
                 '<b,<b,b>>',
@@ -80,13 +89,16 @@ class TestRateCalculusWorld(AllenNlpTestCase):
                                 ['dollar', 'unit'])
 
         check_productions_match(valid_actions['n'],
-                                ['num:20', 'num:50', '[<o,<d,<d,n>>>, o, d, d]', '[<o,<d,n>>, o, d]', 'p', 'q'])
+                                ['20', '50', '[<o,<d,<d,n>>>, o, d, d]', '[<o,<d,n>>, o, d]', 'p', 'q'])
+
+        check_productions_match(valid_actions['<o,<d,n>>'],
+                                ['Value'])
 
         check_productions_match(valid_actions['<o,<d,<d,n>>>'],
                                 ['Rate'])
 
-        check_productions_match(valid_actions['<o,<d,n>>'],
-                                ['Value'])
+        check_productions_match(valid_actions['<o,<o,o>>'],
+                                ['Union'])
 
         check_productions_match(valid_actions['<n,<n,b>>'],
                                 ['Equals'])
