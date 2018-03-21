@@ -39,7 +39,7 @@
     "train_data_path": "web-train.json",
     "validation_data_path": "web-dev.json",
     "model": {
-      "type": "multi-paragraph",
+      "type": "document-qa",
       "text_field_embedder": {
         "tokens": {
           "type": "embedding",

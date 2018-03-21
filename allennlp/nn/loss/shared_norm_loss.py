@@ -13,10 +13,9 @@ class SharedNormLoss(torch.nn.Module):
                 paragraph_mask: Variable,
                 actual_spans: Variable,
                 actual_spans_mask: Variable) -> Variable:
+        # pylint: disable=arguments-differ
         batch_size, num_paragraphs, num_tokens = span_logits.size()
         _, _, num_spans = actual_spans.size()
-
-        # print(f"batch size: { batch_size}, num_paragraphs: {num_paragraphs}, num_tokens: {num_tokens}, num_spans: {num_spans}")
 
         # (batch_size, num_paragraphs, num_tokens), with 0s for missing paragraphs
         masked_span_logits = span_logits * paragraph_mask.unsqueeze(-1)

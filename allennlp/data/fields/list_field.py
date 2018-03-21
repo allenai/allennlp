@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use
-from typing import Dict, List, Iterator
+from typing import Dict, List, Iterator, Iterable, Sequence
 
 from overrides import overrides
 
@@ -9,7 +9,7 @@ from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.common.util import pad_sequence_to_length
 
 
-class ListField(SequenceField[DataArray]):
+class ListField(SequenceField[DataArray], Iterable):
     """
     A ``ListField`` is a list of other fields.  You would use this to represent, e.g., a list of
     answer options that are themselves ``TextFields``.
@@ -24,12 +24,13 @@ class ListField(SequenceField[DataArray]):
         A list of ``Field`` objects to be concatenated into a single input tensor.  All of the
         contained ``Field`` objects must be of the same type.
     """
-    def __init__(self, field_list: List[Field]) -> None:
+    def __init__(self, field_list: Sequence[Field]) -> None:
+        super().__init__()
         field_class_set = set([field.__class__ for field in field_list])
         assert len(field_class_set) == 1, "ListFields must contain a single field type, found " +\
                                           str(field_class_set)
         # Not sure why mypy has a hard time with this type...
-        self.field_list: List[Field] = field_list
+        self.field_list: List[Field] = list(field_list)
 
     def __getitem__(self, idx: int) -> Field:
         return self.field_list[idx]

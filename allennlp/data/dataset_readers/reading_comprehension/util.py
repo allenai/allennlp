@@ -213,7 +213,7 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)
 
-def make_multi_paragraph_reading_comprehension_instance(
+def make_multi_paragraph_reading_comprehension_instance(  # pylint: disable=invalid-name
         question_tokens: List[Token],
         paragraph_tokens: List[List[Token]],
         token_indexers: Dict[str, TokenIndexer],
@@ -277,8 +277,8 @@ def make_multi_paragraph_reading_comprehension_instance(
     #logger.info("question_field")
     fields['question'] = TextField(question_tokens, token_indexers)
     metadata = {
-        'paragraph_texts': paragraph_texts,
-        'token_offsets': paragraph_offsets
+            'paragraph_texts': paragraph_texts,
+            'token_offsets': paragraph_offsets
     }
             # 'paragraph_texts': paragraph_texts,
             # 'token_offsets': paragraph_offsets,
@@ -294,7 +294,8 @@ def make_multi_paragraph_reading_comprehension_instance(
         span_fields = []
         for paragraph_field_i, token_spans_i in zip(paragraphs_field, token_spans):
             if token_spans_i:
-                span_field_i = ListField([SpanField(start, end, paragraph_field_i) for start, end in token_spans_i])
+                span_field_i = ListField([SpanField(start, end, paragraph_field_i)
+                                          for start, end in token_spans_i])
                 span_fields.append(span_field_i)
             else:
                 # Hack to make an "empty" list field

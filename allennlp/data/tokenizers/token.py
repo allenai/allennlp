@@ -52,23 +52,32 @@ class Token:
     def __repr__(self):
         return self.__str__()
 
-
-def json_to_token(blob, short: bool = True, max_len: int = None) -> Token:
-    if short:
-        text, idx = blob
-        if max_len:
-            text = text[:max_len]
-        return Token(text, idx)
+def truncate_token(token, max_len: int = None) -> Token:
+    """
+    Because spacy ``Token``s are immutable, we have to return a new Token.
+    """
+    if max_len is None:
+        return token
     else:
-        if max_len:
-            blob['text'] = blob['text'][:max_len]
-        return Token(**blob)
+        return Token(text=token.text[:max_len],
+                     idx=token.idx,
+                     pos=token.pos_,
+                     tag=token.tag_,
+                     dep=token.dep_,
+                     ent_type=token.ent_type_,
+                     text_id=getattr(token, 'text_id', None))
+
 
 def token_to_json(token: Token, short: bool = True):
+    """
+    There are two ways to serialize a Token.
+    The "short" way is as an array [text, index].
+    The "long" way is as a dictionary of properties.
+    """
     if short:
         return [token.text, token.idx]
     else:
-        blob = {"text": token.text}
+        blob: JsonDict = {"text": token.text}
         if token.idx is not None:
             blob['idx'] = token.idx
         if token.pos_:
@@ -83,3 +92,14 @@ def token_to_json(token: Token, short: bool = True):
             blob['text_id'] = token.text_id
 
         return blob
+
+def json_to_token(blob, short: bool = True, max_len: int = None) -> Token:
+    if short:
+        text, idx = blob
+        if max_len:
+            text = text[:max_len]
+        return Token(text, idx)
+    else:
+        if max_len:
+            blob['text'] = blob['text'][:max_len]
+        return Token(**blob)

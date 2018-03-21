@@ -34,11 +34,11 @@ def repeat_question(question_tensor: Variable, num_paragraphs: int) -> Variable:
     tensor = tensor.view(torch.Size([old_size[0] * num_paragraphs]) + old_size[1:])
     return tensor
 
-@Model.register("multi-paragraph")
-class MultiParagraphReadingComprehension(Model):
+@Model.register("document-qa")
+class DocumentQa(Model):
     """
     This class implements Christopher Clark and Matt Gardner's
-    This class implements Minjoon Seo's `Multi-Paragraph Reading Comprehension
+    `Multi-Paragraph Reading Comprehension
     <https://www.semanticscholar.org/paper/Simple-and-Effective-Multi-Paragraph-Reading-Compr-Clark-Gardner/10201edcf04a102a1c4f8ed7107562a13148dd81>`_
     for answering reading comprehension questions.
     """
@@ -103,9 +103,9 @@ class MultiParagraphReadingComprehension(Model):
         question : Dict[str, torch.LongTensor]
             From a ``TextField``.
         paragraphs : Dict[str, torch.LongTensor]
-            From a ``ListField[TextField]``.  The model assumes that at least this passage contains the answer to the
-            question, and predicts the beginning and ending positions of the answer within the
-            passage.
+            From a ``ListField[TextField]``.  The model assumes that at least this passage contains the
+            answer to the question, and predicts the beginning and ending positions of the answer
+            within the passage.
         spans : ``torch.IntTensor``, optional
             From an ``SpanField``. These are what we are trying to predict, the start and the end of the
             answer within each passage. This is an `inclusive` index. Note that a passage may contain
@@ -241,13 +241,13 @@ class MultiParagraphReadingComprehension(Model):
                                           encoded_passage * tiled_question_passage_vector],
                                          dim=-1)
 
-        if DEBUG:  print("fmp1", final_merged_passage.size())
+        if DEBUG: print("fmp1", final_merged_passage.size())
 
 
         # purple "linear ReLU layer"
         final_merged_passage = F.relu(self._merge_atten(final_merged_passage))
 
-        if DEBUG:  print("fmp2", final_merged_passage.size())
+        if DEBUG: print("fmp2", final_merged_passage.size())
 
         # Bi-GRU in the paper
         residual_layer = self._dropout(self._residual_encoder(self._dropout(final_merged_passage), passage_mask))
@@ -421,7 +421,7 @@ class MultiParagraphReadingComprehension(Model):
         return best_word_span
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'MultiParagraphReadingComprehension':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'DocumentQa':
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         phrase_layer = Seq2SeqEncoder.from_params(params.pop("phrase_layer"))

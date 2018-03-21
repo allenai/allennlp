@@ -39,7 +39,6 @@ class PassThroughWordStemmer(WordStemmer):
     def stem_word(self, word: Token) -> Token:
         return word
 
-
 @WordStemmer.register('porter')
 class PorterStemmer(WordStemmer):
     """
