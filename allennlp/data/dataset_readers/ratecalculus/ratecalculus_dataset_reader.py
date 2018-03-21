@@ -116,7 +116,6 @@ class RateCalculusDatasetReader(DatasetReader):
                   'actions': action_field}
 
         if dpd_output:
-            print("LOGICAL FORM!!!")
             # We'll make each target action sequence a List[IndexField], where the index is into
             # the action list we made above.  We need to ignore the type here because mypy doesn't
             # like `action.rule` - it's hard to tell mypy that the ListField is made up of

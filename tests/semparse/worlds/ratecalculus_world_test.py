@@ -91,6 +91,9 @@ class TestRateCalculusWorld(AllenNlpTestCase):
         check_productions_match(valid_actions['n'],
                                 ['20', '50', '[<o,<d,<d,n>>>, o, d, d]', '[<o,<d,n>>, o, d]', 'p', 'q'])
 
+        check_productions_match(valid_actions['o'],
+                                ['[<o,<o,o>>, o, o]'])
+
         check_productions_match(valid_actions['<o,<d,n>>'],
                                 ['Value'])
 

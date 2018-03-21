@@ -28,7 +28,11 @@ class RateCalculusWorld(World):
     # series of one-argument function applications.  See `world._get_transitions` for more info.
     curried_functions = {
             types.CONJUNCTION_TYPE: 2,
-            types.BINARY_NUM_OP_TYPE: 2
+            types.BINARY_NUM_OP_TYPE: 2,
+            types.BINARY_BOOL_OP_TYPE: 2,
+            types.BINARY_NUM_TO_BOOL_OP_TYPE: 2,
+            types.RATE_TYPE: 3,
+            types.VALUE_TYPE: 2
             }
 
     def __init__(self, question_knowledge_graph: QuestionKnowledgeGraph) -> None:

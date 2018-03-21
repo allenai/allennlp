@@ -42,7 +42,6 @@ BINARY_BOOL_OP_TYPE = ComplexType(BOOLEAN_TYPE, ComplexType(BOOLEAN_TYPE, BOOLEA
 CONJUNCTION_TYPE = BINARY_BOOL_OP_TYPE
 
 COMMON_NAME_MAPPING = {"x": "X", "y": "Y", "p": "P", "q": "Q"}
-
 COMMON_TYPE_SIGNATURE = {"X": OBJECT_TYPE, "Y": OBJECT_TYPE, "P": NUMBER_TYPE, "Q": NUMBER_TYPE}
 
 def add_common_name_with_type(name, mapping, type_signature):
