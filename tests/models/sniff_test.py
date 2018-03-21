@@ -35,11 +35,6 @@ class SniffTest(AllenNlpTestCase):
 
         result = predictor.predict_json({"sentence": sentence})
 
-        assert result["tokens"] == [
-                "If", "you", "liked", "the", "music", "we", "were", "playing", "last", "night", ",",
-                "you", "will", "absolutely", "love", "what", "we", "'re", "playing", "tomorrow", "!"
-        ]
-
         assert result["words"] == [
                 "If", "you", "liked", "the", "music", "we", "were", "playing", "last", "night", ",",
                 "you", "will", "absolutely", "love", "what", "we", "'re", "playing", "tomorrow", "!"
