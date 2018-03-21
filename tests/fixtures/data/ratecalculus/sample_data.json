@@ -9,5 +9,16 @@
             "20.0"
         ],
         "lSemantics": "(Equals (Value s dollar) 20)"
+  },
+  {
+        "iIndex": "998",
+        "sQuestion": "I have five $20 bills and three $10 bills. How much do I have?",
+        "lEquations": [
+            "x=5*20+3*10"
+        ],
+        "lSolutions": [
+            "130.0"
+        ],
+        "lSemantics": "(And (Equals (Rate s dollar unit) 20) (And (Equals (Value s unit) 5) (And (Equals (Rate t dollar unit) 10) (And (Equals (Value t unit) 3) (Equals (Value (Union s t) dollar) p)))"
   }
 ]

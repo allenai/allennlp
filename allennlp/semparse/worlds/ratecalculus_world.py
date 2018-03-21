@@ -32,7 +32,8 @@ class RateCalculusWorld(World):
             types.BINARY_BOOL_OP_TYPE: 2,
             types.BINARY_NUM_TO_BOOL_OP_TYPE: 2,
             types.RATE_TYPE: 3,
-            types.VALUE_TYPE: 2
+            types.VALUE_TYPE: 2,
+            types.UNION_TYPE: 2
             }
 
     def __init__(self, question_knowledge_graph: QuestionKnowledgeGraph) -> None:

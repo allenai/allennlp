@@ -61,9 +61,7 @@ class RateCalculusDatasetReader(DatasetReader):
             questions = json.loads(data)
 
             for q in list(questions):
-                lfs = [q["lSemantics"]]
-                print("LFS: ", lfs)
-                instance = self.text_to_instance(q["sQuestion"], lfs)
+                instance = self.text_to_instance(q["sQuestion"], [q["lSemantics"]])
                 if instance is not None:
                     yield instance
 
@@ -130,7 +128,6 @@ class RateCalculusDatasetReader(DatasetReader):
                     logger.debug(f'Question was: {question}')
                     continue
                 try:
-                    print("LOGICAL FORM: ", logical_form)
                     expression = world.parse_logical_form(logical_form)
                 except ParsingError as error:
                     logger.debug(f'Parsing error: {error.message}, skipping logical form')
@@ -141,7 +138,6 @@ class RateCalculusDatasetReader(DatasetReader):
                     logger.error(logical_form)
                     raise
                 action_sequence = world.get_action_sequence(expression)
-                print("ACTION SEQ: ", action_sequence)
                 try:
                     index_fields: List[Field] = []
                     for production_rule in action_sequence:
@@ -163,6 +159,5 @@ class RateCalculusDatasetReader(DatasetReader):
                 # full test data.
                 return None
 
-            print("TARGET ACTION LOGICAL FORM!!!")
             fields['target_action_sequences'] = ListField(action_sequence_fields)
         return Instance(fields)
