@@ -1,0 +1,15 @@
+[
+  {
+        "iIndex": "2598",
+        "sQuestion": "I have a $20 bill.",
+        "lEquations": [
+            "3.0*novelists=5.0*poets",
+            "novelists+poets=24.0"
+        ],
+        "lSolutions": [
+            "15.0",
+            "9.0"
+        ],
+        "lSemantics": "(Equals (Value x dollar) 20)"
+  }
+]
