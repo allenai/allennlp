@@ -41,8 +41,8 @@ BINARY_BOOL_OP_TYPE = ComplexType(BOOLEAN_TYPE, ComplexType(BOOLEAN_TYPE, BOOLEA
 # and, or
 CONJUNCTION_TYPE = BINARY_BOOL_OP_TYPE
 
-COMMON_NAME_MAPPING = {"s": "S", "t": "T", "p": "P", "q": "Q"}
-COMMON_TYPE_SIGNATURE = {"S": OBJECT_TYPE, "T": OBJECT_TYPE, "P": NUMBER_TYPE, "Q": NUMBER_TYPE}
+COMMON_NAME_MAPPING = {}
+COMMON_TYPE_SIGNATURE = {}
 
 def add_common_name_with_type(name, mapping, type_signature):
     COMMON_NAME_MAPPING[name] = mapping
@@ -55,3 +55,7 @@ add_common_name_with_type("And", "A", CONJUNCTION_TYPE)
 add_common_name_with_type("Equals", "E", BINARY_NUM_TO_BOOL_OP_TYPE)
 add_common_name_with_type("dollar", "D", DIMENSION_TYPE)
 add_common_name_with_type("unit", "U", DIMENSION_TYPE)
+add_common_name_with_type("s", "S", OBJECT_TYPE)
+add_common_name_with_type("t", "T", OBJECT_TYPE)
+add_common_name_with_type("p", "P", NUMBER_TYPE)
+add_common_name_with_type("q", "Q", NUMBER_TYPE)
