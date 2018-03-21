@@ -1,11 +1,11 @@
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 
 from overrides import overrides
 import torch
 
 from allennlp.models.ensemble.ensemble import Ensemble
 from allennlp.models.archival import load_archive
-from allennlp.models import Model
+from allennlp.models.model import Model
 from allennlp.models.reading_comprehension import BidirectionalAttentionFlow
 from allennlp.common import Params
 from allennlp.data import Vocabulary
@@ -79,45 +79,31 @@ class BidafEnsemble(Ensemble):
 
         subresults = []
         for submodel in self.submodels:
+            # TODO(michaels): should I not call forward directly here and instead call submodel(**)?
             subresults.append(submodel.forward(question, passage, span_start, span_end, metadata))
 
         batch_size = len(subresults[0]["best_span"])
 
+        # TODO(michaels): The response here is a tensor rather than a variable (as in BiDAF).  I think that is
+        # ok because this isn't used for training, but I wanted to ask.
         output = {
                 "best_span": torch.zeros(batch_size, 2).long()
         }
-        for batch in range(batch_size):
-            # Populate span_votes so each key represents a span range that a submodel predicts and the value
-            # is the number of models that made the prediction.
-            spans = [(subresult["best_span"].data[batch][0], subresult["best_span"].data[batch][1])
-                     for subresult in subresults]
-            votes: Dict[(int, int), int] = {span:spans.count(span) for span in spans}
-
-            # Choose the majority-vote span.
-            # If there is a tie, break it with the average confidence (span_start_probs + span_end_probs).
-            options = []
-            for i, subresult in enumerate(subresults):
-                start = subresult["best_span"].data[batch][0]
-                end = subresult["best_span"].data[batch][1]
-                num_votes = votes[(start, end)]
-                average_confidence = (subresult["span_start_probs"].data[batch][start] +
-                                      subresult["span_end_probs"].data[batch][end]) / 2.0
-                options.append((-num_votes, -average_confidence, i))
-
-            best = sorted(options)[0][2]
-            best_span = subresults[best]["best_span"].data[batch].long()
-            output["best_span"][batch] = best_span
+        for index in range(batch_size):
+            best = ensemble(index, subresults)
+            best_span = subresults[best]["best_span"].data[index].long()
+            output["best_span"][index] = best_span
 
             if metadata is not None:
                 if "best_span_str" not in output:
                     output["best_span_str"] = []
-                best_span_str = subresults[best]["best_span_str"][batch]
+                best_span_str = subresults[best]["best_span_str"][index]
                 output["best_span_str"].append(best_span_str)
 
-                answer_texts = metadata[batch].get('answer_texts', [])
+                answer_texts = metadata[index].get('answer_texts', [])
                 if answer_texts:
-                    passage_str = metadata[batch]['original_passage']
-                    offsets = metadata[batch]['token_offsets'] # character offsets of tokens
+                    passage_str = metadata[index]['original_passage']
+                    offsets = metadata[index]['token_offsets'] # character offsets of tokens
                     start_offset = offsets[best_span[0]][0]
                     end_offset = offsets[best_span[1]][1]
                     best_span_string = passage_str[start_offset:end_offset]
@@ -143,3 +129,35 @@ class BidafEnsemble(Ensemble):
             submodels.append(load_archive(path).model)
 
         return cls(submodels=submodels)
+
+def ensemble(index, subresults: List[Dict[str, torch.Tensor]]) -> int:
+    """
+    Return the index of the best subresults.
+    Parameters
+    ----------
+    index : the index within this index to ensemble
+    subresults : List[Dict[str, torch.Tensor]]
+
+    Returns
+    -------
+    The index of the best submodel.
+    """
+
+    # Populate span_votes so each key represents a span range that a submodel predicts and the value
+    # is the number of models that made the prediction.
+    spans = [(subresult["best_span"].data[index][0], subresult["best_span"].data[index][1])
+             for subresult in subresults]
+    votes: Dict[Tuple[int, int], int] = {span:spans.count(span) for span in spans}
+
+    # Choose the majority-vote span.
+    # If there is a tie, break it with the average confidence (span_start_probs + span_end_probs).
+    options = []
+    for i, subresult in enumerate(subresults):
+        start = subresult["best_span"].data[index][0]
+        end = subresult["best_span"].data[index][1]
+        num_votes = votes[(start, end)]
+        average_confidence = (subresult["span_start_probs"].data[index][start] +
+                              subresult["span_end_probs"].data[index][end]) / 2.0
+        options.append((-num_votes, -average_confidence, i))
+
+    return sorted(options)[0][2]

@@ -3,7 +3,7 @@ from typing import Dict, List
 import torch
 
 from allennlp.common.params import Params
-from allennlp.models import Model
+from allennlp.models.model import Model
 from allennlp.models.model import remove_pretrained_embedding_params
 
 class Ensemble(Model):
