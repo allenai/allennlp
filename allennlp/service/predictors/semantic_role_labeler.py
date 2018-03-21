@@ -116,6 +116,10 @@ class SemanticRoleLabelerPredictor(Predictor):
 
         flattened_instances = [instance for sentence_instances in instances_per_sentence
                                for instance in sentence_instances]
+
+        if not flattened_instances:
+            return sanitize(return_dicts)
+
         # Make the instances into batches and check the last batch for
         # padded elements as the number of instances might not be perfectly
         # divisible by the batch size.
@@ -140,7 +144,7 @@ class SemanticRoleLabelerPredictor(Predictor):
             for verb in verbs_for_sentence:
                 output = outputs[sentence_index]
                 tags = output['tags']
-                description = SemanticRoleLabelerPredictor.make_srl_string(results["words"], tags)
+                description = self.make_srl_string(results["words"], tags)
                 results["verbs"].append({
                         "verb": verb,
                         "description": description,
@@ -148,9 +152,7 @@ class SemanticRoleLabelerPredictor(Predictor):
                 })
                 sentence_index += 1
 
-            results["tokens"] = results["words"]
-
-        return return_dicts
+        return sanitize(return_dicts)
 
     @overrides
     def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
@@ -174,16 +176,18 @@ class SemanticRoleLabelerPredictor(Predictor):
         verbs_for_instances: List[str] = results["verbs"]
         results["verbs"] = []
 
+        if not instances:
+            return sanitize(results)
+
         outputs = self._model.forward_on_instances(instances, cuda_device)
 
         for output, verb in zip(outputs, verbs_for_instances):
             tags = output['tags']
-            description = SemanticRoleLabelerPredictor.make_srl_string(results["words"], tags)
+            description = self.make_srl_string(results["words"], tags)
             results["verbs"].append({
                     "verb": verb,
                     "description": description,
                     "tags": tags,
             })
 
-        results["tokens"] = results["words"]
         return sanitize(results)
