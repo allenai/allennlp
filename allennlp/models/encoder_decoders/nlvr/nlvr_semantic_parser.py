@@ -14,7 +14,6 @@ from allennlp.nn.decoding import RnnState
 from allennlp.nn import util as nn_util
 from allennlp.models.model import Model
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
-from allennlp.semparse.type_declarations import GrammarState
 from allennlp.semparse.worlds import NlvrWorld
 from allennlp.training.metrics import Average
 

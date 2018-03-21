@@ -76,12 +76,10 @@ class GrammarState:
                 actions = actions + [self._action_indices[production_string]]
         return actions
 
-    def take_action(self, left_side: str, right_side: str) -> 'GrammarState':
+    def take_action(self, production_rule: str) -> 'GrammarState':
         """
         Takes an action in the current grammar state, returning a new grammar state with whatever
-        updates are necessary.  Because the decoder state keeps around actions that are already
-        split into left hand side and right hand side, we take those here directly, instead of
-        taking an action formatted as "LHS -> RHS" that we will just have to split.
+        updates are necessary.  The production rule is assumed to be formatted as "LHS -> RHS".
 
         This will update the non-terminal stack and the context-dependent actions.  Updating the
         non-terminal stack involves popping the non-terminal that was expanded off of the stack,
@@ -93,6 +91,7 @@ class GrammarState:
         ``action`` is ``d -> [<e,d>, e]``, the resulting stack will be ``["r", "<e,r>", "e",
         "<e,d>"]``.
         """
+        left_side, right_side = production_rule.split(' -> ')
         assert self._nonterminal_stack[-1] == left_side, (f"Tried to expand {self._nonterminal_stack[-1]}"
                                                           "but got rule f{left_side}->f{right_side}")
         new_stack = self._nonterminal_stack[:-1]

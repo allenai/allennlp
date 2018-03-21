@@ -13,13 +13,12 @@ from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
 from allennlp.models.encoder_decoders.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
 from allennlp.models.encoder_decoders.wikitables.wikitables_decoder_state import WikiTablesDecoderState
-from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, FeedForward
+from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, FeedForward, Embedding
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
-from allennlp.nn.decoding import BeamSearch, MaximumMarginalLikelihood, RnnState
-from allennlp.semparse.type_declarations import GrammarState
+from allennlp.nn.decoding import BeamSearch, GrammarState, MaximumMarginalLikelihood, RnnState
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import WikiTablesWorld
 from allennlp.semparse import ParsingError
@@ -67,18 +66,11 @@ class WikiTablesSemanticParser(Model):
         which is to use all eight defined features. If this is 0, another term will be added to the
         linking score. This term contains the maximum similarity value from the entity's neighbors
         and the question.
-    embed_terminals : ``bool``, optional (default=False)
-        When selecting grammar actions in a particular state, we compare an action embedding with
-        our current decoder state.  Computing the action embedding might be hard for
-        instance-specific entity productions.  Additionally, we have a linking from question words
-        to table entities, and an embedding comparison makes no use of this linking score or the
-        current attention on question words.  If ``embed_terminals`` is ``False``, instead of
-        constructing an embedding for terminal (that is, table-specific) entity productions, we
-        will compute scores for these actions using the linking score and current attention.
     """
     def __init__(self,
                  vocab: Vocabulary,
                  question_embedder: TextFieldEmbedder,
+                 action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
                  entity_encoder: Seq2VecEncoder,
                  mixture_feedforward: FeedForward,
@@ -87,7 +79,6 @@ class WikiTablesSemanticParser(Model):
                  attention_function: SimilarityFunction,
                  dropout: float = 0.0,
                  num_linking_features: int = 8,
-                 embed_terminals: bool = False,
                  rule_namespace: str = 'rule_labels') -> None:
         super(WikiTablesSemanticParser, self).__init__(vocab)
         self._question_embedder = question_embedder
@@ -95,22 +86,21 @@ class WikiTablesSemanticParser(Model):
         self._entity_encoder = TimeDistributed(entity_encoder)
         self._beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
-        self._action_embedder = Embedding(
         self._action_sequence_accuracy = Average()
-        self._embed_terminals = embed_terminals
         if dropout > 0:
             self._dropout = torch.nn.Dropout(p=dropout)
         else:
             self._dropout = lambda x: x
+        self._rule_namespace = rule_namespace
 
         check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
                                "entity word average embedding dim", "question embedding dim")
-        if terminal_embedder:
-            check_dimensions_match(nonterminal_embedder.get_output_dim(), terminal_embedder.get_output_dim(),
-                                   "nonterminal embedding dim", "terminal embedding dim")
 
         self._action_padding_index = -1  # the padding value used by IndexField
-        action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
+        self._action_embedder = Embedding(num_embeddings=vocab.get_vocab_size(self._rule_namespace),
+                                          embedding_dim=action_embedding_dim)
+        self._initial_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
+
         self.num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
         self._embedding_dim = question_embedder.get_output_dim()
         self._type_params = torch.nn.Linear(self.num_entity_types, self._embedding_dim)
@@ -277,7 +267,7 @@ class WikiTablesSemanticParser(Model):
                                                                      encoder_outputs,
                                                                      question_mask)
 
-        action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
+        action_embeddings, action_indices = self._embed_actions(actions)
 
         _, num_entities, num_question_tokens = linking_scores.size()
         flattened_linking_scores, actions_to_entities = self._map_entity_productions(linking_scores,
@@ -303,7 +293,7 @@ class WikiTablesSemanticParser(Model):
         for i in range(batch_size):
             initial_rnn_state.append(RnnState(final_encoder_output[i],
                                               memory_cell[i],
-                                              initial_action_embedding,
+                                              self._initial_action_embedding,
                                               attended_question[i],
                                               encoder_output_list,
                                               question_mask_list))
@@ -329,7 +319,7 @@ class WikiTablesSemanticParser(Model):
             action_mapping = {}
             for batch_index, batch_actions in enumerate(actions):
                 for action_index, action in enumerate(batch_actions):
-                    action_mapping[(batch_index, action_index)] = f"{action['left'][0]} -> {action['right'][0]}"
+                    action_mapping[(batch_index, action_index)] = action[0]
             outputs: Dict[str, Any] = {'action_mapping': action_mapping}
             if target_action_sequences is not None:
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
@@ -576,7 +566,7 @@ class WikiTablesSemanticParser(Model):
         valid_actions = world.get_valid_actions()
         action_mapping = {}
         for i, action in enumerate(possible_actions):
-            action_string = action['left'][0] + ' -> ' + action['right'][0]
+            action_string = action[0]
             action_mapping[action_string] = i
         translated_valid_actions = {}
         for key, action_strings in valid_actions.items():
@@ -585,8 +575,7 @@ class WikiTablesSemanticParser(Model):
         return GrammarState([START_SYMBOL], {}, translated_valid_actions, action_mapping)
 
     def _embed_actions(self, actions: List[List[ProductionRuleArray]]) -> Tuple[torch.Tensor,
-                                                                                Dict[Tuple[int, int], int],
-                                                                                torch.Tensor]:
+                                                                                Dict[Tuple[int, int], int]]:
         """
         Given all of the possible actions for all batch instances, produce an embedding for them.
         There will be significant overlap in this list, as the production rules from the grammar
@@ -601,96 +590,30 @@ class WikiTablesSemanticParser(Model):
             Has shape ``(num_unique_actions, action_embedding_dim)``.
         action_map : ``Dict[Tuple[int, int], int]``
             Maps ``(batch_index, action_index)`` in the input action list to ``action_index`` in
-            the ``action_embeddings`` tensor.
-        initial_action_embedding : ``torch.Tensor``
-            Has shape ``(action_embedding_dim,)``.  An embedding for the initial action input.
-            This needs to be computed here, because we don't keep around the nonterminal
-            embeddings.  We do this by creating a fake rule "0 -> START", where the LHS embedding
-            is a vector of zeros, and the RHS embedding is the START symbol embedding.
+            the ``action_embeddings`` tensor.  All non-embeddable actions get mapped to `-1` here.
         """
-        # Basic outline: we'll embed actions by embedding their left hand side (LHS) and right hand
-        # side (RHS) separately, then concatenating the two parts.  So first we need to find all of
-        # the unique terminals and non-terminals in the production rules, and embed those (for ease
-        # of reference, we'll refer to non-terminals and terminals collectively as "elements" in
-        # the logic below).  Then we'll gather all unique _actions_, and for each action, we'll use
-        # an `index_select` to look up the embedding for it's LHS and RHS, then do the concat.
-        nonterminals, terminals = self._get_unique_elements(actions)
-        nonterminal_strings = sorted(nonterminals.keys())
-        terminal_strings = sorted(terminals.keys())
-        nonterminal_tensor_dicts = [nonterminals[key] for key in nonterminal_strings]
-        terminal_tensor_dicts = [terminals[key] for key in terminal_strings]
-        nonterminal_tensors = util.batch_tensor_dicts(nonterminal_tensor_dicts,
-                                                      remove_trailing_dimension=True)
-        terminal_tensors = util.batch_tensor_dicts(terminal_tensor_dicts,
-                                                   remove_trailing_dimension=True)
+        # TODO(mattg): This whole action pipeline might be a whole lot more complicated than it
+        # needs to be.  We used to embed actions differently (using some crazy ideas about
+        # embedding the LHS and RHS separately); we could probably get away with simplifying things
+        # further now that we're just doing a simple embedding for global actions.  But I'm leaving
+        # it like this for now to have a minimal change to go from the LHS/RHS embedding to a
+        # single action embedding.
+        embedded_actions = self._action_embedder.weight
 
-        # The TextFieldEmbedder expects a 3D tensor, but we have 2D tensors, so we unsqueeze here
-        # and squeeze after the embedding.
-        nonterminal_tensors = {key: tensor.unsqueeze(0) for key, tensor in nonterminal_tensors.items()}
-        terminal_tensors = {key: tensor.unsqueeze(0) for key, tensor in terminal_tensors.items()}
-        # Shape: (num_nonterminals, element_embedding_dim)
-        embedded_nonterminals = self._nonterminal_embedder(nonterminal_tensors).squeeze(0)
-
-        if self._embed_terminals:
-            # Shape: (num_terminals, element_embedding_dim)
-            embedded_terminals = self._terminal_embedder(terminal_tensors).squeeze(0)
-            # Shape: (num_nonterminals + num_terminals, element_embedding_dim)
-            embedded_elements = torch.cat([embedded_nonterminals, embedded_terminals], dim=0)
-        else:
-            embedded_elements = embedded_nonterminals
-        # This will map element strings to their index in the `embedded_elements` tensor.
-        element_ids = {nonterminal: i for i, nonterminal in enumerate(nonterminal_strings)}
-        element_ids.update({terminal: i + len(nonterminal_strings)
-                            for i, terminal in enumerate(terminal_strings)})
-        unique_nonterminal_actions: Set[Tuple[int, int]] = set()
-        unique_terminal_actions: Set[Tuple[int, int]] = set()
-        for instance_actions in actions:
-            for action in instance_actions:
-                if not action['left'][0]:
-                    # This rule is padding.
-                    continue
-                # This gives us the LHS and RHS strings, which we map to ids in the element tensor.
-                action_ids = (element_ids[action['left'][0]], element_ids[action['right'][0]])
-                if action['right'][1]:
-                    unique_nonterminal_actions.add(action_ids)
-                else:
-                    unique_terminal_actions.add(action_ids)
-        unique_action_list = list(unique_nonterminal_actions) + list(unique_terminal_actions)
-        action_left_sides, action_right_sides = zip(*unique_action_list)
-        if not self._embed_terminals:
-            action_left_sides = action_left_sides[:len(unique_nonterminal_actions)]
-            action_right_sides = action_right_sides[:len(unique_nonterminal_actions)]
-        # We need a tensor to copy so we can create stuff on the right device; just grabbing one
-        # from the nonterminals here.
-        copy_tensor = list(list(nonterminals.values())[0].values())[0]
-        action_left_indices = Variable(copy_tensor.data.new(list(action_left_sides)).long())
-        action_right_indices = Variable(copy_tensor.data.new(list(action_right_sides)).long())
-        left_side_embeddings = embedded_elements.index_select(0, action_left_indices)
-        right_side_embeddings = embedded_elements.index_select(0, action_right_indices)
-        # Shape: (num_actions, element_embedding_dim * 2)
-        embedded_actions = torch.cat([left_side_embeddings, right_side_embeddings], dim=-1)
-
-        # Next we'll construct the embedding for the initial action, which is a concatenation of a
-        # zero LHS vector and the START RHS vector.
-        zeros = Variable(copy_tensor.data.new(embedded_elements.size(-1)).fill_(0).float())
-        start_vector = embedded_elements[element_ids[START_SYMBOL]]
-        # Shape: (element_embedding_dim * 2,)
-        initial_action_embedding = torch.cat([zeros, start_vector], dim=-1)
-
-        # Now we just need to make a map from `(batch_index, action_index)` to `action_index`.
-        # global_action_ids has the list of all unique actions; here we're going over all of the
-        # actions for each batch instance so we can map them to the global action ids.
-        global_action_ids = {action: i for i, action in enumerate(unique_action_list)}
+        # Now we just need to make a map from `(batch_index, action_index)` to
+        # `global_action_index`.  global_action_ids has the list of all unique actions; here we're
+        # going over all of the actions for each batch instance so we can map them to the global
+        # action ids.
+        action_vocab = self.vocab.get_token_to_index_vocabulary(self._rule_namespace)
         action_map: Dict[Tuple[int, int], int] = {}
-        for batch_index, action_list in enumerate(actions):
-            for action_index, action in enumerate(action_list):
-                if not action['left'][0]:
+        for batch_index, instance_actions in enumerate(actions):
+            for action_index, action in enumerate(instance_actions):
+                if not action[0]:
                     # This rule is padding.
                     continue
-                action_indices = (element_ids[action['left'][0]], element_ids[action['right'][0]])
-                action_id = global_action_ids[action_indices]
-                action_map[(batch_index, action_index)] = action_id
-        return embedded_actions, action_map, initial_action_embedding
+                global_action_id = action_vocab.get(action[0], -1)
+                action_map[(batch_index, action_index)] = global_action_id
+        return embedded_actions, action_map
 
     @staticmethod
     def _map_entity_productions(linking_scores: torch.FloatTensor,
@@ -743,7 +666,10 @@ class WikiTablesSemanticParser(Model):
         actions_to_entities: Dict[Tuple[int, int], int] = {}
         for batch_index, action_list in enumerate(actions):
             for action_index, action in enumerate(action_list):
-                production = action['right'][0]
+                if not action[0]:
+                    # This action is padding.
+                    continue
+                _, production = action[0].split(' -> ')
                 entity_index = entity_map.get((batch_index, production), None)
                 if entity_index is not None:
                     actions_to_entities[(batch_index, action_index)] = entity_index
@@ -788,15 +714,10 @@ class WikiTablesSemanticParser(Model):
     @classmethod
     def from_params(cls, vocab, params: Params) -> 'WikiTablesSemanticParser':
         question_embedder = TextFieldEmbedder.from_params(vocab, params.pop("question_embedder"))
+        action_embedding_dim = params.pop_int("action_embedding_dim")
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
         entity_encoder = Seq2VecEncoder.from_params(params.pop('entity_encoder'))
-        max_decoding_steps = params.pop("max_decoding_steps")
-        nonterminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("nonterminal_embedder"))
-        terminal_embedder_params = params.pop('terminal_embedder', None)
-        if terminal_embedder_params:
-            terminal_embedder = TextFieldEmbedder.from_params(vocab, terminal_embedder_params)
-        else:
-            terminal_embedder = None
+        max_decoding_steps = params.pop_int("max_decoding_steps")
         mixture_feedforward_type = params.pop('mixture_feedforward', None)
         if mixture_feedforward_type is not None:
             mixture_feedforward = FeedForward.from_params(mixture_feedforward_type)
@@ -812,12 +733,10 @@ class WikiTablesSemanticParser(Model):
             attention_function = None
         dropout = params.pop_float('dropout', 0.0)
         num_linking_features = params.pop_int('num_linking_features', 8)
-        embed_terminals = params.pop('embed_terminals', False)
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    question_embedder=question_embedder,
-                   nonterminal_embedder=nonterminal_embedder,
-                   terminal_embedder=terminal_embedder,
+                   action_embedding_dim=action_embedding_dim,
                    encoder=encoder,
                    entity_encoder=entity_encoder,
                    mixture_feedforward=mixture_feedforward,
@@ -825,5 +744,4 @@ class WikiTablesSemanticParser(Model):
                    max_decoding_steps=max_decoding_steps,
                    attention_function=attention_function,
                    dropout=dropout,
-                   num_linking_features=num_linking_features,
-                   embed_terminals=embed_terminals)
+                   num_linking_features=num_linking_features)

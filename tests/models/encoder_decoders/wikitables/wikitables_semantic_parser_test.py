@@ -1,6 +1,7 @@
 # pylint: disable=invalid-name,no-self-use,protected-access
 from collections import namedtuple
 
+from flaky import flaky
 from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
@@ -16,9 +17,11 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         self.set_up_model("tests/fixtures/encoder_decoder/wikitables_semantic_parser/experiment.json",
                           "tests/fixtures/data/wikitables/sample_data.examples")
 
+    @flaky
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
+    @flaky
     def test_mixture_feedforward_model_can_train_save_and_load(self):
         # pylint: disable=line-too-long
         self.ensure_model_can_train_save_and_load('tests/fixtures/encoder_decoder/wikitables_semantic_parser_with_mixture_feedforward/experiment.json')
@@ -115,161 +118,46 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         num_entities = max([len(entity_list) for entity_list in entities])
         return worlds, num_entities
 
-    def test_get_unique_elements(self):
-        # pylint: disable=protected-access
-        production_rules = [
-                # We won't bother with constructing the last element of the ProductionRuleArray
-                # here, the Dict[str, torch.Tensor].  It's not necessary for this test.  We'll just
-                # give each element a unique index that we can check in the resulting dictionaries.
-                # arrays.
-                [{"left": ('r', True, 1), "right": ('d', True, 2)},
-                 {"left": ('r', True, 1), "right": ('c', True, 3)},
-                 {"left": ('d', True, 2), "right": ('entity_1', False, 4)}],
-                [{"left": ('r', True, 1), "right": ('d', True, 2)},
-                 {"left": ('d', True, 2), "right": ('entity_2', False, 5)},
-                 {"left": ('d', True, 2), "right": ('entity_1', False, 4)},
-                 {"left": ('d', True, 2), "right": ('entity_3', False, 6)}]
-                ]
-        nonterminals, terminals = WikiTablesSemanticParser._get_unique_elements(production_rules)
-        assert nonterminals == {
-                'r': 1,
-                'd': 2,
-                'c': 3,
-                }
-        assert terminals == {
-                'entity_1': 4,
-                'entity_2': 5,
-                'entity_3': 6,
-                }
-
     def test_embed_actions_works_with_batched_and_padded_input(self):
-        # pylint: disable=protected-access
         params = Params.from_file(self.param_file)
-        params['model']['embed_terminals'] = True
         model = Model.from_params(self.vocab, params['model'])
-        nonterminal_embedding = model._nonterminal_embedder._token_embedders['tokens']
-        terminal_encoder = model._terminal_embedder._token_embedders['token_characters']
-        start_id = model.vocab.get_token_index(START_SYMBOL, 'rule_labels')
-        start_tensor = Variable(torch.LongTensor([start_id]))
+        action_embedding_weights = model._action_embedder.weight
+        rule1 = model.vocab.get_token_from_index(1, 'rule_labels')
+        rule1_tensor = Variable(torch.LongTensor([1]))
         rule2 = model.vocab.get_token_from_index(2, 'rule_labels')
         rule2_tensor = Variable(torch.LongTensor([2]))
         rule3 = model.vocab.get_token_from_index(3, 'rule_labels')
         rule3_tensor = Variable(torch.LongTensor([3]))
-        rule4 = model.vocab.get_token_from_index(4, 'rule_labels')
-        rule4_tensor = Variable(torch.LongTensor([4]))
-        char2 = model.vocab.get_token_from_index(2, 'token_characters')
-        char2_tensor = Variable(torch.LongTensor([2, 2, 2]))
-        char3 = model.vocab.get_token_from_index(3, 'token_characters')
-        char3_tensor = Variable(torch.LongTensor([3, 3, 3]))
-        char4 = model.vocab.get_token_from_index(4, 'token_characters')
-        char4_tensor = Variable(torch.LongTensor([4, 4, 4]))
-        actions = [[{'left': (rule2, True, {'tokens': rule2_tensor}),
-                     'right': (char2 * 3, False, {'token_characters': char2_tensor})},
-                    {'left': (rule3, True, {'tokens': rule3_tensor}),
-                     'right': (char3 * 3, False, {'token_characters': char3_tensor})},
+        actions = [[(rule1, True, rule1_tensor),
+                    (rule2, True, rule2_tensor),
                     # This one is padding; the tensors shouldn't matter here.
-                    {'left': ('', True, {'tokens': rule3_tensor}),
-                     'right': ('', False, {'token_characters': char3_tensor})}],
-                   [{'left': (rule2, True, {'tokens': rule2_tensor}),
-                     'right': (char2 * 3, False, {'token_characters': char2_tensor})},
-                    {'left': (rule4, True, {'tokens': rule4_tensor}),
-                     'right': (char4 * 3, False, {'token_characters': char4_tensor})},
-                    {'left': (START_SYMBOL, True, {'tokens': start_tensor}),
-                     'right': (rule2, True, {'tokens': rule2_tensor})}]]
-        embedded_actions, action_indices, initial_action_embedding = model._embed_actions(actions)
-        assert embedded_actions.size(0) == 4
-        assert action_indices[(0, 0)] == action_indices[(1, 0)]
+                    ('', False, None)],
+                   [(rule3, True, rule3_tensor),
+                    ('instance_action', False, None),
+                    (rule1, True, rule1_tensor)]]
+
+        embedded_actions, action_indices = model._embed_actions(actions)
+        assert action_indices[(0, 0)] == action_indices[(1, 2)]
+        assert action_indices[(1, 1)] == -1
         assert len(set(action_indices.values())) == 4
 
-        # Now we'll go through all four unique actions and make sure the embedding is as we expect.
+        # Now we'll go through all three unique actions and make sure the embedding is as we expect.
         action_embedding = embedded_actions[action_indices[(0, 0)]]
-        left_side_embedding = nonterminal_embedding(rule2_tensor)
-        right_side_embedding = terminal_encoder(char2_tensor.unsqueeze(0).unsqueeze(0)).squeeze(0)
-        expected_action_embedding = torch.cat([left_side_embedding, right_side_embedding],
-                                              dim=-1).squeeze(0)
+        expected_action_embedding = action_embedding_weights[action_indices[(0, 0)]]
         assert_almost_equal(action_embedding.cpu().data.numpy(),
                             expected_action_embedding.cpu().data.numpy())
 
         action_embedding = embedded_actions[action_indices[(0, 1)]]
-        left_side_embedding = nonterminal_embedding(rule3_tensor)
-        right_side_embedding = terminal_encoder(char3_tensor.unsqueeze(0).unsqueeze(0)).squeeze(0)
-        expected_action_embedding = torch.cat([left_side_embedding, right_side_embedding],
-                                              dim=-1).squeeze(0)
+        expected_action_embedding = action_embedding_weights[action_indices[(0, 1)]]
         assert_almost_equal(action_embedding.cpu().data.numpy(),
                             expected_action_embedding.cpu().data.numpy())
 
-        action_embedding = embedded_actions[action_indices[(1, 1)]]
-        left_side_embedding = nonterminal_embedding(rule4_tensor)
-        right_side_embedding = terminal_encoder(char4_tensor.unsqueeze(0).unsqueeze(0)).squeeze(0)
-        expected_action_embedding = torch.cat([left_side_embedding, right_side_embedding],
-                                              dim=-1).squeeze(0)
-        assert_almost_equal(action_embedding.cpu().data.numpy(),
-                            expected_action_embedding.cpu().data.numpy())
-
-        action_embedding = embedded_actions[action_indices[(1, 2)]]
-        left_side_embedding = nonterminal_embedding(start_tensor)
-        right_side_embedding = nonterminal_embedding(rule2_tensor)
-        expected_action_embedding = torch.cat([left_side_embedding, right_side_embedding],
-                                              dim=-1).squeeze(0)
-        assert_almost_equal(action_embedding.cpu().data.numpy(),
-                            expected_action_embedding.cpu().data.numpy())
-
-        # Finally, we'll check that the embedding for the initial action is as we expect.
-        start_embedding = nonterminal_embedding(start_tensor).squeeze(0)
-        zeros = Variable(start_embedding.data.new(start_embedding.size(-1)).fill_(0).float())
-        expected_action_embedding = torch.cat([zeros, start_embedding], dim=-1)
-        assert_almost_equal(initial_action_embedding.cpu().data.numpy(),
-                            expected_action_embedding.cpu().data.numpy())
-
-    def test_embed_actions_does_not_embed_terminals_when_set(self):
-        # pylint: disable=protected-access
-        model = self.model
-        model._embed_terminals = False
-        nonterminal_embedding = model._nonterminal_embedder._token_embedders['tokens']
-        start_id = model.vocab.get_token_index(START_SYMBOL, 'rule_labels')
-        start_tensor = Variable(torch.LongTensor([start_id]))
-        rule2 = model.vocab.get_token_from_index(2, 'rule_labels')
-        rule2_tensor = Variable(torch.LongTensor([2]))
-        rule3 = model.vocab.get_token_from_index(3, 'rule_labels')
-        rule3_tensor = Variable(torch.LongTensor([3]))
-        rule4 = model.vocab.get_token_from_index(4, 'rule_labels')
-        rule4_tensor = Variable(torch.LongTensor([4]))
-        char2 = model.vocab.get_token_from_index(2, 'token_characters')
-        char2_tensor = Variable(torch.LongTensor([2, 2, 2]))
-        char3 = model.vocab.get_token_from_index(3, 'token_characters')
-        char3_tensor = Variable(torch.LongTensor([3, 3, 3]))
-        char4 = model.vocab.get_token_from_index(4, 'token_characters')
-        char4_tensor = Variable(torch.LongTensor([4, 4, 4]))
-        actions = [[{'left': (rule2, True, {'tokens': rule2_tensor}),
-                     'right': (char2 * 3, False, {'token_characters': char2_tensor})},
-                    {'left': (rule3, True, {'tokens': rule3_tensor}),
-                     'right': (char3 * 3, False, {'token_characters': char3_tensor})},
-                    # This one is padding; the tensors shouldn't matter here.
-                    {'left': ('', True, {'tokens': rule3_tensor}),
-                     'right': ('', False, {'token_characters': char3_tensor})}],
-                   [{'left': (rule2, True, {'tokens': rule2_tensor}),
-                     'right': (char2 * 3, False, {'token_characters': char2_tensor})},
-                    {'left': (rule4, True, {'tokens': rule4_tensor}),
-                     'right': (char4 * 3, False, {'token_characters': char4_tensor})},
-                    {'left': (START_SYMBOL, True, {'tokens': start_tensor}),
-                     'right': (rule2, True, {'tokens': rule2_tensor})}]]
-        embedded_actions, action_indices, _ = model._embed_actions(actions)
-        assert embedded_actions.size(0) == 1
-        assert action_indices[(1, 2)] == 0  # non-terminals should have lower indices than terminals
-        assert action_indices[(0, 0)] == action_indices[(1, 0)]
-        assert len(set(action_indices.values())) == 4
-
-        # Now we'll go through all four unique actions and make sure the embedding is as we expect.
-        action_embedding = embedded_actions[action_indices[(1, 2)]]
-        left_side_embedding = nonterminal_embedding(start_tensor)
-        right_side_embedding = nonterminal_embedding(rule2_tensor)
-        expected_action_embedding = torch.cat([left_side_embedding, right_side_embedding],
-                                              dim=-1).squeeze(0)
+        action_embedding = embedded_actions[action_indices[(1, 0)]]
+        expected_action_embedding = action_embedding_weights[action_indices[(1, 0)]]
         assert_almost_equal(action_embedding.cpu().data.numpy(),
                             expected_action_embedding.cpu().data.numpy())
 
     def test_map_entity_productions(self):
-        # pylint: disable=protected-access
         # (batch_size, num_entities, num_question_tokens) = (3, 4, 5)
         linking_scores = Variable(torch.rand(3, 4, 5))
         # Because we only need a small piece of the WikiTablesWorld and TableKnowledgeGraph, we'll
@@ -281,22 +169,23 @@ class WikiTablesSemanticParserTest(ModelTestCase):
                     ['fb:cell.2012', 'fb:cell.2013', 'fb:row.row.year'],
                     ['fb:cell.2010', 'fb:row.row.year']]
         worlds = [FakeWorld(FakeTable(entity_list)) for entity_list in entities]
-        # The left-hand side of each action here will not be read, so we won't bother constructing
+        # The tensors here for the global actions won't actually be read, so we're not constructing
+        # them.
         # it.  Same with the RHS tensors.  NT* here is just saying "some non-terminal".
-        actions = [[{'left': None, 'right': ('NT1', True, None)},
-                    {'left': None, 'right': ('NT2', True, None)},
-                    {'left': None, 'right': ('NT3', True, None)},
-                    {'left': None, 'right': ('fb:cell.2010', True, None)},
-                    {'left': None, 'right': ('fb:cell.2011', True, None)},
-                    {'left': None, 'right': ('fb:row.row.year', True, None)},
-                    {'left': None, 'right': ('fb:row.row.year2', True, None)}],
-                   [{'left': None, 'right': ('NT1', True, None)},
-                    {'left': None, 'right': ('fb:cell.2012', True, None)},
-                    {'left': None, 'right': ('fb:cell.2013', True, None)},
-                    {'left': None, 'right': ('fb:row.row.year', True, None)}],
-                   [{'left': None, 'right': ('NT4', True, None)},
-                    {'left': None, 'right': ('fb:cell.2010', True, None)},
-                    {'left': None, 'right': ('fb:row.row.year', True, None)}]]
+        actions = [[('@START@ -> r', True, None),
+                    ('@START@ -> c', True, None),
+                    ('@START@ -> <c,r>', True, None),
+                    ('c -> fb:cell.2010', False, None),
+                    ('c -> fb:cell.2011', False, None),
+                    ('<c,r> -> fb:row.row.year', False, None),
+                    ('<c,r> -> fb:row.row.year2', False, None)],
+                   [('@START@ -> c', True, None),
+                    ('c -> fb:cell.2012', False, None),
+                    ('c -> fb:cell.2013', False, None),
+                    ('<c,r> -> fb:row.row.year', False, None)],
+                   [('@START@ -> c', True, None),
+                    ('c -> fb:cell.2010', False, None),
+                    ('<c,r> -> fb:row.row.year', False, None)]]
         flattened_linking_scores, actions_to_entities = \
                 WikiTablesSemanticParser._map_entity_productions(linking_scores, worlds, actions)
         assert_almost_equal(flattened_linking_scores.data.cpu().numpy(),

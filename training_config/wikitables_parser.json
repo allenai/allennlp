@@ -20,14 +20,7 @@
         "trainable": true
       }
     },
-    "nonterminal_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "vocab_namespace": "rule_labels",
-        "embedding_dim": 50,
-        "trainable": true
-      }
-    },
+    "action_embedding_dim": 100,
     "encoder": {
       "type": "lstm",
       "input_size": 400,
@@ -39,9 +32,6 @@
       "type": "boe",
       "embedding_dim": 200,
       "averaged": true
-    },
-    "decoder_trainer": {
-      "type": "max_marginal_likelihood"
     },
     "decoder_beam_search": {
       "beam_size": 3
@@ -62,6 +52,7 @@
     "num_epochs": 20,
     "patience": 5,
     "cuda_device": 0,
+    "grad_norm": 5.0,
     "validation_metric": "+parse_acc",
     "optimizer": {
       "type": "sgd",
