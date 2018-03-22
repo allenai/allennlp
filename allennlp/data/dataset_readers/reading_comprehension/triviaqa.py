@@ -72,7 +72,7 @@ class Question(NamedTuple):
 
         # This is hacky, but ``MergedParagraphs`` is immutable, so we can't change its ``.tokens``.
         # However, ``.tokens`` is a list of lists, so we can change the inner lists. Hacky.
-        num_paragraphs = len(self.paragraphs)
+        num_paragraphs = len(self.paragraphs.tokens)
         for i in range(num_paragraphs):
             self.paragraphs.tokens[i] = [truncate_token(token, max_len) for token in self.paragraphs.tokens[i]]
 
