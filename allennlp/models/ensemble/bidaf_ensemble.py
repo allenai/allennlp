@@ -15,7 +15,7 @@ from allennlp.training.metrics import SquadEmAndF1
 class BidafEnsemble(Ensemble):
     """
     This class ensembles the output from multiple BiDAF models.
-    
+
     It combines results from the submodels by taking the option with the most votes and breaking ties with
     the average confidence of the start and stop indices.
     """
