@@ -9,11 +9,11 @@ from allennlp.data.iterators import EpochTrackingBucketIterator
 from allennlp.models import Model
 
 
-class NlvrSemanticParserTest(ModelTestCase):
+class NlvrSemanticParserUngroupedTest(ModelTestCase):
     def setUp(self):
-        super(NlvrSemanticParserTest, self).setUp()
-        self.set_up_model("tests/fixtures/encoder_decoder/nlvr_semantic_parser/experiment.json",
-                          "tests/fixtures/data/nlvr/sample_data.jsonl")
+        super(NlvrSemanticParserUngroupedTest, self).setUp()
+        self.set_up_model("tests/fixtures/encoder_decoder/nlvr_semantic_parser/ungrouped_experiment.json",
+                          "tests/fixtures/data/nlvr/sample_ungrouped_data.jsonl")
 
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
@@ -48,3 +48,13 @@ class NlvrSemanticParserTest(ModelTestCase):
         # The config file has ``wait_num_epochs`` set to 0, so the model starts decreasing the const
         # weight at epoch 0 itself.
         assert_almost_equal(cost_weights, [0.72, 0.648, 0.5832, 0.52488])
+
+
+class NlvrSemanticParserGroupedTest(ModelTestCase):
+    def setUp(self):
+        super(NlvrSemanticParserGroupedTest, self).setUp()
+        self.set_up_model("tests/fixtures/encoder_decoder/nlvr_semantic_parser/grouped_experiment.json",
+                          "tests/fixtures/data/nlvr/sample_grouped_data.jsonl")
+
+    def test_model_can_train_save_and_load(self):
+        self.ensure_model_can_train_save_and_load(self.param_file)
