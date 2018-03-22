@@ -21,7 +21,7 @@
         "num_layers": 1
       },
       "feedforward": {
-        "input_dim": 4,
+        "input_dim": 8,
         "num_layers": 1,
         "hidden_dims": 4,
         "activations": "relu"

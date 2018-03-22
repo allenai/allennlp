@@ -103,10 +103,14 @@ class SpanConstituencyParser(Model):
                                encoder.get_input_dim(),
                                "representation dim (tokens + optional POS tags)",
                                "encoder input dim")
+        check_dimensions_match(encoder.get_output_dim(),
+                               span_extractor.get_input_dim(),
+                               "encoder input dim",
+                               "span extractor input dim")
         if feedforward_layer is not None:
-            check_dimensions_match(encoder.get_output_dim(),
+            check_dimensions_match(span_extractor.get_output_dim(),
                                    feedforward_layer.get_input_dim(),
-                                   "stacked encoder output dim",
+                                   "span extractor output dim",
                                    "feedforward input dim")
 
         self.tag_accuracy = CategoricalAccuracy()

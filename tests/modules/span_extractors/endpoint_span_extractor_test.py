@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,protected-access
 import numpy
 import torch
 from torch.autograd import Variable
@@ -17,11 +17,11 @@ class TestEndpointSpanExtractor:
                 })
         extractor = SpanExtractor.from_params(params)
         assert isinstance(extractor, EndpointSpanExtractor)
-        assert extractor.get_output_dim() == 10
+        assert extractor.get_output_dim() == 17  # 2 * input_dim + span_width_embedding_dim
 
     def test_correct_sequence_elements_are_embedded(self):
         sequence_tensor = Variable(torch.randn([2, 5, 7]))
-        # concatentate start and end points together to form our representation.
+        # Concatentate start and end points together to form our representation.
         extractor = EndpointSpanExtractor(7, "x,y")
 
         indices = Variable(torch.LongTensor([[[1, 3],
@@ -73,3 +73,46 @@ class TestEndpointSpanExtractor:
                                          correct_start_embeddings.numpy())
         numpy.testing.assert_array_equal(end_embeddings.data.numpy(),
                                          correct_end_embeddings.numpy())
+
+
+    def test_masked_indices_are_handled_correctly_with_exclusive_indices(self):
+        sequence_tensor = Variable(torch.randn([2, 5, 8]))
+        # concatentate start and end points together to form our representation
+        # for both the forward and backward directions.
+        extractor = EndpointSpanExtractor(8, "x,y", use_exclusive_start_indices=True)
+        indices = Variable(torch.LongTensor([[[1, 3],
+                                              [2, 4]],
+                                             [[0, 2],
+                                              [0, 1]]]))
+        sequence_mask = Variable(torch.LongTensor([[1, 1, 1, 1, 1],
+                                                   [1, 1, 1, 0, 0]]))
+
+        span_representations = extractor(sequence_tensor, indices, sequence_mask=sequence_mask)
+
+        # We just concatenated the start and end embeddings together, so
+        # we can check they match the original indices if we split them apart.
+        start_embeddings, end_embeddings = span_representations.split(8, -1)
+
+
+        correct_start_indices = Variable(torch.LongTensor([[0, 1],
+                                                           [-1, -1]]))
+        # These indices should be -1, so they'll be replaced with a sentinel. Here,
+        # we'll set them to a value other than -1 so we can index select the indices and
+        # replace them later.
+        correct_start_indices[1, 0] = 1
+        correct_start_indices[1, 1] = 1
+
+        correct_end_indices = Variable(torch.LongTensor([[3, 4], [2, 1]]))
+
+        correct_start_embeddings = batched_index_select(sequence_tensor.contiguous(),
+                                                        correct_start_indices)
+        # This element had sequence_tensor index of 0, so it's exclusive index is the start sentinel.
+        correct_start_embeddings[1, 0] = extractor._start_sentinel.data
+        correct_start_embeddings[1, 1] = extractor._start_sentinel.data
+        numpy.testing.assert_array_equal(start_embeddings.data.numpy(),
+                                         correct_start_embeddings.data.numpy())
+
+        correct_end_embeddings = batched_index_select(sequence_tensor.contiguous(),
+                                                      correct_end_indices)
+        numpy.testing.assert_array_equal(end_embeddings.data.numpy(),
+                                         correct_end_embeddings.data.numpy())
