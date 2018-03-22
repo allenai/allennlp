@@ -13,7 +13,7 @@ In this tutorial we'll also implement a custom PyTorch
 [`Module`](http://pytorch.org/docs/master/nn.html#torch.nn.Module),
 but you won't need to do that in general.
 
-Our [simple tagger](simple-tagger) model
+Our [simple tagger](training_and_evaluating.md) model
 uses an LSTM to capture dependencies between
 the words in the input sentence, but doesn't have a great way
 to capture dependencies between the _tags_. This can be a problem
@@ -185,10 +185,10 @@ We don't *need* to, but we also make a few other changes
 
 At this point we're ready to train the model.
 In this case our new classes are part of the `allennlp` library,
-which means we can just use `python -m allennlp.run train`:
+which means we can just use `allennlp train`:
 
 ```bash
-$ python -m allennlp.run train \
+$ allennlp train \
     tutorials/getting_started/crf_tagger.json \
     -s /tmp/crf_model
 ```
@@ -207,7 +207,7 @@ and your dataset reader is in the module `myallennlp.dataset_reader`.
 
 Then you would just
 ```bash
-$ python -m allennlp.run train \
+$ allennlp train \
     /path/to/your/model/configuration \
     -s /path/to/serialization/dir \
     --include-package myallennlp

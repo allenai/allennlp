@@ -55,8 +55,8 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         file_path = cached_path(file_path)
         directory, filename = os.path.split(file_path)
         logger.info("Reading instances from lines in file at: %s", file_path)
-
         for parse in BracketParseCorpusReader(root=directory, fileids=[filename]).parsed_sents():
+
             self._strip_functional_tags(parse)
             # This is un-needed and clutters the label space.
             # All the trees also contain a root S node.
@@ -114,10 +114,9 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         gold_labels = []
 
         if gold_tree is not None:
-            gold_spans_with_pos_tags: Dict[Tuple[int, int], str] = {}
-            self._get_gold_spans(gold_tree, 0, gold_spans_with_pos_tags)
-            gold_spans = {span: label for (span, label)
-                          in gold_spans_with_pos_tags.items() if "-POS" not in label}
+            gold_spans: Dict[Tuple[int, int], str] = {}
+            self._get_gold_spans(gold_tree, 0, gold_spans)
+
         else:
             gold_spans = None
         for start, end in enumerate_spans(tokens):
@@ -187,20 +186,16 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         -------
         typed_spans : ``Dict[Tuple[int, int], str]``.
             A dictionary mapping all subtree spans in the parse tree
-            to their constituency labels. Leaf nodes have POS tag spans, which
-            are denoted by a label of "LABEL-POS".
+            to their constituency labels. POS tags are ignored.
         """
         # NLTK leaves are strings.
         if isinstance(tree[0], str):
             # The "length" of a tree is defined by
             # NLTK as the number of children.
             # We don't actually want the spans for leaves, because
-            # their labels are POS tags. However, it makes the
-            # indexing more straightforward, so we'll collect them
-            # and filter them out below. We subtract 1 from the end
-            # index so the spans are inclusive.
+            # their labels are POS tags. Instead, we just add the length
+            # of the word to the end index as we iterate through.
             end = index + len(tree)
-            typed_spans[(index, end - 1)] = tree.label() + "-POS"
         else:
             # otherwise, the tree has children.
             child_start = index

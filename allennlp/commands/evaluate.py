@@ -5,13 +5,13 @@ and report any metrics calculated by the model.
 
 .. code-block:: bash
 
-    $ python -m allennlp.run evaluate --help
-    usage: python -m allennlp.run [command] evaluate [-h] --evaluation-data-file
-                                                    EVALUATION_DATA_FILE
-                                                    [--cuda-device CUDA_DEVICE]
-                                                    [-o OVERRIDES]
-                                                    [--include-package INCLUDE_PACKAGE]
-                                                    archive_file
+    $ allennlp evaluate --help
+    usage: allennlp [command] evaluate [-h] --evaluation-data-file
+                                            EVALUATION_DATA_FILE
+                                            [--cuda-device CUDA_DEVICE]
+                                            [-o OVERRIDES]
+                                            [--include-package INCLUDE_PACKAGE]
+                                            archive_file
 
     Evaluate the specified model + dataset
 

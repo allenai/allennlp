@@ -103,7 +103,7 @@ class TestMain(AllenNlpTestCase):
         serialization_dir = os.path.join(self.TEST_DIR, 'serialization')
 
         # Run train with using the non-allennlp module.
-        sys.argv = ["python -m allennlp.run",
+        sys.argv = ["bin/allennlp",
                     "train", config_path,
                     "-s", serialization_dir]
 

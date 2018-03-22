@@ -133,15 +133,24 @@ class ModelTestCase(AllenNlpTestCase):
         model.zero_grad()
         result = model(**model_batch)
         result["loss"].backward()
-
-        for parameter in model.parameters():
+        has_zero_or_none_grads = {}
+        for name, parameter in model.named_parameters():
             zeros = torch.zeros(parameter.size())
             if parameter.requires_grad:
+
+                if parameter.grad is None:
+                    has_zero_or_none_grads[name] = "No gradient computed (i.e parameter.grad is None)"
                 # Some parameters will only be partially updated,
                 # like embeddings, so we just check that any gradient is non-zero.
-                assert (parameter.grad.data.cpu() != zeros).any()
+                if (parameter.grad.data.cpu() == zeros).all():
+                    has_zero_or_none_grads[name] = f"zeros with shape ({tuple(parameter.grad.size())})"
             else:
                 assert parameter.grad is None
+
+        if has_zero_or_none_grads:
+            for name, grad in has_zero_or_none_grads.items():
+                print(f"Parameter: {name} had incorrect gradient: {grad}")
+            raise Exception("Incorrect gradients found. See stdout for more info.")
 
     def ensure_batch_predictions_are_consistent(self):
         self.model.eval()

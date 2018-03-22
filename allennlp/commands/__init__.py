@@ -18,22 +18,13 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def main(prog: str = None,
-         model_overrides: Dict[str, DemoModel] = {},
-         predictor_overrides: Dict[str, str] = {},
          subcommand_overrides: Dict[str, Subcommand] = {}) -> None:
     """
     The :mod:`~allennlp.run` command only knows about the registered classes in the ``allennlp``
     codebase. In particular, once you start creating your own ``Model`` s and so forth, it won't
-    work for them, unless you use the ``--include-package`` flag available for most commands.
+    work for them, unless you use the ``--include-package`` flag.
     """
     # pylint: disable=dangerous-default-value
-
-    # TODO(mattg): document and/or remove the `predictor_overrides` and `model_overrides` commands.
-    # The `--predictor` option for the `predict` command largely removes the need for
-    # `predictor_overrides`, and I think the simple server largely removes the need for
-    # `model_overrides`, and maybe the whole `serve` command as a public API (we only need that
-    # path for demo.allennlp.org, and it's not likely anyone else would host that particular demo).
-
     parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s', prog=prog)
 
     subparsers = parser.add_subparsers(title='Commands', metavar='')
@@ -42,8 +33,8 @@ def main(prog: str = None,
             # Default commands
             "train": Train(),
             "evaluate": Evaluate(),
-            "predict": Predict(predictor_overrides),
-            "serve": Serve(model_overrides),
+            "predict": Predict(),
+            "serve": Serve(),
             "make-vocab": MakeVocab(),
             "elmo": Elmo(),
             "fine-tune": FineTune(),
