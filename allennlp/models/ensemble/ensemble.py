@@ -10,6 +10,11 @@ class Ensemble(Model):
     """
     An ensemble runs multiple instances of a model and selects an answer from the subresults via some
     ensembling strategy.
+
+    Ensembles differ from most models in that they do not have a vocabulary or weights of their own
+    (instead they rely on the vocabulary and weights from submodels) and they are not directly
+    trainable.  Instead, the submodels are trained independently and the ensemble is created
+    from the result.
     """
 
     def __init__(self,
@@ -31,7 +36,7 @@ class Ensemble(Model):
               weights_file: str = None,
               cuda_device: int = -1) -> 'Model':
         """
-        Ensembles don't have vocabularies or weights, so they override _load.
+        Ensembles don't have vocabularies or weights of their own, so they override _load.
         """
         model_params = config.get('model')
 

@@ -102,13 +102,7 @@ class BidafEnsemble(Ensemble):
 
                 answer_texts = metadata[index].get('answer_texts', [])
                 if answer_texts:
-                    passage_str = metadata[index]['original_passage']
-                    offsets = metadata[index]['token_offsets'] # character offsets of tokens
-                    start_offset = offsets[best_span[0]][0]
-                    end_offset = offsets[best_span[1]][1]
-                    best_span_string = passage_str[start_offset:end_offset]
-                    assert best_span_string == best_span_str, f"{best_span_string} != {best_span_str}"
-                    self._squad_metrics(best_span_string, answer_texts)
+                    self._squad_metrics(best_span_str, answer_texts)
 
         return output
 
@@ -132,7 +126,8 @@ class BidafEnsemble(Ensemble):
 
 def ensemble(index, subresults: List[Dict[str, torch.Tensor]]) -> int:
     """
-    Return the index of the best subresults.
+    Identifies the best prediction given the results from the submodels.
+
     Parameters
     ----------
     index : the index within this index to ensemble
