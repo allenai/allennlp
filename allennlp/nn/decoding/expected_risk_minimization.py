@@ -41,22 +41,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
                decode_step: DecoderStep,
                supervision: Callable[[StateType], torch.Tensor]) -> Dict[str, torch.Tensor]:
         cost_function = supervision
-        finished_states = []
-        states = [initial_state]
-        num_steps = 0
-        while states and num_steps < self.max_decoding_steps:
-            next_states = []
-            grouped_state = states[0].combine_states(states)
-            # These states already come sorted.
-            for next_state in decode_step.take_step(grouped_state):
-                if next_state.is_finished():
-                    finished_states.append(next_state)
-                else:
-                    next_states.append(next_state)
-
-            states = self._prune_beam(next_states)
-            num_steps += 1
-
+        finished_states = self._get_finished_states(initial_state, decode_step)
         loss = nn_util.new_variable_with_data(initial_state.score[0], torch.Tensor([0.0]))
         finished_model_scores = self._get_model_scores_by_batch(finished_states)
         finished_costs = self._get_costs_by_batch(finished_states, cost_function)
@@ -74,7 +59,27 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
         return {'loss': mean_loss,
                 'best_action_sequence': self._get_best_action_sequences(finished_states)}
 
-    def _get_model_scores_by_batch(self, states: List[DecoderState]) -> Dict[int, List[Variable]]:
+    def _get_finished_states(self,
+                             initial_state: DecoderState,
+                             decode_step: DecoderStep) -> List[StateType]:
+        finished_states = []
+        states = [initial_state]
+        num_steps = 0
+        while states and num_steps < self.max_decoding_steps:
+            next_states = []
+            grouped_state = states[0].combine_states(states)
+            # These states already come sorted.
+            for next_state in decode_step.take_step(grouped_state):
+                if next_state.is_finished():
+                    finished_states.append(next_state)
+                else:
+                    next_states.append(next_state)
+
+            states = self._prune_beam(next_states)
+            num_steps += 1
+        return finished_states
+
+    def _get_model_scores_by_batch(self, states: List[StateType]) -> Dict[int, List[Variable]]:
         batch_scores: Dict[int, List[Variable]] = defaultdict(list)
         for state in states:
             for batch_index, model_score, history in zip(state.batch_indices,
@@ -99,7 +104,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
             batch_costs[batch_index].append(cost)
         return batch_costs
 
-    def _get_best_action_sequences(self, finished_states: List[DecoderState]) -> Dict[int, List[int]]:
+    def _get_best_action_sequences(self, finished_states: List[StateType]) -> Dict[int, List[int]]:
         """
         Returns the best action sequences for each item based on model scores.
         """
