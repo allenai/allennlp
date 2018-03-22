@@ -2,6 +2,7 @@ from typing import Dict, List
 
 import torch
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.models.model import Model
 from allennlp.models.model import remove_pretrained_embedding_params
@@ -21,7 +22,8 @@ class Ensemble(Model):
                  submodels: List[Model]) -> None:
         vocab = submodels[0].vocab
         for submodel in submodels:
-            assert submodel.vocab == vocab, "Vocabularies in ensemble differ"
+            if submodel.vocab != vocab:
+                raise ConfigurationError("Vocabularies in ensemble differ")
 
         super(Ensemble, self).__init__(vocab, None)
 
