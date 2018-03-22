@@ -3,6 +3,7 @@ from typing import Dict, List, Any, Tuple
 from overrides import overrides
 import torch
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.models.ensemble.ensemble import Ensemble
 from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
@@ -23,10 +24,6 @@ class BidafEnsemble(Ensemble):
     def __init__(self,
                  submodels: List[BidirectionalAttentionFlow]) -> None:
         super(BidafEnsemble, self).__init__(submodels)
-
-        # Using ModuleList propagates calls to .eval() so dropout is disabled on the submodels in evaluation
-        # and prediction.
-        self.submodels = torch.nn.ModuleList(submodels)
 
         self._squad_metrics = SquadEmAndF1()
 
@@ -80,24 +77,21 @@ class BidafEnsemble(Ensemble):
             question.
         """
 
-        subresults = []
-        for submodel in self.submodels:
-            subresults.append(submodel(question, passage, span_start, span_end, metadata))
+        subresults = [submodel(question, passage, span_start, span_end, metadata) for submodel in self.submodels]
 
         batch_size = len(subresults[0]["best_span"])
 
         output = {
-                "best_span": torch.zeros(batch_size, 2).long()
+                "best_span": torch.zeros(batch_size, 2).long(),
+                "best_span_str": []
         }
         for index in range(batch_size):
-            best = ensemble(index, subresults)
-            best_span = subresults[best]["best_span"].data[index].long()
+            best_index = ensemble(index, subresults)
+            best_span = subresults[best_index]["best_span"].data[index].long()
             output["best_span"][index] = best_span
 
             if metadata is not None:
-                if "best_span_str" not in output:
-                    output["best_span_str"] = []
-                best_span_str = subresults[best]["best_span_str"][index]
+                best_span_str = subresults[best_index]["best_span_str"][index]
                 output["best_span_str"].append(best_span_str)
 
                 answer_texts = metadata[index].get('answer_texts', [])
@@ -115,7 +109,8 @@ class BidafEnsemble(Ensemble):
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params):
-        assert not vocab, "vocab should be None"
+        if vocab:
+            raise ConfigurationError("vocab should be None")
 
         submodels = []
         paths = params.pop("submodels")
@@ -124,13 +119,15 @@ class BidafEnsemble(Ensemble):
 
         return cls(submodels=submodels)
 
-def ensemble(index, subresults: List[Dict[str, torch.Tensor]]) -> int:
+def ensemble(index: int, subresults: List[Dict[str, torch.Tensor]]) -> int:
     """
     Identifies the best prediction given the results from the submodels.
 
     Parameters
     ----------
-    index : the index within this index to ensemble
+    index : int
+        The index within this index to ensemble
+
     subresults : List[Dict[str, torch.Tensor]]
 
     Returns

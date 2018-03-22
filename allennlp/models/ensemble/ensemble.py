@@ -24,7 +24,10 @@ class Ensemble(Model):
             assert submodel.vocab == vocab, "Vocabularies in ensemble differ"
 
         super(Ensemble, self).__init__(vocab, None)
-        self.submodels = submodels
+
+        # Using ModuleList propagates calls to .eval() so dropout is disabled on the submodels in evaluation
+        # and prediction.
+        self.submodels = torch.nn.ModuleList(submodels)
 
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
         raise NotImplementedError
