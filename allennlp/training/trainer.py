@@ -460,7 +460,7 @@ class Trainer:
                 self._optimizer.step()
 
             # Update the description with the latest metrics
-            metrics = self._get_metrics(train_loss, self._batch_num_total)
+            metrics = self._get_metrics(train_loss, batches_this_epoch)
             description = self._description_from_metrics(metrics)
 
             train_generator_tqdm.set_description(description, refresh=False)
