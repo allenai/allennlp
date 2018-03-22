@@ -38,8 +38,8 @@
         }
       }
     },
-    "train_data_path": "web-train-5k.jsonl",
-    "validation_data_path": "web-dev-5k.jsonl",
+    "train_data_path": "web-train.jsonl",
+    "validation_data_path": "web-dev.jsonl",
     "model": {
       "type": "document-qa",
       "text_field_embedder": {
@@ -93,8 +93,11 @@
       }
     },
     "iterator": {
-      "type": "basic",
-      "batch_size": 20
+      "type": "bucket",
+      "batch_size": 20,
+      "max_instances_in_memory": 1000000,
+      "biggest_batch_first": true,
+      "sorting_keys": [["paragraphs", "list_num_tokens"], ["question", "num_tokens"]]
     },
     "trainer": {
       "num_epochs": 100,
