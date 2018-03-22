@@ -18,7 +18,7 @@ from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEnc
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
-from allennlp.nn.decoding import BeamSearch, MaximumMarginalLikelihood
+from allennlp.nn.decoding import BeamSearch, MaximumMarginalLikelihood, RnnState
 from allennlp.semparse.type_declarations import GrammarState
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import WikiTablesWorld
@@ -272,24 +272,23 @@ class WikiTablesSemanticParser(Model):
         # of `batch_size` tensors, each of shape `(question_length, encoder_output_dim)`.  Then we
         # won't have to do any index selects, or anything, we'll just do some `torch.cat()`s.
         initial_score_list = [initial_score[i] for i in range(batch_size)]
-        initial_hidden_state = [final_encoder_output[i] for i in range(batch_size)]
-        initial_memory_cell = [memory_cell[i] for i in range(batch_size)]
-        initial_attended_question = [attended_question[i] for i in range(batch_size)]
         encoder_output_list = [encoder_outputs[i] for i in range(batch_size)]
         question_mask_list = [question_mask[i] for i in range(batch_size)]
+        initial_rnn_state = []
+        for i in range(batch_size):
+            initial_rnn_state.append(RnnState(final_encoder_output[i],
+                                              memory_cell[i],
+                                              initial_action_embedding,
+                                              attended_question[i],
+                                              encoder_output_list,
+                                              question_mask_list))
         initial_grammar_state = [self._create_grammar_state(world[i], actions[i])
                                  for i in range(batch_size)]
-        initial_action_embedding_list = [initial_action_embedding for _ in range(batch_size)]
         initial_state = WikiTablesDecoderState(batch_indices=list(range(batch_size)),
                                                action_history=[[] for _ in range(batch_size)],
                                                score=initial_score_list,
-                                               hidden_state=initial_hidden_state,
-                                               memory_cell=initial_memory_cell,
-                                               previous_action_embedding=initial_action_embedding_list,
-                                               attended_question=initial_attended_question,
+                                               rnn_state=initial_rnn_state,
                                                grammar_state=initial_grammar_state,
-                                               encoder_outputs=encoder_output_list,
-                                               encoder_output_mask=question_mask_list,
                                                action_embeddings=action_embeddings,
                                                action_indices=action_indices,
                                                possible_actions=actions,
