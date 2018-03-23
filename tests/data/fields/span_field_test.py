@@ -35,3 +35,7 @@ class TestSpanField(AllenNlpTestCase):
         empty_span = span_field.empty_field()
         assert empty_span.span_start == -1
         assert empty_span.span_end == -1
+
+    def test_printing_doesnt_crash(self):
+        span_field = SpanField(2, 3, self.text)
+        print(span_field)

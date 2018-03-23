@@ -53,3 +53,7 @@ class TestArrayField(AllenNlpTestCase):
                                       [[-1., -1., -1., -1., -1.],
                                        [-1., -1., -1., -1., -1.]]])
         numpy.testing.assert_array_equal(returned_tensor, correct_tensor)
+
+    def test_printing_doesnt_crash(self):
+        array = ArrayField(numpy.ones([2, 3]), padding_value=-1)
+        print(array)

@@ -50,5 +50,4 @@ class MetadataField(Field[DataArray]):
 
 
     def __str__(self) -> str:
-        # If you print a Metadata Field, we'll just assume it has a string representation.
-        return f"MetadataField with metadata: {self.metadata}" # type: ignore
+        return f"MetadataField (print field.metadata to see specific information.)"
