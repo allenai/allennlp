@@ -1,24 +1,31 @@
 #! /usr/bin/env python
-
 import json
 import argparse
-from typing import Tuple
+from typing import Tuple, List
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
+# pylint: disable=wrong-import-position,invalid-name
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir)))))
+
 from allennlp.common.util import JsonDict
-from allennlp.data.semparse.worlds import NlvrWorld
-from allennlp.data.semparse import ActionSpaceWalker
+from allennlp.semparse.worlds import NlvrWorld
+from allennlp.semparse import ActionSpaceWalker
 
 
-def read_json_line(line: str) -> Tuple[str, str, NlvrWorld, bool]:
+def read_json_line(line: str) -> Tuple[str, str, List[NlvrWorld], List[bool]]:
     data = json.loads(line)
     instance_id = data["identifier"]
     sentence = data["sentence"]
-    world = NlvrWorld(data["structured_rep"])
-    label = data["label"].lower() == "true"
-    return instance_id, sentence, world, label
+    if "worlds" in data:
+        worlds = [NlvrWorld(json_dict) for json_dict in data["worlds"]]
+        labels = [label_str.lower() == "true" for label_str in data["labels"]]
+    else:
+        # We're reading ungrouped data.
+        worlds = [NlvrWorld(data["structured_rep"])]
+        labels = [data["label"].lower() == "true"]
+    return instance_id, sentence, worlds, labels
 
 
 def process_data(input_file: str,
@@ -36,15 +43,16 @@ def process_data(input_file: str,
     # same for all the ``NlvrWorlds``. It is just the execution that differs.
     walker = ActionSpaceWalker(NlvrWorld({}), max_path_length=max_path_length)
     for line in open(input_file):
-        instance_id, sentence, world, label = read_json_line(line)
+        instance_id, sentence, worlds, labels = read_json_line(line)
         correct_logical_forms = []
         incorrect_logical_forms = []
-        sentence_agenda = world.get_agenda_for_sentence(sentence, add_paths_to_agenda=False)
+        # TODO (pradeep): Assuming all worlds give the same agenda.
+        sentence_agenda = worlds[0].get_agenda_for_sentence(sentence, add_paths_to_agenda=False)
         if sentence_agenda:
             logical_forms = walker.get_logical_forms_with_agenda(sentence_agenda,
                                                                  max_num_logical_forms * 10)
             for logical_form in logical_forms:
-                if world.execute(logical_form) == label:
+                if all([world.execute(logical_form) == label for world, label in zip(worlds, labels)]):
                     if len(correct_logical_forms) <= max_num_logical_forms:
                         correct_logical_forms.append(logical_form)
                 else:
@@ -55,7 +63,6 @@ def process_data(input_file: str,
                     break
         processed_data.append({"id": instance_id,
                                "sentence": sentence,
-                               "label": str(label),
                                "correct": correct_logical_forms,
                                "incorrect": incorrect_logical_forms})
     outfile = open(output_file, "w")
