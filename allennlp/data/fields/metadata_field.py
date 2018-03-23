@@ -50,4 +50,4 @@ class MetadataField(Field[DataArray]):
 
 
     def __str__(self) -> str:
-        return f"MetadataField (print field.metadata to see specific information.)"
+        return f"MetadataField (print field.metadata to see specific information)."

@@ -61,4 +61,4 @@ class SpanField(Field[torch.Tensor]):
         return SpanField(-1, -1, self.sequence_field.empty_field())
 
     def __str__(self) -> str:
-        return f"SpanField with spans: ({self.span_start}, {self.span_end})"
+        return f"SpanField with spans: ({self.span_start}, {self.span_end})."
