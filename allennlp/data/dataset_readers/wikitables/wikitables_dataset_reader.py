@@ -18,10 +18,10 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
-from allennlp.semparse import ParsingError
 from allennlp.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
 from allennlp.semparse.type_declarations import wikitables_type_declaration as wt_types
 from allennlp.semparse.worlds import WikiTablesWorld
+from allennlp.semparse.worlds.world import ParsingError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
