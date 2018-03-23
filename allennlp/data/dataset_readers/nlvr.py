@@ -26,9 +26,12 @@ class NlvrDatasetReader(DatasetReader):
     instances from text, this class contains a method for creating an agenda of actions that each
     sentence triggers.
 
-    We process the json version of the dataset (http://lic.nlp.cornell.edu/nlvr/) here, to read in
-    the structured representations of the synthetic images instead of dealing with the actual images
-    themselves. The format of each line in the jsonl file is
+    We process here, either the original json version of the NLVR dataset
+    (http://lic.nlp.cornell.edu/nlvr/) or the processed version (using
+    ``scripts/nlvr/group_nlvr_worlds.py``) where we group all the worlds that a sentence appears in.
+    Note that we deal with the structured representations of the synthetic images instead of the
+    actual images themselves.
+    The format of each line in the original jsonl file is
     ```
     "sentence": <sentence>,
     "label": <true/false>,
@@ -38,6 +41,13 @@ class NlvrDatasetReader(DatasetReader):
     representation dicts, containing fields "x_loc", "y_loc", "color", "type", "size">
     ```
     We use the fields ``sentence``, ``label`` and ``structured_rep``.
+    And the format of the processed files is
+    ```
+    "sentence": <sentence>,
+    "labels": <list of labels corresponding to worlds the sentence appears in>
+    "identifier": <id that is only the prefix from the original data>
+    "worlds": <list of structured representations>
+    ```
 
     Parameters
     ----------
@@ -87,53 +97,67 @@ class NlvrDatasetReader(DatasetReader):
                     continue
                 data = json.loads(line)
                 sentence = data["sentence"]
-                label = data["label"]
-                structured_representation = data["structured_rep"]
-                yield self.text_to_instance(sentence, structured_representation, label)
+                if "worlds" in data:
+                    # This means that we are reading grouped nlvr data. There will be multiple
+                    # worlds and corresponding labels per sentence.
+                    labels = data["labels"]
+                    structured_representations = data["worlds"]
+                else:
+                    # We will make lists of labels and structured representations, each with just
+                    # one element for consistency.
+                    labels = [data["label"]]
+                    structured_representations = [data["structured_rep"]]
+                yield self.text_to_instance(sentence, structured_representations, labels)
 
     @overrides
     def text_to_instance(self,  # type: ignore
                          sentence: str,
-                         structured_representation: List[List[JsonDict]],
-                         label: str = None) -> Instance:
+                         structured_representations: List[List[List[JsonDict]]],
+                         labels: List[str] = None) -> Instance:
         """
         Parameters
         ----------
         sentence : ``str``
             The query sentence.
-        structured_representation : ``List[List[JsonDict]]``
-            A Json representation of the context. See expected format in this class' docstring.
-        label : ``str`` (optional)
-            String representation of the label (true or false). Not required while testing.
+        structured_representations : ``List[List[List[JsonDict]]]``
+            A list of Json representations of all the worlds. See expected format in this class' docstring.
+        labels : ``List[str]`` (optional)
+            List of string representations of the labels (true or false) corresponding to the
+            ``structured_representations``. Not required while testing.
         """
         # pylint: disable=arguments-differ
-        world = NlvrWorld(structured_representation)
+        worlds = [NlvrWorld(data) for data in structured_representations]
         tokenized_sentence = self._tokenizer.tokenize(sentence)
         sentence_field = TextField(tokenized_sentence, self._sentence_token_indexers)
-        agenda = world.get_agenda_for_sentence(sentence, self._add_paths_to_agenda)
+        # TODO(pradeep): Assuming every world gives the same agenda for a sentence. This is true
+        # now, but may change later.
+        agenda = worlds[0].get_agenda_for_sentence(sentence, self._add_paths_to_agenda)
         assert agenda, "No agenda found for sentence: %s" % sentence
         production_rule_fields: List[Field] = []
         instance_action_ids: Dict[str, int] = {}
-        for production_rule in world.all_possible_actions():
+        # TODO(pradeep): Assuming that possible actions are the same in all worlds. This may change
+        # later too.
+        for production_rule in worlds[0].all_possible_actions():
             instance_action_ids[production_rule] = len(instance_action_ids)
             field = ProductionRuleField(production_rule,
                                         terminal_indexers=self._terminal_indexers,
                                         nonterminal_indexers=self._nonterminal_indexers,
-                                        is_nonterminal=lambda x: x not in world.terminal_productions,
+                                        is_nonterminal=lambda x: x not in worlds[0].terminal_productions,
                                         context=tokenized_sentence)
             production_rule_fields.append(field)
         action_field = ListField(production_rule_fields)
         # agenda_field contains indices into actions.
         agenda_field = ListField([IndexField(instance_action_ids[action], action_field)
                                   for action in agenda])
-        world_field = MetadataField(world)
+        worlds_field = ListField([MetadataField(world) for world in worlds])
         fields = {"sentence": sentence_field,
                   "agenda": agenda_field,
-                  "world": world_field,
+                  "worlds": worlds_field,
                   "actions": action_field}
-        if label:
-            label_field = LabelField(label, label_namespace='denotations')
-            fields["label"] = label_field
+        if labels:
+            labels_field = ListField([LabelField(label, label_namespace='denotations')
+                                      for label in labels])
+            fields["labels"] = labels_field
         return Instance(fields)
 
     @classmethod
