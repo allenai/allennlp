@@ -23,7 +23,7 @@ class BidafEnsemble(Ensemble):
 
     def __init__(self,
                  submodels: List[BidirectionalAttentionFlow]) -> None:
-        super(BidafEnsemble, self).__init__(submodels)
+        super().__init__(submodels)
 
         self._squad_metrics = SquadEmAndF1()
 

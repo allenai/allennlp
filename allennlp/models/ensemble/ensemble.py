@@ -18,8 +18,7 @@ class Ensemble(Model):
     from the result.
     """
 
-    def __init__(self,
-                 submodels: List[Model]) -> None:
+    def __init__(self, submodels: List[Model]) -> None:
         vocab = submodels[0].vocab
         for submodel in submodels:
             if submodel.vocab != vocab:
