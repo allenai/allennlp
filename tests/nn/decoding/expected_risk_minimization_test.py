@@ -15,6 +15,7 @@ from collections import defaultdict
 from overrides import overrides
 import torch
 from torch.autograd import Variable
+import numpy as np
 from numpy.testing import assert_almost_equal
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -84,9 +85,7 @@ class TestExpectedRiskMinimization(AllenNlpTestCase):
 
     def test_get_finished_states(self):
         finished_states = self.trainer._get_finished_states(self.initial_state, self.decoder_step)
-        state_info = []
-        for state in finished_states:
-            state_info.append((state.action_history[0], int(state.score[0].data)))
+        state_info = [(state.action_history[0], int(state.score[0].data)) for state in finished_states]
         # There will be exactly five finished states with the following paths. Each score is the
         # negative of one less than the number of elements in the action history.
         assert len(finished_states) == 5
@@ -100,4 +99,15 @@ class TestExpectedRiskMinimization(AllenNlpTestCase):
         decoded_info = self.trainer.decode(self.initial_state, self.decoder_step, self.supervision)
         # The best state corresponds to the shortest path.
         assert decoded_info['best_action_sequence'][0] == [0, 2, 4]
-        assert_almost_equal(decoded_info['loss'].data.numpy(), 0.7781, decimal=4)
+        # The scores and costs corresponding to the finished states will be
+        # [0, 2, 4] : -2, 0
+        # [0, 1, 2, 4] : -3, 1
+        # [0, 1, 3, 4] : -3, 2
+        # [0, 2, 3, 4] : -3, 1
+        # [0, 1, 2, 3, 4] : -4, 2
+
+        # This is the normalization factor while re-normalizing probabilities on the beam
+        partition = np.exp(-2) + np.exp(-3) + np.exp(-3) + np.exp(-3) + np.exp(-4)
+        expected_loss = ((np.exp(-2) * 0) + (np.exp(-3) * 1) + (np.exp(-3) * 2) +
+                         (np.exp(-3) *1) + (np.exp(-4) * 2)) / partition
+        assert_almost_equal(decoded_info['loss'].data.numpy(), expected_loss)
