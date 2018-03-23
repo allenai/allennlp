@@ -54,9 +54,11 @@ class NlvrSemanticParser(Model):
         decoder hidden state as the query.  This is the similarity function we use for that
         attention.
     beam_size : ``int``
-    normalize_beam_score_by_length : ``bool``, optional (default=True)
+    normalize_beam_score_by_length : ``bool``, optional (default=False)
         Should the log probabilities be normalized by length before renormalizing them? Edunov et
-        al. do this in their work.
+        al. do this in their work, but we found that not doing it works better. It's possible they
+        did this because their task is NMT, and longer decoded sequences are not necessarily worse,
+        and shouldn't be penalized, while we will mostly want to penalize longer logical forms.
     max_decoding_steps : ``int``
         We use a beam search during decoding; what's the maximum number of steps we should take?
     checklist_cost_weight : ``float``, optional (default=0.8)
@@ -81,7 +83,7 @@ class NlvrSemanticParser(Model):
                  attention_function: SimilarityFunction,
                  beam_size: int,
                  max_decoding_steps: int,
-                 normalize_beam_score_by_length: bool = True,
+                 normalize_beam_score_by_length: bool = False,
                  checklist_cost_weight: float = 0.8,
                  dynamic_cost_weight: Dict[str, Union[int, float]] = None,
                  penalize_non_agenda_actions: bool = False) -> None:
@@ -594,7 +596,7 @@ class NlvrSemanticParser(Model):
         else:
             attention_function = None
         beam_size = params.pop_int('beam_size')
-        normalize_beam_score_by_length = params.pop_bool('normalize_beam_score_by_length', True)
+        normalize_beam_score_by_length = params.pop_bool('normalize_beam_score_by_length', False)
         max_decoding_steps = params.pop_int("max_decoding_steps")
         checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.8)
         dynamic_cost_weight = params.pop("dynamic_cost_weight", None)
