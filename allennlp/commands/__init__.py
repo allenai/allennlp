@@ -53,14 +53,13 @@ def main(prog: str = None,
 
     args = parser.parse_args()
 
-    # Import any additional modules needed (to register custom classes).
-    for package_name in args.include_package:
-        import_submodules(package_name)
-
     # If a subparser is triggered, it adds its work as `args.func`.
     # So if no such attribute has been added, no subparser was triggered,
     # so give the user some help.
     if 'func' in dir(args):
+        # Import any additional modules needed (to register custom classes).
+        for package_name in args.include_package:
+            import_submodules(package_name)
         args.func(args)
     else:
         parser.print_help()
