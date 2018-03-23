@@ -45,7 +45,7 @@ class TestWorld(AllenNlpTestCase):
         self.world_without_recursion = FakeWorldWithoutRecursion()
         self.world_with_recursion = FakeWorldWithRecursion()
 
-        test_filename = "tests/fixtures/data/nlvr/sample_data.jsonl"
+        test_filename = "tests/fixtures/data/nlvr/sample_ungrouped_data.jsonl"
         data = [json.loads(line)["structured_rep"] for line in open(test_filename).readlines()]
         self.nlvr_world = NlvrWorld(data[0])
 

@@ -91,6 +91,7 @@ class NlvrSemanticParser(Model):
 
         self._sentence_embedder = sentence_embedder
         self._denotation_accuracy = Average()
+        self._consistency = Average()
         self._agenda_coverage = Average()
         check_dimensions_match(nonterminal_embedder.get_output_dim(),
                                terminal_embedder.get_output_dim(),
@@ -121,10 +122,10 @@ class NlvrSemanticParser(Model):
     @overrides
     def forward(self,  # type: ignore
                 sentence: Dict[str, torch.LongTensor],
-                world: List[NlvrWorld],
+                worlds: List[List[NlvrWorld]],
                 actions: List[List[ProductionRuleArray]],
                 agenda: torch.LongTensor,
-                label: torch.LongTensor = None,
+                labels: torch.LongTensor = None,
                 epoch_num: List[int] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
@@ -168,9 +169,16 @@ class NlvrSemanticParser(Model):
                                                      0)
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
         # TODO (pradeep): Use an unindexed field for labels?
-        labels_data = label.data.cpu()
-        label_strings = [self.vocab.get_token_from_index(int(label_data), "denotations") for
-                         label_data in labels_data]
+        labels_data = labels.data.cpu()
+        label_strings: List[List[str]] = []
+        for instance_labels_data in labels_data:
+            label_strings.append([])
+            for label in instance_labels_data:
+                label_int = int(label)
+                if label_int == -1:
+                    # Padding, because not all instances have the same number of labels.
+                    continue
+                label_strings[-1].append(self.vocab.get_token_from_index(label_int, "denotations"))
         # Each instance's agenda is of size (agenda_size, 1)
         agenda_list = [agenda[i] for i in range(batch_size)]
         checklist_targets = []
@@ -201,9 +209,10 @@ class NlvrSemanticParser(Model):
                                               encoder_outputs_list,
                                               sentence_mask_list))
 
-        initial_grammar_state = [self._create_grammar_state(world[i], actions[i]) for i in
+        # TODO (pradeep): Assuming all worlds give the same set of valid actions.
+        initial_grammar_state = [self._create_grammar_state(worlds[i][0], actions[i]) for i in
                                  range(batch_size)]
-        worlds_list = [world[i] for i in range(batch_size)]
+        worlds_list = [worlds[i] for i in range(batch_size)]
         initial_state = NlvrDecoderState(batch_indices=list(range(batch_size)),
                                          action_history=[[] for _ in range(batch_size)],
                                          score=initial_score_list,
@@ -226,7 +235,7 @@ class NlvrSemanticParser(Model):
         for i in range(batch_size):
             batch_actions = actions[i]
             batch_best_sequences = best_action_sequences[i] if i in best_action_sequences else []
-            sequence_is_correct = False
+            sequence_is_correct = [False]
             in_agenda_ratio = 0.0
             if batch_best_sequences:
                 action_strings = [get_action_string(batch_actions[rule_id]) for rule_id in
@@ -242,12 +251,14 @@ class NlvrSemanticParser(Model):
                 actions_in_agenda = [rule_id in batch_best_sequences for rule_id in
                                      terminal_agenda_actions]
                 in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
-                label_string = label_strings[i]
-                instance_world = world[i]
+                instance_label_strings = label_strings[i]
+                instance_worlds = worlds[i]
                 sequence_is_correct = self._check_denotation(action_strings,
-                                                             label_string,
-                                                             instance_world)
-            self._denotation_accuracy(1 if sequence_is_correct else 0)
+                                                             instance_label_strings,
+                                                             instance_worlds)
+            for correct_in_world in sequence_is_correct:
+                self._denotation_accuracy(1 if correct_in_world else 0)
+            self._consistency(1 if all(sequence_is_correct) else 0)
             self._agenda_coverage(in_agenda_ratio)
         return outputs
 
@@ -301,17 +312,20 @@ class NlvrSemanticParser(Model):
 
     @staticmethod
     def _check_denotation(best_action_sequence: List[str],
-                          label: str,
-                          world: NlvrWorld) -> bool:
-        logical_form = world.get_logical_form(best_action_sequence)
-        denotation = world.execute(logical_form)
-        is_correct = str(denotation).lower() == label.lower()
+                          labels: List[str],
+                          worlds: List[NlvrWorld]) -> List[bool]:
+        is_correct = []
+        for world, label in zip(worlds, labels):
+            logical_form = world.get_logical_form(best_action_sequence)
+            denotation = world.execute(logical_form)
+            is_correct.append(str(denotation).lower() == label)
         return is_correct
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {
                 'denotation_accuracy': self._denotation_accuracy.get_metric(reset),
+                'consistency': self._consistency.get_metric(reset),
                 'agenda_coverage': self._agenda_coverage.get_metric(reset)
         }
 
@@ -522,29 +536,28 @@ class NlvrSemanticParser(Model):
         # upper limit on the checklist cost. That would be the number of terminal actions.
         denotation_cost = torch.sum(instance_checklist_target.float())
         checklist_cost = self._checklist_cost_weight * checklist_cost
-        if self._denotation_is_correct(state):
+        # TODO (pradeep): The denotation based cost below is strict. May be define a cost based on
+        # how many worlds the logical form is correct in?
+        if all(self._check_state_denotations(state)):
             cost = checklist_cost
         else:
             cost = checklist_cost + (1 - self._checklist_cost_weight) * denotation_cost
         return cost
 
-    def _denotation_is_correct(self, state) -> bool:
+    def _check_state_denotations(self, state) -> List[bool]:
         """
-        Returns whether action history in the state evaluates to the correct denotation. Only
-        defined when the state is finished.
+        Returns whether action history in the state evaluates to the correct denotations over all
+        worlds. Only defined when the state is finished.
         """
         assert state.is_finished(), "Cannot compute denotations for unfinished states!"
         # Since this is a finished state, its group size must be 1.
         batch_index = state.batch_indices[0]
-        world = state.worlds[batch_index]
-        label_string = state.label_strings[batch_index]
+        worlds = state.worlds[batch_index]
+        instance_label_strings = state.label_strings[batch_index]
         history = state.action_history[0]
         all_actions = state.possible_actions[0]
         action_sequence = [self._get_action_string(all_actions[action]) for action in history]
-        logical_form = world.get_logical_form(action_sequence)
-        denotation = world.execute(logical_form)
-        is_correct = str(denotation).lower() == label_string.lower()
-        return is_correct
+        return self._check_denotation(action_sequence, instance_label_strings, worlds)
 
     def _get_state_info(self, state) -> Dict[str, List]:
         """

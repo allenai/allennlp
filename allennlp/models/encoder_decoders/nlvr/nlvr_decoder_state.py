@@ -55,11 +55,14 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
     possible_actions : ``List[List[ProductionRuleArray]]``
         The list of all possible actions that was passed to ``model.forward()``.  We need this so
         we can recover production strings, which we need to update grammar states.
-    world : ``List[NlvrWorld]``
-        The world associated with each element. This is needed to compute the denotations.
-    label_strings : ``List[str]``
+    worlds : ``List[List[NlvrWorld]]``
+        The worlds associated with each element. These are needed to compute the denotations. The
+        outer list corresponds to elements, and the inner corresponds to worlds related to each
+        element.
+    label_strings : ``List[List[str]]``
         String representations of labels for the elements provided. When scoring finished states, we
-        will compare the denotations of their action sequences against these labels.
+        will compare the denotations of their action sequences against these labels. For each
+        element, there will be as many labels as there are worlds.
     """
     def __init__(self,
                  batch_indices: List[int],
@@ -74,8 +77,8 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
                  action_embeddings: torch.Tensor,
                  action_indices: Dict[Tuple[int, int], int],
                  possible_actions: List[List[ProductionRuleArray]],
-                 worlds: List[NlvrWorld],
-                 label_strings: List[str]) -> None:
+                 worlds: List[List[NlvrWorld]],
+                 label_strings: List[List[str]]) -> None:
         super(NlvrDecoderState, self).__init__(batch_indices, action_history, score)
         self.rnn_state = rnn_state
         self.grammar_state = grammar_state
