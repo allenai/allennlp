@@ -94,7 +94,7 @@ def evaluate(model: Model,
         description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
         generator_tqdm.set_description(description, refresh=False)
 
-    return model.get_metrics()
+    return model.get_metrics(reset=True)
 
 
 def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
