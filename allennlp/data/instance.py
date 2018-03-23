@@ -78,3 +78,9 @@ class Instance:
                                                   cuda_device=cuda_device,
                                                   for_training=for_training)
         return tensors
+
+
+    def __str__(self) -> str:
+        base_string = f"Instance with fields:\n"
+        return " ".join([base_string] + [f"\t {name}: {field} \n"
+                                         for name, field in self.fields.items()])
