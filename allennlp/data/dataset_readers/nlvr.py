@@ -26,9 +26,9 @@ class NlvrDatasetReader(DatasetReader):
     instances from text, this class contains a method for creating an agenda of actions that each
     sentence triggers.
 
-    We process the either the original json version of the NLVR dataset
-    (http://lic.nlp.cornell.edu/nlvr/) or the processed version where we group all the worlds that a
-    sentence appears in here.
+    We process here, either the original json version of the NLVR dataset
+    (http://lic.nlp.cornell.edu/nlvr/) or the processed version (using
+    ``scripts/nlvr/group_nlvr_worlds.py``) where we group all the worlds that a sentence appears in.
     Note that we deal with the structured representations of the synthetic images instead of the
     actual images themselves.
     The format of each line in the original jsonl file is
@@ -155,8 +155,8 @@ class NlvrDatasetReader(DatasetReader):
                   "worlds": worlds_field,
                   "actions": action_field}
         if labels:
-            labels_field = ListField([LabelField(label, label_namespace='denotations') for label in
-                                      labels])
+            labels_field = ListField([LabelField(label, label_namespace='denotations')
+                                      for label in labels])
             fields["labels"] = labels_field
         return Instance(fields)
 

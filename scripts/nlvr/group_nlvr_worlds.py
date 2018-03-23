@@ -24,9 +24,10 @@ def group_dataset(input_file: str, output_file: str) -> None:
         instance_groups[identifier]["worlds"].append(data["structured_rep"])
         instance_groups[identifier]["labels"].append(data["label"])
 
-    output_ptr = open(output_file, "w")
-    for instance_group in instance_groups.values():
-        print(json.dumps(instance_group), file=output_ptr)
+    with open(output_file, "w") as output:
+        for instance_group in instance_groups.values():
+            json.dump(instance_group, output)
+            output.write('\n')
 
 
 if __name__ == "__main__":
