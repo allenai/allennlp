@@ -27,3 +27,6 @@ class TestIndexField(AllenNlpTestCase):
         index_field = IndexField(4, self.text)
         empty_index = index_field.empty_field()
         assert empty_index.sequence_index == -1
+
+    def test_printing_doesnt_crash(self):
+        print(self.text)

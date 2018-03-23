@@ -188,3 +188,8 @@ class TestTextField(AllenNlpTestCase):
                                                              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]))
+
+    def test_printing_doesnt_crash(self):
+        field = TextField([Token(t) for t in ["A", "sentence"]],
+                          {"words": SingleIdTokenIndexer(namespace="words")})
+        print(field)
