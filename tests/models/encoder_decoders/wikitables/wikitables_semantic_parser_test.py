@@ -23,6 +23,10 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         # pylint: disable=line-too-long
         self.ensure_model_can_train_save_and_load('tests/fixtures/encoder_decoder/wikitables_semantic_parser_with_mixture_feedforward/experiment.json')
 
+    def test_model_no_features_can_train_save_and_load(self):
+        # pylint: disable=line-too-long
+        self.ensure_model_can_train_save_and_load("tests/fixtures/encoder_decoder/wikitables_semantic_parser_no_features/experiment.json")
+
     def test_get_neighbor_indices(self):
         worlds, num_entities = self.get_fake_worlds()
         tensor = Variable(torch.LongTensor([]))
