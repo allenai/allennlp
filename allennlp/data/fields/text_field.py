@@ -3,6 +3,7 @@ A ``TextField`` represents a string of text, the kind that you might want to rep
 standard word vectors, or pass through an LSTM.
 """
 from typing import Dict, List, Optional
+import textwrap
 
 from overrides import overrides
 from spacy.tokens import Token as SpacyToken
@@ -135,3 +136,12 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         # This is creating a dict of {token_indexer_key: batch_tensor} for each token indexer used
         # to index this field.
         return util.batch_tensor_dicts(tensor_list)
+
+    def __str__(self) -> str:
+        indexers = {name: indexer.__class__.__name__ for name, indexer in self._token_indexers.items()}
+
+        # Double tab to indent under the header.
+        formatted_text = "".join(["\t\t" + text + "\n"
+                                  for text in textwrap.wrap(repr(self.tokens), 100)])
+        return f"TextField of length {self.sequence_length()} with " \
+               f"text: \n {formatted_text} \t\tand TokenIndexers : {indexers}"

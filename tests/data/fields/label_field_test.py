@@ -54,3 +54,8 @@ class TestLabelField(AllenNlpTestCase):
         assert "text2" not in LabelField._already_warned_namespaces
         with self.assertLogs(logger="allennlp.data.fields.label_field", level="WARNING"):
             _ = LabelField("test", label_namespace="text2")
+
+    def test_printing_doesnt_crash(self):
+        label = LabelField("label", label_namespace="namespace")
+        print(label)
+ 

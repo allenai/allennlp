@@ -1,5 +1,6 @@
 from typing import Dict, List, Union, Set
 import logging
+import textwrap
 
 from overrides import overrides
 import torch
@@ -107,3 +108,10 @@ class SequenceLabelField(Field[torch.Tensor]):
         sequence_label_field = SequenceLabelField([], self.sequence_field.empty_field())
         sequence_label_field._indexed_labels = []
         return sequence_label_field
+
+    def __str__(self) -> str:
+        length = self.sequence_field.sequence_length()
+        formatted_labels = "".join(["\t\t" + labels + "\n"
+                                    for labels in textwrap.wrap(repr(self.labels), 100)])
+        return f"SequenceLabelField of length {length} with " \
+               f"labels:\n {formatted_labels} \t\tin namespace: '{self._label_namespace}'."
