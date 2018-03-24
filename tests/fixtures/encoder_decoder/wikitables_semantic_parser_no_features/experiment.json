@@ -11,7 +11,6 @@
   "validation_data_path": "tests/fixtures/data/wikitables/sample_data.examples",
   "model": {
     "type": "wikitables_parser",
-    "num_linking_features": 0,
     "question_embedder": {
       "tokens": {
         "type": "embedding",
@@ -57,7 +56,7 @@
     },
     "max_decoding_steps": 200,
     "attention_function": {"type": "dot_product"},
-    "num_linking_features": 8
+    "num_linking_features": 0
   },
   "iterator": {
     "type": "bucket",
