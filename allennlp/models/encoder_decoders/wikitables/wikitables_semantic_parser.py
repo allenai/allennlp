@@ -250,7 +250,7 @@ class WikiTablesSemanticParser(Model):
             # as the related_column feature.
             # (batch_size, num_entities, num_neighbors, num_question_tokens)
             question_neighbor_similarity = util.batched_index_select(question_entity_similarity_max_score,
-                                                                            torch.abs(neighbor_indices))
+                                                                     torch.abs(neighbor_indices))
             # (batch_size, num_entities, num_question_tokens)
             question_neighbor_similarity_max_score, _ = torch.max(question_neighbor_similarity, 2)
             projected_question_entity_similarity = self._question_entity_params(question_entity_similarity_max_score.unsqueeze(-1)).squeeze(-1)
