@@ -67,7 +67,9 @@ class WikiTablesSemanticParser(Model):
     num_linking_features : ``int``, optional (default=8)
         We need to construct a parameter vector for the linking features, so we need to know how
         many there are.  The default of 8 here matches the default in the ``KnowledgeGraphField``,
-        which is to use all eight defined features.
+        which is to use all eight defined features. If this is 0, another term will be added to the
+        linking score. This term contains the maximum similarity value from the entity's neighbors
+        and the question.
     embed_terminals : ``bool``, optional (default=False)
         When selecting grammar actions in a particular state, we compare an action embedding with
         our current decoder state.  Computing the action embedding might be hard for
@@ -232,23 +234,27 @@ class WikiTablesSemanticParser(Model):
 
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
-        linking_scores = question_entity_similarity_max_score
 
         if self._linking_params is not None:
             feature_scores = self._linking_params(linking_features).squeeze(3)
-            linking_scores = linking_scores + feature_scores
+            linking_scores = question_entity_similarity_max_score + feature_scores
         else:
             # pylint: disable=line-too-long
-            # The similarity between a question token and an entity's neighbors is useful when
+            # The linking score is computed as a linear projection of two terms. The first is the maximum
+            # similarity score over the entity's words and the question token. The second is the maximum
+            # similarity over the words in the entity's neighbors and the question token.
+            #   The second term, projected_question_neighbor_similarity, is useful when
             # a column needs to be selected. For example, the question token might have no similarity
             # with the column name, but is similar with the cells in the column.
+            #   Note that projected_question_neighbor_similarity is intended to capture the same information
+            # as the related_column feature.
             # (batch_size, num_entities, num_neighbors, num_question_tokens)
-            question_entity_neighbor_similarity = util.batched_index_select(question_entity_similarity_max_score,
+            question_neighbor_similarity = util.batched_index_select(question_entity_similarity_max_score,
                                                                             torch.abs(neighbor_indices))
             # (batch_size, num_entities, num_question_tokens)
-            question_entity_neighbor_similarity_score, _ = torch.max(question_entity_neighbor_similarity, 2)
-            projected_question_entity_similarity = self._question_entity_params(linking_scores.unsqueeze(-1)).squeeze(-1)
-            projected_question_neighbor_similarity = self._question_neighbor_params(question_entity_neighbor_similarity_score.unsqueeze(-1)).squeeze(-1)
+            question_neighbor_similarity_max_score, _ = torch.max(question_neighbor_similarity, 2)
+            projected_question_entity_similarity = self._question_entity_params(question_entity_similarity_max_score.unsqueeze(-1)).squeeze(-1)
+            projected_question_neighbor_similarity = self._question_neighbor_params(question_neighbor_similarity_max_score.unsqueeze(-1)).squeeze(-1)
             linking_scores = projected_question_entity_similarity + projected_question_neighbor_similarity
 
         # (batch_size, num_question_tokens, num_entities)
