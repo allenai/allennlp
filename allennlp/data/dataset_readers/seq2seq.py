@@ -82,30 +82,26 @@ class Seq2SeqDatasetReader(DatasetReader):
         self._source_add_start_token = source_add_start_token
 
         if source_max_sequence_length < 0:
-            raise ConfigurationError(
-                "source_max_sequence_length is {}, but must "
-                "be greater than or equal to 0".format(source_max_sequence_length))
+            raise ConfigurationError("source_max_sequence_length is {}, but must "
+                                     "be greater than or equal to 0".format(source_max_sequence_length))
         self._source_max_sequence_length = source_max_sequence_length
         self._filter_source = (source_max_sequence_length != 0)
 
         if source_truncate_sequence_length < 0:
-            raise ConfigurationError(
-                "source_truncate_sequence_length is {}, but must "
-                "be greater than or equal to 0".format(source_truncate_sequence_length))
+            raise ConfigurationError("source_truncate_sequence_length is {}, but must "
+                                     "be greater than or equal to 0".format(source_truncate_sequence_length))
         self._source_truncate_sequence_length = source_truncate_sequence_length
         self._truncate_source = (source_truncate_sequence_length != 0)
 
         if target_max_sequence_length < 0:
-            raise ConfigurationError(
-                "target_max_sequence_length is {}, but must "
-                "be greater than or equal to 0".format(target_max_sequence_length))
+            raise ConfigurationError("target_max_sequence_length is {}, but must "
+                                     "be greater than or equal to 0".format(target_max_sequence_length))
         self._target_max_sequence_length = target_max_sequence_length
         self._filter_target = (target_max_sequence_length != 0)
 
         if target_truncate_sequence_length < 0:
-            raise ConfigurationError(
-                "target_truncate_sequence_length is {}, but must "
-                "be greater than or equal to 0".format(target_truncate_sequence_length))
+            raise ConfigurationError("target_truncate_sequence_length is {}, but must "
+                                     "be greater than or equal to 0".format(target_truncate_sequence_length))
         self._target_truncate_sequence_length = target_truncate_sequence_length
         self._truncate_target = (target_truncate_sequence_length != 0)
 
@@ -146,7 +142,7 @@ class Seq2SeqDatasetReader(DatasetReader):
             if len(tokenized_target) > self._target_max_sequence_length and self._filter_target:
                 return None
             if (len(tokenized_target) > self._target_truncate_sequence_length and
-                    self._truncate_target):
+                        self._truncate_target):
                 tokenized_target = tokenized_target[:self._target_truncate_sequence_length]
             tokenized_target.insert(0, Token(START_SYMBOL))
             tokenized_target.append(Token(END_SYMBOL))
