@@ -1,13 +1,13 @@
 # pylint: disable=no-self-use,invalid-name
 import pytest
 
-from allennlp.data.dataset_readers import StanfordSentimentTreeBankTokensDatasetReader
+from allennlp.data.dataset_readers import StanfordSentimentTreeBankDatasetReader
 from allennlp.common.util import ensure_list
 
 class TestStanfordSentimentTreebankReader():
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file(self, lazy):
-        reader = StanfordSentimentTreeBankTokensDatasetReader(lazy=lazy)
+        reader = StanfordSentimentTreeBankDatasetReader(lazy=lazy)
         instances = reader.read('tests/fixtures/data/sst.txt')
         instances = ensure_list(instances)
 
@@ -30,7 +30,7 @@ class TestStanfordSentimentTreebankReader():
         assert fields["label"].label == instance3["label"]
 
     def test_use_subtrees(self):
-        reader = StanfordSentimentTreeBankTokensDatasetReader(use_subtrees=True)
+        reader = StanfordSentimentTreeBankDatasetReader(use_subtrees=True)
         instances = reader.read('tests/fixtures/data/sst.txt')
         instances = ensure_list(instances)
 
@@ -53,7 +53,7 @@ class TestStanfordSentimentTreebankReader():
         assert fields["label"].label == instance3["label"]
 
     def test_3_class(self):
-        reader = StanfordSentimentTreeBankTokensDatasetReader(granularity="3-class")
+        reader = StanfordSentimentTreeBankDatasetReader(granularity="3-class")
         instances = reader.read('tests/fixtures/data/sst.txt')
         instances = ensure_list(instances)
 
@@ -76,7 +76,7 @@ class TestStanfordSentimentTreebankReader():
         assert fields["label"].label == instance3["label"]
 
     def test_2_class(self):
-        reader = StanfordSentimentTreeBankTokensDatasetReader(granularity="2-class")
+        reader = StanfordSentimentTreeBankDatasetReader(granularity="2-class")
         instances = reader.read('tests/fixtures/data/sst.txt')
         instances = ensure_list(instances)
 

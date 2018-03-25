@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @DatasetReader.register("sst_tokens")
-class StanfordSentimentTreeBankTokensDatasetReader(DatasetReader):
+class StanfordSentimentTreeBankDatasetReader(DatasetReader):
     """
     Reads tokens and their sentiment labels from the Stanford Sentiment Treebank.
 
