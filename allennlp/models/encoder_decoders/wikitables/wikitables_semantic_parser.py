@@ -67,7 +67,9 @@ class WikiTablesSemanticParser(Model):
     num_linking_features : ``int``, optional (default=8)
         We need to construct a parameter vector for the linking features, so we need to know how
         many there are.  The default of 8 here matches the default in the ``KnowledgeGraphField``,
-        which is to use all eight defined features.
+        which is to use all eight defined features. If this is 0, another term will be added to the
+        linking score. This term contains the maximum similarity value from the entity's neighbors
+        and the question.
     embed_terminals : ``bool``, optional (default=False)
         When selecting grammar actions in a particular state, we compare an action embedding with
         our current decoder state.  Computing the action embedding might be hard for
@@ -119,8 +121,11 @@ class WikiTablesSemanticParser(Model):
             self._linking_params = torch.nn.Linear(num_linking_features, 1)
         else:
             self._linking_params = None
+            self._question_entity_params = torch.nn.Linear(1, 1)
+            self._question_neighbor_params = torch.nn.Linear(1, 1)
 
         self._decoder_trainer = MaximumMarginalLikelihood()
+
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
                                                    attention_function=attention_function,
@@ -186,8 +191,9 @@ class WikiTablesSemanticParser(Model):
         # Neighbor_indices is padded with -1 since 0 is a potential neighbor index.
         # Thus, the absolute value needs to be taken in the index_select, and 1 needs to
         # be added for the mask since that method expects 0 for padding.
-        # (batch_size, num_entities, num_entities, embedding_dim)
+        # (batch_size, num_entities, num_neighbors, embedding_dim)
         embedded_neighbors = util.batched_index_select(encoded_table, torch.abs(neighbor_indices))
+
         neighbor_mask = util.get_text_field_mask({'ignored': neighbor_indices + 1},
                                                  num_wrapping_dims=1).float()
 
@@ -208,10 +214,10 @@ class WikiTablesSemanticParser(Model):
         entity_embeddings = torch.nn.functional.tanh(entity_type_embeddings + projected_neighbor_embeddings)
 
         # Compute entity and question word similarity through a dot product.
-        question_table_similarity = torch.bmm(embedded_table.view(batch_size,
-                                                                  num_entities * num_entity_tokens,
-                                                                  self._embedding_dim),
-                                              torch.transpose(embedded_question, 1, 2))
+        question_entity_similarity = torch.bmm(embedded_table.view(batch_size,
+                                                                   num_entities * num_entity_tokens,
+                                                                   self._embedding_dim),
+                                               torch.transpose(embedded_question, 1, 2))
 
         # We divide the similarity scores by the embedding dim to reduce the variance of these
         # scores, and put the similarity scores into the same ballpark range as the linking
@@ -219,18 +225,37 @@ class WikiTablesSemanticParser(Model):
         # the order of 1, which means that a 200-dimensional vector would have a dot product with
         # itself on the order of 200.  This is not reasonable to have as input to a softmax, which
         # we do later, so we need to scale by the number of dimensions.
-        question_table_similarity = question_table_similarity.view(batch_size,
-                                                                   num_entities,
-                                                                   num_entity_tokens,
-                                                                   num_question_tokens) / self._embedding_dim
+        question_entity_similarity = question_entity_similarity.view(batch_size,
+                                                                     num_entities,
+                                                                     num_entity_tokens,
+                                                                     num_question_tokens) / self._embedding_dim
         # (batch_size, num_entities, num_question_tokens)
-        question_table_similarity_max_score, _ = torch.max(question_table_similarity, 2)
+        question_entity_similarity_max_score, _ = torch.max(question_entity_similarity, 2)
+
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
-        linking_scores = question_table_similarity_max_score
+
         if self._linking_params is not None:
             feature_scores = self._linking_params(linking_features).squeeze(3)
-            linking_scores = linking_scores + feature_scores
+            linking_scores = question_entity_similarity_max_score + feature_scores
+        else:
+            # pylint: disable=line-too-long
+            # The linking score is computed as a linear projection of two terms. The first is the maximum
+            # similarity score over the entity's words and the question token. The second is the maximum
+            # similarity over the words in the entity's neighbors and the question token.
+            #   The second term, projected_question_neighbor_similarity, is useful when
+            # a column needs to be selected. For example, the question token might have no similarity
+            # with the column name, but is similar with the cells in the column.
+            #   Note that projected_question_neighbor_similarity is intended to capture the same information
+            # as the related_column feature.
+            # (batch_size, num_entities, num_neighbors, num_question_tokens)
+            question_neighbor_similarity = util.batched_index_select(question_entity_similarity_max_score,
+                                                                     torch.abs(neighbor_indices))
+            # (batch_size, num_entities, num_question_tokens)
+            question_neighbor_similarity_max_score, _ = torch.max(question_neighbor_similarity, 2)
+            projected_question_entity_similarity = self._question_entity_params(question_entity_similarity_max_score.unsqueeze(-1)).squeeze(-1)
+            projected_question_neighbor_similarity = self._question_neighbor_params(question_neighbor_similarity_max_score.unsqueeze(-1)).squeeze(-1)
+            linking_scores = projected_question_entity_similarity + projected_question_neighbor_similarity
 
         # (batch_size, num_question_tokens, num_entities)
         linking_probabilities = self._get_linking_probabilities(world, linking_scores.transpose(1, 2),
@@ -324,7 +349,7 @@ class WikiTablesSemanticParser(Model):
             outputs['linking_scores'] = linking_scores
             if self._linking_params is not None:
                 outputs['feature_scores'] = feature_scores
-            outputs['similarity_scores'] = question_table_similarity_max_score
+            outputs['similarity_scores'] = question_entity_similarity_max_score
             outputs['logical_form'] = []
             for i in range(batch_size):
                 # Decoding may not have terminated with any completed logical forms, if `num_steps`
