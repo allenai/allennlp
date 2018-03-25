@@ -2,6 +2,7 @@
 import pytest
 
 from allennlp.data.dataset_readers import StanfordSentimentTreeBankDatasetReader
+from allennlp.common import Params
 from allennlp.common.util import ensure_list
 
 class TestStanfordSentimentTreebankReader():
@@ -92,3 +93,9 @@ class TestStanfordSentimentTreebankReader():
         fields = instances[1].fields
         assert [t.text for t in fields["tokens"].tokens] == instance2["tokens"]
         assert fields["label"].label == instance2["label"]
+
+    def test_from_params(self):
+        params = Params({"use_subtrees": True, "granularity": "5-class"})
+        reader = StanfordSentimentTreeBankDatasetReader.from_params(params)
+        assert reader._use_subtrees is True
+        assert reader._granularity == "5-class"
