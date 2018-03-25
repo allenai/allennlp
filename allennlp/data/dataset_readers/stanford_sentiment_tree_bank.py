@@ -75,7 +75,7 @@ class StanfordSentimentTreeBankTokensDatasetReader(DatasetReader):
                 else:
                     instance = self.text_to_instance(parsed_line.leaves(), parsed_line.label())
                     if instance is not None:
-                            yield instance
+                        yield instance
 
     @overrides
     def text_to_instance(self, tokens: List[str], sentiment: str = None) -> Instance:  # type: ignore
@@ -132,5 +132,7 @@ class StanfordSentimentTreeBankTokensDatasetReader(DatasetReader):
         lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
         return StanfordSentimentTreeBankTokensDatasetReader(
-                token_indexers=token_indexers, use_subtrees=use_subtrees,
-                granularity=granularity, lazy=lazy)
+                token_indexers=token_indexers,
+                use_subtrees=use_subtrees,
+                granularity=granularity,
+                lazy=lazy)
