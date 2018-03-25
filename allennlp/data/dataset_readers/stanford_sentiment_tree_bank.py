@@ -32,7 +32,7 @@ class StanfordSentimentTreeBankTokensDatasetReader(DatasetReader):
         Whether or not to use sentiment-tagged subtrees.
     granularity : ``str``, optional (default = ``"5-class"``)
         One of ``"5-class"``, ``"3-class"``, or ``"2-class"``, indicating the number
-        sentiment labels to use.
+        of sentiment labels to use.
     lazy : ``bool``, optional, (default = ``False``)
         Whether or not instances can be consumed lazily.
     """
