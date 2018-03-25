@@ -3,7 +3,6 @@ import logging
 
 from overrides import overrides
 from nltk.tree import Tree
-import tqdm
 
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
@@ -132,13 +131,13 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
         return Instance(fields)
 
     @classmethod
-    def from_params(cls, params: Params) -> 'StanfordSentimentTreeBankTokensDatasetReader':
+    def from_params(cls, params: Params) -> 'StanfordSentimentTreeBankDatasetReader':
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         use_subtrees = params.pop('use_subtrees', False)
         granularity = params.pop_choice('granularity', ["5-class", "3-class", "2-class"], True)
         lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
-        return StanfordSentimentTreeBankTokensDatasetReader(
+        return StanfordSentimentTreeBankDatasetReader(
                 token_indexers=token_indexers,
                 use_subtrees=use_subtrees,
                 granularity=granularity,
