@@ -22,27 +22,34 @@ class StanfordSentimentTreeBankTokensDatasetReader(DatasetReader):
     """
     Reads tokens and their sentiment labels from the Stanford Sentiment Treebank.
 
+    The Stanford Sentiment Treebank comes with labels
+    from 0 to 4. ``"5-class"`` uses these labels as is. ``"3-class"`` converts the
+    problem into one of identifying whether a sentence is negative, positive, or
+    neutral sentiment. In this case, 0 and 1 are grouped as label 0 (negative sentiment),
+    2 is converted to label 1 (neutral sentiment) and 3 and 4 are grouped as label 2
+    (positive sentiment). ``"2-class"`` turns it into a binary classification problem
+    between positive and negative sentiment. 0 and 1 are grouped as the label 0
+    (negative sentiment), 2 (neutral) is discarded, and 3 and 4 are grouped as the label 1
+    (positive sentiment).
+
+    Expected format for each input line: a linearized tree, where nodes are labeled
+    by their sentiment.
+
+    The output of ``read`` is a list of ``Instance`` s with the fields:
+        tokens: ``TextField`` and
+        label: ``LabelField``
+
     Parameters
     ----------
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
-        Note that the `output` tags will always correspond to single token IDs based on how they
-        are pre-tokenised in the data file.
     use_subtrees : ``bool``, optional, (default = ``False``)
         Whether or not to use sentiment-tagged subtrees.
     granularity : ``str``, optional (default = ``"5-class"``)
         One of ``"5-class"``, ``"3-class"``, or ``"2-class"``, indicating the number
-        of sentiment labels to use. The Stanford Sentiment Treebank comes with labels
-        from 0 to 4. ``"5-class"`` uses these labels as is. ``"3-class"`` converts the
-        problem into one of identifying whether a sentence is negative, positive, or
-        neutral sentiment. In this case, 0 and 1 are grouped as label 0 (negative sentiment),
-        2 is converted to label 1 (neutral sentiment) and 3 and 4 are grouped as label 2
-        (positive sentiment). ``"2-class"`` turns it into a binary classification problem
-        between positive and negative sentiment. 0 and 1 are grouped as the label 0
-        (negative sentiment), 2 (neutral) is discarded, and 3 and 4 are grouped as the label 1
-        (positive sentiment).
+        of sentiment labels to use.
     lazy : ``bool``, optional, (default = ``False``)
-        Whether or not instances can be consumed lazily.
+        Whether or not instances can be read lazily.
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
