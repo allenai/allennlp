@@ -95,6 +95,7 @@ class TestStanfordSentimentTreebankReader():
         assert fields["label"].label == instance2["label"]
 
     def test_from_params(self):
+        # pylint: disable=protected-access
         params = Params({"use_subtrees": True, "granularity": "5-class"})
         reader = StanfordSentimentTreeBankDatasetReader.from_params(params)
         assert reader._use_subtrees is True
