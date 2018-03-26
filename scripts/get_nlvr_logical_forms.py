@@ -8,8 +8,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 from allennlp.common.util import JsonDict
-from allennlp.data.semparse.worlds import NlvrWorld
-from allennlp.data.semparse import ActionSpaceWalker
+from allennlp.semparse.worlds import NlvrWorld
+from allennlp.semparse import ActionSpaceWalker
 
 
 def read_json_line(line: str) -> Tuple[str, str, NlvrWorld, bool]:

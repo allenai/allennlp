@@ -20,3 +20,4 @@ from allennlp.data.dataset_readers.sequence_tagging import SequenceTaggingDatase
 from allennlp.data.dataset_readers.snli import SnliReader
 from allennlp.data.dataset_readers.wikitables.wikitables_dataset_reader import WikiTablesDatasetReader
 from allennlp.data.dataset_readers.wikitables.wikitables_preprocessed_dataset_reader import WikiTablesPreprocessedDatasetReader
+from allennlp.data.dataset_readers.ratecalculus.ratecalculus_dataset_reader import RateCalculusDatasetReader
