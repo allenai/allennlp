@@ -13,9 +13,8 @@ class Ensemble(Model):
     ensembling strategy.
 
     Ensembles differ from most models in that they do not have a vocabulary or weights of their own
-    (instead they rely on the vocabulary and weights from submodels) and they are not directly
-    trainable.  Instead, the submodels are trained independently and the ensemble is created
-    from the result.
+    (instead they rely on the vocabulary and weights from submodels).  Instead, the submodels are trained
+    independently and the ensemble is created from the result.
     """
 
     def __init__(self, submodels: List[Model]) -> None:
