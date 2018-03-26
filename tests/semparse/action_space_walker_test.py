@@ -29,6 +29,10 @@ class FakeWorldWithAssertions(World):
                    '<o,o>': ['<o,o> -> black', '<o,o> -> triangle', '<o,o> -> touch_wall']}
         return actions
 
+    @overrides
+    def is_terminal(self, symbol: str) -> bool:
+        return symbol in {'object_exists', 'all_objects', 'black', 'triangle', 'touch_wall'}
+
 
 class ActionSpaceWalkerTest(AllenNlpTestCase):
     def setUp(self):

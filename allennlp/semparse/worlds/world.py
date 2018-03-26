@@ -40,6 +40,25 @@ class ExecutionError(Exception):
         return repr(self.message)
 
 
+class _TreeNode:
+    """
+    A simple Tree class for representing a logical form tree.  Used in ``World.get_logical_form``.
+    """
+    def __init__(self, label: str) -> None:
+        self.label = label
+        self.children: List[_TreeNode] = []
+
+    def __str__(self) -> str:
+        if not self.children:
+            return self.label
+        if len(self.children) == 1:
+            return str(self.children[0])
+        return '(' + ' '.join(str(child) for child in self.children) + ')'
+
+    def __repr__(self) -> str:
+        return str(self)
+
+
 class World:
     """
     Base class for defining a world in a new domain. This class defines a method to translate a
@@ -82,6 +101,7 @@ class World:
         if num_nested_lambdas > 3:
             raise NotImplementedError("For ease of implementation, we currently only handle at "
                                       "most three nested lambda expressions")
+        self._lambda_variables = set(['x', 'y', 'z'][:num_nested_lambdas])
         self._logic_parser = types.DynamicTypeLogicParser(constant_type_prefixes=type_prefixes,
                                                           type_signatures=self.global_type_signatures)
         self._right_side_indexed_actions: Dict[str, List[Tuple[str, str]]] = None
@@ -93,6 +113,17 @@ class World:
     def get_type_signatures(self) -> Dict[str, str]:
         # Python 3.5 syntax for merging two dictionaries.
         return {**self.global_type_signatures, **self.local_type_signatures}
+
+    def is_terminal(self, symbol: str) -> bool:
+        """
+        This function will be called on nodes of a logical form tree, which are either non-terminal
+        symbols that can be expanded or terminal symbols that must be leaf nodes.  Returns ``True``
+        if the given symbol is a terminal symbol.
+        """
+        # We special-case 'lambda' here because it behaves weirdly in action sequences.
+        return (symbol in self.global_name_mapping or
+                symbol in self.local_name_mapping or
+                'lambda' in symbol)
 
     def get_valid_actions(self) -> Dict[str, List[str]]:
         return types.get_valid_actions(self.get_name_mapping(),
@@ -245,71 +276,85 @@ class World:
              not produce these functions. In that case, setting this flag adds the function in the
              logical form even though it is not present in the action sequence.
         """
-        split_actions = [action.split(" -> ") for action in action_sequence]
-        terminals: List[Tuple[str, int]] = []  # terminal name and the number of arguments it takes
-        for left_side, right_side in split_actions:
-            right_side_is_number = False
-            try:
-                float(right_side)
-                right_side_is_number = True
-            except ValueError:
-                pass
-            if '[' in right_side:
-                if 'lambda ' in right_side:
-                    # "lambda x/y/...". Removing single quotes surrounding the string.
-                    terminals.append((right_side[1:-1].split(', ')[0].replace("'", ""),
-                                      self._infer_num_arguments(left_side)))
-            elif len(right_side) > 1 or right_side in ['x', 'y', 'z', '<', '-'] or right_side_is_number:
-                if right_side == "var" and add_var_function:
-                    raise RuntimeError("You wanted to add var, but you didn't need to!")
-                if right_side in ['x', 'y', 'z'] and add_var_function:
-                    right_side = f"(var {right_side})"
-                terminals.append((right_side, self._infer_num_arguments(left_side)))
-        partial_logical_forms: List[str] = []
+        # Basic outline: we assume that the bracketing that we get in the RHS of each action is the
+        # correct bracketing for reconstructing the logical form.  This is true when there is no
+        # currying in the action sequence.  Given this assumption, we just need to construct a tree
+        # from the action sequence, then output all of the leaves in the tree, with brackets around
+        # the children of all non-terminal nodes.
 
-        # We'll handle higher order functions ("reverse" and "negate_filter") here by looking at the
-        # prior terminal to see if it's a higher order function (and because we're iterating over
-        # this backwards, "prior" actually means "next").  If it is, we'll create a new "terminal"
-        # that's the application of the higher order function to that terminal. This works for most
-        # cases, but there are a few edge cases where this breaks, particularly when there's a
-        # lambda involved (happens only with "reverse" in LambdaDCS).  We have a hack to try to
-        # handle lambdas, but it doesn't always work.  TODO(mattg,pradeep): We have now removed
-        # currying from our action sequences, so it should be possible to simplify this logic and
-        # just use the bracketing defined by the action sequence itself.
-        terminals = list(reversed(terminals))
-        higher_order_functions = ['reverse', 'negate_filter']
-        for i, (terminal, num_args) in enumerate(terminals):
-            if terminal in higher_order_functions:
-                continue
-            upcoming_higher_order_functions = []
-            for j in range(i + 1, len(terminals)):
-                if terminals[j][0] in higher_order_functions:
-                    upcoming_higher_order_functions.append(terminals[j][0])
-                else:
-                    break
-            if upcoming_higher_order_functions:
-                if 'lambda' in terminal:
-                    terminal = f"({terminal} {partial_logical_forms.pop()})"
-                    num_args -= 1
-                for upcoming_function in upcoming_higher_order_functions:
-                    terminal = f"({upcoming_function} {terminal})"
-            if num_args == 0:
-                partial_logical_forms.append(terminal)
-            else:
-                args = []
-                if len(partial_logical_forms) < num_args:
-                    logger.error("Not enough arguments for: %s", terminal)
-                    logger.error("Partial logical forms were: %s", partial_logical_forms)
-                    logger.error("Action sequence was: %s", action_sequence)
-                    raise ParsingError("Can't produce logical form from action sequence")
-                for _ in range(num_args):
-                    args.append(partial_logical_forms.pop())
-                partial_logical_forms.append("(%s %s)" % (terminal, " ".join(args)))
-        if len(partial_logical_forms) != 1:
-            logger.error("Incomplete action sequence (or parsing error): %s", action_sequence)
-            logger.error("Partial logical forms were: %s", partial_logical_forms)
-            raise ParsingError("Can't produce logical form from action sequence")
-        return partial_logical_forms[0]
+        remaining_actions = [action.split(" -> ") for action in action_sequence]
+        tree = _TreeNode(remaining_actions[0][1])
+
+        try:
+            remaining_actions = self._construct_node_from_actions(tree,
+                                                                  remaining_actions[1:],
+                                                                  add_var_function)
+        except ParsingError:
+            logger.error("Error parsing action sequence: %s", action_sequence)
+            raise
+
+        if remaining_actions:
+            logger.error("Error parsing action sequence: %s", action_sequence)
+            logger.error("Remaining actions were: %s", remaining_actions)
+            raise ParsingError("Extra actions in action sequence")
+        return str(tree)
+
+    def _construct_node_from_actions(self,
+                                     current_node: _TreeNode,
+                                     remaining_actions: List[List[str]],
+                                     add_var_function: bool) -> List[List[str]]:
+        """
+        Given a current node in the logical form tree, and a list of actions in an action sequence,
+        this method fills in the children of the current node from the action sequence, then
+        returns whatever actions are left.
+
+        For example, we could get a node with type ``c``, and an action sequence that begins with
+        ``c -> [<r,c>, r]``.  This method will add two children to the input node, consuming
+        actions from the action sequence for nodes of type ``<r,c>`` (and all of its children,
+        recursively) and ``r`` (and all of its children, recursively).  This method assumes that
+        action sequences are produced `depth-first`, so all actions for the subtree under ``<r,c>``
+        appear before actions for the subtree under ``r``.  If there are any actions in the action
+        sequence after the ``<r,c>`` and ``r`` subtrees have terminated in leaf nodes, they will be
+        returned.
+        """
+        if not remaining_actions:
+            logger.error("No actions left to construct current node: %s", current_node)
+            raise ParsingError("Incomplete action sequence")
+        left_side, right_side = remaining_actions.pop(0)
+        if left_side != current_node.label:
+            logger.error("Current node: %s", current_node)
+            logger.error("Next action: %s -> %s", left_side, right_side)
+            logger.error("Remaining actions were: %s", remaining_actions)
+            raise ParsingError("Current node does not match next action")
+        if right_side[0] == '[':
+            # This is a non-terminal expansion, with more than one child node.
+            for child_type in right_side[1:-1].split(', '):
+                if child_type.startswith("'lambda"):
+                    # We need to special-case the handling of lambda here, because it's handled a
+                    # bit weirdly in the action sequence.  This is stripping off the single quotes
+                    # around something like `'lambda x'`.
+                    child_type = child_type[1:-1]
+                child_node = _TreeNode(child_type)
+                current_node.children.append(child_node)
+                if not self.is_terminal(child_type):
+                    remaining_actions = self._construct_node_from_actions(child_node,
+                                                                          remaining_actions,
+                                                                          add_var_function)
+        elif self.is_terminal(right_side):
+            # The current node is a pre-terminal; we'll add a single terminal child.  We need to
+            # check first for whether we need to add a (var _) around the terminal node, though.
+            if add_var_function and right_side in self._lambda_variables:
+                right_side = f"(var {right_side})"
+            if add_var_function and right_side == 'var':
+                raise ParsingError('add_var_function was true, but action sequence already had var')
+            current_node.children.append(_TreeNode(right_side))
+        else:
+            # The only way this can happen is if you have a unary non-terminal production rule.
+            # That is almost certainly not what you want with this kind of grammar, so we'll crash.
+            # If you really do want this, open a PR with a valid use case.
+            raise ParsingError(f"Found a unary production rule: {left_side} -> {right_side}. "
+                               "Are you sure you want a unary production rule in your grammar?")
+        return remaining_actions
 
     @classmethod
     def _infer_num_arguments(cls, type_signature: str) -> int:
