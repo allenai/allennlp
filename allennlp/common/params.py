@@ -78,7 +78,7 @@ class Params(MutableMapping):
         If the ``loading_from_archive`` flag is True, this will be a no-op.
         """
         if not self.loading_from_archive:
-            self.files_to_archive[f"{self.history}{name}"] = self.get(name)
+            self.files_to_archive[f"{self.history}{name}"] = cached_path(self.get(name))
 
     @overrides
     def pop(self, key: str, default: Any = DEFAULT) -> Any:
@@ -210,6 +210,23 @@ class Params(MutableMapping):
         logger.info("CURRENTLY DEFINED PARAMETERS: ")
         log_recursively(self.params, self.history)
         return self.params
+
+    def as_flat_dict(self):
+        """
+        Returns the parameters of a flat dictionary from keys to values.
+        Nested structure is collapsed with periods.
+        """
+        flat_params = {}
+        def recurse(parameters, path):
+            for key, value in parameters.items():
+                newpath = path + [key]
+                if isinstance(value, dict):
+                    recurse(value, newpath)
+                else:
+                    flat_params['.'.join(newpath)] = value
+
+        recurse(self.params, [])
+        return flat_params
 
     def duplicate(self) -> 'Params':
         """

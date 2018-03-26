@@ -10,3 +10,8 @@ allennlp.models.encoder_decoders
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. toctree::
+
+  allennlp.models.encoder_decoders.nlvr
+  allennlp.models.encoder_decoders.wikitables

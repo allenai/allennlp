@@ -5,12 +5,9 @@ import tarfile
 from typing import Dict, List, Tuple
 
 from overrides import overrides
-from tqdm import tqdm
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.reading_comprehension import util
@@ -57,14 +54,16 @@ class TriviaQaReader(DatasetReader):
                  base_tarball_path: str,
                  unfiltered_tarball_path: str = None,
                  tokenizer: Tokenizer = None,
-                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 lazy: bool = False) -> None:
+        super().__init__(lazy)
         self._base_tarball_path = base_tarball_path
         self._unfiltered_tarball_path = unfiltered_tarball_path
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
     @overrides
-    def read(self, file_path: str):
+    def _read(self, file_path: str):
         logger.info("Opening base tarball file at %s", self._base_tarball_path)
         base_tarball = tarfile.open(cached_path(self._base_tarball_path), 'r')
         if 'unfiltered' in file_path:
@@ -78,8 +77,7 @@ class TriviaQaReader(DatasetReader):
             data_json = json.loads(base_tarball.extractfile(path).read().decode('utf-8'))
 
         logger.info("Reading the dataset")
-        instances = []
-        for question_json in tqdm(data_json['Data']):
+        for question_json in data_json['Data']:
             question_text = question_json['Question']
             question_tokens = self._tokenizer.tokenize(question_text)
 
@@ -111,11 +109,7 @@ class TriviaQaReader(DatasetReader):
                                                  answer_texts,
                                                  question_tokens,
                                                  paragraph_tokens)
-                instances.append(instance)
-        if not instances:
-            raise ConfigurationError("No instances were read from the given filepath {}. "
-                                     "Is the path correct?".format(file_path))
-        return Dataset(instances)
+                yield instance
 
     def pick_paragraphs(self,
                         evidence_files: List[List[str]],
@@ -165,8 +159,10 @@ class TriviaQaReader(DatasetReader):
         unfiltered_tarball_path = params.pop('unfiltered_tarball_path', None)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
+        lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
         return cls(base_tarball_path=base_tarball_path,
                    unfiltered_tarball_path=unfiltered_tarball_path,
                    tokenizer=tokenizer,
-                   token_indexers=token_indexers)
+                   token_indexers=token_indexers,
+                   lazy=lazy)

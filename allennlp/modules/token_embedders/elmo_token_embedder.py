@@ -25,19 +25,23 @@ class ElmoTokenEmbedder(TokenEmbedder):
         Should we apply layer normalization (passed to ``ScalarMix``)?
     dropout : ``float``, optional.
         The dropout value to be applied to the ELMo representations.
+    requires_grad: ``bool``, optional
+        If True, compute gradient of ELMo parameters for fine tuning.
     """
     def __init__(self,
                  options_file: str,
                  weight_file: str,
                  do_layer_norm: bool = False,
-                 dropout: float = 0.5) -> None:
+                 dropout: float = 0.5,
+                 requires_grad: bool = False) -> None:
         super(ElmoTokenEmbedder, self).__init__()
 
         self._elmo = Elmo(options_file,
                           weight_file,
                           1,
                           do_layer_norm=do_layer_norm,
-                          dropout=dropout)
+                          dropout=dropout,
+                          requires_grad=requires_grad)
 
     def get_output_dim(self):
         # pylint: disable=protected-access
@@ -64,7 +68,8 @@ class ElmoTokenEmbedder(TokenEmbedder):
         params.add_file_to_archive('weight_file')
         options_file = params.pop('options_file')
         weight_file = params.pop('weight_file')
+        requires_grad = params.pop('requires_grad', False)
         do_layer_norm = params.pop_bool('do_layer_norm', False)
         dropout = params.pop_float("dropout", 0.5)
         params.assert_empty(cls.__name__)
-        return cls(options_file, weight_file, do_layer_norm, dropout)
+        return cls(options_file, weight_file, do_layer_norm, dropout, requires_grad=requires_grad)

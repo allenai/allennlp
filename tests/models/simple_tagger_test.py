@@ -35,9 +35,9 @@ class SimpleTaggerTest(ModelTestCase):
 
     def test_mismatching_dimensions_throws_configuration_error(self):
         params = Params.from_file(self.param_file)
-        # Make the stacked_encoder wrong - it should be 2 to match
+        # Make the encoder wrong - it should be 2 to match
         # the embedding dimension from the text_field_embedder.
-        params["model"]["stacked_encoder"]["input_size"] = 10
+        params["model"]["encoder"]["input_size"] = 10
         with pytest.raises(ConfigurationError):
             Model.from_params(self.vocab, params.pop("model"))
 
@@ -49,12 +49,12 @@ class SimpleTaggerTest(ModelTestCase):
         trainer = Trainer(self.model,
                           None,  # optimizer,
                           iterator,
-                          self.dataset)
+                          self.instances)
 
         # You get a RuntimeError if you call `model.forward` twice on the same inputs.
         # The data and config are such that the whole dataset is one batch.
-        training_batch = next(iterator(self.dataset, num_epochs=1))
-        validation_batch = next(iterator(self.dataset, num_epochs=1))
+        training_batch = next(iterator(self.instances, num_epochs=1))
+        validation_batch = next(iterator(self.instances, num_epochs=1))
 
         training_loss = trainer._batch_loss(training_batch, for_training=True).data
         validation_loss = trainer._batch_loss(validation_batch, for_training=False).data
@@ -105,8 +105,8 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
 
         # You get a RuntimeError if you call `model.forward` twice on the same inputs.
         # The data and config are such that the whole dataset is one batch.
-        training_batch = next(self.iterator(self.dataset, num_epochs=1))
-        validation_batch = next(self.iterator(self.dataset, num_epochs=1))
+        training_batch = next(self.iterator(self.instances, num_epochs=1))
+        validation_batch = next(self.iterator(self.instances, num_epochs=1))
 
         training_loss = self.trainer._batch_loss(training_batch, for_training=True).data
         validation_loss = self.trainer._batch_loss(validation_batch, for_training=False).data

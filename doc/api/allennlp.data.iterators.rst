@@ -10,7 +10,7 @@ allennlp.data.iterators
 * :ref:`AdaptiveIterator<adaptive-iterator>`
 * :ref:`BasicIterator<basic-iterator>`
 * :ref:`BucketIterator<bucket-iterator>`
-* :ref:`LazyBasicIterator<lazy-basic-iterator>`
+* :ref:`EpochTrackingBucketIterator<epoch-tracking-bucket-iterator>`
 
 .. _data-iterator:
 .. automodule:: allennlp.data.iterators.data_iterator
@@ -36,9 +36,8 @@ allennlp.data.iterators
    :undoc-members:
    :show-inheritance:
 
-.. _lazy-basic-iterator:
-.. automodule:: allennlp.data.iterators.lazy_basic_iterator
+.. _epoch-tracking-bucket-iterator:
+.. automodule:: allennlp.data.iterators.epoch_tracking_bucket_iterator
    :members:
    :undoc-members:
    :show-inheritance:
-

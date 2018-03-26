@@ -17,34 +17,39 @@
   "model": {
     "type": "simple_tagger",
     "text_field_embedder": {
-            "tokens": {
-                    "type": "embedding",
-                    "embedding_dim": 50
-            },
-            "token_characters": {
-              "type": "character_encoding",
-              "embedding": {
-                "embedding_dim": 8
-              },
-              "encoder": {
-                "type": "cnn",
-                "embedding_dim": 8,
-                "num_filters": 50,
-                "ngram_filter_sizes": [5]
-              },
-              "dropout": 0.2
-            }
+      "tokens": {
+        "type": "embedding",
+        "embedding_dim": 50
+      },
+      "token_characters": {
+        "type": "character_encoding",
+        "embedding": {
+          "embedding_dim": 8
+        },
+        "encoder": {
+          "type": "cnn",
+          "embedding_dim": 8,
+          "num_filters": 50,
+          "ngram_filter_sizes": [
+            5
+          ]
+        },
+        "dropout": 0.2
+      }
     },
-    "stacked_encoder": {
-            "type": "lstm",
-            "input_size": 100,
-            "hidden_size": 100,
-            "num_layers": 2,
-            "dropout": 0.5,
-            "bidirectional": true
+    "encoder": {
+      "type": "lstm",
+      "input_size": 100,
+      "hidden_size": 100,
+      "num_layers": 2,
+      "dropout": 0.5,
+      "bidirectional": true
     }
   },
-  "iterator": {"type": "basic", "batch_size": 32},
+  "iterator": {
+    "type": "basic",
+    "batch_size": 32
+  },
   "trainer": {
     "optimizer": "adam",
     "num_epochs": 40,

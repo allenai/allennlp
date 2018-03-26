@@ -45,4 +45,6 @@ class ArrayField(Field[numpy.ndarray]):
 
     @overrides
     def empty_field(self):  # pylint: disable=no-self-use
-        return ArrayField(numpy.array([], dtype="float32"))
+        # Pass the padding_value, so that any outer field, e.g., `ListField[ArrayField]` uses the
+        # same padding_value in the padded ArrayFields
+        return ArrayField(numpy.array([], dtype="float32"), padding_value=self.padding_value)

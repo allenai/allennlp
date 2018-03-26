@@ -1,16 +1,14 @@
-from typing import Dict, List, Sequence
+from typing import Dict, List, Sequence, Iterable
 import itertools
 import logging
 
 from overrides import overrides
-import tqdm
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.data.dataset import Dataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import TextField, SequenceLabelField
+from allennlp.data.fields import TextField, SequenceLabelField, Field
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
@@ -62,7 +60,9 @@ class Conll2003DatasetReader(DatasetReader):
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  tag_label: str = "ner",
-                 feature_labels: Sequence[str] = ()) -> None:
+                 feature_labels: Sequence[str] = (),
+                 lazy: bool = False) -> None:
+        super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         if tag_label is not None and tag_label not in _VALID_LABELS:
             raise ConfigurationError("unknown tag label type: {}".format(tag_label))
@@ -74,17 +74,15 @@ class Conll2003DatasetReader(DatasetReader):
         self.feature_labels = set(feature_labels)
 
     @overrides
-    def read(self, file_path):
+    def _read(self, file_path: str) -> Iterable[Instance]:
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
-
-        instances = []
 
         with open(file_path, "r") as data_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
 
             # Group into alternative divider / sentence chunks.
-            for is_divider, lines in tqdm.tqdm(itertools.groupby(data_file, _is_divider)):
+            for is_divider, lines in itertools.groupby(data_file, _is_divider):
                 # Ignore the divider chunks, so that `lines` corresponds to the words
                 # of a single sentence.
                 if not is_divider:
@@ -95,7 +93,7 @@ class Conll2003DatasetReader(DatasetReader):
                     tokens = [Token(token) for token in tokens]
                     sequence = TextField(tokens, self._token_indexers)
 
-                    instance_fields = {'tokens': sequence}
+                    instance_fields: Dict[str, Field] = {'tokens': sequence}
 
                     # Add "feature labels" to instance
                     if 'pos' in self.feature_labels:
@@ -113,12 +111,7 @@ class Conll2003DatasetReader(DatasetReader):
                     elif self.tag_label == 'chunk':
                         instance_fields['tags'] = SequenceLabelField(chunk_tags, sequence)
 
-                    instances.append(Instance(instance_fields))
-
-        if not instances:
-            raise ConfigurationError("reading {} resulted in an empty Dataset".format(file_path))
-
-        return Dataset(instances)
+                    yield Instance(instance_fields)
 
     def text_to_instance(self, tokens: List[Token]) -> Instance:  # type: ignore
         """
@@ -132,7 +125,9 @@ class Conll2003DatasetReader(DatasetReader):
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         tag_label = params.pop('tag_label', None)
         feature_labels = params.pop('feature_labels', ())
+        lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
         return Conll2003DatasetReader(token_indexers=token_indexers,
                                       tag_label=tag_label,
-                                      feature_labels=feature_labels)
+                                      feature_labels=feature_labels,
+                                      lazy=lazy)

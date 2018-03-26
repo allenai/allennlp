@@ -51,7 +51,7 @@ class F1Measure(Metric):
         positive_label_mask = gold_labels.eq(self._positive_label).float()
         negative_label_mask = 1.0 - positive_label_mask
 
-        argmax_predictions = predictions.topk(1, -1)[1].float().squeeze(-1)
+        argmax_predictions = predictions.max(-1)[1].float().squeeze(-1)
 
         # True Negatives: correct non-positive predictions.
         correct_null_predictions = (argmax_predictions !=

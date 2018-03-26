@@ -26,11 +26,13 @@ class Header extends React.Component {
           <div className="header__content">
             <nav>
               <ul>
+                {buildLink("wikitables-parser", "Semantic Parsing")}
                 {buildLink("machine-comprehension", "Machine Comprehension")}
                 {buildLink("textual-entailment", "Textual Entailment")}
                 {buildLink("semantic-role-labeling", "Semantic Role Labeling")}
                 {buildLink("coreference-resolution", "Coreference Resolution")}
                 {buildLink("named-entity-recognition", "Named Entity Recognition")}
+                {buildLink("constituency-parsing", "Constituency Parsing")}
               </ul>
             </nav>
             <h1 className="header__content__logo">

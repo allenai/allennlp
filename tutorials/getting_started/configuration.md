@@ -264,7 +264,7 @@ which needs to be a
 [`Seq2SeqEncoder`](http://docs.allennlp.org/en/latest/api/allennlp.modules.seq2seq_encoders.html#allennlp.modules.seq2seq_encoders.seq2seq_encoder.Seq2SeqEncoder):
 
 ```js
-    "stacked_encoder": {
+    "encoder": {
             "type": "lstm",
             "input_size": 100,
             "hidden_size": 100,

@@ -60,6 +60,27 @@ def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
     return mask.long().sum(-1)
 
 
+def get_mask_from_sequence_lengths(sequence_lengths: Variable, max_length: int) -> Variable:
+    """
+    Given a variable of shape ``(batch_size,)`` that represents the sequence lengths of each batch
+    element, this function returns a ``(batch_size, max_length)`` mask variable.  For example, if
+    our input was ``[2, 2, 3]``, with a ``max_length`` of 4, we'd return
+    ``[[1, 1, 0, 0], [1, 1, 0, 0], [1, 1, 1, 0]]``.
+
+    We require ``max_length`` here instead of just computing it from the input ``sequence_lengths``
+    because it lets us avoid finding the max, then copying that value from the GPU to the CPU so
+    that we can use it to construct a new tensor.
+
+    Some of our functions are agnostic as to whether they accept ``Tensors`` or ``Variables``, and
+    they just use ``Tensor`` for their type annotations.  We `require` ``Variables`` here, as we
+    call ``sequence_length.data.new()``.  The data type of ``sequence_lengths`` is assumed to be
+    ``long``, but really could be anything, and the data type of the returned mask is ``long``.
+    """
+    # (batch_size, max_length)
+    ones = Variable(sequence_lengths.data.new(sequence_lengths.size(0), max_length).fill_(1))
+    range_tensor = ones.cumsum(dim=1)
+    return (sequence_lengths.unsqueeze(1) >= range_tensor).long()
+
 def sort_batch_by_length(tensor: torch.autograd.Variable,
                          sequence_lengths: torch.autograd.Variable):
     """
@@ -147,7 +168,7 @@ def masked_softmax(vector, mask):
     if mask is None:
         result = torch.nn.functional.softmax(vector, dim=-1)
     else:
-        # To limit numerical errors from large vector elements outside mask, we zero these out
+        # To limit numerical errors from large vector elements outside the mask, we zero these out.
         result = torch.nn.functional.softmax(vector * mask, dim=-1)
         result = result * mask
         result = result / (result.sum(dim=1, keepdim=True) + 1e-13)
@@ -162,12 +183,23 @@ def masked_log_softmax(vector, mask):
 
     We assume that both ``vector`` and ``mask`` (if given) have shape ``(batch_size, vector_dim)``.
 
-    In the case that the input vector is completely masked, this function returns an array
-    of ``0.0``.  You should be masking the result of whatever computation comes out of this in that
-    case, anyway, so it shouldn't matter.
+    In the case that the input vector is completely masked, the return value of this function is
+    arbitrary, but not ``nan``.  You should be masking the result of whatever computation comes out
+    of this in that case, anyway, so the specific values returned shouldn't matter.  Also, the way
+    that we deal with this case relies on having single-precision floats; mixing half-precision
+    floats with fully-masked vectors will likely give you ``nans``.
+
+    If your logits are all extremely negative (i.e., the max value in your logit vector is -50 or
+    lower), the way we handle masking here could mess you up.  But if you've got logit values that
+    extreme, you've got bigger problems than this.
     """
     if mask is not None:
-        vector = vector + mask.log()
+        # vector + mask.log() is an easy way to zero out masked elements in logspace, but it
+        # results in nans when the whole vector is masked.  We need a very small value instead of a
+        # zero in the mask for these cases.  log(1 + 1e-45) is still basically 0, so we can safely
+        # just add 1e-45 before calling mask.log().  We use 1e-45 because 1e-46 is so small it
+        # becomes 0 - this is just the smallest value we can actually use.
+        vector = vector + (mask + 1e-45).log()
     return torch.nn.functional.log_softmax(vector, dim=1)
 
 
@@ -471,6 +503,27 @@ def ones_like(tensor: torch.Tensor) -> torch.Tensor:
     return tensor.clone().fill_(1)
 
 
+def new_variable_with_data(original: Variable, data: torch.Tensor) -> Variable:
+    """
+    ``Variable.clone`` does not necessarily make a new variable on the same device as the original.
+    This method takes a variable and some data and makes a new variable on the same device as the original
+    variable, but with the provided data. Note that the returned variable will be the same type as the
+    passed data, which may be different from the original variable's type.
+    """
+    # We cast the variable to the type of the data first before filling it with new data.
+    data_type = data.type()
+    return Variable(original.type(data_type).data.new(data))
+
+
+def new_variable_with_size(original: Variable, size: Tuple[int, ...], value) -> Variable:
+    """
+    Returns a new variable on the same device as the ``original``, but containing a tensor of provided
+    ``size``, filled with the given ``value``.
+    """
+    size = torch.Size(size)
+    return Variable(original.data.new(size).fill_(value))
+
+
 def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
     """
     Combines a list of tensors using element-wise operations and concatenation, specified by a
@@ -585,6 +638,15 @@ def logsumexp(tensor: torch.Tensor,
         stable_vec = tensor - max_score.unsqueeze(dim)
     return max_score + (stable_vec.exp().sum(dim, keepdim=keepdim)).log()
 
+def get_device_of(tensor: torch.Tensor) -> int:
+    """
+    Returns the device of the tensor.
+    """
+    if not tensor.is_cuda:
+        return -1
+    else:
+        return tensor.get_device()
+
 def flatten_and_batch_shift_indices(indices: torch.Tensor,
                                     sequence_length: int) -> torch.Tensor:
     """
@@ -617,7 +679,7 @@ def flatten_and_batch_shift_indices(indices: torch.Tensor,
     offset_indices : ``torch.LongTensor``
     """
     # Shape: (batch_size)
-    offsets = get_range_vector(indices.size(0), indices.is_cuda) * sequence_length
+    offsets = get_range_vector(indices.size(0), get_device_of(indices)) * sequence_length
     for _ in range(len(indices.size()) - 1):
         offsets = offsets.unsqueeze(1)
 
@@ -633,20 +695,21 @@ def batched_index_select(target: torch.Tensor,
                          indices: torch.LongTensor,
                          flattened_indices: Optional[torch.LongTensor] = None) -> torch.Tensor:
     """
-    The given `indices` of size ``(batch_size, d_1, ..., d_n)`` indexes into the sequence dimension
-    (dimension 2) of the target, which has size ``(batch_size, sequence_length, embedding_size)``.
+    The given ``indices`` of size ``(batch_size, d_1, ..., d_n)`` indexes into the sequence
+    dimension (dimension 2) of the target, which has size ``(batch_size, sequence_length,
+    embedding_size)``.
 
     This function returns selected values in the target with respect to the provided indices, which
-    have size ``(batch_size, d_1, ..., d_n, embedding_size)``. This can use the optionally precomputed
-    :func:`~flattened_indices` with size ``(batch_size * d_1 * ... * d_n)`` if given.
+    have size ``(batch_size, d_1, ..., d_n, embedding_size)``. This can use the optionally
+    precomputed :func:`~flattened_indices` with size ``(batch_size * d_1 * ... * d_n)`` if given.
 
     An example use case of this function is looking up the start and end indices of spans in a
     sequence tensor. This is used in the
     :class:`~allennlp.models.coreference_resolution.CoreferenceResolver`. Model to select
-    contextual word representations corresponding to the start and end indices of mentions. The
-    key reason this can't be done with basic torch functions is that we want to be able to use
-    look-up tensors with an arbitrary number of dimensions (for example, in the coref model,
-    we don't know a-priori how many spans we are looking up).
+    contextual word representations corresponding to the start and end indices of mentions. The key
+    reason this can't be done with basic torch functions is that we want to be able to use look-up
+    tensors with an arbitrary number of dimensions (for example, in the coref model, we don't know
+    a-priori how many spans we are looking up).
 
     Parameters
     ----------
@@ -704,7 +767,7 @@ def flattened_index_select(target: torch.Tensor,
         A Tensor of shape (batch_size, set_size, subset_size, embedding_size).
     """
     if indices.dim() != 2:
-        raise ConfigurationError("Indices passed to flatten_index_select had shape {} but "
+        raise ConfigurationError("Indices passed to flattened_index_select had shape {} but "
                                  "only 2 dimensional inputs are supported.".format(indices.size()))
     # Shape: (batch_size, set_size * subset_size, embedding_size)
     flattened_selected = target.index_select(1, indices.view(-1))
@@ -714,13 +777,13 @@ def flattened_index_select(target: torch.Tensor,
     return selected
 
 
-def get_range_vector(size: int, is_cuda: bool) -> torch.Tensor:
+def get_range_vector(size: int, device: int) -> torch.Tensor:
     """
     Returns a range vector with the desired size, starting at 0. The CUDA implementation
     is meant to avoid copy data from CPU to GPU.
     """
-    if is_cuda:
-        indices = torch.cuda.LongTensor(size).fill_(1).cumsum(0) - 1
+    if device > -1:
+        indices = torch.cuda.LongTensor(size, device=device).fill_(1).cumsum(0) - 1
     else:
         indices = torch.arange(0, size).long()
     return Variable(indices, requires_grad=False)
@@ -897,11 +960,11 @@ def add_positional_features(tensor: torch.Tensor,
     """
     _, timesteps, hidden_dim = tensor.size()
 
-    timestep_range = get_range_vector(timesteps, tensor.is_cuda).data.float()
+    timestep_range = get_range_vector(timesteps, get_device_of(tensor)).data.float()
     # We're generating both cos and sin frequencies,
     # so half for each.
     num_timescales = hidden_dim // 2
-    timescale_range = get_range_vector(num_timescales, tensor.is_cuda).data.float()
+    timescale_range = get_range_vector(num_timescales, get_device_of(tensor)).data.float()
 
     log_timescale_increments = math.log(float(max_timescale) / float(min_timescale)) / float(num_timescales - 1)
     inverse_timescales = min_timescale * torch.exp(timescale_range * -log_timescale_increments)

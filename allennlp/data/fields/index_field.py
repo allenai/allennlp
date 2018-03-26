@@ -38,7 +38,7 @@ class IndexField(Field[torch.Tensor]):
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-        return {'num_options': self.sequence_field.sequence_length()}
+        return {}
 
     @overrides
     def as_tensor(self,

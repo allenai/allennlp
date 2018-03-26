@@ -16,5 +16,6 @@ from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
-from allennlp.modules.token_embedders import TokenEmbedder
+from allennlp.modules.token_embedders import TokenEmbedder, Embedding
 from allennlp.modules.scalar_mix import ScalarMix
+from allennlp.modules.span_pruner import SpanPruner

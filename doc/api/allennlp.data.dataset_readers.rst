@@ -17,4 +17,7 @@ allennlp.data.dataset_readers
   allennlp.data.dataset_readers.seq2seq
   allennlp.data.dataset_readers.sequence_tagging
   allennlp.data.dataset_readers.snli
+  allennlp.data.dataset_readers.penn_tree_bank
   allennlp.data.dataset_readers.dataset_utils
+  allennlp.data.dataset_readers.wikitables
+  allennlp.data.dataset_readers.nlvr

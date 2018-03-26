@@ -13,6 +13,7 @@ that's used by datasets, models, trainers, and so on.
    allennlp.common.squad_eval
    allennlp.common.tee_logger
    allennlp.common.testing
+   allennlp.common.tqdm
    allennlp.common.util
 
 .. automodule:: allennlp.common

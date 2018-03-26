@@ -7,7 +7,7 @@ from copy import deepcopy
 import pytest
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance, Token
-from allennlp.data.dataset import Dataset
+from allennlp.data.dataset import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import CharacterTokenizer
@@ -22,18 +22,18 @@ class TestVocabulary(AllenNlpTestCase):
         text_field = TextField([Token(t) for t in ["a", "a", "a", "a", "b", "b", "c", "c", "c"]],
                                {"tokens": token_indexer})
         self.instance = Instance({"text": text_field})
-        self.dataset = Dataset([self.instance])
+        self.dataset = Batch([self.instance])
         super(TestVocabulary, self).setUp()
 
     def test_from_dataset_respects_min_count(self):
 
-        vocab = Vocabulary.from_instances(self.dataset, min_count=4)
+        vocab = Vocabulary.from_instances(self.dataset, min_count={'tokens': 4})
         words = vocab.get_index_to_token_vocabulary().values()
         assert 'a' in words
         assert 'b' not in words
         assert 'c' not in words
 
-        vocab = Vocabulary.from_instances(self.dataset, min_count=1)
+        vocab = Vocabulary.from_instances(self.dataset, min_count=None)
         words = vocab.get_index_to_token_vocabulary().values()
         assert 'a' in words
         assert 'b' in words
@@ -46,7 +46,7 @@ class TestVocabulary(AllenNlpTestCase):
             embeddings_file.write("b 0.1 0.4 -4.0\n".encode('utf-8'))
 
         vocab = Vocabulary.from_instances(self.dataset,
-                                          min_count=4,
+                                          min_count={'tokens': 4},
                                           pretrained_files={'tokens': embeddings_filename},
                                           only_include_pretrained_words=True)
         words = vocab.get_index_to_token_vocabulary().values()
@@ -55,7 +55,6 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'c' not in words
 
         vocab = Vocabulary.from_instances(self.dataset,
-                                          min_count=-1,
                                           pretrained_files={'tokens': embeddings_filename},
                                           only_include_pretrained_words=True)
         words = vocab.get_index_to_token_vocabulary().values()
@@ -70,7 +69,7 @@ class TestVocabulary(AllenNlpTestCase):
             embeddings_file.write("b 0.1 0.4 -4.0\n".encode('utf-8'))
 
         vocab = Vocabulary.from_instances(self.dataset,
-                                          min_count=4,
+                                          min_count={'tokens': 4},
                                           pretrained_files={'tokens': embeddings_filename},
                                           only_include_pretrained_words=False)
         words = vocab.get_index_to_token_vocabulary().values()
@@ -79,14 +78,12 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'c' not in words
 
         vocab = Vocabulary.from_instances(self.dataset,
-                                          min_count=-1,
                                           pretrained_files={'tokens': embeddings_filename},
                                           only_include_pretrained_words=False)
         words = vocab.get_index_to_token_vocabulary().values()
         assert 'a' in words
         assert 'b' in words
         assert 'c' in words
-
 
     def test_add_word_to_index_gives_consistent_results(self):
         vocab = Vocabulary()
@@ -251,7 +248,7 @@ class TestVocabulary(AllenNlpTestCase):
         token_indexer = TokenCharactersIndexer(character_tokenizer=tokenizer)
         tokens = [Token(t) for t in ["Øyvind", "für", "汉字"]]
         text_field = TextField(tokens, {"characters": token_indexer})
-        dataset = Dataset([Instance({"sentence": text_field})])
+        dataset = Batch([Instance({"sentence": text_field})])
         vocab = Vocabulary.from_instances(dataset)
         text_field.index(vocab)
         indexed_tokens = deepcopy(text_field._indexed_tokens)  # pylint: disable=protected-access
@@ -292,4 +289,4 @@ class TestVocabulary(AllenNlpTestCase):
         # Test from_params raises when there are any other dict keys
         # present apart from 'vocabulary_directory' and we aren't calling from_dataset.
         with pytest.raises(ConfigurationError):
-            _ = Vocabulary.from_params(Params({"directory_path": vocab_dir, "min_count": 2}))
+            _ = Vocabulary.from_params(Params({"directory_path": vocab_dir, "min_count": {'tokens': 2}}))

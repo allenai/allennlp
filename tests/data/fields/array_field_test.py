@@ -38,3 +38,18 @@ class TestArrayField(AllenNlpTestCase):
                                       [[0., 0., 0., 0., 0.],
                                        [0., 0., 0., 0., 0.]]])
         numpy.testing.assert_array_equal(returned_tensor, correct_tensor)
+
+    def test_padding_handles_list_fields_with_padding_values(self):
+        array1 = ArrayField(numpy.ones([2, 3]), padding_value=-1)
+        array2 = ArrayField(numpy.ones([1, 5]), padding_value=-1)
+        empty_array = array1.empty_field()
+        list_field = ListField([array1, array2, empty_array])
+
+        returned_tensor = list_field.as_tensor(list_field.get_padding_lengths()).data.cpu().numpy()
+        correct_tensor = numpy.array([[[1., 1., 1., -1., -1.],
+                                       [1., 1., 1., -1., -1.]],
+                                      [[1., 1., 1., 1., 1.],
+                                       [-1., -1., -1., -1., -1.]],
+                                      [[-1., -1., -1., -1., -1.],
+                                       [-1., -1., -1., -1., -1.]]])
+        numpy.testing.assert_array_equal(returned_tensor, correct_tensor)

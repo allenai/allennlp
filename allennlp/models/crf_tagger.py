@@ -8,6 +8,7 @@ from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, ConditionalRandomField
+from allennlp.modules.conditional_random_field import allowed_transitions
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 import allennlp.nn.util as util
@@ -30,6 +31,9 @@ class CrfTagger(Model):
     label_namespace : ``str``, optional (default=``labels``)
         This is needed to compute the SpanBasedF1Measure metric.
         Unless you did something unusual, the default value should be what you want.
+    constraint_type : ``str``, optional (default=``None``)
+        If provided, the CRF will be constrained at decoding time
+        to produce valid labels based on the specified type (e.g. "BIO", or "BIOUL").
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
@@ -40,6 +44,7 @@ class CrfTagger(Model):
                  text_field_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
                  label_namespace: str = "labels",
+                 constraint_type: str = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
@@ -50,7 +55,14 @@ class CrfTagger(Model):
         self.encoder = encoder
         self.tag_projection_layer = TimeDistributed(Linear(self.encoder.get_output_dim(),
                                                            self.num_tags))
-        self.crf = ConditionalRandomField(self.num_tags)
+
+        if constraint_type is not None:
+            labels = self.vocab.get_index_to_token_vocabulary(label_namespace)
+            constraints = allowed_transitions(constraint_type, labels)
+        else:
+            constraints = None
+
+        self.crf = ConditionalRandomField(self.num_tags, constraints)
 
         self.span_metric = SpanBasedF1Measure(vocab, tag_namespace=label_namespace)
 
@@ -143,6 +155,7 @@ class CrfTagger(Model):
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
         label_namespace = params.pop("label_namespace", "labels")
+        constraint_type = params.pop("constraint_type", None)
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
 
@@ -152,5 +165,6 @@ class CrfTagger(Model):
                    text_field_embedder=text_field_embedder,
                    encoder=encoder,
                    label_namespace=label_namespace,
+                   constraint_type=constraint_type,
                    initializer=initializer,
                    regularizer=regularizer)

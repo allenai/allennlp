@@ -7,15 +7,13 @@ their predictions.
 .. code-block:: bash
 
     $ python -m allennlp.run serve --help
-    usage: run [command] serve [-h] [--port PORT] [--workers WORKERS]
-                            [--config-file CONFIG_FILE]
+    usage: python -m allennlp.run serve [-h] [--port PORT]
 
     Run the web service, which provides an HTTP API as well as a web demo.
 
     optional arguments:
-    -h, --help            show this help message and exit
+    -h, --help   show this help message and exit
     --port PORT
-    --workers WORKERS
 """
 
 import argparse
@@ -32,24 +30,28 @@ from allennlp.service.predictors import DemoModel
 # that have the same ``Predictor`` wrapper. The corresponding model
 # will be served at the `/predict/<name-of-task>` API endpoint.
 DEFAULT_MODELS = {
+        'wikitables-parser': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/wikitables-model-preliminary-2018.02.15.tar.gz',  # pylint: disable=line-too-long
+                'wikitables-parser'
+        ),
         'machine-comprehension': DemoModel(
                 'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz',  # pylint: disable=line-too-long
                 'machine-comprehension'
         ),
         'semantic-role-labeling': DemoModel(
-                'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2017.09.05.tar.gz', # pylint: disable=line-too-long
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2018.02.27.tar.gz', # pylint: disable=line-too-long
                 'semantic-role-labeling'
         ),
         'textual-entailment': DemoModel(
-                'https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-2017.09.04.tar.gz',  # pylint: disable=line-too-long
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-elmo-2018.02.19.tar.gz',  # pylint: disable=line-too-long
                 'textual-entailment'
         ),
         'coreference-resolution': DemoModel(
-                'https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2017.11.09.tar.gz',  # pylint: disable=line-too-long
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2018.02.05.tar.gz',  # pylint: disable=line-too-long
                 'coreference-resolution'
         ),
         'named-entity-recognition': DemoModel(
-                'https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2017.11.15.tar.gz',  # pylint: disable=line-too-long
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.02.12.tar.gz',  # pylint: disable=line-too-long
                 'sentence-tagger'
         )
 }

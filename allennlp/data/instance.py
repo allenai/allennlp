@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Mapping
 
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.vocabulary import Vocabulary
@@ -14,16 +14,17 @@ class Instance:
     as outputs.
 
     The ``Fields`` in an ``Instance`` can start out either indexed or un-indexed.  During the data
-    processing pipeline, all fields will end up as ``IndexedFields``, and will then be converted
-    into padded arrays by a ``DataGenerator``.
+    processing pipeline, all fields will be indexed, after which multiple instances can be combined
+    into a ``Batch`` and then converted into padded arrays.
 
     Parameters
     ----------
     fields : ``Dict[str, Field]``
         The ``Field`` objects that will be used to produce data arrays for this instance.
     """
-    def __init__(self, fields: Dict[str, Field]) -> None:
+    def __init__(self, fields: Mapping[str, Field]) -> None:
         self.fields = fields
+        self.indexed = False
 
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         """
@@ -33,13 +34,20 @@ class Instance:
         for field in self.fields.values():
             field.count_vocab_items(counter)
 
-    def index_fields(self, vocab: Vocabulary):
+    def index_fields(self, vocab: Vocabulary) -> None:
         """
-        Converts all ``UnindexedFields`` in this ``Instance`` to ``IndexedFields``, given the
-        ``Vocabulary``.  This `mutates` the current object, it does not return a new ``Instance``.
+        Indexes all fields in this ``Instance`` using the provided ``Vocabulary``.
+        This `mutates` the current object, it does not return a new ``Instance``.
+        A ``DataIterator`` will call this on each pass through a dataset; we use the ``indexed``
+        flag to make sure that indexing only happens once.
+
+        This means that if for some reason you modify your vocabulary after you've
+        indexed your instances, you might get unexpected behavior.
         """
-        for field in self.fields.values():
-            field.index(vocab)
+        if not self.indexed:
+            self.indexed = True
+            for field in self.fields.values():
+                field.index(vocab)
 
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:
         """

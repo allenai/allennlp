@@ -9,7 +9,7 @@ from allennlp.training.metrics import F1Measure
 
 
 class F1MeasureTest(AllenNlpTestCase):
-    def test__f1_measure_catches_exceptions(self):
+    def test_f1_measure_catches_exceptions(self):
         f1_measure = F1Measure(0)
         predictions = torch.rand([5, 7])
         out_of_range_labels = torch.Tensor([10, 3, 4, 0, 1])

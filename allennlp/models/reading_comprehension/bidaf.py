@@ -247,11 +247,14 @@ class BidirectionalAttentionFlow(Model):
         span_end_logits = util.replace_masked_values(span_end_logits, passage_mask, -1e7)
         best_span = self._get_best_span(span_start_logits, span_end_logits)
 
-        output_dict = {"span_start_logits": span_start_logits,
-                       "span_start_probs": span_start_probs,
-                       "span_end_logits": span_end_logits,
-                       "span_end_probs": span_end_probs,
-                       "best_span": best_span}
+        output_dict = {
+                "passage_question_attention": passage_question_attention,
+                "span_start_logits": span_start_logits,
+                "span_start_probs": span_start_probs,
+                "span_end_logits": span_end_logits,
+                "span_end_probs": span_end_probs,
+                "best_span": best_span,
+                }
         if span_start is not None:
             loss = nll_loss(util.masked_log_softmax(span_start_logits, passage_mask), span_start.squeeze(-1))
             self._span_start_accuracy(span_start_logits, span_start.squeeze(-1))
@@ -261,7 +264,11 @@ class BidirectionalAttentionFlow(Model):
             output_dict["loss"] = loss
         if metadata is not None:
             output_dict['best_span_str'] = []
+            question_tokens = []
+            passage_tokens = []
             for i in range(batch_size):
+                question_tokens.append(metadata[i]['question_tokens'])
+                passage_tokens.append(metadata[i]['passage_tokens'])
                 passage_str = metadata[i]['original_passage']
                 offsets = metadata[i]['token_offsets']
                 predicted_span = tuple(best_span[i].data.cpu().numpy())
@@ -272,6 +279,8 @@ class BidirectionalAttentionFlow(Model):
                 answer_texts = metadata[i].get('answer_texts', [])
                 if answer_texts:
                     self._squad_metrics(best_span_string, answer_texts)
+            output_dict['question_tokens'] = question_tokens
+            output_dict['passage_tokens'] = passage_tokens
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:

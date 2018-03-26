@@ -16,6 +16,7 @@ allennlp.training.metrics
 * :ref:`SquadEmAndF1<squad-em-and-f1>`
 * :ref:`MentionRecall<mention-recall>`
 * :ref:`ConllCorefScores<conll-coref-scores>`
+* :ref:`EvalbBracketingScorer<evalb>`
 
 
 .. _metric:
@@ -78,3 +79,8 @@ allennlp.training.metrics
    :undoc-members:
    :show-inheritance:
 
+.. _evalb:
+.. automodule:: allennlp.training.metrics.evalb_bracketing_scorer
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -13,7 +13,7 @@ import torch
 from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary
-from allennlp.data.dataset import Dataset
+from allennlp.data.dataset import Batch
 from allennlp.nn import util
 from allennlp.nn.regularizers import RegularizerApplicator
 
@@ -60,6 +60,13 @@ class Model(torch.nn.Module, Registrable):
             return 0.0
         else:
             return self._regularizer(self)
+
+    def get_parameters_for_histogram_tensorboard_logging( # pylint: disable=invalid-name
+            self) -> List[str]:
+        """
+        Returns the name of model parameters used for logging histograms to tensorboard.
+        """
+        return [name for name, _ in self.named_parameters()]
 
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
         """
@@ -125,7 +132,7 @@ class Model(torch.nn.Module, Registrable):
         this will be faster on a GPU (and conditionally, on a CPU) than repeated calls to
         :func:`forward_on_instance`.
         """
-        dataset = Dataset(instances)
+        dataset = Batch(instances)
         dataset.index_instances(self.vocab)
         model_input = dataset.as_tensor_dict(cuda_device=cuda_device, for_training=False)
         outputs = self.decode(self(**model_input))

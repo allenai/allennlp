@@ -1,5 +1,4 @@
 from unittest import TestCase
-import logging
 import sys
 
 from allennlp.commands import main
@@ -18,28 +17,6 @@ class TestMain(TestCase):
             main()
 
         assert cm.exception.code == 2  # argparse code for incorrect usage
-
-    def test_warn_on_deprecated_flags(self):
-        sys.argv = ["[executable]",
-                    "evaluate",
-                    "--archive_file", "tests/fixtures/bidaf/serialization/model.tar.gz",
-                    "--evaluation_data_file", "tests/fixtures/data/squad.json",
-                    "--cuda_device", "-1"]
-
-
-        with self.assertLogs(level=logging.WARNING) as context:
-            main()
-            assert set(context.output) == {
-                    'WARNING:allennlp.commands:Argument name --archive_file is deprecated '
-                    '(and will likely go away at some point), please use --archive-file instead',
-
-                    'WARNING:allennlp.commands:Argument name --evaluation_data_file is deprecated '
-                    '(and will likely go away at some point), please use --evaluation-data-file instead',
-
-                    'WARNING:allennlp.commands:Argument name --cuda_device is deprecated '
-                    '(and will likely go away at some point), please use --cuda-device instead',
-            }
-
 
     def test_subcommand_overrides(self):
         def do_nothing(_):

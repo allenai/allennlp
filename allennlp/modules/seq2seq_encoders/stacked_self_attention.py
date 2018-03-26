@@ -151,6 +151,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         num_attention_heads = params.pop_int('num_attention_heads', 3)
         use_positional_encoding = params.pop_bool('use_positional_encoding', True)
         dropout_prob = params.pop_float("dropout_prob", 0.2)
+        params.assert_empty(cls.__name__)
 
         return cls(input_dim=input_dim,
                    hidden_dim=hidden_dim,

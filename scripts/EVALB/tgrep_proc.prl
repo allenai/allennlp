@@ -1,0 +1,9 @@
+#!/usr/local/bin/perl
+
+while(<>)
+{
+    if(m/TOP/) #skip lines which are blank
+    {
+	print;
+    } 
+}

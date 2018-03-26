@@ -2,10 +2,14 @@
 Various utilities that don't fit anwhere else.
 """
 
-from itertools import zip_longest
-from typing import Any, Callable, Dict, List, Tuple, TypeVar
+from itertools import zip_longest, islice
+from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator, Union
+import importlib
+import logging
+import pkgutil
 import random
 import resource
+import subprocess
 import sys
 
 import torch
@@ -13,8 +17,11 @@ import numpy
 import spacy
 from spacy.language import Language as SpacyModelType
 
+import allennlp
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 
@@ -43,6 +50,11 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, (list, tuple)):
         # Lists and Tuples need their values sanitized
         return [sanitize(x_i) for x_i in x]
+    elif isinstance(x, (spacy.tokens.Token, allennlp.data.Token)):
+        # Tokens get sanitized to just their text.
+        return x.text
+    elif x is None:
+        return "None"
     else:
         raise ValueError("cannot sanitize {} of type {}".format(x, type(x)))
 
@@ -60,6 +72,14 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
     """
     return [list(l) for l in zip_longest(*[iter(iterable)] * count, fillvalue=default_value)]
 
+A = TypeVar('A')
+
+def lazy_groups_of(iterator: Iterator[A], group_size: int) -> Iterator[List[A]]:
+    """
+    Takes an iterator and batches the invididual instances into lists of the
+    specified size. The last list may be smaller if there are instances left over.
+    """
+    return iter(lambda: list(islice(iterator, 0, group_size)), [])
 
 def pad_sequence_to_length(sequence: List,
                            desired_length: int,
@@ -105,7 +125,17 @@ def pad_sequence_to_length(sequence: List,
     return padded_sequence
 
 
-A = TypeVar('A')
+def flatten_list(nested_list: Union[A, List[A]]) -> List[A]:
+    def _flatten(_list_or_item: Union[A, List[A]], flat_list: List[A]) -> List[A]:
+        if isinstance(_list_or_item, list):
+            for item in _list_or_item:
+                flat_list = _flatten(item, flat_list)
+            return flat_list
+        flat_list.append(_list_or_item)
+        return flat_list
+    return _flatten(nested_list, [])
+
+
 def add_noise_to_dict_values(dictionary: Dict[A, float], noise_param: float) -> Dict[A, float]:
     """
     Returns a new dictionary with noise added to every key in ``dictionary``.  The noise is
@@ -187,6 +217,22 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
         LOADED_SPACY_MODELS[options] = spacy_model
     return LOADED_SPACY_MODELS[options]
 
+def import_submodules(package_name: str) -> None:
+    """
+    Import all submodules under the given package.
+    Primarily useful so that people using AllenNLP as a library
+    can specify their own custom packages and have their custom
+    classes get loaded and registered.
+    """
+    importlib.invalidate_caches()
+
+    module = importlib.import_module(package_name)
+    path = getattr(module, '__path__', '')
+
+    for _, name, _ in pkgutil.walk_packages(path):
+        importlib.import_module(package_name + '.' + name)
+
+
 def peak_memory_mb() -> float:
     """
     Get peak memory usage for this process, as measured by
@@ -211,3 +257,49 @@ def peak_memory_mb() -> float:
     else:
         # On Linux the result is in kilobytes.
         return peak / 1_000
+
+def gpu_memory_mb() -> Dict[int, int]:
+    """
+    Get the current GPU memory usage.
+    Based on https://discuss.pytorch.org/t/access-gpu-memory-usage-in-pytorch/3192/4
+
+    Returns
+    -------
+    ``Dict[int, int]``
+        Keys are device ids as integers.
+        Values are memory usage as integers in MB.
+        Returns an empty ``dict`` if GPUs are not available.
+    """
+    # pylint: disable=bare-except
+    try:
+        result = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used',
+                                          '--format=csv,nounits,noheader'],
+                                         encoding='utf-8')
+        gpu_memory = [int(x) for x in result.strip().split('\n')]
+        return {gpu: memory for gpu, memory in enumerate(gpu_memory)}
+    except FileNotFoundError:
+        # `nvidia-smi` doesn't exist, assume that means no GPU.
+        return {}
+    except:
+        # Catch *all* exceptions, because this memory check is a nice-to-have
+        # and we'd never want a training run to fail because of it.
+        logger.exception("unable to check gpu_memory_mb(), continuing")
+        return {}
+
+
+def ensure_list(iterable: Iterable[A]) -> List[A]:
+    """
+    An Iterable may be a list or a generator.
+    This ensures we get a list without making an unnecessary copy.
+    """
+    if isinstance(iterable, list):
+        return iterable
+    else:
+        return list(iterable)
+
+def is_lazy(iterable: Iterable[A]) -> bool:
+    """
+    Checks if the given iterable is lazy,
+    which here just means it's not a list.
+    """
+    return not isinstance(iterable, list)
