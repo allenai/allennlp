@@ -11,7 +11,7 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
 
 The preferred way to install AllenNLP is via `pip`.
 
-tldr; Just run pip install allennlp in your python 3.6 environment, install pytorch 0.3.1 from their website (link), and you're good to go!
+tldr; Just run `pip install allennlp` in your python 3.6 environment, install pytorch 0.3.1 from their [website](http://pytorch.org/), and you're good to go!
 If you need pointers on setting up a python 3.6 environment, see below.
 
 _Just want AllenNLP models running as a service via Docker? `docker run --rm  -p 8000:8000 allennlp/allennlp:v0.4.1 python -m allennlp.run serve`_
