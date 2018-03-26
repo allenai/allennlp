@@ -15,7 +15,7 @@ def check_productions_match(actual_rules: List[str], expected_right_sides: List[
 class TestRateCalculusWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        question_tokens = [Token(x) for x in ['I', 'have', 'a', '20', 'dollar', 'bill', 'and', 'a', '50', 'dollar', 'bill']]
+        question_tokens = [Token(x) for x in ['I', 'have', 'a', '20', 'Dollar', 'bill', 'and', 'a', '50', 'Dollar', 'bill']]
         question_knowledge_graph = QuestionKnowledgeGraph.read(question_tokens)
         self.world = RateCalculusWorld(question_knowledge_graph)
 
@@ -25,30 +25,30 @@ class TestRateCalculusWorld(AllenNlpTestCase):
         assert str(expression) == "E(num:50,num:20)"
 
     def test_world_parses_values(self):
-        sempre_form = "(Value s dollar)"
+        sempre_form = "(Value s Dollar)"
         expression = self.world.parse_logical_form(sempre_form)
         assert str(expression) == "V1(S,D)"
 
     def test_world_parses_rates(self):
-        sempre_form = "(Rate s dollar unit)"
+        sempre_form = "(Rate s Dollar Unit)"
         expression = self.world.parse_logical_form(sempre_form)
         assert str(expression) == "R1(S,D,U)"
 
     def test_world_parses_value_constraint(self):
-        sempre_form = "(Equals (Value s dollar) 20)"
+        sempre_form = "(Equals (Value s Dollar) 20)"
         expression = self.world.parse_logical_form(sempre_form)
         print("ACTION SEQ: ", self.world.get_action_sequence(expression))
         assert str(expression) == "E(V1(S,D),num:20)"
 
     def test_world_parses_rate_constraint(self):
-        sempre_form = "(Equals (Rate s dollar unit) 20)"
+        sempre_form = "(Equals (Rate s Dollar Unit) 20)"
         expression = self.world.parse_logical_form(sempre_form)
         assert str(expression) == "E(R1(S,D,U),num:20)"
 
     def test_world_parses_union_constraint(self):
-        sempre_form = "(Equals (Value (Union s t) dollar) 20)"
+        sempre_form = "(Equals (Value (Join s t) Dollar) 20)"
         expression = self.world.parse_logical_form(sempre_form)
-        assert str(expression) == "E(V1(U1(S,T),D),num:20)"
+        assert str(expression) == "E(V1(J1(S,T),D),num:20)"
 
     def test_world_parses_conjunction(self):
         sempre_form = "(And (Equals 20 20) (Equals 50 50))"
@@ -84,7 +84,7 @@ class TestRateCalculusWorld(AllenNlpTestCase):
                                 ['[<b,<b,b>>, b, b]', '[<n,<n,b>>, n, n]'])
 
         check_productions_match(valid_actions['d'],
-                                ['dollar', 'unit'])
+                                ['Dollar', 'Unit'])
 
         check_productions_match(valid_actions['n'],
                                 ['20', '50', '[<o,<d,<d,n>>>, o, d, d]', '[<o,<d,n>>, o, d]', 'p', 'q'])
@@ -99,7 +99,7 @@ class TestRateCalculusWorld(AllenNlpTestCase):
                                 ['Rate'])
 
         check_productions_match(valid_actions['<o,<o,o>>'],
-                                ['Union'])
+                                ['Join'])
 
         check_productions_match(valid_actions['<n,<n,b>>'],
                                 ['Equals'])

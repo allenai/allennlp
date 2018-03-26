@@ -44,13 +44,24 @@ def add_common_name_with_type(name, mapping, type_signature):
     COMMON_NAME_MAPPING[name] = mapping
     COMMON_TYPE_SIGNATURE[mapping] = type_signature
 
+# Rate Calculus
 add_common_name_with_type("Value", "V1", VALUE_TYPE)
 add_common_name_with_type("Rate", "R1", RATE_TYPE)
-add_common_name_with_type("Union", "U1", UNION_TYPE)
+add_common_name_with_type("Join", "J1", UNION_TYPE)
+
+# Linear Algebra
 add_common_name_with_type("And", "A", CONJUNCTION_TYPE)
 add_common_name_with_type("Equals", "E", BINARY_NUM_TO_BOOL_OP_TYPE)
-add_common_name_with_type("dollar", "D", DIMENSION_TYPE)
-add_common_name_with_type("unit", "U", DIMENSION_TYPE)
+add_common_name_with_type("Plus", "P1", BINARY_NUM_OP_TYPE)
+add_common_name_with_type("Minus", "M1", BINARY_NUM_OP_TYPE)
+add_common_name_with_type("Times", "T1", BINARY_NUM_OP_TYPE)
+add_common_name_with_type("Div", "D1", BINARY_NUM_OP_TYPE)
+
+# Dimensions
+add_common_name_with_type("Dollar", "D", DIMENSION_TYPE)
+add_common_name_with_type("Unit", "U", DIMENSION_TYPE)
+
+# Variables
 add_common_name_with_type("s", "S", OBJECT_TYPE)
 add_common_name_with_type("t", "T", OBJECT_TYPE)
 add_common_name_with_type("p", "P", NUMBER_TYPE)

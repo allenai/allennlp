@@ -43,7 +43,7 @@ class RateCalculusWorld(World):
                                                 num_nested_lambdas=0)
         self.question_knowledge_graph = question_knowledge_graph
 
-        for entity in question_knowledge_graph.entities:
+        for entity in question_knowledge_graph.entities + ['1']:
             self._map_name(entity, keep_mapping=True)
 
         self._entity_set = set(question_knowledge_graph.entities)

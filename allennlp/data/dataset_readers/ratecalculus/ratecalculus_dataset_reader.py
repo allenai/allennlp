@@ -57,7 +57,8 @@ class RateCalculusDatasetReader(DatasetReader):
             questions = json.loads(data)
 
             for q in list(questions):
-                instance = self.text_to_instance(q["sQuestion"], [q["lSemantics"]])
+                sem = q["lSemantics"]
+                instance = self.text_to_instance(q["sQuestion"], [sem])
                 if instance is not None:
                     yield instance
 
