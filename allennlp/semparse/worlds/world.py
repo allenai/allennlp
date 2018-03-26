@@ -349,12 +349,11 @@ class World:
                 raise ParsingError('add_var_function was true, but action sequence already had var')
             current_node.children.append(_TreeNode(right_side))
         else:
-            # We've got a unary non-terminal expansion here.  Not very common, but possible.
-            child_node = _TreeNode(right_side)
-            current_node.children.append(child_node)
-            remaining_actions = self._construct_node_from_actions(child_node,
-                                                                  remaining_actions,
-                                                                  add_var_function)
+            # The only way this can happen is if you have a unary non-terminal production rule.
+            # That is almost certainly not what you want with this kind of grammar, so we'll crash.
+            # If you really do want this, open a PR with a valid use case.
+            raise ParsingError(f"Found a unary production rule: {left_side} -> {right_side}. "
+                               "Are you sure you want a unary production rule in your grammar?")
         return remaining_actions
 
     @classmethod
