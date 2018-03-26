@@ -4,7 +4,7 @@ from overrides import overrides
 import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.models.ensemble.ensemble import Ensemble
+from allennlp.models.ensemble import Ensemble
 from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
 from allennlp.models.reading_comprehension import BidirectionalAttentionFlow
@@ -21,8 +21,7 @@ class BidafEnsemble(Ensemble):
     the average confidence of the start and stop indices.
     """
 
-    def __init__(self,
-                 submodels: List[BidirectionalAttentionFlow]) -> None:
+    def __init__(self, submodels: List[BidirectionalAttentionFlow]) -> None:
         super().__init__(submodels)
 
         self._squad_metrics = SquadEmAndF1()
