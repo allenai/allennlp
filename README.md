@@ -11,11 +11,17 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
 
 The preferred way to install AllenNLP is via `pip`.
 
+tldr; Just run pip install allennlp in your python 3.6 environment, install pytorch 0.3.1 from their website (link), and you're good to go!
+If you need pointers on setting up a python 3.6 environment, see below.
+
+_Just want AllenNLP models running as a service via Docker? `docker run --rm  -p 8000:8000 allennlp/allennlp:v0.4.1 python -m allennlp.run serve`_
+
 ### Setting up a virtual environment
 
 [Conda](https://conda.io/) can be used set up a virtual environment
 with the version of Python required for AllenNLP and in which you can
-sandbox its dependencies:
+sandbox its dependencies. If you already have a python 3.6 environment 
+you want to use, you can skip to the 'installing via pip' section.
 
 1.  [Download and install Conda](https://conda.io/docs/download.html).
 
@@ -25,17 +31,13 @@ sandbox its dependencies:
     conda create -n allennlp python=3.6
     ```
 
-3.  Activate the Conda environment.  (You will need to activate the Conda environment in each terminal in which you want to use AllenNLP.
+3.  Activate the Conda environment. You will need to activate the Conda environment in each terminal in which you want to use AllenNLP.
 
     ```
     source activate allennlp
     ```
 
-4. Install AllenNLP in your environment.
-
 ### Installing via pip
-
-The preferred way to install AllenNLP into your environment is via `pip`.
 
 1.  Install AllenNLP.
 
@@ -45,18 +47,8 @@ The preferred way to install AllenNLP into your environment is via `pip`.
 
 2. Visit http://pytorch.org/ and install the PyTorch 0.3.1 package for your system.
 
-3. Download the spacy models. 
-
-    ```
-    python -m spacy download en_core_web_sm
-    ```
-
 That's it! You're now ready to build and train AllenNLP models.
 AllenNLP installs a script when you install the python package, meaning you can run allennlp commands just by typing `allennlp` into a terminal.
-Now you can do any of the following:
-
-* Run a model on example sentences with `allennlp predict`.
-* Interactively code against AllenNLP from the Python interpreter with `python`.
 
 
 ## Installing using Docker
