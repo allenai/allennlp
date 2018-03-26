@@ -301,8 +301,8 @@ class World:
 
     def _construct_node_from_actions(self,
                                      current_node: _TreeNode,
-                                     remaining_actions: List[Tuple[str, str]],
-                                     add_var_function: bool) -> List[Tuple[str, str]]:
+                                     remaining_actions: List[List[str]],
+                                     add_var_function: bool) -> List[List[str]]:
         """
         Given a current node in the logical form tree, and a list of actions in an action sequence,
         this method fills in the children of the current node from the action sequence, then
