@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import List
 
 import torch
 
@@ -16,6 +16,7 @@ class Ensemble(Model):
     (instead they rely on the vocabulary and weights from submodels).  Instead, the submodels are trained
     independently and the ensemble is created from the result.
     """
+    # pylint: disable=abstract-method
 
     def __init__(self, submodels: List[Model]) -> None:
         vocab = submodels[0].vocab
@@ -28,9 +29,6 @@ class Ensemble(Model):
         # Using ModuleList propagates calls to .eval() so dropout is disabled on the submodels in evaluation
         # and prediction.
         self.submodels = torch.nn.ModuleList(submodels)
-
-    def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
-        raise NotImplementedError
 
     @classmethod
     def _load(cls,
