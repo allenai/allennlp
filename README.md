@@ -7,9 +7,53 @@
 An [Apache 2.0](https://github.com/allenai/allennlp/blob/master/LICENSE) NLP research library, built on PyTorch,
 for developing state-of-the-art deep learning models on a wide variety of linguistic tasks.
 
-## Quickstart
+## Running AllenNLP
 
-The fastest way to get an environment to run AllenNLP is with Docker.  Once you have [installed Docker](https://docs.docker.com/engine/installation/)
+The preferred way to install AllenNLP is via `pip`.
+
+tldr; Just run `pip install allennlp` in your python 3.6 environment, install pytorch 0.3.1 from their [website](http://pytorch.org/), and you're good to go!
+If you need pointers on setting up a python 3.6 environment, see below.
+
+_Just want AllenNLP models running as a service via Docker? `docker run --rm  -p 8000:8000 allennlp/allennlp:v0.4.1 python -m allennlp.run serve`_
+
+### Setting up a virtual environment
+
+[Conda](https://conda.io/) can be used set up a virtual environment
+with the version of Python required for AllenNLP and in which you can
+sandbox its dependencies. If you already have a python 3.6 environment 
+you want to use, you can skip to the 'installing via pip' section.
+
+1.  [Download and install Conda](https://conda.io/docs/download.html).
+
+2.  Create a Conda environment with Python 3.6
+
+    ```
+    conda create -n allennlp python=3.6
+    ```
+
+3.  Activate the Conda environment. You will need to activate the Conda environment in each terminal in which you want to use AllenNLP.
+
+    ```
+    source activate allennlp
+    ```
+
+### Installing via pip
+
+1.  Install AllenNLP.
+
+    ```
+    pip install allennlp
+    ```
+
+2. Visit http://pytorch.org/ and install the PyTorch 0.3.1 package for your system.
+
+That's it! You're now ready to build and train AllenNLP models.
+AllenNLP installs a script when you install the python package, meaning you can run allennlp commands just by typing `allennlp` into a terminal.
+
+
+## Installing using Docker
+
+Once you have [installed Docker](https://docs.docker.com/engine/installation/)
 just run `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.4.0` to get an environment that will run on either the cpu or gpu.
 
 Now you can do any of the following:
@@ -18,8 +62,9 @@ Now you can do any of the following:
 * Start a web service to host our models with `python -m allennlp.run serve`.
 * Interactively code against AllenNLP from the Python interpreter with `python`.
 
-You can also install via the `pip` package manager or by cloning this repository into a Python 3.6 environment.
-See below for more detailed instructions.
+Using Docker installs AllenNLP from source, for development. Consequently, the `allennlp` commandline tool is not
+installed and you will have to use the correpsonding python commands (see above).
+
 
 ## What is AllenNLP?
 
@@ -80,50 +125,6 @@ state of the art models with high quality engineering.
     <td> functionality for training models </td>
 </tr>
 </table>
-
-## Running AllenNLP
-
-### Setting up a virtual environment
-
-[Conda](https://conda.io/) can be used set up a virtual environment
-with the version of Python required for AllenNLP and in which you can
-sandbox its dependencies:
-
-1.  [Download and install Conda](https://conda.io/docs/download.html).
-
-2.  Create a Conda environment with Python 3.6
-
-    ```
-    conda create -n allennlp python=3.6
-    ```
-
-3.  Activate the Conda environment.  (You will need to activate the Conda environment in each terminal in which you want to use AllenNLP.
-
-    ```
-    source activate allennlp
-    ```
-
-4. Install AllenNLP in your environment.
-
-### Installing via pip
-
-The preferred way to install AllenNLP into your environment is via `pip`.
-
-1.  Install AllenNLP.
-
-    ```
-    pip install allennlp
-    ```
-
-2. Visit http://pytorch.org/ and install the PyTorch 0.3.1 package for your system.
-
-3. Download the spacy models. 
-
-    ```
-    python -m spacy download en_core_web_sm
-    ```
-
-That's it! You're now ready to build and train AllenNLP models.
 
 ### Setting up a development environment
 
