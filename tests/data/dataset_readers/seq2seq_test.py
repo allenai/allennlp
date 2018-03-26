@@ -2,9 +2,10 @@
 import pytest
 
 from allennlp.data.dataset_readers import Seq2SeqDatasetReader
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import ensure_list
 
-class TestSeq2SeqDatasetReader:
+class TestSeq2SeqDatasetReader():
     @pytest.mark.parametrize("lazy", (True, False))
     def test_default_format(self, lazy):
         reader = Seq2SeqDatasetReader(lazy=lazy)
@@ -38,3 +39,84 @@ class TestSeq2SeqDatasetReader:
         assert [t.text for t in fields["source_tokens"].tokens] == ["this", "is", "a", "sentence", "@@END@@"]
         assert [t.text for t in fields["target_tokens"].tokens] == ["@@START@@", "this", "is",
                                                                     "a", "sentence", "@@END@@"]
+
+    def test_source_max_sequence_length(self):
+        reader = Seq2SeqDatasetReader(source_max_sequence_length=3)
+        instances = reader.read('tests/fixtures/data/seq2seq_copy.tsv')
+        instances = ensure_list(instances)
+
+        assert len(instances) == 1
+        fields = instances[0].fields
+        assert [t.text for t in fields["source_tokens"].tokens] == ["@@START@@", "this", "is",
+                                                                    "another", "@@END@@"]
+        assert [t.text for t in fields["target_tokens"].tokens] == ["@@START@@", "this", "is",
+                                                                    "another", "@@END@@"]
+
+    def test_source_truncate_sequence_length(self):
+        reader = Seq2SeqDatasetReader(source_truncate_sequence_length=4)
+        instances = reader.read('tests/fixtures/data/seq2seq_copy.tsv')
+        instances = ensure_list(instances)
+
+        assert len(instances) == 3
+        fields = instances[0].fields
+        assert [t.text for t in fields["source_tokens"].tokens] == ["@@START@@", "this", "is",
+                                                                    "a", "sentence", "@@END@@"]
+        assert [t.text for t in fields["target_tokens"].tokens] == ["@@START@@", "this", "is",
+                                                                    "a", "sentence", "@@END@@"]
+        fields = instances[1].fields
+        assert [t.text for t in fields["source_tokens"].tokens] == ["@@START@@", "this", "is",
+                                                                    "another", "@@END@@"]
+        assert [t.text for t in fields["target_tokens"].tokens] == ["@@START@@", "this", "is",
+                                                                    "another", "@@END@@"]
+        fields = instances[2].fields
+        assert [t.text for t in fields["source_tokens"].tokens] == ["@@START@@", "all", "these", "sentences",
+                                                                    "should", "@@END@@"]
+        assert [t.text for t in fields["target_tokens"].tokens] == ["@@START@@", "all", "these", "sentences",
+                                                                    "should", "get", "copied", "@@END@@"]
+
+    def test_target_max_sequence_length(self):
+        reader = Seq2SeqDatasetReader(target_max_sequence_length=4)
+        instances = reader.read('tests/fixtures/data/seq2seq_copy.tsv')
+        instances = ensure_list(instances)
+
+        assert len(instances) == 2
+        fields = instances[0].fields
+        assert [t.text for t in fields["source_tokens"].tokens] == ["@@START@@", "this", "is",
+                                                                    "a", "sentence", "@@END@@"]
+        assert [t.text for t in fields["target_tokens"].tokens] == ["@@START@@", "this", "is",
+                                                                    "a", "sentence", "@@END@@"]
+        fields = instances[1].fields
+        assert [t.text for t in fields["source_tokens"].tokens] == ["@@START@@", "this", "is",
+                                                                    "another", "@@END@@"]
+        assert [t.text for t in fields["target_tokens"].tokens] == ["@@START@@", "this", "is",
+                                                                    "another", "@@END@@"]
+
+    def test_target_truncate_sequence_length(self):
+        reader = Seq2SeqDatasetReader(target_truncate_sequence_length=1)
+        instances = reader.read('tests/fixtures/data/seq2seq_copy.tsv')
+        instances = ensure_list(instances)
+
+        assert len(instances) == 3
+        assert len(instances) == 3
+        fields = instances[0].fields
+        assert [t.text for t in fields["source_tokens"].tokens] == ["@@START@@", "this", "is",
+                                                                    "a", "sentence", "@@END@@"]
+        assert [t.text for t in fields["target_tokens"].tokens] == ["@@START@@", "this", "@@END@@"]
+        fields = instances[1].fields
+        assert [t.text for t in fields["source_tokens"].tokens] == ["@@START@@", "this", "is",
+                                                                    "another", "@@END@@"]
+        assert [t.text for t in fields["target_tokens"].tokens] == ["@@START@@", "this", "@@END@@"]
+        fields = instances[2].fields
+        assert [t.text for t in fields["source_tokens"].tokens] == ["@@START@@", "all", "these", "sentences",
+                                                                    "should", "get", "copied", "@@END@@"]
+        assert [t.text for t in fields["target_tokens"].tokens] == ["@@START@@", "all", "@@END@@"]
+
+    def test_filter_truncate_errors(self):
+        with pytest.raises(ConfigurationError):
+            Seq2SeqDatasetReader(source_max_sequence_length=-1)
+        with pytest.raises(ConfigurationError):
+            Seq2SeqDatasetReader(source_truncate_sequence_length=-2)
+        with pytest.raises(ConfigurationError):
+            Seq2SeqDatasetReader(target_max_sequence_length=-3)
+        with pytest.raises(ConfigurationError):
+            Seq2SeqDatasetReader(target_truncate_sequence_length=-4)

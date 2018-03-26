@@ -46,6 +46,22 @@ class Seq2SeqDatasetReader(DatasetReader):
         ``source_token_indexers``.
     source_add_start_token : bool, (optional, default=True)
         Whether or not to add `START_SYMBOL` to the beginning of the source sequence.
+    source_max_sequence_length : int, (optional, default=0)
+        Maximum source sequence length (excluding `START_SYMBOL` and `END_SYMBOL`).
+        Examples with source sequence length exceeding this value are discarded.
+        0 indicates length is unlimited. Value must be greater than or equal to 0.
+    source_truncate_sequence_length : int, (optional, default=0)
+        Source sequences longer than this value (excluding `START_SYMBOL` and
+        `END_SYMBOL`) will be truncated to this value (cutting starting from the end).
+        0 indicates length is unlimited. Value must be greater than or equal to 0.
+    target_max_sequence_length : int, (optional, default=0)
+        Maximum target sequence length (excluding `START_SYMBOL` and `END_SYMBOL`).
+        Examples with target sequence length exceeding this value are discarded.
+        0 indicates length is unlimited. Value must be greater than or equal to 0.
+    target_truncate_sequence_length : int, (optional, default=0)
+        Target sequences longer than this value (excluding `START_SYMBOL` and
+        `END_SYMBOL`) will be truncated to this value (cutting starting from the end).
+        0 indicates length is unlimited. Value must be greater than or equal to 0.
     """
     def __init__(self,
                  source_tokenizer: Tokenizer = None,
@@ -53,6 +69,10 @@ class Seq2SeqDatasetReader(DatasetReader):
                  source_token_indexers: Dict[str, TokenIndexer] = None,
                  target_token_indexers: Dict[str, TokenIndexer] = None,
                  source_add_start_token: bool = True,
+                 source_max_sequence_length: int = 0,
+                 source_truncate_sequence_length: int = 0,
+                 target_max_sequence_length: int = 0,
+                 target_truncate_sequence_length: int = 0,
                  lazy: bool = False) -> None:
         super().__init__(lazy)
         self._source_tokenizer = source_tokenizer or WordTokenizer()
@@ -60,6 +80,30 @@ class Seq2SeqDatasetReader(DatasetReader):
         self._source_token_indexers = source_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._target_token_indexers = target_token_indexers or self._source_token_indexers
         self._source_add_start_token = source_add_start_token
+
+        if source_max_sequence_length < 0:
+            raise ConfigurationError("source_max_sequence_length is {}, but must "
+                                     "be greater than or equal to 0".format(source_max_sequence_length))
+        self._source_max_sequence_length = source_max_sequence_length
+        self._filter_source = (source_max_sequence_length != 0)
+
+        if source_truncate_sequence_length < 0:
+            raise ConfigurationError("source_truncate_sequence_length is {}, but must "
+                                     "be greater than or equal to 0".format(source_truncate_sequence_length))
+        self._source_truncate_sequence_length = source_truncate_sequence_length
+        self._truncate_source = (source_truncate_sequence_length != 0)
+
+        if target_max_sequence_length < 0:
+            raise ConfigurationError("target_max_sequence_length is {}, but must "
+                                     "be greater than or equal to 0".format(target_max_sequence_length))
+        self._target_max_sequence_length = target_max_sequence_length
+        self._filter_target = (target_max_sequence_length != 0)
+
+        if target_truncate_sequence_length < 0:
+            raise ConfigurationError("target_truncate_sequence_length is {}, but must "
+                                     "be greater than or equal to 0".format(target_truncate_sequence_length))
+        self._target_truncate_sequence_length = target_truncate_sequence_length
+        self._truncate_target = (target_truncate_sequence_length != 0)
 
     @overrides
     def _read(self, file_path):
@@ -75,18 +119,31 @@ class Seq2SeqDatasetReader(DatasetReader):
                 if len(line_parts) != 2:
                     raise ConfigurationError("Invalid line format: %s (line number %d)" % (line, line_num + 1))
                 source_sequence, target_sequence = line_parts
-                yield self.text_to_instance(source_sequence, target_sequence)
+                instance = self.text_to_instance(source_sequence, target_sequence)
+                if instance is None:
+                    continue
+                yield instance
 
     @overrides
     def text_to_instance(self, source_string: str, target_string: str = None) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
         tokenized_source = self._source_tokenizer.tokenize(source_string)
+        if len(tokenized_source) > self._source_max_sequence_length and self._filter_source:
+            return None
+        if len(tokenized_source) > self._source_truncate_sequence_length and self._truncate_source:
+            tokenized_source = tokenized_source[:self._source_truncate_sequence_length]
+
         if self._source_add_start_token:
             tokenized_source.insert(0, Token(START_SYMBOL))
         tokenized_source.append(Token(END_SYMBOL))
         source_field = TextField(tokenized_source, self._source_token_indexers)
         if target_string is not None:
             tokenized_target = self._target_tokenizer.tokenize(target_string)
+            if len(tokenized_target) > self._target_max_sequence_length and self._filter_target:
+                return None
+            if (len(tokenized_target) > self._target_truncate_sequence_length and
+                        self._truncate_target):
+                tokenized_target = tokenized_target[:self._target_truncate_sequence_length]
             tokenized_target.insert(0, Token(START_SYMBOL))
             tokenized_target.append(Token(END_SYMBOL))
             target_field = TextField(tokenized_target, self._target_token_indexers)
@@ -102,6 +159,11 @@ class Seq2SeqDatasetReader(DatasetReader):
         target_tokenizer = None if target_tokenizer_type is None else Tokenizer.from_params(target_tokenizer_type)
         source_indexers_type = params.pop('source_token_indexers', None)
         source_add_start_token = params.pop_bool('source_add_start_token', True)
+        source_max_sequence_length = params.pop_int("source_max_sequence_length", 0)
+        source_truncate_sequence_length = params.pop_int("source_truncate_sequence_length", 0)
+        target_max_sequence_length = params.pop_int("target_max_sequence_length", 0)
+        target_truncate_sequence_length = params.pop_int("target_truncate_sequence_length", 0)
+
         if source_indexers_type is None:
             source_token_indexers = None
         else:
@@ -115,4 +177,9 @@ class Seq2SeqDatasetReader(DatasetReader):
         params.assert_empty(cls.__name__)
         return Seq2SeqDatasetReader(source_tokenizer, target_tokenizer,
                                     source_token_indexers, target_token_indexers,
-                                    source_add_start_token, lazy)
+                                    source_add_start_token,
+                                    source_max_sequence_length,
+                                    source_truncate_sequence_length,
+                                    target_max_sequence_length,
+                                    target_truncate_sequence_length,
+                                    lazy)
