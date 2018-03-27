@@ -66,11 +66,11 @@ class SpanUtilsTest(AllenNlpTestCase):
         with self.assertRaises(span_utils.InvalidTagSequence):
             spans = span_utils.bioul_tags_to_spans(tag_sequence)
 
-    def test_bio_to_bioul(self):
+    def test_iob1_to_bioul(self):
         tag_sequence = ['I-ORG', 'O', 'I-MISC', 'O']
-        bioul_sequence = span_utils.bio_to_bioul(tag_sequence)
+        bioul_sequence = span_utils.iob1_to_bioul(tag_sequence)
         assert bioul_sequence == ['U-ORG', 'O', 'U-MISC', 'O']
 
         tag_sequence = ['O', 'I-PER', 'B-PER', 'I-PER', 'I-PER', 'B-PER']
-        bioul_sequence = span_utils.bio_to_bioul(tag_sequence)
+        bioul_sequence = span_utils.iob1_to_bioul(tag_sequence)
         assert bioul_sequence == ['O', 'U-PER', 'B-PER', 'I-PER', 'L-PER', 'U-PER']

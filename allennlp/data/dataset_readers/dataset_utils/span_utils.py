@@ -174,9 +174,13 @@ def bioul_tags_to_spans(tag_sequence: List[str]) -> List[TypedStringSpan]:
     return spans
 
 
-def bio_to_bioul(tag_sequence: List[str]) -> List[str]:
+def iob1_to_bioul(tag_sequence: List[str]) -> List[str]:
     """
     Given a tag sequence encoded with IOB1 labels, recode to BIOUL.
+
+    In the IOB1 scheme, I is a token inside a span, O is a token outside
+    a span and B is the beginning of span immediately following another
+    span of the same type.
 
     Parameters
     ----------
