@@ -144,13 +144,12 @@ def biolu_tags_to_spans(tag_sequence: List[str]) -> List[TypedStringSpan]:
     Parameters
     ----------
     tag_sequence : List[str], required.
-        The integer class labels for a sequence.
+        The tag sequence encoded in BIOLU, e.g. ["B-PER", "L-PER", "O"].
 
     Returns
     -------
     spans : List[TypedStringSpan]
         The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
-        Note that the label `does not` contain any BIO tag prefixes.
     """
     spans = []
     k = 0
@@ -173,3 +172,95 @@ def biolu_tags_to_spans(tag_sequence: List[str]) -> List[TypedStringSpan]:
                 raise InvalidTagSequence
         k += 1
     return spans
+
+
+def iob1_to_biolu(tag_sequence: List[str]) -> List[str]:
+    """
+    Given a tag sequence encoded with IOB1 labels, recode to BIOLU.
+
+    Parameters
+    ----------
+    tag_sequence : List[str], required.
+        The tag sequence encoded in IOB1, e.g. ["I-PER", "I-PER", "O"].
+
+    Returns
+    -------
+    biolu_sequence: List[str]
+        The tag sequence encoded in IOB1, e.g. ["B-PER", "L-PER", "O"].
+    """
+
+    def replace_label(full_label, new_label):
+        # example: full_label = 'I-PER', new_label = 'U', returns 'U-PER'
+        parts = list(full_label.partition('-'))
+        parts[0] = new_label
+        return ''.join(parts)
+
+    def pop_replace_append(in_stack, out_stack, new_label):
+        # pop the last element from in_stack, replace the label, append
+        # to out_stack
+        tag = in_stack.pop()
+        new_tag = replace_label(tag, new_label)
+        out_stack.append(new_tag)
+
+    def process_stack(stack, out_stack):
+        # process a stack of labels, add them to out_stack
+        if len(stack) == 1:
+            # just a U token
+            pop_replace_append(stack, out_stack, 'U')
+        else:
+            # need to code as BIL
+            recoded_stack = []
+            pop_replace_append(stack, recoded_stack, 'L')
+            while len(stack) >= 2:
+                pop_replace_append(stack, recoded_stack, 'I')
+            pop_replace_append(stack, recoded_stack, 'B')
+            recoded_stack.reverse()
+            out_stack.extend(recoded_stack)
+
+
+    # Process the tag_sequence one tag at a time, adding spans to a stack,
+    # then recode them.
+    biolu_sequence = []
+    stack = []
+
+    for label in tag_sequence:
+        # need to make a dict like
+        # token = {'token': 'Matt', "labels": {'conll2003': "B-PER"}
+        #                   'gold': 'I-PER'}
+        # where 'gold' is the raw value from the CoNLL data set
+
+        if label == 'O' and len(stack) == 0:
+            biolu_sequence.append(label)
+        elif label == 'O' and len(stack) > 0:
+            # need to process the entries on the stack plus this one
+            process_stack(stack, biolu_sequence)
+            biolu_sequence.append(label)
+        elif label[0] == 'I':
+            # check if the previous type is the same as this one
+            # if it is then append to stack
+            # otherwise this start a new entity if the type
+            # is different
+            if len(stack) == 0:
+                stack.append(label)
+            else:
+                # check if the previous type is the same as this one
+                this_type = label.partition('-')[2]
+                prev_type = stack[-1].partition('-')[2]
+                if this_type == prev_type:
+                    stack.append(label)
+                else:
+                    # a new entity
+                    process_stack(stack, biolu_sequence)
+                    stack.append(label)
+        elif label[0] == 'B':
+            if len(stack) > 0:
+                process_stack(stack, biolu_sequence)
+            stack.append(label)
+        else:
+            raise InvalidTagSequence
+
+    # process the stack
+    if len(stack) > 0:
+        process_stack(stack, biolu_sequence)
+
+    return biolu_sequence
