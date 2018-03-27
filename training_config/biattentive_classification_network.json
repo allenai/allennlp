@@ -1,0 +1,68 @@
+{
+  "dataset_reader":{
+    "type": "sst_tokens",
+    "use_subtrees": true,
+    "granularity": "5-class"
+  },
+  "validation_dataset_reader":{
+    "type": "sst_tokens",
+    "use_subtrees": false,
+    "granularity": "5-class"
+  },
+  "train_data_path": "https://homes.cs.washington.edu/~nfliu/files/sst/train.txt",
+  "validation_data_path": "https://homes.cs.washington.edu/~nfliu/files/sst/dev.txt",
+  "test_data_path": "https://homes.cs.washington.edu/~nfliu/files/sst/test.txt",
+  "model": {
+    "type": "bcn",
+    "text_field_embedder": {
+      "tokens": {
+        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
+        "type": "embedding",
+        "embedding_dim": 300
+      }
+    },
+    "pre_encode_feedforward": {
+        "input_dim": 300,
+        "num_layers": 1,
+        "hidden_dims": [300],
+        "activations": ["relu"],
+        "dropout": [0.2]
+    },
+    "encoder": {
+      "type": "lstm",
+      "input_size": 300,
+      "hidden_size": 300,
+      "num_layers": 1,
+      "bidirectional": true
+    },
+    "integrator": {
+      "type": "lstm",
+      "input_size": 1800,
+      "hidden_size": 300,
+      "num_layers": 1,
+      "bidirectional": true
+    },
+    "classifier_feedforward": {
+        "input_dim": 2400,
+        "num_layers": 4,
+        "hidden_dims": [1200, 300, 300, 5],
+        "activations": ["relu", "relu", "relu", "linear"],
+        "dropout": [0.2, 0.2, 0.2, 0.0]
+    }
+  },
+  "iterator": {
+    "type": "bucket",
+    "sorting_keys": [["tokens", "num_tokens"]],
+    "batch_size" : 32
+  },
+  "trainer": {
+    "num_epochs": 10,
+    "validation_metric": "+accuracy",
+    "patience": 2,
+    "cuda_device": 0,
+    "optimizer": {
+      "type": "adam",
+      "lr": 0.0001
+    }
+  }
+}
