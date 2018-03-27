@@ -247,7 +247,7 @@ class BidirectionalAttentionFlow(Model):
         span_end_probs = util.masked_softmax(span_end_logits, passage_mask)
         span_start_logits = util.replace_masked_values(span_start_logits, passage_mask, -1e7)
         span_end_logits = util.replace_masked_values(span_end_logits, passage_mask, -1e7)
-        best_span = self._get_best_span(span_start_logits, span_end_logits)
+        best_span = self.get_best_span(span_start_logits, span_end_logits)
 
         output_dict = {
                 "passage_question_attention": passage_question_attention,
@@ -300,7 +300,7 @@ class BidirectionalAttentionFlow(Model):
                 }
 
     @staticmethod
-    def _get_best_span(span_start_logits: Variable, span_end_logits: Variable) -> Variable:
+    def get_best_span(span_start_logits: Variable, span_end_logits: Variable) -> Variable:
         if span_start_logits.dim() != 2 or span_end_logits.dim() != 2:
             raise ValueError("Input shapes must be (batch_size, passage_length)")
         batch_size, passage_length = span_start_logits.size()
