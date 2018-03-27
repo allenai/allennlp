@@ -44,14 +44,14 @@ class TestFeedForward(AllenNlpTestCase):
                 'dropout': 0.0,
                 'num_layers': 2
                 })
-        feedforward = Maxout.from_params(params)
+        maxout = Maxout.from_params(params)
 
         constant_init = lambda tensor: torch.nn.init.constant(tensor, 1.)
         initializer = InitializerApplicator([(".*", constant_init)])
-        initializer(feedforward)
+        initializer(maxout)
 
         input_tensor = Variable(torch.FloatTensor([[-3, 1]]))
-        output = feedforward(input_tensor).data.numpy()
+        output = maxout(input_tensor).data.numpy()
         assert output.shape == (1, 3)
         # This output was checked by hand
         # The output of the first maxout layer is [-1, -1, -1], since the
