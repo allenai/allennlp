@@ -22,7 +22,7 @@ def _is_divider(line: str) -> bool:
         return True
     else:
         first_token = line.split()[0]
-        if first_token == "-DOCSTART-":
+        if first_token == "-DOCSTART-":  # pylint: disable=simplifiable-if-statement
             return True
         else:
             return False
