@@ -19,10 +19,25 @@ from allennlp.training.metrics import CategoricalAccuracy
 @Model.register("bcn")
 class BiattentiveClassificationNetwork(Model):
     """
-    This class implements the `Biattentive Classification Network model
-    <https://www.semanticscholar.org/paper/Bidirectional-Attention-Flow-for-Machine-Seo-Kembhavi/7586b7cca1deba124af80609327395e613a20e9d>`_
-    for text classification. We assume we're given a piece of text, and we predict
-    some output label.
+    This class implements the Biattentive Classification Network model described
+    in section 5 of `Learned in Translation: Contextualized Word Vectors (NIPS 2017)
+    <https://arxiv.org/abs/1708.00107>`_ for text classification. We assume we're
+    given a piece of text, and we predict some output label.
+
+    At a high level, the model starts by embedding the tokens and running them through
+    a feed-forward neural net (``pre_encode_feedforward``). Then, we encode these
+    representations with a ``Seq2SeqEncoder`` (``encoder``). We run biattention
+    on the encoder output represenatations (self-attention in this case, since
+    the two representations that typically go into biattention are identical) and
+    get out an attentive vector representation of the text. We combine this text
+    representation with the encoder outputs computed earlier, and then run this through
+    yet another ``Seq2SeqEncoder`` (the ``integrator``). Lastly, we take the output of the
+    integrator and max, min, mean, and self-attention pool to create a final representation,
+    which is passed through some feed-forward layers and used to output a classification
+    (``classifier_feedforward``).
+
+    Note: In the original paper, the feed-forward network at the end is a maxout network,
+    which has not yet been implemented in AllenNLP.
 
     Parameters
     ----------
