@@ -63,7 +63,7 @@ class Maxout(torch.nn.Module):
         dropout_layers = [torch.nn.Dropout(p=value) for value in dropout]
         self._dropout = torch.nn.ModuleList(dropout_layers)
         self._output_dim = output_dims[-1]
-        self.input_dim = input_dim
+        self._input_dim = input_dim
 
     def get_output_dim(self):
         return self._output_dim
