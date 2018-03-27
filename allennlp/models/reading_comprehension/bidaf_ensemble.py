@@ -140,6 +140,4 @@ def ensemble(subresults: List[Dict[str, torch.Tensor]]) -> torch.Tensor:
 
     span_start_probs = sum(subresult['span_start_probs'] for subresult in subresults) / len(subresults)
     span_end_probs = sum(subresult['span_end_probs'] for subresult in subresults) / len(subresults)
-    best_span = BidirectionalAttentionFlow.get_best_span(span_start_probs.log(), span_end_probs.log())
-
-    return best_span
+    return BidirectionalAttentionFlow.get_best_span(span_start_probs.log(), span_end_probs.log()) # type: ignore

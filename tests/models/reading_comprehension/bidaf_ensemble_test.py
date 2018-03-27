@@ -1,6 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
-import torch
 import numpy
+import torch
 from torch.autograd import Variable
 
 from allennlp.common.testing import ModelTestCase
@@ -30,44 +30,44 @@ class BidafEnsembleTest(ModelTestCase):
                         "best_span_str": "cheese",
                         "question_tokens": ["What", "did", "Michael", "eat", "?"],
                         "passage_tokens": ["Michael", "ate", "cheese", "."]
-                },
+                }
         ]
 
         numpy.testing.assert_almost_equal(
-            ensemble(subresults).data[0].cpu().numpy(),
-            torch.LongTensor([2, 2]).cpu().numpy())
+                ensemble(subresults).data[0].cpu().numpy(),
+                torch.LongTensor([2, 2]).cpu().numpy())
 
     def test_ensemble_chooses_highest_average_confidence_3(self):
         subresults = [
-            {
-                    "span_start_probs": Variable(torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]])),
-                    "span_end_probs": Variable(torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]])),
-                    "best_span": Variable(torch.LongTensor([[2, 2]])),
-                    "best_span_str": "cheese",
-                    "question_tokens": ["What", "did", "Michael", "eat", "?"],
-                    "passage_tokens": ["Michael", "ate", "cheese", "."]
-            },
-            {
-                    "span_start_probs": Variable(torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]])),
-                    "span_end_probs": Variable(torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]])),
-                    "best_span": Variable(torch.LongTensor([[2, 2]])),
-                    "best_span_str": "cheese",
-                    "question_tokens": ["What", "did", "Michael", "eat", "?"],
-                    "passage_tokens": ["Michael", "ate", "cheese", "."]
-            },
-            {
-                    "span_start_probs": Variable(torch.FloatTensor([[0.9, 0.0, 0.0, 0.0]])),
-                    "span_end_probs": Variable(torch.FloatTensor([[0.9, 0.0, 0.0, 0.0]])),
-                    "best_span": Variable(torch.LongTensor([[0, 0]])),
-                    "best_span_str": "What",
-                    "question_tokens": ["What", "did", "Michael", "eat", "?"],
-                    "passage_tokens": ["Michael", "ate", "cheese", "."]
-            }
+                {
+                        "span_start_probs": Variable(torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]])),
+                        "span_end_probs": Variable(torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]])),
+                        "best_span": Variable(torch.LongTensor([[2, 2]])),
+                        "best_span_str": "cheese",
+                        "question_tokens": ["What", "did", "Michael", "eat", "?"],
+                        "passage_tokens": ["Michael", "ate", "cheese", "."]
+                },
+                {
+                        "span_start_probs": Variable(torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]])),
+                        "span_end_probs": Variable(torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]])),
+                        "best_span": Variable(torch.LongTensor([[2, 2]])),
+                        "best_span_str": "cheese",
+                        "question_tokens": ["What", "did", "Michael", "eat", "?"],
+                        "passage_tokens": ["Michael", "ate", "cheese", "."]
+                },
+                {
+                        "span_start_probs": Variable(torch.FloatTensor([[0.9, 0.0, 0.0, 0.0]])),
+                        "span_end_probs": Variable(torch.FloatTensor([[0.9, 0.0, 0.0, 0.0]])),
+                        "best_span": Variable(torch.LongTensor([[0, 0]])),
+                        "best_span_str": "What",
+                        "question_tokens": ["What", "did", "Michael", "eat", "?"],
+                        "passage_tokens": ["Michael", "ate", "cheese", "."]
+                }
         ]
 
         numpy.testing.assert_almost_equal(
-            ensemble(subresults).data[0].cpu().numpy(),
-            torch.LongTensor([2, 2]).numpy())
+                ensemble(subresults).data[0].cpu().numpy(),
+                torch.LongTensor([2, 2]).numpy())
 
     def test_forward_pass_runs_correctly(self):
         """
