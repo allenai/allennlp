@@ -16,3 +16,5 @@ from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
 from allennlp.data.dataset_readers.seq2seq import Seq2SeqDatasetReader
 from allennlp.data.dataset_readers.coreference_resolution import ConllCorefReader, WinobiasReader
 from allennlp.data.dataset_readers.penn_tree_bank import PennTreeBankConstituencySpanDatasetReader
+from allennlp.data.dataset_readers.stanford_sentiment_tree_bank import (
+        StanfordSentimentTreeBankDatasetReader)
