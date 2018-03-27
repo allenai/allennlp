@@ -78,7 +78,7 @@ class BiattentiveClassificationNetwork(Model):
         self._encoder = encoder
         self._integrator = integrator
         self._self_attentive_pooling_projection = nn.Linear(
-                self._integrator.get_output_dim(), 1, bias=False)
+                self._integrator.get_output_dim(), 1)
         self._classifier_feedforward = classifier_feedforward
 
         check_dimensions_match(text_field_embedder.get_output_dim(),
