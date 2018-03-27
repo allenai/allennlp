@@ -6,13 +6,13 @@ from allennlp.common.util import ensure_list
 
 class TestConll2003Reader:
     @pytest.mark.parametrize("lazy", (True, False))
-    @pytest.mark.parametrize("coding_scheme", ('iob1', 'biolu'))
+    @pytest.mark.parametrize("coding_scheme", ('BIO', 'BIOUL'))
     def test_read_from_file(self, lazy, coding_scheme):
         conll_reader = Conll2003DatasetReader(lazy=lazy, coding_scheme=coding_scheme)
         instances = conll_reader.read('tests/fixtures/data/conll2003.txt')
         instances = ensure_list(instances)
 
-        if coding_scheme == 'iob1':
+        if coding_scheme == 'BIO':
             expected_labels = ['I-ORG', 'O', 'I-PER', 'O', 'O', 'I-LOC', 'O']
         else:
             expected_labels = ['U-ORG', 'O', 'U-PER', 'O', 'O', 'U-LOC', 'O']

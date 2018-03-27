@@ -8,7 +8,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.dataset_readers.dataset_utils import iob1_to_biolu
+from allennlp.data.dataset_readers.dataset_utils import bio_to_bioul
 from allennlp.data.fields import TextField, SequenceLabelField, Field
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
@@ -64,16 +64,16 @@ class Conll2003DatasetReader(DatasetReader):
         Each will have its own namespace: ``pos_labels``, ``chunk_labels``, ``ner_labels``.
         If you want to use one of the labels as a `feature` in your model, it should be
         specified here.
-    coding_scheme: ``str``, optional (default=``iob1``)
+    coding_scheme: ``str``, optional (default=``BIO``)
         Specifies the coding scheme for ``ner_labels`` and ``chunk_labels``.
-        Valid options are ``iob1`` and ``biolu``.
+        Valid options are ``BIO`` and ``BIOUL``.
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  tag_label: str = "ner",
                  feature_labels: Sequence[str] = (),
                  lazy: bool = False,
-                 coding_scheme: str = "iob1") -> None:
+                 coding_scheme: str = "BIO") -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         if tag_label is not None and tag_label not in _VALID_LABELS:
@@ -81,7 +81,7 @@ class Conll2003DatasetReader(DatasetReader):
         for label in feature_labels:
             if label not in _VALID_LABELS:
                 raise ConfigurationError("unknown feature label type: {}".format(label))
-        if coding_scheme not in ("iob1", "biolu"):
+        if coding_scheme not in ("BIO", "BIOUL"):
             raise ConfigurationError("unknown coding_scheme: {}".format(coding_scheme))
 
         self.tag_label = tag_label
@@ -111,9 +111,9 @@ class Conll2003DatasetReader(DatasetReader):
                     instance_fields: Dict[str, Field] = {'tokens': sequence}
 
                     # Recode the labels if necessary.
-                    if self.coding_scheme == "biolu":
-                        coded_chunks = iob1_to_biolu(chunk_tags)
-                        coded_ner = iob1_to_biolu(ner_tags)
+                    if self.coding_scheme == "BIOUL":
+                        coded_chunks = bio_to_bioul(chunk_tags)
+                        coded_ner = bio_to_bioul(ner_tags)
                     else:
                         # the default IOB1
                         coded_chunks = chunk_tags
@@ -150,7 +150,7 @@ class Conll2003DatasetReader(DatasetReader):
         tag_label = params.pop('tag_label', None)
         feature_labels = params.pop('feature_labels', ())
         lazy = params.pop('lazy', False)
-        coding_scheme = params.pop('coding_scheme', 'iob1')
+        coding_scheme = params.pop('coding_scheme', 'BIO')
         params.assert_empty(cls.__name__)
         return Conll2003DatasetReader(token_indexers=token_indexers,
                                       tag_label=tag_label,

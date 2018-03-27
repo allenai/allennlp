@@ -135,7 +135,7 @@ class InvalidTagSequence(Exception):
     pass
 
 
-def biolu_tags_to_spans(tag_sequence: List[str]) -> List[TypedStringSpan]:
+def bioul_tags_to_spans(tag_sequence: List[str]) -> List[TypedStringSpan]:
     """
     Given a sequence corresponding to BIOLU tags, extracts spans.
     Spans are inclusive and can be of zero length, representing a single word span.
@@ -174,9 +174,9 @@ def biolu_tags_to_spans(tag_sequence: List[str]) -> List[TypedStringSpan]:
     return spans
 
 
-def iob1_to_biolu(tag_sequence: List[str]) -> List[str]:
+def bio_to_bioul(tag_sequence: List[str]) -> List[str]:
     """
-    Given a tag sequence encoded with IOB1 labels, recode to BIOLU.
+    Given a tag sequence encoded with IOB1 labels, recode to BIOUL.
 
     Parameters
     ----------
@@ -185,7 +185,7 @@ def iob1_to_biolu(tag_sequence: List[str]) -> List[str]:
 
     Returns
     -------
-    biolu_sequence: List[str]
+    bioul_sequence: List[str]
         The tag sequence encoded in IOB1, e.g. ["B-PER", "L-PER", "O"].
     """
     # pylint: disable=len-as-condition
@@ -221,7 +221,7 @@ def iob1_to_biolu(tag_sequence: List[str]) -> List[str]:
 
     # Process the tag_sequence one tag at a time, adding spans to a stack,
     # then recode them.
-    biolu_sequence = []
+    bioul_sequence = []
     stack: List[str] = []
 
     for label in tag_sequence:
@@ -231,11 +231,11 @@ def iob1_to_biolu(tag_sequence: List[str]) -> List[str]:
         # where 'gold' is the raw value from the CoNLL data set
 
         if label == 'O' and len(stack) == 0:
-            biolu_sequence.append(label)
+            bioul_sequence.append(label)
         elif label == 'O' and len(stack) > 0:
             # need to process the entries on the stack plus this one
-            process_stack(stack, biolu_sequence)
-            biolu_sequence.append(label)
+            process_stack(stack, bioul_sequence)
+            bioul_sequence.append(label)
         elif label[0] == 'I':
             # check if the previous type is the same as this one
             # if it is then append to stack
@@ -251,17 +251,17 @@ def iob1_to_biolu(tag_sequence: List[str]) -> List[str]:
                     stack.append(label)
                 else:
                     # a new entity
-                    process_stack(stack, biolu_sequence)
+                    process_stack(stack, bioul_sequence)
                     stack.append(label)
         elif label[0] == 'B':
             if len(stack) > 0:
-                process_stack(stack, biolu_sequence)
+                process_stack(stack, bioul_sequence)
             stack.append(label)
         else:
             raise InvalidTagSequence
 
     # process the stack
     if len(stack) > 0:
-        process_stack(stack, biolu_sequence)
+        process_stack(stack, bioul_sequence)
 
-    return biolu_sequence
+    return bioul_sequence

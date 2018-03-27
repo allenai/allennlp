@@ -57,20 +57,20 @@ class SpanUtilsTest(AllenNlpTestCase):
         # as their last element.
         assert spans == [(0, 1), (0, 2), (1, 2), (1, 3), (2, 3)]
 
-    def test_biolu_tags_to_spans(self):
+    def test_bioul_tags_to_spans(self):
         tag_sequence = ['B-PER', 'I-PER', 'L-PER', 'U-PER', 'U-LOC', 'O']
-        spans = span_utils.biolu_tags_to_spans(tag_sequence)
+        spans = span_utils.bioul_tags_to_spans(tag_sequence)
         assert spans == [('PER', (0, 2)), ('PER', (3, 3)), ('LOC', (4, 4))]
 
         tag_sequence = ['B-PER', 'I-PER', 'O']
         with self.assertRaises(span_utils.InvalidTagSequence):
-            spans = span_utils.biolu_tags_to_spans(tag_sequence)
+            spans = span_utils.bioul_tags_to_spans(tag_sequence)
 
-    def test_iob1_to_biolu(self):
+    def test_bio_to_bioul(self):
         tag_sequence = ['I-ORG', 'O', 'I-MISC', 'O']
-        biolu_sequence = span_utils.iob1_to_biolu(tag_sequence)
-        assert biolu_sequence == ['U-ORG', 'O', 'U-MISC', 'O']
+        bioul_sequence = span_utils.bio_to_bioul(tag_sequence)
+        assert bioul_sequence == ['U-ORG', 'O', 'U-MISC', 'O']
 
         tag_sequence = ['O', 'I-PER', 'B-PER', 'I-PER', 'I-PER', 'B-PER']
-        biolu_sequence = span_utils.iob1_to_biolu(tag_sequence)
-        assert biolu_sequence == ['O', 'U-PER', 'B-PER', 'I-PER', 'L-PER', 'U-PER']
+        bioul_sequence = span_utils.bio_to_bioul(tag_sequence)
+        assert bioul_sequence == ['O', 'U-PER', 'B-PER', 'I-PER', 'L-PER', 'U-PER']
