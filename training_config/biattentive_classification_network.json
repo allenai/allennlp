@@ -44,10 +44,10 @@
     },
     "classifier_feedforward": {
         "input_dim": 2400,
-        "num_layers": 4,
-        "hidden_dims": [1200, 300, 300, 5],
-        "activations": ["relu", "relu", "relu", "linear"],
-        "dropout": [0.2, 0.2, 0.2, 0.0]
+        "num_layers": 3,
+        "hidden_dims": [1200, 600, 5],
+        "activations": ["relu", "relu", "linear"],
+        "dropout": [0.2, 0.2, 0.0]
     }
   },
   "iterator": {
