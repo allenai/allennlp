@@ -56,3 +56,12 @@ class SpanUtilsTest(AllenNlpTestCase):
         # No longer includes (2, 4) or (3, 4) as these include punctuation
         # as their last element.
         assert spans == [(0, 1), (0, 2), (1, 2), (1, 3), (2, 3)]
+
+    def test_biolu_tags_to_spans(self):
+        tag_sequence = ['B-PER', 'I-PER', 'L-PER', 'U-PER', 'U-LOC', 'O']
+        spans = span_utils.biolu_tags_to_spans(tag_sequence)
+        assert spans == [('PER', (0, 2)), ('PER', (3, 3)), ('LOC', (4, 4))]
+
+        tag_sequence = ['B-PER', 'I-PER', 'O']
+        with self.assertRaises(span_utils.InvalidTagSequence):
+            spans = span_utils.biolu_tags_to_spans(tag_sequence)

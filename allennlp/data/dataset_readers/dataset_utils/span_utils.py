@@ -129,3 +129,47 @@ def bio_tags_to_spans(tag_sequence: List[str],
     if active_conll_tag:
         spans.add((active_conll_tag, (span_start, span_end)))
     return list(spans)
+
+
+class InvalidTagSequence(Exception):
+    pass
+
+
+def biolu_tags_to_spans(tag_sequence: List[str]) -> List[TypedStringSpan]:
+    """
+    Given a sequence corresponding to BIOLU tags, extracts spans.
+    Spans are inclusive and can be of zero length, representing a single word span.
+    Ill-formed spans are not allowed and will raise ``InvalidTagSequence``.
+
+    Parameters
+    ----------
+    tag_sequence : List[str], required.
+        The integer class labels for a sequence.
+
+    Returns
+    -------
+    spans : List[TypedStringSpan]
+        The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
+        Note that the label `does not` contain any BIO tag prefixes.
+    """
+    spans = []
+    k = 0
+    while k < len(tag_sequence):
+        label = tag_sequence[k]
+        if label[0] == 'U':
+            spans.append((label.partition('-')[2], (k, k)))
+        elif label[0] == 'B':
+            start = k
+            while label[0] != 'L':
+                k += 1
+                if k >= len(tag_sequence):
+                    raise InvalidTagSequence
+                label = tag_sequence[k]
+                if not (label[0] == 'I' or label[0] == 'L'):
+                    raise InvalidTagSequence
+            spans.append((label.partition('-')[2], (start, k)))
+        else:
+            if label != 'O':
+                raise InvalidTagSequence
+        k += 1
+    return spans
