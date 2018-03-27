@@ -33,7 +33,7 @@
       "hidden_size": 3,
       "num_layers": 1
     },
-    "classifier_feedforward": {
+    "output_layer": {
         "input_dim": 12,
         "num_layers": 2,
         "hidden_dims": [6, 5],
