@@ -24,7 +24,7 @@ class Maxout(torch.nn.Module):
         it for all maxout layers.  If it is a ``Sequence[int]``, ``len(output_dims)`` must be
         ``num_layers``.
     pool_sizes : ``Union[int, Sequence[int]]``
-        The size of max-ppols.  If this is a single ``int``, we use
+        The size of max-pools.  If this is a single ``int``, we use
         it for all maxout layers.  If it is a ``Sequence[int]``, ``len(pool_sizes)`` must be
         ``num_layers``.
     dropout : ``Union[float, Sequence[float]]``, optional
