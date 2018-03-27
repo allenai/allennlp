@@ -42,6 +42,8 @@ class BiattentiveClassificationNetwork(Model):
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
         Used to embed the ``tokens`` ``TextField`` we get as input to the model.
+    embedding_dropout : ``float``
+        The amount of dropout to apply on the embeddings.
     pre_encode_feedforward : ``FeedForward``
         A feedforward network that is run on the embedded tokens before they
         are passed to the encoder.
@@ -50,6 +52,8 @@ class BiattentiveClassificationNetwork(Model):
     integrator : ``Seq2SeqEncoder``
         The encoder to use when integrating the attentive text encoding
         with the token encodings.
+    integrator_dropout : ``float``
+        The amount of dropout to apply on integrator output.
     output_layer : ``Union[FeedForward, Maxout]``
         The feedforward network that takes the final representations and produces
         a classification prediction.
@@ -60,9 +64,11 @@ class BiattentiveClassificationNetwork(Model):
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
+                 embedding_dropout: float,
                  pre_encode_feedforward: FeedForward,
                  encoder: Seq2SeqEncoder,
                  integrator: Seq2SeqEncoder,
+                 integrator_dropout: float,
                  output_layer: Union[FeedForward, Maxout],
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
@@ -77,6 +83,8 @@ class BiattentiveClassificationNetwork(Model):
         self._self_attentive_pooling_projection = nn.Linear(
                 self._integrator.get_output_dim(), 1)
         self._output_layer = output_layer
+        self._embedding_dropout = nn.Dropout(embedding_dropout)
+        self._integrator_dropout = nn.Dropout(integrator_dropout)
 
         check_dimensions_match(text_field_embedder.get_output_dim(),
                                self._pre_encode_feedforward.get_input_dim(),
@@ -126,7 +134,9 @@ class BiattentiveClassificationNetwork(Model):
         text_mask = util.get_text_field_mask(tokens).float()
         embedded_text = self._text_field_embedder(tokens)
         batch_size, sequence_length, _ = embedded_text.size()
-        pre_encoded_text = self._pre_encode_feedforward(embedded_text)
+        dropped_embedded_text = self._embedding_dropout(embedded_text)
+
+        pre_encoded_text = self._pre_encode_feedforward(dropped_embedded_text)
         encoded_tokens = self._encoder(pre_encoded_text, text_mask)
 
         # Compute biattention. This is a special case since the inputs are the same.
@@ -161,8 +171,10 @@ class BiattentiveClassificationNetwork(Model):
 
         # Join the pooled representations
         pooled_representations = torch.cat([max_pool, min_pool, mean_pool, self_attentive_pool], 1)
+        # Apply dropout on the pooled representations
+        pooled_representations_dropped = self._integrator_dropout(pooled_representations)
 
-        logits = self._output_layer(pooled_representations)
+        logits = self._output_layer(pooled_representations_dropped)
         class_probabilities = F.softmax(logits, dim=-1)
 
         output_dict = {'logits': logits, 'class_probabilities': class_probabilities}
@@ -195,9 +207,11 @@ class BiattentiveClassificationNetwork(Model):
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BiattentiveClassificationNetwork':
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
+        embedding_dropout = params.pop("embedding_dropout")
         pre_encode_feedforward = FeedForward.from_params(params.pop("pre_encode_feedforward"))
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
         integrator = Seq2SeqEncoder.from_params(params.pop("integrator"))
+        integrator_dropout = params.pop("integrator_dropout")
 
         output_layer_params = params.pop("output_layer")
         if "activations" in output_layer_params:
@@ -209,9 +223,11 @@ class BiattentiveClassificationNetwork(Model):
 
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
+                   embedding_dropout=embedding_dropout,
                    pre_encode_feedforward=pre_encode_feedforward,
                    encoder=encoder,
                    integrator=integrator,
+                   integrator_dropout=integrator_dropout,
                    output_layer=output_layer,
                    initializer=initializer,
                    regularizer=regularizer)

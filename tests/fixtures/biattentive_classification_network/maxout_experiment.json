@@ -14,12 +14,13 @@
         "embedding_dim": 10
       }
     },
+    "embedding_dropout": 0.2,
     "pre_encode_feedforward": {
         "input_dim": 10,
         "num_layers": 1,
         "hidden_dims": [3],
         "activations": ["relu"],
-        "dropout": [0.2]
+        "dropout": [0.0]
     },
     "encoder": {
       "type": "lstm",
@@ -33,6 +34,7 @@
       "hidden_size": 3,
       "num_layers": 1
     },
+    "integrator_dropout": 0.2,
     "output_layer": {
         "input_dim": 12,
         "num_layers": 2,
