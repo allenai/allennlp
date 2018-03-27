@@ -42,11 +42,11 @@
       "num_layers": 1,
       "bidirectional": true
     },
-    "classifier_feedforward": {
+    "output_layer": {
         "input_dim": 2400,
         "num_layers": 3,
-        "hidden_dims": [1200, 600, 5],
-        "activations": ["relu", "relu", "linear"],
+        "output_dims": [1200, 600, 5],
+        "pool_sizes": 4,
         "dropout": [0.2, 0.2, 0.0]
     }
   },
