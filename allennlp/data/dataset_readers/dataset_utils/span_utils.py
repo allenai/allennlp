@@ -143,12 +143,12 @@ def bioul_tags_to_spans(tag_sequence: List[str]) -> List[TypedStringSpan]:
 
     Parameters
     ----------
-    tag_sequence : List[str], required.
+    tag_sequence : ``List[str]``, required.
         The tag sequence encoded in BIOLU, e.g. ["B-PER", "L-PER", "O"].
 
     Returns
     -------
-    spans : List[TypedStringSpan]
+    spans : ``List[TypedStringSpan]``
         The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
     """
     spans = []
@@ -180,12 +180,12 @@ def bio_to_bioul(tag_sequence: List[str]) -> List[str]:
 
     Parameters
     ----------
-    tag_sequence : List[str], required.
+    tag_sequence : ``List[str]``, required.
         The tag sequence encoded in IOB1, e.g. ["I-PER", "I-PER", "O"].
 
     Returns
     -------
-    bioul_sequence: List[str]
+    bioul_sequence: ``List[str]``
         The tag sequence encoded in IOB1, e.g. ["B-PER", "L-PER", "O"].
     """
     # pylint: disable=len-as-condition

@@ -66,7 +66,8 @@ class Conll2003DatasetReader(DatasetReader):
         specified here.
     coding_scheme: ``str``, optional (default=``BIO``)
         Specifies the coding scheme for ``ner_labels`` and ``chunk_labels``.
-        Valid options are ``BIO`` and ``BIOUL``.
+        Valid options are ``BIO`` and ``BIOUL``.  The ``BIO`` default maintains
+        the original IOB1 scheme in the CoNLL data.
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
