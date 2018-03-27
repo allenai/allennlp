@@ -134,8 +134,6 @@ def ensemble(index: int, subresults: List[Dict[str, torch.Tensor]]) -> int:
     The index of the best submodel.
     """
 
-    # Populate span_votes so each key represents a span range that a submodel predicts and the value
-    # is the number of models that made the prediction.
     spans = [(subresult["best_span"].data[index][0], subresult["best_span"].data[index][1])
              for subresult in subresults]
     votes: Dict[Tuple[int, int], int] = {span:spans.count(span) for span in spans}
