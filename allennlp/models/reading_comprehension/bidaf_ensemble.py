@@ -80,22 +80,24 @@ class BidafEnsemble(Ensemble):
 
         batch_size = len(subresults[0]["best_span"])
 
+        best_span = ensemble(subresults)
         output = {
-                "best_span": torch.zeros(batch_size, 2).long(),
+                "best_span": best_span,
                 "best_span_str": []
         }
         for index in range(batch_size):
-            best_index = ensemble(index, subresults)
-            best_span = subresults[best_index]["best_span"].data[index].long()
-            output["best_span"][index] = best_span
-
             if metadata is not None:
-                best_span_str = subresults[best_index]["best_span_str"][index]
-                output["best_span_str"].append(best_span_str)
+                passage_str = metadata[index]['original_passage']
+                offsets = metadata[index]['token_offsets']
+                predicted_span = tuple(best_span[index].data.cpu().numpy())
+                start_offset = offsets[predicted_span[0]][0]
+                end_offset = offsets[predicted_span[1]][1]
+                best_span_string = passage_str[start_offset:end_offset]
+                output["best_span_str"].append(best_span_string)
 
                 answer_texts = metadata[index].get('answer_texts', [])
                 if answer_texts:
-                    self._squad_metrics(best_span_str, answer_texts)
+                    self._squad_metrics(best_span_string, answer_texts)
 
         return output
 
@@ -118,7 +120,7 @@ class BidafEnsemble(Ensemble):
 
         return cls(submodels=submodels)
 
-def ensemble(index: int, subresults: List[Dict[str, torch.Tensor]]) -> int:
+def ensemble(subresults: List[Dict[str, torch.Tensor]]) -> torch.Tensor:
     """
     Identifies the best prediction given the results from the submodels.
 
@@ -134,19 +136,10 @@ def ensemble(index: int, subresults: List[Dict[str, torch.Tensor]]) -> int:
     The index of the best submodel.
     """
 
-    spans = [(subresult["best_span"].data[index][0], subresult["best_span"].data[index][1])
-             for subresult in subresults]
-    votes: Dict[Tuple[int, int], int] = {span:spans.count(span) for span in spans}
+    # Choose the highest average confidence span.
 
-    # Choose the majority-vote span.
-    # If there is a tie, break it with the average confidence (span_start_probs + span_end_probs).
-    options = []
-    for i, subresult in enumerate(subresults):
-        start = subresult["best_span"].data[index][0]
-        end = subresult["best_span"].data[index][1]
-        num_votes = votes[(start, end)]
-        average_confidence = (subresult["span_start_probs"].data[index][start] +
-                              subresult["span_end_probs"].data[index][end]) / 2.0
-        options.append((-num_votes, -average_confidence, i))
+    span_start_probs = sum(subresult['span_start_probs'] for subresult in subresults) / len(subresults)
+    span_end_probs = sum(subresult['span_end_probs'] for subresult in subresults) / len(subresults)
+    best_span = BidirectionalAttentionFlow._get_best_span(span_start_probs.log(), span_end_probs.log())
 
-    return sorted(options)[0][2]
+    return best_span

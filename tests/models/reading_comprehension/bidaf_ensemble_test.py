@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 import torch
+import numpy
 from torch.autograd import Variable
 
 from allennlp.common.testing import ModelTestCase
@@ -40,7 +41,9 @@ class BidafEnsembleTest(ModelTestCase):
                 }
         ]
 
-        assert ensemble(0, subresults) == 0
+        numpy.testing.assert_almost_equal(
+            ensemble(subresults).data[0].cpu().numpy(),
+            torch.LongTensor([2, 2]).numpy())
 
     def test_ensemble_chooses_highest_average_confidence_reverse(self):
         subresults = [
@@ -62,7 +65,9 @@ class BidafEnsembleTest(ModelTestCase):
                 },
         ]
 
-        assert ensemble(0, subresults) == 1
+        numpy.testing.assert_almost_equal(
+            ensemble(subresults).data[0].cpu().numpy(),
+            torch.LongTensor([2, 2]).cpu().numpy())
 
     def test_forward_pass_runs_correctly(self):
         """
@@ -87,5 +92,5 @@ class BidafEnsembleTest(ModelTestCase):
         # loaded the evaluation data correctly and have hooked things up to the official evaluation
         # script.
         assert metrics['f1'] > 0
-        assert torch.equal(ensemble_output_dict['best_span'], bidaf_output_dict['best_span'].data)
+        assert torch.equal(ensemble_output_dict['best_span'], bidaf_output_dict['best_span'])
         assert ensemble_output_dict['best_span_str'] == bidaf_output_dict['best_span_str']
