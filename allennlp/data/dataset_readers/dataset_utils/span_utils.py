@@ -222,7 +222,7 @@ def iob1_to_biolu(tag_sequence: List[str]) -> List[str]:
     # Process the tag_sequence one tag at a time, adding spans to a stack,
     # then recode them.
     biolu_sequence = []
-    stack = []
+    stack: List[str] = []
 
     for label in tag_sequence:
         # need to make a dict like
