@@ -4,6 +4,7 @@ import logging
 from overrides import overrides
 
 from allennlp.common import Params
+from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField
@@ -63,7 +64,7 @@ class Seq2SeqDatasetReader(DatasetReader):
 
     @overrides
     def _read(self, file_path):
-        with open(file_path, "r") as data_file:
+        with open(cached_path(file_path), "r") as data_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
             for line_num, line in enumerate(data_file):
                 line = line.strip("\n")
