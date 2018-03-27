@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 import numpy
 from overrides import overrides
@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
-from allennlp.modules import FeedForward, Seq2SeqEncoder, TextFieldEmbedder
+from allennlp.modules import FeedForward, Seq2SeqEncoder, TextFieldEmbedder, Maxout
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn import util
@@ -34,10 +34,7 @@ class BiattentiveClassificationNetwork(Model):
     yet another ``Seq2SeqEncoder`` (the ``integrator``). Lastly, we take the output of the
     integrator and max, min, mean, and self-attention pool to create a final representation,
     which is passed through some feed-forward layers and used to output a classification
-    (``classifier_feedforward``).
-
-    Note: In the original paper, the feed-forward network at the end is a maxout network,
-    which has not yet been implemented in AllenNLP.
+    (``output_layer``).
 
     Parameters
     ----------
@@ -53,7 +50,7 @@ class BiattentiveClassificationNetwork(Model):
     integrator : ``Seq2SeqEncoder``
         The encoder to use when integrating the attentive text encoding
         with the token encodings.
-    classifier_feedforward : ``FeedForward``
+    output_layer : ``Union[FeedForward, Maxout]``
         The feedforward network that takes the final representations and produces
         a classification prediction.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
@@ -66,7 +63,7 @@ class BiattentiveClassificationNetwork(Model):
                  pre_encode_feedforward: FeedForward,
                  encoder: Seq2SeqEncoder,
                  integrator: Seq2SeqEncoder,
-                 classifier_feedforward: FeedForward,
+                 output_layer: Union[FeedForward, Maxout],
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(BiattentiveClassificationNetwork, self).__init__(vocab, regularizer)
@@ -79,7 +76,7 @@ class BiattentiveClassificationNetwork(Model):
         self._integrator = integrator
         self._self_attentive_pooling_projection = nn.Linear(
                 self._integrator.get_output_dim(), 1)
-        self._classifier_feedforward = classifier_feedforward
+        self._output_layer = output_layer
 
         check_dimensions_match(text_field_embedder.get_output_dim(),
                                self._pre_encode_feedforward.get_input_dim(),
@@ -94,7 +91,7 @@ class BiattentiveClassificationNetwork(Model):
                                "Encoder output dim * 3",
                                "Integrator input dim")
         check_dimensions_match(self._integrator.get_output_dim() * 4,
-                               self._classifier_feedforward.get_input_dim(),
+                               self._output_layer.get_input_dim(),
                                "Integrator output dim * 4",
                                "Feedforward classifier input dim")
 
@@ -165,7 +162,7 @@ class BiattentiveClassificationNetwork(Model):
         # Join the pooled representations
         pooled_representations = torch.cat([max_pool, min_pool, mean_pool, self_attentive_pool], 1)
 
-        logits = self._classifier_feedforward(pooled_representations)
+        logits = self._output_layer(pooled_representations)
         class_probabilities = F.softmax(logits, dim=-1)
 
         output_dict = {'logits': logits, 'class_probabilities': class_probabilities}
@@ -201,7 +198,12 @@ class BiattentiveClassificationNetwork(Model):
         pre_encode_feedforward = FeedForward.from_params(params.pop("pre_encode_feedforward"))
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
         integrator = Seq2SeqEncoder.from_params(params.pop("integrator"))
-        classifier_feedforward = FeedForward.from_params(params.pop("classifier_feedforward"))
+
+        output_layer_params = params.pop("output_layer")
+        if "activations" in output_layer_params:
+            output_layer = FeedForward.from_params(output_layer_params)
+        else:
+            output_layer = Maxout.from_params(output_layer_params)
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
 
@@ -210,6 +212,6 @@ class BiattentiveClassificationNetwork(Model):
                    pre_encode_feedforward=pre_encode_feedforward,
                    encoder=encoder,
                    integrator=integrator,
-                   classifier_feedforward=classifier_feedforward,
+                   output_layer=output_layer,
                    initializer=initializer,
                    regularizer=regularizer)
