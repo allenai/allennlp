@@ -188,6 +188,7 @@ def iob1_to_biolu(tag_sequence: List[str]) -> List[str]:
     biolu_sequence: List[str]
         The tag sequence encoded in IOB1, e.g. ["B-PER", "L-PER", "O"].
     """
+    # pylint: disable=len-as-condition
 
     def replace_label(full_label, new_label):
         # example: full_label = 'I-PER', new_label = 'U', returns 'U-PER'
