@@ -17,8 +17,15 @@ from allennlp.data.tokenizers import Token
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def _is_divider(line: str) -> bool:
-    line = line.strip()
-    return not line or line == """-DOCSTART- -X- -X- O"""
+    empty_line = line.strip() == ''
+    if empty_line:
+        return True
+    else:
+        first_token = line.split()[0]
+        if first_token == "-DOCSTART-":
+            return True
+        else:
+            return False
 
 _VALID_LABELS = {'ner', 'pos', 'chunk'}
 
