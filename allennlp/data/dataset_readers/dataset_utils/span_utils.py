@@ -3,6 +3,10 @@ from typing import List, Tuple, Callable, TypeVar
 from allennlp.data.dataset_readers.dataset_utils.ontonotes import TypedStringSpan
 from allennlp.data.tokenizers.token import Token
 
+
+class InvalidTagSequence(Exception):
+    pass
+
 T = TypeVar("T", str, Token)
 def enumerate_spans(sentence: List[T],
                     offset: int = 0,
@@ -84,6 +88,8 @@ def bio_tags_to_spans(tag_sequence: List[str],
     for index, string_tag in enumerate(tag_sequence):
         # Actual BIO tag.
         bio_tag = string_tag[0]
+        if bio_tag not in ["B", "I", "O"]:
+            raise InvalidTagSequence
         conll_tag = string_tag[2:]
         if bio_tag == "O" or conll_tag in classes_to_ignore:
             # The span has ended.
@@ -93,14 +99,6 @@ def bio_tags_to_spans(tag_sequence: List[str],
             # We don't care about tags we are
             # told to ignore, so we do nothing.
             continue
-        elif bio_tag == "U":
-            # The U tag is used to indicate a span of length 1,
-            # so if there's an active tag we end it, and then
-            # we add a "length 0" tag.
-            if active_conll_tag:
-                spans.add((active_conll_tag, (span_start, span_end)))
-            spans.add((conll_tag, (index, index)))
-            active_conll_tag = None
         elif bio_tag == "B":
             # We are entering a new span; reset indices
             # and active tag to new span.
@@ -131,20 +129,20 @@ def bio_tags_to_spans(tag_sequence: List[str],
     return list(spans)
 
 
-class InvalidTagSequence(Exception):
-    pass
-
-
-def bioul_tags_to_spans(tag_sequence: List[str]) -> List[TypedStringSpan]:
+def bioul_tags_to_spans(tag_sequence: List[str],
+                        classes_to_ignore: List[str] = None) -> List[TypedStringSpan]:
     """
-    Given a sequence corresponding to BIOLU tags, extracts spans.
+    Given a sequence corresponding to BIOUL tags, extracts spans.
     Spans are inclusive and can be of zero length, representing a single word span.
     Ill-formed spans are not allowed and will raise ``InvalidTagSequence``.
 
     Parameters
     ----------
     tag_sequence : ``List[str]``, required.
-        The tag sequence encoded in BIOLU, e.g. ["B-PER", "L-PER", "O"].
+        The tag sequence encoded in BIOUL, e.g. ["B-PER", "L-PER", "O"].
+    classes_to_ignore : ``List[str]``, optional (default = None).
+        A list of string class labels `excluding` the bio tag
+        which should be ignored when extracting spans.
 
     Returns
     -------
@@ -152,26 +150,27 @@ def bioul_tags_to_spans(tag_sequence: List[str]) -> List[TypedStringSpan]:
         The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
     """
     spans = []
-    k = 0
-    while k < len(tag_sequence):
-        label = tag_sequence[k]
+    classes_to_ignore = classes_to_ignore or []
+    index = 0
+    while index < len(tag_sequence):
+        label = tag_sequence[index]
         if label[0] == 'U':
-            spans.append((label.partition('-')[2], (k, k)))
+            spans.append((label.partition('-')[2], (index, index)))
         elif label[0] == 'B':
-            start = k
+            start = index
             while label[0] != 'L':
-                k += 1
-                if k >= len(tag_sequence):
+                index += 1
+                if index >= len(tag_sequence):
                     raise InvalidTagSequence
-                label = tag_sequence[k]
+                label = tag_sequence[index]
                 if not (label[0] == 'I' or label[0] == 'L'):
                     raise InvalidTagSequence
-            spans.append((label.partition('-')[2], (start, k)))
+            spans.append((label.partition('-')[2], (start, index)))
         else:
             if label != 'O':
                 raise InvalidTagSequence
-        k += 1
-    return spans
+        index += 1
+    return [span for span in spans if span[0] not in classes_to_ignore]
 
 
 def iob1_to_bioul(tag_sequence: List[str]) -> List[str]:
