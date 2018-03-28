@@ -54,6 +54,7 @@ DEFAULT_PREDICTORS = {
         'srl': 'semantic-role-labeling',
         'decomposable_attention': 'textual-entailment',
         'bidaf': 'machine-comprehension',
+        'bidaf-ensemble': 'machine-comprehension',
         'simple_tagger': 'sentence-tagger',
         'crf_tagger': 'sentence-tagger',
         'coref': 'coreference-resolution',

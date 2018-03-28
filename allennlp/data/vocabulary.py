@@ -417,3 +417,8 @@ class Vocabulary:
 
     def get_vocab_size(self, namespace: str = 'tokens') -> int:
         return len(self._token_to_index[namespace])
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return False
