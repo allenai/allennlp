@@ -47,3 +47,7 @@ class MetadataField(Field[DataArray]):
     @overrides
     def batch_tensors(cls, tensor_list: List[DataArray]) -> DataArray:  # type: ignore
         return tensor_list  # type: ignore
+
+
+    def __str__(self) -> str:
+        return f"MetadataField (print field.metadata to see specific information)."

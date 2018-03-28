@@ -5,13 +5,13 @@ and report any metrics calculated by the model.
 
 .. code-block:: bash
 
-    $ python -m allennlp.run evaluate --help
-    usage: python -m allennlp.run [command] evaluate [-h] --evaluation-data-file
-                                                    EVALUATION_DATA_FILE
-                                                    [--cuda-device CUDA_DEVICE]
-                                                    [-o OVERRIDES]
-                                                    [--include-package INCLUDE_PACKAGE]
-                                                    archive_file
+    $ allennlp evaluate --help
+    usage: allennlp [command] evaluate [-h] --evaluation-data-file
+                                            EVALUATION_DATA_FILE
+                                            [--cuda-device CUDA_DEVICE]
+                                            [-o OVERRIDES]
+                                            [--include-package INCLUDE_PACKAGE]
+                                            archive_file
 
     Evaluate the specified model + dataset
 
@@ -94,7 +94,7 @@ def evaluate(model: Model,
         description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
         generator_tqdm.set_description(description, refresh=False)
 
-    return model.get_metrics()
+    return model.get_metrics(reset=True)
 
 
 def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:

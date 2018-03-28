@@ -8,8 +8,11 @@ The available optimizers are
 * `"adadelta" <http://pytorch.org/docs/master/optim.html#torch.optim.Adadelta>`_
 * `"adagrad" <http://pytorch.org/docs/master/optim.html#torch.optim.Adagrad>`_
 * `"adam" <http://pytorch.org/docs/master/optim.html#torch.optim.Adam>`_
+* `"sparse_adam" <http://pytorch.org/docs/master/optim.html#torch.optim.SparseAdam>`_
 * `"sgd" <http://pytorch.org/docs/master/optim.html#torch.optim.SGD>`_
 * `"rmsprop <http://pytorch.org/docs/master/optim.html#torch.optim.RMSprop>`_
+* `"adamax <http://pytorch.org/docs/master/optim.html#torch.optim.Adamax>`_
+* `"averaged_sgd <http://pytorch.org/docs/master/optim.html#torch.optim.ASGD>`_
 """
 
 import logging
@@ -112,8 +115,11 @@ class Optimizer(Registrable):
 # Registry._registry so we can build them from params.
 Registrable._registry[Optimizer] = {   # pylint: disable=protected-access
         "adam": torch.optim.Adam,
+        "sparse_adam": torch.optim.SparseAdam,
         "adagrad": torch.optim.Adagrad,
         "adadelta": torch.optim.Adadelta,
         "sgd": torch.optim.SGD,
         "rmsprop": torch.optim.RMSprop,
+        "adamax": torch.optim.Adamax,
+        "averaged_sgd": torch.optim.ASGD,
 }

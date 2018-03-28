@@ -1,0 +1,3 @@
+(4 (2 (2 The) (2 actors)) (3 (4 (2 are) (3 fantastic)) (2 .)))
+(0 (2 It) (0 (1 (2 was) (0 terrible)) (2 .)))
+(2 (2 Chomp) (2 (2 chomp) (2 !)))

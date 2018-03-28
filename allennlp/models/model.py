@@ -131,6 +131,17 @@ class Model(torch.nn.Module, Registrable):
         batched output into a list of individual dicts per instance. Note that typically
         this will be faster on a GPU (and conditionally, on a CPU) than repeated calls to
         :func:`forward_on_instance`.
+
+        Parameters
+        ----------
+        instances : List[Instance], required
+            The instances to run the model on.
+        cuda_device : int, required
+            The GPU device to use.  -1 means use the CPU.
+
+        Returns
+        -------
+        A list of the models output for each instance.
         """
         dataset = Batch(instances)
         dataset.index_instances(self.vocab)
@@ -167,7 +178,7 @@ class Model(torch.nn.Module, Registrable):
         """
         Returns a dictionary of metrics. This method will be called by
         :class:`allennlp.training.Trainer` in order to compute and use model metrics for early
-        stopping and model serialisation.  We return an empty dictionary here rather than raising
+        stopping and model serialization.  We return an empty dictionary here rather than raising
         as it is not required to implement metrics for a new model.  A boolean `reset` parameter is
         passed, as frequently a metric accumulator will have some state which should be reset
         between epochs. This is also compatible with :class:`~allennlp.training.Metric`s. Metrics
@@ -182,6 +193,42 @@ class Model(torch.nn.Module, Registrable):
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
         choice = params.pop_choice("type", cls.list_available())
         model = cls.by_name(choice).from_params(vocab, params)
+        return model
+
+    @classmethod
+    def _load(cls,
+              config: Params,
+              serialization_dir: str,
+              weights_file: str = None,
+              cuda_device: int = -1) -> 'Model':
+        """
+        Instantiates an already-trained model, based on the experiment
+        configuration and some optional overrides.
+        """
+        weights_file = weights_file or os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
+
+        # Load vocabulary from file
+        vocab_dir = os.path.join(serialization_dir, 'vocabulary')
+        vocab = Vocabulary.from_files(vocab_dir)
+
+        model_params = config.get('model')
+
+        # The experiment config tells us how to _train_ a model, including where to get pre-trained
+        # embeddings from.  We're now _loading_ the model, so those embeddings will already be
+        # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
+        # want the code to look for it, so we remove it from the parameters here.
+        remove_pretrained_embedding_params(model_params)
+        model = Model.from_params(vocab, model_params)
+        model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
+        model.load_state_dict(model_state)
+
+        # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
+        # in sync with the weights
+        if cuda_device >= 0:
+            model.cuda(cuda_device)
+        else:
+            model.cpu()
+
         return model
 
     @classmethod
@@ -217,37 +264,20 @@ class Model(torch.nn.Module, Registrable):
             The model specified in the configuration, loaded with the serialized
             vocabulary and the trained weights.
         """
-        weights_file = weights_file or os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
 
-        # Load vocabulary from file
-        vocab_dir = os.path.join(serialization_dir, 'vocabulary')
-        vocab = Vocabulary.from_files(vocab_dir)
+        # Peak at the class of the model.
+        model_type = config["model"]["type"]
 
-        model_params = config.get('model')
-
-        # The experiment config tells us how to _train_ a model, including where to get pre-trained
-        # embeddings from.  We're now _loading_ the model, so those embeddings will already be
-        # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
-        # want the code to look for it, so we remove it from the parameters here.
-        _remove_pretrained_embedding_params(model_params)
-        model = Model.from_params(vocab, model_params)
-        model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
-        model.load_state_dict(model_state)
-
-        # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
-        # in sync with the weights
-        if cuda_device >= 0:
-            model.cuda(cuda_device)
-        else:
-            model.cpu()
-
-        return model
+        # Load using an overridable _load method.
+        # This allows subclasses of Model to override _load.
+        # pylint: disable=protected-access
+        return cls.by_name(model_type)._load(config, serialization_dir, weights_file, cuda_device)
 
 
-def _remove_pretrained_embedding_params(params: Params):
+def remove_pretrained_embedding_params(params: Params):
     keys = params.keys()
     if 'pretrained_file' in keys:
         del params['pretrained_file']
     for value in params.values():
         if isinstance(value, Params):
-            _remove_pretrained_embedding_params(value)
+            remove_pretrained_embedding_params(value)

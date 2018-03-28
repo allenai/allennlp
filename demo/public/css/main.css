@@ -1132,6 +1132,7 @@ svg {
 
 .pane__bottom {
   min-height: 100%;
+  overflow: auto;
   height: auto;
 }
 

@@ -1,5 +1,6 @@
 include README.md
 include requirements.txt
+include bin/allennlp
 recursive-include scripts *
 recursive-include tutorials *
 recursive-include training_config *.json

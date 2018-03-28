@@ -13,13 +13,13 @@ https://arxiv.org/abs/1802.05365
 
 .. code-block:: bash
 
-   $ python -m allennlp.run elmo --help
-   usage: python -m allennlp.run [command] elmo [-h] [--vocab-path VOCAB_PATH]
-                                                [--options-file OPTIONS_FILE]
-                                                [--weight-file WEIGHT_FILE]
-                                                [--batch-size BATCH_SIZE]
-                                                [--cuda-device CUDA_DEVICE]
-                                                input_file output_file
+   $ allennlp elmo --help
+   usage: allennlp [command] elmo [-h] [--vocab-path VOCAB_PATH]
+                                       [--options-file OPTIONS_FILE]
+                                       [--weight-file WEIGHT_FILE]
+                                       [--batch-size BATCH_SIZE]
+                                       [--cuda-device CUDA_DEVICE]
+                                       input_file output_file
 
    Create word vectors using ELMo.
 

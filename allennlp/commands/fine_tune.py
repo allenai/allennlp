@@ -3,7 +3,7 @@ The ``fine-tune`` subcommand is used to continue training (or `fine-tune`) a mod
 dataset` than the one it was originally trained on.  It requires a saved model archive file, a path
 to the data you will continue training with, and a directory in which to write the results.
 
-Run ``python -m allennlp.run fine-tune --help`` for detailed usage information.
+Run ``allennlp fine-tune --help`` for detailed usage information.
 """
 import argparse
 import json

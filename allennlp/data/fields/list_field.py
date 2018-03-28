@@ -96,3 +96,8 @@ class ListField(SequenceField[DataArray]):
     def batch_tensors(self, tensor_list: List[DataArray]) -> DataArray:
         # We defer to the class we're wrapping in a list to handle the batching.
         return self.field_list[0].batch_tensors(tensor_list)
+
+    def __str__(self) -> str:
+        field_class = self.field_list[0].__class__.__name__
+        base_string = f"ListField of {len(self.field_list)} {field_class}s : \n"
+        return " ".join([base_string] + [f"\t {field} \n" for field in self.field_list])

@@ -177,3 +177,7 @@ class TestListField(AllenNlpTestCase):
                                                                             [1, 0, 0, 0, 0, 0, 0, 0, 0],
                                                                             [1, 1, 1, 1, 3, 1, 3, 4, 5],
                                                                             [2, 3, 4, 5, 3, 4, 6, 3, 0]]))
+
+    def test_printing_doesnt_crash(self):
+        list_field = ListField([self.field1, self.field2])
+        print(list_field)
