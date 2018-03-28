@@ -8,6 +8,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.dataset_readers.dataset_utils import iob1_to_bioul
 from allennlp.data.fields import TextField, SequenceLabelField, Field
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
@@ -16,8 +17,15 @@ from allennlp.data.tokenizers import Token
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def _is_divider(line: str) -> bool:
-    line = line.strip()
-    return not line or line == """-DOCSTART- -X- -X- O"""
+    empty_line = line.strip() == ''
+    if empty_line:
+        return True
+    else:
+        first_token = line.split()[0]
+        if first_token == "-DOCSTART-":  # pylint: disable=simplifiable-if-statement
+            return True
+        else:
+            return False
 
 _VALID_LABELS = {'ner', 'pos', 'chunk'}
 
@@ -56,12 +64,20 @@ class Conll2003DatasetReader(DatasetReader):
         Each will have its own namespace: ``pos_labels``, ``chunk_labels``, ``ner_labels``.
         If you want to use one of the labels as a `feature` in your model, it should be
         specified here.
+    coding_scheme: ``str``, optional (default=``IOB1``)
+        Specifies the coding scheme for ``ner_labels`` and ``chunk_labels``.
+        Valid options are ``IOB1`` and ``BIOUL``.  The ``IOB1`` default maintains
+        the original IOB1 scheme in the CoNLL data.
+        In the IOB1 scheme, I is a token inside a span, O is a token outside
+        a span and B is the beginning of span immediately following another
+        span of the same type.
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  tag_label: str = "ner",
                  feature_labels: Sequence[str] = (),
-                 lazy: bool = False) -> None:
+                 lazy: bool = False,
+                 coding_scheme: str = "IOB1") -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         if tag_label is not None and tag_label not in _VALID_LABELS:
@@ -69,9 +85,12 @@ class Conll2003DatasetReader(DatasetReader):
         for label in feature_labels:
             if label not in _VALID_LABELS:
                 raise ConfigurationError("unknown feature label type: {}".format(label))
+        if coding_scheme not in ("IOB1", "BIOUL"):
+            raise ConfigurationError("unknown coding_scheme: {}".format(coding_scheme))
 
         self.tag_label = tag_label
         self.feature_labels = set(feature_labels)
+        self.coding_scheme = coding_scheme
 
     @overrides
     def _read(self, file_path: str) -> Iterable[Instance]:
@@ -95,21 +114,30 @@ class Conll2003DatasetReader(DatasetReader):
 
                     instance_fields: Dict[str, Field] = {'tokens': sequence}
 
+                    # Recode the labels if necessary.
+                    if self.coding_scheme == "BIOUL":
+                        coded_chunks = iob1_to_bioul(chunk_tags)
+                        coded_ner = iob1_to_bioul(ner_tags)
+                    else:
+                        # the default IOB1
+                        coded_chunks = chunk_tags
+                        coded_ner = ner_tags
+
                     # Add "feature labels" to instance
                     if 'pos' in self.feature_labels:
                         instance_fields['pos_tags'] = SequenceLabelField(pos_tags, sequence, "pos_tags")
                     if 'chunk' in self.feature_labels:
-                        instance_fields['chunk_tags'] = SequenceLabelField(chunk_tags, sequence, "chunk_tags")
+                        instance_fields['chunk_tags'] = SequenceLabelField(coded_chunks, sequence, "chunk_tags")
                     if 'ner' in self.feature_labels:
-                        instance_fields['ner_tags'] = SequenceLabelField(ner_tags, sequence, "ner_tags")
+                        instance_fields['ner_tags'] = SequenceLabelField(coded_ner, sequence, "ner_tags")
 
                     # Add "tag label" to instance
                     if self.tag_label == 'ner':
-                        instance_fields['tags'] = SequenceLabelField(ner_tags, sequence)
+                        instance_fields['tags'] = SequenceLabelField(coded_ner, sequence)
                     elif self.tag_label == 'pos':
                         instance_fields['tags'] = SequenceLabelField(pos_tags, sequence)
                     elif self.tag_label == 'chunk':
-                        instance_fields['tags'] = SequenceLabelField(chunk_tags, sequence)
+                        instance_fields['tags'] = SequenceLabelField(coded_chunks, sequence)
 
                     yield Instance(instance_fields)
 
@@ -126,8 +154,10 @@ class Conll2003DatasetReader(DatasetReader):
         tag_label = params.pop('tag_label', None)
         feature_labels = params.pop('feature_labels', ())
         lazy = params.pop('lazy', False)
+        coding_scheme = params.pop('coding_scheme', 'IOB1')
         params.assert_empty(cls.__name__)
         return Conll2003DatasetReader(token_indexers=token_indexers,
                                       tag_label=tag_label,
                                       feature_labels=feature_labels,
-                                      lazy=lazy)
+                                      lazy=lazy,
+                                      coding_scheme=coding_scheme)
