@@ -1,5 +1,5 @@
 """
-A feed-forward neural network.
+A maxout neural network.
 """
 from typing import Sequence, Union
 
@@ -62,6 +62,7 @@ class Maxout(torch.nn.Module):
         self._linear_layers = torch.nn.ModuleList(linear_layers)
         dropout_layers = [torch.nn.Dropout(p=value) for value in dropout]
         self._dropout = torch.nn.ModuleList(dropout_layers)
+        self._output_dims = output_dims
         self._output_dim = output_dims[-1]
         self._input_dim = input_dim
 
@@ -74,11 +75,15 @@ class Maxout(torch.nn.Module):
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         # pylint: disable=arguments-differ
         output = inputs
-        for layer, dropout, pool_size in zip(self._linear_layers, self._dropout, self._pool_sizes):
+        for layer, layer_output_dim, dropout, pool_size in zip(self._linear_layers, self._output_dims,
+                                                               self._dropout, self._pool_sizes):
             affine_output = layer(output)
-            # -1 in shape should be the output_dim of the maxout layer. This lets
-            # the maxout layer generalize the non-2D input.
-            maxed_output = torch.max(affine_output.view(*inputs.size()[:-1], -1, pool_size), dim=-1)[0]
+            # Compute and apply the proper shape for the max.
+            shape = list(inputs.size())
+            shape[-1] = layer_output_dim
+            shape.append(pool_size)
+
+            maxed_output = torch.max(affine_output.view(*shape), dim=-1)[0]
             dropped_output = dropout(maxed_output)
             output = dropped_output
         return output

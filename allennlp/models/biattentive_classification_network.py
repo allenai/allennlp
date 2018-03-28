@@ -33,8 +33,8 @@ class BiattentiveClassificationNetwork(Model):
     representation with the encoder outputs computed earlier, and then run this through
     yet another ``Seq2SeqEncoder`` (the ``integrator``). Lastly, we take the output of the
     integrator and max, min, mean, and self-attention pool to create a final representation,
-    which is passed through some feed-forward layers and used to output a classification
-    (``output_layer``).
+    which is passed through a maxout network or some feed-forward layers
+    to output a classification (``output_layer``).
 
     Parameters
     ----------
@@ -54,15 +54,16 @@ class BiattentiveClassificationNetwork(Model):
         with the token encodings.
     integrator_dropout : ``float``
         The amount of dropout to apply on integrator output.
-    output_layer : ``Union[FeedForward, Maxout]``
-        The feedforward network that takes the final representations and produces
+    output_layer : ``Union[Maxout, FeedForward]``
+        The maxout or feed forward network that takes the final representations and produces
         a classification prediction.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
-    def __init__(self, vocab: Vocabulary,
+    def __init__(self,
+                 vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  embedding_dropout: float,
                  pre_encode_feedforward: FeedForward,
@@ -101,7 +102,11 @@ class BiattentiveClassificationNetwork(Model):
         check_dimensions_match(self._integrator.get_output_dim() * 4,
                                self._output_layer.get_input_dim(),
                                "Integrator output dim * 4",
-                               "Feedforward classifier input dim")
+                               "Output layer input dim")
+        check_dimensions_match(self._output_layer.get_output_dim(),
+                               self._num_classes,
+                               "Output layer output dim",
+                               "Number of classes.")
 
         self.metrics = {
                 "accuracy": CategoricalAccuracy(),
@@ -133,7 +138,6 @@ class BiattentiveClassificationNetwork(Model):
         """
         text_mask = util.get_text_field_mask(tokens).float()
         embedded_text = self._text_field_embedder(tokens)
-        batch_size, sequence_length, _ = embedded_text.size()
         dropped_embedded_text = self._embedding_dropout(embedded_text)
 
         pre_encoded_text = self._pre_encode_feedforward(dropped_embedded_text)
@@ -142,9 +146,7 @@ class BiattentiveClassificationNetwork(Model):
         # Compute biattention. This is a special case since the inputs are the same.
         attention_logits = encoded_tokens.bmm(encoded_tokens.permute(0, 2, 1).contiguous())
         attention_weights = util.last_dim_softmax(attention_logits, text_mask)
-        # Compute the attention-weighted sum of the encoder states.
-        # This is the text representation.
-        encoded_text = attention_weights.bmm(encoded_tokens)
+        encoded_text = util.weighted_sum(encoded_tokens, attention_weights)
 
         # Build the input to the integrator
         integrator_input = torch.cat([encoded_tokens,
@@ -162,16 +164,14 @@ class BiattentiveClassificationNetwork(Model):
         mean_pool = torch.sum(integrated_encodings, 1) / torch.sum(text_mask, 1, keepdim=True)
 
         # Self-attentive pooling layer
-        flat_self_attentive_logits = self._self_attentive_pooling_projection(
-                integrated_encodings.contiguous().view(-1, self._integrator.get_output_dim()))
-        self_attentive_logits = flat_self_attentive_logits.view(batch_size, sequence_length)
+        # Run through linear projection. Shape: (batch_size, sequence length, 1)
+        # Then remove the last dimension to get the proper attention shape (batch_size, sequence length).
+        self_attentive_logits = self._self_attentive_pooling_projection(
+                integrated_encodings.contiguous()).squeeze(2)
         self_weights = util.masked_softmax(self_attentive_logits, text_mask)
-        # Do the weighted sum
         self_attentive_pool = util.weighted_sum(integrated_encodings, self_weights)
 
-        # Join the pooled representations
         pooled_representations = torch.cat([max_pool, min_pool, mean_pool, self_attentive_pool], 1)
-        # Apply dropout on the pooled representations
         pooled_representations_dropped = self._integrator_dropout(pooled_representations)
 
         logits = self._output_layer(pooled_representations_dropped)

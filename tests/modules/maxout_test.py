@@ -11,7 +11,7 @@ from allennlp.nn import InitializerApplicator
 from allennlp.common.testing import AllenNlpTestCase
 
 
-class TestFeedForward(AllenNlpTestCase):
+class TestMaxout(AllenNlpTestCase):
     def test_init_checks_output_dims_consistency(self):
         with pytest.raises(ConfigurationError):
             Maxout(input_dim=2,
