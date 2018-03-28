@@ -1,4 +1,4 @@
-\# Getting BiDAF (Pytorch) up for experimentation on Gypsum
+# Getting BiDAF (Pytorch) up for experimentation on Gypsum
 
 1\. Clone the repo.
 ```
@@ -14,7 +14,8 @@ git checkout -b <name>
 module remove python/3.5
 module load python/3.6.1
 ```
-Do not load python 3.5 back right now, because the default version is taken as 3.5
+Do not load python 3.5 back right now, because the default version is taken as 3.5. 
+
 Then, create a virtual environment (just in case):
 ```
 python3 -m venv <environment name>
@@ -44,6 +45,7 @@ mkdir data
 Copy the raw versions (i.e. the directories with dev-v1.1.json  test-v1.1.json  train-v1.1.json) for SQuAD and NewsQA to the data directory. 
 
 5\. Slurm files
+
 Use the following script. Change the parts in <> to your running requirements.
 ```
 #!/bin/bash
@@ -56,8 +58,6 @@ Use the following script. Change the parts in <> to your running requirements.
 #SBATCH --gres=gpu:1
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=<your e-mail>
-
-# Log what we're running and where.
 echo $SLURM_JOBID - `hostname` >> ~/slurm-jobs.txt
 
 module purge
@@ -85,7 +85,8 @@ echo '{"passage": "A reusable launch system (RLS, or reusable launch vehicle, RL
 python -m allennlp.run predict https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz  examples.jsonl
 ```
 6\. Options for model training and evaluation
-Change options and parameters in the training_config/bidaf.json file
+- Change options and parameters in the training_config/bidaf.json file
+- Models and results are stored in "~/output_path" Best and last model are both stored.
 
 7\. Push your branch to master.
 ```
