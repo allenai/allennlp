@@ -1,5 +1,5 @@
+from overrides import overrides
 import torch
-
 from torch.autograd import Variable
 from torch.nn import Dropout, Linear
 
@@ -79,6 +79,7 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
     def is_bidirectional(self):
         return False
 
+    @overrides
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor,
                 mask: torch.LongTensor = None) -> torch.FloatTensor:
