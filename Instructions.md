@@ -92,4 +92,3 @@ python -m allennlp.run predict https://s3-us-west-2.amazonaws.com/allennlp/model
 ```
 git push origin <name>
 ```
-
