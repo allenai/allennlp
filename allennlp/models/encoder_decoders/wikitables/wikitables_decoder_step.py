@@ -24,7 +24,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                  action_embedding_dim: int,
                  attention_function: SimilarityFunction,
                  num_entity_types: int,
-                 mixture_feedforward: FeedForward = None) -> None:
+                 mixture_feedforward: FeedForward,
+                 dropout: float = 0.0) -> None:
         super(WikiTablesDecoderStep, self).__init__()
         self._mixture_feedforward = mixture_feedforward
         self._entity_type_embedding = Embedding(num_entity_types, action_embedding_dim)
@@ -52,6 +53,11 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             check_dimensions_match(mixture_feedforward.get_output_dim(), 1,
                                    "mixture feedforward output dim", "dimension for scalar value")
 
+        if dropout > 0:
+            self._dropout = torch.nn.Dropout(p=dropout)
+        else:
+            self._dropout = lambda x: x
+
     @overrides
     def take_step(self,
                   state: WikiTablesDecoderState,
@@ -75,6 +81,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                                 previous_action_embedding], -1))
 
         hidden_state, memory_cell = self._decoder_cell(decoder_input, (hidden_state, memory_cell))
+        hidden_state = self._dropout(hidden_state)
 
         # (group_size, encoder_output_dim)
         encoder_outputs = torch.stack([state.rnn_state[0].encoder_outputs[i] for i in state.batch_indices])
@@ -89,7 +96,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         action_query = torch.cat([hidden_state, attended_question], dim=-1)
 
         # (group_size, action_embedding_dim)
-        predicted_action_embedding = self._output_projection_layer(action_query)
+        predicted_action_embedding = self._dropout(self._output_projection_layer(action_query))
 
         considered_actions, actions_to_embed, actions_to_link = self._get_actions_to_consider(state)
 

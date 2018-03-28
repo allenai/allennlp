@@ -64,6 +64,9 @@ class WikiTablesSemanticParser(Model):
         We compute an attention over the input question at each step of the decoder, using the
         decoder hidden state as the query.  This is the similarity function we use for that
         attention.
+    dropout : ``float``, optional (default=0)
+        If greater than 0, we will apply dropout with this probability after all encoders (pytorch
+        LSTMs do not apply dropout to their last layer).
     num_linking_features : ``int``, optional (default=8)
         We need to construct a parameter vector for the linking features, so we need to know how
         many there are.  The default of 8 here matches the default in the ``KnowledgeGraphField``,
@@ -78,6 +81,9 @@ class WikiTablesSemanticParser(Model):
         current attention on question words.  If ``embed_terminals`` is ``False``, instead of
         constructing an embedding for terminal (that is, table-specific) entity productions, we
         will compute scores for these actions using the linking score and current attention.
+    rule_namespace : ``str``, optional (default=rule_labels)
+        The vocabulary namespace to use for production rules.  The default corresponds to the
+        default used in the dataset reader, so you likely don't need to modify this.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -90,6 +96,7 @@ class WikiTablesSemanticParser(Model):
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  attention_function: SimilarityFunction,
+                 dropout: float = 0.0,
                  num_linking_features: int = 8,
                  embed_terminals: bool = False) -> None:
         super(WikiTablesSemanticParser, self).__init__(vocab)
@@ -104,6 +111,11 @@ class WikiTablesSemanticParser(Model):
             # TODO(mattg): should we raise an error here if terminal_embedder is not None?
         self._action_sequence_accuracy = Average()
         self._embed_terminals = embed_terminals
+        if dropout > 0:
+            self._dropout = torch.nn.Dropout(p=dropout)
+        else:
+            self._dropout = lambda x: x
+        self._rule_namespace = rule_namespace
 
         check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
                                "entity word average embedding dim", "question embedding dim")
@@ -130,7 +142,8 @@ class WikiTablesSemanticParser(Model):
                                                    action_embedding_dim=action_embedding_dim,
                                                    attention_function=attention_function,
                                                    num_entity_types=self.num_entity_types,
-                                                   mixture_feedforward=mixture_feedforward)
+                                                   mixture_feedforward=mixture_feedforward,
+                                                   dropout=dropout)
 
     @overrides
     def forward(self,  # type: ignore
@@ -266,7 +279,7 @@ class WikiTablesSemanticParser(Model):
         encoder_input = torch.cat([link_embedding, embedded_question], 2)
 
         # (batch_size, question_length, encoder_output_dim)
-        encoder_outputs = self._encoder(encoder_input, question_mask)
+        encoder_outputs = self._dropout(self._encoder(encoder_input, question_mask))
 
         # This will be our initial hidden state and memory cell for the decoder LSTM.
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
@@ -856,8 +869,10 @@ class WikiTablesSemanticParser(Model):
             attention_function = SimilarityFunction.from_params(attention_function_type)
         else:
             attention_function = None
+        dropout = params.pop_float('dropout', 0.0)
         num_linking_features = params.pop_int('num_linking_features', 8)
         embed_terminals = params.pop('embed_terminals', False)
+        rule_namespace = params.pop('rule_namespace', 'rule_labels')
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    question_embedder=question_embedder,
@@ -869,5 +884,7 @@ class WikiTablesSemanticParser(Model):
                    decoder_beam_search=decoder_beam_search,
                    max_decoding_steps=max_decoding_steps,
                    attention_function=attention_function,
+                   dropout=dropout,
                    num_linking_features=num_linking_features,
-                   embed_terminals=embed_terminals)
+                   embed_terminals=embed_terminals,
+                   rule_namespace=rule_namespace)
