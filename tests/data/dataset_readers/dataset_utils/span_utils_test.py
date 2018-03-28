@@ -13,10 +13,10 @@ class SpanUtilsTest(AllenNlpTestCase):
         spans = span_utils.bio_tags_to_spans(tag_sequence)
         assert set(spans) == {("ARG1", (1, 2)), ("ARG2", (4, 5)), ("ARG1", (6, 6)), ("ARG2", (7, 7))}
 
-        # Check that it works when we use U- tags for single tokens.
+        # Check that it raises when we use U- tags for single tokens.
         tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "U-ARG1", "U-ARG2"]
-        spans = span_utils.bio_tags_to_spans(tag_sequence)
-        assert set(spans) == {("ARG1", (1, 2)), ("ARG2", (4, 5)), ("ARG1", (6, 6)), ("ARG2", (7, 7))}
+        with self.assertRaises(span_utils.InvalidTagSequence):
+            spans = span_utils.bio_tags_to_spans(tag_sequence)
 
         # Check that invalid BIO sequences are also handled as spans.
         tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "I-ARG1", "B-ARG2", "I-ARG2", "B-ARG1", "I-ARG2", "I-ARG2"]

@@ -64,7 +64,9 @@ class CrfTagger(Model):
 
         self.crf = ConditionalRandomField(self.num_tags, constraints)
 
-        self.span_metric = SpanBasedF1Measure(vocab, tag_namespace=label_namespace)
+        self.span_metric = SpanBasedF1Measure(vocab,
+                                              tag_namespace=label_namespace,
+                                              label_encoding=constraint_type or "BIO")
 
         check_dimensions_match(text_field_embedder.get_output_dim(), encoder.get_input_dim(),
                                "text field embedding dim", "encoder input dim")
