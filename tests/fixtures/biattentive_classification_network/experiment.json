@@ -1,0 +1,63 @@
+{
+  "dataset_reader":{
+      "type": "sst_tokens",
+      "use_subtrees": true,
+      "granularity": "5-class"
+  },
+  "train_data_path": "tests/fixtures/data/sst.txt",
+  "validation_data_path": "tests/fixtures/data/sst.txt",
+  "model": {
+    "type": "bcn",
+    "text_field_embedder": {
+      "tokens": {
+        "type": "embedding",
+        "embedding_dim": 10
+      }
+    },
+    "embedding_dropout": 0.2,
+    "pre_encode_feedforward": {
+        "input_dim": 10,
+        "num_layers": 1,
+        "hidden_dims": [3],
+        "activations": ["relu"],
+        "dropout": [0.0]
+    },
+    "encoder": {
+      "type": "lstm",
+      "input_size": 3,
+      "hidden_size": 2,
+      "num_layers": 1
+    },
+    "integrator": {
+      "type": "lstm",
+      "input_size": 6,
+      "hidden_size": 3,
+      "num_layers": 1
+    },
+    "integrator_dropout": 0.2,
+    "output_layer": {
+        "input_dim": 12,
+        "num_layers": 2,
+        "output_dims": [6, 5],
+        "pool_sizes": [4, 3],
+        "dropout": [0.2, 0.0]
+    }
+  },
+  "iterator": {
+    "type": "bucket",
+    "sorting_keys": [["tokens", "num_tokens"]],
+    "padding_noise": 0.0,
+    "batch_size" : 80
+  },
+  "trainer": {
+    "num_epochs": 1,
+    "grad_norm": 1.0,
+    "patience": 500,
+    "cuda_device": -1,
+    "optimizer": {
+      "type": "adadelta",
+      "lr": 0.000001,
+      "rho": 0.95
+    }
+  }
+}

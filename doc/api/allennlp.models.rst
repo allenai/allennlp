@@ -18,3 +18,4 @@ allennlp.models
   allennlp.models.semantic_role_labeler
   allennlp.models.simple_tagger
   allennlp.models.constituency_parser
+  allennlp.models.biattentive_classification_network
