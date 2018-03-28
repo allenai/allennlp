@@ -115,6 +115,8 @@ class WikiTablesDatasetReader(DatasetReader):
         information necessary for reading each instance, which includes the table contents itself.
         This flag tells the reader to include a ``table_metadata`` field that gets read by the
         pre-processing script.
+    max_number_table_tokens : ``int``, optional (default=-1)
+        We use this to truncate the entity tokens in the table.
     """
     def __init__(self,
                  lazy: bool = False,
@@ -130,7 +132,8 @@ class WikiTablesDatasetReader(DatasetReader):
                  nonterminal_indexers: Dict[str, TokenIndexer] = None,
                  terminal_indexers: Dict[str, TokenIndexer] = None,
                  linking_feature_extractors: List[str] = None,
-                 include_table_metadata: bool = False) -> None:
+                 include_table_metadata: bool = False,
+                 max_number_table_tokens: int = -1) -> None:
         super().__init__(lazy=lazy)
         self._tables_directory = tables_directory
         self._dpd_output_directory = dpd_output_directory
@@ -146,6 +149,7 @@ class WikiTablesDatasetReader(DatasetReader):
         self._linking_feature_extractors = linking_feature_extractors
         self._include_table_metadata = include_table_metadata
         self._basic_types = set(str(type_) for type_ in wt_types.BASIC_TYPES)
+        self._max_number_table_tokens = max_number_table_tokens
 
     @overrides
     def _read(self, file_path: str):
@@ -246,7 +250,8 @@ class WikiTablesDatasetReader(DatasetReader):
                                           self._table_token_indexers,
                                           tokenizer=self._tokenizer,
                                           feature_extractors=self._linking_feature_extractors,
-                                          include_in_vocab=self._use_table_for_vocab)
+                                          include_in_vocab=self._use_table_for_vocab,
+                                          max_number_table_tokens=self._max_number_table_tokens)
         world = WikiTablesWorld(table_knowledge_graph)
         world_field = MetadataField(world)
 
@@ -358,6 +363,7 @@ class WikiTablesDatasetReader(DatasetReader):
         use_table_for_vocab = params.pop_bool('use_table_for_vocab', False)
         linking_feature_extracters = params.pop('linking_feature_extractors', None)
         include_table_metadata = params.pop_bool('include_table_metadata', False)
+        max_number_table_tokens = params.pop_int('max_number_table_tokens', -1)
         params.assert_empty(cls.__name__)
         return WikiTablesDatasetReader(lazy=lazy,
                                        tables_directory=tables_directory,
@@ -370,4 +376,5 @@ class WikiTablesDatasetReader(DatasetReader):
                                        table_token_indexers=table_token_indexers,
                                        use_table_for_vocab=use_table_for_vocab,
                                        linking_feature_extractors=linking_feature_extracters,
-                                       include_table_metadata=include_table_metadata)
+                                       include_table_metadata=include_table_metadata,
+                                       max_number_table_tokens=max_number_table_tokens)

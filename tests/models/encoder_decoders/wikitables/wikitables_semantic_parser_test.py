@@ -20,14 +20,9 @@ class WikiTablesSemanticParserTest(ModelTestCase):
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
-    @flaky
-    def test_mixture_feedforward_model_can_train_save_and_load(self):
+    def test_elmo_mixture_no_features_model_can_train_save_and_load(self):
         # pylint: disable=line-too-long
-        self.ensure_model_can_train_save_and_load('tests/fixtures/encoder_decoder/wikitables_semantic_parser_with_mixture_feedforward/experiment.json')
-
-    def test_model_no_features_can_train_save_and_load(self):
-        # pylint: disable=line-too-long
-        self.ensure_model_can_train_save_and_load("tests/fixtures/encoder_decoder/wikitables_semantic_parser_no_features/experiment.json")
+        self.ensure_model_can_train_save_and_load('tests/fixtures/encoder_decoder/wikitables_semantic_parser/experiment-mixture.json')
 
     def test_get_neighbor_indices(self):
         worlds, num_entities = self.get_fake_worlds()
@@ -200,3 +195,16 @@ class WikiTablesSemanticParserTest(ModelTestCase):
                 (2, 1): 8,
                 (2, 2): 9,
                 }
+
+class WikiTablesSemanticParserElmoNoFeaturesTest(ModelTestCase):
+    """
+    This needs to be a separate class since the set_up_model forces the model to expect key
+    'tokens' for the embedder but elmo has key 'elmo'.
+    """
+    def setUp(self):
+        super(WikiTablesSemanticParserElmoNoFeaturesTest, self).setUp()
+        self.set_up_model("tests/fixtures/encoder_decoder/wikitables_semantic_parser/experiment-elmo-no-features.json",
+                          "tests/fixtures/data/wikitables/sample_data.examples")
+
+    def test_model_can_train_save_and_load(self):
+        self.ensure_model_can_train_save_and_load(self.param_file)

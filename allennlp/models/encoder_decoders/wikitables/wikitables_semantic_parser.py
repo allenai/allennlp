@@ -111,7 +111,17 @@ class WikiTablesSemanticParser(Model):
         torch.nn.init.normal(self._first_action_embedding)
 
         self.num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
-        self._embedding_dim = question_embedder.get_output_dim()
+
+        # The entity_encoder's output dim is used instead of question_embedder's output dim since
+        # the question_embedder output will get projected down for Elmo.
+        self._embedding_dim = entity_encoder.get_output_dim()
+        # pylint: disable=protected-access
+        if 'elmo' in self._question_embedder._token_embedders:
+            self._elmo_linear = torch.nn.Linear(question_embedder.get_output_dim(), self._embedding_dim)
+        else:
+            check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
+                                   "entity word average embedding dim", "question embedding dim")
+
         self._type_params = torch.nn.Linear(self.num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
         if num_linking_features > 0:
@@ -178,6 +188,12 @@ class WikiTablesSemanticParser(Model):
         embedded_table = self._question_embedder(table_text, num_wrapping_dims=1)
         table_mask = util.get_text_field_mask(table_text, num_wrapping_dims=1).float()
 
+        # pylint: disable=protected-access
+        if 'elmo' in self._question_embedder._token_embedders:
+            # Elmo embedding projected down for saving GPU memory.
+            embedded_question = self._elmo_linear(embedded_question)
+            embedded_table = self._elmo_linear(embedded_table)
+
         batch_size, num_entities, num_entity_tokens, _ = embedded_table.size()
         num_question_tokens = embedded_question.size(1)
 
@@ -211,22 +227,20 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, num_entities, embedding_dim)
         entity_embeddings = torch.nn.functional.tanh(entity_type_embeddings + projected_neighbor_embeddings)
 
-        # Compute entity and question word similarity through a dot product.
+
+        # Compute entity and question word cosine similarity.
+        embedded_table = embedded_table / embedded_table.norm(dim=-1, keepdim=True)
+        embedded_question = embedded_question / embedded_question.norm(dim=-1, keepdim=True)
         question_entity_similarity = torch.bmm(embedded_table.view(batch_size,
                                                                    num_entities * num_entity_tokens,
                                                                    self._embedding_dim),
                                                torch.transpose(embedded_question, 1, 2))
 
-        # We divide the similarity scores by the embedding dim to reduce the variance of these
-        # scores, and put the similarity scores into the same ballpark range as the linking
-        # features and other scores in the model.  Glove vectors have average absolute magnitude on
-        # the order of 1, which means that a 200-dimensional vector would have a dot product with
-        # itself on the order of 200.  This is not reasonable to have as input to a softmax, which
-        # we do later, so we need to scale by the number of dimensions.
         question_entity_similarity = question_entity_similarity.view(batch_size,
                                                                      num_entities,
                                                                      num_entity_tokens,
-                                                                     num_question_tokens) / self._embedding_dim
+                                                                     num_question_tokens)
+
         # (batch_size, num_entities, num_question_tokens)
         question_entity_similarity_max_score, _ = torch.max(question_entity_similarity, 2)
 
