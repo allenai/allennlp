@@ -167,7 +167,7 @@ class BiattentiveClassificationNetwork(Model):
         # Run through linear projection. Shape: (batch_size, sequence length, 1)
         # Then remove the last dimension to get the proper attention shape (batch_size, sequence length).
         self_attentive_logits = self._self_attentive_pooling_projection(
-                integrated_encodings.contiguous()).squeeze(2)
+                integrated_encodings).squeeze(2)
         self_weights = util.masked_softmax(self_attentive_logits, text_mask)
         self_attentive_pool = util.weighted_sum(integrated_encodings, self_weights)
 
