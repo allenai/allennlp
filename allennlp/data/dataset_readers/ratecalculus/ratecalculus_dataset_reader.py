@@ -8,8 +8,9 @@ import json
 
 from overrides import overrides
 
+from allennlp.common import Params
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, IndexField, ListField
+from allennlp.data.fields import Field, IndexField, KnowledgeGraphField, ListField
 from allennlp.data.fields import MetadataField, ProductionRuleField, TextField
 from allennlp.data.instance import Instance
 from allennlp.semparse import ParsingError
@@ -58,6 +59,8 @@ class RateCalculusDatasetReader(DatasetReader):
 
             for q in list(questions):
                 sem = q["lSemantics"]
+                if( sem == "" ):
+                    sem = "(Equals p )"
                 instance = self.text_to_instance(q["sQuestion"], [sem])
                 if instance is not None:
                     yield instance
@@ -91,20 +94,24 @@ class RateCalculusDatasetReader(DatasetReader):
         tokenized_question = tokenized_question or self._tokenizer.tokenize(question.lower())
         question_field = TextField(tokenized_question, self._question_token_indexers)
         question_knowledge_graph = QuestionKnowledgeGraph.read(tokenized_question)
+        question_knowledge_graph_field = KnowledgeGraphField(question_knowledge_graph,
+                                          tokenized_question,
+                                          self._question_token_indexers,
+                                          tokenizer=self._tokenizer)
+
         world = RateCalculusWorld(question_knowledge_graph)
         world_field = MetadataField(world)
 
         production_rule_fields: List[Field] = []
         for production_rule in world.all_possible_actions():
-            field = ProductionRuleField(production_rule,
-                                        terminal_indexers=self._terminal_indexers,
-                                        nonterminal_indexers=self._nonterminal_indexers,
-                                        is_nonterminal=lambda x: not world.is_question_entity(x),
-                                        context=tokenized_question)
+            _, rule_right_side = production_rule.split(' -> ')
+            is_global_rule = not world.is_question_entity(rule_right_side)
+            field = ProductionRuleField(production_rule, is_global_rule)
             production_rule_fields.append(field)
         action_field = ListField(production_rule_fields)
 
         fields = {'question': question_field,
+                  'question_knowledge_graph': question_knowledge_graph_field,
                   'world': world_field,
                   'actions': action_field}
 
@@ -151,3 +158,18 @@ class RateCalculusDatasetReader(DatasetReader):
 
             fields['target_action_sequences'] = ListField(action_sequence_fields)
         return Instance(fields)
+
+    @classmethod
+    def from_params(cls, params: Params) -> 'RateCalculusDatasetReader':
+        lazy = params.pop('lazy', False)
+        max_dpd_logical_forms = params.pop_int('max_dpd_logical_forms', 10)
+        default_tokenizer_params = {'word_splitter': {'type': 'spacy', 'pos_tags': True}}
+        tokenizer = Tokenizer.from_params(params.pop('tokenizer', default_tokenizer_params))
+        question_token_indexers = TokenIndexer.dict_from_params(params.pop('question_token_indexers', {}))
+        params.assert_empty(cls.__name__)
+        return RateCalculusDatasetReader(lazy=lazy,
+                                       max_dpd_logical_forms=max_dpd_logical_forms,
+                                       tokenizer=tokenizer,
+                                       question_token_indexers=question_token_indexers,
+                                         nonterminal_indexers = None,
+                                         terminal_indexers = None)

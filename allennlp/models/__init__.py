@@ -8,6 +8,7 @@ from allennlp.models.crf_tagger import CrfTagger
 from allennlp.models.decomposable_attention import DecomposableAttention
 from allennlp.models.encoder_decoders.simple_seq2seq import SimpleSeq2Seq
 from allennlp.models.encoder_decoders.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
+from allennlp.models.encoder_decoders.ratecalculus.ratecalculus_semantic_parser import RateCalculusSemanticParser
 from allennlp.models.encoder_decoders.nlvr.nlvr_semantic_parser import NlvrSemanticParser
 from allennlp.models.model import Model
 from allennlp.models.reading_comprehension.bidaf import BidirectionalAttentionFlow
