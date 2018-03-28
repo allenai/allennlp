@@ -47,7 +47,11 @@
       "beam_size": 3
     },
     "max_decoding_steps": 20,
-    "attention_function": {"type": "dot_product"}
+    "attention_function": {
+      "type": "bilinear",
+      "tensor_1_dim": 200,
+      "tensor_2_dim": 200
+    }
   },
   "iterator": {
     "type": "basic",
