@@ -58,8 +58,6 @@ Use the following script. Change the parts in <> to your running requirements.
 #SBATCH --gres=gpu:1
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=<your e-mail>
-
-# Log what we're running and where.
 echo $SLURM_JOBID - `hostname` >> ~/slurm-jobs.txt
 
 module purge
