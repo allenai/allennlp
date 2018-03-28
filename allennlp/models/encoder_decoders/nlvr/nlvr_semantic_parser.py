@@ -9,7 +9,7 @@ from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
-from allennlp.nn import util as nn_util
+from allennlp.nn import util
 from allennlp.nn.decoding import GrammarState, RnnState
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import NlvrWorld
@@ -73,26 +73,19 @@ class NlvrSemanticParser(Model):
     def _get_initial_rnn_state(self, sentence: Dict[str, torch.LongTensor]):
         embedded_input = self._sentence_embedder(sentence)
         # (batch_size, sentence_length)
-        sentence_mask = nn_util.get_text_field_mask(sentence).float()
+        sentence_mask = util.get_text_field_mask(sentence).float()
 
         batch_size = embedded_input.size(0)
 
         # (batch_size, sentence_length, encoder_output_dim)
         encoder_outputs = self._encoder(embedded_input, sentence_mask)
 
-        # These are the indices of the last words in the sentences (i.e. length sans padding - 1).
-        # We are assuming sentences are right padded.
-        # (batch_size,)
-        last_word_indices = sentence_mask.sum(1).long() - 1
-        encoder_output_dim = encoder_outputs.size(2)
-        # Expanding indices to 3 dimensions
-        expanded_indices = last_word_indices.view(-1, 1, 1).expand(batch_size, 1, encoder_output_dim)
-        # (batch_size, 1, encoder_output_dim)
-        final_encoder_output = encoder_outputs.gather(1, expanded_indices)
-        final_encoder_output = final_encoder_output.squeeze(1)  # (batch_size, encoder_output_dim)
-        memory_cell = nn_util.new_variable_with_size(encoder_outputs,
-                                                     (batch_size, self._encoder.get_output_dim()),
-                                                     0)
+        final_encoder_output = util.get_final_encoder_states(encoder_outputs,
+                                                             sentence_mask,
+                                                             self._encoder.is_bidirectional())
+        memory_cell = util.new_variable_with_size(encoder_outputs,
+                                                  (batch_size, self._encoder.get_output_dim()),
+                                                  0)
         attended_sentence = self._decoder_step.attend_on_sentence(final_encoder_output,
                                                                   encoder_outputs, sentence_mask)
         encoder_outputs_list = [encoder_outputs[i] for i in range(batch_size)]
