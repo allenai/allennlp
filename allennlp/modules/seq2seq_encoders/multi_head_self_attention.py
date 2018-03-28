@@ -75,6 +75,10 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
     def get_output_dim(self):
         return self._output_dim
 
+    @overrides
+    def is_bidirectional(self):
+        return False
+
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor,
                 mask: torch.LongTensor = None) -> torch.FloatTensor:
