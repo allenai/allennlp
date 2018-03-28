@@ -17,8 +17,7 @@ class BidafEnsemble(Ensemble):
     """
     This class ensembles the output from multiple BiDAF models.
 
-    It combines results from the submodels by taking the option with the most votes and breaking ties with
-    the average confidence of the start and stop indices.
+    It combines results from the submodels by averaging the start and end span probabilities.
     """
 
     def __init__(self, submodels: List[BidirectionalAttentionFlow]) -> None:
@@ -36,8 +35,7 @@ class BidafEnsemble(Ensemble):
         # pylint: disable=arguments-differ
         """
         The forward method runs each of the submodels, then selects the best span from the subresults.
-        The best span is the span which most of the submodels predict.  If there is a tie, it is broken
-        by the average confidence of the span_start and span_end.
+        The best span is determined by averaging the probabilities for the start and end of the spans.
 
         Parameters
         ----------
