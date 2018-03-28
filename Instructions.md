@@ -1,4 +1,4 @@
-\# Getting BiDAF (Pytorch) up for experimentation on Gypsum
+# Getting BiDAF (Pytorch) up for experimentation on Gypsum
 
 1\. Clone the repo.
 ```
