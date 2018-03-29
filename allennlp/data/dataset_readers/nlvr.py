@@ -107,13 +107,28 @@ class NlvrDatasetReader(DatasetReader):
                     # one element for consistency.
                     labels = [data["label"]]
                     structured_representations = [data["structured_rep"]]
-                yield self.text_to_instance(sentence, structured_representations, labels)
+
+                target_sequences: List[List[str]] = None
+                # TODO(pradeep): The processed file also has incorrect sequences as well, which are
+                # needed if we want to define some sort of a hinge-loss based trainer. Deal with
+                # them.
+                if "correct_sequences" in data:
+                    # We are reading the processed file and these are the "correct" logical form
+                    # sequences. See ``scripts/nlvr/get_nlvr_logical_forms.py``.
+                    target_sequences = data["correct_sequences"]
+                instance = self.text_to_instance(sentence,
+                                                 structured_representations,
+                                                 labels,
+                                                 target_sequences)
+                if instance is not None:
+                    yield instance
 
     @overrides
     def text_to_instance(self,  # type: ignore
                          sentence: str,
                          structured_representations: List[List[List[JsonDict]]],
-                         labels: List[str] = None) -> Instance:
+                         labels: List[str] = None,
+                         target_sequences: List[List[str]] = None) -> Instance:
         """
         Parameters
         ----------
@@ -124,19 +139,18 @@ class NlvrDatasetReader(DatasetReader):
         labels : ``List[str]`` (optional)
             List of string representations of the labels (true or false) corresponding to the
             ``structured_representations``. Not required while testing.
+        target_sequences : ``List[List[str]]`` (optional)
+            List of target action sequences for each element which lead to the correct denotation in
+            worlds corresponding to the structured representations.
         """
         # pylint: disable=arguments-differ
         worlds = [NlvrWorld(data) for data in structured_representations]
         tokenized_sentence = self._tokenizer.tokenize(sentence)
         sentence_field = TextField(tokenized_sentence, self._sentence_token_indexers)
-        # TODO(pradeep): Assuming every world gives the same agenda for a sentence. This is true
-        # now, but may change later.
-        agenda = worlds[0].get_agenda_for_sentence(sentence, self._add_paths_to_agenda)
-        assert agenda, "No agenda found for sentence: %s" % sentence
         production_rule_fields: List[Field] = []
         instance_action_ids: Dict[str, int] = {}
         # TODO(pradeep): Assuming that possible actions are the same in all worlds. This may change
-        # later too.
+        # later.
         for production_rule in worlds[0].all_possible_actions():
             instance_action_ids[production_rule] = len(instance_action_ids)
             field = ProductionRuleField(production_rule,
@@ -146,18 +160,36 @@ class NlvrDatasetReader(DatasetReader):
                                         context=tokenized_sentence)
             production_rule_fields.append(field)
         action_field = ListField(production_rule_fields)
-        # agenda_field contains indices into actions.
-        agenda_field = ListField([IndexField(instance_action_ids[action], action_field)
-                                  for action in agenda])
         worlds_field = ListField([MetadataField(world) for world in worlds])
         fields = {"sentence": sentence_field,
-                  "agenda": agenda_field,
                   "worlds": worlds_field,
                   "actions": action_field}
+        # Depending on the type of supervision used for training the parser, we may want either
+        # target action sequences or an agenda in our instance. We check if target sequences are
+        # provided, and include them if they are. If not, we'll get an agenda for the sentence, and
+        # include that in the instance.
+        if target_sequences:
+            action_sequence_fields: List[Field] = []
+            for target_sequence in target_sequences:
+                index_fields = ListField([IndexField(instance_action_ids[action], action_field)
+                                          for action in target_sequence])
+                action_sequence_fields.append(index_fields)
+                # TODO(pradeep): Define a max length for this field.
+            fields["target_action_sequences"] = ListField(action_sequence_fields)
+        else:
+            # TODO(pradeep): Assuming every world gives the same agenda for a sentence. This is true
+            # now, but may change later too.
+            agenda = worlds[0].get_agenda_for_sentence(sentence, self._add_paths_to_agenda)
+            assert agenda, "No agenda found for sentence: %s" % sentence
+            # agenda_field contains indices into actions.
+            agenda_field = ListField([IndexField(instance_action_ids[action], action_field)
+                                      for action in agenda])
+            fields["agenda"] = agenda_field
         if labels:
             labels_field = ListField([LabelField(label, label_namespace='denotations')
                                       for label in labels])
             fields["labels"] = labels_field
+
         return Instance(fields)
 
     @classmethod
