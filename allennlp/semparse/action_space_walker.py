@@ -25,6 +25,7 @@ class ActionSpaceWalker:
         self._max_path_length = max_path_length
         self._completed_paths: List[List[str]] = None
         self._terminal_path_index: Dict[str, Set[int]] = defaultdict(set)
+        self._length_sorted_paths: List[List[str]] = None
 
     def _walk(self) -> None:
         """
@@ -100,5 +101,17 @@ class ActionSpaceWalker:
         paths = [self._completed_paths[index] for index in return_set]
         if max_num_logical_forms is not None:
             paths = sorted(paths, key=len)[:max_num_logical_forms]
+        logical_forms = [self._world.get_logical_form(path) for path in paths]
+        return logical_forms
+
+    def get_all_logical_forms(self,
+                              max_num_logical_forms: int = None) -> List[str]:
+        if self._completed_paths is None:
+            self._walk()
+        paths = self._completed_paths
+        if max_num_logical_forms is not None:
+            if self._length_sorted_paths is None:
+                self._length_sorted_paths = sorted(self._completed_paths, key=len)
+            paths = self._length_sorted_paths[:max_num_logical_forms]
         logical_forms = [self._world.get_logical_form(path) for path in paths]
         return logical_forms
