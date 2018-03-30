@@ -1,4 +1,4 @@
-from typing import Dict, Union, Set
+from typing import Dict, Union, Sequence, Set
 import logging
 
 from collections import defaultdict
@@ -22,12 +22,12 @@ class MultiLabelField(Field[torch.Tensor]):
     If the labels need indexing, we will use a :class:`Vocabulary` to convert the string labels
     into integers.
 
-    This field will get converted into a vector of length equals the vocabulary size with
+    This field will get converted into a vector of length equal to the vocabulary size with
     one hot encoding for the labels (all zeros, and ones for the labels).
 
     Parameters
     ----------
-    labels : ``Set[Union[str, int]]``
+    labels : ``Sequence[Union[str, int]]``
     label_namespace : ``str``, optional (default="labels")
         The namespace to use for converting label strings into integers.  We map label strings to
         integers for you (e.g., "entailment" and "contradiction" get converted to 0, 1, ...),
@@ -50,7 +50,7 @@ class MultiLabelField(Field[torch.Tensor]):
     _vocab_size: Dict[str, int] = defaultdict(int)
 
     def __init__(self,
-                 labels: Set[Union[str, int]],
+                 labels: Sequence[Union[str, int]],
                  label_namespace: str = 'labels',
                  skip_indexing: bool = False) -> None:
         self.labels = labels
@@ -59,23 +59,22 @@ class MultiLabelField(Field[torch.Tensor]):
         self._maybe_warn_for_namespace(label_namespace)
 
         if skip_indexing:
-            for label in labels:
-                if not isinstance(label, int):
-                    raise ConfigurationError("In order to skip indexing, your labels must be integers. "
-                                             "Found label = {}".format(label))
-                # vocabulary size = largest label id
-                MultiLabelField._vocab_size[self._label_namespace] = \
-                    max(label + 1, MultiLabelField._vocab_size[self._label_namespace])
+            if not all(isinstance(label, int) for label in labels):
+                raise ConfigurationError("In order to skip indexing, your labels must be integers. "
+                                         "Found labels = {}".format(labels))
+            # vocabulary size = largest label id
+            largest_label_id = max(labels)
+            MultiLabelField._vocab_size[self._label_namespace] = \
+                    max(largest_label_id + 1, MultiLabelField._vocab_size[self._label_namespace])
 
             self._label_ids = labels
         else:
-            for label in labels:
-                if not isinstance(label, str):
-                    raise ConfigurationError("MultiLabelFields expects string labels if skip_indexing=False. "
-                                             "Found label: {} with type: {}.".format(label, type(label)))
+            if not all(isinstance(label, str) for label in labels):
+                raise ConfigurationError("MultiLabelFields expects string labels if skip_indexing=False. "
+                                         "Found labels: {}".format(labels))
 
     def _maybe_warn_for_namespace(self, label_namespace: str) -> None:
-        if not (self._label_namespace.endswith("labels") or self._label_namespace.endswith("tags")):
+        if not (label_namespace.endswith("labels") or label_namespace.endswith("tags")):
             if label_namespace not in self._already_warned_namespaces:
                 logger.warning("Your label namespace was '%s'. We recommend you use a namespace "
                                "ending with 'labels' or 'tags', so we don't add UNK and PAD tokens by "
