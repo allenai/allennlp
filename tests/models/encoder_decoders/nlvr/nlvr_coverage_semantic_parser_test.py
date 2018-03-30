@@ -9,10 +9,10 @@ from allennlp.data.iterators import EpochTrackingBucketIterator
 from allennlp.models import Model
 
 
-class NlvrSemanticParserTest(ModelTestCase):
+class NlvrCoverageSemanticParserTest(ModelTestCase):
     def setUp(self):
-        super(NlvrSemanticParserTest, self).setUp()
-        self.set_up_model("tests/fixtures/encoder_decoder/nlvr_semantic_parser/ungrouped_experiment.json",
+        super(NlvrCoverageSemanticParserTest, self).setUp()
+        self.set_up_model("tests/fixtures/encoder_decoder/nlvr_coverage_semantic_parser/ungrouped_experiment.json",
                           "tests/fixtures/data/nlvr/sample_ungrouped_data.jsonl")
 
     def test_model_can_train_save_and_load(self):
@@ -20,7 +20,7 @@ class NlvrSemanticParserTest(ModelTestCase):
 
     def test_grouped_model_can_train_save_and_load(self):
         # pylint: disable=line-too-long
-        self.ensure_model_can_train_save_and_load("tests/fixtures/encoder_decoder/nlvr_semantic_parser/experiment.json")
+        self.ensure_model_can_train_save_and_load("tests/fixtures/encoder_decoder/nlvr_coverage_semantic_parser/experiment.json")
 
     def test_get_checklist_info(self):
         # Creating a fake all_actions field where actions 0, 2 and 4 are terminal productions.
@@ -49,6 +49,6 @@ class NlvrSemanticParserTest(ModelTestCase):
         for epoch_data in iterator(self.dataset, num_epochs=4):
             model.forward(**epoch_data)
             cost_weights.append(model._checklist_cost_weight)
-        # The config file has ``wait_num_epochs`` set to 0, so the model starts decreasing the const
+        # The config file has ``wait_num_epochs`` set to 0, so the model starts decreasing the cost
         # weight at epoch 0 itself.
         assert_almost_equal(cost_weights, [0.72, 0.648, 0.5832, 0.52488])
