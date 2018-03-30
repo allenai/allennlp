@@ -1,7 +1,6 @@
-from typing import Dict, Union, Sequence, Set, cast
+from typing import Dict, Union, Sequence, Set, Optional
 import logging
 
-from collections import defaultdict
 from overrides import overrides
 import torch
 from torch.autograd import Variable
@@ -39,6 +38,11 @@ class MultiLabelField(Field[torch.Tensor]):
     skip_indexing : ``bool``, optional (default=False)
         If your labels are 0-indexed integers, you can pass in this flag, and we'll skip the indexing
         step.  If this is ``False`` and your labels are not strings, this throws a ``ConfigurationError``.
+    num_labels : ``int``, optional (default=None)
+        If ``skip_indexing=True``, the total number of possible labels should be provided, which is needed
+        in deciding the size of the output tensor. `num_labels` should equal largest label id + 1
+        If ``skip_indexing=False``, it should remain None
+
     """
     # It is possible that users want to use this field with a namespace which uses OOV/PAD tokens.
     # This warning will be repeated for every instantiation of this class (i.e for every data
@@ -46,32 +50,35 @@ class MultiLabelField(Field[torch.Tensor]):
     # warning per namespace.
     _already_warned_namespaces: Set[str] = set()
 
-    # Dictionary from a vocab namespace to size. Need the vocab size to map labels to a tensor
-    _vocab_size: Dict[str, int] = defaultdict(int)
-
     def __init__(self,
                  labels: Sequence[Union[str, int]],
                  label_namespace: str = 'labels',
-                 skip_indexing: bool = False) -> None:
+                 skip_indexing: bool = False,
+                 num_labels: Optional[int] = None) -> None:
         self.labels = labels
         self._label_namespace = label_namespace
         self._label_ids = None
         self._maybe_warn_for_namespace(label_namespace)
+        self._num_labels = num_labels
 
         if skip_indexing:
             if not all(isinstance(label, int) for label in labels):
                 raise ConfigurationError("In order to skip indexing, your labels must be integers. "
                                          "Found labels = {}".format(labels))
-            # vocabulary size = largest label id
-            largest_label_id: int = cast(int, max(labels))
-            MultiLabelField._vocab_size[self._label_namespace] = \
-                    max(largest_label_id + 1, MultiLabelField._vocab_size[self._label_namespace])
+            if not num_labels:
+                raise ConfigurationError("In order to skip indexing, num_labels can't be None.")
+
+            if not all(label < num_labels for label in labels):
+                raise ConfigurationError("All labels should be < num_labels. "
+                                         "Found num_labels = {} and labels = {} ".format(num_labels, labels))
 
             self._label_ids = labels
         else:
             if not all(isinstance(label, str) for label in labels):
                 raise ConfigurationError("MultiLabelFields expects string labels if skip_indexing=False. "
                                          "Found labels: {}".format(labels))
+            if num_labels:
+                raise ConfigurationError("num_labels shouldn't be given when skip_indexing=False.")
 
     def _maybe_warn_for_namespace(self, label_namespace: str) -> None:
         if not (label_namespace.endswith("labels") or label_namespace.endswith("tags")):
@@ -95,12 +102,7 @@ class MultiLabelField(Field[torch.Tensor]):
             self._label_ids = [vocab.get_token_index(label, self._label_namespace)  # type: ignore
                                for label in self.labels]
 
-        # This is called after the full vocabulary has been built
-        if MultiLabelField._vocab_size[self._label_namespace]:
-            assert MultiLabelField._vocab_size[self._label_namespace] == vocab.get_vocab_size(
-                    self._label_namespace), "Vocabulary size shouldn't change here."
-        else:
-            MultiLabelField._vocab_size[self._label_namespace] = vocab.get_vocab_size(self._label_namespace)
+        self._num_labels = vocab.get_vocab_size(self._label_namespace)
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:  # pylint: disable=no-self-use
@@ -113,7 +115,7 @@ class MultiLabelField(Field[torch.Tensor]):
                   for_training: bool = True) -> torch.Tensor:
         # pylint: disable=unused-argument
 
-        values = torch.zeros(MultiLabelField._vocab_size[self._label_namespace])  # vector of zeros
+        values = torch.zeros(self._num_labels)  # vector of zeros
         if self._label_ids:
             values.scatter_(0, torch.LongTensor(self._label_ids), 1)
 

@@ -10,13 +10,9 @@ from allennlp.data.vocabulary import Vocabulary
 
 class TestMultiLabelField(AllenNlpTestCase):
     def test_as_tensor_returns_integer_tensor(self):
-        f = MultiLabelField([5], skip_indexing=True, label_namespace="test1")
+        f = MultiLabelField([2, 3], skip_indexing=True, label_namespace="test1", num_labels=5)
         tensor = f.as_tensor(f.get_padding_lengths()).data.cpu().numpy()
-        numpy.testing.assert_array_almost_equal(tensor, numpy.array([0, 0, 0, 0, 0, 1]))
-
-        f = MultiLabelField([3], skip_indexing=True, label_namespace="test1")
-        tensor = f.as_tensor(f.get_padding_lengths()).data.cpu().numpy()
-        numpy.testing.assert_array_almost_equal(tensor, numpy.array([0, 0, 0, 1, 0, 0]))
+        numpy.testing.assert_array_almost_equal(tensor, numpy.array([0, 0, 1, 1, 0]))
 
     def test_multilabel_field_can_index_with_vocab(self):
         vocab = Vocabulary()
@@ -33,9 +29,21 @@ class TestMultiLabelField(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             _ = MultiLabelField(["non integer field"], skip_indexing=True)
 
+    def test_multilabel_field_raises_with_no_indexing_and_missing_num_labels(self):
+        with pytest.raises(ConfigurationError):
+            _ = MultiLabelField([0, 2], skip_indexing=True, num_labels=None)
+
+    def test_multilabel_field_raises_with_no_indexing_and_wrong_num_labels(self):
+        with pytest.raises(ConfigurationError):
+            _ = MultiLabelField([0, 2, 4], skip_indexing=True, num_labels=3)
+
     def test_multilabel_field_raises_with_incorrect_label_type(self):
         with pytest.raises(ConfigurationError):
             _ = MultiLabelField([1, 2], skip_indexing=False)
+
+    def test_multilabel_field_raises_with_given_num_labels(self):
+        with pytest.raises(ConfigurationError):
+            _ = MultiLabelField([1, 2], skip_indexing=False, num_labels=4)
 
     def test_multilabel_field_empty_field_works(self):
         vocab = Vocabulary()
