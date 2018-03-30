@@ -39,9 +39,9 @@ class MultiLabelField(Field[torch.Tensor]):
         If your labels are 0-indexed integers, you can pass in this flag, and we'll skip the indexing
         step.  If this is ``False`` and your labels are not strings, this throws a ``ConfigurationError``.
     num_labels : ``int``, optional (default=None)
-        If ``skip_indexing=True``, the total number of possible labels should be provided, which is needed
-        in deciding the size of the output tensor. `num_labels` should equal largest label id + 1
-        If ``skip_indexing=False``, it should remain None
+        If ``skip_indexing=True``, the total number of possible labels should be provided, which is required
+        to decide the size of the output tensor. `num_labels` should equal largest label id + 1.
+        If ``skip_indexing=False``, `num_labels` is not required.
 
     """
     # It is possible that users want to use this field with a namespace which uses OOV/PAD tokens.
@@ -77,8 +77,6 @@ class MultiLabelField(Field[torch.Tensor]):
             if not all(isinstance(label, str) for label in labels):
                 raise ConfigurationError("MultiLabelFields expects string labels if skip_indexing=False. "
                                          "Found labels: {}".format(labels))
-            if num_labels:
-                raise ConfigurationError("num_labels shouldn't be given when skip_indexing=False.")
 
     def _maybe_warn_for_namespace(self, label_namespace: str) -> None:
         if not (label_namespace.endswith("labels") or label_namespace.endswith("tags")):
@@ -101,8 +99,8 @@ class MultiLabelField(Field[torch.Tensor]):
         if self._label_ids is None:
             self._label_ids = [vocab.get_token_index(label, self._label_namespace)  # type: ignore
                                for label in self.labels]
-
-        self._num_labels = vocab.get_vocab_size(self._label_namespace)
+        if not self._num_labels:
+            self._num_labels = vocab.get_vocab_size(self._label_namespace)
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:  # pylint: disable=no-self-use
