@@ -132,7 +132,10 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
             if i in best_final_states:
                 best_action_indices = best_final_states[i][0].action_history[0]
                 best_action_sequences[i] = best_action_indices
-        self._update_metrics(actions, worlds, best_action_sequences, label_strings)
+        self._update_metrics(actions=actions,
+                             worlds=worlds,
+                             best_action_sequences=best_action_sequences,
+                             label_strings=label_strings)
         return outputs
 
     def _update_metrics(self,

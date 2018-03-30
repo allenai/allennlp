@@ -180,7 +180,11 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                                self._decoder_step,
                                                self._get_state_cost)
         best_action_sequences = outputs['best_action_sequence']
-        self._update_metrics(actions, worlds, label_strings, best_action_sequences, agenda_data)
+        self._update_metrics(actions=actions,
+                             worlds=worlds,
+                             best_action_sequences=best_action_sequences,
+                             label_strings=label_strings,
+                             agenda_data=agenda_data)
         return outputs
 
     def _get_checklist_info(self,
