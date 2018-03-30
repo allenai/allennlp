@@ -1,6 +1,5 @@
 import logging
 from typing import List, Dict
-from collections import defaultdict
 
 from overrides import overrides
 
@@ -125,15 +124,15 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                                                              initial_state,
                                                              self._decoder_step,
                                                              keep_final_unfinished_states=False)
-        best_action_sequences: Dict[int, List[int]] = defaultdict(list)
+        best_action_sequences: Dict[int, List[int]] = {}
         for i in range(batch_size):
             # Decoding may not have terminated with any completed logical forms, if `num_steps`
             # isn't long enough (or if the model is not trained enough and gets into an
             # infinite action loop).
             if i in best_final_states:
                 best_action_indices = best_final_states[i][0].action_history[0]
-                best_action_sequences[i].append(best_action_indices)
-        self._update_metrics(actions, worlds, label_strings, best_action_sequences)
+                best_action_sequences[i] = best_action_indices
+        self._update_metrics(actions, worlds, best_action_sequences, label_strings)
         return outputs
 
     def _update_metrics(self,

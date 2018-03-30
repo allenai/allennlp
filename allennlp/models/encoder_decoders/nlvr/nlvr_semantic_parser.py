@@ -23,13 +23,14 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class NlvrSemanticParser(Model):
     """
-    ``NlvrSemanticParser`` is a semantic parsing model built for the NLVR domain.  There is a lot of
-    overlap with ``WikiTablesSemanticParser`` here. We may want to eventually move the common
-    functionality into a more general transition-based parsing class.
-
-    The main differences between this parser and what we have for Wikitables are that we have an
-    agenda of actions instead of complete target action sequences, and accordingly the score in this
-    parser is based on how many of the agenda actions are covered.
+    ``NlvrSemanticParser`` is a semantic parsing model built for the NLVR domain. This is an
+    abstract class and does not have a ``forward`` method implemented. Classes that inherit from
+    this class are expected to define their own logic depending on the kind of supervision they use.
+    Accordingly, they should use the appropriate ``DecoderTrainer``. This class provides some common
+    functionality for things like defining an initial ``RnnState``, embedding actions, evaluating
+    the denotations of completed logical forms, etc.  There is a lot of overlap with
+    ``WikiTablesSemanticParser`` here. We may want to eventually move the common functionality into
+    a more general transition-based parsing class.
 
     Parameters
     ----------
@@ -44,30 +45,6 @@ class NlvrSemanticParser(Model):
         but they are structured the same way.
     encoder : ``Seq2SeqEncoder``
         The encoder to use for the input question.
-    attention_function : ``SimilarityFunction``
-        We compute an attention over the input question at each step of the decoder, using the
-        decoder hidden state as the query.  This is the similarity function we use for that
-        attention.
-    beam_size : ``int``
-    normalize_beam_score_by_length : ``bool``, optional (default=False)
-        Should the log probabilities be normalized by length before renormalizing them? Edunov et
-        al. do this in their work, but we found that not doing it works better. It's possible they
-        did this because their task is NMT, and longer decoded sequences are not necessarily worse,
-        and shouldn't be penalized, while we will mostly want to penalize longer logical forms.
-    max_decoding_steps : ``int``
-        We use a beam search during decoding; what's the maximum number of steps we should take?
-    checklist_cost_weight : ``float``, optional (default=0.8)
-        Mixture weight (0-1) for combining coverage cost and denotation cost. As this increases, we
-        weigh the coverage cost higher, with a value of 1.0 meaning that we do not care about
-        denotation accuracy.
-    dynamic_cost_weight : ``Dict[str, Union[int, float]]``, optional (default=None)
-        A dict containing keys ``wait_num_epochs`` and ``rate`` indicating the number of steps
-        after which we should start decreasing the weight on checklist cost in favor of denotation
-        cost, and the rate at which we should do it. We will decrease the weight in the following
-        way - ``checklist_cost_weight = checklist_cost_weight - rate * checklist_cost_weight``
-        starting at the apropriate epoch.  The weight will remain constant if this is not provided.
-    penalize_non_agenda_actions : ``bool``, optional (default=False)
-        Should we penalize the model for producing terminal actions that are outside the agenda?
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -91,6 +68,7 @@ class NlvrSemanticParser(Model):
     @overrides
     def forward(self):  # type: ignore
         # pylint: disable=arguments-differ
+        # Sub-classes should define their own logic here.
         raise NotImplementedError
 
     def _get_initial_rnn_state(self, sentence, initial_action_embedding):
