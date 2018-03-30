@@ -1,4 +1,4 @@
-from typing import Dict, Union, Sequence, Set
+from typing import Dict, Union, Sequence, Set, cast
 import logging
 
 from collections import defaultdict
@@ -63,7 +63,7 @@ class MultiLabelField(Field[torch.Tensor]):
                 raise ConfigurationError("In order to skip indexing, your labels must be integers. "
                                          "Found labels = {}".format(labels))
             # vocabulary size = largest label id
-            largest_label_id = max(labels)
+            largest_label_id: int = cast(int, max(labels))
             MultiLabelField._vocab_size[self._label_namespace] = \
                     max(largest_label_id + 1, MultiLabelField._vocab_size[self._label_namespace])
 
