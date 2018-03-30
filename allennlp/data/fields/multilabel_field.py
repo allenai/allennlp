@@ -1,4 +1,4 @@
-from typing import Dict, Union, Sequence, Set, Optional
+from typing import Dict, Union, Sequence, Set, Optional, cast
 import logging
 
 from overrides import overrides
@@ -68,7 +68,7 @@ class MultiLabelField(Field[torch.Tensor]):
             if not num_labels:
                 raise ConfigurationError("In order to skip indexing, num_labels can't be None.")
 
-            if not all(label < num_labels for label in labels):
+            if not all(cast(int, label) < num_labels for label in labels):
                 raise ConfigurationError("All labels should be < num_labels. "
                                          "Found num_labels = {} and labels = {} ".format(num_labels, labels))
 
