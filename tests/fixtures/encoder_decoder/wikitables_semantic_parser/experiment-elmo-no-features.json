@@ -30,13 +30,13 @@
     "action_embedding_dim": 50,
     "encoder": {
       "type": "lstm",
-      "input_size": 50,
+      "input_size": 64,
       "hidden_size": 10,
       "num_layers": 1
     },
     "entity_encoder": {
       "type": "boe",
-      "embedding_dim": 25,
+      "embedding_dim": 32,
       "averaged": true
     },
     "decoder_beam_search": {

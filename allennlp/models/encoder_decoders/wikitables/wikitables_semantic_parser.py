@@ -114,13 +114,9 @@ class WikiTablesSemanticParser(Model):
 
         # The entity_encoder's output dim is used instead of question_embedder's output dim since
         # the question_embedder output will get projected down for Elmo.
-        self._embedding_dim = entity_encoder.get_output_dim()
-        # pylint: disable=protected-access
-        if 'elmo' in self._question_embedder._token_embedders:
-            self._elmo_linear = torch.nn.Linear(question_embedder.get_output_dim(), self._embedding_dim)
-        else:
-            check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
-                                   "entity word average embedding dim", "question embedding dim")
+        self._embedding_dim = question_embedder.get_output_dim()
+        check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
+                               "entity word average embedding dim", "question embedding dim")
 
         self._type_params = torch.nn.Linear(self.num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
@@ -188,12 +184,6 @@ class WikiTablesSemanticParser(Model):
         embedded_table = self._question_embedder(table_text, num_wrapping_dims=1)
         table_mask = util.get_text_field_mask(table_text, num_wrapping_dims=1).float()
 
-        # pylint: disable=protected-access
-        if 'elmo' in self._question_embedder._token_embedders:
-            # Elmo embedding projected down for saving GPU memory.
-            embedded_question = self._elmo_linear(embedded_question)
-            embedded_table = self._elmo_linear(embedded_table)
-
         batch_size, num_entities, num_entity_tokens, _ = embedded_table.size()
         num_question_tokens = embedded_question.size(1)
 
@@ -228,9 +218,10 @@ class WikiTablesSemanticParser(Model):
         entity_embeddings = torch.nn.functional.tanh(entity_type_embeddings + projected_neighbor_embeddings)
 
 
-        # Compute entity and question word cosine similarity.
-        embedded_table = embedded_table / embedded_table.norm(dim=-1, keepdim=True)
-        embedded_question = embedded_question / embedded_question.norm(dim=-1, keepdim=True)
+        # Compute entity and question word cosine similarity. Need to add a small value to
+        # to the table norm since there are padding values which cause a divide by 0.
+        embedded_table = embedded_table / (embedded_table.norm(dim=-1, keepdim=True) + 1e-13)
+        embedded_question = embedded_question / (embedded_question.norm(dim=-1, keepdim=True) + 1e-13)
         question_entity_similarity = torch.bmm(embedded_table.view(batch_size,
                                                                    num_entities * num_entity_tokens,
                                                                    self._embedding_dim),
