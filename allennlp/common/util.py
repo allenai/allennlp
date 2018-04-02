@@ -200,7 +200,7 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) 
         (used to update progress bars on a single terminal line).
     """
     Tqdm.set_slower_interval(file_friendly_logging)
-    std_out_file = os.path.join(serialization_dir, "stdout.log") 
+    std_out_file = os.path.join(serialization_dir, "stdout.log")
     sys.stdout = TeeLogger(std_out_file, # type: ignore
                            sys.stdout,
                            file_friendly_logging)
