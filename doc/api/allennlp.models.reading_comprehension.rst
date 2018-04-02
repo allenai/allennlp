@@ -15,3 +15,8 @@ allennlp.models.reading_comprehension
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.models.reading_comprehension.document_qa
+   :members:
+   :undoc-members:
+   :show-inheritance:
