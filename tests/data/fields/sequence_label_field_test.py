@@ -83,3 +83,8 @@ class TestSequenceLabelField(AllenNlpTestCase):
         assert "text2" not in SequenceLabelField._already_warned_namespaces
         with self.assertLogs(logger="allennlp.data.fields.sequence_label_field", level="WARNING"):
             _ = SequenceLabelField(tags, self.text, label_namespace="text2")
+
+    def test_printing_doesnt_crash(self):
+        tags = ["B", "I", "O", "O", "O"]
+        sequence_label_field = SequenceLabelField(tags, self.text, label_namespace="labels")
+        print(sequence_label_field)

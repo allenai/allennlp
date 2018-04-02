@@ -9,6 +9,7 @@ The available learning rate schedulers are
 * `"multi_step" <http://pytorch.org/docs/master/optim.html#torch.optim.lr_scheduler.MultiStepLR>`_
 * `"exponential" <http://pytorch.org/docs/master/optim.html#torch.optim.lr_scheduler.ExponentialLR>`_
 * `"reduce_on_plateau" <http://pytorch.org/docs/master/optim.html#torch.optim.lr_scheduler.ReduceLROnPlateau>`_
+* `"cosine" <http://pytorch.org/docs/master/optim.html#torch.optim.lr_scheduler.CosineAnnealingLR>`_
 """
 
 import torch
@@ -33,5 +34,6 @@ Registrable._registry[LearningRateScheduler] = {   # pylint: disable=protected-a
         "step": torch.optim.lr_scheduler.StepLR,
         "multi_step": torch.optim.lr_scheduler.MultiStepLR,
         "exponential": torch.optim.lr_scheduler.ExponentialLR,
-        "reduce_on_plateau": torch.optim.lr_scheduler.ReduceLROnPlateau
+        "reduce_on_plateau": torch.optim.lr_scheduler.ReduceLROnPlateau,
+        "cosine": torch.optim.lr_scheduler.CosineAnnealingLR,
 }

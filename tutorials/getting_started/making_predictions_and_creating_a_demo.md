@@ -141,21 +141,21 @@ This test passes, so we can feel reasonably good about our predictor.
 Once we have a predictor, we can make predictions using the command
 
 ```bash
-python -m allennlp.run predict
+allennlp predict
 ```
 
 If you ask it for `--help` you'll see:
 
 ```
-usage: python -m allennlp.run [command] predict [-h]
-                                                [--output-file OUTPUT_FILE]
-                                                [--batch-size BATCH_SIZE]
-                                                [--silent]
-                                                [--cuda-device CUDA_DEVICE]
-                                                [-o OVERRIDES]
-                                                [--include-package INCLUDE_PACKAGE]
-                                                [--predictor PREDICTOR]
-                                                archive_file input_file
+usage: allennlp [command] predict [-h]
+                                  [--output-file OUTPUT_FILE]
+                                  [--batch-size BATCH_SIZE]
+                                  [--silent]
+                                  [--cuda-device CUDA_DEVICE]
+                                  [-o OVERRIDES]
+                                  [--include-package INCLUDE_PACKAGE]
+                                  [--predictor PREDICTOR]
+                                  archive_file input_file
 ```
 
 Notice that it requires both an archive file (that is, a trained model)
@@ -179,7 +179,7 @@ There are 10 papers in JSONL format at
 `tests/fixtures/s2_papers.jsonl`, so let's make some predictions on those:
 
 ```bash
-python -m allennlp.run predict \
+allennlp predict \
     tests/fixtures/model.tar.gz \
     tests/fixtures/s2_papers.jsonl \
     --include-package my_library \

@@ -2,12 +2,59 @@ from typing import Tuple, List
 
 from overrides import overrides
 from nltk import Tree
+from spacy.lang.en.tag_map import TAG_MAP
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
+
+
+# Make the links to POS tag nodes render as "pos",
+# to distinguish them from constituency tags. The
+# actual tag is still visible within the node.
+LINK_TO_LABEL = {x: "pos" for x in TAG_MAP}
+
+# POS tags have a unified colour.
+NODE_TYPE_TO_STYLE = {x: ["color0"] for x in TAG_MAP}
+
+# Verb and Noun phrases get their own colour.
+NODE_TYPE_TO_STYLE["NP"] = ["color1"]
+NODE_TYPE_TO_STYLE["NX"] = ["color1"]
+NODE_TYPE_TO_STYLE["QP"] = ["color1"]
+NODE_TYPE_TO_STYLE["NAC"] = ["color1"]
+NODE_TYPE_TO_STYLE["VP"] = ["color2"]
+
+# Clause level fragments
+NODE_TYPE_TO_STYLE["S"] = ["color3"]
+NODE_TYPE_TO_STYLE["SQ"] = ["color3"]
+NODE_TYPE_TO_STYLE["SBAR"] = ["color3"]
+NODE_TYPE_TO_STYLE["SBARQ"] = ["color3"]
+NODE_TYPE_TO_STYLE["SINQ"] = ["color3"]
+NODE_TYPE_TO_STYLE["FRAG"] = ["color3"]
+NODE_TYPE_TO_STYLE["X"] = ["color3"]
+
+# Wh-phrases.
+NODE_TYPE_TO_STYLE["WHADVP"] = ["color4"]
+NODE_TYPE_TO_STYLE["WHADJP"] = ["color4"]
+NODE_TYPE_TO_STYLE["WHNP"] = ["color4"]
+NODE_TYPE_TO_STYLE["WHPP"] = ["color4"]
+
+# Prepositional Phrases get their own colour because
+# they are linguistically interesting.
+NODE_TYPE_TO_STYLE["PP"] = ["color6"]
+
+# Everything else.
+NODE_TYPE_TO_STYLE["ADJP"] = ["color5"]
+NODE_TYPE_TO_STYLE["ADVP"] = ["color5"]
+NODE_TYPE_TO_STYLE["CONJP"] = ["color5"]
+NODE_TYPE_TO_STYLE["INTJ"] = ["color5"]
+NODE_TYPE_TO_STYLE["LST"] = ["color5", "seq"]
+NODE_TYPE_TO_STYLE["PRN"] = ["color5"]
+NODE_TYPE_TO_STYLE["PRT"] = ["color5"]
+NODE_TYPE_TO_STYLE["RRC"] = ["color5"]
+NODE_TYPE_TO_STYLE["UCP"] = ["color5"]
 
 
 @Predictor.register('constituency-parser')
@@ -97,6 +144,8 @@ class ConstituencyParserPredictor(Predictor):
         # TODO(Mark): Figure out how to span highlighting to the leaves.
         if is_root:
             hierplane_node = {
+                    "linkNameToLabel": LINK_TO_LABEL,
+                    "nodeTypeToStyle": NODE_TYPE_TO_STYLE,
                     "text": span,
                     "root": hierplane_node
             }

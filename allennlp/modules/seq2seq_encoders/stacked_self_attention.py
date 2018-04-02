@@ -52,8 +52,12 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         as without this feature, the self attention layers have no idea of absolute or relative
         position (as they are just computing pairwise similarity between vectors of elements),
         which can be important features for many tasks.
-    dropout_prob : ``float``, optional, (default = 0.2)
+    dropout_prob : ``float``, optional, (default = 0.1)
         The dropout probability for the feedforward network.
+    residual_dropout_prob : ``float``, optional, (default = 0.2)
+        The dropout probability for the residual connections.
+    attention_dropout_prob : ``float``, optional, (default = 0.1)
+        The dropout probability for the attention distributions in each attention layer.
     """
     def __init__(self,
                  input_dim: int,
@@ -63,7 +67,9 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
                  num_layers: int,
                  num_attention_heads: int,
                  use_positional_encoding: bool = True,
-                 dropout_prob: float = 0.2) -> None:
+                 dropout_prob: float = 0.1,
+                 residual_dropout_prob: float = 0.2,
+                 attention_dropout_prob: float = 0.1) -> None:
         super(StackedSelfAttentionEncoder, self).__init__()
 
         self._use_positional_encoding = use_positional_encoding
@@ -91,7 +97,8 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             self_attention = MultiHeadSelfAttention(num_heads=num_attention_heads,
                                                     input_dim=hidden_dim,
                                                     attention_dim=projection_dim,
-                                                    values_dim=projection_dim)
+                                                    values_dim=projection_dim,
+                                                    attention_dropout_prob=attention_dropout_prob)
             self.add_module(f"self_attention_{i}", self_attention)
             self._attention_layers.append(self_attention)
 
@@ -101,7 +108,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
 
             feedfoward_input_dim = hidden_dim
 
-        self.dropout = Dropout(dropout_prob)
+        self.dropout = Dropout(residual_dropout_prob)
         self._input_dim = input_dim
         self._output_dim = self._attention_layers[-1].get_output_dim()
 
@@ -113,6 +120,11 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
     def get_output_dim(self) -> int:
         return self._output_dim
 
+    @overrides
+    def is_bidirectional(self):
+        return False
+
+    @overrides
     def forward(self, inputs: torch.Tensor, mask: torch.Tensor): # pylint: disable=arguments-differ
         if self._use_positional_encoding:
             output = add_positional_features(inputs)
@@ -150,7 +162,9 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         num_layers = params.pop_int("num_layers", 2)
         num_attention_heads = params.pop_int('num_attention_heads', 3)
         use_positional_encoding = params.pop_bool('use_positional_encoding', True)
-        dropout_prob = params.pop_float("dropout_prob", 0.2)
+        dropout_prob = params.pop_float("dropout_prob", 0.1)
+        residual_dropout_prob = params.pop_float("residual_dropout_prob", 0.2)
+        attention_dropout_prob = params.pop_float("attention_dropout_prob", 0.1)
         params.assert_empty(cls.__name__)
 
         return cls(input_dim=input_dim,
@@ -160,4 +174,6 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
                    num_layers=num_layers,
                    num_attention_heads=num_attention_heads,
                    use_positional_encoding=use_positional_encoding,
-                   dropout_prob=dropout_prob)
+                   dropout_prob=dropout_prob,
+                   residual_dropout_prob=residual_dropout_prob,
+                   attention_dropout_prob=attention_dropout_prob)

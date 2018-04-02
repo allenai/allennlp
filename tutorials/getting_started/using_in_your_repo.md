@@ -470,7 +470,7 @@ Now let's train it on some real data!
 ## Step five: train the model
 
 As per our [getting started tutorial](training_and_evaluating.md),
-you can use `python -m allennlp.run train` to train a model.
+you can use `allennlp train` to train a model.
 
 To do that, we need a configuration file.  You can see the full file
 [here](https://github.com/allenai/allennlp-as-a-library-example/blob/master/experiments/venue_classifier.json).
@@ -596,7 +596,7 @@ repository](https://github.com/allenai/allennlp-as-a-library-example/), run the 
 mentioned above to install AllenNLP, pytorch, and spacy, and try training this with:
 
 ```bash
-python -m allennlp.run train \
+allennlp train \
     experiments/venue_classifier.json \
     -s /tmp/venue_output_dir \
     --include-package my_library

@@ -13,10 +13,10 @@ class SpanUtilsTest(AllenNlpTestCase):
         spans = span_utils.bio_tags_to_spans(tag_sequence)
         assert set(spans) == {("ARG1", (1, 2)), ("ARG2", (4, 5)), ("ARG1", (6, 6)), ("ARG2", (7, 7))}
 
-        # Check that it works when we use U- tags for single tokens.
+        # Check that it raises when we use U- tags for single tokens.
         tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "U-ARG1", "U-ARG2"]
-        spans = span_utils.bio_tags_to_spans(tag_sequence)
-        assert set(spans) == {("ARG1", (1, 2)), ("ARG2", (4, 5)), ("ARG1", (6, 6)), ("ARG2", (7, 7))}
+        with self.assertRaises(span_utils.InvalidTagSequence):
+            spans = span_utils.bio_tags_to_spans(tag_sequence)
 
         # Check that invalid BIO sequences are also handled as spans.
         tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "I-ARG1", "B-ARG2", "I-ARG2", "B-ARG1", "I-ARG2", "I-ARG2"]
@@ -56,3 +56,21 @@ class SpanUtilsTest(AllenNlpTestCase):
         # No longer includes (2, 4) or (3, 4) as these include punctuation
         # as their last element.
         assert spans == [(0, 1), (0, 2), (1, 2), (1, 3), (2, 3)]
+
+    def test_bioul_tags_to_spans(self):
+        tag_sequence = ['B-PER', 'I-PER', 'L-PER', 'U-PER', 'U-LOC', 'O']
+        spans = span_utils.bioul_tags_to_spans(tag_sequence)
+        assert spans == [('PER', (0, 2)), ('PER', (3, 3)), ('LOC', (4, 4))]
+
+        tag_sequence = ['B-PER', 'I-PER', 'O']
+        with self.assertRaises(span_utils.InvalidTagSequence):
+            spans = span_utils.bioul_tags_to_spans(tag_sequence)
+
+    def test_iob1_to_bioul(self):
+        tag_sequence = ['I-ORG', 'O', 'I-MISC', 'O']
+        bioul_sequence = span_utils.iob1_to_bioul(tag_sequence)
+        assert bioul_sequence == ['U-ORG', 'O', 'U-MISC', 'O']
+
+        tag_sequence = ['O', 'I-PER', 'B-PER', 'I-PER', 'I-PER', 'B-PER']
+        bioul_sequence = span_utils.iob1_to_bioul(tag_sequence)
+        assert bioul_sequence == ['O', 'U-PER', 'B-PER', 'I-PER', 'L-PER', 'U-PER']

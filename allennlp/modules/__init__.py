@@ -20,3 +20,4 @@ from allennlp.modules.token_embedders import TokenEmbedder
 from allennlp.modules.tri_linear_attention import TriLinearAttention
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.span_pruner import SpanPruner
+from allennlp.modules.maxout import Maxout

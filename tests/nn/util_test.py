@@ -59,6 +59,19 @@ class TestNnUtil(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             _ = util.sort_batch_by_length(tensor, sequence_lengths)
 
+    def test_get_final_encoder_states(self):
+        encoder_outputs = Variable(torch.Tensor([[[1, 2, 3, 4],
+                                                  [5, 6, 7, 8],
+                                                  [9, 10, 11, 12]],
+                                                 [[13, 14, 15, 16],
+                                                  [17, 18, 19, 20],
+                                                  [21, 22, 23, 24]]]))
+        mask = Variable(torch.Tensor([[1, 1, 1], [1, 1, 0]]))
+        final_states = util.get_final_encoder_states(encoder_outputs, mask, bidirectional=False)
+        assert_almost_equal(final_states.data.numpy(), [[9, 10, 11, 12], [17, 18, 19, 20]])
+        final_states = util.get_final_encoder_states(encoder_outputs, mask, bidirectional=True)
+        assert_almost_equal(final_states.data.numpy(), [[9, 10, 3, 4], [17, 18, 15, 16]])
+
     def test_masked_softmax_no_mask(self):
         # Testing the general unmasked 1D case.
         vector_1d = Variable(torch.FloatTensor([[1.0, 2.0, 3.0]]))
@@ -436,7 +449,6 @@ class TestNnUtil(AllenNlpTestCase):
         loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights)
         loss2 = util.sequence_cross_entropy_with_logits(tensor2, targets, weights)
         assert loss.data.numpy() == loss2.data.numpy()
-
 
     def test_sequence_cross_entropy_with_logits_smooths_labels_correctly(self):
         tensor = torch.rand([1, 3, 4])

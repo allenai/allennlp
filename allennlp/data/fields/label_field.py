@@ -98,3 +98,6 @@ class LabelField(Field[torch.Tensor]):
     @overrides
     def empty_field(self):
         return LabelField(-1, self._label_namespace, skip_indexing=True)
+
+    def __str__(self) -> str:
+        return f"LabelField with label: {self.label} in namespace: '{self._label_namespace}'.'"
