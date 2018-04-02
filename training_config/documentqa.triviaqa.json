@@ -22,7 +22,7 @@
     "validation_dataset_reader": {
       "type": "triviaqa",
       "lazy": "false",
-      "triviaqa_path": "/triviaqa_processed",
+      "triviaqa_path": "/triviaqa_eval",
       "data_format": "preprocessed",
       "max_token_length": 20,
       "token_indexers": {
@@ -102,8 +102,8 @@
     "trainer": {
       "num_epochs": 100,
       "grad_norm": 10.0,
-      "num_serialized_models_to_keep": 20,
-      "patience" : 100,
+      "num_serialized_models_to_keep": 10,
+      "patience" : 10,
       "cuda_device" : 0,
       "learning_rate_scheduler": {
           "type": "reduce_on_plateau",

@@ -258,7 +258,7 @@ class TriviaQaReader(DatasetReader):
     data_format : ``str``, optional (default: "tar.gz")
         Valid values are ``"tar.gz"``, for the single file you can download from the TriviaQA website,
         ``"unpackaged"``, for if you've extracted the tar file into a directory, or
-        ``"preprocessed"``, for if you've already preprocessed it into serialized ``Question``s.
+        ``"preprocessed"``, for if you've already preprocessed it into serialized ``Question`` s.
     paragraph_picker: ``str``, optional, (default: ``None``)
         If specified, this indicates the scheme for sampling paragraphs
         for each question-document pair. Currently, the only supported

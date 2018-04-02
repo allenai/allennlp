@@ -54,7 +54,7 @@ class Token:
 
 def truncate_token(token, max_len: int = None) -> Token:
     """
-    Because spacy ``Token``s are immutable, we have to return a new Token
+    Because spacy ``Token`` s are immutable, we have to return a new Token
     """
     if max_len is None:
         return token
