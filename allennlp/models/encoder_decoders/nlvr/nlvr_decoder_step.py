@@ -151,7 +151,8 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                                                                              action_logits,
                                                                              action_mask)
         else:
-            logprobs = self._get_next_state_info_without_agenda(considered_actions,
+            logprobs = self._get_next_state_info_without_agenda(state,
+                                                                considered_actions,
                                                                 action_logits,
                                                                 action_mask)
             new_checklists = None
@@ -251,7 +252,8 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         return all_action_logprobs, all_new_checklists
 
     @staticmethod
-    def _get_next_state_info_without_agenda(considered_actions: List[List[int]],
+    def _get_next_state_info_without_agenda(state: NlvrDecoderState,
+                                            considered_actions: List[List[int]],
                                             action_logits: torch.Tensor,
                                             action_mask: torch.Tensor) -> List[List[Tuple[int,
                                                                                           torch.LongTensor]]]:
@@ -262,7 +264,8 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         """
         considered_action_logprobs = nn_util.masked_log_softmax(action_logits, action_mask)
         all_action_logprobs: List[List[Tuple[int, torch.LongTensor]]] = []
-        for group_index, considered_logprobs in enumerate(considered_action_logprobs):
+        for group_index, (score, considered_logprobs) in enumerate(zip(state.score,
+                                                                       considered_action_logprobs)):
             instance_action_logprobs: List[Tuple[int, torch.Tensor]] = []
             for action_index, logprob in enumerate(considered_logprobs):
                 # This is the actual index of the action from the original list of actions.
@@ -270,7 +273,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                 if action == -1:
                     # Ignoring padding.
                     continue
-                instance_action_logprobs.append((action_index, logprob))
+                instance_action_logprobs.append((action_index, score + logprob))
             all_action_logprobs.append(instance_action_logprobs)
         return all_action_logprobs
 
