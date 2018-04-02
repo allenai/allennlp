@@ -54,7 +54,7 @@ class Token:
 
 def truncate_token(token, max_len: int = None) -> Token:
     """
-    Because spacy ``Token``s are immutable, we have to return a new Token.
+    Because spacy ``Token``s are immutable, we have to return a new Token
     """
     if max_len is None:
         return token
@@ -70,9 +70,13 @@ def truncate_token(token, max_len: int = None) -> Token:
 
 def token_to_json(token: Token, short: bool = True):
     """
-    There are two ways to serialize a Token.
-    The "short" way is as an array [text, index].
-    The "long" way is as a dictionary of properties.
+    Sometimes you would like to preprocess some of your data, so that
+    you can do expensive operations only once across many experiments.
+    Sometimes that preprocessing involves tokenizing things, in which
+    case you might need to serialize / deserialize the tokens. These
+    helper methods allow you to convert them to and from JSON.
+    The ``short`` way is as an array [text, index]. This is good if those
+    are the only fields you need. The "long" way is as a dictionary of properties.
     """
     if short:
         return [token.text, token.idx]

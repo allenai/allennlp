@@ -16,8 +16,6 @@ from allennlp.training.metrics import Average, BooleanAccuracy, CategoricalAccur
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-DEBUG = False
-
 def repeat_question(question_tensor: Variable, num_paragraphs: int) -> Variable:
     """
     Turns a (batch_size, num_tokens, input_dim) tensor representing a question into a
@@ -164,9 +162,6 @@ class DocumentQa(Model):
         embedded_question = self._dropout(self._text_field_embedder(question))
         embedded_passage = self._dropout(self._text_field_embedder(passage))
 
-        if DEBUG: print("emb q", embedded_question.size())
-        if DEBUG: print("emb p", embedded_passage.size())
-
         # Extended batch size takes into account batch size * num paragraphs
         extended_batch_size = embedded_question.size(0)
         passage_length = embedded_passage.size(1)
@@ -181,26 +176,17 @@ class DocumentQa(Model):
         encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_lstm_mask))
         encoding_dim = encoded_question.size(-1)
 
-        if DEBUG: print("enc q", encoded_question.size())
-        if DEBUG: print("enc p", encoded_passage.size())
-
         # Shape: (extended_batch_size, passage_length, question_length)
         # these are the a_ij in the paper
         passage_question_similarity = self._matrix_attention(encoded_passage, encoded_question)
-
-        if DEBUG: print("pqs", passage_question_similarity.size())
 
         # Shape: (extended_batch_size, passage_length, question_length)
         # these are the p_ij in the paper
         passage_question_attention = util.last_dim_softmax(passage_question_similarity, question_mask)
 
-        if DEBUG: print("pqa", passage_question_attention.size())
-
         # Shape: (extended_batch_size, passage_length, encoding_dim)
         # these are the c_i in the paper
         passage_question_vectors = util.weighted_sum(encoded_question, passage_question_attention)
-
-        if DEBUG: print("pqv", passage_question_vectors.size())
 
         # We replace masked values with something really negative here, so they don't affect the
         # max below.
@@ -213,26 +199,18 @@ class DocumentQa(Model):
         # Shape: (extended_batch_size, passage_length)
         question_passage_similarity = masked_similarity.max(dim=-1)[0]
 
-        if DEBUG: print("qps", question_passage_similarity.size())
-
         # masked_softmax operates over the last (i.e. passage_length) dimension
         # Shape: (extended_batch_size, passage_length)
         question_passage_attention = util.masked_softmax(question_passage_similarity, passage_mask)
-
-        if DEBUG: print("qpa", question_passage_attention.size())
 
         # Shape: (extended_batch_size, encoding_dim)
         # these are the q_c in the paper
         question_passage_vector = util.weighted_sum(encoded_passage, question_passage_attention)
 
-        if DEBUG: print("qpv", question_passage_vector.size())
-
         # Shape: (extended_batch_size, passage_length, encoding_dim)
         tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(extended_batch_size,
                                                                                     passage_length,
                                                                                     encoding_dim)
-
-        if DEBUG: print("tiled qpv", tiled_question_passage_vector.size())
 
         # Shape: (extended_batch_size, passage_length, encoding_dim * 4)
         final_merged_passage = torch.cat([encoded_passage,
@@ -241,22 +219,13 @@ class DocumentQa(Model):
                                           encoded_passage * tiled_question_passage_vector],
                                          dim=-1)
 
-        if DEBUG: print("fmp1", final_merged_passage.size())
-
-
         # purple "linear ReLU layer"
         final_merged_passage = F.relu(self._merge_atten(final_merged_passage))
-
-        if DEBUG: print("fmp2", final_merged_passage.size())
 
         # Bi-GRU in the paper
         residual_layer = self._dropout(self._residual_encoder(self._dropout(final_merged_passage), passage_mask))
 
-        if DEBUG: print("residual", residual_layer.size())
-
         self_atten_matrix = self._self_atten(residual_layer, residual_layer)
-
-        if DEBUG: print("self attention", self_atten_matrix.size())
 
         # Expand mask for self-attention
         mask = (passage_mask.resize(extended_batch_size, passage_length, 1) *
@@ -273,19 +242,13 @@ class DocumentQa(Model):
 
         self_atten_probs = util.last_dim_softmax(self_atten_matrix, mask)
 
-        if DEBUG: print("sap", self_atten_probs.size())
-
         # Batch matrix multiplication:
         # (batch, passage_len, passage_len) * (batch, passage_len, dim) -> (batch, passage_len, dim)
         self_atten_vecs = torch.matmul(self_atten_probs, residual_layer)
 
-        if DEBUG: print("sav", self_atten_vecs.size())
-
         # (extended_batch_size, passage_length, embedding_dim * 3)
         concatenated = torch.cat([self_atten_vecs, residual_layer, residual_layer * self_atten_vecs],
                                  dim=-1)
-
-        if DEBUG: print("concat", concatenated.size())
 
         # _merge_self_atten => (extended_batch_size, passage_length, embedding_dim)
         residual_layer = F.relu(self._merge_self_atten(concatenated))
@@ -295,21 +258,14 @@ class DocumentQa(Model):
         final_merged_passage += residual_layer
         final_merged_passage = self._dropout(final_merged_passage)
 
-        if DEBUG: print("fmp", final_merged_passage.size())
-
         # Bi-GRU in paper
         start_rep = self._span_start_encoder(final_merged_passage, passage_lstm_mask)
-        if DEBUG: print("startrep", start_rep.size())
         span_start_logits = self._span_start_predictor(start_rep).squeeze(-1)
         span_start_probs = util.masked_softmax(span_start_logits, passage_mask)
-        if DEBUG: print("spanstart", span_start_logits.size())
-
 
         end_rep = self._span_end_encoder(torch.cat([final_merged_passage, start_rep], dim=-1), passage_lstm_mask)
-        if DEBUG: print("endrep", end_rep.size())
         span_end_logits = self._span_end_predictor(end_rep).squeeze(-1)
         span_end_probs = util.masked_softmax(span_end_logits, passage_mask)
-        if DEBUG: print("spanend", span_end_logits.size())
 
         span_start_logits = util.replace_masked_values(span_start_logits, passage_mask, -1e7)
         span_end_logits = util.replace_masked_values(span_end_logits, passage_mask, -1e7)
@@ -345,9 +301,10 @@ class DocumentQa(Model):
             loss = self._shared_norm_loss(paragraph_span_start_logits, paragraphs_mask, span_starts, span_idx_mask)
             loss += self._shared_norm_loss(paragraph_span_end_logits, paragraphs_mask, span_ends, span_idx_mask)
 
-            #self._span_start_accuracy(span_start_logits, span_starts.squeeze(-1))
-            #self._span_end_accuracy(span_end_logits, span_ends.squeeze(-1))
-            #self._span_accuracy(best_paragraph_word_span, spans)
+            # TODO(joelgrus) figure out how to compute span_start_accuracy, span_end_accuracy,
+            # and span_accuracy in a context when there are multiple correct answers.
+            # (Conceptually it's not hard, but figure out how to do it using our metrics.)
+
             output_dict["loss"] = loss
 
         if metadata is not None:
@@ -382,13 +339,8 @@ class DocumentQa(Model):
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return {
-                # 'start_acc': self._span_start_accuracy.get_metric(reset),
-                # 'end_acc': self._span_end_accuracy.get_metric(reset),
-                # 'span_acc': self._span_accuracy.get_metric(reset),
-                'em': self._official_em.get_metric(reset),
-                'f1': self._official_f1.get_metric(reset),
-                }
+        return {'em': self._official_em.get_metric(reset),
+                'f1': self._official_f1.get_metric(reset)}
 
     @staticmethod
     def _get_best_span(span_start_logits: Variable, span_end_logits: Variable) -> Variable:

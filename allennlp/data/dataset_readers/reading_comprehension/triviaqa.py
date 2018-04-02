@@ -5,7 +5,7 @@ import pathlib
 import shutil
 import tarfile
 import tempfile
-from typing import Dict, List, Tuple, Iterator, NamedTuple
+from typing import Dict, List, Tuple, Iterator, Iterable, NamedTuple
 
 from overrides import overrides
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -26,11 +26,14 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 _PARAGRAPH_TOKEN = "@@PARAGRAPH@@"
 
+# We create NamedTuples for storing "merged paragraphs" and questions
+# to make it easier to preprocess the dataset into JSONL format
+# and start training from the processed data.
+
 class MergedParagraphs(NamedTuple):
     """
     A typical TriviaQA question has multiple files with answers, each consisting
-    of many small paragraphs. We preprocess these by merging them into fewer
-    paragraphs of larger size.
+    of many small paragraphs. We merge these into fewer paragraphs of larger size.
     """
     texts: List[str]
     tokens: List[List[Token]]
@@ -66,21 +69,11 @@ class Question(NamedTuple):
     paragraphs: MergedParagraphs
     answer_texts: List[str] = None
 
-    def truncate_passage_tokens(self, max_len: int = None) -> None:
-        if max_len is None:
-            return
-
-        # This is hacky, but ``MergedParagraphs`` is immutable, so we can't change its ``.tokens``.
-        # However, ``.tokens`` is a list of lists, so we can change the inner lists. Hacky.
-        num_paragraphs = len(self.paragraphs.tokens)
-        for i in range(num_paragraphs):
-            self.paragraphs.tokens[i] = [truncate_token(token, max_len) for token in self.paragraphs.tokens[i]]
-
     def to_json(self) -> JsonDict:
         return {
                 "id": self.id,
                 "text": self.text,
-                "tokens": [json_to_token(token) for token in self.tokens],
+                "tokens": [token_to_json(token) for token in self.tokens],
                 "paragraphs": self.paragraphs.to_json(),
                 "answer_texts": self.answer_texts
         }
@@ -94,31 +87,25 @@ class Question(NamedTuple):
                         answer_texts=blob.get('answer_texts'))
 
 
-def _document_tfidf(tfidf: TfidfVectorizer, paragraphs: List[str], question: str) -> np.ndarray:
+def _merge(paragraphs: List[str],
+           question: str,
+           answer_texts: List[str],
+           tokenizer: Tokenizer,
+           max_paragraphs: int = 4,
+           tfidf_sort: bool = True,
+           require_answer: bool = False,
+           max_paragraph_length: int = 400) -> MergedParagraphs:
     """
-    Given a question and some supporting paragraphs, return the array of tfidf
-    distances from each paragraph to the question.
+    Given some (small?) paragraphs and a question, merge the paragraphs to make
+    synthetic paragraphs of size ``max_paragraph_length``, and return a ``MergedParagraphs``
+    instance containing the "best" ``topn`` of them. If ``topn`` is None, return all of them.
+
+    If ``tfidf_sort`` is True, "best" means closest (in terms of tfidf distance) to the question.
+    If ``require_answer`` is True, then the best "best" paragraph is also required to contain
+    one of the ``answer_texts``. Don't do this with a test or validation dataset, that's cheating.
+    If neither is True, then just the first ``topn`` paragraphs are returned.
     """
-    try:
-        # (num_paragraphs, num_features)
-        para_features = tfidf.fit_transform(paragraphs)
-        # (1, num_features)
-        q_features = tfidf.transform([question])
-    except ValueError:
-        # (num_paragraphs,)
-        return np.array([0.0] * len(paragraphs))
-
-    # pairwise_distances is (1, num_paragraphs); after ravel it's (num_paragraphs,)
-    return pairwise_distances(q_features, para_features, "cosine").ravel()
-
-def _merge_and_sort(paragraphs: List[str],
-                    question: str,
-                    answer_texts: List[str],
-                    tokenizer: Tokenizer,
-                    topn: int = 4,
-                    max_paragraph_length: int = 400) -> MergedParagraphs:
-    tfidf = TfidfVectorizer(strip_accents="unicode", stop_words="")
-
+    # Collect all the text into one mega-paragraph.
     tokens: List[str] = []
     for paragraph in paragraphs:
         tokens.extend(token.text for token in tokenizer.tokenize(paragraph))
@@ -127,26 +114,48 @@ def _merge_and_sort(paragraphs: List[str],
     # Get rid of trailing paragraph token
     tokens = tokens[:-1]
 
+    # Merge them into paragraphs of size ``max_paragraph_length``.
     merged_paragraphs = [' '.join(paragraph_tokens)
                          for paragraph_tokens in lazy_groups_of(iter(tokens), max_paragraph_length)]
     merged_paragraph_tokens = [tokenizer.tokenize(paragraph) for paragraph in merged_paragraphs]
 
-    # Sort the paragraphs by their tfidf score with the question.
-    scores = _document_tfidf(tfidf, merged_paragraphs, question)
-    # Get the ranked indexes.
-    ranks = [i for i, _ in sorted(enumerate(scores), key=lambda pair: pair[1])]
+    # If ``max_paragraphs`` is None, we want all the merged paragraphs.
+    if max_paragraphs is None:
+        max_paragraphs = len(merged_paragraphs)
 
-    # Find the indexes of paragraphs that have answers.
+    # Get the ranked indexes, from "best" paragraph to worst paragraph.
+    if tfidf_sort:
+        # Sort the paragraphs by their tfidf scores with the question.
+        try:
+            tfidf = TfidfVectorizer(strip_accents="unicode", stop_words="")
+            paragraph_features = tfidf.fit_transform(merged_paragraphs)
+            question_features = tfidf.transform([question])
+            scores = pairwise_distances(question_features, paragraph_features, "cosine").ravel()
+        except ValueError:
+            scores = np.array([0.0] * len(merged_paragraphs))
+
+        # Sort by distance, break ties by original order.
+        ranks: Iterable[int] = [i for i, _ in sorted(enumerate(scores), key=lambda pair: (pair[1], pair[0]))]
+    else:
+        # Keep the paragraphs in their original order.
+        ranks = range(len(merged_paragraphs))
+
+    # Find the indices of paragraphs that have answers.
     has_answers = [i for i in ranks
                    if util.find_valid_answer_spans(merged_paragraph_tokens[i], answer_texts)]
 
-    if not has_answers:
+    # In the require_answer case, we just return None if no paragraph has the answer.
+    if require_answer and not has_answers:
         return None
 
-    first_answer = has_answers[0]
-    # Want first_answer to be the first paragraph, and then take the most highly ranked
-    # other topn - 1
-    choices = [first_answer] + [i for i in ranks if i != first_answer][:(topn - 1)]
+    if require_answer:
+        # Want first_answer to be the first paragraph, and then take the most highly ranked
+        # other topn - 1
+        first_answer = has_answers[0]
+        choices: Iterable[int] = ([first_answer] +
+                                  [i for i in ranks if i != first_answer][:(max_paragraphs - 1)])
+    else:
+        choices = range(min(max_paragraphs, len(merged_paragraphs)))
 
     merged_texts = [merged_paragraphs[i] for i in choices]
     merged_tokens = [merged_paragraph_tokens[i] for i in choices]
@@ -159,21 +168,24 @@ def _merge_and_sort(paragraphs: List[str],
                             has_answers=[i for i, choice in enumerate(choices) if choice in has_answers])
 
 
-def preprocess(base_path: pathlib.Path,
-               questions_file: str,
-               tokenizer: Tokenizer,
-               topn: int = 4,
-               max_paragraph_length: int = 400) -> Iterator[Question]:
+def process_triviaqa_questions(evidence_path: pathlib.Path,
+                               questions_path: pathlib.Path,
+                               tokenizer: Tokenizer,
+                               max_paragraphs: int = 4,
+                               tfidf_sort: bool = True,
+                               require_answer: bool = False,
+                               max_paragraph_length: int = 400) -> Iterator[Question]:
     """
-    Preprocesses one of the questions files in the (untarred) TriviaQA dataset
+    Processes one of the questions files in the (untarred) TriviaQA dataset
     into ``Question`` objects. For each question in the specified JSON file,
     we load all of the evidence files, merge the paragraphs to get new paragraphs
     of size ``max_paragraph_length``, sort them by tfidf distance to the question,
     and take the ``topn`` closest paragraphs.
     """
-    result_key, evidence_subdir = 'SearchResults', 'web'
-
-    questions_path = base_path / 'qa' / questions_file
+    if 'web' in questions_path.name:
+        result_key, evidence_subdir = 'SearchResults', 'web'
+    else:
+        result_key, evidence_subdir = 'EntityPages', 'wikipedia'
 
     with open(questions_path, 'r') as f:
         questions_data = json.loads(f.read())['Data']
@@ -192,19 +204,21 @@ def preprocess(base_path: pathlib.Path,
         paragraphs: List[str] = []
 
         for evidence_file in evidence_files:
-            evidence_path = base_path / 'evidence' / evidence_subdir / evidence_file
-            with open(evidence_path, 'r') as evidence_file:
+            evidence_file_path = evidence_path / 'evidence' / evidence_subdir / evidence_file
+            with open(evidence_file_path, 'r') as evidence_file:
                 paragraphs.extend(evidence_file.readlines())
 
-        merged_paragraphs = _merge_and_sort(paragraphs=paragraphs,
-                                            question=question_text,
-                                            answer_texts=answer_texts,
-                                            tokenizer=tokenizer,
-                                            topn=topn,
-                                            max_paragraph_length=max_paragraph_length)
+        merged_paragraphs = _merge(paragraphs=paragraphs,
+                                   question=question_text,
+                                   answer_texts=answer_texts,
+                                   tokenizer=tokenizer,
+                                   max_paragraphs=max_paragraphs,
+                                   tfidf_sort=tfidf_sort,
+                                   require_answer=require_answer,
+                                   max_paragraph_length=max_paragraph_length)
 
         if not merged_paragraphs:
-            logger.warning(f"found no paragraphs with answers for {question_id}, skipping")
+            logger.warning(f"unable to merge paragraphs for {question_id}, skipping")
             continue
 
         question = Question(id=question_id,
@@ -238,6 +252,9 @@ class TriviaQaReader(DatasetReader):
     ----------
     triviaqa_path : ``str``
         The path to the TriviaQA data, which may be in one of several formats.
+    unfiltered_path : ``str``, optional
+        The path to the "unfiltered" TriviaQA data, which contains only the questions
+        and points to evidence files under the original triviaqa_path.
     data_format : ``str``, optional (default: "tar.gz")
         Valid values are ``"tar.gz"``, for the single file you can download from the TriviaQA website,
         ``"unpackaged"``, for if you've extracted the tar file into a directory, or
@@ -253,6 +270,9 @@ class TriviaQaReader(DatasetReader):
         be the iteration for creating the ``Vocabulary``, in which you would
         like all the paragraphs to be represented. However, if you are using
         a precomputed ``Vocabulary``, you should set this to ``True``.
+    keep_questions_in_memory: ``bool``, optional, (default: ``True``)
+        The training will run faster (and use more memory) if you load the questions
+        into memory once and then read them from memory each epoch.
     max_token_length: ``int``, optional, (default: ``None``)
         If specified, we will truncate longer tokens to this length in the
         passages (but not in the questions).
@@ -266,89 +286,125 @@ class TriviaQaReader(DatasetReader):
     # Class static variable for storing the temp locations of untarred files,
     # so that if we instantiate two different dataset readers for the
     # same tarball we can reuse the temp file
-    _temp_files: Dict[pathlib.Path, Tuple[str, int]] = {}
+    _temp_files: Dict[str, Tuple[pathlib.Path, int]] = {}
 
     def __init__(self,
                  triviaqa_path: str,
+                 unfiltered_path: str = None,
                  data_format: str = "tar.gz",
                  paragraph_picker: str = None,
                  sample_first_iteration: bool = False,
+                 keep_questions_in_memory: bool = True,
                  max_token_length: int = None,
+                 max_paragraphs: int = 4,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False) -> None:
         super().__init__(lazy)
+        # Store original paths as strings
         self._triviaqa_path = triviaqa_path
+        self._unfiltered_path = unfiltered_path
+
         self._sample_this_iteration = sample_first_iteration
+        self._keep_questions_in_memory = keep_questions_in_memory
         self._paragraph_picker = paragraph_picker
         self._max_token_length = max_token_length
+        self._max_paragraphs = max_paragraphs
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
+        # In-memory cache for questions.
         self._data: Dict[str, List[Question]] = {}
 
         if data_format not in ["preprocessed", "tar.gz", "unpackaged"]:
             raise ConfigurationError(f"unknown data_format {data_format}")
 
         self._preprocessed = (data_format == "preprocessed")
-        self._path = pathlib.Path(triviaqa_path)
 
         if data_format == "tar.gz":
-            # need to untar, unless already untarred
-            if self._path in self._temp_files:
-                logger.info("already un-tar-ed, reusing")
-                directory, ref_count = self._temp_files[self._path]
-                self._temp_files[self._path] = (directory, ref_count + 1)
+            # Need to untar, unless it's already been done.
+            self._evidence_path = self._untar(self._triviaqa_path)
+            if unfiltered_path:
+                self._question_path = self._untar(self._unfiltered_path)
             else:
-                logger.info("un-tar-ing")
-                directory = tempfile.mkdtemp()
-                with tarfile.open(triviaqa_path) as tarball:
-                    tarball.extractall(directory)
-                self._temp_files[self._path] = (directory, 1)
+                self._question_path = self._evidence_path
+        else:
+            # Don't need to untar.
+            self._evidence_path = pathlib.Path(self._triviaqa_path)
+            if unfiltered_path:
+                self._question_path = pathlib.Path(self._unfiltered_path)
+            else:
+                self._question_path = self._evidence_path
 
-            self._path = pathlib.Path(directory)
+    def _untar(self, tar_path: str) -> pathlib.Path:
+        """
+        Return the path to the untarred version of tar_path,
+        extracting the tarfile first if necessary.
+        """
+        if tar_path in self._temp_files:
+            logger.info(f"{tar_path} has already been unzipped, reusing")
+            untarred_path, ref_count = self._temp_files[tar_path]
+            self._temp_files[tar_path] = untarred_path, ref_count + 1
+        else:
+            logger.info(f"un-tar-ing {tar_path}")
+            untarred_path = pathlib.Path(tempfile.mkdtemp())
+            with tarfile.open(tar_path) as tarball:
+                tarball.extractall(untarred_path)
+            self._temp_files[tar_path] = untarred_path, 1
+        return untarred_path
+
+    def _cleanup(self, tar_path: str) -> None:
+        """
+        Decrement the reference count for ``tar_path``
+        and delete it if there are no more references to it.
+        """
+        if tar_path and tar_path in self._temp_files:
+            untarred_path, ref_count = self._temp_files[tar_path]
+            if ref_count > 1:
+                self._temp_files[tar_path] = untarred_path, ref_count - 1
+            else:
+                shutil.rmtree(untarred_path)
+                del self._temp_files[tar_path]
 
     def __del__(self):
         """
         Clean up temporary directories
         """
-        if self._triviaqa_path in self._temp_files:
-            directory, ref_count = self._temp_files[self._triviaqa_path]
-            if ref_count > 1:
-                self._temp_files[self._triviaqa_path] = (directory, ref_count - 1)
-            else:
-                shutil.rmtree(directory)
-
-    def _truncate(self, questions: List[Question]) -> List[Question]:
-        for question in questions:
-            question.truncate_passage_tokens(max_len=self._max_token_length)
-        return questions
+        self._cleanup(self._triviaqa_path)
+        self._cleanup(self._unfiltered_path)  # will be a no-op if unfiltered_path is None
 
     @overrides
     def _read(self, file_path: str):
-
         if file_path in self._data:
+            # Data is already in memory, so just use it.
             questions = self._data[file_path]
         elif self._preprocessed:
-            question_path = self._path / file_path
-            logger.info(f"loading preprocessed questions from {question_path}")
-            with open(question_path, 'r') as f:
+            # Data is preprocessed in JSONL format, so load it that way.
+            questions_path = self._question_path / file_path
+            logger.info(f"loading preprocessed questions from {questions_path}")
+            with open(questions_path, 'r') as f:
                 questions = [Question.from_json(json.loads(line)) for line in f]
-            self._data[file_path] = self._truncate(questions)
         else:
+            # Data from untarred original file.
             logger.info(f"preprocessing questions from {file_path}")
-            questions = [question for question in preprocess(base_path=self._path,
-                                                             questions_file=file_path,
-                                                             tokenizer=self._tokenizer,
-                                                             topn=4,
-                                                             max_paragraph_length=400)]
-            self._data[file_path] = self._truncate(questions)
+            questions_path = self._question_path / 'qa' / file_path
 
-        logger.info("sample this iteration %s", self._sample_this_iteration)
+            # Require a paragraph with an answer only if this is the training
+            # dataset reader.
+            require_answer = self._paragraph_picker == 'triviaqa-web-train'
+            questions = [question for question in process_triviaqa_questions(evidence_path=self._evidence_path,
+                                                                             questions_path=questions_path,
+                                                                             tokenizer=self._tokenizer,
+                                                                             max_paragraphs=self._max_paragraphs,
+                                                                             require_answer=require_answer,
+                                                                             max_paragraph_length=400)]
+
+        # Store questions in memory, unless we're not supposed to.
+        if self._keep_questions_in_memory and file_path not in self._data:
+            self._data[file_path] = questions
 
         for question in questions:
             paragraphs = question.paragraphs
-            # sample:
             if self._sample_this_iteration and self._paragraph_picker == 'triviaqa-web-train':
                 sample: List[int] = []
                 # double sample the first one
@@ -363,6 +419,15 @@ class TriviaQaReader(DatasetReader):
                 picked_paragraph_tokens = paragraphs.tokens
                 picked_paragraph_spans = paragraphs.token_spans
 
+            if not picked_paragraph_tokens:
+                logger.warning(f"no paragraph tokens for {question.id}, skipping")
+                continue
+
+            # Truncate tokens if necessary
+            if self._max_token_length is not None:
+                picked_paragraph_tokens = [[truncate_token(token, self._max_token_length) for token in tokens]
+                                           for tokens in picked_paragraph_tokens]
+
             instance = util.make_multi_paragraph_reading_comprehension_instance(
                     question.tokens,
                     picked_paragraph_tokens,
@@ -373,6 +438,7 @@ class TriviaQaReader(DatasetReader):
 
             yield instance
 
+        # sample_this_iteration is always True after the first iteration
         self._sample_this_iteration = True
 
     @overrides
@@ -386,6 +452,10 @@ class TriviaQaReader(DatasetReader):
         # pylint: disable=arguments-differ
         if paragraph_tokens is None:
             paragraph_tokens = [self._tokenizer.tokenize(paragraph) for paragraph in paragraphs]
+
+        if self._max_token_length is not None:
+            paragraph_tokens = [[truncate_token(token, self._max_token_length) for token in tokens]
+                                for tokens in paragraph_tokens]
 
         if token_spans is None:
             token_spans = [util.find_valid_answer_spans(paragraph_tokens_i, answer_texts)
@@ -407,7 +477,9 @@ class TriviaQaReader(DatasetReader):
         data_format = params.pop('data_format', 'tar.gz')
         paragraph_picker = params.pop('paragraph_picker', None)
         sample_first_iteration = params.pop_bool('sample_first_iteration', False)
+        keep_questions_in_memory = params.pop_bool('keep_questions_in_memory', True)
         max_token_length = params.pop_int('max_token_length', None)
+        max_paragraphs = params.pop_int('max_paragraphs', 4)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         lazy = params.pop('lazy', False)
@@ -415,8 +487,10 @@ class TriviaQaReader(DatasetReader):
         return cls(triviaqa_path=triviaqa_path,
                    data_format=data_format,
                    sample_first_iteration=sample_first_iteration,
+                   keep_questions_in_memory=keep_questions_in_memory,
                    paragraph_picker=paragraph_picker,
                    max_token_length=max_token_length,
+                   max_paragraphs=max_paragraphs,
                    tokenizer=tokenizer,
                    token_indexers=token_indexers,
                    lazy=lazy)

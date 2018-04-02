@@ -17,8 +17,6 @@ Each JSON line corresponds to a single question and has the format
     "answer_texts": ["primary answer", "alternative answer"]
 }
 """
-
-from typing import List
 import json
 import logging
 import os
@@ -38,12 +36,12 @@ from allennlp.data import Instance
 from allennlp.data.tokenizers import Tokenizer
 from allennlp.data.tokenizers.token import Token, token_to_json, json_to_token
 from allennlp.data.dataset_readers.reading_comprehension import util
-from allennlp.data.dataset_readers.reading_comprehension.triviaqa import MergeAndSorter, Question, MergedParagraphs, preprocess
+from allennlp.data.dataset_readers.reading_comprehension.triviaqa import Question, MergedParagraphs, process_triviaqa_questions
 from allennlp.data.vocabulary import Vocabulary
 
 logger = logging.getLogger(__name__)
 
-def main(params: Params, triviaqa_path: pathlib.Path, outdir: pathlib.Path):
+def main(triviaqa_path: pathlib.Path, outdir: pathlib.Path):
     outdir.mkdir(exist_ok=True)
 
     # If triviaqa is a tar.gz, then untar it to a temporary location:
@@ -59,17 +57,23 @@ def main(params: Params, triviaqa_path: pathlib.Path, outdir: pathlib.Path):
             tarball.extractall(tempdir)
         triviaqa_path = pathlib.Path(tempdir)
 
-    tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
+    tokenizer = Tokenizer.from_params(Params({}))
 
-    for questions_file, topn in [('web-train.json', 4),
-                                 ('web-dev.json', 15)]:
+    for questions_file, topn, require_answer in [('web-train.json', 4, True),
+                                                 ('web-dev.json', 15, False)]:
+        if 'train' in questions_file: continue
         logger.info(f"starting questions file {questions_file}")
+        questions_path = triviaqa_path / 'qa' / questions_file
 
         output_path = outdir / f"{questions_file}l"
 
         with open(output_path, 'w') as f:
-            for question in preprocess(triviaqa_path, questions_file, topn, tokenizer):
-                f.write(question.to_json())
+            for question in process_triviaqa_questions(evidence_path=triviaqa_path,
+                                                       questions_path=questions_path,
+                                                       tokenizer=tokenizer,
+                                                       topn=topn,
+                                                       require_answer=require_answer):
+                f.write(json.dumps(question.to_json()))
                 f.write("\n")
 
     # And then finally clean up:
@@ -78,7 +82,6 @@ def main(params: Params, triviaqa_path: pathlib.Path, outdir: pathlib.Path):
         shutil.rmtree(tempdir)
 
 if __name__ == '__main__':
-    params = Params.from_file(sys.argv[1])
-    triviaqa_path = pathlib.Path(sys.argv[2])
-    outdir = pathlib.Path(sys.argv[3])
-    main(params, triviaqa_path, outdir)
+    triviaqa_path = pathlib.Path(sys.argv[1])
+    outdir = pathlib.Path(sys.argv[2])
+    main(triviaqa_path, outdir)
