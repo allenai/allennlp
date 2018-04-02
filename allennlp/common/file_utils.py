@@ -16,7 +16,7 @@ from allennlp.common.tqdm import Tqdm
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-CACHE_ROOT = os.path.expanduser(os.path.join('~', '.allennlp'))
+CACHE_ROOT = os.getenv('ALLENNLP_CACHE_ROOT', os.path.expanduser(os.path.join('~', '.allennlp')))
 DATASET_CACHE = os.path.join(CACHE_ROOT, "datasets")
 
 def url_to_filename(url: str, etag: str = None) -> str:
