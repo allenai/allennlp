@@ -5,7 +5,7 @@
 
 # This installs Pytorch for CUDA 8 only. If you are using a newer version,
 # please visit http://pytorch.org/ and install the relevant version.
-pytorch==0.3.1
+torch==0.3.1
 
 # Parameter parsing.
 pyhocon==0.3.35
