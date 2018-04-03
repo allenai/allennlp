@@ -88,7 +88,7 @@ setup(name='allennlp',
       license='Apache',
       packages=find_packages(),
       install_requires=[
-          'torch==0.3.1'
+          'torch==0.3.1',
           'pyhocon==0.3.35',
           'typing',
           'overrides',
