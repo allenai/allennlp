@@ -48,6 +48,8 @@ you want to use, you can skip to the 'installing via pip' section.
 That's it! You're now ready to build and train AllenNLP models.
 AllenNLP installs a script when you install the python package, meaning you can run allennlp commands just by typing `allennlp` into a terminal.
 
+_`pip` currently installs Pytorch for CUDA 8 only (or no GPU). If you require a newer version,
+please visit http://pytorch.org/ and install the relevant pytorch binary._
 
 ## Installing using Docker
 
