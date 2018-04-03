@@ -83,9 +83,9 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
 
     logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
 
-    instances = (instance for key, dataset in all_datasets.items()
+    instances = [instance for key, dataset in all_datasets.items()
                  for instance in dataset
-                 if key in datasets_for_vocab_creation)
+                 if key in datasets_for_vocab_creation]
 
     vocabulary = verbosely_create_vocabulary(vocab_params, instances)
 
@@ -134,6 +134,10 @@ def verbosely_create_vocabulary(params: Params, instances: List[Instance]) -> Vo
         print(f"Statistics for {name}:")
         print(f"\tLengths: Mean: {numpy.mean(lengths)}, Standard Dev: {numpy.std(lengths)}")
 
+    print("\n10 Random instances: ")
+    for i in list(numpy.random.randint(len(instances), size=10)):
+        print(f"Instance {i}:")
+        print(f"\t{instances[i]}")
 
     print("\n\n----Vocabulary Statistics----\n")
     print(vocabulary)
