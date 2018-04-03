@@ -1,11 +1,17 @@
-from unittest import TestCase
+# pytest: disable=no-self-use,invalid-name
+import pathlib
+import shutil
 import sys
+import os
+
+import pytest
 
 from allennlp.commands import main
 from allennlp.commands.subcommand import Subcommand
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase
 
-class TestMain(TestCase):
-
+class TestMain(AllenNlpTestCase):
     def test_fails_on_unknown_command(self):
         sys.argv = ["bogus",         # command
                     "unknown_model", # model_name
@@ -37,7 +43,86 @@ class TestMain(TestCase):
 
         fake_evaluate = FakeEvaluate()
 
-        sys.argv = ["evaluate"]
+        sys.argv = ["allennlp.run", "evaluate"]
         main(subcommand_overrides={"evaluate": fake_evaluate})
 
         assert fake_evaluate.add_subparser_called
+
+    def test_other_modules(self):
+        # Create a new package in a temporary dir
+        packagedir = os.path.join(self.TEST_DIR, 'testpackage')
+        pathlib.Path(packagedir).mkdir()
+        pathlib.Path(os.path.join(packagedir, '__init__.py')).touch()
+
+        # And add that directory to the path
+        sys.path.insert(0, self.TEST_DIR)
+
+        # Write out a duplicate model there, but registered under a different name.
+        from allennlp.models import simple_tagger
+        with open(simple_tagger.__file__) as model_file:
+            code = model_file.read().replace("""@Model.register("simple_tagger")""",
+                                             """@Model.register("duplicate-test-tagger")""")
+
+        with open(os.path.join(packagedir, 'model.py'), 'w') as new_model_file:
+            new_model_file.write(code)
+
+        # Copy fixture there too.
+        shutil.copy(os.path.join(os.getcwd(), 'tests/fixtures/data/sequence_tagging.tsv'), self.TEST_DIR)
+        data_path = os.path.join(self.TEST_DIR, 'sequence_tagging.tsv')
+
+        # Write out config file
+        config_path = os.path.join(self.TEST_DIR, 'config.json')
+        config_json = """
+                "model": {
+                        "type": "duplicate-test-tagger",
+                        "text_field_embedder": {
+                                "tokens": {
+                                        "type": "embedding",
+                                        "embedding_dim": 5
+                                }
+                        },
+                        "encoder": {
+                                "type": "lstm",
+                                "input_size": 5,
+                                "hidden_size": 7,
+                                "num_layers": 2
+                        }
+                },
+                "dataset_reader": {"type": "sequence_tagging"},
+                "train_data_path": $$$,
+                "validation_data_path": $$$,
+                "iterator": {"type": "basic", "batch_size": 2},
+                "trainer": {
+                        "num_epochs": 2,
+                        "optimizer": "adam"
+                }
+            """.replace('$$$', data_path)
+        with open(config_path, 'w') as config_file:
+            config_file.write(config_json)
+
+        serialization_dir = os.path.join(self.TEST_DIR, 'serialization')
+
+        # Run train with using the non-allennlp module.
+        sys.argv = ["bin/allennlp",
+                    "train", config_path,
+                    "-s", serialization_dir]
+
+        # Shouldn't be able to find the model.
+        with pytest.raises(ConfigurationError):
+            main()
+
+        # Now add the --include-package flag and it should work.
+        # We also need to add --recover since the output directory already exists.
+        sys.argv.extend(["--recover", "--include-package", 'testpackage'])
+
+        main()
+
+        # Rewrite out config file, but change a value.
+        with open(config_path, 'w') as new_config_file:
+            new_config_file.write(config_json.replace('"num_epochs": 2,', '"num_epochs": 4,'))
+
+        # This should fail because the config.json does not match that in the serialization directory.
+        with pytest.raises(ConfigurationError):
+            main()
+
+        sys.path.remove(self.TEST_DIR)

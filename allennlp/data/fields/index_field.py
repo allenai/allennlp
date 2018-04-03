@@ -52,3 +52,6 @@ class IndexField(Field[torch.Tensor]):
     @overrides
     def empty_field(self):
         return IndexField(-1, self.sequence_field.empty_field())
+
+    def __str__(self) -> str:
+        return f"IndexField with index: {self.sequence_index}."

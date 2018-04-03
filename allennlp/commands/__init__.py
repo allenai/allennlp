@@ -12,41 +12,29 @@ from allennlp.commands.serve import Serve
 from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.train import Train
 from allennlp.service.predictors import DemoModel
+from allennlp.common.util import import_submodules
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def main(prog: str = None,
-         model_overrides: Dict[str, DemoModel] = {},
-         predictor_overrides: Dict[str, str] = {},
          subcommand_overrides: Dict[str, Subcommand] = {}) -> None:
     """
     The :mod:`~allennlp.run` command only knows about the registered classes in the ``allennlp``
     codebase. In particular, once you start creating your own ``Model`` s and so forth, it won't
-    work for them, unless you use the ``--include-package`` flag available for most commands.
+    work for them, unless you use the ``--include-package`` flag.
     """
     # pylint: disable=dangerous-default-value
+    parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s', prog=prog)
 
-    # TODO(mattg): document and/or remove the `predictor_overrides` and `model_overrides` commands.
-    # The `--predictor` option for the `predict` command largely removes the need for
-    # `predictor_overrides`, and I think the simple server largely removes the need for
-    # `model_overrides`, and maybe the whole `serve` command as a public API (we only need that
-    # path for demo.allennlp.org, and it's not likely anyone else would host that particular demo).
-
-    # TODO(mattg): is it feasible to add `--include-package` somewhere in here, so it's included by
-    # all commands, instead of needing to be added manually for each one?
-
-    # TODO(mattg): is it the `[command]` here in the usage parameter that causes the funny
-    # duplication we see in the module docstrings?
-    parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s [command]', prog=prog)
     subparsers = parser.add_subparsers(title='Commands', metavar='')
 
     subcommands = {
             # Default commands
             "train": Train(),
             "evaluate": Evaluate(),
-            "predict": Predict(predictor_overrides),
-            "serve": Serve(model_overrides),
+            "predict": Predict(),
+            "serve": Serve(),
             "make-vocab": MakeVocab(),
             "elmo": Elmo(),
             "fine-tune": FineTune(),
@@ -56,7 +44,12 @@ def main(prog: str = None,
     }
 
     for name, subcommand in subcommands.items():
-        subcommand.add_subparser(name, subparsers)
+        subparser = subcommand.add_subparser(name, subparsers)
+        subparser.add_argument('--include-package',
+                               type=str,
+                               action='append',
+                               default=[],
+                               help='additional packages to include')
 
     args = parser.parse_args()
 
@@ -64,6 +57,9 @@ def main(prog: str = None,
     # So if no such attribute has been added, no subparser was triggered,
     # so give the user some help.
     if 'func' in dir(args):
+        # Import any additional modules needed (to register custom classes).
+        for package_name in args.include_package:
+            import_submodules(package_name)
         args.func(args)
     else:
         parser.print_help()

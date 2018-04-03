@@ -13,6 +13,7 @@ class SniffTest(AllenNlpTestCase):
                 'textual-entailment',
                 'coreference-resolution',
                 'named-entity-recognition',
+                'constituency-parsing'
         }
 
     def test_machine_comprehension(self):
@@ -33,11 +34,6 @@ class SniffTest(AllenNlpTestCase):
         sentence = "If you liked the music we were playing last night, you will absolutely love what we're playing tomorrow!"
 
         result = predictor.predict_json({"sentence": sentence})
-
-        assert result["tokens"] == [
-                "If", "you", "liked", "the", "music", "we", "were", "playing", "last", "night", ",",
-                "you", "will", "absolutely", "love", "what", "we", "'re", "playing", "tomorrow", "!"
-        ]
 
         assert result["words"] == [
                 "If", "you", "liked", "the", "music", "we", "were", "playing", "last", "night", ",",
@@ -117,3 +113,13 @@ class SniffTest(AllenNlpTestCase):
 
         assert result["words"] == ["Michael", "Jordan", "is", "a", "professor", "at", "Berkeley", "."]
         assert result["tags"] == ["B-PER", "L-PER", "O", "O", "O", "O", "U-LOC", "O"]
+
+    def test_constituency_parsing(self):
+        predictor = DEFAULT_MODELS['constituency-parsing'].predictor()
+
+        sentence = """Pierre Vinken died aged 81; immortalised aged 61."""
+
+        result = predictor.predict_json({"sentence": sentence})
+
+        assert result["tokens"] == ["Pierre", "Vinken", "died", "aged", "81", ";", "immortalised", "aged", "61", "."]
+        assert result["trees"] == "(S (NP (NNP Pierre) (NNP Vinken)) (VP (VP (VBD died) (NP (JJ aged) (CD 81))) (, ;) (VP (VBD immortalised) (S (ADJP (VBN aged) (NP (CD 61)))))) (. .))"

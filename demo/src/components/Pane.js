@@ -8,7 +8,7 @@ import React from 'react';
 class ResultDisplay extends React.Component {
 
     render() {
-      const { outputState } = this.props;
+      const { resultPane, outputState } = this.props;
 
       const placeholderTemplate = (message) => {
         return (
@@ -42,7 +42,7 @@ class ResultDisplay extends React.Component {
       }
 
       return (
-        <div className={`pane__right model__output ${outputState !== "received" ? "model__output--empty" : ""}`}>
+        <div className={`pane__${resultPane} model__output ${outputState !== "received" ? "model__output--empty" : ""}`}>
           <div className="pane__thumb"></div>
           {outputContent}
         </div>
@@ -60,12 +60,29 @@ export class PaneRight extends React.Component {
       const { outputState } = this.props;
 
       return (
-        <ResultDisplay outputState={outputState}>
+        <ResultDisplay resultPane="right" outputState={outputState}>
           {this.props.children}
         </ResultDisplay>
       )
     }
 }
+
+/*******************************************************************************
+  <PaneBottom /> Component
+*******************************************************************************/
+
+export class PaneBottom extends React.Component {
+  render() {
+    const { outputState } = this.props;
+
+    return (
+      <ResultDisplay resultPane="bottom" outputState={outputState}>
+        {this.props.children}
+      </ResultDisplay>
+    )
+  }
+}
+
 
 /*******************************************************************************
 <PaneLeft /> Component
@@ -80,4 +97,19 @@ export class PaneLeft extends React.Component {
         </div>
       );
     }
+}
+
+/*******************************************************************************
+<PaneTop /> Component
+*******************************************************************************/
+
+export class PaneTop extends React.Component {
+
+  render () {
+    return (
+      <div className="pane__top model__input">
+        {this.props.children}
+      </div>
+    );
+  }
 }

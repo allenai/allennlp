@@ -40,8 +40,11 @@ def main(param_file: str, extra_beaker_commands: List[str]):
 
     # Get temporary ecr login. For this command to work, you need the python awscli
     # package with a version more recent than 1.11.91.
+    print("Generating ECR Login Command")
+    login_command = subprocess.check_output('aws --region=us-west-2 ecr get-login --no-include-email', shell=True)
+
     print("Logging into ECR")
-    subprocess.run('eval $(aws --region=us-west-2 ecr get-login --no-include-email)', shell=True, check=True)
+    subprocess.run(login_command, shell=True, check=True)
 
     print(f"Building the Docker image ({image})")
     subprocess.run(f'docker build -t {image} .', shell=True, check=True)

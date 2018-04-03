@@ -110,6 +110,7 @@ setup(name='allennlp',
           'scipy',
           'pytz==2017.3'
       ],
+      scripts=["bin/allennlp"],
       setup_requires=['pytest-runner'],
       tests_require=['pytest'],
       include_package_data=True,

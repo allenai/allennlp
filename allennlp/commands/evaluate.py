@@ -5,13 +5,13 @@ and report any metrics calculated by the model.
 
 .. code-block:: bash
 
-    $ python -m allennlp.run evaluate --help
-    usage: python -m allennlp.run [command] evaluate [-h] --evaluation-data-file
-                                                    EVALUATION_DATA_FILE
-                                                    [--cuda-device CUDA_DEVICE]
-                                                    [-o OVERRIDES]
-                                                    [--include-package INCLUDE_PACKAGE]
-                                                    archive_file
+    $ allennlp evaluate --help
+    usage: allennlp [command] evaluate [-h] --evaluation-data-file
+                                            EVALUATION_DATA_FILE
+                                            [--cuda-device CUDA_DEVICE]
+                                            [-o OVERRIDES]
+                                            [--include-package INCLUDE_PACKAGE]
+                                            archive_file
 
     Evaluate the specified model + dataset
 
@@ -35,7 +35,7 @@ import argparse
 import logging
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.util import prepare_environment, import_submodules
+from allennlp.common.util import prepare_environment
 from allennlp.common.tqdm import Tqdm
 from allennlp.data import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -74,12 +74,6 @@ class Evaluate(Subcommand):
                                default="",
                                help='a HOCON structure used to override the experiment configuration')
 
-        subparser.add_argument('--include-package',
-                               type=str,
-                               action='append',
-                               default=[],
-                               help='additional packages to include')
-
         subparser.set_defaults(func=evaluate_from_args)
 
         return subparser
@@ -100,7 +94,7 @@ def evaluate(model: Model,
         description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
         generator_tqdm.set_description(description, refresh=False)
 
-    return model.get_metrics()
+    return model.get_metrics(reset=True)
 
 
 def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
@@ -108,10 +102,6 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     logging.getLogger('allennlp.common.params').disabled = True
     logging.getLogger('allennlp.nn.initializers').disabled = True
     logging.getLogger('allennlp.modules.token_embedders.embedding').setLevel(logging.INFO)
-
-    # Import any additional modules needed (to register custom classes)
-    for package_name in args.include_package:
-        import_submodules(package_name)
 
     # Load from archive
     archive = load_archive(args.archive_file, args.cuda_device, args.overrides, args.weights_file)

@@ -1,4 +1,3 @@
-
 from overrides import overrides
 import torch
 from torch.nn import Linear
@@ -91,6 +90,11 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
     def get_output_dim(self) -> int:
         return self._output_dim
 
+    @overrides
+    def is_bidirectional(self):
+        return False
+
+    @overrides
     def forward(self, tokens: torch.Tensor, mask: torch.Tensor):  # pylint: disable=arguments-differ
         batch_size, sequence_length, _ = tokens.size()
         # Shape: (batch_size, sequence_length, sequence_length)
@@ -141,9 +145,11 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
         similarity_function = SimilarityFunction.from_params(params.pop('similarity_function', {}))
         num_attention_heads = params.pop_int('num_attention_heads', 1)
         combination = params.pop('combination', '1,2')
+        output_dim = params.pop_int('output_dim', None)
         params.assert_empty(cls.__name__)
         return cls(input_dim=input_dim,
                    projection_dim=projection_dim,
                    similarity_function=similarity_function,
                    num_attention_heads=num_attention_heads,
-                   combination=combination)
+                   combination=combination,
+                   output_dim=output_dim)

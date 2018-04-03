@@ -7,7 +7,11 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, ones_like
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.training.metrics.metric import Metric
-from allennlp.data.dataset_readers.dataset_utils.span_utils import bio_tags_to_spans, TypedStringSpan
+from allennlp.data.dataset_readers.dataset_utils.span_utils import (
+        bio_tags_to_spans,
+        bioul_tags_to_spans,
+        TypedStringSpan
+)
 
 
 @Metric.register("span_f1")
@@ -25,7 +29,8 @@ class SpanBasedF1Measure(Metric):
     def __init__(self,
                  vocabulary: Vocabulary,
                  tag_namespace: str = "tags",
-                 ignore_classes: List[str] = None) -> None:
+                 ignore_classes: List[str] = None,
+                 label_encoding: str = "BIO") -> None:
         """
         Parameters
         ----------
@@ -47,7 +52,14 @@ class SpanBasedF1Measure(Metric):
 
             This is helpful for instance, to avoid computing metrics for "V"
             spans in a BIO tagging scheme which are typically not included.
+        label_encoding : ``str``, optional (default = "BIO")
+            The encoding used to specify label span endpoints in the sequence.
+            Valid options are "BIO" or "BIOUL".
         """
+        if label_encoding not in ["BIO", "BIOUL"]:
+            raise ConfigurationError("Unknown label encoding - expected 'BIO' or 'BIOUL'.")
+
+        self._label_encoding = label_encoding
         self._label_vocabulary = vocabulary.get_index_to_token_vocabulary(tag_namespace)
         self._ignore_classes: List[str] = ignore_classes or []
 
@@ -117,8 +129,13 @@ class SpanBasedF1Measure(Metric):
                                        for label_id in sequence_prediction[:length].tolist()]
             gold_string_labels = [self._label_vocabulary[label_id]
                                   for label_id in sequence_gold_label[:length].tolist()]
-            predicted_spans = bio_tags_to_spans(predicted_string_labels, self._ignore_classes)
-            gold_spans = bio_tags_to_spans(gold_string_labels, self._ignore_classes)
+
+            if self._label_encoding == "BIO":
+                predicted_spans = bio_tags_to_spans(predicted_string_labels, self._ignore_classes)
+                gold_spans = bio_tags_to_spans(gold_string_labels, self._ignore_classes)
+            elif self._label_encoding == "BIOUL":
+                predicted_spans = bioul_tags_to_spans(predicted_string_labels, self._ignore_classes)
+                gold_spans = bioul_tags_to_spans(gold_string_labels, self._ignore_classes)
 
             predicted_spans = self._handle_continued_spans(predicted_spans)
             gold_spans = self._handle_continued_spans(gold_spans)
