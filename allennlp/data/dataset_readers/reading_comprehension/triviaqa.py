@@ -218,7 +218,6 @@ def process_triviaqa_questions(evidence_path: pathlib.Path,
                                    max_paragraph_length=max_paragraph_length)
 
         if not merged_paragraphs:
-            logger.warning(f"unable to merge paragraphs for {question_id}, skipping")
             continue
 
         question = Question(id=question_id,
@@ -420,7 +419,6 @@ class TriviaQaReader(DatasetReader):
                 picked_paragraph_spans = paragraphs.token_spans
 
             if not picked_paragraph_tokens:
-                logger.warning(f"no paragraph tokens for {question.id}, skipping")
                 continue
 
             # Truncate tokens if necessary
