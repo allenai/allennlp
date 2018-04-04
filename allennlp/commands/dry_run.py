@@ -114,14 +114,7 @@ def verbosely_create_vocabulary(params: Params, instances: List[Instance]) -> Vo
     sequence_field_lengths: Dict[str, List] = defaultdict(list)
 
     for instance in instances:
-        for name, field in instance.fields.items():
-            if isinstance(field, SequenceField):
-                sequence_field_lengths[name].append(field.sequence_length())
-                if isinstance(field, ListField) and isinstance(field.field_list[0], SequenceField):
-                    for sub_field in field.field_list:
-                        sequence_field_lengths[name + "_sub_field"].append(sub_field.sequence_length())
         instance.count_vocab_items(namespace_token_counts)
-
     vocabulary = Vocabulary(counter=namespace_token_counts,
                             min_count=min_count,
                             max_vocab_size=max_vocab_size,
@@ -129,10 +122,20 @@ def verbosely_create_vocabulary(params: Params, instances: List[Instance]) -> Vo
                             pretrained_files=pretrained_files,
                             only_include_pretrained_words=only_include_pretrained_words)
 
+    for instance in instances:
+        instance.index_fields(vocabulary)
+        for key, value in instance.get_padding_lengths().items():
+            if isinstance(value, dict):
+                for sub_key, sub_value in value.items():
+                    sequence_field_lengths[f"{key}.{sub_key}"].append(sub_value)
+            else:
+                sequence_field_lengths[key].append(value)
+
     print("\n\n----Dataset Statistics----\n")
     for name, lengths in sequence_field_lengths.items():
         print(f"Statistics for {name}:")
-        print(f"\tLengths: Mean: {numpy.mean(lengths)}, Standard Dev: {numpy.std(lengths)}")
+        print(f"\tLengths: Mean: {numpy.mean(lengths)}, Standard Dev: {numpy.std(lengths)}, "
+              f"Max: {numpy.max(lengths)}, Min: {numpy.min(lengths)}")
 
     print("\n10 Random instances: ")
     for i in list(numpy.random.randint(len(instances), size=10)):
