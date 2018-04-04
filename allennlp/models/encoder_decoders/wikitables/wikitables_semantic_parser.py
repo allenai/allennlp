@@ -252,7 +252,6 @@ class WikiTablesSemanticParser(Model):
             feature_scores = self._linking_params(linking_features).squeeze(3)
             linking_scores = question_entity_similarity_max_score + feature_scores
         else:
-            # pylint: disable=line-too-long
             # The linking score is computed as a linear projection of two terms. The first is the maximum
             # similarity score over the entity's words and the question token. The second is the maximum
             # similarity over the words in the entity's neighbors and the question token.
@@ -266,8 +265,10 @@ class WikiTablesSemanticParser(Model):
                                                                      torch.abs(neighbor_indices))
             # (batch_size, num_entities, num_question_tokens)
             question_neighbor_similarity_max_score, _ = torch.max(question_neighbor_similarity, 2)
-            projected_question_entity_similarity = self._question_entity_params(question_entity_similarity_max_score.unsqueeze(-1)).squeeze(-1)
-            projected_question_neighbor_similarity = self._question_neighbor_params(question_neighbor_similarity_max_score.unsqueeze(-1)).squeeze(-1)
+            projected_question_entity_similarity = self._question_entity_params(
+                    question_entity_similarity_max_score.unsqueeze(-1)).squeeze(-1)
+            projected_question_neighbor_similarity = self._question_neighbor_params(
+                    question_neighbor_similarity_max_score.unsqueeze(-1)).squeeze(-1)
             linking_scores = projected_question_entity_similarity + projected_question_neighbor_similarity
 
         # (batch_size, num_question_tokens, num_entities)
