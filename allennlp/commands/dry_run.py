@@ -4,6 +4,26 @@ dataset statistics and other training utilities without actually training
 a model.
 
 .. code-block:: bash
+    $ allennlp dry-run --help
+    usage: python -m allennlp.run dry-run [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
+                                      [--include-package INCLUDE_PACKAGE]
+                                      param_path
+
+    Create a vocabulary, compute dataset statistics and other training utilities.
+
+    positional arguments:
+    param_path            path to parameter file describing the model and its
+                            inputs
+
+    optional arguments:
+    -h, --help            show this help message and exit
+    -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
+                            directory in which to save the output of the dry run.
+    -o OVERRIDES, --overrides OVERRIDES
+                            a HOCON structure used to override the experiment
+                            configuration
+    --include-package INCLUDE_PACKAGE
+                            additional packages to include
 """
 from typing import Dict, List
 from collections import defaultdict
@@ -20,7 +40,6 @@ from allennlp.common.params import Params
 from allennlp.common.util import prepare_environment
 from allennlp.data.vocabulary import DEFAULT_NON_PADDED_NAMESPACES
 from allennlp.data import Vocabulary, Instance
-from allennlp.data.fields import SequenceField, ListField
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -29,8 +48,10 @@ class DryRun(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         # pylint: disable=protected-access
         description = '''Create a vocabulary, compute dataset statistics and other training utilities.'''
-        subparser = parser.add_parser(
-                name, description=description, help='Create a vocabulary')
+        subparser = parser.add_parser(name,
+                                      description=description,
+                                      help='Create a vocabulary, compute dataset statistics '
+                                           'and other training utilities.')
         subparser.add_argument('param_path',
                                type=str,
                                help='path to parameter file describing the model and its inputs')
@@ -65,7 +86,7 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
     prepare_environment(params)
 
     vocab_params = params.pop("vocabulary", {})
-    vocab_dir = vocab_params.get('directory_path')
+    vocab_dir = vocab_params.pop('directory_path', None)
 
     if vocab_dir is not None:
         logger.info("Found a directory_path parameter in your config. "
@@ -100,14 +121,29 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
         vocabulary.save_to_files(vocab_dir)
 
 
-def verbosely_create_vocabulary(params: Params, instances: List[Instance]) -> Vocabulary:
+def verbosely_create_vocabulary(vocab_params: Params, instances: List[Instance]) -> Vocabulary:
+    """
+    Given a parameter config specifying a vocabulary and a list of instances, this function
+    creates a Vocabulary from the instances. Additionally, it logs corpus statistics, prints
+    a random selection of instances and prints vocabulary sizes and namespaces.
 
-    min_count = params.pop("min_count", None)
-    max_vocab_size = params.pop_int("max_vocab_size", None)
-    non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
-    pretrained_files = params.pop("pretrained_files", {})
-    only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
-    params.assert_empty("Vocabulary - from dataset")
+    Parameters
+    ----------
+    vocab_params : ``Params``, required
+        The parameters for the Vocabulary we create.
+    instances : ``List[Instance]``, required.
+        The instances to build the vocabulary from.
+
+    Returns
+    -------
+    The created Vocabulary.
+    """
+    min_count = vocab_params.pop("min_count", None)
+    max_vocab_size = vocab_params.pop_int("max_vocab_size", None)
+    non_padded_namespaces = vocab_params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
+    pretrained_files = vocab_params.pop("pretrained_files", {})
+    only_include_pretrained_words = vocab_params.pop_bool("only_include_pretrained_words", False)
+    vocab_params.assert_empty("Vocabulary - from dataset")
 
     logger.info("Fitting token dictionary from dataset.")
     namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
@@ -125,8 +161,8 @@ def verbosely_create_vocabulary(params: Params, instances: List[Instance]) -> Vo
     for instance in instances:
         instance.index_fields(vocabulary)
         for field, field_padding_lengths in instance.get_padding_lengths().items():
-                for key, value in field_padding_lengths.items():
-                    sequence_field_lengths[f"{field}.{key}"].append(value)
+            for key, value in field_padding_lengths.items():
+                sequence_field_lengths[f"{field}.{key}"].append(value)
 
     print("\n\n----Dataset Statistics----\n")
     for name, lengths in sequence_field_lengths.items():
