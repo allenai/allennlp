@@ -124,12 +124,9 @@ def verbosely_create_vocabulary(params: Params, instances: List[Instance]) -> Vo
 
     for instance in instances:
         instance.index_fields(vocabulary)
-        for key, value in instance.get_padding_lengths().items():
-            if isinstance(value, dict):
-                for sub_key, sub_value in value.items():
-                    sequence_field_lengths[f"{key}.{sub_key}"].append(sub_value)
-            else:
-                sequence_field_lengths[key].append(value)
+        for field, field_padding_lengths in instance.get_padding_lengths().items():
+                for key, value in field_padding_lengths.items():
+                    sequence_field_lengths[f"{field}.{key}"].append(value)
 
     print("\n\n----Dataset Statistics----\n")
     for name, lengths in sequence_field_lengths.items():
