@@ -98,9 +98,6 @@ class WikiTablesSemanticParser(Model):
             self._dropout = lambda x: x
         self._rule_namespace = rule_namespace
 
-        check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
-                               "entity word average embedding dim", "question embedding dim")
-
         self._action_padding_index = -1  # the padding value used by IndexField
         self._action_embedder = Embedding(num_embeddings=vocab.get_vocab_size(self._rule_namespace),
                                           embedding_dim=action_embedding_dim)
@@ -112,13 +109,13 @@ class WikiTablesSemanticParser(Model):
         torch.nn.init.normal(self._first_action_embedding)
         torch.nn.init.normal(self._first_attended_question)
 
-        self.num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
-
-        self._embedding_dim = question_embedder.get_output_dim()
         check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
                                "entity word average embedding dim", "question embedding dim")
 
-        self._type_params = torch.nn.Linear(self.num_entity_types, self._embedding_dim)
+        self._num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
+        self._num_start_types = 5  # TODO(mattg): get this in a more principled way somehow?
+        self._embedding_dim = question_embedder.get_output_dim()
+        self._type_params = torch.nn.Linear(self._num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
         if num_linking_features > 0:
             self._linking_params = torch.nn.Linear(num_linking_features, 1)
@@ -132,7 +129,8 @@ class WikiTablesSemanticParser(Model):
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
                                                    attention_function=attention_function,
-                                                   num_entity_types=self.num_entity_types,
+                                                   num_start_types=self._num_start_types,
+                                                   num_entity_types=self._num_entity_types,
                                                    mixture_feedforward=mixture_feedforward,
                                                    dropout=dropout)
 
@@ -511,7 +509,7 @@ class WikiTablesSemanticParser(Model):
             # implicitly sorted by their types when we sort them by name, and that numbers come
             # before "fb:cell", and "fb:cell" comes before "fb:row".  This is not a great
             # assumption, and could easily break later, but it should work for now.
-            for type_index in range(self.num_entity_types):
+            for type_index in range(self._num_entity_types):
                 # This index of 0 is for the null entity for each type, representing the case where a
                 # word doesn't link to any entity.
                 entity_indices = [0]
