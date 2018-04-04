@@ -4,6 +4,7 @@ dataset statistics and other training utilities without actually training
 a model.
 
 .. code-block:: bash
+
     $ allennlp dry-run --help
     usage: python -m allennlp.run dry-run [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
                                       [--include-package INCLUDE_PACKAGE]
