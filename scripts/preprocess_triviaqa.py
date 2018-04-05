@@ -31,13 +31,8 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s
                     level=logging.INFO)
 
 from allennlp.common import Params
-from allennlp.common.util import lazy_groups_of
-from allennlp.data import Instance
 from allennlp.data.tokenizers import Tokenizer
-from allennlp.data.tokenizers.token import Token, token_to_json, json_to_token
-from allennlp.data.dataset_readers.reading_comprehension import util
-from allennlp.data.dataset_readers.reading_comprehension.triviaqa import Question, MergedParagraphs, process_triviaqa_questions
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.dataset_readers.reading_comprehension.triviaqa import process_triviaqa_questions
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +56,6 @@ def main(triviaqa_path: pathlib.Path, outdir: pathlib.Path):
 
     for questions_file, topn, require_answer in [('web-train.json', 4, True),
                                                  ('web-dev.json', 15, False)]:
-        if 'train' in questions_file: continue
         logger.info(f"starting questions file {questions_file}")
         questions_path = triviaqa_path / 'qa' / questions_file
 
@@ -71,7 +65,7 @@ def main(triviaqa_path: pathlib.Path, outdir: pathlib.Path):
             for question in process_triviaqa_questions(evidence_path=triviaqa_path,
                                                        questions_path=questions_path,
                                                        tokenizer=tokenizer,
-                                                       topn=topn,
+                                                       max_paragraphs=topn,
                                                        require_answer=require_answer):
                 f.write(json.dumps(question.to_json()))
                 f.write("\n")
