@@ -14,6 +14,7 @@ allennlp.service.predictors
 * :ref:`CorefPredictor<coreference-resolution>`
 * :ref:`ConstituencyParserPredictor<constituency-parser>`
 * :ref:`WikiTablesParserPredictor<wikitables-parser>`
+* :ref:`NlvrParserPredictor<nlvr-parser>`
 
 .. _predictor:
 .. automodule:: allennlp.service.predictors.predictor
@@ -59,6 +60,12 @@ allennlp.service.predictors
 
 .. _wikitables-parser:
 .. automodule:: allennlp.service.predictors.wikitables_parser
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _nlvr-parser:
+.. automodule:: allennlp.service.predictors.nlvr_parser
    :members:
    :undoc-members:
    :show-inheritance:
