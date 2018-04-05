@@ -81,9 +81,6 @@ class WikiTablesSemanticParser(Model):
         current attention on question words.  If ``embed_terminals`` is ``False``, instead of
         constructing an embedding for terminal (that is, table-specific) entity productions, we
         will compute scores for these actions using the linking score and current attention.
-    rule_namespace : ``str``, optional (default=rule_labels)
-        The vocabulary namespace to use for production rules.  The default corresponds to the
-        default used in the dataset reader, so you likely don't need to modify this.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -115,7 +112,6 @@ class WikiTablesSemanticParser(Model):
             self._dropout = torch.nn.Dropout(p=dropout)
         else:
             self._dropout = lambda x: x
-        self._rule_namespace = rule_namespace
 
         check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
                                "entity word average embedding dim", "question embedding dim")
@@ -873,7 +869,6 @@ class WikiTablesSemanticParser(Model):
         dropout = params.pop_float('dropout', 0.0)
         num_linking_features = params.pop_int('num_linking_features', 8)
         embed_terminals = params.pop('embed_terminals', False)
-        rule_namespace = params.pop('rule_namespace', 'rule_labels')
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    question_embedder=question_embedder,
@@ -887,5 +882,4 @@ class WikiTablesSemanticParser(Model):
                    attention_function=attention_function,
                    dropout=dropout,
                    num_linking_features=num_linking_features,
-                   embed_terminals=embed_terminals,
-                   rule_namespace=rule_namespace)
+                   embed_terminals=embed_terminals)
