@@ -11,7 +11,7 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
 
 The preferred way to install AllenNLP is via `pip`.
 
-tldr; Just run `pip install allennlp` in your python 3.6 environment, install pytorch 0.3.1 from their [website](http://pytorch.org/), and you're good to go!
+tldr; Just run `pip install allennlp` in your python 3.6 environment and you're good to go!
 If you need pointers on setting up a python 3.6 environment, see below.
 
 _Just want AllenNLP models running as a service via Docker? `docker run --rm  -p 8000:8000 allennlp/allennlp:v0.4.1 python -m allennlp.run serve`_
@@ -20,7 +20,7 @@ _Just want AllenNLP models running as a service via Docker? `docker run --rm  -p
 
 [Conda](https://conda.io/) can be used set up a virtual environment
 with the version of Python required for AllenNLP and in which you can
-sandbox its dependencies. If you already have a python 3.6 environment 
+sandbox its dependencies. If you already have a python 3.6 environment
 you want to use, you can skip to the 'installing via pip' section.
 
 1.  [Download and install Conda](https://conda.io/docs/download.html).
@@ -45,11 +45,11 @@ you want to use, you can skip to the 'installing via pip' section.
     pip install allennlp
     ```
 
-2. Visit http://pytorch.org/ and install the PyTorch 0.3.1 package for your system.
-
 That's it! You're now ready to build and train AllenNLP models.
 AllenNLP installs a script when you install the python package, meaning you can run allennlp commands just by typing `allennlp` into a terminal.
 
+_`pip` currently installs Pytorch for CUDA 8 only (or no GPU). If you require a newer version,
+please visit http://pytorch.org/ and install the relevant pytorch binary._
 
 ## Installing using Docker
 
