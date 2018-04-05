@@ -24,7 +24,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                  action_embedding_dim: int,
                  attention_function: SimilarityFunction,
                  num_entity_types: int,
-                 mixture_feedforward: FeedForward,
+                 mixture_feedforward: FeedForward = None,
                  dropout: float = 0.0) -> None:
         super(WikiTablesDecoderStep, self).__init__()
         self._mixture_feedforward = mixture_feedforward
