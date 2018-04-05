@@ -90,7 +90,7 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
     vocab_dir = vocab_params.pop('directory_path', None)
 
     if vocab_dir is not None:
-        logger.info("Found a directory_path parameter in your config. "
+        logger.info("Found a vocabulary.directory_path parameter in your config. "
                     "Also saving the vocab we create to that location.")
         os.makedirs(vocab_dir, exist_ok=True)
 
@@ -114,10 +114,10 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
     logger.info(f"writing the vocabulary to {serialization_dir}.")
     vocabulary.save_to_files(os.path.join(serialization_dir, "vocabulary"))
     if vocab_dir is not None and os.path.exists(vocab_dir) and os.listdir(vocab_dir) is not None:
-        logger.info(f"You passed a directory_path in your config which already exists and is non-empty. "
+        logger.info(f"You passed a vocabulary.directory_path in your config which already exists and is non-empty. "
                     f"Refusing to overwrite - we saved it to {serialization_dir} instead.")
     elif vocab_dir is not None:
-        logger.info(f"You passed a directory_path in your config which was empty. Also "
+        logger.info(f"You passed a vocabulary.directory_path in your config which was empty. Also "
                     f"writing the vocabulary to {vocab_dir}.")
         vocabulary.save_to_files(vocab_dir)
 
@@ -139,6 +139,9 @@ def verbosely_create_vocabulary(vocab_params: Params, instances: List[Instance])
     -------
     The created Vocabulary.
     """
+    # This is exactly the code in Vocabulary.from_params,
+    # but we want to retain access to the counter we use to
+    # index the data so we can compute statistics about the corpus.
     min_count = vocab_params.pop("min_count", None)
     max_vocab_size = vocab_params.pop_int("max_vocab_size", None)
     non_padded_namespaces = vocab_params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
