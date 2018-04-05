@@ -7,7 +7,7 @@ from allennlp.semparse.worlds import NlvrWorld
 class TestNlvrDatasetReader(AllenNlpTestCase):
     def test_reader_reads_ungrouped_data(self):
         test_file = "tests/fixtures/data/nlvr/sample_ungrouped_data.jsonl"
-        dataset = NlvrDatasetReader(add_paths_to_agenda=False).read(test_file)
+        dataset = NlvrDatasetReader().read(test_file)
         instances = list(dataset)
         assert len(instances) == 3
         instance = instances[0]
@@ -28,8 +28,8 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         label = instance.fields["labels"].field_list[0].label
         assert label == "true"
 
-    def test_agenda_indices_are_correct_without_paths(self):
-        reader = NlvrDatasetReader(add_paths_to_agenda=False)
+    def test_agenda_indices_are_correct(self):
+        reader = NlvrDatasetReader()
         test_file = "tests/fixtures/data/nlvr/sample_ungrouped_data.jsonl"
         dataset = reader.read(test_file)
         instances = list(dataset)
@@ -43,24 +43,9 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         expected_agenda_actions = world.get_agenda_for_sentence(sentence, add_paths_to_agenda=False)
         assert expected_agenda_actions == agenda_actions
 
-    def test_agenda_indices_are_correct_with_paths(self):
-        reader = NlvrDatasetReader()
-        test_file = "tests/fixtures/data/nlvr/sample_ungrouped_data.jsonl"
-        dataset = reader.read(test_file)
-        instances = list(dataset)
-        instance = instances[0]
-        sentence_tokens = instance.fields["sentence"].tokens
-        sentence = " ".join([t.text for t in sentence_tokens])
-        agenda = [item.sequence_index for item in instance.fields["agenda"].field_list]
-        actions = [action.rule for action in instance.fields["actions"].field_list]
-        agenda_actions = [actions[i] for i in agenda]
-        world = instance.fields["worlds"].field_list[0].as_tensor({})
-        expected_agenda_actions = world.get_agenda_for_sentence(sentence, add_paths_to_agenda=True)
-        assert expected_agenda_actions == agenda_actions
-
     def test_reader_reads_grouped_data(self):
         test_file = "tests/fixtures/data/nlvr/sample_grouped_data.jsonl"
-        dataset = NlvrDatasetReader(add_paths_to_agenda=False).read(test_file)
+        dataset = NlvrDatasetReader().read(test_file)
         instances = list(dataset)
         assert len(instances) == 1
         instance = instances[0]
@@ -86,7 +71,7 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         # Processed data contains action sequences that yield the correct denotations, obtained from
         # an offline search.
         test_file = "tests/fixtures/data/nlvr/sample_processed_data.jsonl"
-        dataset = NlvrDatasetReader(add_paths_to_agenda=False).read(test_file)
+        dataset = NlvrDatasetReader().read(test_file)
         instances = list(dataset)
         assert len(instances) == 2
         instance = instances[0]
