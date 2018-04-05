@@ -14,3 +14,4 @@ from .coref import CorefPredictor
 from .sentence_tagger import SentenceTaggerPredictor
 from .constituency_parser import ConstituencyParserPredictor
 from .wikitables_parser import WikiTablesParserPredictor
+from .ratecalculus_parser import RateCalculusParserPredictor

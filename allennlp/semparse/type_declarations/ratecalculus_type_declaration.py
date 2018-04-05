@@ -62,7 +62,7 @@ add_common_name_with_type("Dollar", "D", DIMENSION_TYPE)
 add_common_name_with_type("Unit", "U", DIMENSION_TYPE)
 
 # Variables
-add_common_name_with_type("s", "S", OBJECT_TYPE)
-add_common_name_with_type("t", "T", OBJECT_TYPE)
-add_common_name_with_type("p", "P", NUMBER_TYPE)
-add_common_name_with_type("q", "Q", NUMBER_TYPE)
+add_common_name_with_type("fb:s", "S", OBJECT_TYPE)
+add_common_name_with_type("fb:t", "T", OBJECT_TYPE)
+add_common_name_with_type("fb:p", "P", NUMBER_TYPE)
+add_common_name_with_type("fb:q", "Q", NUMBER_TYPE)

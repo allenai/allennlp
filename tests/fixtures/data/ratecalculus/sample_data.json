@@ -8,7 +8,7 @@
         "lSolutions": [
             "20.0"
         ],
-        "lSemantics": "(Equals (Value s Dollar) 20)"
+        "lSemantics": "(Equals (Value fb:s Dollar) 20)"
   },
   {
         "iIndex": "998",
@@ -19,6 +19,6 @@
         "lSolutions": [
             "130.0"
         ],
-        "lSemantics": "(And (Equals (Rate s Dollar Unit) 20) (And (Equals (Value s Unit) 5) (And (Equals (Rate t Dollar Unit) 10) (And (Equals (Value t Unit) 3) (Equals (Value (Join s t) Dollar) p)))"
+        "lSemantics": "(And (Equals (Rate fb:s Dollar Unit) 20) (And (Equals (Value fb:s Unit) 5) (And (Equals (Rate fb:t Dollar Unit) 10) (And (Equals (Value fb:t Unit) 3) (Equals (Value (Join fb:s fb:t) Dollar) fb:p)))"
   }
 ]

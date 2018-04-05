@@ -90,6 +90,7 @@ class RateCalculusSemanticParser(Model):
         self._action_embedder = Embedding(num_embeddings=vocab.get_vocab_size(self._rule_namespace),
                                           embedding_dim=action_embedding_dim)
         self._initial_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
+        torch.nn.init.normal(self._initial_action_embedding)
 
         # WARNING: CHANGEME
         self.num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
@@ -358,6 +359,9 @@ class RateCalculusSemanticParser(Model):
             for entity in world.question_knowledge_graph.entities:
                 if len(world.question_knowledge_graph.neighbors[entity]) > num_neighbors:
                     num_neighbors = len(world.question_knowledge_graph.neighbors[entity])
+
+        if(num_neighbors == 0):
+            num_neighbors = 1
 
         batch_neighbors = []
         for world in worlds:

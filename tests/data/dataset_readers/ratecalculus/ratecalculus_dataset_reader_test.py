@@ -9,7 +9,7 @@ expected_sample_actions = {
         '<n,<n,b>> -> Equals',
         'n -> [<o,<d,n>>, o, d]',
         '<o,<d,n>> -> Value',
-        'o -> s',
+        'o -> fb:s',
         'd -> Dollar',
         'n -> 20'],
     1: ['@START@ -> b',
@@ -19,7 +19,7 @@ expected_sample_actions = {
         '<n,<n,b>> -> Equals',
         'n -> [<o,<d,n>>, o, d]',
         '<o,<d,n>> -> Value',
-        'o -> s',
+        'o -> fb:s',
         'd -> Unit',
         'n -> 5',
         'b -> [<b,<b,b>>, b, b]',
@@ -28,7 +28,7 @@ expected_sample_actions = {
         '<n,<n,b>> -> Equals',
         'n -> [<o,<d,<d,n>>>, o, d, d]',
         '<o,<d,<d,n>>> -> Rate',
-        'o -> t',
+        'o -> fb:t',
         'd -> Dollar',
         'd -> Unit',
         'n -> 10',
@@ -38,7 +38,7 @@ expected_sample_actions = {
         '<n,<n,b>> -> Equals',
         'n -> [<o,<d,n>>, o, d]',
         '<o,<d,n>> -> Value',
-        'o -> t',
+        'o -> fb:t',
         'd -> Unit',
         'n -> 3',
         'b -> [<n,<n,b>>, n, n]',
@@ -47,10 +47,10 @@ expected_sample_actions = {
         '<o,<d,n>> -> Value',
         'o -> [<o,<o,o>>, o, o]',
         '<o,<o,o>> -> Join',
-        'o -> s',
-        'o -> t',
+        'o -> fb:s',
+        'o -> fb:t',
         'd -> Dollar',
-        'n -> p']
+        'n -> fb:p']
 }
 
 expected_alg514_actions = {
@@ -59,7 +59,7 @@ expected_alg514_actions = {
         '<n,<n,b>> -> Equals',
         'n -> [<o,<d,n>>, o, d]',
         '<o,<d,n>> -> Value',
-        'o -> s',
+        'o -> fb:s',
         'd -> Dollar',
         'n -> 20']
 }
@@ -124,7 +124,7 @@ def assert_sample_dataset_correct(dataset):
 
 def assert_alg514_dataset_correct(dataset):
     instances = list(dataset)
-    assert len(instances) == 514
+    assert len(instances) == 512
 
     #for i, instance in enumerate(instances):
     #    assert_alg514_instances_correct(instance, expected_alg514_actions[i])
@@ -139,6 +139,6 @@ class RateCalculusDatasetReaderTest(AllenNlpTestCase):
     def test_reader_reads_alg514(self):
         reader = RateCalculusDatasetReader(lazy=False)
         dataset = reader.read("tests/fixtures/data/ratecalculus/alg514_binaryAnd_unitDims_simplifiedVars.json")
-        #assert_alg514_dataset_correct(dataset)
+        assert_alg514_dataset_correct(dataset)
 
 

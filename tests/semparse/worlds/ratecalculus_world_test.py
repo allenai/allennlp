@@ -25,28 +25,28 @@ class TestRateCalculusWorld(AllenNlpTestCase):
         assert str(expression) == "E(num:50,num:20)"
 
     def test_world_parses_values(self):
-        sempre_form = "(Value s Dollar)"
+        sempre_form = "(Value fb:s Dollar)"
         expression = self.world.parse_logical_form(sempre_form)
         assert str(expression) == "V1(S,D)"
 
     def test_world_parses_rates(self):
-        sempre_form = "(Rate s Dollar Unit)"
+        sempre_form = "(Rate fb:s Dollar Unit)"
         expression = self.world.parse_logical_form(sempre_form)
         assert str(expression) == "R1(S,D,U)"
 
     def test_world_parses_value_constraint(self):
-        sempre_form = "(Equals (Value s Dollar) 20)"
+        sempre_form = "(Equals (Value fb:s Dollar) 20)"
         expression = self.world.parse_logical_form(sempre_form)
         print("ACTION SEQ: ", self.world.get_action_sequence(expression))
         assert str(expression) == "E(V1(S,D),num:20)"
 
     def test_world_parses_rate_constraint(self):
-        sempre_form = "(Equals (Rate s Dollar Unit) 20)"
+        sempre_form = "(Equals (Rate fb:s Dollar Unit) 20)"
         expression = self.world.parse_logical_form(sempre_form)
         assert str(expression) == "E(R1(S,D,U),num:20)"
 
     def test_world_parses_union_constraint(self):
-        sempre_form = "(Equals (Value (Join s t) Dollar) 20)"
+        sempre_form = "(Equals (Value (Join fb:s fb:t) Dollar) 20)"
         expression = self.world.parse_logical_form(sempre_form)
         assert str(expression) == "E(V1(J1(S,T),D),num:20)"
 
@@ -56,7 +56,7 @@ class TestRateCalculusWorld(AllenNlpTestCase):
         assert str(expression) == "A(E(num:20,num:20),E(num:50,num:50))"
 
     def test_world_parses_nested_conjunction(self):
-        sempre_form = "(And (Equals p q) (And (Equals 20 20) (Equals 50 50)))"
+        sempre_form = "(And (Equals fb:p fb:q) (And (Equals 20 20) (Equals 50 50)))"
         expression = self.world.parse_logical_form(sempre_form)
         assert str(expression) == "A(E(P,Q),A(E(num:20,num:20),E(num:50,num:50)))"
 
@@ -74,7 +74,8 @@ class TestRateCalculusWorld(AllenNlpTestCase):
                 '<o,<d,<d,n>>>',
                 '<o,<d,n>>',
                 '<b,<b,b>>',
-                '<n,<n,b>>'
+                '<n,<n,b>>',
+                '<n,<n,n>>'
                 }
 
         check_productions_match(valid_actions['@START@'],
@@ -87,10 +88,10 @@ class TestRateCalculusWorld(AllenNlpTestCase):
                                 ['Dollar', 'Unit'])
 
         check_productions_match(valid_actions['n'],
-                                ['20', '50', '[<o,<d,<d,n>>>, o, d, d]', '[<o,<d,n>>, o, d]', 'p', 'q'])
+                                ['20', '50', '[<o,<d,<d,n>>>, o, d, d]', '[<o,<d,n>>, o, d]', 'fb:p', 'fb:q', '1', '[<n,<n,n>>, n, n]'])
 
         check_productions_match(valid_actions['o'],
-                                ['[<o,<o,o>>, o, o]', 's', 't'])
+                                ['[<o,<o,o>>, o, o]', 'fb:s', 'fb:t'])
 
         check_productions_match(valid_actions['<o,<d,n>>'],
                                 ['Value'])
