@@ -51,7 +51,8 @@
       "type": "bilinear",
       "tensor_1_dim": 200,
       "tensor_2_dim": 200
-    }
+    },
+    "dropout": 0.5
   },
   "iterator": {
     "type": "basic",
