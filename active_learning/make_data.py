@@ -35,16 +35,22 @@ def process(args):
         dtype = torch.FloatTensor
 
     for i in range(len(start)):
+    # for i in range(50):
 
-        print(ids[i])
-        # e.append(get_scores_using_logits(start[i], end[i], dtype))
-        e.append(get_scores_using_softmax(start[i], end[i], dtype))
+        # print(ids[i])
+        e.append(get_scores_using_logits(start[i], end[i], dtype))
+        # e.append(get_scores_using_softmax(start[i], end[i], dtype))
     #
-    # df = pd.DataFrame(list(zip(ids, e)), columns=['ids', 'entropy'])
-    # dfsorted = df.sort_values('entropy')
-    # idx = int(args.percent * len(dfsorted) / 100)
-    # ids = dfsorted[:idx].ids
-    # return ids
+    print("Sorting now")
+    df = pd.DataFrame(list(zip(ids, e)), columns=['ids', 'entropy'])
+    # print(df)
+    dfsorted = df.sort_values('entropy')
+    print(dfsorted)
+    idx = int(args.percent * len(dfsorted) / 100)
+    # print(idx)
+    ids = dfsorted[:idx].ids
+    # print(ids)
+    return ids
 
 
 def get_scores_using_logits(start, end, dtype):
@@ -55,26 +61,24 @@ def get_scores_using_logits(start, end, dtype):
     end = end.type(dtype)
     s_p = start
     e_p = end
-    # s_p = torch.nn.functional.softmax(torch.autograd.Variable(start), dim=0).data
-    # e_p = torch.nn.functional.softmax(torch.autograd.Variable(end), dim=1).data
-    # print(s_p, e_p)
-    # print(s_p.shape, e_p.shape)
+
     score_mul = s_p * e_p
     score_mul = torch.triu(score_mul)
-    # print(score_mul)
+
     score_sum = torch.sum(score_mul)
-    # print(score_sum)
+
     score_mul = score_mul / score_sum
     score_mul[score_mul<=0]=1
-    # print(score_mul)
+
     y = torch.log(score_mul)
-    # print("log")
-    # print(y)
+
     y = score_mul * y
-    # print("mul")
-    # print(y)
-    print("total ")
-    print(-1 * torch.sum(y))
+
+    # print("total ")
+    total = -1 * torch.sum(y)
+    # print(total)
+
+    return total
 
 
 '''
@@ -85,68 +89,55 @@ def get_scores_using_softmax(start, end, dtype):
 
     start = start.type(dtype)
     end = end.type(dtype)
-    # s_p = start
-    # e_p = end
+
     s_p = torch.nn.functional.softmax(torch.autograd.Variable(start), dim=0).data
     e_p = torch.nn.functional.softmax(torch.autograd.Variable(end), dim=1).data
-    # print(s_p, e_p)
-    # print(s_p.shape, e_p.shape)
+
     score_mul = s_p * e_p
     score_mul = torch.triu(score_mul)
-    # print(score_mul)
+
     score_sum = torch.sum(score_mul)
-    # print(score_sum)
+
     score_mul = score_mul / score_sum
     score_mul[score_mul==0]=1
-    # print(score_mul)
-    y = torch.log(score_mul)
-    # print("log")
-    # print(y)
-    y = score_mul * y
-    # print("mul")
-    # print(y)
-    print("total ")
-    print(-1 * torch.sum(y))
 
-    '''
-    prob = []
-    for i in range(len(start)):
-        p = np.multiply(start[i], end[i:])
-        for pr in p:
-            prob.append(pr)
-    prob = prob / (sum(prob) * 1.0)
-    entro = []
-    for p in prob:
-        if p != 0.0:
-            entro.append(p * np.log2(float(p)))
-    if len(entro) == 0:
-        e = 0
-    else:
-        e = -1 * sum(entro)
-    '''
-    return 0
+    y = torch.log(score_mul)
+
+    y = score_mul * y
+
+    # print("total ")
+    total = -1 * torch.sum(y)
+    # print(total)
+
+    return total
 
 
 def make_newdata(ids, args):
+
+    ids = list(ids)
+
     file = open(args.source_file, 'rb')
     f = json.load(file)
     data = f['data']
-    data = []
+    new_data = []
     for item in data:
         paragraphs = item['paragraphs']
         for p in paragraphs:
             paragraph = []
             context = p['context']
             qas = p['qas']
+            qas_new = []
             for q in qas:
-                id = q[id]
-                if id not in reqlist:
-                    qas.remove(q)
-            if len(qas) != 0:
-                paragraph.append({"qas": qas, "context": context})
+                id = q['id']
+                if id in ids:
+                    # print("FOUND IT")
+                    print(q['id'])
+                    qas_new.append(q)
+            if len(qas_new) != 0:
+                paragraph.append({"context": context, "qas": qas_new})
             if len(paragraph) != 0:
-                data.append({"paragraphs": paragraph, "title": "Hello"})
-    jsonfinal = {"data": data, "version": "3"}
+                new_data.append({"paragraphs": paragraph, "title": "Hello"})
+    jsonfinal = {"data": new_data, "version": "4"}
 
     with open(args.target_file, 'w') as fp:
         json.dump(jsonfinal, fp)
@@ -156,38 +147,10 @@ def main():
     args = get_args()
     ids = process(args)
     # print(ids)
-    # make_newdata(ids, args)
+    # print(ids)
+    # ids = []
+    make_newdata(ids, args)
 
 
 if __name__ == "__main__":
     main()
-    '''
-    x = torch.FloatTensor(torch.randn(2,4))
-    a = np.array([[1,2,3]])
-    b = np.array([[4,5,6]])
-    a = torch.from_numpy(a.transpose())
-    b = torch.from_numpy(b)
-    # b = torch.transpose(b)
-    x = torch.matmul(a, b)
-    # print(a, b, x)
-    print(x)
-    x = x.type(torch.FloatTensor)
-    # print(torch.min(x))
-    # x = x - (torch.min(x))
-    # print(x)
-
-    x_sum = torch.sum(x)
-    x = x/x_sum
-    y = torch.log(x)
-    print(y)
-
-    y = x * y
-    print(y)
-    z = torch.triu(y)
-    print(z)
-    print(-1 * torch.sum(z))
-    
-    '''
-    # z_sum = torch.sum(z)
-    # print(z_sum)
-    # print(z / z_sum)
