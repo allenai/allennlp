@@ -114,8 +114,8 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
     logger.info(f"writing the vocabulary to {serialization_dir}.")
     vocabulary.save_to_files(os.path.join(serialization_dir, "vocabulary"))
     if vocab_dir is not None and os.path.exists(vocab_dir) and os.listdir(vocab_dir) is not None:
-        logger.info(f"You passed a vocabulary.directory_path in your config which already exists and is non-empty. "
-                    f"Refusing to overwrite - we saved it to {serialization_dir} instead.")
+        logger.info(f"You passed a vocabulary.directory_path in your config which already exists "
+                    f"and is non-empty. Refusing to overwrite - we saved it to {serialization_dir} instead.")
     elif vocab_dir is not None:
         logger.info(f"You passed a vocabulary.directory_path in your config which was empty. Also "
                     f"writing the vocabulary to {vocab_dir}.")
