@@ -280,12 +280,6 @@ def make_multi_paragraph_reading_comprehension_instance(  # pylint: disable=inva
             'paragraph_texts': paragraph_texts,
             'token_offsets': paragraph_offsets
     }
-            # 'paragraph_texts': paragraph_texts,
-            # 'token_offsets': paragraph_offsets,
-            # 'question_tokens': [token.text for token in question_tokens],
-            # 'paragraph_tokens': [[token.text for token in paragraph_i_tokens]
-            #                      for paragraph_i_tokens in paragraph_tokens],
-            # }
     if answer_texts:
         metadata['answer_texts'] = answer_texts
 
@@ -308,5 +302,4 @@ def make_multi_paragraph_reading_comprehension_instance(  # pylint: disable=inva
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
 
-    #logger.info("returning instance")
     return Instance(fields)
