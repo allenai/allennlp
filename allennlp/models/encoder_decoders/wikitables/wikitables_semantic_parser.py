@@ -44,6 +44,8 @@ class WikiTablesSemanticParser(Model):
     vocab : ``Vocabulary``
     question_embedder : ``TextFieldEmbedder``
         Embedder for questions.
+    action_embedding_dim : ``int``
+        Dimension to use for action embeddings.
     encoder : ``Seq2SeqEncoder``
         The encoder to use for the input question.
     entity_encoder : ``Seq2VecEncoder``
@@ -66,6 +68,9 @@ class WikiTablesSemanticParser(Model):
         which is to use all eight defined features. If this is 0, another term will be added to the
         linking score. This term contains the maximum similarity value from the entity's neighbors
         and the question.
+    rule_namespace : ``str``, optional (default=rule_labels)
+        The vocabulary namespace to use for production rules.  The default corresponds to the
+        default used in the dataset reader, so you likely don't need to modify this.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -100,6 +105,7 @@ class WikiTablesSemanticParser(Model):
         self._action_embedder = Embedding(num_embeddings=vocab.get_vocab_size(self._rule_namespace),
                                           embedding_dim=action_embedding_dim)
         self._initial_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
+        torch.nn.init.normal(self._initial_action_embedding)
 
         self.num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
         self._embedding_dim = question_embedder.get_output_dim()
@@ -733,6 +739,7 @@ class WikiTablesSemanticParser(Model):
             attention_function = None
         dropout = params.pop_float('dropout', 0.0)
         num_linking_features = params.pop_int('num_linking_features', 8)
+        rule_namespace = params.pop('rule_namespace', 'rule_labels')
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    question_embedder=question_embedder,
@@ -744,4 +751,5 @@ class WikiTablesSemanticParser(Model):
                    max_decoding_steps=max_decoding_steps,
                    attention_function=attention_function,
                    dropout=dropout,
-                   num_linking_features=num_linking_features)
+                   num_linking_features=num_linking_features,
+                   rule_namespace=rule_namespace)

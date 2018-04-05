@@ -393,10 +393,8 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                     continue
                 action_embedding = action_embeddings[group_index, action_index, :]
                 new_action_history = state.action_history[group_index] + [action]
-                left_side = state.possible_actions[batch_index][action]['left'][0]
-                right_side = state.possible_actions[batch_index][action]['right'][0]
-                new_grammar_state = state.grammar_state[group_index].take_action(left_side,
-                                                                                 right_side)
+                production_rule = state.possible_actions[batch_index][action][0]
+                new_grammar_state = state.grammar_state[group_index].take_action(production_rule)
                 new_rnn_state = RnnState(hidden_state[group_index],
                                          memory_cell[group_index],
                                          action_embedding,
