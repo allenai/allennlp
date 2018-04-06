@@ -264,8 +264,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                     action_string = self._get_action_string(batch_actions[rule_id])
                     right_side = action_string.split(" -> ")[1]
                     if right_side.isdigit() or ('[' not in right_side and len(right_side) > 1):
-                        terminal_agenda_actions.append(rule_id)
-                actions_in_agenda = [rule_id in instance_action_strings for rule_id in
+                        terminal_agenda_actions.append(action_string)
+                actions_in_agenda = [action in instance_action_strings for action in
                                      terminal_agenda_actions]
                 in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
                 instance_label_strings = label_strings[i]

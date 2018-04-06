@@ -151,7 +151,11 @@ class NlvrSemanticParser(Model):
             denotations: List[str] = []
             if instance_action_strings:
                 logical_form = instance_worlds[0].get_logical_form(instance_action_strings)
-                denotations = [str(world.execute(logical_form)) for world in instance_worlds]
+                for world in instance_worlds:
+                    # Some of the worlds can be None for instances that come with less than 4 worlds
+                    # because of padding.
+                    if world is not None:
+                        denotations.append(str(world.execute(logical_form)))
             all_denotations.append(denotations)
         return all_denotations
 
