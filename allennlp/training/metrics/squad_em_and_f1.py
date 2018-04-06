@@ -57,3 +57,6 @@ class SquadEmAndF1(Metric):
         self._total_em = 0.0
         self._total_f1 = 0.0
         self._count = 0
+
+    def __str__(self):
+        return f"SquadEmAndF1(em={self._total_em}, f1={self._total_f1})"

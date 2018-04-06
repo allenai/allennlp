@@ -417,3 +417,15 @@ class Vocabulary:
 
     def get_vocab_size(self, namespace: str = 'tokens') -> int:
         return len(self._token_to_index[namespace])
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return False
+
+    def __str__(self) -> str:
+        base_string = f"Vocabulary with namespaces:\n"
+        non_padded_namespaces = f"\tNon Padded Namespaces: {self._non_padded_namespaces}\n"
+        namespaces = [f"\tNamespace: {name}, Size: {self.get_vocab_size(name)} \n"
+                      for name in self._index_to_token]
+        return " ".join([base_string, non_padded_namespaces] + namespaces)

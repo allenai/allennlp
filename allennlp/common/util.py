@@ -200,14 +200,15 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) 
         (used to update progress bars on a single terminal line).
     """
     Tqdm.set_slower_interval(file_friendly_logging)
-    sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), # type: ignore
+    std_out_file = os.path.join(serialization_dir, "stdout.log")
+    sys.stdout = TeeLogger(std_out_file, # type: ignore
                            sys.stdout,
                            file_friendly_logging)
     sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), # type: ignore
                            sys.stderr,
                            file_friendly_logging)
 
-    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler = logging.FileHandler(std_out_file)
     stdout_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
     logging.getLogger().addHandler(stdout_handler)
 

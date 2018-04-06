@@ -19,3 +19,4 @@ from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders import TokenEmbedder
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.span_pruner import SpanPruner
+from allennlp.modules.maxout import Maxout
