@@ -118,20 +118,42 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         for name, weights in archived_parameters:
             if name in model_parameters:
                 if name == "_decoder_step._output_projection_layer.weight":
-                    # This is the only weight whose dimensions differ between the coverage model and
+                    # The dimensions differ for this parameter between the coverage model and
                     # the direct model. In the direct model, this is of size
                     # (decoder_output_dim + encoder_output_dim, action_embedding_dim), whereas in
                     # the coverage model, it is
                     # (decoder_output_dim + encoder_output_dim + checklist_size, action_embedding_dim)
                     # We copy only the relevant part of the weights here.
-                    model_projection_weights = model_parameters[name].data
                     archived_projection_weights = weights.data
-                    new_weights = model_projection_weights.clone()
+                    new_weights = model_parameters[name].data.clone()
                     new_weights[:, :-self.num_terminals] = archived_projection_weights
+                elif name == "_sentence_embedder.token_embedder_tokens.weight":
+                    # The embedding weights will most likely differ between the two models because
+                    # the vocabularies will most likely be different. We will get a mapping of
+                    # indices from this model's token indices to the archived model's and copy the
+                    # tensor accordingly.
+                    vocab_index_mapping = self._get_vocab_index_mapping(archive.model.vocab)
+                    archived_embedding_weights = weights.data
+                    new_weights = model_parameters[name].data.clone()
+                    for index, archived_index in vocab_index_mapping:
+                        new_weights[index] = archived_embedding_weights[archived_index]
+                    logger.info("Copied embeddings of %d out of %d tokens",
+                                len(vocab_index_mapping), new_weights.size()[0])
                 else:
                     new_weights = weights.data
                 logger.info("Copying parameter %s", name)
                 model_parameters[name].data.copy_(new_weights)
+
+    def _get_vocab_index_mapping(self, archived_vocab: Vocabulary) -> List[Tuple[int, int]]:
+        vocab_index_mapping: List[Tuple[int, int]] = []
+        for index in range(self.vocab.get_vocab_size(namespace='tokens')):
+            token = self.vocab.get_token_from_index(index=index, namespace='tokens')
+            archived_token_index = archived_vocab.get_token_index(token, namespace='tokens')
+            # Checking if we got the UNK token index, because we don't want all new token
+            # representations initialized to UNK token's representation.
+            if archived_vocab.get_token_from_index(archived_token_index) == token:
+                vocab_index_mapping.append((index, archived_token_index))
+        return vocab_index_mapping
 
     @overrides
     def forward(self,  # type: ignore
