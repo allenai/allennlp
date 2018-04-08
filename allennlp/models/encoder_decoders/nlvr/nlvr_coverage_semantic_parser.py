@@ -12,6 +12,7 @@ from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.nn.decoding import DecoderTrainer, ExpectedRiskMinimization
 from allennlp.nn import util as nn_util
+from allennlp.models.archival import load_archive, Archive
 from allennlp.models.model import Model
 from allennlp.models.encoder_decoders.nlvr.nlvr_decoder_state import NlvrDecoderState
 from allennlp.models.encoder_decoders.nlvr.nlvr_decoder_step import NlvrDecoderStep
@@ -67,6 +68,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         starting at the apropriate epoch.  The weight will remain constant if this is not provided.
     penalize_non_agenda_actions : ``bool``, optional (default=False)
         Should we penalize the model for producing terminal actions that are outside the agenda?
+    initial_mml_model_file : ``str`` , optional (default=None)
+        If you want to initialize this model using weights from another model trained using MML,
+        pass the path to the ``model.tar.gz`` file of that model here.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -79,7 +83,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                  normalize_beam_score_by_length: bool = False,
                  checklist_cost_weight: float = 0.8,
                  dynamic_cost_weight: Dict[str, Union[int, float]] = None,
-                 penalize_non_agenda_actions: bool = False) -> None:
+                 penalize_non_agenda_actions: bool = False,
+                 initial_mml_model_file: str = None) -> None:
         super(NlvrCoverageSemanticParser, self).__init__(vocab=vocab,
                                                          sentence_embedder=sentence_embedder,
                                                          action_embedding_dim=action_embedding_dim,
@@ -102,6 +107,31 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             self._dynamic_cost_rate = dynamic_cost_weight["rate"]
         self._penalize_non_agenda_actions = penalize_non_agenda_actions
         self._last_epoch_in_forward: int = None
+        if initial_mml_model_file is not None:
+            archive = load_archive(initial_mml_model_file)
+            self._initialize_weights_from_archive(archive)
+
+    def _initialize_weights_from_archive(self, archive: Archive) -> None:
+        logger.info("Initializing weights from MML model.")
+        model_parameters = dict(self.named_parameters())
+        archived_parameters = archive.model.named_parameters()
+        for name, weights in archived_parameters:
+            if name in model_parameters:
+                if name == "_decoder_step._output_projection_layer.weight":
+                    # This is the only weight whose dimensions differ between the coverage model and
+                    # the direct model. In the direct model, this is of size
+                    # (decoder_output_dim + encoder_output_dim, action_embedding_dim), whereas in
+                    # the coverage model, it is
+                    # (decoder_output_dim + encoder_output_dim + checklist_size, action_embedding_dim)
+                    # We copy only the relevant part of the weights here.
+                    model_projection_weights = model_parameters[name].data
+                    archived_projection_weights = weights.data
+                    new_weights = model_projection_weights.clone()
+                    new_weights[:, :-self.num_terminals] = archived_projection_weights
+                else:
+                    new_weights = weights.data
+                logger.info("Copying parameter %s", name)
+                model_parameters[name].data.copy_(new_weights)
 
     @overrides
     def forward(self,  # type: ignore
@@ -362,6 +392,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.8)
         dynamic_cost_weight = params.pop("dynamic_cost_weight", None)
         penalize_non_agenda_actions = params.pop_bool("penalize_non_agenda_actions", False)
+        initial_mml_model_file = params.pop("initial_mml_model_file", None)
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    sentence_embedder=sentence_embedder,
@@ -373,4 +404,5 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                    normalize_beam_score_by_length=normalize_beam_score_by_length,
                    checklist_cost_weight=checklist_cost_weight,
                    dynamic_cost_weight=dynamic_cost_weight,
-                   penalize_non_agenda_actions=penalize_non_agenda_actions)
+                   penalize_non_agenda_actions=penalize_non_agenda_actions,
+                   initial_mml_model_file=initial_mml_model_file)
