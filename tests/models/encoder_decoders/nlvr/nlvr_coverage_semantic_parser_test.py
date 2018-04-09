@@ -1,26 +1,32 @@
 # pylint: disable=no-self-use,protected-access,invalid-name
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_raises
 import torch
 from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.common.testing import ModelTestCase
+from allennlp.data import Vocabulary
 from allennlp.data.iterators import EpochTrackingBucketIterator
 from allennlp.models import Model
+from allennlp.models.archival import load_archive
 
 
 class NlvrCoverageSemanticParserTest(ModelTestCase):
     def setUp(self):
         super(NlvrCoverageSemanticParserTest, self).setUp()
-        self.set_up_model("tests/fixtures/encoder_decoder/nlvr_coverage_semantic_parser/ungrouped_experiment.json",
-                          "tests/fixtures/data/nlvr/sample_ungrouped_data.jsonl")
+        self.set_up_model("tests/fixtures/encoder_decoder/nlvr_coverage_semantic_parser/experiment.json",
+                          "tests/fixtures/data/nlvr/sample_grouped_data.jsonl")
 
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
-    def test_grouped_model_can_train_save_and_load(self):
+    def test_ungrouped_model_can_train_save_and_load(self):
         # pylint: disable=line-too-long
-        self.ensure_model_can_train_save_and_load("tests/fixtures/encoder_decoder/nlvr_coverage_semantic_parser/experiment.json")
+        self.ensure_model_can_train_save_and_load("tests/fixtures/encoder_decoder/nlvr_coverage_semantic_parser/ungrouped_experiment.json")
+
+    def test_mml_initialized_model_can_train_save_and_load(self):
+        # pylint: disable=line-too-long
+        self.ensure_model_can_train_save_and_load("tests/fixtures/encoder_decoder/nlvr_coverage_semantic_parser/mml_init_experiment.json")
 
     def test_get_checklist_info(self):
         print(self.model._terminal_productions)
@@ -53,3 +59,45 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
         # The config file has ``wait_num_epochs`` set to 0, so the model starts decreasing the cost
         # weight at epoch 0 itself.
         assert_almost_equal(cost_weights, [0.72, 0.648, 0.5832, 0.52488])
+
+    def test_initialize_weights_from_archive(self):
+        original_model_parameters = self.model.named_parameters()
+        original_model_weights = {name: parameter.data.clone().numpy()
+                                  for name, parameter in original_model_parameters}
+        # pylint: disable=line-too-long
+        mml_model_archive_file = "tests/fixtures/encoder_decoder/nlvr_direct_semantic_parser/serialization/model.tar.gz"
+        archive = load_archive(mml_model_archive_file)
+        archived_model_parameters = archive.model.named_parameters()
+        self.model._initialize_weights_from_archive(archive)
+        changed_model_parameters = dict(self.model.named_parameters())
+        for name, archived_parameter in archived_model_parameters:
+            archived_weight = archived_parameter.data.numpy()
+            original_weight = original_model_weights[name]
+            changed_weight = changed_model_parameters[name].data.numpy()
+            assert_raises(AssertionError, assert_almost_equal, original_weight, changed_weight)
+            if name == "_decoder_step._output_projection_layer.weight":
+                assert_almost_equal(archived_weight, changed_weight[:, :-self.model.num_terminals])
+            else:
+                # This also includes the sentence token embedder. Those weights will be the same
+                # because the two models have the same vocabulary.
+                assert_almost_equal(archived_weight, changed_weight)
+
+    def test_get_vocab_index_mapping(self):
+        # pylint: disable=line-too-long
+        mml_model_archive_file = "tests/fixtures/encoder_decoder/nlvr_direct_semantic_parser/serialization/model.tar.gz"
+        archive = load_archive(mml_model_archive_file)
+        mapping = self.model._get_vocab_index_mapping(archive.model.vocab)
+        expected_mapping = [(i, i) for i in range(16)]
+        assert mapping == expected_mapping
+
+        new_vocab = Vocabulary()
+        def copy_token_at_index(i):
+            token = self.vocab.get_token_from_index(i, "tokens")
+            new_vocab.add_token_to_namespace(token, "tokens")
+        copy_token_at_index(5)
+        copy_token_at_index(7)
+        copy_token_at_index(10)
+        mapping = self.model._get_vocab_index_mapping(new_vocab)
+        # Mapping of indices from model vocabulary to new vocabulary. 0 and 1 are padding and unk
+        # tokens.
+        assert mapping == [(0, 0), (1, 1), (5, 2), (7, 3), (10, 4)]

@@ -24,7 +24,8 @@ class ModelTestCase(AllenNlpTestCase):
 
         reader = DatasetReader.from_params(params['dataset_reader'])
         instances = reader.read(dataset_file)
-        vocab = Vocabulary.from_instances(instances)
+        vocab_params = params['vocabulary']
+        vocab = Vocabulary.from_params(params=vocab_params, instances=instances)
         self.vocab = vocab
         self.instances = instances
         self.model = Model.from_params(self.vocab, params['model'])

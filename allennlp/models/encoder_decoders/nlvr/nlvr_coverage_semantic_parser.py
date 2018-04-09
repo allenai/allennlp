@@ -120,18 +120,18 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                 if name == "_decoder_step._output_projection_layer.weight":
                     # The dimensions differ for this parameter between the coverage model and
                     # the direct model. In the direct model, this is of size
-                    # (decoder_output_dim + encoder_output_dim, action_embedding_dim), whereas in
-                    # the coverage model, it is
+                    # (decoder_output_dim + encoder_output_dim, action_embedding_dim),
+                    # whereas in the coverage model, it is
                     # (decoder_output_dim + encoder_output_dim + checklist_size, action_embedding_dim)
                     # We copy only the relevant part of the weights here.
                     archived_projection_weights = weights.data
                     new_weights = model_parameters[name].data.clone()
                     new_weights[:, :-self.num_terminals] = archived_projection_weights
                 elif name == "_sentence_embedder.token_embedder_tokens.weight":
-                    # The embedding weights will most likely differ between the two models because
-                    # the vocabularies will most likely be different. We will get a mapping of
-                    # indices from this model's token indices to the archived model's and copy the
-                    # tensor accordingly.
+                    # The shapes of embedding weights will most likely differ between the two models
+                    # because the vocabularies will most likely be different. We will get a mapping
+                    # of indices from this model's token indices to the archived model's and copy
+                    # the tensor accordingly.
                     vocab_index_mapping = self._get_vocab_index_mapping(archive.model.vocab)
                     archived_embedding_weights = weights.data
                     new_weights = model_parameters[name].data.clone()
@@ -150,7 +150,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             token = self.vocab.get_token_from_index(index=index, namespace='tokens')
             archived_token_index = archived_vocab.get_token_index(token, namespace='tokens')
             # Checking if we got the UNK token index, because we don't want all new token
-            # representations initialized to UNK token's representation.
+            # representations initialized to UNK token's representation. We do that by checking if
+            # the two tokens are the same. They will not be if the token at the archived index is
+            # UNK.
             if archived_vocab.get_token_from_index(archived_token_index) == token:
                 vocab_index_mapping.append((index, archived_token_index))
         return vocab_index_mapping
