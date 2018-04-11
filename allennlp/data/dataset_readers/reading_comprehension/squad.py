@@ -64,12 +64,14 @@ class SquadReader(DatasetReader):
                     answer_texts = [answer['text'] for answer in question_answer['answers']]
                     span_starts = [answer['answer_start'] for answer in question_answer['answers']]
                     span_ends = [start + len(answer) for start, answer in zip(span_starts, answer_texts)]
-                    instance = self.text_to_instance(question_text,
-                                                     paragraph,
-                                                     zip(span_starts, span_ends),
-                                                     answer_texts,
-                                                     tokenized_paragraph)
-                    yield instance
+
+                    try:
+                        instance = self.text_to_instance(question_text, paragraph, zip(span_starts, span_ends), answer_texts, tokenized_paragraph)
+                        yield instance
+                    except IndexError:
+                        print("Index Error")
+                        continue           
+                    # yield instance
 
     @overrides
     def text_to_instance(self,  # type: ignore
