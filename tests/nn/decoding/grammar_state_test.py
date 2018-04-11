@@ -39,19 +39,19 @@ class TestGrammarState(AllenNlpTestCase):
         action_indices = object()
 
         state = GrammarState(['s'], {}, valid_actions, action_indices)
-        next_state = state.take_action('s', '[t, r]')
+        next_state = state.take_action('s -> [t, r]')
         expected_next_state = GrammarState(['r', 't'], {}, valid_actions, action_indices)
         assert next_state.__dict__ == expected_next_state.__dict__
 
         state = GrammarState(['r', 't'], {}, valid_actions, action_indices)
-        next_state = state.take_action('t', 'identity')
+        next_state = state.take_action('t -> identity')
         expected_next_state = GrammarState(['r'], {}, valid_actions, action_indices)
         assert next_state.__dict__ == expected_next_state.__dict__
 
     def test_take_action_crashes_with_mismatched_types(self):
         with pytest.raises(AssertionError):
             state = GrammarState(['s'], {}, {}, {})
-            state.take_action('t', 'identity')
+            state.take_action('t -> identity')
 
     def test_take_action_gives_correct_next_states_with_lambda_productions(self):
         # state.take_action() doesn't read or change these objects, it just passes them through, so
@@ -60,7 +60,7 @@ class TestGrammarState(AllenNlpTestCase):
         action_indices = object()
 
         state = GrammarState(['t', '<s,d>'], {}, valid_actions, action_indices)
-        next_state = state.take_action('<s,d>', '[lambda x, d]')
+        next_state = state.take_action('<s,d> -> [lambda x, d]')
         expected_next_state = GrammarState(['t', 'd'],
                                            {('s', 'x'): ['d']},
                                            valid_actions,
@@ -68,7 +68,7 @@ class TestGrammarState(AllenNlpTestCase):
         assert next_state.__dict__ == expected_next_state.__dict__
 
         state = expected_next_state
-        next_state = state.take_action('d', '[<s,r>, d]')
+        next_state = state.take_action('d -> [<s,r>, d]')
         expected_next_state = GrammarState(['t', 'd', '<s,r>'],
                                            {('s', 'x'): ['d', '<s,r>']},
                                            valid_actions,
@@ -76,7 +76,7 @@ class TestGrammarState(AllenNlpTestCase):
         assert next_state.__dict__ == expected_next_state.__dict__
 
         state = expected_next_state
-        next_state = state.take_action('<s,r>', '[lambda y, r]')
+        next_state = state.take_action('<s,r> -> [lambda y, r]')
         expected_next_state = GrammarState(['t', 'd', 'r'],
                                            {('s', 'x'): ['d', 'r'], ('s', 'y'): ['r']},
                                            valid_actions,
@@ -84,7 +84,7 @@ class TestGrammarState(AllenNlpTestCase):
         assert next_state.__dict__ == expected_next_state.__dict__
 
         state = expected_next_state
-        next_state = state.take_action('r', 'identity')
+        next_state = state.take_action('r -> identity')
         expected_next_state = GrammarState(['t', 'd'],
                                            {('s', 'x'): ['d']},
                                            valid_actions,
@@ -92,7 +92,7 @@ class TestGrammarState(AllenNlpTestCase):
         assert next_state.__dict__ == expected_next_state.__dict__
 
         state = expected_next_state
-        next_state = state.take_action('d', 'x')
+        next_state = state.take_action('d -> x')
         expected_next_state = GrammarState(['t'],
                                            {},
                                            valid_actions,

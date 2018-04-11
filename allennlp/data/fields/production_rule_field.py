@@ -5,8 +5,6 @@ from torch.autograd import Variable
 from overrides import overrides
 
 from allennlp.data.fields.field import Field
-from allennlp.data.tokenizers.token import Token
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.vocabulary import Vocabulary
 
 ProductionRuleArray = Tuple[str, bool, Optional[torch.Tensor]]  # pylint: disable=invalid-name
@@ -85,6 +83,7 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
+        # pylint: disable=no-self-use
         return {}
 
     @overrides
@@ -92,6 +91,7 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
                   padding_lengths: Dict[str, int],
                   cuda_device: int = -1,
                   for_training: bool = True) -> ProductionRuleArray:
+        # pylint: disable=unused-argument
         if self.is_global_rule:
             tensor = Variable(torch.LongTensor([self._rule_id]), volatile=not for_training)
         else:

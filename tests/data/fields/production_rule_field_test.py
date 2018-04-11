@@ -1,14 +1,11 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
 from collections import defaultdict
 
-import pytest
-import numpy
 from numpy.testing import assert_almost_equal
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.data.fields import ListField, ProductionRuleField
-from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 
 
 class TestProductionRuleField(AllenNlpTestCase):

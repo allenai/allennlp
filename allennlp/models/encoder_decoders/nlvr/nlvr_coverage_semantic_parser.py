@@ -38,9 +38,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         Passed to super-class.
     sentence_embedder : ``TextFieldEmbedder``
         Passed to super-class.
-    nonterminal_embedder : ``TextFieldEmbedder``
-        Passed to super-class.
-    terminal_embedder : ``TextFieldEmbedder``
+    action_embedding_dim : ``int``
         Passed to super-class.
     encoder : ``Seq2SeqEncoder``
         Passed to super-class.
@@ -73,8 +71,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
     def __init__(self,
                  vocab: Vocabulary,
                  sentence_embedder: TextFieldEmbedder,
-                 nonterminal_embedder: TextFieldEmbedder,
-                 terminal_embedder: TextFieldEmbedder,
+                 action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
                  attention_function: SimilarityFunction,
                  beam_size: int,
@@ -85,20 +82,18 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                  penalize_non_agenda_actions: bool = False) -> None:
         super(NlvrCoverageSemanticParser, self).__init__(vocab=vocab,
                                                          sentence_embedder=sentence_embedder,
-                                                         nonterminal_embedder=nonterminal_embedder,
-                                                         terminal_embedder=terminal_embedder,
+                                                         action_embedding_dim=action_embedding_dim,
                                                          encoder=encoder)
         self._agenda_coverage = Average()
         self._decoder_trainer: DecoderTrainer[Callable[[NlvrDecoderState], torch.Tensor]] = \
                 ExpectedRiskMinimization(beam_size, normalize_beam_score_by_length, max_decoding_steps)
-        action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
 
         # Instantiating an empty NlvrWorld just to get the number of terminals.
-        num_terminals = len(NlvrWorld([]).terminal_productions)
+        self._terminal_productions = set(NlvrWorld([]).terminal_productions.values())
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
                                              attention_function=attention_function,
-                                             checklist_size=num_terminals)
+                                             checklist_size=len(self._terminal_productions))
         self._checklist_cost_weight = checklist_cost_weight
         self._dynamic_cost_wait_epochs = None
         self._dynamic_cost_rate = None
@@ -134,9 +129,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                     logger.info("Checklist cost weight is now %f", self._checklist_cost_weight)
                 self._last_epoch_in_forward = instance_epoch_num
         batch_size = len(worlds)
-        action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
+        action_embeddings, action_indices = self._embed_actions(actions)
 
-        initial_rnn_state = self._get_initial_rnn_state(sentence, initial_action_embedding)
+        initial_rnn_state = self._get_initial_rnn_state(sentence)
         initial_score_list = [nn_util.new_variable_with_data(list(sentence.values())[0],
                                                              torch.Tensor([0.0]))
                               for i in range(batch_size)]
@@ -219,10 +214,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         target_checklist_list = []
         agenda_indices_set = set([int(x) for x in agenda.squeeze(0).data.cpu().numpy()])
         for index, action in enumerate(all_actions):
-            # Each action is a ProductionRuleArray, a dict with keys "left" and "right", and
-            # values are tuples where the second element shows whether element is a
-            # non_terminal.
-            if not action["right"][1]:
+            # Each action is a ProductionRuleArray, a tuple where the first item is the production
+            # rule string.
+            if action[0] in self._terminal_productions:
                 terminal_indices.append([index])
                 if index in agenda_indices_set:
                     target_checklist_list.append([1])
@@ -261,7 +255,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                 for rule_id in agenda_data[i]:
                     if rule_id == -1:
                         continue
-                    action_string = self._get_action_string(instance_possible_actions[rule_id])
+                    action_string = instance_possible_actions[rule_id][0]
                     right_side = action_string.split(" -> ")[1]
                     if right_side.isdigit() or ('[' not in right_side and len(right_side) > 1):
                         terminal_agenda_actions.append(action_string)
@@ -355,9 +349,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
     def from_params(cls, vocab, params: Params) -> 'NlvrCoverageSemanticParser':
         sentence_embedder_params = params.pop("sentence_embedder")
         sentence_embedder = TextFieldEmbedder.from_params(vocab, sentence_embedder_params)
+        action_embedding_dim = params.pop_int('action_embedding_dim')
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        nonterminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("nonterminal_embedder"))
-        terminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("terminal_embedder"))
         attention_function_type = params.pop("attention_function", None)
         if attention_function_type is not None:
             attention_function = SimilarityFunction.from_params(attention_function_type)
@@ -372,8 +365,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    sentence_embedder=sentence_embedder,
-                   nonterminal_embedder=nonterminal_embedder,
-                   terminal_embedder=terminal_embedder,
+                   action_embedding_dim=action_embedding_dim,
                    encoder=encoder,
                    attention_function=attention_function,
                    beam_size=beam_size,

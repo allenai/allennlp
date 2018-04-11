@@ -36,9 +36,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         Passed to super-class.
     sentence_embedder : ``TextFieldEmbedder``
         Passed to super-class.
-    nonterminal_embedder : ``TextFieldEmbedder``
-        Passed to super-class.
-    terminal_embedder : ``TextFieldEmbedder``
+    action_embedding_dim : ``int``
         Passed to super-class.
     encoder : ``Seq2SeqEncoder``
         Passed to super-class.
@@ -54,20 +52,16 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
     def __init__(self,
                  vocab: Vocabulary,
                  sentence_embedder: TextFieldEmbedder,
-                 nonterminal_embedder: TextFieldEmbedder,
-                 terminal_embedder: TextFieldEmbedder,
+                 action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
                  attention_function: SimilarityFunction,
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int) -> None:
         super(NlvrDirectSemanticParser, self).__init__(vocab=vocab,
                                                        sentence_embedder=sentence_embedder,
-                                                       nonterminal_embedder=nonterminal_embedder,
-                                                       terminal_embedder=terminal_embedder,
+                                                       action_embedding_dim=action_embedding_dim,
                                                        encoder=encoder)
         self._decoder_trainer = MaximumMarginalLikelihood()
-        action_embedding_dim = nonterminal_embedder.get_output_dim() * 2
-
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
                                              attention_function=attention_function)
@@ -88,9 +82,9 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         likelihod over a set of approximate logical forms.
         """
         batch_size = len(worlds)
-        action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
+        action_embeddings, action_indices = self._embed_actions(actions)
 
-        initial_rnn_state = self._get_initial_rnn_state(sentence, initial_action_embedding)
+        initial_rnn_state = self._get_initial_rnn_state(sentence)
         initial_score_list = [nn_util.new_variable_with_data(list(sentence.values())[0],
                                                              torch.Tensor([0.0]))
                               for i in range(batch_size)]
@@ -176,9 +170,8 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
     def from_params(cls, vocab, params: Params) -> 'NlvrDirectSemanticParser':
         sentence_embedder_params = params.pop("sentence_embedder")
         sentence_embedder = TextFieldEmbedder.from_params(vocab, sentence_embedder_params)
+        action_embedding_dim = params.pop_int('action_embedding_dim')
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        nonterminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("nonterminal_embedder"))
-        terminal_embedder = TextFieldEmbedder.from_params(vocab, params.pop("terminal_embedder"))
         attention_function_type = params.pop("attention_function", None)
         if attention_function_type is not None:
             attention_function = SimilarityFunction.from_params(attention_function_type)
@@ -189,8 +182,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    sentence_embedder=sentence_embedder,
-                   nonterminal_embedder=nonterminal_embedder,
-                   terminal_embedder=terminal_embedder,
+                   action_embedding_dim=action_embedding_dim,
                    encoder=encoder,
                    attention_function=attention_function,
                    decoder_beam_search=decoder_beam_search,

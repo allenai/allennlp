@@ -1,17 +1,14 @@
 import logging
-from typing import List, Set, Dict, Tuple
+from typing import List, Dict, Tuple
 
 from overrides import overrides
 
 import torch
-from torch.autograd import Variable
 
-from allennlp.common.checks import check_dimensions_match
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
-from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.nn import util as nn_util
 from allennlp.nn.decoding import GrammarState, RnnState
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
@@ -70,7 +67,7 @@ class NlvrSemanticParser(Model):
         # Sub-classes should define their own logic here.
         raise NotImplementedError
 
-    def _get_initial_rnn_state(self, sentence, initial_action_embedding):
+    def _get_initial_rnn_state(self, sentence: Dict[str, torch.LongTensor]):
         embedded_input = self._sentence_embedder(sentence)
         # (batch_size, sentence_length)
         sentence_mask = nn_util.get_text_field_mask(sentence).float()

@@ -9,7 +9,6 @@ from torch.autograd import Variable
 from allennlp.common import Params
 from allennlp.common.testing import ModelTestCase
 from allennlp.models import Model, WikiTablesSemanticParser
-from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 
 class WikiTablesSemanticParserTest(ModelTestCase):
     def setUp(self):
