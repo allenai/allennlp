@@ -24,14 +24,12 @@ class NlvrDatasetReader(DatasetReader):
     """
     ``DatasetReader`` for the NLVR domain. In addition to the usual methods for reading files and
     instances from text, this class contains a method for creating an agenda of actions that each
-    sentence triggers.
+    sentence triggers, if needed. Note that we deal with the version of the dataset with structured
+    representations of the synthetic images instead of the actual images themselves.
 
-    We process here, either the original json version of the NLVR dataset
-    (http://lic.nlp.cornell.edu/nlvr/) or the processed version (using
-    ``scripts/nlvr/group_nlvr_worlds.py``) where we group all the worlds that a sentence appears in.
-    Note that we deal with the structured representations of the synthetic images instead of the
-    actual images themselves.
-    The format of each line in the original jsonl file is
+    We support multiple data formats here:
+    1) The original json version of the NLVR dataset (http://lic.nlp.cornell.edu/nlvr/) where the
+    format of each line in the jsonl file is
     ```
     "sentence": <sentence>,
     "label": <true/false>,
@@ -40,13 +38,24 @@ class NlvrDatasetReader(DatasetReader):
     "structured_rep": <list of three box representations, where each box is a list of object
     representation dicts, containing fields "x_loc", "y_loc", "color", "type", "size">
     ```
-    We use the fields ``sentence``, ``label`` and ``structured_rep``.
-    And the format of the processed files is
+
+    2) A grouped version (constructed using ``scripts/nlvr/group_nlvr_worlds.py``) where we group
+    all the worlds that a sentence appears in. We use the fields ``sentence``, ``label`` and
+    ``structured_rep``.  And the format of the grouped files is
     ```
     "sentence": <sentence>,
     "labels": <list of labels corresponding to worlds the sentence appears in>
     "identifier": <id that is only the prefix from the original data>
     "worlds": <list of structured representations>
+    ```
+
+    3) A processed version that contains action sequences that lead to the correct denotations (or
+    not), using some search. This format is very similar to the grouped format, and has the
+    following extra field
+
+    ```
+    "correct_sequences": <list of lists of action sequences corresponding to logical forms that
+    evaluate to the correct denotations>
     ```
 
     Parameters

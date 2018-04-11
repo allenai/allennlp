@@ -84,8 +84,8 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                 labels: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
-        Decoder logic for producing type constrained target sequences that maximize coverage of
-        their respective agendas, and minimize a denotation based loss.
+        Decoder logic for producing type constrained target sequences, trained to maximize marginal
+        likelihod over a set of approximate logical forms.
         """
         batch_size = len(worlds)
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
@@ -143,6 +143,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                         worlds: List[List[NlvrWorld]],
                         best_action_sequences: Dict[int, List[int]],
                         label_strings: List[List[str]]) -> None:
+        # TODO(pradeep): Move this to the base class.
         batch_size = len(worlds)
         for i in range(batch_size):
             batch_actions = actions[i]

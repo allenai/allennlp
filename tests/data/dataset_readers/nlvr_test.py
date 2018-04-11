@@ -5,7 +5,6 @@ from allennlp.semparse.worlds import NlvrWorld
 
 
 class TestNlvrDatasetReader(AllenNlpTestCase):
-    # TODO(pradeep): Write a test for reading grouped and processed data.
     def test_reader_reads_ungrouped_data(self):
         test_file = "tests/fixtures/data/nlvr/sample_ungrouped_data.jsonl"
         dataset = NlvrDatasetReader(add_paths_to_agenda=False).read(test_file)

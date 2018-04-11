@@ -68,6 +68,7 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         been chosen previously. It contains the actual counts of the agenda actions. Needed only if
         this state is being used while training a parser without logical forms.
     """
+    # TODO(pradeep): Group checklist related pieces into a checklist state.
     def __init__(self,
                  batch_indices: List[int],
                  action_history: List[List[int]],

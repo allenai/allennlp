@@ -241,6 +241,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                         best_action_sequences: Dict[int, List[int]],
                         label_strings: List[List[str]],
                         agenda_data: List[List[int]]) -> None:
+        # TODO(pradeep): Move this to the base class.
         batch_size = len(worlds)
         for i in range(batch_size):
             batch_actions = actions[i]

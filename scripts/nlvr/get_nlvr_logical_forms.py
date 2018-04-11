@@ -90,28 +90,33 @@ def process_data(input_file: str,
                                    "incorrect_logical_forms": incorrect_logical_forms,
                                    "worlds": structured_reps,
                                    "labels": label_strings})
-    outfile = open(output_file, "w")
-    for instance_processed_data in processed_data:
-        print(json.dumps(instance_processed_data), file=outfile)
-    outfile.close()
+    with open(output_file, "w") as outfile:
+        for instance_processed_data in processed_data:
+            json.dump(instance_processed_data, outfile)
+            outfile.write('\n')
+        outfile.close()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("input", type=str, help="NLVR data file")
     parser.add_argument("output", type=str, help="Processed output")
-    parser.add_argument("--max_path_length", type=int,
+    parser.add_argument("--max-path-length", type=int, dest="max_path_length",
                         help="Maximum path length for logical forms", default=12)
-    parser.add_argument("--max_num_logical_forms", type=int,
+    parser.add_argument("--max-num-logical-forms", type=int, dest="max_num_logical_forms",
                         help="Maximum number of logical forms per denotation, per question",
                         default=20)
-    parser.add_argument("--ignore_agenda", dest="ignore_agenda", help="Should we ignore the "
+    parser.add_argument("--ignore-agenda", dest="ignore_agenda", help="Should we ignore the "
                         "agenda and use consistency as the only signal to get logical forms?",
                         action='store_true')
-    parser.add_argument("--write_action_sequences", dest="write_sequences", help="If this "
+    parser.add_argument("--write-action-sequences", dest="write_sequences", help="If this "
                         "flag is set, action sequences instead of logical forms will be written "
                         "to the json file. This will avoid having to parse the logical forms again "
                         "in the NlvrDatasetReader.", action='store_true')
     args = parser.parse_args()
-    process_data(args.input, args.output, args.max_path_length,
-                 args.max_num_logical_forms, args.ignore_agenda, args.write_sequences)
+    process_data(args.input,
+                 args.output,
+                 args.max_path_length,
+                 args.max_num_logical_forms,
+                 args.ignore_agenda,
+                 args.write_sequences)
