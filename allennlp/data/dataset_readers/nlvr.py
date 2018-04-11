@@ -76,10 +76,9 @@ class NlvrDatasetReader(DatasetReader):
         Indexers for terminals in production rules. The default is to index terminals and
         non-terminals in the same way, but you may want to change it.
         Default is ``{"tokens": SingleIdTokenIndexer("rule_labels")}``
-    add_paths_to_agenda : ``bool`` (optional)
-        If set to true, the agenda will also contain the non-terminal productions in the path from
-        the root node to each of the desired terminal productions. We do an approximate heuristic
-        search while computing the paths to avoid infinitely long ones (containing cycles).
+    output_agendas : ``bool`` (optional)
+        If preparing data for a trainer that uses agendas, set this flag and the datset reader will
+        output agendas.
     """
     def __init__(self,
                  lazy: bool = False,
@@ -87,14 +86,14 @@ class NlvrDatasetReader(DatasetReader):
                  sentence_token_indexers: Dict[str, TokenIndexer] = None,
                  nonterminal_indexers: Dict[str, TokenIndexer] = None,
                  terminal_indexers: Dict[str, TokenIndexer] = None,
-                 add_paths_to_agenda: bool = True) -> None:
+                 output_agendas: bool = True) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._sentence_token_indexers = sentence_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._nonterminal_indexers = nonterminal_indexers or {"tokens":
                                                               SingleIdTokenIndexer("rule_labels")}
         self._terminal_indexers = terminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
-        self._add_paths_to_agenda = add_paths_to_agenda
+        self._output_agendas = output_agendas
 
     @overrides
     def _read(self, file_path: str):
@@ -185,10 +184,10 @@ class NlvrDatasetReader(DatasetReader):
                 action_sequence_fields.append(index_fields)
                 # TODO(pradeep): Define a max length for this field.
             fields["target_action_sequences"] = ListField(action_sequence_fields)
-        else:
+        elif self._output_agendas:
             # TODO(pradeep): Assuming every world gives the same agenda for a sentence. This is true
             # now, but may change later too.
-            agenda = worlds[0].get_agenda_for_sentence(sentence, self._add_paths_to_agenda)
+            agenda = worlds[0].get_agenda_for_sentence(sentence, add_paths_to_agenda=False)
             assert agenda, "No agenda found for sentence: %s" % sentence
             # agenda_field contains indices into actions.
             agenda_field = ListField([IndexField(instance_action_ids[action], action_field)
@@ -208,11 +207,11 @@ class NlvrDatasetReader(DatasetReader):
         sentence_token_indexers = TokenIndexer.dict_from_params(params.pop('sentence_token_indexers', {}))
         terminal_indexers = TokenIndexer.dict_from_params(params.pop('terminal_indexers', {}))
         nonterminal_indexers = TokenIndexer.dict_from_params(params.pop('nonterminal_indexers', {}))
-        add_paths_to_agenda = params.pop("add_paths_to_agenda", True)
+        output_agendas = params.pop("output_agendas", True)
         params.assert_empty(cls.__name__)
         return NlvrDatasetReader(lazy=lazy,
                                  tokenizer=tokenizer,
                                  sentence_token_indexers=sentence_token_indexers,
                                  terminal_indexers=terminal_indexers,
                                  nonterminal_indexers=nonterminal_indexers,
-                                 add_paths_to_agenda=add_paths_to_agenda)
+                                 output_agendas=output_agendas)

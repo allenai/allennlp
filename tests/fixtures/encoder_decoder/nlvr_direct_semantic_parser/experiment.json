@@ -1,7 +1,7 @@
 {
   "dataset_reader": {
     "type": "nlvr",
-    "add_paths_to_agenda": true
+    "output_agendas": false
   },
   "vocabulary": {
     "non_padded_namespaces": ["actions", "denotations"]

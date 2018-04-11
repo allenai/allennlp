@@ -122,6 +122,42 @@ class NlvrSemanticParser(Model):
                 label_strings[-1].append(self.vocab.get_token_from_index(label_int, "denotations"))
         return label_strings
 
+    @classmethod
+    def _get_action_strings(cls,
+                            possible_actions: List[List[ProductionRuleArray]],
+                            action_indices: Dict[int, List[int]]) -> List[List[str]]:
+        """
+        Takes a list of possible actions and indices of decoded actions into those possible actions
+        for a batch and returns sequences of action strings.
+        """
+        all_action_strings: List[List[str]] = []
+        batch_size = len(possible_actions)
+        for i in range(batch_size):
+            batch_actions = possible_actions[i]
+            batch_best_sequences = action_indices[i] if i in action_indices else []
+            # This will append an empty list to ``all_action_strings`` if ``batch_best_sequences``
+            # is empty.
+            action_strings = [cls._get_action_string(batch_actions[rule_id]) for rule_id in
+                              batch_best_sequences]
+            all_action_strings.append(action_strings)
+        return all_action_strings
+
+    @staticmethod
+    def _get_denotations(action_strings: List[List[str]],
+                         worlds: List[List[NlvrWorld]]) -> List[List[str]]:
+        all_denotations: List[List[str]] = []
+        for instance_worlds, instance_action_strings in zip(worlds, action_strings):
+            denotations: List[str] = []
+            if instance_action_strings:
+                logical_form = instance_worlds[0].get_logical_form(instance_action_strings)
+                for world in instance_worlds:
+                    # Some of the worlds can be None for instances that come with less than 4 worlds
+                    # because of padding.
+                    if world is not None:
+                        denotations.append(str(world.execute(logical_form)))
+            all_denotations.append(denotations)
+        return all_denotations
+
     @staticmethod
     def _check_denotation(best_action_sequence: List[str],
                           labels: List[str],
@@ -301,7 +337,6 @@ class NlvrSemanticParser(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        This method is identical to ``WikiTablesSemanticParser.decode``
         This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
         time, to finalize predictions.  This is (confusingly) a separate notion from the "decoder"
         in "encoder/decoder", where that decoder logic lives in ``WikiTablesDecoderStep``.
@@ -309,12 +344,16 @@ class NlvrSemanticParser(Model):
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
         """
-        best_action_indices = output_dict["best_action_sequence"][0]
-        action_strings = []
-        for action_index in best_action_indices:
-            action_strings.append(self.vocab.get_token_from_index(action_index,
-                                                                  namespace=self._action_namespace))
-        output_dict["predicted_actions"] = [action_strings]
+        best_action_strings = output_dict["best_action_strings"]
+        # Instantiating an empty world for getting logical forms.
+        world = NlvrWorld([])
+        logical_forms = []
+        for action_strings in best_action_strings:
+            if action_strings:
+                logical_forms.append(world.get_logical_form(action_strings))
+            else:
+                logical_forms.append('')
+        output_dict["logical_form"] = logical_forms
         return output_dict
 
     def _check_state_denotations(self, state) -> List[bool]:
