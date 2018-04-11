@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use,protected-access,invalid-name
-from numpy.testing import assert_almost_equal, assert_raises
+from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
 
@@ -74,7 +74,8 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
             archived_weight = archived_parameter.data.numpy()
             original_weight = original_model_weights[name]
             changed_weight = changed_model_parameters[name].data.numpy()
-            assert_raises(AssertionError, assert_almost_equal, original_weight, changed_weight)
+            with self.assertRaises(AssertionError):
+                assert_almost_equal(original_weight, changed_weight)
             if name == "_decoder_step._output_projection_layer.weight":
                 assert_almost_equal(archived_weight, changed_weight[:, :-self.model.num_terminals])
             else:
