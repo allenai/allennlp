@@ -1,4 +1,4 @@
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Set
 from collections import defaultdict
 
 from overrides import overrides
@@ -23,17 +23,18 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
     encoder_output_dim : ``int``
     action_embedding_dim : ``int``
     attention_function : ``SimilarityFunction``
-    checklist_size : ``int``
-        We need the size of the checklist vector to define the output projection layer, which
-        projects a concatenation of the current hidden state, attended encoder input and the
-        current checklist balance into the action space. The size of the checklist balance
-        vector is the same as the number of terminals.
+    checklist_size : ``int``, optional
+        If we are training a parser to maximize coverage using a checklist, we need the size of the
+        checklist vector to define the output projection layer, which projects a concatenation of
+        the current hidden state, attended encoder input and the current checklist balance into the
+        action space. The size of the checklist balance vector is the same as the number of
+        terminals. This is not needed if we are training the parser using target action sequences.
     """
     def __init__(self,
                  encoder_output_dim: int,
                  action_embedding_dim: int,
                  attention_function: SimilarityFunction,
-                 checklist_size: int) -> None:
+                 checklist_size: int = None) -> None:
         super(NlvrDecoderStep, self).__init__()
         self._input_attention = Attention(attention_function)
 
@@ -46,11 +47,15 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         # arbitrarily set to be the same as `output_dim`.
         self._input_projection_layer = Linear(output_dim + action_embedding_dim, input_dim)
         # Before making a prediction, we'll compute an attention over the input given our updated
-        # hidden state, and a difference between the current checklist vector and its target. Then we
-        # concatenate those with the decoder state and project to `action_embedding_dim` to make a
-        # prediction.
-        self._output_projection_layer = Linear(output_dim + encoder_output_dim + checklist_size,
-                                               action_embedding_dim)
+        # hidden state, and optionally a difference between the current checklist vector and its
+        # target, if we are training to maximize coverage using a checklist. Then we concatenate
+        # those with the decoder state and project to `action_embedding_dim` to make a prediction.
+        if checklist_size is None:
+            self._output_projection_layer = Linear(output_dim + encoder_output_dim,
+                                                   action_embedding_dim)
+        else:
+            self._output_projection_layer = Linear(output_dim + encoder_output_dim + checklist_size,
+                                                   action_embedding_dim)
 
         # TODO(pradeep): Do not hardcode decoder cell type.
         self._decoder_cell = LSTMCell(input_dim, output_dim)
@@ -58,22 +63,27 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
     @overrides
     def take_step(self,  # type: ignore
                   state: NlvrDecoderState,
-                  max_actions: int = None) -> List[NlvrDecoderState]:
+                  max_actions: int = None,
+                  allowed_actions: List[Set[int]] = None) -> List[NlvrDecoderState]:
         """
         Given a ``NlvrDecoderState``, returns a list of next states that are sorted by their scores.
         This method is very similar to ``WikiTablesDecoderStep._take_step``. The differences are
-        that we do not have a notion of "allowed actions" here, and we do not perform entity linking
-        here.
+        that depending on the type of supervision being used, we may not have a notion of
+        "allowed actions" here, and we do not perform entity linking here.
         """
-        # TODO(pradeep): Break this method into smaller methods.
         # Outline here: first we'll construct the input to the decoder, which is a concatenation of
         # an embedding of the decoder input (the last action taken) and an attention over the
         # sentence.  Then we'll update our decoder's hidden state given this input, and recompute
         # an attention over the sentence given our new hidden state.  We'll use a concatenation of
-        # the new hidden state, the new attention and the checklist balance to predict an output, then
-        # yield new states.
+        # the new hidden state, the new attention and optionall, the checklist balance to predict an
+        # output, then yield new states. We will compute and use a checklist balance when
+        # ``allowed_actions`` is None, with the assumption that the ``DecoderTrainer`` that is
+        # calling this method is trying to train a parser without logical form supervision.
+        # TODO (pradeep): Make the distinction between the two kinds of trainers in the way they
+        # call this method more explicit.
+
         # Each new state corresponds to one valid action that can be taken from the current state,
-        # and they are ordered by how much they contribute to an agenda.
+        # and they are ordered by model scores.
         attended_sentence = torch.stack([rnn_state.attended_input for rnn_state in state.rnn_state])
         hidden_state = torch.stack([rnn_state.hidden_state for rnn_state in state.rnn_state])
         memory_cell = torch.stack([rnn_state.memory_cell for rnn_state in state.rnn_state])
@@ -122,32 +132,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         # action_mask: (group_size, num_embedded_actions)
         action_embeddings, embedded_action_mask = self._get_action_embeddings(state,
                                                                               global_actions_to_embed)
-
-        # This holds a list of checklist balances for this state. Each balance is a float vector
-        # containing just 1s and 0s showing which of the items are filled. We clamp the min at 0 to
-        # ignore the number of times an action is taken. The value at an index will be 1 iff the
-        # target wants an unmasked action to be taken, and it is not yet taken. All elements in
-        # each balance corresponding to masked actions will be 0.
-        checklist_balances = []
-        for instance_target, instance_checklist, checklist_mask in zip(state.checklist_target,
-                                                                       state.checklist,
-                                                                       state.checklist_mask):
-            checklist_balance = torch.clamp(instance_target - instance_checklist, min=0.0)
-            checklist_balance = checklist_balance * checklist_mask
-            checklist_balances.append(checklist_balance)
-
-        # Note that the checklist balance has 0s for actions that are masked (see comment above).
-        # So, masked actions do not contribute to the projection of ``predicted_action_emebedding``
-        # below.
-        # (group_size, num_terminals, 1)
-        checklist_balance = torch.stack([x for x in  checklist_balances])
-        checklist_balance = checklist_balance.squeeze(2)  # (group_size, num_terminals)
-
-        # To predict an action, we'll use a concatenation of the hidden state and attention over
-        # the sentence.  We'll just predict an _embedding_, which we will compare to embedded
-        # representations of all valid actions to get a final output.
-        action_query = torch.cat([hidden_state, attended_sentence, checklist_balance], dim=-1)
-
+        action_query = self._get_action_query(state, hidden_state, attended_sentence)
         # (group_size, action_embedding_dim)
         predicted_action_embedding = self._output_projection_layer(action_query)
 
@@ -155,22 +140,94 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         # action_embedding)` for each `action_embedding`, and we can get that efficiently with
         # `bmm` and some squeezing.
         # Shape: (group_size, num_embedded_actions)
-        embedded_action_logits = action_embeddings.bmm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
+        action_logits = action_embeddings.bmm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
 
-        action_logits = embedded_action_logits
         action_mask = embedded_action_mask.float()
+        if state.checklist is not None:
+            # We will compute the logprobs and the checklists of potential next states together for
+            # efficiency.
+            logprobs, new_checklists = self._get_next_state_info_with_agenda(state,
+                                                                             considered_actions,
+                                                                             action_logits,
+                                                                             action_mask)
+        else:
+            logprobs = self._get_next_state_info_without_agenda(state,
+                                                                considered_actions,
+                                                                action_logits,
+                                                                action_mask)
+            new_checklists = None
+        return self._compute_new_states(state,
+                                        logprobs,
+                                        hidden_state,
+                                        memory_cell,
+                                        action_embeddings,
+                                        attended_sentence,
+                                        considered_actions,
+                                        allowed_actions,
+                                        new_checklists,
+                                        max_actions)
+
+    @staticmethod
+    def _get_action_query(state: NlvrDecoderState,
+                          hidden_state: torch.Tensor,
+                          attended_sentence: torch.Tensor) -> torch.Tensor:
+        if state.checklist is not None:
+            # This means the we want to take steps based on an agenda. We will use the checklist
+            # balance to compute the action query.
+
+            # This holds a list of checklist balances for this state. Each balance is a float vector
+            # containing just 1s and 0s showing which of the items are filled. We clamp the min at 0
+            # to ignore the number of times an action is taken. The value at an index will be 1 iff
+            # the target wants an unmasked action to be taken, and it is not yet taken. All elements
+            # in each balance corresponding to masked actions will be 0.
+            checklist_balances = []
+            for instance_target, instance_checklist, checklist_mask in zip(state.checklist_target,
+                                                                           state.checklist,
+                                                                           state.checklist_mask):
+                checklist_balance = torch.clamp(instance_target - instance_checklist, min=0.0)
+                checklist_balance = checklist_balance * checklist_mask
+                checklist_balances.append(checklist_balance)
+
+            # Note that the checklist balance has 0s for actions that are masked (see comment above).
+            # So, masked actions do not contribute to the projection of ``predicted_action_emebedding``
+            # below.
+            # (group_size, num_terminals, 1)
+            checklist_balance = torch.stack([x for x in  checklist_balances])
+            checklist_balance = checklist_balance.squeeze(2)  # (group_size, num_terminals)
+
+            # To predict an action, we'll use a concatenation of the hidden state and attention over
+            # the sentence.  We'll just predict an _embedding_, which we will compare to embedded
+            # representations of all valid actions to get a final output.
+            action_query = torch.cat([hidden_state, attended_sentence, checklist_balance], dim=-1)
+        else:
+            # We'll just concatenate the hidden state and the attended sentence. We're training the
+            # parser with target action sequences.
+            action_query = torch.cat([hidden_state, attended_sentence], dim=-1)
+        return action_query
+
+    @staticmethod
+    def _get_next_state_info_with_agenda(
+            state: NlvrDecoderState,
+            considered_actions: List[List[int]],
+            action_logits: torch.Tensor,
+            action_mask: torch.Tensor) -> Tuple[List[List[Tuple[int, torch.LongTensor]]],
+                                                List[List[torch.LongTensor]]]:
+        """
+        We return a list of log probabilities and checklists corresponding to next actions that are
+        not padding. This method is applicable to the case where we do not have target action
+        sequences an are relying on agendas for training.
+        """
         considered_action_probs = nn_util.masked_softmax(action_logits, action_mask)
         # Mixing model scores and agenda selection probabilities to compute the probabilities of all
         # actions for the next step and the corresponding new checklists.
         # All action logprobs will keep track of logprob corresponding to each local action index
         # for each instance.
-        all_action_logprobs: List[List[Tuple[int, torch.Tensor]]] = []
+        all_action_logprobs: List[List[Tuple[int, torch.LongTensor]]] = []
         all_new_checklists: List[List[torch.LongTensor]] = []
-        for group_index, instance_info in enumerate(zip(state.batch_indices,
-                                                        state.score,
+        for group_index, instance_info in enumerate(zip(state.score,
                                                         considered_action_probs,
                                                         state.checklist)):
-            (batch_index, instance_score, instance_probs, instance_checklist) = instance_info
+            (instance_score, instance_probs, instance_checklist) = instance_info
             terminal_actions = state.terminal_actions[group_index]  # (num_terminals, 1)
             # We will mix the model scores with agenda selection probabilities and compute their
             # logs to fill the following list with action indices and corresponding logprobs.
@@ -192,15 +249,33 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                 instance_action_logprobs.append((action_index, logprob))
             all_action_logprobs.append(instance_action_logprobs)
             all_new_checklists.append(instance_new_checklists)
-        return self._compute_new_states(state,
-                                        all_action_logprobs,
-                                        all_new_checklists,
-                                        hidden_state,
-                                        memory_cell,
-                                        action_embeddings,
-                                        attended_sentence,
-                                        considered_actions,
-                                        max_actions)
+        return all_action_logprobs, all_new_checklists
+
+    @staticmethod
+    def _get_next_state_info_without_agenda(state: NlvrDecoderState,
+                                            considered_actions: List[List[int]],
+                                            action_logits: torch.Tensor,
+                                            action_mask: torch.Tensor) -> List[List[Tuple[int,
+                                                                                          torch.LongTensor]]]:
+        """
+        We return a list of log probabilities corresponding to actions that are not padding. This
+        method is related to the training scenario where we have target action sequences for
+        training.
+        """
+        considered_action_logprobs = nn_util.masked_log_softmax(action_logits, action_mask)
+        all_action_logprobs: List[List[Tuple[int, torch.LongTensor]]] = []
+        for group_index, (score, considered_logprobs) in enumerate(zip(state.score,
+                                                                       considered_action_logprobs)):
+            instance_action_logprobs: List[Tuple[int, torch.Tensor]] = []
+            for action_index, logprob in enumerate(considered_logprobs):
+                # This is the actual index of the action from the original list of actions.
+                action = considered_actions[group_index][action_index]
+                if action == -1:
+                    # Ignoring padding.
+                    continue
+                instance_action_logprobs.append((action_index, score + logprob))
+            all_action_logprobs.append(instance_action_logprobs)
+        return all_action_logprobs
 
     def attend_on_sentence(self,
                            query: torch.Tensor,
@@ -272,24 +347,29 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         return action_embeddings, action_mask
 
     @classmethod
-    def _compute_new_states(cls,  # type: ignore
+    def _compute_new_states(cls,
                             state: NlvrDecoderState,
                             action_logprobs: List[List[Tuple[int, torch.Tensor]]],
-                            new_checklists: List[List[torch.Tensor]],
                             hidden_state: torch.Tensor,
                             memory_cell: torch.Tensor,
                             action_embeddings: torch.Tensor,
                             attended_sentence: torch.Tensor,
                             considered_actions: List[List[int]],
+                            allowed_actions: List[Set[int]] = None,
+                            new_checklists: List[List[torch.Tensor]] = None,
                             max_actions: int = None) -> List[NlvrDecoderState]:
         """
         This method is very similar to ``WikiTabledDecoderStep._compute_new_states``.
-        The difference here is that we also have checklists to deal with.
+        The difference here is that we also keep track of checklists if they are passed to this
+        method.
         """
-        # TODO(pradeep): We do not have a notion of ``allowed_actions`` for NLVR for now, but this
-        # may be applicable in the future.
         # batch_index -> group_index, action_index, checklist, score
         states_info: Dict[int, List[Tuple[int, int, torch.Tensor, torch.Tensor]]] = defaultdict(list)
+        if new_checklists is None:
+            # We do not have checklists. Making a list of lists of Nones of the appropriate size for
+            # the zips below.
+            new_checklists = [[None for logprob in instance_logprobs]
+                              for instance_logprobs in action_logprobs]
         for group_index, instance_info in enumerate(zip(state.batch_indices,
                                                         action_logprobs,
                                                         new_checklists)):
@@ -309,6 +389,8 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                 # We do not have to check whether it is the padding index because ``take_step``
                 # already took care of that.
                 action = considered_actions[group_index][action_index]
+                if allowed_actions is not None and action not in allowed_actions[group_index]:
+                    continue
                 action_embedding = action_embeddings[group_index, action_index, :]
                 new_action_history = state.action_history[group_index] + [action]
                 left_side = state.possible_actions[batch_index][action]['left'][0]
@@ -321,20 +403,31 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                                          attended_sentence[group_index],
                                          state.rnn_state[group_index].encoder_outputs,
                                          state.rnn_state[group_index].encoder_output_mask)
-
-                new_state = NlvrDecoderState(batch_indices=[batch_index],
-                                             action_history=[new_action_history],
-                                             score=[new_score],
-                                             rnn_state=[new_rnn_state],
-                                             grammar_state=[new_grammar_state],
-                                             terminal_actions=[state.terminal_actions[group_index]],
-                                             checklist_target=[state.checklist_target[group_index]],
-                                             checklist_masks=[state.checklist_mask[group_index]],
-                                             checklist=[new_checklist],
-                                             action_embeddings=state.action_embeddings,
-                                             action_indices=state.action_indices,
-                                             possible_actions=state.possible_actions,
-                                             worlds=state.worlds,
-                                             label_strings=state.label_strings)
+                if new_checklist is None:
+                    new_state = NlvrDecoderState(batch_indices=[batch_index],
+                                                 action_history=[new_action_history],
+                                                 score=[new_score],
+                                                 rnn_state=[new_rnn_state],
+                                                 grammar_state=[new_grammar_state],
+                                                 action_embeddings=state.action_embeddings,
+                                                 action_indices=state.action_indices,
+                                                 possible_actions=state.possible_actions,
+                                                 worlds=state.worlds,
+                                                 label_strings=state.label_strings)
+                else:
+                    new_state = NlvrDecoderState(batch_indices=[batch_index],
+                                                 action_history=[new_action_history],
+                                                 score=[new_score],
+                                                 rnn_state=[new_rnn_state],
+                                                 grammar_state=[new_grammar_state],
+                                                 action_embeddings=state.action_embeddings,
+                                                 action_indices=state.action_indices,
+                                                 possible_actions=state.possible_actions,
+                                                 worlds=state.worlds,
+                                                 label_strings=state.label_strings,
+                                                 terminal_actions=[state.terminal_actions[group_index]],
+                                                 checklist_target=[state.checklist_target[group_index]],
+                                                 checklist_masks=[state.checklist_mask[group_index]],
+                                                 checklist=[new_checklist])
                 new_states.append(new_state)
         return new_states

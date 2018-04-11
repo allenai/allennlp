@@ -1,3 +1,4 @@
 from allennlp.models.encoder_decoders.simple_seq2seq import SimpleSeq2Seq
 from allennlp.models.encoder_decoders.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
-from allennlp.models.encoder_decoders.nlvr.nlvr_semantic_parser import NlvrSemanticParser
+from allennlp.models.encoder_decoders.nlvr.nlvr_coverage_semantic_parser import NlvrCoverageSemanticParser
+from allennlp.models.encoder_decoders.nlvr.nlvr_direct_semantic_parser import NlvrDirectSemanticParser
