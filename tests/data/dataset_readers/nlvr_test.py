@@ -81,3 +81,28 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         assert all([isinstance(world, NlvrWorld) for world in worlds])
         labels = [label.label for label in instance.fields["labels"].field_list]
         assert labels == ["false", "true", "false", "false"]
+
+    def test_reader_reads_processed_data(self):
+        # Processed data contains action sequences that yield the correct denotations, obtained from
+        # an offline search.
+        test_file = "tests/fixtures/data/nlvr/sample_processed_data.jsonl"
+        dataset = NlvrDatasetReader(add_paths_to_agenda=False).read(test_file)
+        instances = list(dataset)
+        assert len(instances) == 2
+        instance = instances[0]
+        assert instance.fields.keys() == {"sentence", "target_action_sequences",
+                                          "worlds", "actions", "labels"}
+        all_action_sequence_indices = instance.fields["target_action_sequences"].field_list
+        assert len(all_action_sequence_indices) == 20
+        action_sequence_indices = [item.sequence_index for item in
+                                   all_action_sequence_indices[0].field_list]
+        actions = [action.rule for action in instance.fields["actions"].field_list]
+        action_sequence = [actions[rule_id] for rule_id in action_sequence_indices]
+        assert action_sequence == ['@START@ -> t',
+                                   't -> [<o,t>, o]',
+                                   '<o,t> -> object_exists',
+                                   'o -> [<o,o>, o]',
+                                   '<o,o> -> touch_corner',
+                                   'o -> [<o,o>, o]',
+                                   '<o,o> -> circle',
+                                   'o -> all_objects']

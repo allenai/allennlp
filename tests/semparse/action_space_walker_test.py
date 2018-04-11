@@ -59,3 +59,13 @@ class ActionSpaceWalkerTest(AllenNlpTestCase):
                 '(object_exists (triangle (touch_wall (black all_objects))))',
                 '(object_exists (touch_wall (black (triangle all_objects))))',
                 '(object_exists (touch_wall (triangle (black all_objects))))'])
+
+    def test_get_all_logical_forms(self):
+        # get_all_logical_forms should sort logical forms by length.
+        ten_shortest_logical_forms = self.walker.get_all_logical_forms(max_num_logical_forms=10)
+        shortest_logical_form = ten_shortest_logical_forms[0]
+        assert shortest_logical_form == '(object_exists all_objects)'
+        length_three_logical_forms = ten_shortest_logical_forms[1:4]
+        assert set(length_three_logical_forms) == {'(object_exists (black all_objects))',
+                                                   '(object_exists (touch_wall all_objects))',
+                                                   '(object_exists (triangle all_objects))'}

@@ -9,7 +9,7 @@
   "train_data_path": "tests/fixtures/data/nlvr/sample_grouped_data.jsonl",
   "validation_data_path": "tests/fixtures/data/nlvr/sample_grouped_data.jsonl",
   "model": {
-    "type": "nlvr_parser",
+    "type": "nlvr_coverage_parser",
     "sentence_embedder": {
       "tokens": {
         "type": "embedding",
