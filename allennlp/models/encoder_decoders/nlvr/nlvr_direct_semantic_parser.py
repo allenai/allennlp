@@ -94,7 +94,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         initial_score_list = [nn_util.new_variable_with_data(list(sentence.values())[0],
                                                              torch.Tensor([0.0]))
                               for i in range(batch_size)]
-        label_strings = self._get_label_strings(labels)
+        label_strings = self._get_label_strings(labels) if labels is not None else None
         # TODO (pradeep): Assuming all worlds give the same set of valid actions.
         initial_grammar_state = [self._create_grammar_state(worlds[i][0], actions[i]) for i in
                                  range(batch_size)]
@@ -117,9 +117,12 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
             target_mask = target_action_sequences != self._action_padding_index
         else:
             target_mask = None
-        outputs = self._decoder_trainer.decode(initial_state,
-                                               self._decoder_step,
-                                               (target_action_sequences, target_mask))
+
+        outputs: Dict[str, torch.Tensor] = {}
+        if target_action_sequences is not None:
+            outputs = self._decoder_trainer.decode(initial_state,
+                                                   self._decoder_step,
+                                                   (target_action_sequences, target_mask))
         best_final_states = self._decoder_beam_search.search(self._max_decoding_steps,
                                                              initial_state,
                                                              self._decoder_step,
@@ -132,29 +135,30 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
             if i in best_final_states:
                 best_action_indices = best_final_states[i][0].action_history[0]
                 best_action_sequences[i] = best_action_indices
-        self._update_metrics(actions=actions,
-                             worlds=worlds,
-                             best_action_sequences=best_action_sequences,
-                             label_strings=label_strings)
+        batch_action_strings = self._get_action_strings(actions, best_action_sequences)
+        batch_denotations = self._get_denotations(batch_action_strings, worlds)
+        if target_action_sequences is not None:
+            self._update_metrics(action_strings=batch_action_strings,
+                                 worlds=worlds,
+                                 label_strings=label_strings)
+        else:
+            outputs["best_action_strings"] = batch_action_strings
+            outputs["denotations"] = batch_denotations
         return outputs
 
     def _update_metrics(self,
-                        actions: List[List[ProductionRuleArray]],
+                        action_strings: List[List[str]],
                         worlds: List[List[NlvrWorld]],
-                        best_action_sequences: Dict[int, List[int]],
                         label_strings: List[List[str]]) -> None:
         # TODO(pradeep): Move this to the base class.
         batch_size = len(worlds)
         for i in range(batch_size):
-            batch_actions = actions[i]
-            batch_best_sequences = best_action_sequences[i] if i in best_action_sequences else []
+            instance_action_strings = action_strings[i]
             sequence_is_correct = [False]
-            if batch_best_sequences:
-                action_strings = [self._get_action_string(batch_actions[rule_id]) for rule_id in
-                                  batch_best_sequences]
+            if instance_action_strings:
                 instance_label_strings = label_strings[i]
                 instance_worlds = worlds[i]
-                sequence_is_correct = self._check_denotation(action_strings,
+                sequence_is_correct = self._check_denotation(instance_action_strings,
                                                              instance_label_strings,
                                                              instance_worlds)
             for correct_in_world in sequence_is_correct:

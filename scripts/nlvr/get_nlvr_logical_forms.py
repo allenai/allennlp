@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 import json
+import pickle
 import argparse
 from typing import Tuple, List
 import os
@@ -43,7 +44,13 @@ def process_data(input_file: str,
     processed_data: JsonDict = []
     # We can instantiate the ``ActionSpaceWalker`` with any world because the action space is the
     # same for all the ``NlvrWorlds``. It is just the execution that differs.
-    walker = ActionSpaceWalker(NlvrWorld({}), max_path_length=max_path_length)
+    serialized_walker_path = f"serialized_action_space_walker_pl={max_path_length}.pkl"
+    if os.path.isfile(serialized_walker_path):
+        print("Reading walker from serialized file", file=sys.stderr)
+        walker = pickle.load(open(serialized_walker_path, "rb"))
+    else:
+        walker = ActionSpaceWalker(NlvrWorld({}), max_path_length=max_path_length)
+        pickle.dump(walker, open(serialized_walker_path, "wb"))
     for line in open(input_file):
         instance_id, sentence, structured_reps, label_strings = read_json_line(line)
         worlds = [NlvrWorld(structured_rep) for structured_rep in structured_reps]

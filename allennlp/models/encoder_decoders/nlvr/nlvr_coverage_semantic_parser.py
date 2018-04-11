@@ -124,7 +124,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         # We look at the epoch number and adjust the checklist cost weight if needed here.
         instance_epoch_num = epoch_num[0] if epoch_num is not None else None
         if self._dynamic_cost_rate is not None:
-            if instance_epoch_num is None:
+            if self.training and instance_epoch_num is None:
                 raise RuntimeError("If you want a dynamic cost weight, use the "
                                    "EpochTrackingBucketIterator!")
             if instance_epoch_num != self._last_epoch_in_forward:
@@ -137,14 +137,14 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         action_embeddings, action_indices, initial_action_embedding = self._embed_actions(actions)
 
         initial_rnn_state = self._get_initial_rnn_state(sentence, initial_action_embedding)
-        initial_score_list = [nn_util.new_variable_with_data(agenda, torch.Tensor([0.0])) for i in
-                              range(batch_size)]
-        label_strings = self._get_label_strings(labels)
+        initial_score_list = [nn_util.new_variable_with_data(list(sentence.values())[0],
+                                                             torch.Tensor([0.0]))
+                              for i in range(batch_size)]
         # TODO (pradeep): Assuming all worlds give the same set of valid actions.
         initial_grammar_state = [self._create_grammar_state(worlds[i][0], actions[i]) for i in
                                  range(batch_size)]
-        worlds_list = [worlds[i] for i in range(batch_size)]
 
+        label_strings = self._get_label_strings(labels) if labels is not None else None
         # Each instance's agenda is of size (agenda_size, 1)
         agenda_list = [agenda[i] for i in range(batch_size)]
         checklist_targets = []
@@ -168,7 +168,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                          action_embeddings=action_embeddings,
                                          action_indices=action_indices,
                                          possible_actions=actions,
-                                         worlds=worlds_list,
+                                         worlds=worlds,
                                          label_strings=label_strings,
                                          terminal_actions=all_terminal_actions,
                                          checklist_target=checklist_targets,
@@ -180,11 +180,19 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                                self._decoder_step,
                                                self._get_state_cost)
         best_action_sequences = outputs['best_action_sequence']
-        self._update_metrics(actions=actions,
-                             worlds=worlds,
-                             best_action_sequences=best_action_sequences,
-                             label_strings=label_strings,
-                             agenda_data=agenda_data)
+        batch_action_strings = self._get_action_strings(actions, best_action_sequences)
+        batch_denotations = self._get_denotations(batch_action_strings, worlds)
+        if labels is not None:
+            # We're either training or validating.
+            self._update_metrics(action_strings=batch_action_strings,
+                                 worlds=worlds,
+                                 label_strings=label_strings,
+                                 possible_actions=actions,
+                                 agenda_data=agenda_data)
+        else:
+            # We're testing.
+            outputs["best_action_strings"] = batch_action_strings
+            outputs["denotations"] = batch_denotations
         return outputs
 
     def _get_checklist_info(self,
@@ -236,35 +244,33 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         return target_checklist, terminal_actions, checklist_mask
 
     def _update_metrics(self,
-                        actions: List[List[ProductionRuleArray]],
+                        action_strings: List[List[str]],
                         worlds: List[List[NlvrWorld]],
-                        best_action_sequences: Dict[int, List[int]],
                         label_strings: List[List[str]],
+                        possible_actions: List[List[ProductionRuleArray]],
                         agenda_data: List[List[int]]) -> None:
         # TODO(pradeep): Move this to the base class.
         batch_size = len(worlds)
         for i in range(batch_size):
-            batch_actions = actions[i]
-            batch_best_sequences = best_action_sequences[i] if i in best_action_sequences else []
+            instance_action_strings = action_strings[i]
             sequence_is_correct = [False]
             in_agenda_ratio = 0.0
-            if batch_best_sequences:
-                action_strings = [self._get_action_string(batch_actions[rule_id]) for rule_id in
-                                  batch_best_sequences]
+            instance_possible_actions = possible_actions[i]
+            if instance_action_strings:
                 terminal_agenda_actions = []
                 for rule_id in agenda_data[i]:
                     if rule_id == -1:
                         continue
-                    action_string = self._get_action_string(batch_actions[rule_id])
+                    action_string = self._get_action_string(instance_possible_actions[rule_id])
                     right_side = action_string.split(" -> ")[1]
                     if right_side.isdigit() or ('[' not in right_side and len(right_side) > 1):
-                        terminal_agenda_actions.append(rule_id)
-                actions_in_agenda = [rule_id in batch_best_sequences for rule_id in
+                        terminal_agenda_actions.append(action_string)
+                actions_in_agenda = [action in instance_action_strings for action in
                                      terminal_agenda_actions]
                 in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
                 instance_label_strings = label_strings[i]
                 instance_worlds = worlds[i]
-                sequence_is_correct = self._check_denotation(action_strings,
+                sequence_is_correct = self._check_denotation(instance_action_strings,
                                                              instance_label_strings,
                                                              instance_worlds)
             for correct_in_world in sequence_is_correct:
@@ -305,7 +311,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         checklist_cost = self._checklist_cost_weight * checklist_cost
         # TODO (pradeep): The denotation based cost below is strict. May be define a cost based on
         # how many worlds the logical form is correct in?
-        if all(self._check_state_denotations(state)):
+        # label_strings being None happens when we are testing. We do not care about the cost then.
+        # TODO (pradeep): Make this cleaner.
+        if state.label_strings is None or all(self._check_state_denotations(state)):
             cost = checklist_cost
         else:
             cost = checklist_cost + (1 - self._checklist_cost_weight) * denotation_cost
