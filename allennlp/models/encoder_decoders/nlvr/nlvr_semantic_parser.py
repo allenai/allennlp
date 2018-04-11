@@ -135,12 +135,11 @@ class NlvrSemanticParser(Model):
         for i in range(batch_size):
             batch_actions = possible_actions[i]
             batch_best_sequences = action_indices[i] if i in action_indices else []
-            if batch_best_sequences:
-                action_strings = [cls._get_action_string(batch_actions[rule_id]) for rule_id in
-                                  batch_best_sequences]
-                all_action_strings.append(action_strings)
-            else:
-                all_action_strings.append([])
+            # This will append an empty list to ``all_action_strings`` if ``batch_best_sequences``
+            # is empty.
+            action_strings = [cls._get_action_string(batch_actions[rule_id]) for rule_id in
+                              batch_best_sequences]
+            all_action_strings.append(action_strings)
         return all_action_strings
 
     @staticmethod

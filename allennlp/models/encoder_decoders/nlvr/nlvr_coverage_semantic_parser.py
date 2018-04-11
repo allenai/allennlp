@@ -255,13 +255,13 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             instance_action_strings = action_strings[i]
             sequence_is_correct = [False]
             in_agenda_ratio = 0.0
-            batch_actions = possible_actions[i]
+            instance_possible_actions = possible_actions[i]
             if instance_action_strings:
                 terminal_agenda_actions = []
                 for rule_id in agenda_data[i]:
                     if rule_id == -1:
                         continue
-                    action_string = self._get_action_string(batch_actions[rule_id])
+                    action_string = self._get_action_string(instance_possible_actions[rule_id])
                     right_side = action_string.split(" -> ")[1]
                     if right_side.isdigit() or ('[' not in right_side and len(right_side) > 1):
                         terminal_agenda_actions.append(action_string)
