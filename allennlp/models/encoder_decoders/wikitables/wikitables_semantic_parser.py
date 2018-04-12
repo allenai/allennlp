@@ -18,7 +18,8 @@ from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEnc
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
-from allennlp.nn.decoding import BeamSearch, GrammarState, MaximumMarginalLikelihood, RnnState
+from allennlp.nn.decoding import BeamSearch, GrammarState, RnnState
+from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
 from allennlp.semparse.type_declarations import type_declaration
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import WikiTablesWorld

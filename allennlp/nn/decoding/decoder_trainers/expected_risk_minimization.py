@@ -6,7 +6,7 @@ from torch.autograd import Variable
 
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
-from allennlp.nn.decoding.decoder_trainer import DecoderTrainer
+from allennlp.nn.decoding.decoder_trainers.decoder_trainer import DecoderTrainer
 from allennlp.nn import util as nn_util
 
 StateType = TypeVar('StateType', bound=DecoderState)  # pylint: disable=invalid-name
