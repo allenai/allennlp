@@ -104,8 +104,11 @@ class WikiTablesSemanticParser(Model):
         self._action_padding_index = -1  # the padding value used by IndexField
         self._action_embedder = Embedding(num_embeddings=vocab.get_vocab_size(self._rule_namespace),
                                           embedding_dim=action_embedding_dim)
-        self._initial_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
-        torch.nn.init.normal(self._initial_action_embedding)
+
+        # This is what we pass as input in the first step of decoding, when we don't have a
+        # previous action.
+        self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
+        torch.nn.init.normal(self._first_action_embedding)
 
         self.num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
         self._embedding_dim = question_embedder.get_output_dim()
@@ -299,7 +302,7 @@ class WikiTablesSemanticParser(Model):
         for i in range(batch_size):
             initial_rnn_state.append(RnnState(final_encoder_output[i],
                                               memory_cell[i],
-                                              self._initial_action_embedding,
+                                              self._first_action_embedding,
                                               attended_question[i],
                                               encoder_output_list,
                                               question_mask_list))

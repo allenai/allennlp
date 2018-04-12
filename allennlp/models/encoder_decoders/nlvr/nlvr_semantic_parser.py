@@ -58,8 +58,11 @@ class NlvrSemanticParser(Model):
 
         self._action_embedder = Embedding(num_embeddings=vocab.get_vocab_size(self._rule_namespace),
                                           embedding_dim=action_embedding_dim)
-        self._initial_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
-        torch.nn.init.normal(self._initial_action_embedding)
+
+        # This is what we pass as input in the first step of decoding, when we don't have a
+        # previous action.
+        self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
+        torch.nn.init.normal(self._first_action_embedding)
 
     @overrides
     def forward(self):  # type: ignore
@@ -98,7 +101,7 @@ class NlvrSemanticParser(Model):
         for i in range(batch_size):
             initial_rnn_state.append(RnnState(final_encoder_output[i],
                                               memory_cell[i],
-                                              self._initial_action_embedding,
+                                              self._first_action_embedding,
                                               attended_sentence[i],
                                               encoder_outputs_list,
                                               sentence_mask_list))
@@ -193,7 +196,7 @@ class NlvrSemanticParser(Model):
             Has shape ``(num_unique_actions, action_embedding_dim)``.
         action_map : ``Dict[Tuple[int, int], int]``
             Maps ``(batch_index, action_index)`` in the input action list to ``action_index`` in
-            the ``action_embeddings`` tensor.  All non-embeddable actions get mapped to `-1` here.
+            the ``action_embeddings`` tensor.
         """
         # TODO(mattg): This whole action pipeline might be a whole lot more complicated than it
         # needs to be.  We used to embed actions differently (using some crazy ideas about
@@ -214,7 +217,7 @@ class NlvrSemanticParser(Model):
                 if not action[0]:
                     # This rule is padding.
                     continue
-                global_action_id = action_vocab.get(action[0], -1)
+                global_action_id = action_vocab[action[0]]
                 action_map[(batch_index, action_index)] = global_action_id
         return embedded_actions, action_map
 
