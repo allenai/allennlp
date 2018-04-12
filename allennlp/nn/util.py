@@ -1,6 +1,7 @@
 """
 Assorted utilities for working with neural networks in AllenNLP.
 """
+# pylint: disable=too-many-lines
 from collections import defaultdict
 from typing import Dict, List, Optional, Any, Tuple, Callable
 import logging
