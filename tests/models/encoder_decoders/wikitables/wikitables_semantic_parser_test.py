@@ -1,6 +1,7 @@
 # pylint: disable=invalid-name,no-self-use,protected-access
 from collections import namedtuple
 
+from flaky import flaky
 from numpy.testing import assert_almost_equal
 import torch
 from torch.autograd import Variable
@@ -22,6 +23,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
     def test_elmo_mixture_no_features_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(f'{self.fixture_dir}/experiment-mixture.json')
 
+    @flaky
     def test_elmo_no_features_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(f'{self.fixture_dir}/experiment-elmo-no-features.json')
 
