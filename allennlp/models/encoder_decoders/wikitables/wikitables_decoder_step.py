@@ -226,7 +226,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                     new_debug_info = None
 
                 # This part is different from `_compute_new_states` - we're just passing through
-                # the previous RNN state, as the predicting the start type wasn't included in the
+                # the previous RNN state, as predicting the start type wasn't included in the
                 # decoder RNN in the original model.
                 new_rnn_state = state.rnn_state[group_index]
 
