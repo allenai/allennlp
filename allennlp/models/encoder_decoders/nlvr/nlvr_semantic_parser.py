@@ -11,6 +11,7 @@ from allennlp.models.model import Model
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
 from allennlp.nn import util
 from allennlp.nn.decoding import GrammarState, RnnState
+from allennlp.semparse.type_declarations import type_declaration
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import NlvrWorld
 from allennlp.training.metrics import Average
@@ -171,7 +172,11 @@ class NlvrSemanticParser(Model):
         for key, action_strings in valid_actions.items():
             translated_valid_actions[key] = [action_mapping[action_string]
                                              for action_string in action_strings]
-        return GrammarState([START_SYMBOL], {}, translated_valid_actions, action_mapping)
+        return GrammarState([START_SYMBOL],
+                            {},
+                            translated_valid_actions,
+                            action_mapping,
+                            type_declaration.is_nonterminal)
 
     def _embed_actions(self, actions: List[List[ProductionRuleArray]]) -> Tuple[torch.Tensor,
                                                                                 Dict[Tuple[int, int], int]]:
