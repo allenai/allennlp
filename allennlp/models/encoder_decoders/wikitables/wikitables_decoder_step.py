@@ -23,6 +23,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                  encoder_output_dim: int,
                  action_embedding_dim: int,
                  attention_function: SimilarityFunction,
+                 num_start_types: int,
                  num_entity_types: int,
                  mixture_feedforward: FeedForward = None,
                  dropout: float = 0.0) -> None:
@@ -30,6 +31,9 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         self._mixture_feedforward = mixture_feedforward
         self._entity_type_embedding = Embedding(num_entity_types, action_embedding_dim)
         self._input_attention = Attention(attention_function)
+
+        self._num_start_types = num_start_types
+        self._start_type_predictor = Linear(encoder_output_dim, num_start_types)
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with the final hidden state of the encoder.
@@ -63,6 +67,11 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                   state: WikiTablesDecoderState,
                   max_actions: int = None,
                   allowed_actions: List[Set[int]] = None) -> List[WikiTablesDecoderState]:
+        if not state.action_history[0]:
+            # The wikitables parser did something different when predicting the start type, which
+            # is our first action.  So in this case we break out into a different function.  We'll
+            # ignore max_actions on our first step, assuming there aren't that many start types.
+            return self._take_first_step(state, allowed_actions)
         # Outline here: first we'll construct the input to the decoder, which is a concatenation of
         # an embedding of the decoder input (the last action taken) and an attention over the
         # question.  Then we'll update our decoder's hidden state given this input, and recompute
@@ -152,6 +161,89 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                         considered_actions,
                                         allowed_actions,
                                         max_actions)
+
+    def _take_first_step(self,
+                         state: WikiTablesDecoderState,
+                         allowed_actions: List[Set[int]] = None) -> List[WikiTablesDecoderState]:
+        # We'll just do a projection from the current hidden state (which was initialized with the
+        # final encoder output) to the number of start actions that we have, normalize those
+        # logits, and use that as our score.  We end up duplicating some of the logic from
+        # `_compute_new_states` here, but we do things slightly differently, and it's easier to
+        # just copy the parts we need than to try to re-use that code.
+
+        # (group_size, hidden_dim)
+        hidden_state = torch.stack([rnn_state.hidden_state for rnn_state in state.rnn_state])
+        # (group_size, num_start_type)
+        start_action_logits = self._start_type_predictor(hidden_state)
+        log_probs = util.masked_log_softmax(start_action_logits, None)
+        sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
+
+        sorted_actions = sorted_actions.data.cpu().numpy().tolist()
+        if state.debug_info is not None:
+            probs_cpu = log_probs.exp().data.cpu().numpy().tolist()
+
+        # state.get_valid_actions() will return a list that is consistently sorted, so as along as
+        # the set of valid start actions never changes, we can just match up the log prob indices
+        # above with the position of each considered action, and we're good.
+        considered_actions, _, _ = self._get_actions_to_consider(state)
+        if len(considered_actions[0]) != self._num_start_types:
+            raise RuntimeError("Calculated wrong number of initial actions.  Expected "
+                               f"{self._num_start_types}, found {len(considered_actions[0])}.")
+
+        best_next_states: Dict[int, List[Tuple[int, int, int]]] = defaultdict(list)
+        for group_index, (batch_index, group_actions) in enumerate(zip(state.batch_indices, sorted_actions)):
+            for action_index, action in enumerate(group_actions):
+                # `action` is currently the index in `log_probs`, not the actual action ID.  To get
+                # the action ID, we need to go through `considered_actions`.
+                action = considered_actions[group_index][action]
+                if allowed_actions is not None and action not in allowed_actions[group_index]:
+                    # This happens when our _decoder trainer_ wants us to only evaluate certain
+                    # actions, likely because they are the gold actions in this state.  We just skip
+                    # emitting any state that isn't allowed by the trainer, because constructing the
+                    # new state can be expensive.
+                    continue
+                best_next_states[batch_index].append((group_index, action_index, action))
+
+        new_states = []
+        for batch_index, best_states in sorted(best_next_states.items()):
+            for group_index, action_index, action in best_states:
+                # We'll yield a bunch of states here that all have a `group_size` of 1, so that the
+                # learning algorithm can decide how many of these it wants to keep, and it can just
+                # regroup them later, as that's a really easy operation.
+                batch_index = state.batch_indices[group_index]
+                new_action_history = state.action_history[group_index] + [action]
+                new_score = state.score[group_index] + sorted_log_probs[group_index, action_index]
+
+                production_rule = state.possible_actions[batch_index][action][0]
+                new_grammar_state = state.grammar_state[group_index].take_action(production_rule)
+                if state.debug_info is not None:
+                    debug_info = {
+                            'considered_actions': considered_actions[group_index],
+                            'probabilities': probs_cpu[group_index],
+                            }
+                    new_debug_info = [state.debug_info[group_index] + [debug_info]]
+                else:
+                    new_debug_info = None
+
+                # This part is different from `_compute_new_states` - we're just passing through
+                # the previous RNN state, as predicting the start type wasn't included in the
+                # decoder RNN in the original model.
+                new_rnn_state = state.rnn_state[group_index]
+
+                new_state = WikiTablesDecoderState(batch_indices=[batch_index],
+                                                   action_history=[new_action_history],
+                                                   score=[new_score],
+                                                   rnn_state=[new_rnn_state],
+                                                   grammar_state=[new_grammar_state],
+                                                   action_embeddings=state.action_embeddings,
+                                                   action_indices=state.action_indices,
+                                                   possible_actions=state.possible_actions,
+                                                   flattened_linking_scores=state.flattened_linking_scores,
+                                                   actions_to_entities=state.actions_to_entities,
+                                                   entity_types=state.entity_types,
+                                                   debug_info=new_debug_info)
+                new_states.append(new_state)
+        return new_states
 
     def attend_on_question(self,
                            query: torch.Tensor,

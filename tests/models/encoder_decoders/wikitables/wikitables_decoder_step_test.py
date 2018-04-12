@@ -177,7 +177,7 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         assert_almost_equal(embeddings[2, 2].data.cpu().numpy(), action_embeddings[4].data.cpu().numpy())
 
     def test_get_entity_action_logits(self):
-        decoder_step = WikiTablesDecoderStep(1, 5, SimilarityFunction.from_params(Params({})), 3)
+        decoder_step = WikiTablesDecoderStep(1, 5, SimilarityFunction.from_params(Params({})), 5, 3)
         actions_to_link = [[1, 2], [3, 4, 5], [6]]
         # (group_size, num_question_tokens) = (3, 3)
         attention_weights = Variable(torch.Tensor([[.2, .8, 0],
