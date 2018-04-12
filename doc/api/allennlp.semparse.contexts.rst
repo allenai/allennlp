@@ -1,5 +1,5 @@
-allennlp.semparse.knowledge_graphs
-=======================================
+allennlp.semparse.contexts
+==========================
 
 .. automodule:: allennlp.semparse.contexts
    :members:

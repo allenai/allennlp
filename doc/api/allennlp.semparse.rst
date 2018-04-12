@@ -1,5 +1,5 @@
 allennlp.semparse
-======================
+=================
 
 .. automodule:: allennlp.semparse
    :members:
