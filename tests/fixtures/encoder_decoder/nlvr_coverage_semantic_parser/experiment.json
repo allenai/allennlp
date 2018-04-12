@@ -4,7 +4,7 @@
     "output_agendas": true
   },
   "vocabulary": {
-    "non_padded_namespaces": ["denotations"]
+    "non_padded_namespaces": ["denotations", "rule_labels"]
   },
   "train_data_path": "tests/fixtures/data/nlvr/sample_grouped_data.jsonl",
   "validation_data_path": "tests/fixtures/data/nlvr/sample_grouped_data.jsonl",

@@ -114,14 +114,14 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
     def _initialize_weights_from_archive(self, archive: Archive) -> None:
         logger.info("Initializing weights from MML model.")
         model_parameters = dict(self.named_parameters())
-        archived_parameters = archive.model.named_parameters()
+        archived_parameters = dict(archive.model.named_parameters())
         sentence_embedder_weight = "_sentence_embedder.token_embedder_tokens.weight"
-        if sentence_embedder_weight not in dict(archived_parameters) or \
+        if sentence_embedder_weight not in archived_parameters or \
            sentence_embedder_weight not in model_parameters:
             raise RuntimeError("When initializing model weights from an MML model, we need "
                                "the sentence embedder to be a TokenEmbedder using namespace called "
                                "tokens.")
-        for name, weights in archived_parameters:
+        for name, weights in archived_parameters.items():
             if name in model_parameters:
                 if name == "_decoder_step._output_projection_layer.weight":
                     # The dimensions differ for this parameter between the coverage model and
@@ -132,7 +132,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                     # We copy only the relevant part of the weights here.
                     archived_projection_weights = weights.data
                     new_weights = model_parameters[name].data.clone()
-                    new_weights[:, :-self.num_terminals] = archived_projection_weights
+                    new_weights[:, :-len(self._terminal_productions)] = archived_projection_weights
                 elif name == "_sentence_embedder.token_embedder_tokens.weight":
                     # The shapes of embedding weights will most likely differ between the two models
                     # because the vocabularies will most likely be different. We will get a mapping

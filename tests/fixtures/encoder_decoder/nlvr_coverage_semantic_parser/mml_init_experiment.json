@@ -4,7 +4,7 @@
     "output_agendas": true
   },
   "vocabulary": {
-    "non_padded_namespaces": ["denotations"]
+    "non_padded_namespaces": ["denotations", "rule_labels"]
   },
   "train_data_path": "tests/fixtures/data/nlvr/sample_grouped_data.jsonl",
   "validation_data_path": "tests/fixtures/data/nlvr/sample_grouped_data.jsonl",
@@ -17,22 +17,7 @@
         "trainable": true
       }
     },
-    "nonterminal_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "vocab_namespace": "rule_labels",
-        "embedding_dim": 25,
-        "trainable": true
-      }
-    },
-    "terminal_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "vocab_namespace": "rule_labels",
-        "embedding_dim": 25,
-        "trainable": true
-      }
-    },
+    "action_embedding_dim": 50,
     "encoder": {
       "type": "lstm",
       "input_size": 25,

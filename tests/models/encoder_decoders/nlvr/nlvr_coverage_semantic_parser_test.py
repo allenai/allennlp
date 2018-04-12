@@ -29,7 +29,6 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
         self.ensure_model_can_train_save_and_load("tests/fixtures/encoder_decoder/nlvr_coverage_semantic_parser/mml_init_experiment.json")
 
     def test_get_checklist_info(self):
-        print(self.model._terminal_productions)
         # Creating a fake all_actions field where actions 0, 2 and 4 are terminal productions.
         all_actions = [('<o,o> -> top', True, None),
                        ('fake_action', True, None),
@@ -76,10 +75,11 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
             changed_weight = changed_model_parameters[name].data.numpy()
             # We want to make sure that the weights in the original model have indeed been changed
             # after a call to ``_initialize_weights_from_archive``.
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(AssertionError, msg=f"{name} has not changed"):
                 assert_almost_equal(original_weight, changed_weight)
             if name == "_decoder_step._output_projection_layer.weight":
-                assert_almost_equal(archived_weight, changed_weight[:, :-self.model.num_terminals])
+                changed_weight = changed_weight[:, :-len(self.model._terminal_productions)]
+                assert_almost_equal(archived_weight, changed_weight)
             else:
                 # This also includes the sentence token embedder. Those weights will be the same
                 # because the two models have the same vocabulary.
