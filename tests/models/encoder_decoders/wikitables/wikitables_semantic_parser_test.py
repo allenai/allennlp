@@ -25,7 +25,8 @@ class WikiTablesSemanticParserTest(ModelTestCase):
 
     @flaky
     def test_elmo_no_features_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(f'{self.fixture_dir}/experiment-elmo-no-features.json')
+        self.ensure_model_can_train_save_and_load(f'{self.fixture_dir}/experiment-elmo-no-features.json',
+                                                  tolerance=1e-2)
 
     def test_get_neighbor_indices(self):
         worlds, num_entities = self.get_fake_worlds()
