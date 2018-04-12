@@ -31,7 +31,6 @@ class ModelTestCase(AllenNlpTestCase):
             vocab = Vocabulary.from_params(params=vocab_params, instances=instances)
         else:
             vocab = Vocabulary.from_instances(instances)
-        vocab = Vocabulary.from_instances(instances)
         self.vocab = vocab
         self.instances = instances
         self.model = Model.from_params(self.vocab, params['model'])
