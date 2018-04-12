@@ -24,6 +24,7 @@ The included module ``allennlp.run`` is such a script:
         make-vocab
                   Create a vocabulary
         elmo      Use a trained model to make predictions.
+        dry-run   Create a vocabulary, compute dataset statistics and other training utilities.
 
 However, it only knows about the models and classes that are
 included with AllenNLP. Once you start creating custom models,
@@ -39,6 +40,7 @@ calls ``main()``.
     allennlp.commands.train
     allennlp.commands.fine_tune
     allennlp.commands.elmo
+    allennlp.commands.dry_run
 
 .. automodule:: allennlp.commands
    :members:

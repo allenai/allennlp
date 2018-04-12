@@ -300,3 +300,12 @@ class TestVocabulary(AllenNlpTestCase):
         # present apart from 'vocabulary_directory' and we aren't calling from_dataset.
         with pytest.raises(ConfigurationError):
             _ = Vocabulary.from_params(Params({"directory_path": vocab_dir, "min_count": {'tokens': 2}}))
+
+    def test_vocab_can_print(self):
+        vocab = Vocabulary(non_padded_namespaces=["a", "c"])
+        vocab.add_token_to_namespace("a0", namespace="a")
+        vocab.add_token_to_namespace("a1", namespace="a")
+        vocab.add_token_to_namespace("a2", namespace="a")
+        vocab.add_token_to_namespace("b2", namespace="b")
+        vocab.add_token_to_namespace("b3", namespace="b")
+        print(vocab)
