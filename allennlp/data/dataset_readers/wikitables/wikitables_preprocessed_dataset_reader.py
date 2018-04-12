@@ -58,8 +58,11 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
         TokenCharactersIndexer()}``.  We use this indexer by default because WikiTables has plenty
         of terminals that are unseen at training time, so we need to use a representation for them
         that is not just a vocabulary lookup.
-    max_number_table_tokens : ``int``, optional (default=-1)
-        We use this to truncate the entity tokens in the table.
+    max_table_tokens : ``int``, optional
+        If given, we will only keep this number of total table tokens.  This bounds the memory
+        usage of the table representations, truncating cells with really long text.  We specify a
+        total number of tokens, not a max cell text length, because the number of table entities
+        varies.
     """
     def __init__(self,
                  lazy: bool = False,
@@ -68,14 +71,14 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
                  use_table_for_vocab: bool = False,
                  nonterminal_indexers: Dict[str, TokenIndexer] = None,
                  terminal_indexers: Dict[str, TokenIndexer] = None,
-                 max_number_table_tokens: int = -1) -> None:
+                 max_table_tokens: int = None) -> None:
         super().__init__(lazy)
         self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._table_token_indexers = table_token_indexers or self._question_token_indexers
         self._use_table_for_vocab = use_table_for_vocab
         self._nonterminal_indexers = nonterminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
         self._terminal_indexers = terminal_indexers or {"token_characters": TokenCharactersIndexer()}
-        self._max_number_table_tokens = max_number_table_tokens
+        self._max_table_tokens = max_table_tokens
 
     @overrides
     def _read(self, file_path: str):
@@ -100,7 +103,7 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
                                           entity_tokens=entity_tokens,
                                           linking_features=json_obj['linking_features'],
                                           include_in_vocab=self._use_table_for_vocab,
-                                          max_number_table_tokens=self._max_number_table_tokens)
+                                          max_table_tokens=self._max_table_tokens)
         world = WikiTablesWorld(table_knowledge_graph)
         world_field = MetadataField(world)
 
@@ -138,10 +141,10 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
         question_token_indexers = TokenIndexer.dict_from_params(params.pop('question_token_indexers', {}))
         table_token_indexers = TokenIndexer.dict_from_params(params.pop('table_token_indexers', {}))
         use_table_for_vocab = params.pop('use_table_for_vocab', False)
-        max_number_table_tokens = params.pop_int('max_number_table_tokens', -1)
+        max_table_tokens = params.pop_int('max_table_tokens', None)
         params.assert_empty(cls.__name__)
         return WikiTablesPreprocessedDatasetReader(lazy=lazy,
                                                    question_token_indexers=question_token_indexers,
                                                    table_token_indexers=table_token_indexers,
                                                    use_table_for_vocab=use_table_for_vocab,
-                                                   max_number_table_tokens=max_number_table_tokens)
+                                                   max_table_tokens=max_table_tokens)

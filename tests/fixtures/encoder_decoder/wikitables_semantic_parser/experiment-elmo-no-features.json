@@ -8,10 +8,9 @@
        "type": "elmo_characters"
       }
     },
-    "max_number_table_tokens": 200
+    "max_table_tokens": 200
   },
   "vocabulary": {
-    "non_padded_namespaces": ["actions"],
     "min_count": {"tokens": 1}
   },
   "train_data_path": "tests/fixtures/data/wikitables/sample_data.examples",

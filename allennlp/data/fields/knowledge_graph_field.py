@@ -77,8 +77,11 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
         entity text from the vocabulary computation.  You might want to do this if you have a lot
         of rare entities in your tables, and you see the same table in multiple training instances,
         so your vocabulary counts get skewed and include too many rare entities.
-    max_number_table_tokens : ``int``, optional (default=-1)
-        We use this to truncate the entity tokens in the table.
+    max_table_tokens : ``int``, optional
+        If given, we will only keep this number of total table tokens.  This bounds the memory
+        usage of the table representations, truncating cells with really long text.  We specify a
+        total number of tokens, not a max cell text length, because the number of table entities
+        varies.
     """
     def __init__(self,
                  knowledge_graph: KnowledgeGraph,
@@ -89,8 +92,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                  entity_tokens: List[List[Token]] = None,
                  linking_features: List[List[List[float]]] = None,
                  include_in_vocab: bool = True,
-                 # TODO(rajas): should max_number_table_tokens default to high value?
-                 max_number_table_tokens: int = -1) -> None:
+                 max_table_tokens: int = None) -> None:
         self.knowledge_graph = knowledge_graph
         if not entity_tokens:
             entity_texts = [knowledge_graph.entity_text[entity].lower()
@@ -108,7 +110,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
         self._token_indexers: Dict[str, TokenIndexer] = token_indexers
         self._include_in_vocab = include_in_vocab
         self._indexed_entity_texts: Dict[str, TokenList] = None
-        self._max_number_table_tokens = max_number_table_tokens
+        self._max_table_tokens = max_table_tokens
 
         feature_extractors = feature_extractors or [
                 'exact_token_match',
@@ -167,12 +169,12 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
         num_entities = len(self.entity_texts)
         num_entity_tokens = max(len(entity_text) for entity_text in self.entity_texts)
 
-        # This enables us the truncate the number of entity tokens used, enabling the larger
-        # tables(which can have thousands of entities or more than 50 tokens each) to fit in
-        # memory, particularly when using Elmo.
-        if self._max_number_table_tokens != -1:
-            if num_entities * num_entity_tokens > self._max_number_table_tokens:
-                num_entity_tokens = int(self._max_number_table_tokens / num_entities)
+        if self._max_table_tokens:
+            # This truncates the number of entity tokens used, enabling larger tables (which can
+            # have thousands of entities or more than 50 tokens each) to fit in memory,
+            # particularly when using ELMo.
+            if num_entities * num_entity_tokens > self._max_table_tokens:
+                num_entity_tokens = int(self._max_table_tokens / num_entities)
 
         padding_lengths = {'num_entities': num_entities,
                            'num_utterance_tokens': len(self.utterance_tokens)}

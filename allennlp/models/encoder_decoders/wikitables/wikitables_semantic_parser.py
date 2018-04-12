@@ -112,8 +112,6 @@ class WikiTablesSemanticParser(Model):
 
         self.num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
 
-        # The entity_encoder's output dim is used instead of question_embedder's output dim since
-        # the question_embedder output will get projected down for Elmo.
         self._embedding_dim = question_embedder.get_output_dim()
         check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
                                "entity word average embedding dim", "question embedding dim")
