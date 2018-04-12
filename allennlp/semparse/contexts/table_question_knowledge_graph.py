@@ -5,7 +5,7 @@ from typing import Any, DefaultDict, Dict, List, Tuple, Union
 from unidecode import unidecode
 
 from allennlp.data.tokenizers import Token
-from allennlp.semparse.knowledge_graphs.knowledge_graph import KnowledgeGraph
+from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
 
 DEFAULT_NUMBERS = ['-1', '0', '1']
 NUMBER_CHARACTERS = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '-'}
