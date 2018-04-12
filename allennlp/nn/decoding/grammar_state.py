@@ -139,7 +139,8 @@ class GrammarState:
         return GrammarState(nonterminal_stack=new_stack,
                             lambda_stacks=new_lambda_stacks,
                             valid_actions=self._valid_actions,
-                            action_indices=self._action_indices)
+                            action_indices=self._action_indices,
+                            is_nonterminal=self._is_nonterminal)
 
     @staticmethod
     def _get_productions_from_string(production_string: str) -> List[str]:
