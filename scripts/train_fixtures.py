@@ -56,6 +56,8 @@ if __name__ == "__main__":
                 'decomposable_attention',
                 'encoder_decoder/simple_seq2seq',
                 'encoder_decoder/wikitables_semantic_parser',
+                'encoder_decoder/nlvr_coverage_semantic_parser',
+                'encoder_decoder/nlvr_direct_semantic_parser',
                 'srl',
                 ]
         for model in models:
