@@ -17,7 +17,6 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         self.set_up_model(f"{self.fixture_dir}/experiment.json",
                           "tests/fixtures/data/wikitables/sample_data.examples")
 
-    @flaky
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
