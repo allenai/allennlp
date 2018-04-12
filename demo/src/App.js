@@ -7,7 +7,7 @@ import McComponent from './components/McComponent';
 import CorefComponent from './components/CorefComponent'
 import NamedEntityComponent from './components/NamedEntityComponent'
 import ConstituencyParserComponent from './components/ConstituencyParserComponent'
-import Header from './components/Header';
+import Menu from './components/Menu';
 import WaitingForPermalink from './components/WaitingForPermalink'
 
 /*******************************************************************************
@@ -124,7 +124,7 @@ class Demo extends React.Component {
 
     return (
       <div className="pane-container">
-        <Header selectedModel={selectedModel} clearData={this.clearData}/>
+        <Menu selectedModel={selectedModel} clearData={this.clearData}/>
         <ModelComponent />
       </div>
     );
