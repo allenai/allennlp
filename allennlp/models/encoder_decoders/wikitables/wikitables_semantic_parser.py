@@ -106,9 +106,11 @@ class WikiTablesSemanticParser(Model):
                                           embedding_dim=action_embedding_dim)
 
         # This is what we pass as input in the first step of decoding, when we don't have a
-        # previous action.
+        # previous action, or a previous question attention.
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
+        self._first_attended_question = torch.nn.Parameter(torch.FloatTensor(encoder.get_output_dim()))
         torch.nn.init.normal(self._first_action_embedding)
+        torch.nn.init.normal(self._first_attended_question)
 
         self.num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
 
@@ -271,13 +273,12 @@ class WikiTablesSemanticParser(Model):
         encoder_outputs = self._dropout(self._encoder(encoder_input, question_mask))
 
         # This will be our initial hidden state and memory cell for the decoder LSTM.
-        final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
+        final_encoder_output = util.get_final_encoder_states(encoder_outputs,
+                                                             question_mask,
+                                                             self._encoder.is_bidirectional())
         memory_cell = Variable(encoder_outputs.data.new(batch_size, self._encoder.get_output_dim()).fill_(0))
 
         initial_score = Variable(embedded_question.data.new(batch_size).fill_(0))
-        attended_question, _ = self._decoder_step.attend_on_question(final_encoder_output,
-                                                                     encoder_outputs,
-                                                                     question_mask)
 
         action_embeddings, action_indices = self._embed_actions(actions)
 
@@ -306,7 +307,7 @@ class WikiTablesSemanticParser(Model):
             initial_rnn_state.append(RnnState(final_encoder_output[i],
                                               memory_cell[i],
                                               self._first_action_embedding,
-                                              attended_question[i],
+                                              self._first_attended_question,
                                               encoder_output_list,
                                               question_mask_list))
         initial_grammar_state = [self._create_grammar_state(world[i], actions[i])
