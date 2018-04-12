@@ -115,6 +115,12 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         logger.info("Initializing weights from MML model.")
         model_parameters = dict(self.named_parameters())
         archived_parameters = archive.model.named_parameters()
+        sentence_embedder_weight = "_sentence_embedder.token_embedder_tokens.weight"
+        if sentence_embedder_weight not in dict(archived_parameters) or \
+           sentence_embedder_weight not in model_parameters:
+            raise RuntimeError("When initializing model weights from an MML model, we need "
+                               "the sentence embedder to be a TokenEmbedder using namespace called "
+                               "tokens.")
         for name, weights in archived_parameters:
             if name in model_parameters:
                 if name == "_decoder_step._output_projection_layer.weight":
@@ -153,7 +159,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             # representations initialized to UNK token's representation. We do that by checking if
             # the two tokens are the same. They will not be if the token at the archived index is
             # UNK.
-            if archived_vocab.get_token_from_index(archived_token_index) == token:
+            if archived_vocab.get_token_from_index(archived_token_index, namespace="tokens") == token:
                 vocab_index_mapping.append((index, archived_token_index))
         return vocab_index_mapping
 

@@ -74,6 +74,8 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
             archived_weight = archived_parameter.data.numpy()
             original_weight = original_model_weights[name]
             changed_weight = changed_model_parameters[name].data.numpy()
+            # We want to make sure that the weights in the original model have indeed been changed
+            # after a call to ``_initialize_weights_from_archive``.
             with self.assertRaises(AssertionError):
                 assert_almost_equal(original_weight, changed_weight)
             if name == "_decoder_step._output_projection_layer.weight":
