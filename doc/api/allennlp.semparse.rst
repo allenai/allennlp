@@ -13,7 +13,7 @@ allennlp.semparse
 
 .. toctree::
 
-   allennlp.semparse.knowledge_graphs
+   allennlp.semparse.contexts
    allennlp.semparse.type_declarations
    allennlp.semparse.worlds
    allennlp.semparse.util

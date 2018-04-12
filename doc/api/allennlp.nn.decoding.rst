@@ -6,7 +6,7 @@ allennlp.nn.decoding
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.nn.decoding.beam_search
+.. automodule:: allennlp.nn.decoding.decoder_step
    :members:
    :undoc-members:
    :show-inheritance:
@@ -26,22 +26,11 @@ allennlp.nn.decoding
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.nn.decoding.decoder_step
+.. automodule:: allennlp.nn.decoding.beam_search
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.nn.decoding.decoder_trainer
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. toctree::
 
-.. automodule:: allennlp.nn.decoding.maximum_marginal_likelihood
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.nn.decoding.expected_risk_minimization
-   :members:
-   :undoc-members:
-   :show-inheritance:
+  allennlp.nn.decoding.decoder_trainers
