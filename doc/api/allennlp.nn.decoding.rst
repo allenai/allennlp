@@ -21,6 +21,11 @@ allennlp.nn.decoding
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.nn.decoding.grammar_state
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.nn.decoding.decoder_step
    :members:
    :undoc-members:
