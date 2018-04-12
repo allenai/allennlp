@@ -1,0 +1,100 @@
+.menu {
+  background: #e8ebf0;
+  border-right: 4px solid #cdd4dc;
+  max-width: 240px;
+  width: 100%;
+  height: 100%;
+}
+
+.menu__content {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
+.menu__content__logo {
+  margin: 0;
+  padding: 20px 0 0 0;
+}
+
+.menu__content__logo a {
+  margin: 0;
+  padding: 10px;
+  display: block;
+}
+
+.menu__content__logo a svg {
+  fill: #1c2f3a;
+  width: 125px;
+  height: 22px;
+  margin-left: 22px;
+}
+
+.menu__content nav ul,
+.menu__content nav ul li,
+.menu__content nav ul li .nav__link,
+.menu__content nav ul li .nav__link a,
+.menu__content nav ul li .nav__link a span {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+.menu__content nav ul {
+  list-style: none;
+}
+
+.menu__content nav ul li .nav__link a {
+  padding: 16px 32px 16px 28px;
+  position: relative;
+  background: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.menu__content nav ul li .nav__link a:before {
+  position: absolute;
+  width: 7px;
+  height: 100%;
+  top: 0;
+  left: 0;
+  content: "";
+  display: block;
+  background: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.menu__content nav ul li .nav__link a span {
+  color: #979a9d;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 20px;
+  transition: color 0.2s ease;
+}
+
+.menu__content nav ul li .nav__link a:hover span {
+  color: #1c2f3a;
+}
+
+.menu__content nav ul li .nav__link.nav__link--selected a {
+  background: #f6f7fa;
+}
+
+.menu__content nav ul li .nav__link.nav__link--selected a:before {
+  background: #63a7d4;
+}
+
+.menu__content nav ul li .nav__link.nav__link--selected a span {
+  color: #1c2f3a;
+}
+
+/* TODO(aarons): Revisit pane scrolling mechanics. This is not an ideal solution */
+
+.menu {
+  position: fixed;
+  z-index: 2;
+}
+
+.pane-container > .model {
+  margin-left: 244px;
+  overflow: auto;
+}
