@@ -19,8 +19,8 @@ functionality provided by this code is:
     the ``worlds`` module.
 
 Note that the main reason you would use this code is to get the set of actions that are available
-at any point during constrained decoding.  If you have some other means of doing that you might not
-need this code at all.
+at any point during constrained decoding.  If you have some other means of doing that, you might
+not need this code at all.
 """
 
 # We have some circular dependencies with the data code.  Importing this loads all of the data code

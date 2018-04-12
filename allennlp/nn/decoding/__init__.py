@@ -18,7 +18,7 @@ The key abstractions in this code are the following:
       current state.
     - ``DecoderTrainer`` is an algorithm for training the transition function with some kind of
       supervision signal.  There are many options for training algorithms and supervision signals;
-      this is an abstract class that is generic over the supervision signal.
+      this is an abstract class that is generic over the type of the supervision signal.
 
 The module also has some classes to help represent the ``DecoderState``, including ``RnnState``,
 which you can use to keep track of a decoder RNN's internal state, and ``GrammarState``, which
