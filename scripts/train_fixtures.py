@@ -51,3 +51,7 @@ if __name__ == "__main__":
         train_fixture("tests/fixtures/constituency_parser/experiment_no_evalb.json", "tests/fixtures/constituency_parser/serialization")
         train_fixture("tests/fixtures/encoder_decoder/wikitables_semantic_parser/experiment.json",
                       "tests/fixtures/encoder_decoder/wikitables_semantic_parser/serialization")
+        train_fixture("tests/fixtures/encoder_decoder/nlvr_coverage_semantic_parser/experiment.json",
+                      "tests/fixtures/encoder_decoder/nlvr_coverage_semantic_parser/serialization")
+        train_fixture("tests/fixtures/encoder_decoder/nlvr_direct_semantic_parser/experiment.json",
+                      "tests/fixtures/encoder_decoder/nlvr_direct_semantic_parser/serialization")
