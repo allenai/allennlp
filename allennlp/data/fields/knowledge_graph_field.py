@@ -77,6 +77,11 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
         entity text from the vocabulary computation.  You might want to do this if you have a lot
         of rare entities in your tables, and you see the same table in multiple training instances,
         so your vocabulary counts get skewed and include too many rare entities.
+    max_table_tokens : ``int``, optional
+        If given, we will only keep this number of total table tokens.  This bounds the memory
+        usage of the table representations, truncating cells with really long text.  We specify a
+        total number of tokens, not a max cell text length, because the number of table entities
+        varies.
     """
     def __init__(self,
                  knowledge_graph: KnowledgeGraph,
@@ -86,7 +91,8 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                  feature_extractors: List[str] = None,
                  entity_tokens: List[List[Token]] = None,
                  linking_features: List[List[List[float]]] = None,
-                 include_in_vocab: bool = True) -> None:
+                 include_in_vocab: bool = True,
+                 max_table_tokens: int = None) -> None:
         self.knowledge_graph = knowledge_graph
         if not entity_tokens:
             entity_texts = [knowledge_graph.entity_text[entity].lower()
@@ -104,6 +110,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
         self._token_indexers: Dict[str, TokenIndexer] = token_indexers
         self._include_in_vocab = include_in_vocab
         self._indexed_entity_texts: Dict[str, TokenList] = None
+        self._max_table_tokens = max_table_tokens
 
         feature_extractors = feature_extractors or [
                 'exact_token_match',
@@ -159,9 +166,19 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-        padding_lengths = {'num_entities': len(self.entity_texts),
+        num_entities = len(self.entity_texts)
+        num_entity_tokens = max(len(entity_text) for entity_text in self.entity_texts)
+
+        if self._max_table_tokens:
+            # This truncates the number of entity tokens used, enabling larger tables (which can
+            # have thousands of entities or more than 50 tokens each) to fit in memory,
+            # particularly when using ELMo.
+            if num_entities * num_entity_tokens > self._max_table_tokens:
+                num_entity_tokens = int(self._max_table_tokens / num_entities)
+
+        padding_lengths = {'num_entities': num_entities,
                            'num_utterance_tokens': len(self.utterance_tokens)}
-        padding_lengths['num_entity_tokens'] = max(len(entity_text) for entity_text in self.entity_texts)
+        padding_lengths['num_entity_tokens'] = num_entity_tokens
         lengths = []
         assert self._indexed_entity_texts is not None, ("This field is not indexed yet. Call "
                                                         ".index(vocab) before determining padding "

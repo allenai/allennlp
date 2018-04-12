@@ -13,21 +13,19 @@ from allennlp.models import Model, WikiTablesSemanticParser
 class WikiTablesSemanticParserTest(ModelTestCase):
     def setUp(self):
         super(WikiTablesSemanticParserTest, self).setUp()
-        self.set_up_model("tests/fixtures/encoder_decoder/wikitables_semantic_parser/experiment.json",
+        self.fixture_dir = 'tests/fixtures/encoder_decoder/wikitables_semantic_parser'
+        self.set_up_model(f"{self.fixture_dir}/experiment.json",
                           "tests/fixtures/data/wikitables/sample_data.examples")
 
     @flaky
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
-    @flaky
-    def test_mixture_feedforward_model_can_train_save_and_load(self):
-        # pylint: disable=line-too-long
-        self.ensure_model_can_train_save_and_load('tests/fixtures/encoder_decoder/wikitables_semantic_parser_with_mixture_feedforward/experiment.json')
+    def test_elmo_mixture_no_features_model_can_train_save_and_load(self):
+        self.ensure_model_can_train_save_and_load(f'{self.fixture_dir}/experiment-mixture.json')
 
-    def test_model_no_features_can_train_save_and_load(self):
-        # pylint: disable=line-too-long
-        self.ensure_model_can_train_save_and_load("tests/fixtures/encoder_decoder/wikitables_semantic_parser_no_features/experiment.json")
+    def test_elmo_no_features_can_train_save_and_load(self):
+        self.ensure_model_can_train_save_and_load(f'{self.fixture_dir}/experiment-elmo-no-features.json')
 
     def test_get_neighbor_indices(self):
         worlds, num_entities = self.get_fake_worlds()
