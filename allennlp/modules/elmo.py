@@ -87,6 +87,9 @@ class Elmo(torch.nn.Module):
             self.add_module('scalar_mix_{}'.format(k), scalar_mix)
             self._scalar_mixes.append(scalar_mix)
 
+    def get_output_dim(self):
+        return self._elmo_lstm.get_output_dim()
+
     def forward(self,    # pylint: disable=arguments-differ
                 inputs: torch.Tensor) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
         """
@@ -431,6 +434,9 @@ class _ElmoBiLm(torch.nn.Module):
         self._elmo_lstm.load_weights(weight_file)
         # Number of representation layers including context independent layer
         self.num_layers = options['lstm']['n_layers'] + 1
+
+    def get_output_dim(self):
+        return 2 * self._token_embedder.get_output_dim()
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
