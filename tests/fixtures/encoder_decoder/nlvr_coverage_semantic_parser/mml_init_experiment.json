@@ -32,7 +32,8 @@
       "wait_num_epochs": 0,
       "rate": 0.1
     },
-    "penalize_non_agenda_actions": true
+    "penalize_non_agenda_actions": true,
+    "initial_mml_model_file": "tests/fixtures/encoder_decoder/nlvr_direct_semantic_parser/serialization/model.tar.gz"
   },
   "iterator": {
     "type": "epoch_tracking_bucket",

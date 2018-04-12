@@ -24,7 +24,13 @@ class ModelTestCase(AllenNlpTestCase):
 
         reader = DatasetReader.from_params(params['dataset_reader'])
         instances = reader.read(dataset_file)
-        vocab = Vocabulary.from_instances(instances)
+        # Use parameters for vocabulary if they are present in the config file, so that choices like
+        # "non_padded_namespaces", "min_count" etc. can be set if needed.
+        if 'vocabulary' in params:
+            vocab_params = params['vocabulary']
+            vocab = Vocabulary.from_params(params=vocab_params, instances=instances)
+        else:
+            vocab = Vocabulary.from_instances(instances)
         self.vocab = vocab
         self.instances = instances
         self.model = Model.from_params(self.vocab, params['model'])

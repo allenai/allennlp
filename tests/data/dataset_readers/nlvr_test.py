@@ -47,25 +47,25 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         test_file = "tests/fixtures/data/nlvr/sample_grouped_data.jsonl"
         dataset = NlvrDatasetReader().read(test_file)
         instances = list(dataset)
-        assert len(instances) == 1
+        assert len(instances) == 2
         instance = instances[0]
         assert instance.fields.keys() == {'sentence', 'agenda', 'worlds', 'actions', 'labels'}
         sentence_tokens = instance.fields["sentence"].tokens
-        expected_tokens = ['There', 'is', 'exactly', 'one', 'blue', 'circle', 'touching', 'the',
-                           'edge']
+        expected_tokens = ['There', 'is', 'a', 'circle', 'closely', 'touching', 'a', 'corner', 'of',
+                           'a', 'box', '.']
         assert [t.text for t in sentence_tokens] == expected_tokens
         actions = [action.rule for action in instance.fields["actions"].field_list]
         assert len(actions) == 115
         agenda = [item.sequence_index for item in instance.fields["agenda"].field_list]
         agenda_strings = [actions[rule_id] for rule_id in agenda]
         assert set(agenda_strings) == set(['<o,o> -> circle',
-                                           '<o,o> -> blue',
-                                           '<o,o> -> touch_wall',
-                                           'e -> 1'])
+                                           '<o,o> -> touch_corner',
+                                           '<o,t> -> object_exists'
+                                          ])
         worlds = [world_field.as_tensor({}) for world_field in instance.fields["worlds"].field_list]
         assert all([isinstance(world, NlvrWorld) for world in worlds])
         labels = [label.label for label in instance.fields["labels"].field_list]
-        assert labels == ["false", "true", "false", "false"]
+        assert labels == ["true", "false", "true", "false"]
 
     def test_reader_reads_processed_data(self):
         # Processed data contains action sequences that yield the correct denotations, obtained from

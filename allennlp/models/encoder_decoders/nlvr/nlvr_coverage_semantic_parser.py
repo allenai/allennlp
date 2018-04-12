@@ -12,6 +12,7 @@ from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.nn.decoding import DecoderTrainer, ExpectedRiskMinimization
 from allennlp.nn import util as nn_util
+from allennlp.models.archival import load_archive, Archive
 from allennlp.models.model import Model
 from allennlp.models.encoder_decoders.nlvr.nlvr_decoder_state import NlvrDecoderState
 from allennlp.models.encoder_decoders.nlvr.nlvr_decoder_step import NlvrDecoderStep
@@ -67,6 +68,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         starting at the apropriate epoch.  The weight will remain constant if this is not provided.
     penalize_non_agenda_actions : ``bool``, optional (default=False)
         Should we penalize the model for producing terminal actions that are outside the agenda?
+    initial_mml_model_file : ``str`` , optional (default=None)
+        If you want to initialize this model using weights from another model trained using MML,
+        pass the path to the ``model.tar.gz`` file of that model here.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -79,7 +83,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                  normalize_beam_score_by_length: bool = False,
                  checklist_cost_weight: float = 0.8,
                  dynamic_cost_weight: Dict[str, Union[int, float]] = None,
-                 penalize_non_agenda_actions: bool = False) -> None:
+                 penalize_non_agenda_actions: bool = False,
+                 initial_mml_model_file: str = None) -> None:
         super(NlvrCoverageSemanticParser, self).__init__(vocab=vocab,
                                                          sentence_embedder=sentence_embedder,
                                                          action_embedding_dim=action_embedding_dim,
@@ -102,6 +107,61 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             self._dynamic_cost_rate = dynamic_cost_weight["rate"]
         self._penalize_non_agenda_actions = penalize_non_agenda_actions
         self._last_epoch_in_forward: int = None
+        if initial_mml_model_file is not None:
+            archive = load_archive(initial_mml_model_file)
+            self._initialize_weights_from_archive(archive)
+
+    def _initialize_weights_from_archive(self, archive: Archive) -> None:
+        logger.info("Initializing weights from MML model.")
+        model_parameters = dict(self.named_parameters())
+        archived_parameters = dict(archive.model.named_parameters())
+        sentence_embedder_weight = "_sentence_embedder.token_embedder_tokens.weight"
+        if sentence_embedder_weight not in archived_parameters or \
+           sentence_embedder_weight not in model_parameters:
+            raise RuntimeError("When initializing model weights from an MML model, we need "
+                               "the sentence embedder to be a TokenEmbedder using namespace called "
+                               "tokens.")
+        for name, weights in archived_parameters.items():
+            if name in model_parameters:
+                if name == "_decoder_step._output_projection_layer.weight":
+                    # The dimensions differ for this parameter between the coverage model and
+                    # the direct model. In the direct model, this is of size
+                    # (decoder_output_dim + encoder_output_dim, action_embedding_dim),
+                    # whereas in the coverage model, it is
+                    # (decoder_output_dim + encoder_output_dim + checklist_size, action_embedding_dim)
+                    # We copy only the relevant part of the weights here.
+                    archived_projection_weights = weights.data
+                    new_weights = model_parameters[name].data.clone()
+                    new_weights[:, :-len(self._terminal_productions)] = archived_projection_weights
+                elif name == "_sentence_embedder.token_embedder_tokens.weight":
+                    # The shapes of embedding weights will most likely differ between the two models
+                    # because the vocabularies will most likely be different. We will get a mapping
+                    # of indices from this model's token indices to the archived model's and copy
+                    # the tensor accordingly.
+                    vocab_index_mapping = self._get_vocab_index_mapping(archive.model.vocab)
+                    archived_embedding_weights = weights.data
+                    new_weights = model_parameters[name].data.clone()
+                    for index, archived_index in vocab_index_mapping:
+                        new_weights[index] = archived_embedding_weights[archived_index]
+                    logger.info("Copied embeddings of %d out of %d tokens",
+                                len(vocab_index_mapping), new_weights.size()[0])
+                else:
+                    new_weights = weights.data
+                logger.info("Copying parameter %s", name)
+                model_parameters[name].data.copy_(new_weights)
+
+    def _get_vocab_index_mapping(self, archived_vocab: Vocabulary) -> List[Tuple[int, int]]:
+        vocab_index_mapping: List[Tuple[int, int]] = []
+        for index in range(self.vocab.get_vocab_size(namespace='tokens')):
+            token = self.vocab.get_token_from_index(index=index, namespace='tokens')
+            archived_token_index = archived_vocab.get_token_index(token, namespace='tokens')
+            # Checking if we got the UNK token index, because we don't want all new token
+            # representations initialized to UNK token's representation. We do that by checking if
+            # the two tokens are the same. They will not be if the token at the archived index is
+            # UNK.
+            if archived_vocab.get_token_from_index(archived_token_index, namespace="tokens") == token:
+                vocab_index_mapping.append((index, archived_token_index))
+        return vocab_index_mapping
 
     @overrides
     def forward(self,  # type: ignore
@@ -362,6 +422,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.8)
         dynamic_cost_weight = params.pop("dynamic_cost_weight", None)
         penalize_non_agenda_actions = params.pop_bool("penalize_non_agenda_actions", False)
+        initial_mml_model_file = params.pop("initial_mml_model_file", None)
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    sentence_embedder=sentence_embedder,
@@ -373,4 +434,5 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                    normalize_beam_score_by_length=normalize_beam_score_by_length,
                    checklist_cost_weight=checklist_cost_weight,
                    dynamic_cost_weight=dynamic_cost_weight,
-                   penalize_non_agenda_actions=penalize_non_agenda_actions)
+                   penalize_non_agenda_actions=penalize_non_agenda_actions,
+                   initial_mml_model_file=initial_mml_model_file)
