@@ -17,8 +17,9 @@ class DecoderTrainer(Generic[SupervisionType]):
 
     Concrete implementations of this abstract base class could do things like maximum marginal
     likelihood, SEARN, LaSO, or other structured learning algorithms.  If you're just trying to
-    maximize the probability of a single target sequence, there are way more efficient ways to do
-    that than using this API.
+    maximize the probability of a single target sequence where the possible outputs are the same
+    for each timestep (as in, e.g., typical machine translation training regimes), there are way
+    more efficient ways to do that than using this API.
     """
     def decode(self,
                initial_state: DecoderState,
@@ -28,6 +29,9 @@ class DecoderTrainer(Generic[SupervisionType]):
         Takes an initial state object, a means of transitioning from state to state, and a
         supervision signal, and uses the supervision to train the transition function to pick
         "good" states.
+
+        This function should typically return a ``loss`` key during training, which the ``Model``
+        will use as its loss.
 
         Parameters
         ----------
