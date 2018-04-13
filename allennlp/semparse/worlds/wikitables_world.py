@@ -11,7 +11,7 @@ from overrides import overrides
 
 from allennlp.semparse.worlds.world import ParsingError, World
 from allennlp.semparse.type_declarations import wikitables_type_declaration as types
-from allennlp.semparse.knowledge_graphs import TableQuestionKnowledgeGraph
+from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
 
 
 class WikiTablesWorld(World):

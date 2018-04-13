@@ -21,7 +21,7 @@ from numpy.testing import assert_almost_equal
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.decoding.decoder_state import DecoderState
 from allennlp.nn.decoding.decoder_step import DecoderStep
-from allennlp.nn.decoding import ExpectedRiskMinimization
+from allennlp.nn.decoding.decoder_trainers import ExpectedRiskMinimization
 
 
 class SimpleDecoderState(DecoderState['SimpleDecoderState']):

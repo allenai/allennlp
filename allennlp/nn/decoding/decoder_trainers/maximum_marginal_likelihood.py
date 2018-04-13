@@ -8,7 +8,7 @@ from torch.autograd import Variable
 from allennlp.nn import util
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
-from allennlp.nn.decoding.decoder_trainer import DecoderTrainer
+from allennlp.nn.decoding.decoder_trainers.decoder_trainer import DecoderTrainer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

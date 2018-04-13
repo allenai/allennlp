@@ -1,7 +1,5 @@
 from copy import deepcopy
-from typing import Dict, List, Tuple
-
-from allennlp.semparse.type_declarations import type_declaration as types
+from typing import Callable, Dict, List, Tuple
 
 
 class GrammarState:
@@ -47,16 +45,23 @@ class GrammarState:
         We use integers to represent productions in the ``valid_actions`` dictionary for efficiency
         reasons in the decoder.  This means we need a way to map from the production rule strings
         that we generate for lambda variables back to the integer used to represent it.
+    is_nonterminal : ``Callable[[str], bool]``
+        A function that is used to determine whether each piece of the RHS of the action string is
+        a non-terminal that needs to be added to the non-terminal stack.  You can use
+        ``type_declaraction.is_nonterminal`` here, or write your own function if that one doesn't
+        work for your domain.
     """
     def __init__(self,
                  nonterminal_stack: List[str],
                  lambda_stacks: Dict[Tuple[str, str], List[str]],
                  valid_actions: Dict[str, List[int]],
-                 action_indices: Dict[str, int]) -> None:
+                 action_indices: Dict[str, int],
+                 is_nonterminal: Callable[[str], bool]) -> None:
         self._nonterminal_stack = nonterminal_stack
         self._lambda_stacks = lambda_stacks
         self._valid_actions = valid_actions
         self._action_indices = action_indices
+        self._is_nonterminal = is_nonterminal
 
     def is_finished(self) -> bool:
         """
@@ -118,7 +123,7 @@ class GrammarState:
             new_lambda_stacks[(lambda_type, lambda_variable)] = []
 
         for production in reversed(productions):
-            if types.is_nonterminal(production):
+            if self._is_nonterminal(production):
                 new_stack.append(production)
                 for lambda_stack in new_lambda_stacks.values():
                     lambda_stack.append(production)
@@ -134,7 +139,8 @@ class GrammarState:
         return GrammarState(nonterminal_stack=new_stack,
                             lambda_stacks=new_lambda_stacks,
                             valid_actions=self._valid_actions,
-                            action_indices=self._action_indices)
+                            action_indices=self._action_indices,
+                            is_nonterminal=self._is_nonterminal)
 
     @staticmethod
     def _get_productions_from_string(production_string: str) -> List[str]:

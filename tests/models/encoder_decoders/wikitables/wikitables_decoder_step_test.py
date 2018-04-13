@@ -9,6 +9,7 @@ from allennlp.models.encoder_decoders.wikitables.wikitables_decoder_state import
 from allennlp.models.encoder_decoders.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
 from allennlp.modules import SimilarityFunction
 from allennlp.nn.decoding import GrammarState, RnnState
+from allennlp.semparse.type_declarations.type_declaration import is_nonterminal
 
 
 class WikiTablesDecoderStepTest(AllenNlpTestCase):
@@ -22,7 +23,7 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         memory_cell = torch.FloatTensor([[i, i] for i in range(len(batch_indices))])
         previous_action_embedding = torch.FloatTensor([[i, i] for i in range(len(batch_indices))])
         attended_question = torch.FloatTensor([[i, i] for i in range(len(batch_indices))])
-        grammar_state = [GrammarState(['e'], {}, {}, {}) for _ in batch_indices]
+        grammar_state = [GrammarState(['e'], {}, {}, {}, is_nonterminal) for _ in batch_indices]
         self.encoder_outputs = torch.FloatTensor([[1, 2], [3, 4], [5, 6]])
         self.encoder_output_mask = Variable(torch.FloatTensor([[1, 1], [1, 0], [1, 1]]))
         self.action_embeddings = torch.FloatTensor([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5]])
@@ -107,9 +108,9 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         valid_actions_1 = {'e': [0, 1, 2, 4]}
         valid_actions_2 = {'e': [0, 1, 3]}
         valid_actions_3 = {'e': [2, 3, 4]}
-        self.state.grammar_state[0] = GrammarState(['e'], {}, valid_actions_1, {})
-        self.state.grammar_state[1] = GrammarState(['e'], {}, valid_actions_2, {})
-        self.state.grammar_state[2] = GrammarState(['e'], {}, valid_actions_3, {})
+        self.state.grammar_state[0] = GrammarState(['e'], {}, valid_actions_1, {}, is_nonterminal)
+        self.state.grammar_state[1] = GrammarState(['e'], {}, valid_actions_2, {}, is_nonterminal)
+        self.state.grammar_state[2] = GrammarState(['e'], {}, valid_actions_3, {}, is_nonterminal)
 
         # We're making a bunch of the actions linked actions here, pretending that there are only
         # two global actions.
@@ -143,9 +144,9 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         valid_actions_1 = {'e': [0, 1, 2, 4]}
         valid_actions_2 = {'e': [0, 1, 3]}
         valid_actions_3 = {'e': [2, 3, 4]}
-        self.state.grammar_state[0] = GrammarState(['e'], {}, valid_actions_1, {})
-        self.state.grammar_state[1] = GrammarState(['e'], {}, valid_actions_2, {})
-        self.state.grammar_state[2] = GrammarState(['e'], {}, valid_actions_3, {})
+        self.state.grammar_state[0] = GrammarState(['e'], {}, valid_actions_1, {}, is_nonterminal)
+        self.state.grammar_state[1] = GrammarState(['e'], {}, valid_actions_2, {}, is_nonterminal)
+        self.state.grammar_state[2] = GrammarState(['e'], {}, valid_actions_3, {}, is_nonterminal)
         considered, to_embed, to_link = WikiTablesDecoderStep._get_actions_to_consider(self.state)
         # These are _global_ action indices.  All of the actions in this case are embedded, so this
         # is just a mapping from the valid actions above to their global ids.

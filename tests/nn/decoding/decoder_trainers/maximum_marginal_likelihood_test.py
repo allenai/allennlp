@@ -2,7 +2,8 @@
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.nn.decoding import DecoderState, MaximumMarginalLikelihood
+from allennlp.nn.decoding import DecoderState
+from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
 
 
 class TestMaximumMarginalLikelihood(AllenNlpTestCase):
