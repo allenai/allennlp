@@ -733,150 +733,108 @@ h1 {
   font-weight: 300
 }
 
-header {
+
+.menu {
+  background: #e8ebf0;
+  border-right: 4px solid #cdd4dc;
+  max-width: 240px;
   width: 100%;
-  background: #fff;
-  border-bottom: .125em solid #e5eaf0
-}
-
-.header__content {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: -webkit-flex;
-  display: flex;
-  width: 100%
-}
-
-.header__content nav {
   height: 100%;
-  margin-left: 1.25em
 }
 
-.header__content nav ul,
-.header__content nav ul li {
-  list-style: none;
-  display: block;
-  margin: 0;
-  padding: 0;
-  font-size: 1em
-}
-
-.header__content nav ul {
-  height: 100%;
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: -webkit-flex;
-  display: flex;
-  -webkit-flex-direction: row;
-  -ms-flex-direction: row;
-  -webkit-box-orient: horizontal;
-  -webkit-box-direction: normal;
-  flex-direction: row;
-  -webkit-justify-content: flex-end;
-  -ms-justify-content: flex-end;
-  -webkit-box-pack: end;
-  -ms-flex-pack: end;
-  justify-content: flex-end;
-  margin-right: 1.25em
-}
-
-.header__content nav li {
-  height: 100%
-}
-
-.header__content nav li.nav__home {
-  display: none
-}
-
-.header__content .nav__link {
-  height: 100%;
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: -webkit-flex;
-  display: flex;
-  -webkit-align-items: center;
-  -ms-flex-align: center;
-  -webkit-box-align: center;
-  align-items: center;
-  margin: 0;
-  text-decoration: none;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  padding: 0 1.25em
-}
-
-.header__content .nav__link span {
-  font-size: 1em;
-  height: 100%;
-  -webkit-transition: color .2s ease;
-  transition: color .2s ease;
-  font-weight: 600;
-  color: rgba(28, 47, 58, .5);
-  position: relative;
-  line-height: 4.625em
-}
-
-.header__content .nav__link:hover span {
-  color: #1c2f3a
-}
-
-.header__content .nav__link:active span {
-  color: rgba(28, 47, 58, .4);
-  -webkit-transition-duration: 0s;
-  transition-duration: 0s
-}
-
-.header__content .nav__link--selected,
-.header__content .nav__link--selected:active,
-.header__content .nav__link--selected:hover {
-  background: rgba(255, 255, 255, .13);
-  opacity: 1
-}
-
-.header__content .nav__link--selected span,
-.header__content .nav__link--selected:active span,
-.header__content .nav__link--selected:hover span {
-  color: #1c2f3a
-}
-
-.header__content .nav__link--selected span:after,
-.header__content .nav__link--selected:active span:after,
-.header__content .nav__link--selected:hover span:after {
-  content: "";
+.menu__content {
   width: 100%;
-  height: .375em;
-  background: #63a7d4;
-  display: block;
-  bottom: -30px;
-  left: 0;
-  position: absolute
+  height: 100%;
+  overflow: auto;
 }
 
-.header__content__logo {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: -webkit-flex;
-  display: flex;
-  -webkit-align-items: center;
-  -ms-flex-align: center;
-  -webkit-box-align: center;
-  align-items: center;
-  margin: 0 2.125em 0 auto;
-  padding: 0;
-  font-size: 1em
-}
-
-.header__content__logo a {
+.menu__content__logo {
   margin: 0;
-  padding: 0;
-  display: block
+  padding: 20px 0 0 0;
 }
 
-header svg {
+.menu__content__logo a {
+  margin: 0;
+  padding: 10px;
+  display: block;
+}
+
+.menu__content__logo a svg {
   fill: #1c2f3a;
-  width: 7.75em;
-  height: 1.375em
+  width: 125px;
+  height: 22px;
+  margin-left: 22px;
 }
+
+.menu__content nav ul,
+.menu__content nav ul li,
+.menu__content nav ul li .nav__link,
+.menu__content nav ul li .nav__link a,
+.menu__content nav ul li .nav__link a span {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+.menu__content nav ul {
+  list-style: none;
+}
+
+.menu__content nav ul li .nav__link a {
+  padding: 16px 32px 16px 28px;
+  position: relative;
+  background: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.menu__content nav ul li .nav__link a:before {
+  position: absolute;
+  width: 7px;
+  height: 100%;
+  top: 0;
+  left: 0;
+  content: "";
+  display: block;
+  background: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.menu__content nav ul li .nav__link a span {
+  color: #979a9d;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 20px;
+  transition: color 0.2s ease;
+}
+
+.menu__content nav ul li .nav__link a:hover span {
+  color: #1c2f3a;
+}
+
+.menu__content nav ul li .nav__link.nav__link--selected a {
+  background: #f6f7fa;
+}
+
+.menu__content nav ul li .nav__link.nav__link--selected a:before {
+  background: #63a7d4;
+}
+
+.menu__content nav ul li .nav__link.nav__link--selected a span {
+  color: #1c2f3a;
+}
+
+/* TODO(aarons): Revisit pane scrolling mechanics. This is not an ideal solution */
+
+.menu {
+  position: fixed;
+  z-index: 2;
+}
+
+.pane-container > .model {
+  margin-left: 244px;
+  overflow: auto;
+}
+
 
 #icons {
   top: 0;
@@ -1060,15 +1018,7 @@ svg {
 }
 
 .pane-container {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: -webkit-flex;
   display: flex;
-  -webkit-flex-direction: column;
-  -ms-flex-direction: column;
-  -webkit-box-orient: vertical;
-  -webkit-box-direction: normal;
-  flex-direction: column;
   height: 100%
 }
 
