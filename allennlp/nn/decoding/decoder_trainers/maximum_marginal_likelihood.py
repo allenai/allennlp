@@ -118,7 +118,7 @@ class MaximumMarginalLikelihood(DecoderTrainer[Tuple[torch.Tensor, torch.Tensor]
             action_history = grouped_state.action_history[i]
             for allowed_action in allowed_actions[i]:
                 expected_histories.add((batch_index, tuple(action_history + [allowed_action])))
-        assert action_histories == expected_histories
+        assert action_histories == expected_histories, f'Expected: {expected_histories}'
 
     @staticmethod
     def _get_allowed_actions(state: DecoderState,
