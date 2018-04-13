@@ -28,6 +28,9 @@ class DecoderState(Generic[T]):
     Parameters
     ----------
     batch_indices : ``List[int]``
+        A ``group_size``-length list, where each element specifies which ``batch_index`` that group
+        element came from.
+
         Our internal variables (like scores, action histories, hidden states, whatever) are
         `grouped`, and our ``group_size`` is likely different from the original ``batch_size``.
         This variable keeps track of which batch instance each group element came from (e.g., to
@@ -35,15 +38,10 @@ class DecoderState(Generic[T]):
     action_history : ``List[List[int]]``
         The list of actions taken so far in this state.  This is also grouped, so each state in the
         group has a list of actions.
-
-        The type annotation says this is an ``int``, but none of the training logic relies on this
-        being an ``int``.  In some cases, items from this list will get passed as inputs to
-        ``DecodeStep``, so this must return items that are compatible with inputs to your
-        ``DecodeStep`` class.
     score : ``List[torch.autograd.Variable]``
         This state's score.  It's a variable, because typically we'll be computing a loss based on
-        this score, and using it for backprop during training.  Like the other variables here, it's
-        grouped.
+        this score, and using it for backprop during training.  Like the other variables here, this
+        is a ``group_size``-length list.
     """
     def __init__(self,
                  batch_indices: List[int],
