@@ -38,6 +38,10 @@ class DecoderStep(torch.nn.Module, Generic[StateType]):
         a fixed beam size), passing that information into this function will keep us from
         constructing more states than we need, which will greatly speed up your computation.
 
+        IMPORTANT: This method `must` returns states already sorted by their score, otherwise
+        ``BeamSearch`` and other methods will break.  For efficiency, we do not perform an
+        additional sort in those methods.
+
         Parameters
         ----------
         state : ``DecoderState``

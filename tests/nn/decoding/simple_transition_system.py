@@ -35,11 +35,19 @@ class SimpleDecoderState(DecoderState['SimpleDecoderState']):
         start_values = [start_value for state in states for start_value in state.start_values]
         return SimpleDecoderState(batch_indices, action_histories, scores, start_values)
 
+    def __repr__(self):
+        return f"{self.action_history}"
+
 
 class SimpleDecoderStep(DecoderStep[SimpleDecoderState]):
-    def __init__(self):
-        # The allowed actions are adding 1 or 2 to the last element.
-        self._valid_actions = {1, 2}
+    def __init__(self,
+                 valid_actions: Set[int] = None,
+                 include_value_in_score: bool = False):
+        # The default allowed actions are adding 1 or 2 to the last element.
+        self._valid_actions = valid_actions or {1, 2}
+        # If True, we will add a small multiple of the action take to the score, to encourage
+        # getting higher numbers first (and to differentiate action sequences).
+        self._include_value_in_score = include_value_in_score
 
     @overrides
     def take_step(self,
@@ -63,13 +71,17 @@ class SimpleDecoderStep(DecoderStep[SimpleDecoderState]):
                 new_history = action_history + [next_item]
                 # For every action taken, we reduce the score by 1.
                 new_score = score - 1
+                if self._include_value_in_score:
+                    new_score += 0.01 * next_item
                 new_state = SimpleDecoderState([batch_index],
                                                [new_history],
                                                [new_score])
                 indexed_next_states[batch_index].append(new_state)
         next_states: List[SimpleDecoderState] = []
         for batch_next_states in indexed_next_states.values():
+            sorted_next_states = [(-state.score[0].data[0], state) for state in batch_next_states]
+            sorted_next_states.sort(key=lambda x: x[0])
             if max_actions is not None:
-                batch_next_states = batch_next_states[:max_actions]
-            next_states.extend(batch_next_states)
+                sorted_next_states = sorted_next_states[:max_actions]
+            next_states.extend(state[1] for state in sorted_next_states)
         return next_states
