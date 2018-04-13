@@ -71,7 +71,6 @@ class BeamSearch:
             for batch_index, batch_states in next_states.items():
                 # The states from the generator are already sorted, so we can just take the first
                 # ones here, without an additional sort.
-                print(batch_index, batch_states)
                 states.extend(batch_states[:self._beam_size])
             step_num += 1
         best_states: Dict[int, List[DecoderState]] = {}
@@ -80,7 +79,6 @@ class BeamSearch:
             # yet.  Maybe with a larger beam size...
             finished_to_sort = [(-state.score[0].data[0], state) for state in batch_states]
             finished_to_sort.sort(key=lambda x: x[0])
-            print(finished_to_sort)
             best_states[batch_index] = [state[1] for state in finished_to_sort[:self._beam_size]]
         return best_states
 

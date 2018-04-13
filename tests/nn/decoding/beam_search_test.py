@@ -12,8 +12,11 @@ class TestBeamSearch(AllenNlpTestCase):
     def test_search(self):
         beam_search = BeamSearch.from_params(Params({'beam_size': 4}))
         initial_state = SimpleDecoderState([0, 1, 2, 3],
-                                           [[], []],
-                                           [Variable(torch.Tensor([0.0])), Variable(torch.Tensor([0.0]))],
+                                           [[], [], [], []],
+                                           [Variable(torch.Tensor([0.0])),
+                                            Variable(torch.Tensor([0.0])),
+                                            Variable(torch.Tensor([0.0])),
+                                            Variable(torch.Tensor([0.0]))],
                                            [-3, 1, -20, 5])
         decoder_step = SimpleDecoderStep(include_value_in_score=True)
         best_states = beam_search.search(5,
@@ -25,6 +28,20 @@ class TestBeamSearch(AllenNlpTestCase):
         # path to get to a finished state.  (See the simple transition system definitely; goal is
         # to end up at 4, actions are either add one or two to starting value.)
         assert len(best_states) == 2
-        print(list((x.action_history[0], x.score) for x in best_states[0]))
         assert best_states[0][0].action_history[0] == [-1, 1, 3, 4]
         assert best_states[1][0].action_history[0] == [3, 4]
+
+        best_states = beam_search.search(5,
+                                         initial_state,
+                                         decoder_step,
+                                         keep_final_unfinished_states=True)
+
+        # Now we're keeping final unfinished states, which allows a "best state" for the instances
+        # that didn't have one before.  Our previous best states for the instances that finish
+        # doesn't change, because the score for taking another step is always negative at these
+        # values.
+        assert len(best_states) == 4
+        assert best_states[0][0].action_history[0] == [-1, 1, 3, 4]
+        assert best_states[1][0].action_history[0] == [3, 4]
+        assert best_states[2][0].action_history[0] == [-18, -16, -14, -12, -10]
+        assert best_states[3][0].action_history[0] == [7, 9, 11, 13, 15]
