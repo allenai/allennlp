@@ -19,6 +19,9 @@ import spacy
 from spacy.cli.download import download as spacy_download
 from spacy.language import Language as SpacyModelType
 
+# This base import is so we can refer to allennlp.data.Token in `sanitize()` without creating
+# circular dependencies.
+import allennlp
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
@@ -53,6 +56,9 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, (list, tuple)):
         # Lists and Tuples need their values sanitized
         return [sanitize(x_i) for x_i in x]
+    elif isinstance(x, (spacy.tokens.Token, allennlp.data.Token)):
+        # Tokens get sanitized to just their text.
+        return x.text
     elif x is None:
         return "None"
     else:
