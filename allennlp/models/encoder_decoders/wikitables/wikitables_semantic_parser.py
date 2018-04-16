@@ -1,12 +1,16 @@
+import atexit
+import logging
+import os
+import subprocess
 from typing import Any, Dict, List, Tuple
 
 from overrides import overrides
-
 import torch
 from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
+from allennlp.common.file_utils import cached_path
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
@@ -25,6 +29,13 @@ from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import WikiTablesWorld
 from allennlp.semparse import ParsingError
 from allennlp.training.metrics import Average
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+SEMPRE_EXECUTOR_JAR = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-executor-0.1.0.jar"
+ABBREVIATIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-abbreviations.tsv"
+GROW_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-grow.grammar"
+SEMPRE_DIR = 'data/'
 
 
 @Model.register("wikitables_parser")
@@ -73,6 +84,10 @@ class WikiTablesSemanticParser(Model):
     rule_namespace : ``str``, optional (default=rule_labels)
         The vocabulary namespace to use for production rules.  The default corresponds to the
         default used in the dataset reader, so you likely don't need to modify this.
+    table_directory : ``str``, optional (default=/wikitables/)
+        The directory to find tables when evaluating logical forms.  We rely on a call to SEMPRE to
+        evaluate logical forms, and SEMPRE needs to read the table from disk itself.  This tells
+        SEMPRE where to find the tables.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -86,7 +101,8 @@ class WikiTablesSemanticParser(Model):
                  attention_function: SimilarityFunction,
                  dropout: float = 0.0,
                  num_linking_features: int = 8,
-                 rule_namespace: str = 'rule_labels') -> None:
+                 rule_namespace: str = 'rule_labels',
+                 table_directory: str = '/wikitables/') -> None:
         super(WikiTablesSemanticParser, self).__init__(vocab)
         self._question_embedder = question_embedder
         self._encoder = encoder
@@ -94,6 +110,8 @@ class WikiTablesSemanticParser(Model):
         self._beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
         self._action_sequence_accuracy = Average()
+        self._denotation_accuracy = Average()
+        self._has_logical_form = Average()
         if dropout > 0:
             self._dropout = torch.nn.Dropout(p=dropout)
         else:
@@ -136,12 +154,69 @@ class WikiTablesSemanticParser(Model):
                                                    mixture_feedforward=mixture_feedforward,
                                                    dropout=dropout)
 
+        self._executor_process = None
+        self._create_sempre_executor()
+
+    def _create_sempre_executor(self) -> None:
+        """
+        Creates a server running SEMPRE that we can send logical forms to for evaluation.  This
+        uses inter-process communication, because SEMPRE is java code.  We also need to be careful
+        to clean up the process when our program exits.
+        """
+        if self._executor_process:
+            return
+        os.makedirs(SEMPRE_DIR, exist_ok=True)
+        abbreviations_path = os.path.join(SEMPRE_DIR, 'abbreviations.tsv')
+        if not os.path.exists(abbreviations_path):
+            subprocess.run(f'wget {ABBREVIATIONS_FILE}', shell=True)
+            subprocess.run(f'mv wikitables-abbreviations.tsv {abbreviations_path}', shell=True)
+
+        grammar_path = os.path.join(SEMPRE_DIR, 'grow.grammar')
+        if not os.path.exists(grammar_path):
+            subprocess.run(f'wget {GROW_FILE}', shell=True)
+            subprocess.run(f'mv wikitables-grow.grammar {grammar_path}', shell=True)
+
+        args = ['java', '-jar', cached_path(SEMPRE_EXECUTOR_JAR), 'serve', '/wikitables/']
+        self._executor_process = subprocess.Popen(args,
+                                            stdin=subprocess.PIPE,
+                                            stdout=subprocess.PIPE,
+                                            bufsize=1)
+
+        for _ in range(6):
+            # SEMPRE outputs six lines of stuff when it loads that I can't disable.  So, we clear
+            # that here.
+            self._executor_process.stdout.readline()
+        logger.info("Started SEMPRE server for evaluating logical forms")
+        atexit.register(self._stop_sempre_executor)
+
+    def _stop_sempre_executor(self) -> None:
+        if not self._executor_process:
+            return
+        self._executor_process.terminate()
+        self._executor_process = None
+        logger.info("Stopped SEMPRE server")
+
+    def _evaluate_logical_form(self, example_string: str, logical_form: str) -> bool:
+        if example_string[-1] != '\n':
+            example_string += '\n'
+        if logical_form[-1] != '\n':
+            logical_form += '\n'
+        self._executor_process.stdin.write(example_string.encode('utf-8'))
+        self._executor_process.stdin.write(logical_form.encode('utf-8'))
+        self._executor_process.stdin.flush()
+        result = self._executor_process.stdout.readline().decode().strip()
+        if result == '1.0':
+            return True
+        else:
+            return False
+
     @overrides
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
                 table: Dict[str, torch.LongTensor],
                 world: List[WikiTablesWorld],
                 actions: List[List[ProductionRuleArray]],
+                example_string: List[str] = None,
                 target_action_sequences: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         # pylint: disable=unused-argument
@@ -169,7 +244,10 @@ class WikiTablesSemanticParser(Model):
             ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
-        target_action_sequences : torch.Tensor, optional (default = None)
+        example_string : ``List[str]``, optional (default=None)
+            The example string corresponding to the given input.  We pass this to SEMPRE when
+            evaluating denotation accuracy; it is otherwise unused.
+        target_action_sequences : torch.Tensor, optional (default=None)
            A list of possibly valid action sequences, where each action is an index into the list
            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
            sequence_length)``.
@@ -360,23 +438,32 @@ class WikiTablesSemanticParser(Model):
                 # infinite action loop).
                 if i in best_final_states:
                     best_action_indices = best_final_states[i][0].action_history[0]
-                    credit = 0
+                    sequence_in_targets = 0
                     if target_action_sequences is not None:
                         # Use a Tensor, not a Variable, to avoid a memory leak.
                         targets = target_action_sequences[i].data
-                        credit = self._action_history_match(best_action_indices, targets)
-                    self._action_sequence_accuracy(credit)
+                        sequence_in_targets = self._action_history_match(best_action_indices, targets)
+
+                    self._action_sequence_accuracy(sequence_in_targets)
                     action_strings = [action_mapping[(i, action_index)] for action_index in best_action_indices]
                     try:
+                        self._has_logical_form(1.0)
                         logical_form = world[i].get_logical_form(action_strings, add_var_function=False)
                     except ParsingError:
+                        self._has_logical_form(0.0)
                         logical_form = 'Error producing logical form'
+                    denotation_correct = False
+                    if example_string is not None:
+                        denotation_correct = self._evaluate_logical_form(example_string[i], logical_form)
+                    self._denotation_accuracy(1.0 if denotation_correct else 0.0)
                     outputs['best_action_sequence'].append(action_strings)
                     outputs['logical_form'].append(logical_form)
                     outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
                     outputs['entities'].append(world[i].table_graph.entities)
                 else:
                     outputs['logical_form'].append('')
+                    self._has_logical_form(0.0)
+                    self._denotation_accuracy(0.0)
             return outputs
 
     @staticmethod
@@ -570,7 +657,9 @@ class WikiTablesSemanticParser(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {
-                'parse_acc': self._action_sequence_accuracy.get_metric(reset)
+                'dpd_acc': self._action_sequence_accuracy.get_metric(reset),
+                'denotation_acc': self._denotation_accuracy.get_metric(reset),
+                'lf_percent': self._has_logical_form.get_metric(reset),
                 }
 
     @staticmethod

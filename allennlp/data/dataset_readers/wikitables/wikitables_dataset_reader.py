@@ -80,6 +80,11 @@ class WikiTablesDatasetReader(DatasetReader):
         data loading time, because we don't go through the entire DPD file if it's huge (unless
         we're sorting the logical forms).  Only applicable if ``dpd_output_directory`` is given.
         Default is 20.
+    keep_if_no_dpd : ``bool``, optional (default=False)
+        If ``True``, we will keep instances we read that don't have DPD output.  If you want to
+        compute denotation accuracy on the full dataset, you should set this to ``True``.
+        Otherwise, your accuracy numbers will only reflect the subset of the data that has DPD
+        output.
     tokenizer : ``Tokenizer``, optional
         Tokenizer to use for the questions. Will default to ``WordTokenizer()`` with Spacy's tagger
         enabled, as we use lemma matches as features for entity linking.
@@ -93,19 +98,6 @@ class WikiTablesDatasetReader(DatasetReader):
         If ``True``, we will include table cell text in vocabulary creation.  The original parser
         did not do this, because the same table can appear multiple times, messing with vocab
         counts, and making you include lots of rare entities in your vocab.
-    nonterminal_indexers : ``Dict[str, TokenIndexer]``, optional
-        How should we represent non-terminals in production rules when we're computing action
-        embeddings?  We use ``TokenIndexers`` for this.  Default is to use a
-        ``SingleIdTokenIndexer`` with the ``rule_labels`` namespace, keyed by ``tokens``:
-        ``{"tokens": SingleIdTokenIndexer("rule_labels")}``.  We use the namespace ``rule_labels``
-        so that we don't get padding or OOV tokens for nonterminals.
-    terminal_indexers : ``Dict[str, TokenIndexer]``, optional
-        How should we represent terminals in production rules when we're computing action
-        embeddings?  We also use ``TokenIndexers`` for this.  The default is to use a
-        ``TokenCharactersIndexer`` keyed by ``token_characters``: ``{"token_characters":
-        TokenCharactersIndexer()}``.  We use this indexer by default because WikiTables has plenty
-        of terminals that are unseen at training time, so we need to use a representation for them
-        that is not just a vocabulary lookup.
     linking_feature_extractors : ``List[str]``, optional
         The list of feature extractors to use in the :class:`KnowledgeGraphField` when computing
         entity linking features.  See that class for more information.  By default, we will use all
@@ -128,12 +120,11 @@ class WikiTablesDatasetReader(DatasetReader):
                  max_dpd_logical_forms: int = 10,
                  sort_dpd_logical_forms: bool = True,
                  max_dpd_tries: int = 20,
+                 keep_if_no_dpd: bool = False,
                  tokenizer: Tokenizer = None,
                  question_token_indexers: Dict[str, TokenIndexer] = None,
                  table_token_indexers: Dict[str, TokenIndexer] = None,
                  use_table_for_vocab: bool = False,
-                 nonterminal_indexers: Dict[str, TokenIndexer] = None,
-                 terminal_indexers: Dict[str, TokenIndexer] = None,
                  linking_feature_extractors: List[str] = None,
                  include_table_metadata: bool = False,
                  max_table_tokens: int = None) -> None:
@@ -143,12 +134,11 @@ class WikiTablesDatasetReader(DatasetReader):
         self._max_dpd_logical_forms = max_dpd_logical_forms
         self._sort_dpd_logical_forms = sort_dpd_logical_forms
         self._max_dpd_tries = max_dpd_tries
+        self._keep_if_no_dpd = keep_if_no_dpd
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
         self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._table_token_indexers = table_token_indexers or self._question_token_indexers
         self._use_table_for_vocab = use_table_for_vocab
-        self._nonterminal_indexers = nonterminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
-        self._terminal_indexers = terminal_indexers or {"token_characters": TokenCharactersIndexer()}
         self._linking_feature_extractors = linking_feature_extractors
         self._include_table_metadata = include_table_metadata
         self._basic_types = set(str(type_) for type_ in wt_types.BASIC_TYPES)
@@ -190,13 +180,16 @@ class WikiTablesDatasetReader(DatasetReader):
                                     break
                     except FileNotFoundError:
                         logger.debug(f'Missing DPD output for instance {parsed_info["id"]}; skipping...')
+                        sempre_forms = None
                         num_dpd_missing += 1
-                        continue
+                        if not self._keep_if_no_dpd:
+                            continue
                 else:
                     sempre_forms = None
-                instance = self.text_to_instance(question,
-                                                 table_filename,
-                                                 sempre_forms)
+                instance = self.text_to_instance(question=question,
+                                                 table_info=table_filename,
+                                                 example_string=line,
+                                                 dpd_output=sempre_forms)
                 if instance is not None:
                     num_instances += 1
                     yield instance
@@ -214,6 +207,7 @@ class WikiTablesDatasetReader(DatasetReader):
     def text_to_instance(self,  # type: ignore
                          question: str,
                          table_info: Union[str, JsonDict],
+                         example_string: str = None,
                          dpd_output: List[str] = None,
                          tokenized_question: List[Token] = None) -> Instance:
         """
@@ -230,10 +224,14 @@ class WikiTablesDatasetReader(DatasetReader):
         table_info : ``str`` or ``JsonDict``
             Table filename or the table content itself, as a dict. See
             ``TableQuestionKnowledgeGraph.read_from_json`` for the expected format.
+        example_string : ``str``, optional
+            The original (lisp-formatted) example string in the WikiTableQuestions dataset.  We
+            pass this to SEMPRE for evaluating logical forms during training.  It isn't otherwise
+            used for anything.
         dpd_output : List[str], optional
             List of logical forms, produced by dynamic programming on denotations. Not required
             during test.
-        tokenized_question : ``List[Token]``
+        tokenized_question : ``List[Token]``, optional
             If you have already tokenized the question, you can pass that in here, so we don't
             duplicate that work.  You might, for example, do batch processing on the questions in
             the whole dataset, then pass the result in here.
@@ -272,6 +270,8 @@ class WikiTablesDatasetReader(DatasetReader):
                   'actions': action_field}
         if self._include_table_metadata:
             fields['table_metadata'] = table_metadata
+        if example_string:
+            fields['example_string'] = MetadataField(example_string)
 
         if dpd_output:
             # We'll make each target action sequence a List[IndexField], where the index is into
@@ -359,6 +359,7 @@ class WikiTablesDatasetReader(DatasetReader):
         max_dpd_logical_forms = params.pop_int('max_dpd_logical_forms', 10)
         sort_dpd_logical_forms = params.pop_bool('sort_dpd_logical_forms', True)
         max_dpd_tries = params.pop_int('max_dpd_tries', 20)
+        keep_if_no_dpd = params.pop_bool('keep_if_no_dpd', False)
         default_tokenizer_params = {'word_splitter': {'type': 'spacy', 'pos_tags': True}}
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', default_tokenizer_params))
         question_token_indexers = TokenIndexer.dict_from_params(params.pop('question_token_indexers', {}))
@@ -374,6 +375,7 @@ class WikiTablesDatasetReader(DatasetReader):
                                        max_dpd_logical_forms=max_dpd_logical_forms,
                                        sort_dpd_logical_forms=sort_dpd_logical_forms,
                                        max_dpd_tries=max_dpd_tries,
+                                       keep_if_no_dpd=keep_if_no_dpd,
                                        tokenizer=tokenizer,
                                        question_token_indexers=question_token_indexers,
                                        table_token_indexers=table_token_indexers,

@@ -375,19 +375,21 @@ class Trainer:
             if for_training:
                 loss += self._model.get_regularization_penalty()
         except KeyError:
-            raise ConfigurationError("The model you are trying to optimize does not contain a"
-                                     " 'loss' key in the output of model.forward(inputs).")
+            if for_training:
+                raise RuntimeError("The model you are trying to optimize does not contain a"
+                                   " 'loss' key in the output of model.forward(inputs).")
+            loss = None
 
         return loss
 
-    def _get_metrics(self, total_loss: float, batch_num: int, reset: bool = False) -> Dict[str, float]:
+    def _get_metrics(self, total_loss: float, num_batches: int, reset: bool = False) -> Dict[str, float]:
         """
         Gets the metrics but sets ``"loss"`` to
-        the total loss divided by the ``batch_num`` so that
+        the total loss divided by the ``num_batches`` so that
         the ``"loss"`` metric is "average loss per batch".
         """
         metrics = self._model.get_metrics(reset=reset)
-        metrics["loss"] = float(total_loss / batch_num)
+        metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
         return metrics
 
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
@@ -628,10 +630,16 @@ class Trainer:
         batches_this_epoch = 0
         val_loss = 0
         for batch in val_generator_tqdm:
-            batches_this_epoch += 1
 
             loss = self._batch_loss(batch, for_training=False)
-            val_loss += loss.data.cpu().numpy()
+            if loss is not None:
+                # You shouldn't necessarily have to compute a loss for validation, so we allow for
+                # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
+                # currently only used as the divisor for the loss function, so we can safely only
+                # count those batches for which we actually have a loss.  If this variable ever
+                # gets used for something else, we might need to change things around a bit.
+                batches_this_epoch += 1
+                val_loss += loss.data.cpu().numpy()
 
             # Update the description with the latest metrics
             val_metrics = self._get_metrics(val_loss, batches_this_epoch)

@@ -45,19 +45,6 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
         If ``True``, we will include table cell text in vocabulary creation.  The original parser
         did not do this, because the same table can appear multiple times, messing with vocab
         counts, and making you include lots of rare entities in your vocab.
-    nonterminal_indexers : ``Dict[str, TokenIndexer]`` (optional)
-        How should we represent non-terminals in production rules when we're computing action
-        embeddings?  We use ``TokenIndexers`` for this.  Default is to use a
-        ``SingleIdTokenIndexer`` with the ``rule_labels`` namespace, keyed by ``tokens``:
-        ``{"tokens": SingleIdTokenIndexer("rule_labels")}``.  We use the namespace ``rule_labels``
-        so that we don't get padding or OOV tokens for nonterminals.
-    terminal_indexers : ``Dict[str, TokenIndexer]`` (optional)
-        How should we represent terminals in production rules when we're computing action
-        embeddings?  We also use ``TokenIndexers`` for this.  The default is to use a
-        ``TokenCharactersIndexer`` keyed by ``token_characters``: ``{"token_characters":
-        TokenCharactersIndexer()}``.  We use this indexer by default because WikiTables has plenty
-        of terminals that are unseen at training time, so we need to use a representation for them
-        that is not just a vocabulary lookup.
     max_table_tokens : ``int``, optional
         If given, we will only keep this number of total table tokens.  This bounds the memory
         usage of the table representations, truncating cells with really long text.  We specify a
@@ -69,15 +56,11 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
                  question_token_indexers: Dict[str, TokenIndexer] = None,
                  table_token_indexers: Dict[str, TokenIndexer] = None,
                  use_table_for_vocab: bool = False,
-                 nonterminal_indexers: Dict[str, TokenIndexer] = None,
-                 terminal_indexers: Dict[str, TokenIndexer] = None,
                  max_table_tokens: int = None) -> None:
         super().__init__(lazy)
         self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._table_token_indexers = table_token_indexers or self._question_token_indexers
         self._use_table_for_vocab = use_table_for_vocab
-        self._nonterminal_indexers = nonterminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
-        self._terminal_indexers = terminal_indexers or {"token_characters": TokenCharactersIndexer()}
         self._max_table_tokens = max_table_tokens
 
     @overrides
@@ -116,19 +99,24 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
         action_field = ListField(production_rule_fields)
 
         action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
-        action_sequence_fields: List[Field] = []
-        for sequence in json_obj['target_action_sequences']:
-            index_fields: List[Field] = []
-            for production_rule in sequence:
-                index_fields.append(IndexField(action_map[production_rule], action_field))
-            action_sequence_fields.append(ListField(index_fields))
-        targets_field = ListField(action_sequence_fields)
 
         fields = {'question': question_field,
                   'table': table_field,
                   'world': world_field,
-                  'actions': action_field,
-                  'target_action_sequences': targets_field}
+                  'actions': action_field}
+
+        if 'target_action_sequences' in json_obj:
+            action_sequence_fields: List[Field] = []
+            for sequence in json_obj['target_action_sequences']:
+                index_fields: List[Field] = []
+                for production_rule in sequence:
+                    index_fields.append(IndexField(action_map[production_rule], action_field))
+                action_sequence_fields.append(ListField(index_fields))
+            fields['target_action_sequences'] = ListField(action_sequence_fields)
+
+        if 'example_string' in json_obj:
+            fields['example_string'] = MetadataField(json_obj['example_string'])
+
         return Instance(fields)
 
     @staticmethod
