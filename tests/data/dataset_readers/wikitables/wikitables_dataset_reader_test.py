@@ -9,7 +9,14 @@ def assert_dataset_correct(dataset):
     assert len(instances) == 2
     instance = instances[0]
 
-    assert instance.fields.keys() == {'question', 'table', 'world', 'actions', 'target_action_sequences'}
+    assert instance.fields.keys() == {
+            'question',
+            'table',
+            'world',
+            'actions',
+            'target_action_sequences',
+            'example_string',
+            }
 
     question_tokens = ["what", "was", "the", "last", "year", "where", "this", "team", "was", "a",
                        "part", "of", "the", "usl", "a", "-", "league", "?"]

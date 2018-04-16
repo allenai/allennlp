@@ -117,6 +117,7 @@ class WikiTablesSemanticParser(Model):
         else:
             self._dropout = lambda x: x
         self._rule_namespace = rule_namespace
+        self._table_directory = table_directory
 
         self._action_padding_index = -1  # the padding value used by IndexField
         self._action_embedder = Embedding(num_embeddings=vocab.get_vocab_size(self._rule_namespace),
@@ -154,7 +155,7 @@ class WikiTablesSemanticParser(Model):
                                                    mixture_feedforward=mixture_feedforward,
                                                    dropout=dropout)
 
-        self._executor_process = None
+        self._executor_process: subprocess.Popen = None
         self._create_sempre_executor()
 
     def _create_sempre_executor(self) -> None:
@@ -176,11 +177,11 @@ class WikiTablesSemanticParser(Model):
             subprocess.run(f'wget {GROW_FILE}', shell=True)
             subprocess.run(f'mv wikitables-grow.grammar {grammar_path}', shell=True)
 
-        args = ['java', '-jar', cached_path(SEMPRE_EXECUTOR_JAR), 'serve', '/wikitables/']
+        args = ['java', '-jar', cached_path(SEMPRE_EXECUTOR_JAR), 'serve', self._table_directory]
         self._executor_process = subprocess.Popen(args,
-                                            stdin=subprocess.PIPE,
-                                            stdout=subprocess.PIPE,
-                                            bufsize=1)
+                                                  stdin=subprocess.PIPE,
+                                                  stdout=subprocess.PIPE,
+                                                  bufsize=1)
 
         for _ in range(6):
             # SEMPRE outputs six lines of stuff when it loads that I can't disable.  So, we clear
@@ -205,10 +206,7 @@ class WikiTablesSemanticParser(Model):
         self._executor_process.stdin.write(logical_form.encode('utf-8'))
         self._executor_process.stdin.flush()
         result = self._executor_process.stdout.readline().decode().strip()
-        if result == '1.0':
-            return True
-        else:
-            return False
+        return result == '1.0'
 
     @overrides
     def forward(self,  # type: ignore
