@@ -48,7 +48,6 @@ class EvalbBracketingScorerTest(AllenNlpTestCase):
         assert metrics["evalb_precision"] == 0.875
         assert metrics["evalb_f1_measure"] == 0.875
 
-
     def test_evalb_with_terrible_trees_handles_nan_f1(self):
         # If precision and recall are zero, evalb returns nan f1.
         # This checks that we handle the zero division.

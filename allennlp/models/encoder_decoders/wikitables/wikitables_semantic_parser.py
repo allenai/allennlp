@@ -1,7 +1,3 @@
-import atexit
-import logging
-import os
-import subprocess
 from typing import Any, Dict, List, Tuple
 
 from overrides import overrides
@@ -10,7 +6,6 @@ from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
-from allennlp.common.file_utils import cached_path
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
@@ -28,14 +23,7 @@ from allennlp.semparse.type_declarations import type_declaration
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import WikiTablesWorld
 from allennlp.semparse import ParsingError
-from allennlp.training.metrics import Average
-
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
-SEMPRE_EXECUTOR_JAR = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-executor-0.1.0.jar"
-ABBREVIATIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-abbreviations.tsv"
-GROW_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-grow.grammar"
-SEMPRE_DIR = 'data/'
+from allennlp.training.metrics import Average, WikiTablesAccuracy
 
 
 @Model.register("wikitables_parser")
@@ -109,15 +97,14 @@ class WikiTablesSemanticParser(Model):
         self._entity_encoder = TimeDistributed(entity_encoder)
         self._beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
-        self._action_sequence_accuracy = Average()
-        self._denotation_accuracy = Average()
-        self._has_logical_form = Average()
         if dropout > 0:
             self._dropout = torch.nn.Dropout(p=dropout)
         else:
             self._dropout = lambda x: x
         self._rule_namespace = rule_namespace
-        self._table_directory = table_directory
+        self._denotation_accuracy = WikiTablesAccuracy(table_directory)
+        self._action_sequence_accuracy = Average()
+        self._has_logical_form = Average()
 
         self._action_padding_index = -1  # the padding value used by IndexField
         self._action_embedder = Embedding(num_embeddings=vocab.get_vocab_size(self._rule_namespace),
@@ -154,59 +141,6 @@ class WikiTablesSemanticParser(Model):
                                                    num_entity_types=self._num_entity_types,
                                                    mixture_feedforward=mixture_feedforward,
                                                    dropout=dropout)
-
-        self._executor_process: subprocess.Popen = None
-        self._create_sempre_executor()
-
-    def _create_sempre_executor(self) -> None:
-        """
-        Creates a server running SEMPRE that we can send logical forms to for evaluation.  This
-        uses inter-process communication, because SEMPRE is java code.  We also need to be careful
-        to clean up the process when our program exits.
-        """
-        if self._executor_process:
-            return
-        os.makedirs(SEMPRE_DIR, exist_ok=True)
-        abbreviations_path = os.path.join(SEMPRE_DIR, 'abbreviations.tsv')
-        if not os.path.exists(abbreviations_path):
-            subprocess.run(f'wget {ABBREVIATIONS_FILE}', shell=True)
-            subprocess.run(f'mv wikitables-abbreviations.tsv {abbreviations_path}', shell=True)
-
-        grammar_path = os.path.join(SEMPRE_DIR, 'grow.grammar')
-        if not os.path.exists(grammar_path):
-            subprocess.run(f'wget {GROW_FILE}', shell=True)
-            subprocess.run(f'mv wikitables-grow.grammar {grammar_path}', shell=True)
-
-        args = ['java', '-jar', cached_path(SEMPRE_EXECUTOR_JAR), 'serve', self._table_directory]
-        self._executor_process = subprocess.Popen(args,
-                                                  stdin=subprocess.PIPE,
-                                                  stdout=subprocess.PIPE,
-                                                  bufsize=1)
-
-        for _ in range(6):
-            # SEMPRE outputs six lines of stuff when it loads that I can't disable.  So, we clear
-            # that here.
-            self._executor_process.stdout.readline()
-        logger.info("Started SEMPRE server for evaluating logical forms")
-        atexit.register(self._stop_sempre_executor)
-
-    def _stop_sempre_executor(self) -> None:
-        if not self._executor_process:
-            return
-        self._executor_process.terminate()
-        self._executor_process = None
-        logger.info("Stopped SEMPRE server")
-
-    def _evaluate_logical_form(self, example_string: str, logical_form: str) -> bool:
-        if example_string[-1] != '\n':
-            example_string += '\n'
-        if logical_form[-1] != '\n':
-            logical_form += '\n'
-        self._executor_process.stdin.write(example_string.encode('utf-8'))
-        self._executor_process.stdin.write(logical_form.encode('utf-8'))
-        self._executor_process.stdin.flush()
-        result = self._executor_process.stdout.readline().decode().strip()
-        return result == '1.0'
 
     @overrides
     def forward(self,  # type: ignore
@@ -296,8 +230,8 @@ class WikiTablesSemanticParser(Model):
 
         # Compute entity and question word cosine similarity. Need to add a small value to
         # to the table norm since there are padding values which cause a divide by 0.
-        embedded_table = embedded_table / (embedded_table.norm(dim=-1, keepdim=True) + 1e-13)
-        embedded_question = embedded_question / (embedded_question.norm(dim=-1, keepdim=True) + 1e-13)
+        #embedded_table = embedded_table / (embedded_table.norm(dim=-1, keepdim=True) + 1e-13)
+        #embedded_question = embedded_question / (embedded_question.norm(dim=-1, keepdim=True) + 1e-13)
         question_entity_similarity = torch.bmm(embedded_table.view(batch_size,
                                                                    num_entities * num_entity_tokens,
                                                                    self._embedding_dim),
@@ -436,13 +370,12 @@ class WikiTablesSemanticParser(Model):
                 # infinite action loop).
                 if i in best_final_states:
                     best_action_indices = best_final_states[i][0].action_history[0]
-                    sequence_in_targets = 0
                     if target_action_sequences is not None:
                         # Use a Tensor, not a Variable, to avoid a memory leak.
                         targets = target_action_sequences[i].data
+                        sequence_in_targets = 0
                         sequence_in_targets = self._action_history_match(best_action_indices, targets)
-
-                    self._action_sequence_accuracy(sequence_in_targets)
+                        self._action_sequence_accuracy(sequence_in_targets)
                     action_strings = [action_mapping[(i, action_index)] for action_index in best_action_indices]
                     try:
                         self._has_logical_form(1.0)
@@ -450,10 +383,7 @@ class WikiTablesSemanticParser(Model):
                     except ParsingError:
                         self._has_logical_form(0.0)
                         logical_form = 'Error producing logical form'
-                    denotation_correct = False
-                    if example_string is not None:
-                        denotation_correct = self._evaluate_logical_form(example_string[i], logical_form)
-                    self._denotation_accuracy(1.0 if denotation_correct else 0.0)
+                    self._denotation_accuracy(logical_form, example_string[i])
                     outputs['best_action_sequence'].append(action_strings)
                     outputs['logical_form'].append(logical_form)
                     outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
@@ -461,7 +391,7 @@ class WikiTablesSemanticParser(Model):
                 else:
                     outputs['logical_form'].append('')
                     self._has_logical_form(0.0)
-                    self._denotation_accuracy(0.0)
+                    self._denotation_accuracy(None, example_string[i])
             return outputs
 
     @staticmethod

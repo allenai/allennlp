@@ -14,9 +14,8 @@ class TestWikiTablesParserPredictor(TestCase):
 
     def tearDown(self):
         super().tearDown()
-        if self.should_remove_data_dir:
+        if self.should_remove_data_dir and os.path.exists('data'):
             shutil.rmtree('data')
-
 
     def test_uses_named_inputs(self):
         inputs = {

@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import List, Tuple
 
 from overrides import overrides
 
@@ -19,12 +19,14 @@ class SquadEmAndF1(Metric):
         self._count = 0
 
     @overrides
-    def __call__(self, best_span_string, answer_strings):
+    def __call__(self, best_span_string: str, answer_strings: List[str]):
         """
         Parameters
         ----------
-        value : ``float``
-            The value to average.
+        best_span_string : ``str``
+            The best span string predicted by the model.
+        answer_strings : ``List[str]``
+            The annotated answer strings in the data.
         """
         exact_match = squad_eval.metric_max_over_ground_truths(
                 squad_eval.exact_match_score,
