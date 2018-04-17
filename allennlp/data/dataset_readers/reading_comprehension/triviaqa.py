@@ -97,7 +97,7 @@ def _merge(paragraphs: List[str],
            max_paragraph_length: int = 400) -> MergedParagraphs:
     """
     Given some (small?) paragraphs and a question, merge the paragraphs to make
-    synthetic paragraphs of size ``max_paragraph_length``, and return a ``MergedParagraphs``
+    synthetic paragraphs of size at most ``max_paragraph_length``, and return a ``MergedParagraphs``
     instance containing the "best" ``topn`` of them. If ``topn`` is None, return all of them.
 
     If ``tfidf_sort`` is True, "best" means closest (in terms of tfidf distance) to the question.
@@ -105,18 +105,44 @@ def _merge(paragraphs: List[str],
     one of the ``answer_texts``. Don't do this with a test or validation dataset, that's cheating.
     If neither is True, then just the first ``topn`` paragraphs are returned.
     """
-    # Collect all the text into one mega-paragraph.
-    tokens: List[str] = []
+    merged_paragraphs: List[str] = []
+
+    current_length = 0
+    current_paragraph = ""
+
     for paragraph in paragraphs:
-        tokens.extend(token.text for token in tokenizer.tokenize(paragraph))
-        tokens.append(_PARAGRAPH_TOKEN)
+        paragraph_tokens = tokenizer.tokenize(paragraph)
+        paragraph_length = len(paragraph_tokens)
 
-    # Get rid of trailing paragraph token
-    tokens = tokens[:-1]
+        too_long = current_length + paragraph_length > max_paragraph_length
 
-    # Merge them into paragraphs of size ``max_paragraph_length``.
-    merged_paragraphs = [' '.join(paragraph_tokens)
-                         for paragraph_tokens in lazy_groups_of(iter(tokens), max_paragraph_length)]
+        if too_long and current_length > 0 and paragraph_length <= max_paragraph_length:
+            # Keep the previous paragraph and start a new one
+            merged_paragraphs.append(current_paragraph)
+            current_length = paragraph_length
+            current_paragraph = paragraph
+
+        elif too_long and current_length > 0 and paragraph_length > max_paragraph_length:
+            # Keep the previous paragraph and truncate this one
+            truncated = ' '.join(token.text for token in paragraph_tokens[:max_paragraph_length])
+
+            merged_paragraphs.append(current_paragraph)
+            merged_paragraphs.append(truncated)
+            current_length = 0
+            current_paragraph = ""
+
+        elif too_long:  # and current length == 0, so just this paragraph is too long by itself
+            truncated = ' '.join(token.text for token in paragraph_tokens[:max_paragraph_length])
+            merged_paragraphs.append(truncated)
+
+        else:
+            current_paragraph += " " + _PARAGRAPH_TOKEN + " " + paragraph
+            current_length += paragraph_length
+
+    if current_length > 0:
+        merged_paragraphs.append(current_paragraph)
+
+    # Tokenize the merged paragraphs.
     merged_paragraph_tokens = [tokenizer.tokenize(paragraph) for paragraph in merged_paragraphs]
 
     # If ``max_paragraphs`` is None, we want all the merged paragraphs.
@@ -190,7 +216,8 @@ def process_triviaqa_questions(evidence_path: pathlib.Path,
     with open(questions_path, 'r') as f:
         questions_data = json.loads(f.read())['Data']
 
-    for question in questions_data:
+    from allennlp.common.tqdm import Tqdm
+    for question in Tqdm.tqdm(questions_data):
         question_id = question['QuestionId']
         question_text = question['Question']
         question_tokens = tokenizer.tokenize(question_text)
