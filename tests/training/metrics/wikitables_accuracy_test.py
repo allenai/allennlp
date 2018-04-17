@@ -26,8 +26,8 @@ class WikiTablesAccuracyTest(AllenNlpTestCase):
 
         # This logical form should produce the correct denotation (the "targetValue" above) given
         # the table.
-        logical_form = ('((reverse fb:row.row.year) (fb:row.row.index (max ((reverse fb:row.row.index) '
-                        '(fb:row.row.league fb:cell.usl_a_league)))))')
+        logical_form = ('((reverse fb:row.row.year) (fb:row.row.index (max '
+                        '((reverse fb:row.row.index) (fb:row.row.league fb:cell.usl_a_league)))))')
 
         wikitables_accuracy = WikiTablesAccuracy(table_directory='tests/fixtures/data/wikitables/')
         wikitables_accuracy(logical_form, example_string)

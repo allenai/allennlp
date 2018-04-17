@@ -114,8 +114,11 @@ class WikiTablesPreprocessedDatasetReader(DatasetReader):
                 action_sequence_fields.append(ListField(index_fields))
             fields['target_action_sequences'] = ListField(action_sequence_fields)
 
-        if 'example_string' in json_obj:
-            fields['example_string'] = MetadataField(json_obj['example_string'])
+        if 'example_lisp_string' in json_obj:
+            fields['example_lisp_string'] = MetadataField(json_obj['example_lisp_string'])
+        elif 'example_string' in json_obj:
+            # This is here only for backwards compatibility.
+            fields['example_lisp_string'] = MetadataField(json_obj['example_string'])
 
         return Instance(fields)
 

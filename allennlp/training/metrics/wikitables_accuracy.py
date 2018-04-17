@@ -73,6 +73,10 @@ class WikiTablesAccuracy(Metric):
         """
         if self._executor_process:
             return
+
+        # It'd be much nicer to just use `cached_path` for these files.  However, the SEMPRE jar
+        # that we're using expects to find these files in a particular location, so we need to make
+        # sure we put the files in that location.
         os.makedirs(SEMPRE_DIR, exist_ok=True)
         abbreviations_path = os.path.join(SEMPRE_DIR, 'abbreviations.tsv')
         if not os.path.exists(abbreviations_path):

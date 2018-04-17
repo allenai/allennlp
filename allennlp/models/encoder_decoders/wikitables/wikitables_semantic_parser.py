@@ -148,7 +148,7 @@ class WikiTablesSemanticParser(Model):
                 table: Dict[str, torch.LongTensor],
                 world: List[WikiTablesWorld],
                 actions: List[List[ProductionRuleArray]],
-                example_string: List[str] = None,
+                example_lisp_string: List[str] = None,
                 target_action_sequences: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         # pylint: disable=unused-argument
@@ -176,9 +176,10 @@ class WikiTablesSemanticParser(Model):
             ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
-        example_string : ``List[str]``, optional (default=None)
-            The example string corresponding to the given input.  We pass this to SEMPRE when
-            evaluating denotation accuracy; it is otherwise unused.
+        example_lisp_string : ``List[str]``, optional (default=None)
+            The example (lisp-formatted) string corresponding to the given input.  This comes
+            directly from the *.examples file provided with the dataset.  We pass this to SEMPRE
+            when evaluating denotation accuracy; it is otherwise unused.
         target_action_sequences : torch.Tensor, optional (default=None)
            A list of possibly valid action sequences, where each action is an index into the list
            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
@@ -383,7 +384,7 @@ class WikiTablesSemanticParser(Model):
                     except ParsingError:
                         self._has_logical_form(0.0)
                         logical_form = 'Error producing logical form'
-                    self._denotation_accuracy(logical_form, example_string[i])
+                    self._denotation_accuracy(logical_form, example_lisp_string[i])
                     outputs['best_action_sequence'].append(action_strings)
                     outputs['logical_form'].append(logical_form)
                     outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
@@ -391,7 +392,7 @@ class WikiTablesSemanticParser(Model):
                 else:
                     outputs['logical_form'].append('')
                     self._has_logical_form(0.0)
-                    self._denotation_accuracy(None, example_string[i])
+                    self._denotation_accuracy(None, example_lisp_string[i])
             return outputs
 
     @staticmethod
@@ -584,6 +585,26 @@ class WikiTablesSemanticParser(Model):
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        """
+        We track three metrics here:
+
+            1. dpd_acc, which is the percentage of the time that our best output action sequence is
+            in the set of action sequences provided by DPD.  This is an easy-to-compute lower bound
+            on denotation accuracy for the set of examples where we actually have DPD output.  We
+            only score dpd_acc on that subset.
+
+            2. denotation_acc, which is the percentage of examples where we get the correct
+            denotation.  This is the typical "accuracy" metric, and it is what you should usually
+            report in an experimental result.  You need to be careful, though, that you're
+            computing this on the full data, and not just the subset that has DPD output (make sure
+            you pass "keep_if_no_dpd=True" to the dataset reader, which we do for validation data,
+            but not training data).
+
+            3. lf_percent, which is the percentage of time that decoding actually produces a
+            finished logical form.  We might not produce a valid logical form if the decoder gets
+            into a repetitive loop, or we're trying to produce a super long logical form and run
+            out of time steps, or something.
+        """
         return {
                 'dpd_acc': self._action_sequence_accuracy.get_metric(reset),
                 'denotation_acc': self._denotation_accuracy.get_metric(reset),

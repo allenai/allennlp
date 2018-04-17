@@ -188,7 +188,7 @@ class WikiTablesDatasetReader(DatasetReader):
                     sempre_forms = None
                 instance = self.text_to_instance(question=question,
                                                  table_info=table_filename,
-                                                 example_string=line,
+                                                 example_lisp_string=line,
                                                  dpd_output=sempre_forms)
                 if instance is not None:
                     num_instances += 1
@@ -207,7 +207,7 @@ class WikiTablesDatasetReader(DatasetReader):
     def text_to_instance(self,  # type: ignore
                          question: str,
                          table_info: Union[str, JsonDict],
-                         example_string: str = None,
+                         example_lisp_string: str = None,
                          dpd_output: List[str] = None,
                          tokenized_question: List[Token] = None) -> Instance:
         """
@@ -224,10 +224,11 @@ class WikiTablesDatasetReader(DatasetReader):
         table_info : ``str`` or ``JsonDict``
             Table filename or the table content itself, as a dict. See
             ``TableQuestionKnowledgeGraph.read_from_json`` for the expected format.
-        example_string : ``str``, optional
-            The original (lisp-formatted) example string in the WikiTableQuestions dataset.  We
-            pass this to SEMPRE for evaluating logical forms during training.  It isn't otherwise
-            used for anything.
+        example_lisp_string : ``str``, optional
+            The original (lisp-formatted) example string in the WikiTableQuestions dataset.  This
+            comes directly from the *.examples file provided with the dataset.  We pass this to
+            SEMPRE for evaluating logical forms during training.  It isn't otherwise used for
+            anything.
         dpd_output : List[str], optional
             List of logical forms, produced by dynamic programming on denotations. Not required
             during test.
@@ -270,8 +271,8 @@ class WikiTablesDatasetReader(DatasetReader):
                   'actions': action_field}
         if self._include_table_metadata:
             fields['table_metadata'] = table_metadata
-        if example_string:
-            fields['example_string'] = MetadataField(example_string)
+        if example_lisp_string:
+            fields['example_lisp_string'] = MetadataField(example_lisp_string)
 
         if dpd_output:
             # We'll make each target action sequence a List[IndexField], where the index is into

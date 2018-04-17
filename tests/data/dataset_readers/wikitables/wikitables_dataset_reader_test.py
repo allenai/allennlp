@@ -15,7 +15,7 @@ def assert_dataset_correct(dataset):
             'world',
             'actions',
             'target_action_sequences',
-            'example_string',
+            'example_lisp_string',
             }
 
     question_tokens = ["what", "was", "the", "last", "year", "where", "this", "team", "was", "a",
