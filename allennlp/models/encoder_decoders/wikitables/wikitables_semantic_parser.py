@@ -178,7 +178,7 @@ class WikiTablesSemanticParser(Model):
             decoder.
         example_lisp_string : ``List[str]``, optional (default=None)
             The example (lisp-formatted) string corresponding to the given input.  This comes
-            directly from the *.examples file provided with the dataset.  We pass this to SEMPRE
+            directly from the ``.examples`` file provided with the dataset.  We pass this to SEMPRE
             when evaluating denotation accuracy; it is otherwise unused.
         target_action_sequences : torch.Tensor, optional (default=None)
            A list of possibly valid action sequences, where each action is an index into the list
@@ -231,8 +231,8 @@ class WikiTablesSemanticParser(Model):
 
         # Compute entity and question word cosine similarity. Need to add a small value to
         # to the table norm since there are padding values which cause a divide by 0.
-        #embedded_table = embedded_table / (embedded_table.norm(dim=-1, keepdim=True) + 1e-13)
-        #embedded_question = embedded_question / (embedded_question.norm(dim=-1, keepdim=True) + 1e-13)
+        embedded_table = embedded_table / (embedded_table.norm(dim=-1, keepdim=True) + 1e-13)
+        embedded_question = embedded_question / (embedded_question.norm(dim=-1, keepdim=True) + 1e-13)
         question_entity_similarity = torch.bmm(embedded_table.view(batch_size,
                                                                    num_entities * num_entity_tokens,
                                                                    self._embedding_dim),
@@ -384,7 +384,8 @@ class WikiTablesSemanticParser(Model):
                     except ParsingError:
                         self._has_logical_form(0.0)
                         logical_form = 'Error producing logical form'
-                    self._denotation_accuracy(logical_form, example_lisp_string[i])
+                    if example_lisp_string:
+                        self._denotation_accuracy(logical_form, example_lisp_string[i])
                     outputs['best_action_sequence'].append(action_strings)
                     outputs['logical_form'].append(logical_form)
                     outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
@@ -392,7 +393,8 @@ class WikiTablesSemanticParser(Model):
                 else:
                     outputs['logical_form'].append('')
                     self._has_logical_form(0.0)
-                    self._denotation_accuracy(None, example_lisp_string[i])
+                    if example_lisp_string:
+                        self._denotation_accuracy(None, example_lisp_string[i])
             return outputs
 
     @staticmethod

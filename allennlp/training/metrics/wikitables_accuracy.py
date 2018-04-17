@@ -25,7 +25,7 @@ class WikiTablesAccuracy(Metric):
         self._correct = 0
 
     @overrides
-    def __call__(self, logical_form: str, example_lisp_string: str):
+    def __call__(self, logical_form: str, example_lisp_string: str):  # type: ignore
         """
         Parameters
         ----------
@@ -94,11 +94,15 @@ class WikiTablesAccuracy(Metric):
                                                   stdout=subprocess.PIPE,
                                                   bufsize=1)
 
+        lines = []
         for _ in range(6):
             # SEMPRE outputs six lines of stuff when it loads that I can't disable.  So, we clear
             # that here.
-            self._executor_process.stdout.readline()
+            lines.append(str(self._executor_process.stdout.readline()))
+        assert 'Parser' in lines[-1], "SEMPRE server output unexpected; the server may have changed"
         logger.info("Started SEMPRE server for evaluating logical forms")
+
+        # This is supposed to ensure that the subprocess gets killed when python exits.
         atexit.register(self._stop_sempre_executor)
 
     def _stop_sempre_executor(self) -> None:

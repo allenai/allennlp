@@ -19,7 +19,7 @@ class SquadEmAndF1(Metric):
         self._count = 0
 
     @overrides
-    def __call__(self, best_span_string: str, answer_strings: List[str]):
+    def __call__(self, best_span_string: str, answer_strings: List[str]):  # type: ignore
         """
         Parameters
         ----------

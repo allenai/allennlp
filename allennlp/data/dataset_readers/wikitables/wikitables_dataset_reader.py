@@ -226,7 +226,7 @@ class WikiTablesDatasetReader(DatasetReader):
             ``TableQuestionKnowledgeGraph.read_from_json`` for the expected format.
         example_lisp_string : ``str``, optional
             The original (lisp-formatted) example string in the WikiTableQuestions dataset.  This
-            comes directly from the *.examples file provided with the dataset.  We pass this to
+            comes directly from the ``.examples`` file provided with the dataset.  We pass this to
             SEMPRE for evaluating logical forms during training.  It isn't otherwise used for
             anything.
         dpd_output : List[str], optional
