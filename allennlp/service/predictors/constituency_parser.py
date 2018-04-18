@@ -86,6 +86,8 @@ class ConstituencyParserPredictor(Predictor):
         tree = return_dict.pop("trees")
         return_dict["hierplane_tree"] = self._build_hierplane_tree(tree, 0, is_root=True)
         return_dict["trees"] = tree.pformat(margin=1000000)
+        return_dict["top_k_trees"] = \
+            [tree.pformat(margin=1000000) for tree in return_dict["top_k_trees"]]
         return sanitize(return_dict)
 
     @overrides
@@ -97,7 +99,8 @@ class ConstituencyParserPredictor(Predictor):
             # format the NLTK tree as a string on a single line.
             tree = return_dict.pop("trees")
             return_dict["hierplane_tree"] = self._build_hierplane_tree(tree, 0, is_root=True)
-            return_dict["trees"] = tree.pformat(margin=1000000)
+            return_dict["top_k_trees"] = \
+                [tree.pformat(margin=1000000) for tree in return_dict["top_k_trees"]]
         return sanitize(return_dicts)
 
 

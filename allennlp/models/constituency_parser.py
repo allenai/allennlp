@@ -18,6 +18,8 @@ from allennlp.nn.util import last_dim_softmax, get_lengths_from_binary_sequence_
 from allennlp.training.metrics import CategoricalAccuracy
 from allennlp.training.metrics import EvalbBracketingScorer
 from allennlp.common.checks import ConfigurationError
+import numpy as np
+from sortedcontainers import SortedList
 
 class SpanInformation(NamedTuple):
     """
@@ -249,14 +251,197 @@ class SpanConstituencyParser(Model):
         all_sentences = output_dict["tokens"]
         all_pos_tags = output_dict["pos_tags"] if all(output_dict["pos_tags"]) else None
         num_spans = output_dict["num_spans"].data
-        trees = self.construct_trees(all_predictions, all_spans, num_spans, all_sentences, all_pos_tags)
 
         batch_size = all_predictions.size(0)
         output_dict["spans"] = [all_spans[i, :num_spans[i]] for i in range(batch_size)]
         output_dict["class_probabilities"] = [all_predictions[i, :num_spans[i], :] for i in range(batch_size)]
 
-        output_dict["trees"] = trees
+        output_dict["trees"] = self.construct_trees(all_predictions,
+                                                    all_spans,
+                                                    num_spans,
+                                                    all_sentences,
+                                                    all_pos_tags)
+        output_dict['top_k_trees'] = self.construct_topk_trees(all_predictions,
+                                                               all_spans,
+                                                               num_spans,
+                                                               all_sentences,
+                                                               all_pos_tags)
         return output_dict
+
+    def compute_k_best(self,
+                       sentence,
+                       pos_tags,
+                       label_probabilities_np,
+                       span_to_index,
+                       num_trees,
+                       distinguish_between_labels=False):
+        """
+        :param sentence: The sentence for which top-k parses are being computed.
+        :param pos_tags: Part of speech tags for every token in the input sentence.
+        :param label_probabilities_np: A numpy array of shape (num_spans, num_labels)
+        :param span_to_index: A dictionary mapping span indices to column indices in
+        label_log_probabilities.
+        :param no_label_id: The id of the empty label.
+        :param num_trees: The number of parses required.
+        :param distinguish_between_labels: Whether to distinguish between different labels for the
+        top k trees.
+        :return: A list of the num_tree parses, and their log probabilities.
+        """
+        empty_label_index = self.vocab.get_token_index("NO-LABEL", "labels")
+        all_labels = [self.vocab.get_token_from_index(index, "labels").split("-") for index in
+                  range(self.vocab.get_vocab_size("labels"))]
+
+        if not distinguish_between_labels:
+            temp = np.zeros((len(span_to_index), 2))
+            temp[:, 0] = label_probabilities_np[:, empty_label_index]
+            temp[:, 1] = 1 - label_probabilities_np[:, empty_label_index]
+
+            span_to_label = {}
+            # To ensure that the empty label does not have the maximum probability for any span.
+            label_probabilities_np[:, empty_label_index] = -1
+            for span, span_index in span_to_index.items():
+                label_index = label_probabilities_np[span_index, :].argmax()
+                span_to_label[span] = all_labels[label_index]
+
+            label_probabilities_np = temp
+            empty_label_index = 0
+
+
+        label_log_probabilities_np = np.log(label_probabilities_np)
+        correction_term = np.sum(label_log_probabilities_np[:, empty_label_index])
+        label_log_probabilities_np -= label_log_probabilities_np[:, empty_label_index]\
+            .reshape((len(span_to_index), 1))
+        cache = {}
+
+        def helper(left, right, must_be_constituent):
+            assert left < right
+            span = (left, right)
+            if span in cache:
+                return cache[span]
+
+
+            if not distinguish_between_labels:
+                labels = [(), span_to_label[span]]
+            else:
+                labels = all_labels
+
+            span_index = span_to_index[span]
+            actions = list(enumerate(label_log_probabilities_np[span_index, :]))
+            actions.sort(key=lambda x: - x[1])
+            actions = actions[:num_trees]
+
+            if right - left == 1:
+                word = sentence[left]
+                pos_tag = pos_tags[left]
+                options = []
+                for label_index, score in actions:
+                    tree = Tree(pos_tag, [word])
+                    if label_index != empty_label_index:
+                        label = list(labels[label_index])
+                        while label:
+                            tree = Tree(label.pop(), [tree])
+                    options.append(([tree], score))
+                cache[span] = options
+            else:
+                children_options = SortedList(key=lambda x: - x[1])
+                for split in range(left + 1, right):
+                    left_trees_options = helper(left, split, must_be_constituent=True)
+                    right_trees_options = helper(split, right, must_be_constituent=False)
+                    for (left_trees, left_score) in left_trees_options:
+                        assert len(left_trees) == 1, 'Toa avoid duplicates we require that left' \
+                                                     'trees are constituents.'
+                        for (right_trees, right_score) in right_trees_options:
+                            children = left_trees + right_trees
+                            score = left_score + right_score
+                            if len(children_options) < num_trees:
+                                children_options.add((children, score))
+                            elif children_options[-1][1] < score:
+                                del children_options[-1]
+                                children_options.add((children, score))
+
+                options = SortedList(key=lambda x: - x[1])
+                for (label_index, action_score) in actions:
+                    for (children, children_score) in children_options:
+                        option_score = action_score + children_score
+                        if label_index != empty_label_index:
+                            label = list(labels[label_index])
+                            while label:
+                                children = [Tree(label.pop(), children)]
+                            option = children
+                        elif must_be_constituent:
+                            continue
+                        else:
+                            option = children
+                        if len(options) < num_trees:
+                            options.add((option, option_score))
+                        elif options[-1][1] < option_score:
+                            del options[-1]
+                            options.add((option, option_score))
+                        else:
+                            break
+                cache[span] = options
+            return cache[span]
+
+        trees_and_scores = helper(0, len(sentence), must_be_constituent=True)[:num_trees]
+        trees = []
+        scores = []
+        for tree, score in trees_and_scores:
+            assert len(tree) == 1
+            trees.append(tree[0])
+            scores.append(score + correction_term)
+        return trees, scores
+
+    def construct_topk_trees(self,
+                        predictions: torch.FloatTensor,
+                        all_spans: torch.LongTensor,
+                        num_spans: torch.LongTensor,
+                        sentences: List[List[str]],
+                        pos_tags: List[List[str]] = None) -> List[Tree]:
+        """
+        Construct ``nltk.Tree``'s for each batch element by greedily nesting spans.
+        The trees use exclusive end indices, which contrasts with how spans are
+        represented in the rest of the model.
+
+        Parameters
+        ----------
+        predictions : ``torch.FloatTensor``, required.
+            A tensor of shape ``(batch_size, num_spans, span_label_vocab_size)``
+            representing a distribution over the label classes per span.
+        all_spans : ``torch.LongTensor``, required.
+            A tensor of shape (batch_size, num_spans, 2), representing the span
+            indices we scored.
+        num_spans : ``torch.LongTensor``, required.
+            A tensor of shape (batch_size), representing the lengths of non-padded spans
+            in ``enumerated_spans``.
+        sentences : ``List[List[str]]``, required.
+            A list of tokens in the sentence for each element in the batch.
+        pos_tags : ``List[List[str]]``, optional (default = None).
+            A list of POS tags for each word in the sentence for each element
+            in the batch.
+
+        Returns
+        -------
+        A ``List[Tree]`` containing the decoded trees for each element in the batch.
+        """
+        # Switch to using exclusive end spans.
+        exclusive_end_spans = all_spans.clone().cpu().numpy()
+        exclusive_end_spans[:, :, -1] += 1
+
+        trees: List[List[Tree]] = []
+        predictions_np = predictions.cpu().numpy()
+        for batch_index in range(len(sentences)):
+            span_to_index = {}
+            for span_index in range(num_spans[batch_index]):
+                span = (exclusive_end_spans[batch_index, span_index, 0],
+                        exclusive_end_spans[batch_index, span_index, 1])
+                span_to_index[span] = span_index
+            top_k_trees, _ = self.compute_k_best(sentences[batch_index],
+                                                         pos_tags[batch_index],
+                                                         predictions_np[batch_index, :, :],
+                                                         span_to_index,
+                                                         num_trees=16)
+            trees.append(top_k_trees)
+        return trees
 
     def construct_trees(self,
                         predictions: torch.FloatTensor,
@@ -375,8 +560,8 @@ class SpanConstituencyParser(Model):
                         # was unlabled? In the first case, we delete span2 from the
                         # set of spans to form the tree - in the second case, we delete
                         # span1.
-                        if (span1.no_label_prob + span2.label_prob <
-                                    span2.no_label_prob + span1.label_prob):
+                        if (span1.no_label_prob * span2.label_prob <
+                                    span2.no_label_prob * span1.label_prob):
                             spans.pop(span2_index)
                         else:
                             spans.pop(span1_index)
