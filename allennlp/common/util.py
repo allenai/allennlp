@@ -31,6 +31,14 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 
+# If you want to have start and/or end symbols for any reason in your code, we recommend you use
+# these, to have a common place to import from.  Also, it's important for some edge cases in how
+# data is processed for these symbols to be lowercase, not uppercase (because we have code that
+# will lowercase tokens for you in some circumstances, and we need this symbol to not change in
+# those cases).
+START_SYMBOL = '@start@'
+END_SYMBOL = '@end@'
+
 def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-statements
     """
     Sanitize turns PyTorch and Numpy types into basic Python types so they
