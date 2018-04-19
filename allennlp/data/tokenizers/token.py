@@ -1,8 +1,8 @@
 class Token:
     """
     A simple token representation, keeping track of the token's text, offset in the passage it was
-    taken from, POS tag, and dependency relation.  These fields match spacy's exactly, so we can
-    just use a spacy token for this.
+    taken from, POS tag, dependency relation, and similar information.  These fields match spacy's
+    exactly, so we can just use a spacy token for this.
 
     Parameters
     ----------
@@ -10,6 +10,8 @@ class Token:
         The original text represented by this token.
     idx : ``int``, optional
         The character offset of this token into the tokenized passage.
+    lemma : ``str``, optional
+        The lemma of this token.
     pos : ``str``, optional
         The coarse-grained part of speech of this token.
     tag : ``str``, optional
@@ -31,6 +33,7 @@ class Token:
     def __init__(self,
                  text: str = None,
                  idx: int = None,
+                 lemma: str = None,
                  pos: str = None,
                  tag: str = None,
                  dep: str = None,
@@ -38,6 +41,7 @@ class Token:
                  text_id: int = None) -> None:
         self.text = text
         self.idx = idx
+        self.lemma_ = lemma
         self.pos_ = pos
         self.tag_ = tag
         self.dep_ = dep

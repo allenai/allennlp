@@ -13,20 +13,20 @@ class TestSeq2SeqDatasetReader:
 
         assert len(instances) == 3
         fields = instances[0].fields
-        assert [t.text for t in fields["source_tokens"].tokens] == ["@@START@@", "this", "is",
-                                                                    "a", "sentence", "@@END@@"]
-        assert [t.text for t in fields["target_tokens"].tokens] == ["@@START@@", "this", "is",
-                                                                    "a", "sentence", "@@END@@"]
+        assert [t.text for t in fields["source_tokens"].tokens] == ["@start@", "this", "is",
+                                                                    "a", "sentence", "@end@"]
+        assert [t.text for t in fields["target_tokens"].tokens] == ["@start@", "this", "is",
+                                                                    "a", "sentence", "@end@"]
         fields = instances[1].fields
-        assert [t.text for t in fields["source_tokens"].tokens] == ["@@START@@", "this", "is",
-                                                                    "another", "@@END@@"]
-        assert [t.text for t in fields["target_tokens"].tokens] == ["@@START@@", "this", "is",
-                                                                    "another", "@@END@@"]
+        assert [t.text for t in fields["source_tokens"].tokens] == ["@start@", "this", "is",
+                                                                    "another", "@end@"]
+        assert [t.text for t in fields["target_tokens"].tokens] == ["@start@", "this", "is",
+                                                                    "another", "@end@"]
         fields = instances[2].fields
-        assert [t.text for t in fields["source_tokens"].tokens] == ["@@START@@", "all", "these", "sentences",
-                                                                    "should", "get", "copied", "@@END@@"]
-        assert [t.text for t in fields["target_tokens"].tokens] == ["@@START@@", "all", "these", "sentences",
-                                                                    "should", "get", "copied", "@@END@@"]
+        assert [t.text for t in fields["source_tokens"].tokens] == ["@start@", "all", "these", "sentences",
+                                                                    "should", "get", "copied", "@end@"]
+        assert [t.text for t in fields["target_tokens"].tokens] == ["@start@", "all", "these", "sentences",
+                                                                    "should", "get", "copied", "@end@"]
 
     def test_source_add_start_token(self):
         reader = Seq2SeqDatasetReader(source_add_start_token=False)
@@ -35,6 +35,6 @@ class TestSeq2SeqDatasetReader:
 
         assert len(instances) == 3
         fields = instances[0].fields
-        assert [t.text for t in fields["source_tokens"].tokens] == ["this", "is", "a", "sentence", "@@END@@"]
-        assert [t.text for t in fields["target_tokens"].tokens] == ["@@START@@", "this", "is",
-                                                                    "a", "sentence", "@@END@@"]
+        assert [t.text for t in fields["source_tokens"].tokens] == ["this", "is", "a", "sentence", "@end@"]
+        assert [t.text for t in fields["target_tokens"].tokens] == ["@start@", "this", "is",
+                                                                    "a", "sentence", "@end@"]

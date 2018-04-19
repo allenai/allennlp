@@ -231,7 +231,7 @@ def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str, # 
     logger.info("Reading embeddings from file")
     with gzip.open(cached_path(embeddings_filename), 'rb') as embeddings_file:
         for line in embeddings_file:
-            fields = line.decode('utf-8').strip().split(' ')
+            fields = line.decode('utf-8').rstrip().split(' ')
             if len(fields) - 1 != embedding_dim:
                 # Sometimes there are funny unicode parsing problems that lead to different
                 # fields lengths (e.g., a word with a unicode space character that splits

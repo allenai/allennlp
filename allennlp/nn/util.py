@@ -1,6 +1,7 @@
 """
 Assorted utilities for working with neural networks in AllenNLP.
 """
+# pylint: disable=too-many-lines
 from collections import defaultdict
 from typing import Dict, List, Optional, Any, Tuple, Callable
 import logging
@@ -58,6 +59,28 @@ def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
     of the sequences in the batch.
     """
     return mask.long().sum(-1)
+
+
+def get_mask_from_sequence_lengths(sequence_lengths: Variable, max_length: int) -> Variable:
+    """
+    Given a variable of shape ``(batch_size,)`` that represents the sequence lengths of each batch
+    element, this function returns a ``(batch_size, max_length)`` mask variable.  For example, if
+    our input was ``[2, 2, 3]``, with a ``max_length`` of 4, we'd return
+    ``[[1, 1, 0, 0], [1, 1, 0, 0], [1, 1, 1, 0]]``.
+
+    We require ``max_length`` here instead of just computing it from the input ``sequence_lengths``
+    because it lets us avoid finding the max, then copying that value from the GPU to the CPU so
+    that we can use it to construct a new tensor.
+
+    Some of our functions are agnostic as to whether they accept ``Tensors`` or ``Variables``, and
+    they just use ``Tensor`` for their type annotations.  We `require` ``Variables`` here, as we
+    call ``sequence_length.data.new()``.  The data type of ``sequence_lengths`` is assumed to be
+    ``long``, but really could be anything, and the data type of the returned mask is ``long``.
+    """
+    # (batch_size, max_length)
+    ones = Variable(sequence_lengths.data.new(sequence_lengths.size(0), max_length).fill_(1))
+    range_tensor = ones.cumsum(dim=1)
+    return (sequence_lengths.unsqueeze(1) >= range_tensor).long()
 
 
 def sort_batch_by_length(tensor: torch.autograd.Variable,
@@ -538,6 +561,27 @@ def zeros_like(tensor: torch.Tensor) -> torch.Tensor:
     return tensor.clone().fill_(0)
 
 
+def new_variable_with_data(original: Variable, data: torch.Tensor) -> Variable:
+    """
+    ``Variable.clone`` does not necessarily make a new variable on the same device as the original.
+    This method takes a variable and some data and makes a new variable on the same device as the original
+    variable, but with the provided data. Note that the returned variable will be the same type as the
+    passed data, which may be different from the original variable's type.
+    """
+    # We cast the variable to the type of the data first before filling it with new data.
+    data_type = data.type()
+    return Variable(original.type(data_type).data.new(data))
+
+
+def new_variable_with_size(original: Variable, size: Tuple[int, ...], value) -> Variable:
+    """
+    Returns a new variable on the same device as the ``original``, but containing a tensor of provided
+    ``size``, filled with the given ``value``.
+    """
+    size = torch.Size(size)
+    return Variable(original.data.new(size).fill_(value))
+
+
 def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
     """
     Combines a list of tensors using element-wise operations and concatenation, specified by a
@@ -709,20 +753,21 @@ def batched_index_select(target: torch.Tensor,
                          indices: torch.LongTensor,
                          flattened_indices: Optional[torch.LongTensor] = None) -> torch.Tensor:
     """
-    The given `indices` of size ``(batch_size, d_1, ..., d_n)`` indexes into the sequence dimension
-    (dimension 2) of the target, which has size ``(batch_size, sequence_length, embedding_size)``.
+    The given ``indices`` of size ``(batch_size, d_1, ..., d_n)`` indexes into the sequence
+    dimension (dimension 2) of the target, which has size ``(batch_size, sequence_length,
+    embedding_size)``.
 
     This function returns selected values in the target with respect to the provided indices, which
-    have size ``(batch_size, d_1, ..., d_n, embedding_size)``. This can use the optionally precomputed
-    :func:`~flattened_indices` with size ``(batch_size * d_1 * ... * d_n)`` if given.
+    have size ``(batch_size, d_1, ..., d_n, embedding_size)``. This can use the optionally
+    precomputed :func:`~flattened_indices` with size ``(batch_size * d_1 * ... * d_n)`` if given.
 
     An example use case of this function is looking up the start and end indices of spans in a
     sequence tensor. This is used in the
     :class:`~allennlp.models.coreference_resolution.CoreferenceResolver`. Model to select
-    contextual word representations corresponding to the start and end indices of mentions. The
-    key reason this can't be done with basic torch functions is that we want to be able to use
-    look-up tensors with an arbitrary number of dimensions (for example, in the coref model,
-    we don't know a-priori how many spans we are looking up).
+    contextual word representations corresponding to the start and end indices of mentions. The key
+    reason this can't be done with basic torch functions is that we want to be able to use look-up
+    tensors with an arbitrary number of dimensions (for example, in the coref model, we don't know
+    a-priori how many spans we are looking up).
 
     Parameters
     ----------
@@ -780,7 +825,7 @@ def flattened_index_select(target: torch.Tensor,
         A Tensor of shape (batch_size, set_size, subset_size, embedding_size).
     """
     if indices.dim() != 2:
-        raise ConfigurationError("Indices passed to flatten_index_select had shape {} but "
+        raise ConfigurationError("Indices passed to flattened_index_select had shape {} but "
                                  "only 2 dimensional inputs are supported.".format(indices.size()))
     # Shape: (batch_size, set_size * subset_size, embedding_size)
     flattened_selected = target.index_select(1, indices.view(-1))

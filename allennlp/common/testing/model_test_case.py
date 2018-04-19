@@ -24,7 +24,13 @@ class ModelTestCase(AllenNlpTestCase):
 
         reader = DatasetReader.from_params(params['dataset_reader'])
         instances = reader.read(dataset_file)
-        vocab = Vocabulary.from_instances(instances)
+        # Use parameters for vocabulary if they are present in the config file, so that choices like
+        # "non_padded_namespaces", "min_count" etc. can be set if needed.
+        if 'vocabulary' in params:
+            vocab_params = params['vocabulary']
+            vocab = Vocabulary.from_params(params=vocab_params, instances=instances)
+        else:
+            vocab = Vocabulary.from_instances(instances)
         self.vocab = vocab
         self.instances = instances
         self.model = Model.from_params(self.vocab, params['model'])
@@ -50,7 +56,7 @@ class ModelTestCase(AllenNlpTestCase):
             assert_allclose(model.state_dict()[key].cpu().numpy(),
                             loaded_model.state_dict()[key].cpu().numpy(),
                             err_msg=key)
-        params = Params.from_file(self.param_file)
+        params = Params.from_file(param_file)
         reader = DatasetReader.from_params(params['dataset_reader'])
 
         # Need to duplicate params because Iterator.from_params will consume.
@@ -117,7 +123,7 @@ class ModelTestCase(AllenNlpTestCase):
                 self.assert_fields_equal(field1[key],
                                          field2[key],
                                          tolerance=tolerance,
-                                         name=name + '.' + key)
+                                         name=name + '.' + str(key))
         elif isinstance(field1, (list, tuple)):
             assert len(field1) == len(field2)
             for i, (subfield1, subfield2) in enumerate(zip(field1, field2)):
@@ -125,6 +131,8 @@ class ModelTestCase(AllenNlpTestCase):
                                          subfield2,
                                          tolerance=tolerance,
                                          name=name + f"[{i}]")
+        elif isinstance(field1, (float, int)):
+            assert_allclose([field1], [field2], rtol=tolerance, err_msg=name)
         else:
             assert field1 == field2
 

@@ -1,6 +1,4 @@
-
-Using pre-trained ELMo representations
---------------------------------------
+# Using pre-trained ELMo representations
 
 Pre-trained contextual representations from large scale bidirectional
 language models provide large improvements for nearly all supervised
@@ -10,6 +8,49 @@ This document describes how to add ELMo representations to your model using `all
 We also have a [tensorflow implementation](https://github.com/allenai/bilm-tf).
 
 For more detail about ELMo, please see the publication ["Deep contextualized word representations"](http://arxiv.org/abs/1802.05365).
+
+## Writing contextual representations to disk
+
+You can write ELMo representations to disk with the `elmo` command.  The `elmo`
+command will write all the biLM individual layer representations for a dataset
+of sentences to an HDF5 file.  Here is an example of using the `elmo` command:
+
+```bash
+echo "The cryptocurrency space is now figuring out to have the highest search on Google globally ." > sentences.txt
+echo "Bitcoin alone has a sixty percent share of global search ." >> sentences.txt
+allennlp elmo sentences.txt elmo_layers.hdf5
+```
+
+For more details, see `allennlp elmo -h`.
+
+## Using ELMo programmatically
+
+If you need to include ELMo at multiple layers in a task model or you have other advanced use cases, you will need to create ELMo vectors
+programatically.  This is easily done with the ElmoEmbedder class [(API doc)](https://github.com/allenai/allennlp/tree/master/allennlp/commands/elmo.py).
+
+
+```python
+from allennlp.commands.elmo import ElmoEmbedder
+
+ee = ElmoEmbedder()
+
+embeddings = ee.embed_sentence("Bitcoin alone has a sixty percent share of global search .".split())
+
+# embeddings has shape (3, 11, 1024)
+#   3    - the number of ELMo vectors.
+#   11   - the number of words in the input sentence
+#   1024 - the length of each ELMo vector
+```
+
+For larger datasets, batching the sentences by using the `batch_to_embeddings` method
+will speed up the computation significantly.
+
+Also note that `ElmoEmbedder` is a utility class that bundles together several
+tasks related to computing ELMo representations including mapping strings to character ids and
+running the pre-trained biLM.  It is not designed to be used when training a model and
+is not a subclass of `torch.nn.Module`.  To train a model with ELMo, we recommend using
+the `allennlp.modules.elmo.Elmo` class, which does subclass `torch.nn.Module` and implements
+`forward`.
 
 ## Using ELMo with existing `allennlp` models
 
@@ -74,36 +115,6 @@ ELMo provides a 1024 dimension representation so the new `input_size` is 1224.
     },
 ```
 
-
-## Using ELMo programmatically
-
-If you need to include ELMo at multiple layers in a task model or you have other advanced use cases, you will need to create ELMo vectors
-programatically.  This is easily done with the ElmoEmbedder class [(API doc)](https://github.com/allenai/allennlp/tree/master/allennlp/commands/elmo.py).
-
-
-```python
-from allennlp.commands.elmo import ElmoEmbedder
-
-ee = ElmoEmbedder()
-
-embeddings = ee.embed_sentence("Bitcoin alone has a sixty percent share of global search .".split())
-
-# embeddings has shape (3, 11, 1024)
-#   3    - the number of ELMo vectors.
-#   11   - the number of words in the input sentence
-#   1024 - the length of each ELMo vector
-```
-
-For larger datasets, batching the sentences by using the `batch_to_embeddings` method
-will speed up the computation significantly.
-
-Also note that `ElmoEmbedder` is a utility class that bundles together several
-tasks related to computing ELMo representations including mapping strings to character ids and
-running the pre-trained biLM.  It is not designed to be used when training a model and
-is not a subclass of `torch.nn.Module`.  To train a model with ELMo, we recommend using
-the `allennlp.modules.elmo.Elmo` class, which does subclass `torch.nn.Module` and implements
-`forward`.
-
 ## Recommended hyper-parameter settings for `Elmo` class
 
 When using ELMo, there are several hyper-parameters to set.  As a general rule, we have found
@@ -117,18 +128,3 @@ general guidelines for an initial training run.
 
 Finally, we have found that including pre-trained GloVe or other word vectors in addition to ELMo
 provides little to no improvement over just using ELMo and slows down training.
-
-
-## Writing contextual representations to disk
-
-You can write ELMo representations to disk with the `elmo` command.  The `elmo`
-command will write all the biLM individual layer representations for a dataset
-of sentences to an HDF5 file.  Here is an example of using the `elmo` command:
-
-```bash
-echo "The cryptocurrency space is now figuring out to have the highest search on Google globally ." > sentences.txt
-echo "Bitcoin alone has a sixty percent share of global search ." >> sentences.txt
-allennlp elmo sentences.txt elmo_layers.hdf5
-```
-
-For more details, see `allennlp elmo -h`.
