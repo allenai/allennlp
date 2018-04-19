@@ -51,9 +51,12 @@ class TestEmbedding(AllenNlpTestCase):
         vocab = Vocabulary()
         vocab.add_token_to_namespace("word")
         vocab.add_token_to_namespace("word2")
+        unicode_space = "\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0"
+        vocab.add_token_to_namespace(unicode_space)
         embeddings_filename = self.TEST_DIR + "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word 1.0 2.3 -1.0\n".encode('utf-8'))
+            embeddings_file.write(f"{unicode_space} 3.4 3.3 5.0\n".encode('utf-8'))
         params = Params({
                 'pretrained_file': embeddings_filename,
                 'embedding_dim': 3,
@@ -61,6 +64,8 @@ class TestEmbedding(AllenNlpTestCase):
         embedding_layer = Embedding.from_params(vocab, params)
         word_vector = embedding_layer.weight.data[vocab.get_token_index("word")]
         assert numpy.allclose(word_vector.numpy(), numpy.array([1.0, 2.3, -1.0]))
+        word_vector = embedding_layer.weight.data[vocab.get_token_index(unicode_space)]
+        assert numpy.allclose(word_vector.numpy(), numpy.array([3.4, 3.3, 5.0]))
         word_vector = embedding_layer.weight.data[vocab.get_token_index("word2")]
         assert not numpy.allclose(word_vector.numpy(), numpy.array([1.0, 2.3, -1.0]))
 

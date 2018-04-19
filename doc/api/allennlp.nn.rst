@@ -7,6 +7,7 @@ for working with PyTorch neural networks.
 .. toctree::
 
    allennlp.nn.activations
+   allennlp.nn.decoding
    allennlp.nn.initializers
    allennlp.nn.regularizers
    allennlp.nn.util
