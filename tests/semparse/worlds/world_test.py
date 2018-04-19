@@ -17,7 +17,7 @@ class FakeWorldWithoutRecursion(World):
         # The logical forms this grammar allows are
         # (unary_function argument)
         # (binary_function argument argument)
-        actions = ['@START@ -> t',
+        actions = ['@start@ -> t',
                    't -> [<e,t>, e]',
                    '<e,t> -> unary_function',
                    '<e,t> -> [<e,<e,t>>, e]',
@@ -56,35 +56,35 @@ class TestWorld(AllenNlpTestCase):
 
     def test_get_paths_to_root_without_recursion(self):
         argument_paths = self.world_without_recursion.get_paths_to_root('e -> argument')
-        assert argument_paths == [['e -> argument', 't -> [<e,t>, e]', '@START@ -> t'],
+        assert argument_paths == [['e -> argument', 't -> [<e,t>, e]', '@start@ -> t'],
                                   ['e -> argument', '<e,t> -> [<e,<e,t>>, e]', 't -> [<e,t>, e]',
-                                   '@START@ -> t']]
+                                   '@start@ -> t']]
         unary_function_paths = self.world_without_recursion.get_paths_to_root('<e,t> -> unary_function')
         assert unary_function_paths == [['<e,t> -> unary_function', 't -> [<e,t>, e]',
-                                         '@START@ -> t']]
+                                         '@start@ -> t']]
         binary_function_paths = \
                 self.world_without_recursion.get_paths_to_root('<e,<e,t>> -> binary_function')
         assert binary_function_paths == [['<e,<e,t>> -> binary_function',
                                           '<e,t> -> [<e,<e,t>>, e]', 't -> [<e,t>, e]',
-                                          '@START@ -> t']]
+                                          '@start@ -> t']]
 
     def test_get_paths_to_root_with_recursion(self):
         argument_paths = self.world_with_recursion.get_paths_to_root('e -> argument')
         # Argument now has 4 paths, and the two new paths are with the identity function occurring
         # (only once) within unary and binary functions.
-        assert argument_paths == [['e -> argument', 't -> [<e,t>, e]', '@START@ -> t'],
+        assert argument_paths == [['e -> argument', 't -> [<e,t>, e]', '@start@ -> t'],
                                   ['e -> argument', '<e,t> -> [<e,<e,t>>, e]', 't -> [<e,t>, e]',
-                                   '@START@ -> t'],
+                                   '@start@ -> t'],
                                   ['e -> argument', 'e -> [<e,e>, e]', 't -> [<e,t>, e]',
-                                   '@START@ -> t'],
+                                   '@start@ -> t'],
                                   ['e -> argument', 'e -> [<e,e>, e]', '<e,t> -> [<e,<e,t>>, e]',
-                                   't -> [<e,t>, e]', '@START@ -> t']]
+                                   't -> [<e,t>, e]', '@start@ -> t']]
         identity_paths = self.world_with_recursion.get_paths_to_root('<e,e> -> identity')
         # Two identity paths, one through each of unary and binary function productions.
         assert identity_paths == [['<e,e> -> identity', 'e -> [<e,e>, e]', 't -> [<e,t>, e]',
-                                   '@START@ -> t'],
+                                   '@start@ -> t'],
                                   ['<e,e> -> identity', 'e -> [<e,e>, e]',
-                                   '<e,t> -> [<e,<e,t>>, e]', 't -> [<e,t>, e]', '@START@ -> t']]
+                                   '<e,t> -> [<e,<e,t>>, e]', 't -> [<e,t>, e]', '@start@ -> t']]
 
     # The tests for get_action_sequence and get_logical_form need a concrete world to be useful;
     # we'll mostly use the NLVR world to test them, as it's a simpler world than the WikiTables
@@ -132,7 +132,7 @@ class TestWorld(AllenNlpTestCase):
 
     def test_get_logical_form_handles_greater_than(self):
         world = self.wikitables_world
-        action_sequence = ['@START@ -> c', 'c -> [<r,c>, r]', '<r,c> -> [<<#1,#2>,<#2,#1>>, <c,r>]',
+        action_sequence = ['@start@ -> c', 'c -> [<r,c>, r]', '<r,c> -> [<<#1,#2>,<#2,#1>>, <c,r>]',
                            '<<#1,#2>,<#2,#1>> -> reverse', '<c,r> -> fb:row.row.league',
                            'r -> [<c,r>, c]', '<c,r> -> fb:row.row.year', 'c -> [<n,c>, n]',
                            '<n,c> -> fb:cell.cell.number', 'n -> [<nd,nd>, n]', '<nd,nd> -> >',
@@ -172,19 +172,19 @@ class TestWorld(AllenNlpTestCase):
 
     def test_get_logical_form_fails_with_incomplete_action_sequence(self):
         nlvr_world = self.nlvr_world
-        action_sequence = ['@START@ -> t', 't -> [<b,t>, b]', '<b,t> -> box_exists']
+        action_sequence = ['@start@ -> t', 't -> [<b,t>, b]', '<b,t> -> box_exists']
         with self.assertRaisesRegex(ParsingError, 'Incomplete action sequence'):
             nlvr_world.get_logical_form(action_sequence)
 
     def test_get_logical_form_fails_with_extra_actions(self):
         nlvr_world = self.nlvr_world
-        action_sequence = ['@START@ -> <b,t>', '<b,t> -> box_exists', 't -> [<b,t>, b]']
+        action_sequence = ['@start@ -> <b,t>', '<b,t> -> box_exists', 't -> [<b,t>, b]']
         with self.assertRaisesRegex(ParsingError, 'Extra actions'):
             nlvr_world.get_logical_form(action_sequence)
 
     def test_get_logical_form_fails_with_action_sequence_in_wrong_order(self):
         nlvr_world = self.nlvr_world
-        action_sequence = ['@START@ -> t', 't -> [<b,t>, b]', '<b,t> -> box_exists',
+        action_sequence = ['@start@ -> t', 't -> [<b,t>, b]', '<b,t> -> box_exists',
                            'b -> [<c,b>, c]', '<c,b> -> [<b,<c,b>>, b]',
                            'b -> all_boxes', '<b,<c,b>> -> member_color_none_equals',
                            'c -> color_blue']
@@ -193,7 +193,7 @@ class TestWorld(AllenNlpTestCase):
 
     def test_get_logical_form_adds_var_correctly(self):
         world = self.wikitables_world
-        action_sequence = ['@START@ -> e', 'e -> [<r,e>, r]', '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
+        action_sequence = ['@start@ -> e', 'e -> [<r,e>, r]', '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
                            '<<#1,#2>,<#2,#1>> -> reverse', '<e,r> -> fb:row.row.league',
                            'r -> [<d,<d,<#1,<<d,#1>,#1>>>>, d, d, r, <d,r>]',
                            '<d,<d,<#1,<<d,#1>,#1>>>> -> argmin', 'd -> [<e,d>, e]', '<e,d> -> number',
@@ -214,7 +214,7 @@ class TestWorld(AllenNlpTestCase):
 
     def test_get_logical_form_fails_with_unnecessary_add_var(self):
         world = self.wikitables_world
-        action_sequence = ['@START@ -> e', 'e -> [<r,e>, r]', '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
+        action_sequence = ['@start@ -> e', 'e -> [<r,e>, r]', '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
                            '<<#1,#2>,<#2,#1>> -> reverse', '<e,r> -> fb:row.row.league',
                            'r -> [<d,<d,<#1,<<d,#1>,#1>>>>, d, d, r, <d,r>]',
                            '<d,<d,<#1,<<d,#1>,#1>>>> -> argmin', 'd -> [<e,d>, e]', '<e,d> -> number',
@@ -230,7 +230,7 @@ class TestWorld(AllenNlpTestCase):
     def test_get_logical_form_with_multiple_negate_filters(self):
         world = self.nlvr_world
         # This is an actual sequence of actions produced by an untrained NlvrSemanticParser
-        action_sequence = ['@START@ -> t', 't -> [<o,<c,t>>, o, c]',
+        action_sequence = ['@start@ -> t', 't -> [<o,<c,t>>, o, c]',
                            '<o,<c,t>> -> object_color_all_equals', 'o -> [<o,o>, o]',
                            '<o,o> -> [<<o,o>,<o,o>>, <o,o>]', '<<o,o>,<o,o>> -> negate_filter',
                            '<o,o> -> [<<o,o>,<o,o>>, <o,o>]', '<<o,o>,<o,o>> -> negate_filter',

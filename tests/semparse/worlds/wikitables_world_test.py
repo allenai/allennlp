@@ -59,7 +59,7 @@ class TestWikiTablesWorld(AllenNlpTestCase):
                 '<r,n>',
                 '<r,p>',
                 '<r,r>',
-                '@START@',
+                '@start@',
                 'c',
                 'd',
                 'n',
@@ -171,7 +171,7 @@ class TestWikiTablesWorld(AllenNlpTestCase):
         check_productions_match(valid_actions['<r,r>'],
                                 ['fb:row.row.next', 'fb:type.object.type', '[<<#1,#2>,<#2,#1>>, <r,r>]'])
 
-        check_productions_match(valid_actions['@START@'],
+        check_productions_match(valid_actions['@start@'],
                                 ['d', 'c', 'p', 'r', 'n'])
 
         check_productions_match(valid_actions['c'],
@@ -329,7 +329,7 @@ class TestWikiTablesWorld(AllenNlpTestCase):
         sempre_form = "((reverse fb:row.row.year) (fb:row.row.league fb:cell.usl_a_league))"
         expression = self.world.parse_logical_form(sempre_form)
         actions = self.world.get_action_sequence(expression)
-        target_action_sequence = ['@START@ -> c', 'c -> [<r,c>, r]', '<r,c> -> [<<#1,#2>,<#2,#1>>, <c,r>]',
+        target_action_sequence = ['@start@ -> c', 'c -> [<r,c>, r]', '<r,c> -> [<<#1,#2>,<#2,#1>>, <c,r>]',
                                   '<<#1,#2>,<#2,#1>> -> reverse', '<c,r> -> fb:row.row.year',
                                   'r -> [<c,r>, c]', '<c,r> -> fb:row.row.league', 'c -> fb:cell.usl_a_league']
         assert actions == target_action_sequence
@@ -339,7 +339,7 @@ class TestWikiTablesWorld(AllenNlpTestCase):
                        "(fb:row.row.league fb:cell.usl_a_league))))")
         expression = self.world.parse_logical_form(sempre_form)
         actions = self.world.get_action_sequence(expression)
-        target_action_sequence = ['@START@ -> d', 'd -> [<nd,nd>, d]', '<nd,nd> -> max', 'd -> [<c,d>, c]',
+        target_action_sequence = ['@start@ -> d', 'd -> [<nd,nd>, d]', '<nd,nd> -> max', 'd -> [<c,d>, c]',
                                   '<c,d> -> [<<#1,#2>,<#2,#1>>, <d,c>]', '<<#1,#2>,<#2,#1>> -> reverse',
                                   '<d,c> -> fb:cell.cell.date', 'c -> [<r,c>, r]',
                                   '<r,c> -> [<<#1,#2>,<#2,#1>>, <c,r>]', '<<#1,#2>,<#2,#1>> -> reverse',

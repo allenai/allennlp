@@ -3,6 +3,7 @@ from collections import defaultdict
 import logging
 import re
 
+from nltk import Tree
 from nltk.sem.logic import ApplicationExpression, Expression, LambdaExpression, BasicType, Type
 
 from allennlp.semparse.type_declarations import type_declaration as types
@@ -40,23 +41,17 @@ class ExecutionError(Exception):
         return repr(self.message)
 
 
-class _TreeNode:
+def nltk_tree_to_logical_form(tree: Tree) -> str:
     """
-    A simple Tree class for representing a logical form tree.  Used in ``World.get_logical_form``.
+    Given an ``nltk.Tree`` representing the syntax tree that generates a logical form, this method
+    produces the actual (lisp-like) logical form, with all of the non-terminal symbols converted
+    into the correct number of parentheses.
     """
-    def __init__(self, label: str) -> None:
-        self.label = label
-        self.children: List[_TreeNode] = []
-
-    def __str__(self) -> str:
-        if not self.children:
-            return self.label
-        if len(self.children) == 1:
-            return str(self.children[0])
-        return '(' + ' '.join(str(child) for child in self.children) + ')'
-
-    def __repr__(self) -> str:
-        return str(self)
+    if len(tree) == 0:
+        return tree.label()
+    if len(tree) == 1:
+        return tree[0].label()
+    return '(' + ' '.join(nltk_tree_to_logical_form(child) for child in tree) + ')'
 
 
 class World:
@@ -139,7 +134,7 @@ class World:
                           max_num_paths: int = 10) -> List[List[str]]:
         """
         For a given action, returns at most ``max_num_paths`` paths to the root (production with
-        ``@START@``) that are not longer than ``max_path_length``.
+        ``START_SYMBOL``) that are not longer than ``max_path_length``.
         """
         action_left_side, _ = action.split(' -> ')
         right_side_indexed_actions = self._get_right_side_indexed_actions()
@@ -213,7 +208,7 @@ class World:
 
     def get_valid_starting_types(self) -> Set[Type]:
         """
-        Returns the set of all types t, such that actions ``@START@ -> t`` are valid. In other
+        Returns the set of all types t, such that actions ``{START_SYMBOL} -> t`` are valid. In other
         words, these are all the possible types of complete logical forms in this world.
         """
         raise NotImplementedError
@@ -237,7 +232,7 @@ class World:
             implemented.
         """
         if not logical_form.startswith("("):
-            logical_form = "(%s)" % logical_form
+            logical_form = f"({logical_form})"
         if remove_var_function:
             # Replace "(x)" with "x"
             logical_form = re.sub(r'\(([x-z])\)', r'\1', logical_form)
@@ -255,7 +250,7 @@ class World:
         """
         # Starting with the type of the whole expression
         return self._get_transitions(expression,
-                                     ["%s -> %s" % (types.START_TYPE, expression.type)])
+                                     [f"{types.START_TYPE} -> {expression.type}"])
 
     def get_logical_form(self,
                          action_sequence: List[str],
@@ -268,7 +263,7 @@ class World:
         Parameters
         ----------
         action_sequence : ``List[str]``
-            The sequence of actions as strings (eg.: ``['@START@ -> t', 't -> <e,t>', ...]``).
+            The sequence of actions as strings (eg.: ``['{START_SYMBOL} -> t', 't -> <e,t>', ...]``).
         add_var_function : ``bool`` (optional)
              ``var`` is a special function that some languages use within lambda functions to
              indicate the use of a variable (eg.: ``(lambda x (fb:row.row.year (var x)))``). Due to
@@ -283,7 +278,7 @@ class World:
         # the children of all non-terminal nodes.
 
         remaining_actions = [action.split(" -> ") for action in action_sequence]
-        tree = _TreeNode(remaining_actions[0][1])
+        tree = Tree(remaining_actions[0][1], [])
 
         try:
             remaining_actions = self._construct_node_from_actions(tree,
@@ -297,10 +292,10 @@ class World:
             logger.error("Error parsing action sequence: %s", action_sequence)
             logger.error("Remaining actions were: %s", remaining_actions)
             raise ParsingError("Extra actions in action sequence")
-        return str(tree)
+        return nltk_tree_to_logical_form(tree)
 
     def _construct_node_from_actions(self,
-                                     current_node: _TreeNode,
+                                     current_node: Tree,
                                      remaining_actions: List[List[str]],
                                      add_var_function: bool) -> List[List[str]]:
         """
@@ -321,7 +316,7 @@ class World:
             logger.error("No actions left to construct current node: %s", current_node)
             raise ParsingError("Incomplete action sequence")
         left_side, right_side = remaining_actions.pop(0)
-        if left_side != current_node.label:
+        if left_side != current_node.label():
             logger.error("Current node: %s", current_node)
             logger.error("Next action: %s -> %s", left_side, right_side)
             logger.error("Remaining actions were: %s", remaining_actions)
@@ -334,8 +329,8 @@ class World:
                     # bit weirdly in the action sequence.  This is stripping off the single quotes
                     # around something like `'lambda x'`.
                     child_type = child_type[1:-1]
-                child_node = _TreeNode(child_type)
-                current_node.children.append(child_node)
+                child_node = Tree(child_type, [])
+                current_node.append(child_node)  # you add a child to an nltk.Tree with `append`
                 if not self.is_terminal(child_type):
                     remaining_actions = self._construct_node_from_actions(child_node,
                                                                           remaining_actions,
@@ -347,7 +342,7 @@ class World:
                 right_side = f"(var {right_side})"
             if add_var_function and right_side == 'var':
                 raise ParsingError('add_var_function was true, but action sequence already had var')
-            current_node.children.append(_TreeNode(right_side))
+            current_node.append(Tree(right_side, []))  # you add a child to an nltk.Tree with `append`
         else:
             # The only way this can happen is if you have a unary non-terminal production rule.
             # That is almost certainly not what you want with this kind of grammar, so we'll crash.
@@ -410,10 +405,10 @@ class World:
         if mapped_names[0] == "\\":
             # This means the predicate is lambda. NLTK wants the variable name to not be within parantheses.
             # Adding parentheses after the variable.
-            arguments = [mapped_names[1]] + ["(%s)" % name for name in mapped_names[2:]]
+            arguments = [mapped_names[1]] + [f"({name})" for name in mapped_names[2:]]
         else:
-            arguments = ["(%s)" % name for name in mapped_names[1:]]
-        return "(%s %s)" % (mapped_names[0], " ".join(arguments))
+            arguments = [f"({name})" for name in mapped_names[1:]]
+        return f'({mapped_names[0]} {" ".join(arguments)})'
 
     def _map_name(self, name: str, keep_mapping: bool = False) -> str:
         """

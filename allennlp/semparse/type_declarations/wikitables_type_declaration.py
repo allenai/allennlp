@@ -31,8 +31,9 @@ class ReverseType(PlaceholderType, HigherOrderType):
 
     @overrides
     def resolve(self, other: Type) -> Optional[Type]:
-        # Idea: Since its signature is <<#1,#2>,<#2,#1>> no information about types in self is relevant.
-        # All that matters is that other.fiirst resolves against the reverse of other.second and vice versa.
+        # Idea: Since its signature is <<#1,#2>,<#2,#1>> no information about types in self is
+        # relevant.  All that matters is that other.first resolves against the reverse of
+        # other.second and vice versa.
         if not isinstance(other, NltkComplexType):
             return None
         # other.first and other.second are the argument and return types respectively.

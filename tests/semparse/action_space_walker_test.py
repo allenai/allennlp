@@ -22,7 +22,7 @@ class FakeWorldWithAssertions(World):
         # (object_exists (touch_wall all_objects))
         # (object_exists (triangle (black all_objects)))
         # ...
-        actions = {'@START@': ['@START@ -> t'],
+        actions = {'@start@': ['@start@ -> t'],
                    't': ['t -> [<o,t>, o]'],
                    '<o,t>': ['<o,t> -> object_exists'],
                    'o': ['o -> [<o,o>, o]', 'o -> all_objects'],

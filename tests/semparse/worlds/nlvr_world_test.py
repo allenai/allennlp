@@ -123,7 +123,7 @@ class TestNlvrWorld(AllenNlpTestCase):
         logical_form = "(object_color_all_equals (circle (touch_wall (all_objects))) color_black)"
         expression = nlvr_world.parse_logical_form(logical_form)
         action_sequence = nlvr_world.get_action_sequence(expression)
-        assert action_sequence == ['@START@ -> t', 't -> [<o,<c,t>>, o, c]',
+        assert action_sequence == ['@start@ -> t', 't -> [<o,<c,t>>, o, c]',
                                    '<o,<c,t>> -> object_color_all_equals', 'o -> [<o,o>, o]',
                                    '<o,o> -> circle', 'o -> [<o,o>, o]', '<o,o> -> touch_wall',
                                    'o -> all_objects', 'c -> color_black']
@@ -133,7 +133,7 @@ class TestNlvrWorld(AllenNlpTestCase):
         logical_form = "(box_exists (member_color_none_equals all_boxes color_blue))"
         expression = nlvr_world.parse_logical_form(logical_form)
         action_sequence = nlvr_world.get_action_sequence(expression)
-        assert action_sequence == ['@START@ -> t', 't -> [<b,t>, b]', '<b,t> -> box_exists',
+        assert action_sequence == ['@start@ -> t', 't -> [<b,t>, b]', '<b,t> -> box_exists',
                                    'b -> [<b,<c,b>>, b, c]', '<b,<c,b>> -> member_color_none_equals',
                                    'b -> all_boxes', 'c -> color_blue']
 

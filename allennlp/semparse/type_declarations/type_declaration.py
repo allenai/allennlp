@@ -15,7 +15,7 @@ from overrides import overrides
 from nltk.sem.logic import Expression, ApplicationExpression, ConstantExpression, LogicParser, Variable
 from nltk.sem.logic import Type, BasicType, ComplexType as NltkComplexType, ANY_TYPE
 
-START_SYMBOL = '@START@'
+from allennlp.common.util import START_SYMBOL
 
 
 class ComplexType(NltkComplexType):
@@ -25,7 +25,7 @@ class ComplexType(NltkComplexType):
     for us, and we mitigate the problems by adding ``return_type`` and ``argument_type`` functions
     to ``ComplexType``.
     """
-    def return_type(self):
+    def return_type(self) -> Type:
         """
         Gives the final return type for this function.  If the function takes a single argument,
         this is just ``self.second``.  If the function takes multiple arguments and returns a basic
@@ -38,7 +38,7 @@ class ComplexType(NltkComplexType):
             return_type = return_type.second
         return return_type
 
-    def argument_types(self):
+    def argument_types(self) -> List[Type]:
         """
         Gives the types of all arguments to this function.  For functions returning a basic type,
         we grab all ``.first`` types until ``.second`` is no longer a ``ComplexType``.  That logic
@@ -85,14 +85,14 @@ class HigherOrderType(ComplexType):
         self.num_arguments = num_arguments
 
     @overrides
-    def return_type(self):
+    def return_type(self) -> Type:
         return_type = self.second
         for _ in range(self.num_arguments - 1):
             return_type = return_type.second
         return return_type
 
     @overrides
-    def argument_types(self):
+    def argument_types(self) -> List[Type]:
         arguments = [self.first]
         remaining_type = self.second
         for _ in range(self.num_arguments - 1):
@@ -209,7 +209,7 @@ class PlaceholderType(ComplexType):
     def __str__(self):
         if self == ANY_TYPE:
             # If the type remains unresolved, we return ? instead of its signature.
-            return "%s" % ANY_TYPE
+            return str(ANY_TYPE)
         else:
             return self._signature
 
@@ -445,7 +445,7 @@ class DynamicTypeLogicParser(LogicParser):
             if prefix in self._constant_type_prefixes:
                 return TypedConstantExpression(Variable(name), self._constant_type_prefixes[prefix])
             else:
-                raise RuntimeError("Unknown prefix: %s. Did you forget to pass it to the constructor?" % prefix)
+                raise RuntimeError(f"Unknown prefix: {prefix}. Did you forget to pass it to the constructor?")
         return super(DynamicTypeLogicParser, self).make_VariableExpression(name)
 
     def __eq__(self, other):
@@ -472,7 +472,7 @@ def substitute_any_type(type_: Type, basic_types: Set[BasicType]) -> List[Type]:
 
 
 def _make_production_string(source: Type, target: Union[List[Type], Type]) -> str:
-    return "%s -> %s" % (str(source), str(target))
+    return f"{source} -> {target}"
 
 
 def _get_complex_type_production(complex_type: ComplexType) -> Tuple[Type, str]:

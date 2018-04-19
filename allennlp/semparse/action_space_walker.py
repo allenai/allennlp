@@ -1,6 +1,7 @@
 from collections import defaultdict
 from typing import List, Dict, Set
 
+from allennlp.common.util import START_SYMBOL
 from allennlp.semparse.worlds.world import World
 from allennlp.semparse.type_declarations import type_declaration as types
 
@@ -32,7 +33,7 @@ class ActionSpaceWalker:
         Walk over action space to collect completed paths of at most ``self._max_path_length`` steps.
         """
         # Buffer of NTs to expand, previous actions
-        incomplete_paths = [([str(type_)], [f"@START@ -> {type_}"]) for type_ in
+        incomplete_paths = [([str(type_)], [f"{START_SYMBOL} -> {type_}"]) for type_ in
                             self._world.get_valid_starting_types()]
 
         self._completed_paths = []
