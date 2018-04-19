@@ -170,9 +170,9 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
         num_entity_tokens = max(len(entity_text) for entity_text in self.entity_texts)
 
         if self._max_table_tokens:
-            # This truncates the number of entity tokens used, enabling larger tables (which can
-            # have thousands of entities or more than 50 tokens each) to fit in memory,
-            # particularly when using ELMo.
+            # This truncates the number of entity tokens used, enabling larger tables (either in
+            # the number of entities in the table, or the number of tokens per entity) to fit in
+            # memory, particularly when using ELMo.
             if num_entities * num_entity_tokens > self._max_table_tokens:
                 num_entity_tokens = int(self._max_table_tokens / num_entities)
 
