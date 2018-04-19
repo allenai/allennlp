@@ -271,8 +271,8 @@ class SpanConstituencyParser(Model):
     def compute_k_best(self,
                        sentence: List[str],
                        pos_tags: List[str],
-                       label_probabilities: torch.TensorFloat,
-                       span_to_index: Dict[(int, int), int],
+                       label_probabilities: torch.FloatTensor,
+                       span_to_index: Dict[Tuple[int, int], int],
                        num_trees: List[int],
                        distinguish_between_labels: bool = False):
         """
