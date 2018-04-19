@@ -47,7 +47,11 @@ def nltk_tree_to_logical_form(tree: Tree) -> str:
     produces the actual (lisp-like) logical form, with all of the non-terminal symbols converted
     into the correct number of parentheses.
     """
-    if len(tree) == 0:
+    # nltk.Tree actually inherits from `list`, so you use `len()` to get the number of children.
+    # We're going to be explicit about checking length, instead of using `if tree:`, just to avoid
+    # any funny business nltk might have done (e.g., it's really odd if `if tree:` evaluates to
+    # `False` if there's a single leaf node with no children).
+    if len(tree) == 0:  # pylint: disable=len-as-condition
         return tree.label()
     if len(tree) == 1:
         return tree[0].label()
