@@ -18,7 +18,7 @@ from allennlp.nn.util import last_dim_softmax, get_lengths_from_binary_sequence_
 from allennlp.training.metrics import CategoricalAccuracy
 from allennlp.training.metrics import EvalbBracketingScorer
 from allennlp.common.checks import ConfigurationError
-import numpy as np
+import numpy
 from sortedcontainers import SortedList
 
 class SpanInformation(NamedTuple):
@@ -290,9 +290,9 @@ class SpanConstituencyParser(Model):
         empty_label_index = self.vocab.get_token_index("NO-LABEL", "labels")
         all_labels = [self.vocab.get_token_from_index(index, "labels").split("-") for index in
                   range(self.vocab.get_vocab_size("labels"))]
-        label_probabilities_np = label_probabilities.data().cpu().numpy()
+        label_probabilities_np = label_probabilities.cpu().numpy()
         if not distinguish_between_labels:
-            temp = np.zeros((len(span_to_index), 2))
+            temp = numpy.zeros((len(span_to_index), 2))
             temp[:, 0] = label_probabilities_np[:, empty_label_index]
             temp[:, 1] = 1 - label_probabilities_np[:, empty_label_index]
 
@@ -307,8 +307,8 @@ class SpanConstituencyParser(Model):
             empty_label_index = 0
 
 
-        label_log_probabilities_np = np.log(label_probabilities_np)
-        correction_term = np.sum(label_log_probabilities_np[:, empty_label_index])
+        label_log_probabilities_np = numpy.log(label_probabilities_np + 10 ** -5)
+        correction_term = numpy.sum(label_log_probabilities_np[:, empty_label_index])
         label_log_probabilities_np -= label_log_probabilities_np[:, empty_label_index]\
             .reshape((len(span_to_index), 1))
         cache = {}
