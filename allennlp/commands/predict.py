@@ -48,19 +48,7 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
-
-# a mapping from model `type` to the default Predictor for that type
-DEFAULT_PREDICTORS = {
-        'srl': 'semantic-role-labeling',
-        'decomposable_attention': 'textual-entailment',
-        'bidaf': 'machine-comprehension',
-        'bidaf-ensemble': 'machine-comprehension',
-        'simple_tagger': 'sentence-tagger',
-        'crf_tagger': 'sentence-tagger',
-        'coref': 'coreference-resolution',
-        'constituency_parser': 'constituency-parser',
-}
-
+from allennlp.service.predictors.predictor import DEFAULT_PREDICTORS
 
 class Predict(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
@@ -107,13 +95,9 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
     if args.predictor:
         # Predictor explicitly specified, so use it
         return Predictor.from_archive(archive, args.predictor)
-
-    # Otherwise, use the mapping
-    model_type = archive.config.get("model").get("type")
-    if model_type not in DEFAULT_PREDICTORS:
-        raise ConfigurationError(f"No known predictor for model type {model_type}.\n"
-                                 f"Specify one with the --predictor flag.")
-    return Predictor.from_archive(archive, DEFAULT_PREDICTORS[model_type])
+    else:
+        # Otherwise, use the default
+        return Predictor.from_archive(archive)
 
 def _run(predictor: Predictor,
          input_file: IO,
