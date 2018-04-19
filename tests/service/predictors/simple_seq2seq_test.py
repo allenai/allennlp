@@ -15,6 +15,8 @@ class TestSimpleSeq2SeqPredictor(TestCase):
         predictor = Predictor.from_archive(archive, 'simple_seq2seq')
 
         result = predictor.predict_json(inputs)
+        result2 = predictor.predict(inputs["source"])
+        assert result == result2
 
         predicted_tokens = result.get("predicted_tokens")
         assert predicted_tokens is not None

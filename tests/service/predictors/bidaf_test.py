@@ -18,6 +18,8 @@ class TestBidafPredictor(TestCase):
         predictor = Predictor.from_archive(archive, 'machine-comprehension')
 
         result = predictor.predict_json(inputs)
+        result2 = predictor.predict(question = inputs["question"], passage = inputs["passage"])
+        assert(result == result2)
 
         best_span = result.get("best_span")
         assert best_span is not None

@@ -12,11 +12,27 @@ from allennlp.service.predictors.predictor import Predictor
 @Predictor.register("semantic-role-labeling")
 class SemanticRoleLabelerPredictor(Predictor):
     """
-    Wrapper for the :class:`~allennlp.models.bidaf.SemanticRoleLabeler` model.
+    Predictor for the :class:`~allennlp.models.bidaf.SemanticRoleLabeler` model.
     """
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)
         self._tokenizer = SpacyWordSplitter(language='en_core_web_sm', pos_tags=True)
+
+    def predict(self, sentence: str, cuda_device = -1) -> JsonDict:
+        """
+        Predicts the semantic roles of the supplied sentence.
+
+        Parameters
+        ----------
+        sentence, ``str``
+            The sentence to parse via semantic role labeling.
+
+        Returns
+        -------
+        A dictionary representation of the semantic roles in the sentence.
+        """
+        return self.predict_json({"sentence" : sentence}, cuda_device)
+
 
     @staticmethod
     def make_srl_string(words: List[str], tags: List[str]) -> str:
