@@ -269,16 +269,16 @@ class SpanConstituencyParser(Model):
         return output_dict
 
     def compute_k_best(self,
-                       sentence,
-                       pos_tags,
-                       label_probabilities_np,
-                       span_to_index,
-                       num_trees,
-                       distinguish_between_labels=False):
+                       sentence: List[str],
+                       pos_tags: List[str],
+                       label_probabilities: torch.TensorFloat,
+                       span_to_index: Dict[(int, int), int],
+                       num_trees: List[int],
+                       distinguish_between_labels: bool = False):
         """
         :param sentence: The sentence for which top-k parses are being computed.
         :param pos_tags: Part of speech tags for every token in the input sentence.
-        :param label_probabilities_np: A numpy array of shape (num_spans, num_labels)
+        :param label_probabilities: A numpy array of shape (num_spans, num_labels)
         :param span_to_index: A dictionary mapping span indices to column indices in
         label_log_probabilities.
         :param no_label_id: The id of the empty label.
@@ -290,7 +290,7 @@ class SpanConstituencyParser(Model):
         empty_label_index = self.vocab.get_token_index("NO-LABEL", "labels")
         all_labels = [self.vocab.get_token_from_index(index, "labels").split("-") for index in
                   range(self.vocab.get_vocab_size("labels"))]
-
+        label_probabilities_np = label_probabilities.data().cpu().numpy()
         if not distinguish_between_labels:
             temp = np.zeros((len(span_to_index), 2))
             temp[:, 0] = label_probabilities_np[:, empty_label_index]
