@@ -83,6 +83,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument('param_file', type=str, help='The model configuration file.')
+    parser.add_argument('--name', type=str, help='A name for the experiment.')
     parser.add_argument('--desc', type=str, help='A description for the experiment.')
     parser.add_argument('--debug', action='store_true', help='Print verbose stack traces on error.')
     parser.add_argument('--env', action='append', help='Set environment variables (e.g. NAME=value or NAME)')
@@ -96,7 +97,10 @@ if __name__ == "__main__":
 
     extra_beaker_commands = []
     if args.desc:
-        extra_beaker_commands.append(f'--desc={args.desc}'),
+        extra_beaker_commands.append(f'--desc={args.desc}')
+    if args.name:
+        # Remove spaces from the name, because Beaker doesn't allow them.
+        extra_beaker_commands.append(f'--name={args.name.replace(" ", "-")}')
     if args.debug:
         extra_beaker_commands.append("--debug")
     if args.env:
