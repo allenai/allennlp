@@ -435,7 +435,6 @@ class SpanConstituencyParser(Model):
         exclusive_end_spans[:, :, -1] += 1
 
         trees: List[List[Tree]] = []
-        predictions_np = predictions.cpu().numpy()
         for batch_index in range(len(sentences)):
             span_to_index = {}
             for span_index in range(num_spans[batch_index]):
@@ -444,7 +443,7 @@ class SpanConstituencyParser(Model):
                 span_to_index[span] = span_index
             top_k_trees, _ = self.compute_k_best(sentences[batch_index],
                                                          pos_tags[batch_index],
-                                                         predictions_np[batch_index, :, :],
+                                                         predictions[batch_index, :, :],
                                                          span_to_index,
                                                          num_trees=num_trees)
             trees.append(top_k_trees)
