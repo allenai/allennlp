@@ -1,0 +1,42 @@
+{
+  "dataset_reader": {
+    "type": "agenda-prediction",
+    "add_nonterminals": false,
+    "max_num_actions": 5
+  },
+  "train_data_path": "tests/fixtures/data/nlvr/sample_processed_data.jsonl",
+  "validation_data_path": "tests/fixtures/data/nlvr/sample_processed_data.jsonl",
+  "model": {
+    "type": "agenda-predictor",
+    "sentence_embedder": {
+      "tokens": {
+        "type": "embedding",
+        "embedding_dim": 25,
+        "trainable": true
+      }
+    },
+    "action_embedding_dim": 25,
+    "attention_function": {"type": "dot_product"},
+    "output_projector": {
+      "input_dim": 50,
+      "num_layers": 1,
+      "hidden_dims": [20],
+      "activations": "tanh"
+    }
+  },
+  "iterator": {
+    "type": "bucket",
+    "sorting_keys": [["sentence", "num_tokens"]],
+    "padding_noise": 0.0,
+    "batch_size" : 2
+  },
+  "trainer": {
+    "num_epochs": 1,
+    "patience": 2,
+    "cuda_device": -1,
+    "optimizer": {
+      "type": "sgd",
+      "lr": 0.01
+    }
+  }
+}
