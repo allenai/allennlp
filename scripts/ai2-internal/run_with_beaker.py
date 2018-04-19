@@ -100,7 +100,7 @@ if __name__ == "__main__":
         extra_beaker_commands.append(f'--desc={args.desc}')
     if args.name:
         # Remove spaces from the name, because Beaker doesn't allow them.
-        extra_beaker_commands.append(f'--name={"-".join(args.name.split(" "))}')
+        extra_beaker_commands.append(f'--name={args.name.replace(" ", "-")}')
     if args.debug:
         extra_beaker_commands.append("--debug")
     if args.env:
