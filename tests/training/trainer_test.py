@@ -11,7 +11,6 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.trainer import Trainer, sparse_clip_norm, is_sparse
 from allennlp.data import Vocabulary
 from allennlp.common.params import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
@@ -127,7 +126,7 @@ class TestTrainer(AllenNlpTestCase):
         class FakeModel(torch.nn.Module):
             def forward(self, **kwargs):  # pylint: disable=arguments-differ,unused-argument
                 return {}
-        with pytest.raises(ConfigurationError):
+        with pytest.raises(RuntimeError):
             trainer = Trainer(FakeModel(), self.optimizer,
                               self.iterator, self.instances,
                               num_epochs=2, serialization_dir=self.TEST_DIR)
