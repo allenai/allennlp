@@ -55,6 +55,8 @@ if __name__ == "__main__":
                 'coref',
                 'decomposable_attention',
                 'encoder_decoder/simple_seq2seq',
+                'semantic_parsing/nlvr_coverage_semantic_parser',
+                'semantic_parsing/nlvr_direct_semantic_parser',
                 'srl',
                 ]
         for model in models:

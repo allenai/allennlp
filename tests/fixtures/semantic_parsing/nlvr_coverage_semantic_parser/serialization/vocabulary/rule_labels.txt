@@ -1,4 +1,3 @@
-@@UNKNOWN@@
 <<o,o>,<o,o>> -> negate_filter
 <b,<c,b>> -> member_color_all_equals
 <b,<c,b>> -> member_color_any_equals
@@ -84,7 +83,7 @@
 <o,o> -> triangle
 <o,o> -> yellow
 <o,t> -> object_exists
-@START@ -> t
+@start@ -> t
 b -> [<b,<c,b>>, b, c]
 b -> [<b,<e,b>>, b, e]
 b -> [<b,<s,b>>, b, s]

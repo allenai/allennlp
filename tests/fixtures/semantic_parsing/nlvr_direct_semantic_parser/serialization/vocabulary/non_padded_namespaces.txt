@@ -1,2 +1,2 @@
-actions
 denotations
+rule_labels
