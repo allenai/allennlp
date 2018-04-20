@@ -20,3 +20,4 @@ from allennlp.data.dataset_readers.sequence_tagging import SequenceTaggingDatase
 from allennlp.data.dataset_readers.snli import SnliReader
 from allennlp.data.dataset_readers.stanford_sentiment_tree_bank import (
         StanfordSentimentTreeBankDatasetReader)
+from allennlp.data.dataset_readers.wikitables import WikiTablesDatasetReader
