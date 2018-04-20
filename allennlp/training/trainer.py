@@ -729,7 +729,7 @@ class Trainer:
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
         # pylint: disable=no-self-use
-        return ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
+        return ', '.join(["%s: %.4f" % (name, value) for name, value in metrics.items()]) + " ||"
 
     def _save_checkpoint(self,
                          epoch: Union[int, str],
