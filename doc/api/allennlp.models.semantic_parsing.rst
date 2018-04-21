@@ -9,3 +9,4 @@ allennlp.models.semantic_parsing
 .. toctree::
 
   allennlp.models.semantic_parsing.nlvr
+  allennlp.models.semantic_parsing.wikitables
