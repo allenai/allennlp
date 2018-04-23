@@ -54,8 +54,16 @@ def main(triviaqa_path: pathlib.Path, outdir: pathlib.Path):
 
     tokenizer = Tokenizer.from_params(Params({}))
 
-    for questions_file, topn, require_answer in [('web-train.json', 4, True),
-                                                 ('web-dev.json', 15, False)]:
+    for questions_file in ['web-train.json', 'web-dev.json']:
+        if questions_file == 'web-train.json':
+            topn = 4
+            require_answer = True
+            instance_per_doc = True
+        else:
+            topn = 15
+            require_answer = False
+            instance_per_doc = False
+
         logger.info(f"starting questions file {questions_file}")
         questions_path = triviaqa_path / 'qa' / questions_file
 
@@ -66,6 +74,7 @@ def main(triviaqa_path: pathlib.Path, outdir: pathlib.Path):
                                                        questions_path=questions_path,
                                                        tokenizer=tokenizer,
                                                        max_paragraphs=topn,
+                                                       instance_per_document=instance_per_doc,
                                                        require_answer=require_answer):
                 f.write(json.dumps(question.to_json()))
                 f.write("\n")
