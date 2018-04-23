@@ -1,4 +1,4 @@
-from typing import Tuple, List
+from typing import Dict, List, Tuple
 
 from overrides import overrides
 from nltk import Tree
@@ -79,9 +79,8 @@ class ConstituencyParserPredictor(Predictor):
         -------
         A dictionary representation of the constituency tree.
         """
-        instance, return_dict = self._build_instance(sentence)
-        outputs = self._model.forward_on_instance(instance, cuda_device)
-        return_dict.update(outputs)
+        instance = self._build_instance(sentence)
+        return_dict = self._model.forward_on_instance(instance, cuda_device)
 
         # format the NLTK tree as a string on a single line.
         tree = return_dict.pop("trees")
@@ -89,20 +88,17 @@ class ConstituencyParserPredictor(Predictor):
         return_dict["trees"] = tree.pformat(margin=1000000)
         return sanitize(return_dict)
 
-    # pylint: disable=arguments-differ
-    @overrides
-    def _build_instance(self, sentence: str) -> Tuple[Instance, JsonDict]: # type: ignore
-        """
-        Expects JSON that looks like ``{"sentence": "..."}``.
-        """
+    def _build_instance(self, sentence: str) -> Instance:
         spacy_tokens = self._tokenizer.split_words(sentence)
         sentence_text = [token.text for token in spacy_tokens]
         pos_tags = [token.tag_ for token in spacy_tokens]
-        return self._dataset_reader.text_to_instance(sentence_text, pos_tags), {}
+        return self._dataset_reader.text_to_instance(sentence_text, pos_tags)
 
     @overrides
     def predict_batch(self, inputs: List[JsonDict], cuda_device: int = -1) -> List[JsonDict]:
-        instances, return_dicts = zip(*self._build_instances_batch(inputs))
+        built_instances: List[Tuple[Instance, Dict]] =\
+            [(self._build_instance(**parameters), {}) for parameters in inputs]
+        instances, return_dicts = zip(*built_instances)
         outputs = self._model.forward_on_instances(instances, cuda_device)
         for output, return_dict in zip(outputs, return_dicts):
             return_dict.update(output)

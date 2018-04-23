@@ -87,10 +87,6 @@ class SemanticRoleLabelerPredictor(Predictor):
 
         return " ".join(frame)
 
-    @overrides
-    def _build_instance(self, json_dict: JsonDict): # type: ignore
-        raise NotImplementedError("The SRL model uses a different API for creating instances.")
-
     def _sentence_to_srl_instances(self, sentence: str) -> Tuple[List[Instance], Dict]:
         """
         The SRL model has a slightly different API from other models, as the model is run
