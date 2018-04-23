@@ -14,7 +14,6 @@ import numpy as np
 
 from allennlp.common import Params, JsonDict
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import lazy_groups_of
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.reading_comprehension import util
@@ -200,6 +199,7 @@ def process_triviaqa_questions(evidence_path: pathlib.Path,
                                max_paragraphs: int = 4,
                                tfidf_sort: bool = True,
                                require_answer: bool = False,
+                               instance_per_document: bool = False,
                                max_paragraph_length: int = 400) -> Iterator[Question]:
     """
     Processes one of the questions files in the (untarred) TriviaQA dataset
@@ -228,32 +228,40 @@ def process_triviaqa_questions(evidence_path: pathlib.Path,
         answer_texts = answer['NormalizedAliases'] + human_answers
         evidence_files = [result['Filename'] for result in question[result_key]]
 
-        paragraphs: List[str] = []
+        if instance_per_document:
+            # Put each file in its own "group".
+            evidence_file_groups = [[evidence_file] for evidence_file in evidence_files]
+        else:
+            # Make one "group" consisting of all the files.
+            evidence_file_groups = [evidence_files]
 
-        for evidence_file in evidence_files:
-            evidence_file_path = evidence_path / 'evidence' / evidence_subdir / evidence_file
-            with open(evidence_file_path, 'r') as evidence_file:
-                paragraphs.extend(evidence_file.readlines())
+        for file_group in evidence_file_groups:
+            paragraphs: List[str] = []
 
-        merged_paragraphs = _merge(paragraphs=paragraphs,
-                                   question=question_text,
-                                   answer_texts=answer_texts,
-                                   tokenizer=tokenizer,
-                                   max_paragraphs=max_paragraphs,
-                                   tfidf_sort=tfidf_sort,
-                                   require_answer=require_answer,
-                                   max_paragraph_length=max_paragraph_length)
+            for evidence_file in file_group:
+                evidence_file_path = evidence_path / 'evidence' / evidence_subdir / evidence_file
+                with open(evidence_file_path, 'r') as evidence_file:
+                    paragraphs.extend(evidence_file.readlines())
 
-        if not merged_paragraphs:
-            continue
+            merged_paragraphs = _merge(paragraphs=paragraphs,
+                                       question=question_text,
+                                       answer_texts=answer_texts,
+                                       tokenizer=tokenizer,
+                                       max_paragraphs=max_paragraphs,
+                                       tfidf_sort=tfidf_sort,
+                                       require_answer=require_answer,
+                                       max_paragraph_length=max_paragraph_length)
 
-        question = Question(id=question_id,
-                            text=question_text,
-                            tokens=question_tokens,
-                            paragraphs=merged_paragraphs,
-                            answer_texts=answer_texts)
+            if not merged_paragraphs:
+                continue
 
-        yield question
+            question = Question(id=question_id,
+                                text=question_text,
+                                tokens=question_tokens,
+                                paragraphs=merged_paragraphs,
+                                answer_texts=answer_texts)
+
+            yield question
 
 @DatasetReader.register("triviaqa")
 class TriviaQaReader(DatasetReader):
@@ -321,6 +329,7 @@ class TriviaQaReader(DatasetReader):
                  paragraph_picker: str = None,
                  sample_first_iteration: bool = False,
                  keep_questions_in_memory: bool = True,
+                 instance_per_document: bool = False,
                  max_token_length: int = None,
                  max_paragraphs: int = 4,
                  tokenizer: Tokenizer = None,
@@ -333,6 +342,7 @@ class TriviaQaReader(DatasetReader):
 
         self._sample_this_iteration = sample_first_iteration
         self._keep_questions_in_memory = keep_questions_in_memory
+        self._instance_per_document = instance_per_document
         self._paragraph_picker = paragraph_picker
         self._max_token_length = max_token_length
         self._max_paragraphs = max_paragraphs
@@ -418,12 +428,14 @@ class TriviaQaReader(DatasetReader):
             # Require a paragraph with an answer only if this is the training
             # dataset reader.
             require_answer = self._paragraph_picker == 'triviaqa-web-train'
-            questions = [question for question in process_triviaqa_questions(evidence_path=self._evidence_path,
-                                                                             questions_path=questions_path,
-                                                                             tokenizer=self._tokenizer,
-                                                                             max_paragraphs=self._max_paragraphs,
-                                                                             require_answer=require_answer,
-                                                                             max_paragraph_length=400)]
+            questions = [question
+                         for question in process_triviaqa_questions(evidence_path=self._evidence_path,
+                                                                    questions_path=questions_path,
+                                                                    tokenizer=self._tokenizer,
+                                                                    max_paragraphs=self._max_paragraphs,
+                                                                    require_answer=require_answer,
+                                                                    instance_per_document=self._instance_per_document,
+                                                                    max_paragraph_length=400)]
 
         # Store questions in memory, unless we're not supposed to.
         if self._keep_questions_in_memory and file_path not in self._data:
@@ -503,6 +515,7 @@ class TriviaQaReader(DatasetReader):
         paragraph_picker = params.pop('paragraph_picker', None)
         sample_first_iteration = params.pop_bool('sample_first_iteration', False)
         keep_questions_in_memory = params.pop_bool('keep_questions_in_memory', True)
+        instance_per_document = params.pop_bool('instance_per_document', False)
         max_token_length = params.pop_int('max_token_length', None)
         max_paragraphs = params.pop_int('max_paragraphs', 4)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
@@ -513,6 +526,7 @@ class TriviaQaReader(DatasetReader):
                    data_format=data_format,
                    sample_first_iteration=sample_first_iteration,
                    keep_questions_in_memory=keep_questions_in_memory,
+                   instance_per_document=instance_per_document,
                    paragraph_picker=paragraph_picker,
                    max_token_length=max_token_length,
                    max_paragraphs=max_paragraphs,

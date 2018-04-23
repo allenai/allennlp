@@ -60,6 +60,22 @@ class TestTriviaQaReader:
             # Should not sample, so only one result.
             assert len(first_words) == 1
 
+    def test_instance_per_document(self):
+        # By default, it should be one instance per question.
+        params = get_params("tar.gz")
+        reader = TriviaQaReader.from_params(params)
+        instances = ensure_list(reader.read('web-dev.json'))
+        assert len(instances) == 2
+
+        # But if we specify `instance_per_document`, we should get many more instances
+        params = get_params("tar.gz")
+        params["instance_per_document"] = True
+        reader = TriviaQaReader.from_params(params)
+        instances = ensure_list(reader.read('web-dev.json'))
+        assert len(instances) == 4
+
+
+
     @pytest.mark.parametrize('max_token_length', (4, 8))
     def test_max_token_length(self, max_token_length):
         params = get_params('tar.gz', max_token_length=max_token_length)

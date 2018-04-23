@@ -22,7 +22,7 @@
     "validation_dataset_reader": {
       "type": "triviaqa",
       "lazy": "false",
-      "triviaqa_path": "/triviaqa_eval",
+      "triviaqa_path": "/triviaqa_processed",
       "data_format": "preprocessed",
       "max_token_length": 20,
       "token_indexers": {
