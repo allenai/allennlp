@@ -1,5 +1,4 @@
 # pylint: disable=no-self-use,invalid-name
-import copy
 import json
 import os
 import pathlib
@@ -36,10 +35,12 @@ class CountingPredictor(Predictor):
     def __init__(self):                 # pylint: disable=super-init-not-called
         self.calls = defaultdict(int)
 
-    def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
-        key = json.dumps(inputs)
+    # pylint: disable=unused-argument,arguments-differ
+    def predict(self, arg1: str, cuda_device: int = -1) -> JsonDict:
+        dictionary = {"arg1" : arg1}
+        key = json.dumps(dictionary)
         self.calls[key] += 1
-        return copy.deepcopy(inputs)
+        return dictionary
 
 class TestFlask(AllenNlpTestCase):
 
@@ -109,7 +110,7 @@ class TestFlask(AllenNlpTestCase):
 
     def test_caching(self):
         predictor = CountingPredictor()
-        data = {"input1": "this is input 1", "input2": 10}
+        data = {"arg1": "this is input 1"}
         key = json.dumps(data)
 
         self.app.predictors["counting"] = predictor
@@ -126,14 +127,14 @@ class TestFlask(AllenNlpTestCase):
         assert len(predictor.calls) == 1
 
         # make a different call
-        noyes = {"no": "yes"}
-        response = self.post_json("/predict/counting", data=noyes)
+        data2 = {"arg1": "yes"}
+        response = self.post_json("/predict/counting", data=data2)
         assert response.status_code == 200
-        assert json.loads(response.get_data()) == noyes
+        assert json.loads(response.get_data()) == data2
 
         # call counts should reflect two calls
         assert predictor.calls[key] == 1
-        assert predictor.calls[json.dumps(noyes)] == 1
+        assert predictor.calls[json.dumps(data2)] == 1
         assert len(predictor.calls) == 2
 
         # repeated calls should come from cache and not hit the predictor
@@ -144,7 +145,7 @@ class TestFlask(AllenNlpTestCase):
 
             # these should all be cached, so call counts should not be updated
             assert predictor.calls[key] == 1
-            assert predictor.calls[json.dumps(noyes)] == 1
+            assert predictor.calls[json.dumps(data2)] == 1
             assert len(predictor.calls) == 2
 
     def test_disable_caching(self):
@@ -157,7 +158,7 @@ class TestFlask(AllenNlpTestCase):
         app.testing = True
         client = app.test_client()
 
-        data = {"input1": "this is input 1", "input2": 10}
+        data = {"arg1": "this is input 1"}
         key = json.dumps(data)
 
         assert not predictor.calls
@@ -188,7 +189,7 @@ class TestFlask(AllenNlpTestCase):
         client = app.test_client()
 
         # Make a prediction, no permalinks.
-        data = {"some": "input"}
+        data = {"arg1": "input"}
         response = client.post("/predict/counting", content_type="application/json", data=json.dumps(data))
 
         assert response.status_code == 200
@@ -212,7 +213,7 @@ class TestFlask(AllenNlpTestCase):
         def post(endpoint: str, data: JsonDict) -> Response:
             return client.post(endpoint, content_type="application/json", data=json.dumps(data))
 
-        data = {"some": "input"}
+        data = {"arg1": "input"}
         response = post("/predict/counting", data=data)
 
         assert response.status_code == 200

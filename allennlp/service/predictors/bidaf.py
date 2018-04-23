@@ -1,7 +1,7 @@
-from typing import Tuple, Dict
+from typing import Tuple
 from overrides import overrides
 
-from allennlp.common.util import sanitize
+from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.service.predictors.predictor import Predictor
 
@@ -12,8 +12,9 @@ class BidafPredictor(Predictor):
     Predictor for the :class:`~allennlp.models.bidaf.BidirectionalAttentionFlow` model.
     """
 
+    # pylint: disable=arguments-differ
     @overrides
-    def predict(self, question: str, passage: str, cuda_device: int = -1) -> Dict:
+    def predict(self, question: str, passage: str, cuda_device: int = -1) -> JsonDict: # type: ignore
         """
         Make a machine comprehension prediction on the supplied input.
         See https://rajpurkar.github.io/SQuAD-explorer/ for more information about the machine comprehension task.
@@ -33,8 +34,9 @@ class BidafPredictor(Predictor):
         """
         return super().predict(question=question, passage=passage, cuda_device=cuda_device)
 
+    # pylint: disable=arguments-differ
     @overrides
-    def _build_instance(self, question: str, passage: str) -> Tuple[Instance, Dict]:
+    def _build_instance(self, question: str, passage: str) -> Tuple[Instance, JsonDict]: # type: ignore
         """
         Expects JSON that looks like ``{"question": "...", "passage": "..."}``.
         """

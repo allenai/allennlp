@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 
 from overrides import overrides
 
@@ -18,7 +18,9 @@ class SemanticRoleLabelerPredictor(Predictor):
         super().__init__(model, dataset_reader)
         self._tokenizer = SpacyWordSplitter(language='en_core_web_sm', pos_tags=True)
 
-    def predict(self, sentence: str, cuda_device = -1) -> Dict:
+    # pylint: disable=arguments-differ
+    @overrides
+    def predict(self, sentence: str, cuda_device: int = -1) -> JsonDict: # type: ignore
         """
         Predicts the semantic roles of the supplied sentence.
 
@@ -55,9 +57,9 @@ class SemanticRoleLabelerPredictor(Predictor):
             tags = output['tags']
             description = self.make_srl_string(results["words"], tags)
             results["verbs"].append({
-                "verb": verb,
-                "description": description,
-                "tags": tags,
+                    "verb": verb,
+                    "description": description,
+                    "tags": tags,
             })
 
         return sanitize(results)
@@ -86,7 +88,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         return " ".join(frame)
 
     @overrides
-    def _build_instance(self, json_dict: JsonDict):
+    def _build_instance(self, json_dict: JsonDict): # type: ignore
         raise NotImplementedError("The SRL model uses a different API for creating instances.")
 
     def _sentence_to_srl_instances(self, sentence: str) -> Tuple[List[Instance], Dict]:
@@ -109,7 +111,7 @@ class SemanticRoleLabelerPredictor(Predictor):
             One instance per verb.
         result_dict : ``JsonDict``
             A dictionary containing the words of the sentence and the verbs extracted
-            by the Spacy POS tagger. These will be replaced in ``predict_json`` with the
+            by the Spacy POS tagger. These will be replaced in ``predict`` with the
             SRL frame for the verb.
         """
         tokens = self._tokenizer.split_words(sentence)

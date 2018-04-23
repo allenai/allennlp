@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 import json
 
 from allennlp.common import Registrable
@@ -21,8 +21,9 @@ DEFAULT_PREDICTORS = {
 
 class Predictor(Registrable):
     """
-    a ``Predictor`` is a thin wrapper around an AllenNLP model that handles JSON -> JSON predictions
-    that can be used for serving models through the web API or making predictions in bulk.
+    a ``Predictor`` is a thin wrapper around an AllenNLP model that handles making individual predictions
+    that can be used for serving models through the web API, making predictions in bulk on the CLI, or
+    making predictions programatically.
     """
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         self._model = model
@@ -49,7 +50,7 @@ class Predictor(Registrable):
         return_dict.update(outputs)
         return sanitize(return_dict)
 
-    def _build_instance(self, **kwargs) -> Tuple[Instance, Dict]:
+    def _build_instance(self, **kwargs) -> Tuple[Instance, JsonDict]:
         """
         Converts a JSON object into an :class:`~allennlp.data.instance.Instance`
         and a ``JsonDict`` of information which the ``Predictor`` should pass through,

@@ -33,7 +33,7 @@ class SniffTest(AllenNlpTestCase):
 
         sentence = "If you liked the music we were playing last night, you will absolutely love what we're playing tomorrow!"
 
-        result = predictor.predict(sentence = sentence)
+        result = predictor.predict(sentence=sentence)
 
         assert result["words"] == [
                 "If", "you", "liked", "the", "music", "we", "were", "playing", "last", "night", ",",
