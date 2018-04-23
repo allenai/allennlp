@@ -37,6 +37,7 @@ class ServerError(Exception):
 
     def __init__(self, message, status_code=None, payload=None):
         Exception.__init__(self)
+        logger.error(message)
         self.message = message
         if status_code is not None:
             self.status_code = status_code
@@ -223,6 +224,9 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
                 if len(good_tags) > 1:
                     verbs.append({"verb": verb["verb"], "description": verb["description"]})
             log_blob["outputs"]["verbs"] = verbs
+        elif model_name == "wikitables-parser":
+            log_blob['outputs']['logical_form'] = prediction['logical_form']
+            log_blob['outputs']['answer'] = prediction['answer']
 
         elif model_name == "constituency-parsing":
             log_blob["outputs"]["trees"] = prediction["trees"]
@@ -254,12 +258,14 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
     @app.route('/semantic-role-labeling')
     @app.route('/constituency-parsing')
     @app.route('/machine-comprehension')
+    @app.route('/wikitables-parser')
     @app.route('/textual-entailment')
     @app.route('/coreference-resolution')
     @app.route('/named-entity-recognition')
     @app.route('/semantic-role-labeling/<permalink>')
     @app.route('/constituency-parsing/<permalink>')
     @app.route('/machine-comprehension/<permalink>')
+    @app.route('/wikitables-parser/<permalink>')
     @app.route('/textual-entailment/<permalink>')
     @app.route('/coreference-resolution/<permalink>')
     @app.route('/named-entity-recognition/<permalink>')
