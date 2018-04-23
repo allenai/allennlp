@@ -1,10 +1,22 @@
 {
   "dataset_reader": {
-    "type": "wikitables-preprocessed",
+    "type": "wikitables",
     "lazy": false,
+    "tables_directory": "/wikitables/",
+    "dpd_output_directory": "/wikitables/dpd_output/",
     "question_token_indexers": {
       "tokens": {"type": "single_id"}
     }
+  },
+  "validation_dataset_reader": {
+    "type": "wikitables",
+    "lazy": false,
+    "tables_directory": "/wikitables/",
+    "dpd_output_directory": "/wikitables/dpd_output/",
+    "question_token_indexers": {
+      "tokens": {"type": "single_id"}
+    },
+    "keep_if_no_dpd": true
   },
   "vocabulary": {
     "min_count": {"tokens": 3}
@@ -34,9 +46,9 @@
       "averaged": true
     },
     "decoder_beam_search": {
-      "beam_size": 3
+      "beam_size": 10
     },
-    "max_decoding_steps": 20,
+    "max_decoding_steps": 40,
     "attention_function": {
       "type": "bilinear",
       "tensor_1_dim": 200,
