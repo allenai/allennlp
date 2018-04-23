@@ -39,7 +39,6 @@ class AgendaPredictor(Model):
     rule_namespace : ``str``, optional (default=rule_labels)
         Vocabulary namespace for production rules.
     """
-    # TODO(pradeep): Move this class to allennlp.models.semantic_parsing
     def __init__(self,
                  vocab: Vocabulary,
                  sentence_embedder: TextFieldEmbedder,
@@ -104,7 +103,8 @@ class AgendaPredictor(Model):
         # (batch_size, num_actions, projection_output_dim)
         projection_output = self._output_projector(projection_input)
         # (batch_size, num_actions, 2)
-        predicted_actions = torch.nn.functional.softmax(self._final_projection(projection_output), dim=-1)
+        final_projection = self._final_projection(projection_output)
+        predicted_actions = torch.nn.functional.softmax(final_projection, dim=-1)
         # TODO(pradeep): Add F1 metric.
         predicted_action_indices = []
         for prediction in predicted_actions:
@@ -123,7 +123,8 @@ class AgendaPredictor(Model):
             # actions here and averaging the losses.
             losses = []
             for i in range(self._num_actions):
-                losses.append(self._loss_function(predicted_actions[:, i], target_actions[:, i]))
+                loss = self._loss_function(final_projection[:, i], target_actions[:, i])
+                losses.append(loss)
             outputs["loss"] = torch.mean(torch.cat(losses))
             self._f1_metric(predicted_actions, target_actions)
         return outputs
