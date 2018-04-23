@@ -11,6 +11,7 @@ from allennlp.training.metrics import F1Measure
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import TextFieldEmbedder
+from allennlp.modules import Seq2SeqEncoder
 from allennlp.models.model import Model
 
 
@@ -28,6 +29,8 @@ class AgendaPredictor(Model):
         Passed to super-class.
     sentence_embedder : ``TextFieldEmbedder``
         Embedder for inputs.
+    sentence_encoder : ``Seq2SeqEncoder``
+        Input encoder.
     action_embedding_dim : ``int``
         Dimensionality of action embeddings.
     attention_function : ``SimilarityFunction``
@@ -42,6 +45,7 @@ class AgendaPredictor(Model):
     def __init__(self,
                  vocab: Vocabulary,
                  sentence_embedder: TextFieldEmbedder,
+                 sentence_encoder: Seq2SeqEncoder,
                  action_embedding_dim: int,
                  attention_function: SimilarityFunction,
                  output_projector: FeedForward,
@@ -56,7 +60,9 @@ class AgendaPredictor(Model):
         self._action_embedding = torch.nn.Parameter(initial_action_embedding)
         torch.nn.init.xavier_uniform(self._action_embedding)  # Using Glorot Uniform initialization
         self._sentence_embedding_dim = sentence_embedder.get_output_dim()
-        assert output_projector.input_dim == self._sentence_embedding_dim + self._action_embedding_dim
+        self._sentence_encoder = sentence_encoder
+        self._encoder_output_dim = sentence_encoder.get_output_dim()
+        assert output_projector.input_dim == self._encoder_output_dim + self._action_embedding_dim
         self._output_projector = output_projector
         self._final_projection = torch.nn.Linear(self._output_projector.get_output_dim(), 2)
         self._sentence_attention = Attention(attention_function)
@@ -79,6 +85,8 @@ class AgendaPredictor(Model):
         batch_size, _, _ = embedded_sentence.size()
         # (batch_size, sentence_length)
         sentence_mask = util.get_text_field_mask(sentence).float()
+        # (batch_size, sentence_length, sentence_encoder_dim)
+        encoded_sentence = self._sentence_encoder(embedded_sentence, sentence_mask)
         expanded_action_embedding = self._action_embedding.unsqueeze(0).expand(batch_size,
                                                                                self._num_actions,
                                                                                self._action_embedding_dim)
@@ -88,24 +96,23 @@ class AgendaPredictor(Model):
             expanded_action = expanded_action_embedding[:, action_index, :]
             # (batch_size, sentence_length)
             sentence_attention = self._sentence_attention(expanded_action,
-                                                          embedded_sentence,
+                                                          encoded_sentence,
                                                           sentence_mask)
-            # (batch_size, sentence_embedding_dim)
-            action_attended_sentence = util.weighted_sum(embedded_sentence, sentence_attention)
+            # (batch_size, sentence_encoder_dim)
+            action_attended_sentence = util.weighted_sum(encoded_sentence, sentence_attention)
             actions_attended_sentence.append(action_attended_sentence)
-        # (num_actions, batch_size, sentence_embedding_dim)
+        # (num_actions, batch_size, sentence_encoder_dim)
         attended_sentence = torch.stack(actions_attended_sentence)
         attended_sentence = attended_sentence.view(batch_size,
                                                    self._num_actions,
-                                                   self._sentence_embedding_dim)
-        # (batch_size, num_actions, sentence_embedding_dim + action_embedding_dim)
+                                                   self._encoder_output_dim)
+        # (batch_size, num_actions, sentence_encoder_dim + action_embedding_dim)
         projection_input = torch.cat([attended_sentence, expanded_action_embedding], -1)
         # (batch_size, num_actions, projection_output_dim)
         projection_output = self._output_projector(projection_input)
         # (batch_size, num_actions, 2)
         final_projection = self._final_projection(projection_output)
         predicted_actions = torch.nn.functional.softmax(final_projection, dim=-1)
-        # TODO(pradeep): Add F1 metric.
         predicted_action_indices = []
         for prediction in predicted_actions:
             action_indices = []
@@ -141,6 +148,7 @@ class AgendaPredictor(Model):
     @classmethod
     def from_params(cls, vocab, params: Params) -> 'AgendaPredictor':
         sentence_embedder = TextFieldEmbedder.from_params(vocab, params.pop("sentence_embedder"))
+        sentence_encoder = Seq2SeqEncoder.from_params(params.pop("sentence_encoder"))
         action_embedding_dim = params.pop_int("action_embedding_dim")
         attention_function = SimilarityFunction.from_params(params.pop("attention_function"))
         output_projector = FeedForward.from_params(params.pop("output_projector"))
@@ -148,6 +156,7 @@ class AgendaPredictor(Model):
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    sentence_embedder=sentence_embedder,
+                   sentence_encoder=sentence_encoder,
                    action_embedding_dim=action_embedding_dim,
                    attention_function=attention_function,
                    output_projector=output_projector,

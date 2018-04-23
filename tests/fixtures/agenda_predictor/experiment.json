@@ -15,6 +15,13 @@
         "trainable": true
       }
     },
+    "sentence_encoder": {
+      "type": "lstm",
+      "input_size": 25,
+      "hidden_size": 25,
+      "num_layers": 1,
+      "dropout": 0.2
+    },
     "action_embedding_dim": 25,
     "attention_function": {"type": "dot_product"},
     "output_projector": {
@@ -31,8 +38,8 @@
     "batch_size" : 2
   },
   "trainer": {
-    "num_epochs": 1,
-    "patience": 2,
+    "num_epochs": 10,
+    "patience": 10,
     "cuda_device": -1,
     "optimizer": {
       "type": "sgd",
