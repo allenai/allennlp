@@ -17,9 +17,7 @@ class TestBidafPredictor(TestCase):
         archive = load_archive('tests/fixtures/bidaf/serialization/model.tar.gz')
         predictor = Predictor.from_archive(archive, 'machine-comprehension')
 
-        result = predictor.predict_json(inputs)
-        result2 = predictor.predict(question = inputs["question"], passage = inputs["passage"])
-        assert(result == result2)
+        result = predictor.predict(question = inputs["question"], passage = inputs["passage"])
 
         best_span = result.get("best_span")
         assert best_span is not None
@@ -53,7 +51,7 @@ class TestBidafPredictor(TestCase):
         archive = load_archive('tests/fixtures/bidaf/serialization/model.tar.gz')
         predictor = Predictor.from_archive(archive, 'machine-comprehension')
 
-        results = predictor.predict_batch_json(inputs)
+        results = predictor.predict_batch(inputs)
         assert len(results) == 2
 
         for result in results:

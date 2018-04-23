@@ -1,7 +1,7 @@
-from typing import Tuple
+from typing import Tuple, Dict
 from overrides import overrides
 
-from allennlp.common.util import JsonDict
+from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.models import Model
@@ -22,15 +22,14 @@ class SentenceTaggerPredictor(Predictor):
         self._tokenizer = SpacyWordSplitter(language='en_core_web_sm', pos_tags=True)
 
     def predict(self, sentence: str, cuda_device = -1) -> JsonDict:
-        return self.predict_json({"sentence" : sentence}, cuda_device)
+        return super().predict(sentence=sentence, cuda_device=cuda_device)
 
     @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+    def _build_instance(self, sentence: str) -> Tuple[Instance, Dict]:
         """
         Expects JSON that looks like ``{"sentence": "..."}``.
         Runs the underlying model, and adds the ``"words"`` to the output.
         """
-        sentence = json_dict["sentence"]
         tokens = self._tokenizer.split_words(sentence)
         instance = self._dataset_reader.text_to_instance(tokens)
 

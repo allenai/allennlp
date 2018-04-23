@@ -22,7 +22,7 @@ class SniffTest(AllenNlpTestCase):
         passage = """The Matrix is a 1999 science fiction action film written and directed by The Wachowskis, starring Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, and Joe Pantoliano. It depicts a dystopian future in which reality as perceived by most humans is actually a simulated reality called "the Matrix", created by sentient machines to subdue the human population, while their bodies' heat and electrical activity are used as an energy source. Computer programmer Neo" learns this truth and is drawn into a rebellion against the machines, which involves other people who have been freed from the "dream world". """  # pylint: disable=line-too-long
         question = "Who stars in The Matrix?"
 
-        result = predictor.predict_json({"passage": passage, "question": question})
+        result = predictor.predict(passage=passage, question=question)
 
         correct = "Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, and Joe Pantoliano"
 
@@ -33,7 +33,7 @@ class SniffTest(AllenNlpTestCase):
 
         sentence = "If you liked the music we were playing last night, you will absolutely love what we're playing tomorrow!"
 
-        result = predictor.predict_json({"sentence": sentence})
+        result = predictor.predict(sentence = sentence)
 
         assert result["words"] == [
                 "If", "you", "liked", "the", "music", "we", "were", "playing", "last", "night", ",",
@@ -67,24 +67,24 @@ class SniffTest(AllenNlpTestCase):
     def test_textual_entailment(self):
         predictor = DEFAULT_MODELS['textual-entailment'].predictor()
 
-        result = predictor.predict_json({
-                "premise": "An interplanetary spacecraft is in orbit around a gas giant's icy moon.",
-                "hypothesis": "The spacecraft has the ability to travel between planets."
-        })
+        result = predictor.predict(
+                premise="An interplanetary spacecraft is in orbit around a gas giant's icy moon.",
+                hypothesis="The spacecraft has the ability to travel between planets."
+        )
 
         assert result["label_probs"][0] > 0.7  # entailment
 
-        result = predictor.predict_json({
-                "premise": "Two women are wandering along the shore drinking iced tea.",
-                "hypothesis": "Two women are sitting on a blanket near some rocks talking about politics."
-        })
+        result = predictor.predict(
+                premise="Two women are wandering along the shore drinking iced tea.",
+                hypothesis="Two women are sitting on a blanket near some rocks talking about politics."
+        )
 
         assert result["label_probs"][1] > 0.8  # contradiction
 
-        result = predictor.predict_json({
-                "premise": "A large, gray elephant walked beside a herd of zebras.",
-                "hypothesis": "The elephant was lost."
-        })
+        result = predictor.predict(
+                premise="A large, gray elephant walked beside a herd of zebras.",
+                hypothesis="The elephant was lost."
+        )
 
         assert result["label_probs"][2] > 0.6  # neutral
 
@@ -93,7 +93,7 @@ class SniffTest(AllenNlpTestCase):
 
         document = "We 're not going to skimp on quality , but we are very focused to make next year . The only problem is that some of the fabrics are wearing out - since I was a newbie I skimped on some of the fabric and the poor quality ones are developing holes ."
 
-        result = predictor.predict_json({"document": document})
+        result = predictor.predict(document=document)
         print(result)
         assert result['clusters'] == [[[0, 0], [10, 10]],
                                       [[33, 33], [37, 37]],
@@ -109,7 +109,7 @@ class SniffTest(AllenNlpTestCase):
 
         sentence = """Michael Jordan is a professor at Berkeley."""
 
-        result = predictor.predict_json({"sentence": sentence})
+        result = predictor.predict(sentence=sentence)
 
         assert result["words"] == ["Michael", "Jordan", "is", "a", "professor", "at", "Berkeley", "."]
         assert result["tags"] == ["B-PER", "L-PER", "O", "O", "O", "O", "U-LOC", "O"]
@@ -119,7 +119,7 @@ class SniffTest(AllenNlpTestCase):
 
         sentence = """Pierre Vinken died aged 81; immortalised aged 61."""
 
-        result = predictor.predict_json({"sentence": sentence})
+        result = predictor.predict(sentence=sentence)
 
         assert result["tokens"] == ["Pierre", "Vinken", "died", "aged", "81", ";", "immortalised", "aged", "61", "."]
         assert result["trees"] == "(S (NP (NNP Pierre) (NNP Vinken)) (VP (VP (VBD died) (NP (JJ aged) (CD 81))) (, ;) (VP (VBD immortalised) (S (ADJP (VBN aged) (NP (CD 61)))))) (. .))"

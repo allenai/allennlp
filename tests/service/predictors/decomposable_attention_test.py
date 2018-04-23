@@ -17,7 +17,7 @@ class TestDecomposableAttentionPredictor(TestCase):
 
         archive = load_archive('tests/fixtures/decomposable_attention/serialization/model.tar.gz')
         predictor = Predictor.from_archive(archive, 'textual-entailment')
-        result = predictor.predict_json(inputs)
+        result = predictor.predict(inputs["premise"], inputs["hypothesis"])
 
         # Label probs should be 3 floats that sum to one
         label_probs = result.get("label_probs")
@@ -54,7 +54,7 @@ class TestDecomposableAttentionPredictor(TestCase):
 
         archive = load_archive('tests/fixtures/decomposable_attention/serialization/model.tar.gz')
         predictor = Predictor.from_archive(archive, 'textual-entailment')
-        results = predictor.predict_batch_json(batch_inputs)
+        results = predictor.predict_batch(batch_inputs)
         print(results)
         assert len(results) == 2
 

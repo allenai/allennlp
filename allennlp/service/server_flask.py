@@ -102,9 +102,9 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
     @lru_cache(maxsize=cache_size)
     def _caching_prediction(model: Predictor, data: str) -> JsonDict:
         """
-        Just a wrapper around ``model.predict_json`` that allows us to use a cache decorator.
+        Just a wrapper around ``model.predict`` that allows us to use a cache decorator.
         """
-        return model.predict_json(json.loads(data))
+        return model.predict(**json.loads(data))
 
     @app.route('/')
     def index() -> Response: # pylint: disable=unused-variable
@@ -180,7 +180,7 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
                 prediction = _caching_prediction(model, json.dumps(data))
             else:
                 # if cache_size is 0, skip caching altogether
-                prediction = model.predict_json(data)
+                prediction = model.predict(**data)
         except KeyError as err:
             raise ServerError("Required JSON field not found: " + err.args[0], status_code=400)
 

@@ -1,9 +1,9 @@
-from typing import Tuple
+from typing import Dict, Tuple
 
 from overrides import overrides
 
 from allennlp.common.util import get_spacy_model
-from allennlp.common.util import JsonDict
+from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
@@ -34,10 +34,10 @@ class CorefPredictor(Predictor):
         -------
         A dictionary representation of the predicted coreference clusters.
         """
-        return self.predict_json({"document" : document})
+        return super().predict(document=document, cuda_device=cuda_device)
 
     @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+    def _build_instance(self, document: str) -> Tuple[Instance, Dict]:
 
         """
         Expects JSON that looks like ``{"document": "string of document text"}``
@@ -62,7 +62,6 @@ class CorefPredictor(Predictor):
               ]
             }
         """
-        document = json_dict["document"]
         spacy_document = self._spacy(document)
         sentences = [[token.text for token in sentence] for sentence in spacy_document.sents]
         flattened_sentences = [word for sentence in sentences for word in sentence]

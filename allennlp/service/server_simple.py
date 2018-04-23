@@ -92,7 +92,7 @@ def make_app(predictor: Predictor,
 
         data = request.get_json()
 
-        prediction = predictor.predict_json(data)
+        prediction = predictor.predict(**data)
         if sanitizer is not None:
             prediction = sanitizer(prediction)
 

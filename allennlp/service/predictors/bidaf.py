@@ -1,11 +1,9 @@
-from typing import Tuple
+from typing import Tuple, Dict
 from overrides import overrides
 
-from allennlp.common.util import JsonDict
+from allennlp.common.util import sanitize
 from allennlp.data import Instance
 from allennlp.service.predictors.predictor import Predictor
-
-import json
 
 
 @Predictor.register('machine-comprehension')
@@ -14,7 +12,8 @@ class BidafPredictor(Predictor):
     Predictor for the :class:`~allennlp.models.bidaf.BidirectionalAttentionFlow` model.
     """
 
-    def predict(self, question: str, passage: str, cuda_device: int = -1) -> JsonDict:
+    @overrides
+    def predict(self, question: str, passage: str, cuda_device: int = -1) -> Dict:
         """
         Make a machine comprehension prediction on the supplied input.
         See https://rajpurkar.github.io/SQuAD-explorer/ for more information about the machine comprehension task.
@@ -32,13 +31,11 @@ class BidafPredictor(Predictor):
         A dictionary that represents the prediction made by the system.  The answer string will be under the
         "best_span_str" key.
         """
-        return self.predict_json({"passage" : passage, "question" : question}, cuda_device)
+        return super().predict(question=question, passage=passage, cuda_device=cuda_device)
 
     @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+    def _build_instance(self, question: str, passage: str) -> Tuple[Instance, Dict]:
         """
         Expects JSON that looks like ``{"question": "...", "passage": "..."}``.
         """
-        question_text = json_dict["question"]
-        passage_text = json_dict["passage"]
-        return self._dataset_reader.text_to_instance(question_text, passage_text), {}
+        return self._dataset_reader.text_to_instance(question, passage), {}
