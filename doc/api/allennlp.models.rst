@@ -16,7 +16,6 @@ allennlp.models
   allennlp.models.crf_tagger
   allennlp.models.decomposable_attention
   allennlp.models.encoder_decoders
-  allennlp.models.agenda_prediction
   allennlp.models.ensemble
   allennlp.models.reading_comprehension
   allennlp.models.semantic_parsing
