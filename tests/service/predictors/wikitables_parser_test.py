@@ -23,7 +23,7 @@ class TestWikiTablesParserPredictor(TestCase):
                 "table": "name\tdate\nmatt\t2017\npradeep\t2018"
         }
 
-        archive_dir = 'tests/fixtures/encoder_decoder/wikitables_semantic_parser/serialization/'
+        archive_dir = 'tests/fixtures/semantic_parsing/wikitables/serialization/'
         archive = load_archive(os.path.join(archive_dir, 'model.tar.gz'))
         predictor = Predictor.from_archive(archive, 'wikitables-parser')
 
@@ -48,7 +48,7 @@ class TestWikiTablesParserPredictor(TestCase):
                 "table": "Name\tAge\nShallan\t16\nKaladin\t18"
         }
 
-        archive_dir = 'tests/fixtures/encoder_decoder/wikitables_semantic_parser/serialization/'
+        archive_dir = 'tests/fixtures/semantic_parsing/wikitables/serialization/'
         archive = load_archive(os.path.join(archive_dir, 'model.tar.gz'))
         predictor = Predictor.from_archive(archive, 'wikitables-parser')
 

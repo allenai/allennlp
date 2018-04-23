@@ -24,7 +24,7 @@ class TestNlvrParserPredictor(AllenNlpTestCase):
                        'sentence': 'Each grey box contains atleast one yellow object touching the edge'}
 
     def test_predictor_with_coverage_parser(self):
-        archive_dir = 'tests/fixtures/encoder_decoder/nlvr_coverage_semantic_parser/serialization'
+        archive_dir = 'tests/fixtures/semantic_parsing/nlvr_coverage_semantic_parser/serialization'
         archive = load_archive(os.path.join(archive_dir, 'model.tar.gz'))
         predictor = Predictor.from_archive(archive, 'nlvr-parser')
 
@@ -34,7 +34,7 @@ class TestNlvrParserPredictor(AllenNlpTestCase):
         assert len(result['denotations']) == 2  # Because there are two worlds in the input.
 
     def test_predictor_with_direct_parser(self):
-        archive_dir = 'tests/fixtures/encoder_decoder/nlvr_direct_semantic_parser/serialization'
+        archive_dir = 'tests/fixtures/semantic_parsing/nlvr_direct_semantic_parser/serialization'
         archive = load_archive(os.path.join(archive_dir, 'model.tar.gz'))
         predictor = Predictor.from_archive(archive, 'nlvr-parser')
 
