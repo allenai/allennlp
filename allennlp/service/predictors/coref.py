@@ -1,8 +1,9 @@
-from typing import Tuple
+from typing import Dict, Tuple
 
 from overrides import overrides
 
-from allennlp.common.util import get_spacy_model, JsonDict
+from allennlp.common.util import get_spacy_model
+from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
@@ -20,9 +21,7 @@ class CorefPredictor(Predictor):
         # to also know sentence boundaries to propose valid mentions.
         self._spacy = get_spacy_model("en_core_web_sm", pos_tags=True, parse=True, ner=False)
 
-    # pylint: disable=arguments-differ
-    @overrides
-    def predict(self, document: str, cuda_device: int = -1) -> JsonDict: # type: ignore
+    def predict(self, document: str, cuda_device = -1) -> JsonDict:
         """
         Predict the coreference clusters in the given document.
 
@@ -37,9 +36,8 @@ class CorefPredictor(Predictor):
         """
         return super().predict(document=document, cuda_device=cuda_device)
 
-    # pylint: disable=arguments-differ
     @overrides
-    def _build_instance(self, document: str) -> Tuple[Instance, JsonDict]: # type: ignore
+    def _build_instance(self, document: str) -> Tuple[Instance, Dict]:
 
         """
         Expects JSON that looks like ``{"document": "string of document text"}``

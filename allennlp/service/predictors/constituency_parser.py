@@ -1,4 +1,4 @@
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 
 from overrides import overrides
 from nltk import Tree
@@ -66,9 +66,7 @@ class ConstituencyParserPredictor(Predictor):
         super().__init__(model, dataset_reader)
         self._tokenizer = SpacyWordSplitter(language='en_core_web_sm', pos_tags=True)
 
-    # pylint: disable=arguments-differ
-    @overrides
-    def predict(self, sentence: str, cuda_device: int = -1) -> JsonDict: # type: ignore
+    def predict(self, sentence: str, cuda_device: int = -1) -> Dict:
         """
         Predict a constituency parse for the given sentence.
         Parameters
@@ -89,9 +87,8 @@ class ConstituencyParserPredictor(Predictor):
         return_dict["trees"] = tree.pformat(margin=1000000)
         return sanitize(return_dict)
 
-    # pylint: disable=arguments-differ
     @overrides
-    def _build_instance(self, sentence: str) -> Tuple[Instance, JsonDict]: # type: ignore
+    def _build_instance(self, sentence: str) -> Tuple[Instance, Dict]:
         """
         Expects JSON that looks like ``{"sentence": "..."}``.
         """

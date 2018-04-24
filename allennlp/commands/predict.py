@@ -41,12 +41,16 @@ predictions using a trained model and its :class:`~allennlp.service.predictors.p
 
 import argparse
 from contextlib import ExitStack
+import json
 import sys
 from typing import Optional, IO
 
 from allennlp.commands.subcommand import Subcommand
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import sanitize
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
+from allennlp.service.predictors.predictor import DEFAULT_PREDICTORS
 
 class Predict(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
@@ -106,12 +110,12 @@ def _run(predictor: Predictor,
 
     def _run_predictor(batch_data):
         if len(batch_data) == 1:
-            result = predictor.predict(**batch_data[0], cuda_device=cuda_device)
+            result = sanitize(predictor.predict(batch_data[0], cuda_device))
             # Batch results return a list of json objects, so in
             # order to iterate over the result below we wrap this in a list.
             results = [result]
         else:
-            results = predictor.predict_batch(batch_data, cuda_device)
+            results = predictor.predict_batch_json(batch_data, cuda_device)
 
         for model_input, output in zip(batch_data, results):
             string_output = predictor.dump_line(output)
