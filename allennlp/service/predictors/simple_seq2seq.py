@@ -1,7 +1,7 @@
-from typing import Tuple, Dict
+from typing import Tuple
 from overrides import overrides
 
-from allennlp.common.util import JsonDict, sanitize
+from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.service.predictors.predictor import Predictor
 
@@ -11,12 +11,13 @@ class SimpleSeq2SeqPredictor(Predictor):
     Predictor for the :class:`~allennlp.models.encoder_decoder.simple_seq2seq` model.
     """
 
-    def predict(self, source: str, cuda_device = -1) -> Dict:
-        return super().predict(source=source, cuda_device=cuda_device)
+    def predict(self, source: str, cuda_device = -1) -> JsonDict:
+        return self.predict_json({"source" : source}, cuda_device)
 
     @overrides
-    def _build_instance(self, source: str) -> Tuple[Instance, Dict]:
+    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
         """
         Expects JSON that looks like ``{"source": "..."}``.
         """
+        source = json_dict["source"]
         return self._dataset_reader.text_to_instance(source), {}

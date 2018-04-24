@@ -41,13 +41,11 @@ predictions using a trained model and its :class:`~allennlp.service.predictors.p
 
 import argparse
 from contextlib import ExitStack
-import json
 import sys
 from typing import Optional, IO
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import sanitize
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 from allennlp.service.predictors.predictor import DEFAULT_PREDICTORS
@@ -110,7 +108,7 @@ def _run(predictor: Predictor,
 
     def _run_predictor(batch_data):
         if len(batch_data) == 1:
-            result = sanitize(predictor.predict(batch_data[0], cuda_device))
+            result = predictor.predict_json(batch_data[0], cuda_device)
             # Batch results return a list of json objects, so in
             # order to iterate over the result below we wrap this in a list.
             results = [result]

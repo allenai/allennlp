@@ -14,7 +14,9 @@ class TestSimpleSeq2SeqPredictor(TestCase):
         archive = load_archive('tests/fixtures/encoder_decoder/simple_seq2seq/serialization/model.tar.gz')
         predictor = Predictor.from_archive(archive, 'simple_seq2seq')
 
-        result = predictor.predict(inputs["source"])
+        result = predictor.predict_json(inputs)
+        result2 = predictor.predict(inputs["source"])
+        assert result == result2
 
         predicted_tokens = result.get("predicted_tokens")
         assert predicted_tokens is not None
