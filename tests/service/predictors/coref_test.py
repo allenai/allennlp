@@ -14,7 +14,7 @@ class TestCorefPredictor(TestCase):
 
         result = predictor.predict_json(inputs)
         result2 = predictor.predict(inputs["document"])
-        assert(result == result2)
+        assert result == result2
 
         document = result["document"]
         assert document == ['This', 'is', 'a', 'single', 'string',

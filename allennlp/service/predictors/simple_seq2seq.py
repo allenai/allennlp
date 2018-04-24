@@ -11,7 +11,7 @@ class SimpleSeq2SeqPredictor(Predictor):
     Predictor for the :class:`~allennlp.models.encoder_decoder.simple_seq2seq` model.
     """
 
-    def predict(self, source: str, cuda_device = -1) -> JsonDict:
+    def predict(self, source: str, cuda_device: int = -1) -> JsonDict:
         return self.predict_json({"source" : source}, cuda_device)
 
     @overrides

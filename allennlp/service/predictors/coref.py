@@ -21,7 +21,7 @@ class CorefPredictor(Predictor):
         # to also know sentence boundaries to propose valid mentions.
         self._spacy = get_spacy_model("en_core_web_sm", pos_tags=True, parse=True, ner=False)
 
-    def predict(self, document: str, cuda_device = -1) -> JsonDict:
+    def predict(self, document: str, cuda_device: int = -1) -> JsonDict:
         """
         Predict the coreference clusters in the given document.
 
@@ -33,15 +33,6 @@ class CorefPredictor(Predictor):
         Returns
         -------
         A dictionary representation of the predicted coreference clusters.
-        """
-        return self.predict_json({"document" : document})
-
-    @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
-
-        """
-        Expects JSON that looks like ``{"document": "string of document text"}``
-        and returns JSON that looks like:
 
         .. code-block:: js
 
@@ -61,6 +52,13 @@ class CorefPredictor(Predictor):
                 ....
               ]
             }
+        """
+        return self.predict_json({"document" : document}, cuda_device)
+
+    @overrides
+    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+        """
+        Expects JSON that looks like ``{"document": "string of document text"}``
         """
         document = json_dict["document"]
         spacy_document = self._spacy(document)

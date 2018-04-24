@@ -19,7 +19,7 @@ class TestConstituencyParserPredictor(TestCase):
 
         result = predictor.predict_json(inputs)
         result2 = predictor.predict(inputs["sentence"])
-        assert(result == result2)
+        assert result == result2
 
         assert len(result["spans"]) == 21 # number of possible substrings of the sentence.
         assert len(result["class_probabilities"]) == 21

@@ -18,7 +18,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         super().__init__(model, dataset_reader)
         self._tokenizer = SpacyWordSplitter(language='en_core_web_sm', pos_tags=True)
 
-    def predict(self, sentence: str, cuda_device = -1) -> JsonDict:
+    def predict(self, sentence: str, cuda_device: int = -1) -> JsonDict:
         """
         Predicts the semantic roles of the supplied sentence.
 
@@ -30,6 +30,15 @@ class SemanticRoleLabelerPredictor(Predictor):
         Returns
         -------
         A dictionary representation of the semantic roles in the sentence.
+
+        .. code-block:: js
+
+            {"words": [...],
+             "verbs": [
+                {"verb": "...", "description": "...", "tags": [...]},
+                ...
+                {"verb": "...", "description": "...", "tags": [...]},
+            ]}
         """
         return self.predict_json({"sentence" : sentence}, cuda_device)
 
