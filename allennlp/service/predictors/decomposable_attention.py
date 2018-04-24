@@ -1,7 +1,7 @@
-from typing import Dict, List, Tuple
+from typing import Tuple
 from overrides import overrides
 
-from allennlp.common.util import JsonDict, sanitize
+from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.service.predictors.predictor import Predictor
 
@@ -31,15 +31,12 @@ class DecomposableAttentionPredictor(Predictor):
         A dictionary where the key "label_probs" determines the probabilities of each of
         [entailment, contradiction, neutral].
         """
-        instance = self._build_instance(premise, hypothesis)
-        outputs = self._model.forward_on_instance(instance, cuda_device)
-        return sanitize(outputs)
+        return super().predict(premise=premise, hypothesis=hypothesis, cuda_device=cuda_device)
 
+    # pylint: disable=arguments-differ
     @overrides
-    def predict_batch(self, inputs: List[JsonDict], cuda_device: int = -1):
-        instances: List[Tuple[Instance, Dict]] =\
-            [(self._build_instance(**parameters), {}) for parameters in inputs]
-        return self._default_predict_batch(instances, cuda_device)
-
-    def _build_instance(self, premise: str, hypothesis: str) -> Instance:
-        return self._dataset_reader.text_to_instance(premise, hypothesis)
+    def _build_instance(self, premise: str, hypothesis: str) -> Tuple[Instance, JsonDict]: # type: ignore
+        """
+        Expects JSON that looks like ``{"premise": "...", "hypothesis": "..."}``.
+        """
+        return self._dataset_reader.text_to_instance(premise, hypothesis), {}

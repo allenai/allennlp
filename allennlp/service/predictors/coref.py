@@ -1,8 +1,8 @@
-from typing import List, Tuple
+from typing import Tuple
 
 from overrides import overrides
 
-from allennlp.common.util import get_spacy_model, JsonDict, sanitize
+from allennlp.common.util import get_spacy_model, JsonDict
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
@@ -34,6 +34,16 @@ class CorefPredictor(Predictor):
         Returns
         -------
         A dictionary representation of the predicted coreference clusters.
+        """
+        return super().predict(document=document, cuda_device=cuda_device)
+
+    # pylint: disable=arguments-differ
+    @overrides
+    def _build_instance(self, document: str) -> Tuple[Instance, JsonDict]: # type: ignore
+
+        """
+        Expects JSON that looks like ``{"document": "string of document text"}``
+        and returns JSON that looks like:
 
         .. code-block:: js
 
@@ -54,17 +64,6 @@ class CorefPredictor(Predictor):
               ]
             }
         """
-        instance, results_dict = self._build_instance(document)
-        outputs = self._model.forward_on_instance(instance, cuda_device)
-        results_dict.update(outputs)
-        return sanitize(results_dict)
-
-    @overrides
-    def predict_batch(self, inputs: List[JsonDict], cuda_device: int = -1):
-        instances = [self._build_instance(**parameters) for parameters in inputs]
-        return self._default_predict_batch(instances, cuda_device)
-
-    def _build_instance(self, document: str) -> Tuple[Instance, JsonDict]:
         spacy_document = self._spacy(document)
         sentences = [[token.text for token in sentence] for sentence in spacy_document.sents]
         flattened_sentences = [word for sentence in sentences for word in sentence]

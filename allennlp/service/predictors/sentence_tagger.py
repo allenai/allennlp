@@ -1,7 +1,7 @@
-from typing import List, Tuple
+from typing import Tuple
 from overrides import overrides
 
-from allennlp.common.util import JsonDict, sanitize
+from allennlp.common.util import JsonDict
 from allennlp.data import DatasetReader, Instance
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.models import Model
@@ -24,16 +24,10 @@ class SentenceTaggerPredictor(Predictor):
     # pylint: disable=arguments-differ
     @overrides
     def predict(self, sentence: str, cuda_device: int = -1) -> JsonDict: # type: ignore
-        instance, return_dict = self._build_instance(sentence)
-        outputs = self._model.forward_on_instance(instance, cuda_device)
-        return_dict.update(outputs)
-        return sanitize(return_dict)
+        return super().predict(sentence=sentence, cuda_device=cuda_device)
 
+    # pylint: disable=arguments-differ
     @overrides
-    def predict_batch(self, inputs: List[JsonDict], cuda_device: int = -1):
-        instances = [self._build_instance(**parameters) for parameters in inputs]
-        return self._default_predict_batch(instances, cuda_device)
-
     def _build_instance(self, sentence: str) -> Tuple[Instance, JsonDict]: # type: ignore
         """
         Expects JSON that looks like ``{"sentence": "..."}``.

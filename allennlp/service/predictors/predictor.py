@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 import json
 
 from allennlp.common import Registrable
@@ -44,14 +44,22 @@ class Predictor(Registrable):
         return json.dumps(outputs) + "\n"
 
     def predict(self, **kwargs) -> JsonDict:
+        cuda_device = kwargs.pop("cuda_device", -1)
+        instance, return_dict = self._build_instance(**kwargs)
+        outputs = self._model.forward_on_instance(instance, cuda_device)
+        return_dict.update(outputs)
+        return sanitize(return_dict)
+
+    def _build_instance(self, **kwargs) -> Tuple[Instance, JsonDict]:
+        """
+        Converts a JSON object into an :class:`~allennlp.data.instance.Instance`
+        and a ``JsonDict`` of information which the ``Predictor`` should pass through,
+        such as tokenised inputs.
+        """
         raise NotImplementedError
 
-    def predict_batch(self, inputs: List[JsonDict], cuda_device: int = -1):
-        raise NotImplementedError
-
-    def _default_predict_batch(self, built_instances: List[Tuple[Instance, Dict]], cuda_device: int = -1) \
-            -> List[JsonDict]:
-        instances, return_dicts = zip(*built_instances)
+    def predict_batch(self, inputs: List[JsonDict], cuda_device: int = -1) -> List[JsonDict]:
+        instances, return_dicts = zip(*self._build_instances_batch(inputs))
         outputs = self._model.forward_on_instances(instances, cuda_device)
         for output, return_dict in zip(outputs, return_dicts):
             return_dict.update(output)
@@ -66,6 +74,10 @@ class Predictor(Registrable):
         if the instances have some dependency on each other, this method should be overridden
         directly.
         """
+        instances = []
+        for parameters in inputs:
+            instances.append(self._build_instance(**parameters))
+        return instances
 
     @classmethod
     def from_path(cls, archive_path: str, predictor_name: str = None) -> 'Predictor':
