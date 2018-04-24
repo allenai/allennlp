@@ -49,7 +49,7 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
         return x
     elif isinstance(x, torch.autograd.Variable):
         return sanitize(x.data)
-    elif isinstance(x, torch._TensorBase):  # pylint: disable=protected-access
+    elif type(x) == torch.Tensor:  # pylint: disable=unidiomatic-typecheck
         # tensor needs to be converted to a list (and moved to cpu if necessary)
         return x.cpu().tolist()
     elif isinstance(x, numpy.ndarray):
