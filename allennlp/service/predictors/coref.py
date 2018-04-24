@@ -25,15 +25,6 @@ class CorefPredictor(Predictor):
         """
         Predict the coreference clusters in the given document.
 
-        Parameters
-        ----------
-        document : ``str``
-            A string representation of a document.
-
-        Returns
-        -------
-        A dictionary representation of the predicted coreference clusters.
-
         .. code-block:: js
 
             {
@@ -52,6 +43,15 @@ class CorefPredictor(Predictor):
                 ....
               ]
             }
+
+        Parameters
+        ----------
+        document : ``str``
+            A string representation of a document.
+
+        Returns
+        -------
+        A dictionary representation of the predicted coreference clusters.
         """
         return self.predict_json({"document" : document}, cuda_device)
 

@@ -20,16 +20,8 @@ class SemanticRoleLabelerPredictor(Predictor):
 
     def predict(self, sentence: str, cuda_device: int = -1) -> JsonDict:
         """
-        Predicts the semantic roles of the supplied sentence.
-
-        Parameters
-        ----------
-        sentence, ``str``
-            The sentence to parse via semantic role labeling.
-
-        Returns
-        -------
-        A dictionary representation of the semantic roles in the sentence.
+        Predicts the semantic roles of the supplied sentence and returns a dictionary
+        with the results.
 
         .. code-block:: js
 
@@ -39,6 +31,15 @@ class SemanticRoleLabelerPredictor(Predictor):
                 ...
                 {"verb": "...", "description": "...", "tags": [...]},
             ]}
+
+        Parameters
+        ----------
+        sentence, ``str``
+            The sentence to parse via semantic role labeling.
+
+        Returns
+        -------
+        A dictionary representation of the semantic roles in the sentence.
         """
         return self.predict_json({"sentence" : sentence}, cuda_device)
 
