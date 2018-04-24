@@ -50,11 +50,11 @@
 <r,r> -> [<<#1,#2>,<#2,#1>>, <r,r>]
 <r,r> -> fb:row.row.next
 <r,r> -> fb:type.object.type
-@START@ -> c
-@START@ -> d
-@START@ -> n
-@START@ -> p
-@START@ -> r
+@start@ -> c
+@start@ -> d
+@start@ -> n
+@start@ -> p
+@start@ -> r
 c -> [<#1,#1>, c]
 c -> [<#1,<#1,#1>>, c, c]
 c -> [<d,c>, d]
