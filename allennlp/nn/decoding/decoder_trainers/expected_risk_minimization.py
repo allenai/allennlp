@@ -49,7 +49,11 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
             # Finished model scores are log-probabilities of the predicted sequences. We convert
             # log probabilities into probabilities and re-normalize them to compute expected cost under
             # the distribution approximated by the beam search.
-            costs = torch.cat(finished_costs[batch_index])
+
+            # finished_costs[batch_index] could be a list of 0-tensors or 1-tensors. We use .view(-1)
+            # to make sure they're treated as 1-tensors and then concatenated appropriately.
+            # TODO(joelgrus): make sure this is correct
+            costs = torch.cat([cost.view(-1) for cost in finished_costs[batch_index]])
             logprobs = torch.cat(finished_model_scores[batch_index])
             # Unmasked softmax of log probabilities will convert them into probabilities and
             # renormalize them.

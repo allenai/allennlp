@@ -57,7 +57,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
         return total
 
     def test_forward_works_without_mask(self):
-        log_likelihood = self.crf(self.logits, self.tags).data[0]
+        log_likelihood = self.crf(self.logits, self.tags).item()
 
         # Now compute the log-likelihood manually
         manual_log_likelihood = 0.0
@@ -74,7 +74,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
             manual_log_likelihood += numerator - denominator
 
         # The manually computed log likelihood should equal the result of crf.forward.
-        assert manual_log_likelihood == approx(log_likelihood)
+        assert manual_log_likelihood.item() == approx(log_likelihood)
 
 
     def test_forward_works_with_mask(self):
@@ -84,7 +84,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
                 [1, 1, 0]
         ]))
 
-        log_likelihood = self.crf(self.logits, self.tags, mask).data[0]
+        log_likelihood = self.crf(self.logits, self.tags, mask).item()
 
         # Now compute the log-likelihood manually
         manual_log_likelihood = 0.0
@@ -107,7 +107,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
             manual_log_likelihood += numerator - denominator
 
         # The manually computed log likelihood should equal the result of crf.forward.
-        assert manual_log_likelihood == approx(log_likelihood)
+        assert manual_log_likelihood.item() == approx(log_likelihood)
 
 
     def test_viterbi_tags(self):
