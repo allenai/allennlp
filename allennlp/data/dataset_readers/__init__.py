@@ -11,6 +11,7 @@ from allennlp.data.dataset_readers.conll2003 import Conll2003DatasetReader
 from allennlp.data.dataset_readers.coreference_resolution import ConllCorefReader, WinobiasReader
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.language_modeling import LanguageModelingReader
+from allennlp.data.dataset_readers.nlvr import NlvrDatasetReader
 from allennlp.data.dataset_readers.penn_tree_bank import PennTreeBankConstituencySpanDatasetReader
 from allennlp.data.dataset_readers.reading_comprehension import SquadReader, TriviaQaReader
 from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
@@ -19,3 +20,4 @@ from allennlp.data.dataset_readers.sequence_tagging import SequenceTaggingDatase
 from allennlp.data.dataset_readers.snli import SnliReader
 from allennlp.data.dataset_readers.stanford_sentiment_tree_bank import (
         StanfordSentimentTreeBankDatasetReader)
+from allennlp.data.dataset_readers.wikitables import WikiTablesDatasetReader

@@ -1,0 +1,115 @@
+<<o,o>,<o,o>> -> negate_filter
+<b,<c,b>> -> member_color_all_equals
+<b,<c,b>> -> member_color_any_equals
+<b,<c,b>> -> member_color_none_equals
+<b,<e,b>> -> member_color_count_equals
+<b,<e,b>> -> member_color_count_greater
+<b,<e,b>> -> member_color_count_greater_equals
+<b,<e,b>> -> member_color_count_lesser
+<b,<e,b>> -> member_color_count_lesser_equals
+<b,<e,b>> -> member_color_count_not_equals
+<b,<e,b>> -> member_count_equals
+<b,<e,b>> -> member_count_greater
+<b,<e,b>> -> member_count_greater_equals
+<b,<e,b>> -> member_count_lesser
+<b,<e,b>> -> member_count_lesser_equals
+<b,<e,b>> -> member_count_not_equals
+<b,<e,b>> -> member_shape_count_equals
+<b,<e,b>> -> member_shape_count_greater
+<b,<e,b>> -> member_shape_count_greater_equals
+<b,<e,b>> -> member_shape_count_lesser
+<b,<e,b>> -> member_shape_count_lesser_equals
+<b,<e,b>> -> member_shape_count_not_equals
+<b,<e,t>> -> box_count_equals
+<b,<e,t>> -> box_count_greater
+<b,<e,t>> -> box_count_greater_equals
+<b,<e,t>> -> box_count_lesser
+<b,<e,t>> -> box_count_lesser_equals
+<b,<e,t>> -> box_count_not_equals
+<b,<s,b>> -> member_shape_all_equals
+<b,<s,b>> -> member_shape_any_equals
+<b,<s,b>> -> member_shape_none_equals
+<b,b> -> member_color_different
+<b,b> -> member_color_same
+<b,b> -> member_shape_different
+<b,b> -> member_shape_same
+<b,o> -> object_in_box
+<b,t> -> box_exists
+<o,<c,t>> -> object_color_all_equals
+<o,<c,t>> -> object_color_any_equals
+<o,<c,t>> -> object_color_none_equals
+<o,<e,t>> -> object_color_count_equals
+<o,<e,t>> -> object_color_count_greater
+<o,<e,t>> -> object_color_count_greater_equals
+<o,<e,t>> -> object_color_count_lesser
+<o,<e,t>> -> object_color_count_lesser_equals
+<o,<e,t>> -> object_color_count_not_equals
+<o,<e,t>> -> object_count_equals
+<o,<e,t>> -> object_count_greater
+<o,<e,t>> -> object_count_greater_equals
+<o,<e,t>> -> object_count_lesser
+<o,<e,t>> -> object_count_lesser_equals
+<o,<e,t>> -> object_count_not_equals
+<o,<e,t>> -> object_shape_count_equals
+<o,<e,t>> -> object_shape_count_greater
+<o,<e,t>> -> object_shape_count_greater_equals
+<o,<e,t>> -> object_shape_count_lesser
+<o,<e,t>> -> object_shape_count_lesser_equals
+<o,<e,t>> -> object_shape_count_not_equals
+<o,<s,t>> -> object_shape_all_equals
+<o,<s,t>> -> object_shape_any_equals
+<o,<s,t>> -> object_shape_none_equals
+<o,o> -> [<<o,o>,<o,o>>, <o,o>]
+<o,o> -> above
+<o,o> -> below
+<o,o> -> big
+<o,o> -> black
+<o,o> -> blue
+<o,o> -> bottom
+<o,o> -> circle
+<o,o> -> medium
+<o,o> -> same_color
+<o,o> -> same_shape
+<o,o> -> small
+<o,o> -> square
+<o,o> -> top
+<o,o> -> touch_bottom
+<o,o> -> touch_corner
+<o,o> -> touch_left
+<o,o> -> touch_object
+<o,o> -> touch_right
+<o,o> -> touch_top
+<o,o> -> touch_wall
+<o,o> -> triangle
+<o,o> -> yellow
+<o,t> -> object_exists
+@start@ -> t
+b -> [<b,<c,b>>, b, c]
+b -> [<b,<e,b>>, b, e]
+b -> [<b,<s,b>>, b, s]
+b -> [<b,b>, b]
+b -> all_boxes
+c -> color_black
+c -> color_blue
+c -> color_yellow
+e -> 1
+e -> 2
+e -> 3
+e -> 4
+e -> 5
+e -> 6
+e -> 7
+e -> 8
+e -> 9
+o -> [<b,o>, b]
+o -> [<o,o>, o]
+o -> all_objects
+s -> shape_circle
+s -> shape_square
+s -> shape_triangle
+t -> [<b,<e,t>>, b, e]
+t -> [<b,t>, b]
+t -> [<o,<c,t>>, o, c]
+t -> [<o,<e,t>>, o, e]
+t -> [<o,<s,t>>, o, s]
+t -> [<o,t>, o]
