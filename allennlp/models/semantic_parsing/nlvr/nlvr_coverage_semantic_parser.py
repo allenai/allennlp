@@ -176,7 +176,6 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                 actions: List[List[ProductionRuleArray]],
                 agenda: torch.LongTensor,
                 labels: torch.LongTensor = None,
-                max_num_decoded_sequences: List[int] = None,
                 epoch_num: List[int] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
@@ -238,11 +237,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                          checklist=initial_checklist_list)
 
         agenda_data = [agenda_[:, 0].cpu().data for agenda_ in agenda_list]
-        num_sequences = max_num_decoded_sequences[0] if max_num_decoded_sequences is not None else 1
-        outputs = self._decoder_trainer.decode(initial_state,  # type: ignore
+        outputs = self._decoder_trainer.decode(initial_state,
                                                self._decoder_step,
-                                               self._get_state_cost,
-                                               max_num_decoded_sequences=num_sequences)
+                                               self._get_state_cost)
         best_action_sequences = outputs['best_action_sequences']
         batch_action_strings = self._get_action_strings(actions, best_action_sequences)
         batch_denotations = self._get_denotations(batch_action_strings, worlds)

@@ -76,8 +76,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                 worlds: List[List[NlvrWorld]],
                 actions: List[List[ProductionRuleArray]],
                 target_action_sequences: torch.LongTensor = None,
-                labels: torch.LongTensor = None,
-                max_num_decoded_sequences: List[int] = None) -> Dict[str, torch.Tensor]:
+                labels: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Decoder logic for producing type constrained target sequences, trained to maximize marginal
@@ -124,14 +123,12 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                                                              self._decoder_step,
                                                              keep_final_unfinished_states=False)
         best_action_sequences: Dict[int, List[List[int]]] = {}
-        num_sequences = max_num_decoded_sequences[0] if max_num_decoded_sequences is not None else 1
         for i in range(batch_size):
             # Decoding may not have terminated with any completed logical forms, if `num_steps`
             # isn't long enough (or if the model is not trained enough and gets into an
             # infinite action loop).
             if i in best_final_states:
-                best_action_indices = [best_final_states[i][j].action_history[0]
-                                       for j in range(num_sequences)]
+                best_action_indices = [best_final_states[i][0].action_history[0]]
                 best_action_sequences[i] = best_action_indices
         batch_action_strings = self._get_action_strings(actions, best_action_sequences)
         batch_denotations = self._get_denotations(batch_action_strings, worlds)

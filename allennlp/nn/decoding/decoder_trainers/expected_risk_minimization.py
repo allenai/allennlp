@@ -36,16 +36,17 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
     def __init__(self,
                  beam_size: int,
                  normalize_by_length: bool,
-                 max_decoding_steps: int) -> None:
+                 max_decoding_steps: int,
+                 max_num_decoded_sequences: int = 1) -> None:
         self._beam_size = beam_size
         self._normalize_by_length = normalize_by_length
         self.max_decoding_steps = max_decoding_steps
+        self._max_num_decoded_sequences = max_num_decoded_sequences
 
     def decode(self,
                initial_state: DecoderState,
                decode_step: DecoderStep,
-               supervision: Callable[[StateType], torch.Tensor],
-               max_num_decoded_sequences: int = 1) -> Dict[str, torch.Tensor]:
+               supervision: Callable[[StateType], torch.Tensor]) -> Dict[str, torch.Tensor]:
         cost_function = supervision
         finished_states = self._get_finished_states(initial_state, decode_step)
         loss = nn_util.new_variable_with_data(initial_state.score[0], torch.Tensor([0.0]))
@@ -64,7 +65,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
         mean_loss = loss / len(finished_model_scores)
         return {'loss': mean_loss,
                 'best_action_sequences': self._get_best_action_sequences(finished_states,
-                                                                         max_num_decoded_sequences)}
+                                                                         self._max_num_decoded_sequences)}
 
     def _get_finished_states(self,
                              initial_state: DecoderState,

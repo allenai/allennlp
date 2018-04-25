@@ -9,7 +9,7 @@ import argparse
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir)))))
 
 from allennlp.data.dataset_readers import NlvrDatasetReader
-from allennlp.data.fields import MetadataField
+from allennlp.models import NlvrCoverageSemanticParser
 from allennlp.models.archival import load_archive
 from allennlp.semparse.worlds import NlvrWorld
 
@@ -20,6 +20,13 @@ def make_data(input_file: str,
               max_num_decoded_sequences: int) -> None:
     reader = NlvrDatasetReader(output_agendas=True)
     model = load_archive(archived_model_file).model
+    if not isinstance(model, NlvrCoverageSemanticParser):
+        model_type = type(model)
+        raise RuntimeError(f"Expected an archived NlvrCoverageSemanticParser, but found {model_type} instead")
+    # Tweaking the decoder trainer to coerce the it to generate a k-best list. Setting k to 100
+    # here, so that we can filter out the inconsistent ones later.
+    # pylint: disable=protected-access
+    model._decoder_trainer._max_num_decoded_sequences = 100
     num_outputs = 0
     num_sentences = 0
     with open(output_file, "w") as outfile:
@@ -30,9 +37,6 @@ def make_data(input_file: str,
             structured_representations = input_data["worlds"]
             labels = input_data["labels"]
             instance = reader.text_to_instance(sentence, structured_representations)
-            # Tweaking the instance to add an extra field to coerce the model to generate a k-best
-            # list. Setting k to 100 here, so that we can filter out the inconsistent ones later.
-            instance.fields["max_num_decoded_sequences"] = MetadataField(100)
             outputs = model.forward_on_instance(instance, cuda_device=-1)
             action_strings = outputs["best_action_strings"]
             correct_sequences = []
