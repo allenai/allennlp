@@ -84,6 +84,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         memory_cell = torch.stack([rnn_state.memory_cell for rnn_state in state.rnn_state])
         previous_action_embedding = torch.stack([rnn_state.previous_action_embedding
                                                  for rnn_state in state.rnn_state])
+        score_so_far = torch.stack(state.score)
 
         # (group_size, decoder_input_dim)
         decoder_input = self._input_projection_layer(torch.cat([attended_question,
@@ -152,7 +153,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             log_probs = util.masked_log_softmax(action_logits, action_mask)
 
         return self._compute_new_states(state,
-                                        log_probs,
+                                        log_probs + score_so_far,
                                         hidden_state,
                                         memory_cell,
                                         action_embeddings,
@@ -554,7 +555,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # regroup them later, as that's a really easy operation.
                 batch_index = state.batch_indices[group_index]
                 new_action_history = state.action_history[group_index] + [action]
-                new_score = state.score[group_index] + sorted_log_probs[group_index, action_index]
+                new_score = sorted_log_probs[group_index, action_index]
 
                 # `action_index` is the index in the _sorted_ tensors, but the action embedding
                 # matrix is _not_ sorted, so we need to get back the original, non-sorted action
