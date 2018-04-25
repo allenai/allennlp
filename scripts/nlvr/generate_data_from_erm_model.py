@@ -39,11 +39,11 @@ def make_data(input_file: str,
             instance = reader.text_to_instance(sentence, structured_representations)
             outputs = model.forward_on_instance(instance, cuda_device=-1)
             action_strings = outputs["best_action_strings"]
+            logical_forms = outputs["logical_form"]
             correct_sequences = []
             # Checking for consistency
             worlds = [NlvrWorld(structure) for structure in structured_representations]
-            for sequence in action_strings:
-                logical_form = worlds[0].get_logical_form(sequence)
+            for sequence, logical_form in zip(action_strings, logical_forms):
                 denotations = [world.execute(logical_form) for world in worlds]
                 denotations_are_correct = [label.lower() == str(denotation).lower()
                                            for label, denotation in zip(labels, denotations)]
