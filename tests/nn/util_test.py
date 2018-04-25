@@ -62,12 +62,6 @@ class TestNnUtil(AllenNlpTestCase):
         # Test restoration indices correctly recover the original tensor.
         assert sorted_tensor.index_select(0, reverse_indices).data.equal(tensor.data)
 
-    def test_sort_tensor_by_length_raises_on_non_variable_inputs(self):
-        tensor = torch.rand([5, 7, 9])
-        sequence_lengths = Variable(torch.LongTensor([3, 4, 1, 5, 7]))
-        with pytest.raises(ConfigurationError):
-            _ = util.sort_batch_by_length(tensor, sequence_lengths)
-
     def test_get_final_encoder_states(self):
         encoder_outputs = Variable(torch.Tensor([[[1, 2, 3, 4],
                                                   [5, 6, 7, 8],

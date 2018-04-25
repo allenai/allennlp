@@ -47,8 +47,6 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     if isinstance(x, (str, float, int, bool)):
         # x is already serializable
         return x
-    elif isinstance(x, torch.autograd.Variable):
-        return sanitize(x.data)
     elif type(x) == torch.Tensor:  # pylint: disable=unidiomatic-typecheck
         # tensor needs to be converted to a list (and moved to cpu if necessary)
         return x.cpu().tolist()

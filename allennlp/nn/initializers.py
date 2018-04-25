@@ -88,10 +88,6 @@ def uniform_unit_scaling(tensor: torch.Tensor, nonlinearity: str = "linear"):
     -------
     The initialised tensor.
     """
-    if isinstance(tensor, Variable):
-        uniform_unit_scaling(tensor.data, nonlinearity)
-        return tensor
-
     size = 1.
     # Estimate the input size. This won't work perfectly,
     # but it covers almost all use cases where this initialiser
