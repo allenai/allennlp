@@ -40,7 +40,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
                  max_num_decoded_sequences: int = 1) -> None:
         self._beam_size = beam_size
         self._normalize_by_length = normalize_by_length
-        self.max_decoding_steps = max_decoding_steps
+        self._max_decoding_steps = max_decoding_steps
         self._max_num_decoded_sequences = max_num_decoded_sequences
 
     def decode(self,
@@ -64,8 +64,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
             loss += renormalized_probs.dot(costs)
         mean_loss = loss / len(finished_model_scores)
         return {'loss': mean_loss,
-                'best_action_sequences': self._get_best_action_sequences(finished_states,
-                                                                         self._max_num_decoded_sequences)}
+                'best_action_sequences': self._get_best_action_sequences(finished_states)}
 
     def _get_finished_states(self,
                              initial_state: DecoderState,
@@ -73,7 +72,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
         finished_states = []
         states = [initial_state]
         num_steps = 0
-        while states and num_steps < self.max_decoding_steps:
+        while states and num_steps < self._max_decoding_steps:
             next_states = []
             grouped_state = states[0].combine_states(states)
             # These states already come sorted.
@@ -113,11 +112,10 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
         return batch_costs
 
     def _get_best_action_sequences(self,
-                                   finished_states: List[StateType],
-                                   max_num_decoded_sequences: int = 1) -> Dict[int, List[List[int]]]:
+                                   finished_states: List[StateType]) -> Dict[int, List[List[int]]]:
         """
         Returns the best action sequences for each item based on model scores. We return at most
-        ``max_num_decoded_sequences`` number of sequences per instance.
+        ``self._max_num_decoded_sequences`` number of sequences per instance.
         """
         batch_action_histories: Dict[int, List[List[int]]] = defaultdict(list)
         for state in finished_states:
@@ -130,7 +128,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
         for batch_index, scores in batch_scores.items():
             _, sorted_indices = torch.cat(scores).sort(-1, descending=True)
             cpu_indices = [int(index) for index in sorted_indices.data.cpu().numpy()]
-            best_action_indices = cpu_indices[:max_num_decoded_sequences]
+            best_action_indices = cpu_indices[:self._max_num_decoded_sequences]
             instance_best_sequences = [batch_action_histories[batch_index][i]
                                        for i in best_action_indices]
             best_action_sequences[batch_index] = instance_best_sequences
