@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Callable, List, Dict, Tuple, Union
 
 from overrides import overrides
@@ -108,9 +109,20 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             self._dynamic_cost_rate = dynamic_cost_weight["rate"]
         self._penalize_non_agenda_actions = penalize_non_agenda_actions
         self._last_epoch_in_forward: int = None
+        # TODO (pradeep): Checking whether file exists here to avoid raising an error when we've
+        # copied a trained ERM model from a different machine and the original MML model that was
+        # used to initialize it does not exist on the current machine. This may not be the best
+        # solution for the problem.
         if initial_mml_model_file is not None:
-            archive = load_archive(initial_mml_model_file)
-            self._initialize_weights_from_archive(archive)
+            if os.path.isfile(initial_mml_model_file):
+                archive = load_archive(initial_mml_model_file)
+                self._initialize_weights_from_archive(archive)
+            else:
+                # A model file is passed, but it does not exist. This is expected to happen when
+                # you're using a trained ERM model to decode. But it may also happen if the path to
+                # the file is really just incorrect. So throwing a warning.
+                logger.warning("MML model file for initializing weights is passed, but does not exist."
+                               " This is fine if you're just decoding.")
 
     def _initialize_weights_from_archive(self, archive: Archive) -> None:
         logger.info("Initializing weights from MML model.")
@@ -235,7 +247,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         outputs = self._decoder_trainer.decode(initial_state,
                                                self._decoder_step,
                                                self._get_state_cost)
-        best_action_sequences = outputs['best_action_sequence']
+        best_action_sequences = outputs['best_action_sequences']
         batch_action_strings = self._get_action_strings(actions, best_action_sequences)
         batch_denotations = self._get_denotations(batch_action_strings, worlds)
         if labels is not None:
@@ -299,15 +311,18 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         return target_checklist, terminal_actions, checklist_mask
 
     def _update_metrics(self,
-                        action_strings: List[List[str]],
+                        action_strings: List[List[List[str]]],
                         worlds: List[List[NlvrWorld]],
                         label_strings: List[List[str]],
                         possible_actions: List[List[ProductionRuleArray]],
                         agenda_data: List[List[int]]) -> None:
         # TODO(pradeep): Move this to the base class.
+        # TODO(pradeep): action_strings contains k-best lists. This method only uses the top decoded
+        # sequence currently. Maybe define top-k metrics?
         batch_size = len(worlds)
         for i in range(batch_size):
-            instance_action_strings = action_strings[i]
+            # Using only the top decoded sequence per instance.
+            instance_action_strings = action_strings[i][0]
             sequence_is_correct = [False]
             in_agenda_ratio = 0.0
             instance_possible_actions = possible_actions[i]

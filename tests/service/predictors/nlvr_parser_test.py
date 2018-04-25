@@ -31,7 +31,9 @@ class TestNlvrParserPredictor(AllenNlpTestCase):
         result = predictor.predict_json(self.inputs)
         assert 'logical_form' in result
         assert 'denotations' in result
-        assert len(result['denotations']) == 2  # Because there are two worlds in the input.
+        # result['denotations'] is a list corresponding to k-best logical forms, where k is 1 by
+        # default.
+        assert len(result['denotations'][0]) == 2  # Because there are two worlds in the input.
 
     def test_predictor_with_direct_parser(self):
         archive_dir = 'tests/fixtures/semantic_parsing/nlvr_direct_semantic_parser/serialization'
@@ -41,4 +43,6 @@ class TestNlvrParserPredictor(AllenNlpTestCase):
         result = predictor.predict_json(self.inputs)
         assert 'logical_form' in result
         assert 'denotations' in result
-        assert len(result['denotations']) == 2  # Because there are two worlds in the input.
+        # result['denotations'] is a list corresponding to k-best logical forms, where k is 1 by
+        # default.
+        assert len(result['denotations'][0]) == 2  # Because there are two worlds in the input.
