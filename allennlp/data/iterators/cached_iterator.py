@@ -2,9 +2,11 @@ import logging
 import random
 from typing import Iterable, Dict, List
 from overrides import overrides
+from allennlp.common.util import is_lazy
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.bucket_iterator import BucketIterator
 from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -23,18 +25,25 @@ class CachedIterator(BucketIterator):
         See :class:`BucketIterator`.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self._max_instances_in_memory:
+            raise ConfigurationError('max_instances_in_memory should not be set for CachedIterator. '
+                                     'Memory needs to be big enough to cache the whole dataset.')
+        self.cached_batches: Dict[int, List] = {}
+
     @overrides
     def _yield_one_epoch(self, instances: Iterable[Instance], shuffle: bool, cuda_device: int, for_training: bool):
-        if not hasattr(self, 'cached_batches'):
-            # instances id -> list[batches]
-            self.cached_batches: Dict[int, List] = {}  # pylint: disable=attribute-defined-outside-init
+        if is_lazy(instances):
+            raise ConfigurationError('CachedIterator does not work with lazy dataset readers.')
 
         instances_id = id(instances)
         if instances_id in self.cached_batches:
             logger.info('returning cached batches of instances id: %d', instances_id)
             batches = self.cached_batches[instances_id]
             if shuffle:
-                random.shuffle(batches)  # shuffle the list of batches but not each batch
+                random.shuffle(batches)  # shuffle the list of batches but not the rows of each batch
             for batch in batches:
                 yield batch
         else:
