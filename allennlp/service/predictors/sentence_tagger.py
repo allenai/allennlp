@@ -11,7 +11,7 @@ from allennlp.service.predictors.predictor import Predictor
 @Predictor.register('sentence-tagger')
 class SentenceTaggerPredictor(Predictor):
     """
-    Wrapper for any model that takes in a sentence and returns
+    Predictor for any model that takes in a sentence and returns
     a single set of tags for it.  In particular, it can be used with
     the :class:`~allennlp.models.crf_tagger.CrfTagger` model
     and also
@@ -21,8 +21,10 @@ class SentenceTaggerPredictor(Predictor):
         super().__init__(model, dataset_reader)
         self._tokenizer = SpacyWordSplitter(language='en_core_web_sm', pos_tags=True)
 
-    @overrides
+    def predict(self, sentence: str, cuda_device: int = -1) -> JsonDict:
+        return self.predict_json({"sentence" : sentence}, cuda_device)
 
+    @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
         """
         Expects JSON that looks like ``{"sentence": "..."}``.
