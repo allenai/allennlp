@@ -45,7 +45,7 @@ def must_override_method(method: Callable):
     setattr(method, _MUST_OVERRIDE, True)
     return method
 
-def check_is_overridden(method: Callable, name: str = ''):
+def check_is_overridden(method: Callable, name: str):
     """
     Makes sure that a method does not have its "must override" attribute set,
     which it only will if you used the ``@must_override_method`` decorator
