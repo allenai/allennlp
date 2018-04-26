@@ -71,6 +71,14 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         self.entity_types = entity_types
         self.debug_info = debug_info
 
+    def print_action_history(self, group_index: int = None) -> None:
+        scores = self.score if group_index is None else [self.score[group_index]]
+        batch_indices = self.batch_indices if group_index is None else [self.batch_indices[group_index]]
+        histories = self.action_history if group_index is None else [self.action_history[group_index]]
+        for score, batch_index, action_history in zip(scores, batch_indices, histories):
+            print('  ', score.data.cpu().numpy()[0],
+                  [self.possible_actions[batch_index][action][0] for action in action_history])
+
     def get_valid_actions(self) -> List[List[int]]:
         """
         Returns a list of valid actions for each element of the group.

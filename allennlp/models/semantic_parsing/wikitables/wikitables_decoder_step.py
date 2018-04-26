@@ -85,6 +85,9 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         previous_action_embedding = torch.stack([rnn_state.previous_action_embedding
                                                  for rnn_state in state.rnn_state])
 
+        # The scores from all prior state transitions until now.  Shape: (group_size, 1).
+        scores_so_far = torch.stack(state.score)
+
         # (group_size, decoder_input_dim)
         decoder_input = self._input_projection_layer(torch.cat([attended_question,
                                                                 previous_action_embedding], -1))
@@ -141,15 +144,22 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                               entity_action_mask.float()) + mix1
                 embedded_action_probs = util.masked_log_softmax(embedded_action_logits,
                                                                 embedded_action_mask.float()) + mix2
-                log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=1)
+                current_log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=1)
             else:
                 action_logits = torch.cat([embedded_action_logits, entity_action_logits], dim=1)
                 action_mask = torch.cat([embedded_action_mask, entity_action_mask], dim=1).float()
-                log_probs = util.masked_log_softmax(action_logits, action_mask)
+                current_log_probs = util.masked_log_softmax(action_logits, action_mask)
         else:
             action_logits = embedded_action_logits
             action_mask = embedded_action_mask.float()
-            log_probs = util.masked_log_softmax(action_logits, action_mask)
+            current_log_probs = util.masked_log_softmax(action_logits, action_mask)
+
+        # current_log_probs is shape (group_size, num_actions).  We're broadcasting an addition
+        # here with scores_so_far, which has shape (group_size, 1).  This is now the total score
+        # for each state after taking each action.  We're going to sort by this in
+        # `_compute_new_states`, so it's important that this is the total score, not just the score
+        # for the current action.
+        log_probs = scores_so_far + current_log_probs
 
         return self._compute_new_states(state,
                                         log_probs,
@@ -554,7 +564,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # regroup them later, as that's a really easy operation.
                 batch_index = state.batch_indices[group_index]
                 new_action_history = state.action_history[group_index] + [action]
-                new_score = state.score[group_index] + sorted_log_probs[group_index, action_index]
+                new_score = sorted_log_probs[group_index, action_index]
 
                 # `action_index` is the index in the _sorted_ tensors, but the action embedding
                 # matrix is _not_ sorted, so we need to get back the original, non-sorted action
