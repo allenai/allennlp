@@ -32,7 +32,7 @@ RUN apt-get update --fix-missing && apt-get install -y \
     libevent-dev \
     build-essential && \
     rm -rf /var/lib/apt/lists/*
-    
+
 # Install Java.
 RUN echo "deb http://http.debian.net/debian jessie-backports main" >>/etc/apt/sources.list
 RUN apt-get update
@@ -52,11 +52,16 @@ RUN INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh
 COPY demo/ demo/
 RUN cd demo && npm install && npm run build && cd ..
 
+COPY scripts/ scripts/
+# Compile EVALB - required for parsing evaluation.
+# EVALB produces scary looking c-level output which we don't
+# care about, so we redirect the output to /dev/null.
+RUN cd scripts/EVALB && make > /dev/null && cd ..
+
 COPY allennlp/ allennlp/
 COPY tests/ tests/
 COPY pytest.ini pytest.ini
 COPY .pylintrc .pylintrc
-COPY scripts/ scripts/
 COPY tutorials/ tutorials/
 COPY training_config training_config/
 COPY setup.py setup.py
@@ -64,6 +69,7 @@ COPY setup.py setup.py
 # Add model caching
 ARG CACHE_MODELS=false
 RUN ./scripts/cache_models.py
+
 
 # Optional argument to set an environment variable with the Git SHA
 ARG SOURCE_COMMIT
