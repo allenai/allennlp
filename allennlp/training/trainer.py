@@ -88,6 +88,21 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
     return total_norm
 
 
+def move_optimizer_to_cuda(optimizer):
+    """
+    Move the optimizer state to GPU, if necessary.
+    After calling, any parameter specific state in the optimizer
+    will be located on the same device as the parameter.
+    """
+    for param_group in optimizer.param_groups:
+        for param in param_group['params']:
+            if param.is_cuda:
+                param_state = optimizer.state[param]
+                for k in param_state.keys():
+                    if torch.is_tensor(param_state[k]):
+                        param_state[k] = param_state[k].cuda(device=param.get_device())
+
+
 class TensorboardWriter:
     """
     Wraps a pair of ``SummaryWriter`` instances but is a no-op if they're ``None``.
@@ -856,6 +871,7 @@ class Trainer:
         training_state = torch.load(training_state_path, map_location=util.device_mapping(-1))
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
+        move_optimizer_to_cuda(self._optimizer)
 
         # We didn't used to save `validation_metric_per_epoch`, so we can't assume
         # that it's part of the trainer state. If it's not there, an empty list is all
