@@ -112,7 +112,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
         self._indexed_entity_texts: Dict[str, TokenList] = None
         self._max_table_tokens = max_table_tokens
 
-        feature_extractors = feature_extractors or [
+        feature_extractors = feature_extractors if feature_extractors is not None else [
                 'exact_token_match',
                 'contains_exact_token_match',
                 'lemma_match',
