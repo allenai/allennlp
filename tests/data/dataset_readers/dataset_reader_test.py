@@ -19,10 +19,9 @@ class TestDatasetReader:
     def test_raises_without_override(self):
         params = Params({'type': 'not-overridden'})
 
-        with pytest.raises(ConfigurationError) as exc:
+        with pytest.raises(ConfigurationError,
+                           message="You must override DatasetReader.from_params in your subclass"):
             _ = DatasetReader.from_params(params)
-
-        assert exc.value.message == "You must override DatasetReader.from_params in your subclass"
 
     def test_succeeds_with_override(self):
         params = Params({'type': 'yes-overridden'})

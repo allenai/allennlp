@@ -23,10 +23,8 @@ class TestModel:
     def test_raises_without_override(self):
         params = Params({'type': 'not-overridden'})
 
-        with pytest.raises(ConfigurationError) as exc:
+        with pytest.raises(ConfigurationError, message="You must override Model.from_params in your subclass"):
             _ = Model.from_params(None, params)
-
-        assert exc.value.message == "You must override Model.from_params in your subclass"
 
     def test_succeeds_with_override(self):
         params = Params({'type': 'yes-overridden'})
