@@ -90,12 +90,7 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
                            cuda_device=args.cuda_device,
                            overrides=args.overrides)
 
-    if args.predictor:
-        # Predictor explicitly specified, so use it
-        return Predictor.from_archive(archive, args.predictor)
-    else:
-        # Otherwise, use the default
-        return Predictor.from_archive(archive)
+    return Predictor.from_archive(archive, args.predictor)
 
 def _run(predictor: Predictor,
          input_file: IO,

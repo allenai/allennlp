@@ -106,8 +106,9 @@ class Predictor(Registrable):
 
         if not predictor_name:
             model_type = config.get("model").get("type")
-            assert model_type in DEFAULT_PREDICTORS, f"No default predictor for model type {model_type}.\n"\
-                                                     f"Please specify a predictor explicitly."
+            if not model_type in DEFAULT_PREDICTORS:
+                raise ConfigurationError(f"No default predictor for model type {model_type}.\n"\
+                                         f"Please specify a predictor explicitly.")
             predictor_name = DEFAULT_PREDICTORS[model_type]
 
         dataset_reader_params = config["dataset_reader"]
