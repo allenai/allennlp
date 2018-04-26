@@ -100,8 +100,7 @@ def move_optimizer_to_cuda(optimizer):
                 param_state = optimizer.state[param]
                 for k in param_state.keys():
                     if torch.is_tensor(param_state[k]):
-                        param_state[k] = param_state[k].cuda(
-                                        device=param.get_device())
+                        param_state[k] = param_state[k].cuda(device=param.get_device())
 
 
 class TensorboardWriter:
