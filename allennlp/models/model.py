@@ -3,7 +3,7 @@
 an AllenNLP model.
 """
 
-from typing import Dict, Union, List
+from typing import Dict, Optional, Union, List
 import os
 import logging
 
@@ -16,6 +16,8 @@ from allennlp.data import Instance, Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.nn import util
 from allennlp.nn.regularizers import RegularizerApplicator
+
+from overrides import overrides
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -50,6 +52,18 @@ class Model(torch.nn.Module, Registrable):
         super().__init__()
         self.vocab = vocab
         self._regularizer = regularizer
+
+        self.cuda_device: Optional[int] = None
+
+    @overrides
+    def cpu(self):
+        self.cuda_device = -1
+        super().cpu()
+
+    @overrides
+    def cuda(self, device: int):
+        self.cuda_device = device
+        super().cuda(device)
 
     def get_regularization_penalty(self) -> Union[float, torch.autograd.Variable]:
         """
@@ -109,7 +123,7 @@ class Model(torch.nn.Module, Registrable):
         """
         raise NotImplementedError
 
-    def forward_on_instance(self, instance: Instance, cuda_device: int) -> Dict[str, numpy.ndarray]:
+    def forward_on_instance(self, instance: Instance, cuda_device: int = None) -> Dict[str, numpy.ndarray]:
         """
         Takes an :class:`~allennlp.data.instance.Instance`, which typically has raw text in it,
         converts that text into arrays using this model's :class:`Vocabulary`, passes those arrays
@@ -117,11 +131,15 @@ class Model(torch.nn.Module, Registrable):
         and returns the result.  Before returning the result, we convert any ``torch.autograd.Variables``
         or ``torch.Tensors`` into numpy arrays and remove the batch dimension.
         """
+        if not cuda_device:
+            assert self.cuda_device, "No cuda_device specified and the model's cuda_device is None."
+            cuda_device = self.cuda_device
+
         return self.forward_on_instances([instance], cuda_device)[0]
 
     def forward_on_instances(self,
                              instances: List[Instance],
-                             cuda_device: int) -> List[Dict[str, numpy.ndarray]]:
+                             cuda_device: int = None) -> List[Dict[str, numpy.ndarray]]:
         """
         Takes a list of  :class:`~allennlp.data.instance.Instance`s, converts that text into
         arrays using this model's :class:`Vocabulary`, passes those arrays through
@@ -143,6 +161,10 @@ class Model(torch.nn.Module, Registrable):
         -------
         A list of the models output for each instance.
         """
+        if not cuda_device:
+            assert self.cuda_device, "No cuda_device specified and the model's cuda_device is None."
+            cuda_device = self.cuda_device
+
         dataset = Batch(instances)
         dataset.index_instances(self.vocab)
         model_input = dataset.as_tensor_dict(cuda_device=cuda_device, for_training=False)

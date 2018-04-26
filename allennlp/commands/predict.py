@@ -101,12 +101,12 @@ def _run(predictor: Predictor,
 
     def _run_predictor(batch_data):
         if len(batch_data) == 1:
-            result = predictor.predict_json(batch_data[0], cuda_device)
+            result = predictor.predict_json(batch_data[0])
             # Batch results return a list of json objects, so in
             # order to iterate over the result below we wrap this in a list.
             results = [result]
         else:
-            results = predictor.predict_batch_json(batch_data, cuda_device)
+            results = predictor.predict_batch_json(batch_data)
 
         for model_input, output in zip(batch_data, results):
             string_output = predictor.dump_line(output)

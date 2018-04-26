@@ -18,7 +18,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         super().__init__(model, dataset_reader)
         self._tokenizer = SpacyWordSplitter(language='en_core_web_sm', pos_tags=True)
 
-    def predict(self, sentence: str, cuda_device: int = -1) -> JsonDict:
+    def predict(self, sentence: str) -> JsonDict:
         """
         Predicts the semantic roles of the supplied sentence and returns a dictionary
         with the results.
@@ -41,7 +41,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         -------
         A dictionary representation of the semantic roles in the sentence.
         """
-        return self.predict_json({"sentence" : sentence}, cuda_device)
+        return self.predict_json({"sentence" : sentence})
 
 
     @staticmethod
@@ -110,7 +110,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         return instances, result_dict
 
     @overrides
-    def predict_batch_json(self, inputs: List[JsonDict], cuda_device: int = -1) -> List[JsonDict]:
+    def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
         """
         Expects JSON that looks like ``[{"sentence": "..."}, {"sentence": "..."}, ...]``
         and returns JSON that looks like
@@ -155,7 +155,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         # Run the model on the batches.
         outputs = []
         for batch in batched_instances:
-            outputs.extend(self._model.forward_on_instances(batch, cuda_device))
+            outputs.extend(self._model.forward_on_instances(batch))
 
         sentence_index = 0
         for results in return_dicts:
@@ -181,7 +181,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         return sanitize(return_dicts)
 
     @overrides
-    def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
+    def predict_json(self, inputs: JsonDict) -> JsonDict:
         """
         Expects JSON that looks like ``{"sentence": "..."}``
         and returns JSON that looks like
@@ -205,7 +205,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         if not instances:
             return sanitize(results)
 
-        outputs = self._model.forward_on_instances(instances, cuda_device)
+        outputs = self._model.forward_on_instances(instances)
 
         for output, verb in zip(outputs, verbs_for_instances):
             tags = output['tags']
