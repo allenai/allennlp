@@ -13,8 +13,6 @@ class TestCorefPredictor(TestCase):
         predictor = Predictor.from_archive(archive, 'coreference-resolution')
 
         result = predictor.predict_json(inputs)
-        result2 = predictor.predict(inputs["document"])
-        assert result == result2
 
         document = result["document"]
         assert document == ['This', 'is', 'a', 'single', 'string',
