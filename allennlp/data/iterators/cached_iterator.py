@@ -19,10 +19,6 @@ class CachedIterator(BucketIterator):
     Using this iterator saves run time but costs more memory to store the cached batches. It should
     be used only if the dataset can fit in memory. This iterator shouldn't be used with the lazy
     mode.
-
-    Parameters:
-    ----------
-        See :class:`BucketIterator`.
     """
 
     def __init__(self, *args, **kwargs):
