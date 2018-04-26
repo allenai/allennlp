@@ -10,7 +10,7 @@ import logging
 import numpy
 import torch
 
-from allennlp.common.checks import ConfigurationError, must_override_method, check_is_overridden
+from allennlp.common.checks import must_override_method, check_is_overridden
 from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary
