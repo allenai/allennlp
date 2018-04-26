@@ -322,7 +322,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         batch_size = len(worlds)
         for i in range(batch_size):
             # Using only the top decoded sequence per instance.
-            instance_action_strings = action_strings[i][0]
+            instance_action_strings = action_strings[i][0] if action_strings[i] else []
             sequence_is_correct = [False]
             in_agenda_ratio = 0.0
             instance_possible_actions = possible_actions[i]
