@@ -48,6 +48,6 @@ class TestCachedIterator(IteratorTest):
 
         batches4 = [x for x in iterator(self.instances, shuffle=True, num_epochs=2)]
         ids4 = [id(x) for x in batches4]
+        assert ids4[:3] != ids4[3:]
         ids1 = [id(x) for x in batches]
-        assert ids4 != ids1
         assert sorted(ids4) == sorted(ids1)
