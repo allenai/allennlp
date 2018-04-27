@@ -637,6 +637,7 @@ class WikiTablesSemanticParser(Model):
 
     def _embed_actions(self, actions: List[List[ProductionRuleArray]]) -> Tuple[torch.Tensor,
                                                                                 torch.Tensor,
+                                                                                torch.Tensor,
                                                                                 Dict[Tuple[int, int], int]]:
         """
         Given all of the possible actions for all batch instances, produce an embedding for them.

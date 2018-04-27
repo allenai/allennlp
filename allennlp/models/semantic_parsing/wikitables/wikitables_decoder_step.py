@@ -372,7 +372,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
 
     @staticmethod
     def _get_action_embeddings(state: WikiTablesDecoderState,
-                               actions_to_embed: List[List[int]]) -> Tuple[torch.Tensor, torch.Tensor]:
+                               actions_to_embed: List[List[int]]) -> Tuple[torch.Tensor,
+                                                                           torch.Tensor,
+                                                                           torch.Tensor,
+                                                                           torch.Tensor]:
         """
         Returns an embedded representation for all actions in ``actions_to_embed``, using the state
         in ``WikiTablesDecoderState``.
