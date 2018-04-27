@@ -117,15 +117,14 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # action_embeddings: (group_size, num_embedded_actions, action_embedding_dim)
         # output_action_embeddings: (group_size, num_embedded_actions, action_embedding_dim)
         # action_mask: (group_size, num_embedded_actions)
-        action_embeddings, output_action_embeddings, embedded_action_mask = \
+        action_embeddings, output_action_embeddings, action_biases, embedded_action_mask = \
                 self._get_action_embeddings(state, actions_to_embed)
-        print(action_embeddings.size())
-        print(output_action_embeddings.size())
         # We'll do a batch dot product here with `bmm`.  We want `dot(predicted_action_embedding,
         # action_embedding)` for each `action_embedding`, and we can get that efficiently with
         # `bmm` and some squeezing.
         # Shape: (group_size, num_embedded_actions)
         embedded_action_logits = action_embeddings.bmm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
+        embedded_action_logits = embedded_action_logits + action_biases.squeeze(-1)
 
         if actions_to_link:
             # entity_action_logits: (group_size, num_entity_actions)
@@ -253,6 +252,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                    grammar_state=[new_grammar_state],
                                                    action_embeddings=state.action_embeddings,
                                                    output_action_embeddings=state.output_action_embeddings,
+                                                   action_biases=state.action_biases,
                                                    action_indices=state.action_indices,
                                                    possible_actions=state.possible_actions,
                                                    flattened_linking_scores=state.flattened_linking_scores,
@@ -397,6 +397,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             selecting actions, the second is used as the decoder output (which is the input at the
             next timestep).  This is similar to having separate word embeddings and softmax layer
             weights in a language model or MT model.
+        action_biases : ``torch.FloatTensor``
+            A bias weight for predicting each action.  Shape is ``(group_size, num_actions, 1)``.
         action_mask : ``torch.LongTensor``
             A mask of shape ``(group_size, num_actions)`` indicating which ``(group_index,
             action_index)`` pairs were merely added as padding.
@@ -422,9 +424,12 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         flattened_output_embeddings = state.output_action_embeddings.index_select(0, flattened_actions)
         output_embeddings = flattened_output_embeddings.view(group_size, max_num_actions, action_embedding_dim)
 
+        flattened_biases = state.action_biases.index_select(0, flattened_actions)
+        biases = flattened_biases.view(group_size, max_num_actions, 1)
+
         sequence_lengths = Variable(action_embeddings.data.new(num_actions))
         action_mask = util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
-        return action_embeddings, output_embeddings, action_mask
+        return action_embeddings, output_embeddings, biases, action_mask
 
     def _get_entity_action_logits(self,
                                   state: WikiTablesDecoderState,
@@ -614,6 +619,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                    grammar_state=[new_grammar_state],
                                                    action_embeddings=state.action_embeddings,
                                                    output_action_embeddings=state.output_action_embeddings,
+                                                   action_biases=state.action_biases,
                                                    action_indices=state.action_indices,
                                                    possible_actions=state.possible_actions,
                                                    flattened_linking_scores=state.flattened_linking_scores,

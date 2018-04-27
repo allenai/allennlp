@@ -110,6 +110,7 @@ class WikiTablesSemanticParser(Model):
         num_actions = vocab.get_vocab_size(self._rule_namespace)
         self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
         self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
+        self._action_biases = Embedding(num_embeddings=num_actions, embedding_dim=1)
 
         # This is what we pass as input in the first step of decoding, when we don't have a
         # previous action, or a previous question attention.
@@ -292,7 +293,7 @@ class WikiTablesSemanticParser(Model):
 
         initial_score = Variable(embedded_question.data.new(batch_size).fill_(0))
 
-        action_embeddings, output_action_embeddings, action_indices = self._embed_actions(actions)
+        action_embeddings, output_action_embeddings, action_biases, action_indices = self._embed_actions(actions)
 
         _, num_entities, num_question_tokens = linking_scores.size()
         flattened_linking_scores, actions_to_entities = self._map_entity_productions(linking_scores,
@@ -331,6 +332,7 @@ class WikiTablesSemanticParser(Model):
                                                grammar_state=initial_grammar_state,
                                                action_embeddings=action_embeddings,
                                                output_action_embeddings=output_action_embeddings,
+                                               action_biases=action_biases,
                                                action_indices=action_indices,
                                                possible_actions=actions,
                                                flattened_linking_scores=flattened_linking_scores,
@@ -650,6 +652,8 @@ class WikiTablesSemanticParser(Model):
             Has shape ``(num_unique_actions, action_embedding_dim)``.
         output_action_embeddings : ``torch.Tensor``
             Has shape ``(num_unique_actions, action_embedding_dim)``.
+        action_biases : ``torch.Tensor``
+            Has shape ``(num_unique_actions, 1)``.
         action_map : ``Dict[Tuple[int, int], int]``
             Maps ``(batch_index, action_index)`` in the input action list to ``action_index`` in
             the ``action_embeddings`` tensor.  All non-embeddable actions get mapped to `-1` here.
@@ -662,6 +666,7 @@ class WikiTablesSemanticParser(Model):
         # single action embedding.
         embedded_actions = self._action_embedder.weight
         output_embedded_actions = self._output_action_embedder.weight
+        action_biases = self._action_biases.weight
 
         # Now we just need to make a map from `(batch_index, action_index)` to
         # `global_action_index`.  global_action_ids has the list of all unique actions; here we're
@@ -676,7 +681,7 @@ class WikiTablesSemanticParser(Model):
                     continue
                 global_action_id = action_vocab.get(action[0], -1)
                 action_map[(batch_index, action_index)] = global_action_id
-        return embedded_actions, output_embedded_actions, action_map
+        return embedded_actions, output_embedded_actions, action_biases, action_map
 
     @staticmethod
     def _map_entity_productions(linking_scores: torch.FloatTensor,

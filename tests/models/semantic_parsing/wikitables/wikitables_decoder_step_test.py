@@ -28,6 +28,7 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         self.encoder_output_mask = Variable(torch.FloatTensor([[1, 1], [1, 0], [1, 1]]))
         self.action_embeddings = torch.FloatTensor([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5]])
         self.output_action_embeddings = torch.FloatTensor([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5]])
+        self.action_biases = torch.FloatTensor([[0], [1], [2], [3], [4], [5]])
         self.action_indices = {
                 (0, 0): 1,
                 (0, 1): 0,
@@ -99,6 +100,7 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
                                             grammar_state=grammar_state,
                                             action_embeddings=self.action_embeddings,
                                             output_action_embeddings=self.output_action_embeddings,
+                                            action_biases=self.action_biases,
                                             action_indices=self.action_indices,
                                             possible_actions=self.possible_actions,
                                             flattened_linking_scores=flattened_linking_scores,
@@ -166,8 +168,9 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         action_embeddings = Variable(torch.rand(5, 4))
         self.state.action_embeddings = action_embeddings
         self.state.output_action_embeddings = action_embeddings
+        self.state.action_biases = Variable(torch.rand(5, 1))
         actions_to_embed = [[0, 4], [1], [2, 3, 4]]
-        embeddings, _, mask = WikiTablesDecoderStep._get_action_embeddings(self.state, actions_to_embed)
+        embeddings, _, _, mask = WikiTablesDecoderStep._get_action_embeddings(self.state, actions_to_embed)
         assert_almost_equal(mask.data.cpu().numpy(), [[1, 1, 0], [1, 0, 0], [1, 1, 1]])
         assert tuple(embeddings.size()) == (3, 3, 4)
         assert_almost_equal(embeddings[0, 0].data.cpu().numpy(), action_embeddings[0].data.cpu().numpy())
