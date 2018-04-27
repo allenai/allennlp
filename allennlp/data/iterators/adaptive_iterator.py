@@ -10,6 +10,7 @@ from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.bucket_iterator import BucketIterator
 from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.data.iterators.utils import memory_sized_lists, sort_by_padding
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -112,13 +113,15 @@ class AdaptiveIterator(BucketIterator):
 
     @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
-        for instance_list in self._memory_sized_lists(instances):
+        for instance_list in memory_sized_lists(instances, self._batch_size):
             if self._biggest_batch_first:
-                yield from super(AdaptiveIterator, self)._create_batches(instance_list, shuffle)
+                # TODO(joelgrus): this is bad
+                yield from BucketIterator._create_batches(self, instance_list, shuffle)
             else:
-                instance_list = self._sort_by_padding(instance_list,
-                                                      self._sorting_keys,
-                                                      self._padding_noise)
+                instance_list = sort_by_padding(instance_list,
+                                                self._sorting_keys,
+                                                self.vocab,
+                                                self._padding_noise)
                 # Group the instances into different sized batches, depending on how padded they are.
                 grouped_instances = self._adaptive_grouping(instance_list)
                 if shuffle:

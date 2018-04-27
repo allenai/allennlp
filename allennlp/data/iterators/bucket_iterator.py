@@ -1,4 +1,5 @@
 import logging
+import math
 import random
 from typing import List, Tuple, Dict, cast, Iterable
 
@@ -6,17 +7,17 @@ from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common import Params
-from allennlp.common.util import add_noise_to_dict_values
+from allennlp.common.util import add_noise_to_dict_values, is_lazy, lazy_groups_of, ensure_list
 from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
-from allennlp.data.iterators.basic_iterator import BasicIterator
 from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.data.iterators.utils import memory_sized_lists, sort_by_padding
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @DataIterator.register("bucket")
-class BucketIterator(BasicIterator):
+class BucketIterator(DataIterator):
     """
     An iterator which by default, pads batches with respect to the maximum input lengths `per
     batch`. Additionally, you can provide a list of field names and padding keys which the dataset
@@ -62,66 +63,62 @@ class BucketIterator(BasicIterator):
                  biggest_batch_first: bool = False,
                  batch_size: int = 32,
                  instances_per_epoch: int = None,
-                 max_instances_in_memory: int = None) -> None:
+                 max_instances_in_memory: int = None,
+                 cache_instances: bool = False,
+                 track_epoch: bool = False) -> None:
         if not sorting_keys:
             raise ConfigurationError("BucketIterator requires sorting_keys to be specified")
 
+        super().__init__(cache_instances=cache_instances,
+                         track_epoch=track_epoch)
+        self._batch_size = batch_size
+        self._instances_per_epoch = instances_per_epoch
+        self._max_instances_in_memory = max_instances_in_memory
         self._sorting_keys = sorting_keys
         self._padding_noise = padding_noise
         self._biggest_batch_first = biggest_batch_first
-        super(BucketIterator, self).__init__(batch_size=batch_size,
-                                             instances_per_epoch=instances_per_epoch,
-                                             max_instances_in_memory=max_instances_in_memory)
+
+    @overrides
+    def get_num_batches(self, instances: Iterable[Instance]) -> int:
+        if is_lazy(instances) and self._instances_per_epoch is None:
+            # Unable to compute num batches, so just return 1.
+            return 1
+        elif self._instances_per_epoch is not None:
+            return math.ceil(self._instances_per_epoch / self._batch_size)
+        else:
+            # Not lazy, so can compute the list length.
+            return math.ceil(len(ensure_list(instances)) / self._batch_size)
 
     @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
-        for instance_list in self._memory_sized_lists(instances):
-            instance_list = self._sort_by_padding(instance_list,
-                                                  self._sorting_keys,
-                                                  self._padding_noise)
+        for instance_list in memory_sized_lists(instances,
+                                                self._batch_size,
+                                                self._instances_per_epoch,
+                                                self._max_instances_in_memory):
 
-            grouped_instances = list(super()._create_batches(instance_list, shuffle=False))
-            move_to_front = self._biggest_batch_first and len(grouped_instances) > 1
+            instance_list = sort_by_padding(instance_list,
+                                            self._sorting_keys,
+                                            self.vocab,
+                                            self._padding_noise)
+
+            batches = [Batch(batch_instances)
+                       for batch_instances in lazy_groups_of(iter(instance_list), self._batch_size)]
+
+            move_to_front = self._biggest_batch_first and len(batches) > 1
             if move_to_front:
                 # We'll actually pop the last _two_ batches, because the last one might not be full.
-                last_batch = grouped_instances.pop()
-                penultimate_batch = grouped_instances.pop()
+                last_batch = batches.pop()
+                penultimate_batch = batches.pop()
             if shuffle:
-                random.shuffle(grouped_instances)
+                random.shuffle(batches)
             else:
                 logger.warning("shuffle parameter is set to False,"
                                " while bucket iterators by definition change the order of your data.")
             if move_to_front:
-                grouped_instances.insert(0, penultimate_batch)
-                grouped_instances.insert(0, last_batch)
+                batches.insert(0, penultimate_batch)
+                batches.insert(0, last_batch)
 
-            yield from grouped_instances
-
-    def _sort_by_padding(self,
-                         instances: List[Instance],
-                         sorting_keys: List[Tuple[str, str]],  # pylint: disable=invalid-sequence-index
-                         padding_noise: float = 0.0) -> List[Instance]:
-        """
-        Sorts the ``Instances`` in this ``Batch`` by their padding lengths, using the keys in
-        ``sorting_keys`` (in the order in which they are provided).  ``sorting_keys`` is a list of
-        ``(field_name, padding_key)`` tuples.
-        """
-        instances_with_lengths = []
-        for instance in instances:
-            # Make sure instance is indexed before calling .get_padding
-            instance.index_fields(self.vocab)
-            padding_lengths = cast(Dict[str, Dict[str, float]], instance.get_padding_lengths())
-            if padding_noise > 0.0:
-                noisy_lengths = {}
-                for field_name, field_lengths in padding_lengths.items():
-                    noisy_lengths[field_name] = add_noise_to_dict_values(field_lengths, padding_noise)
-                padding_lengths = noisy_lengths
-            instance_with_lengths = ([padding_lengths[field_name][padding_key]
-                                      for (field_name, padding_key) in sorting_keys],
-                                     instance)
-            instances_with_lengths.append(instance_with_lengths)
-        instances_with_lengths.sort(key=lambda x: x[0])
-        return [instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths]
+            yield from batches
 
     @classmethod
     def from_params(cls, params: Params) -> 'BucketIterator':
