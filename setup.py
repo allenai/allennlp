@@ -109,7 +109,8 @@ setup(name='allennlp',
           'h5py',
           'scikit-learn',
           'scipy',
-          'pytz==2017.3'
+          'pytz==2017.3',
+          'unidecode'
       ],
       scripts=["bin/allennlp"],
       setup_requires=['pytest-runner'],
