@@ -67,7 +67,7 @@ class WikiTablesSemanticParser(Model):
     dropout : ``float``, optional (default=0)
         If greater than 0, we will apply dropout with this probability after all encoders (pytorch
         LSTMs do not apply dropout to their last layer).
-    num_linking_features : ``int``, optional (default=8)
+    num_linking_features : ``int``, optional (default=10)
         We need to construct a parameter vector for the linking features, so we need to know how
         many there are.  The default of 8 here matches the default in the ``KnowledgeGraphField``,
         which is to use all eight defined features. If this is 0, another term will be added to the
