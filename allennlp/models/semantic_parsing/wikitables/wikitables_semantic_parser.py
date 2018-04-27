@@ -773,7 +773,7 @@ class WikiTablesSemanticParser(Model):
                 considered_actions, probabilities = zip(*actions)
                 action_info['considered_actions'] = considered_actions
                 action_info['action_probabilities'] = probabilities
-                action_info['question_attention'] = action_debug_info['question_attention']
+                action_info['question_attention'] = action_debug_info.get('question_attention', [])
                 instance_action_info.append(action_info)
             batch_action_info.append(instance_action_info)
         output_dict["predicted_actions"] = batch_action_info
