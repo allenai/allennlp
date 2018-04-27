@@ -36,7 +36,7 @@ class CountingPredictor(Predictor):
     def __init__(self):                 # pylint: disable=super-init-not-called
         self.calls = defaultdict(int)
 
-    def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
+    def predict_json(self, inputs: JsonDict) -> JsonDict:
         key = json.dumps(inputs)
         self.calls[key] += 1
         return copy.deepcopy(inputs)

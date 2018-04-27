@@ -96,8 +96,7 @@ def _run(predictor: Predictor,
          input_file: IO,
          output_file: Optional[IO],
          batch_size: int,
-         print_to_console: bool,
-         cuda_device: int) -> None:
+         print_to_console: bool) -> None:
 
     def _run_predictor(batch_data):
         if len(batch_data) == 1:
@@ -151,5 +150,4 @@ def _predict(args: argparse.Namespace) -> None:
              input_file,
              output_file,
              args.batch_size,
-             not args.silent,
-             args.cuda_device)
+             not args.silent)

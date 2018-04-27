@@ -3,11 +3,12 @@
 an AllenNLP model.
 """
 
-from typing import Dict, Optional, Union, List
-import os
 import logging
+import os
+from typing import Dict, Optional, Union, List
 
 import numpy
+from overrides import overrides
 import torch
 
 from allennlp.common.params import Params
@@ -16,8 +17,6 @@ from allennlp.data import Instance, Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.nn import util
 from allennlp.nn.regularizers import RegularizerApplicator
-
-from overrides import overrides
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -61,7 +60,7 @@ class Model(torch.nn.Module, Registrable):
         super().cpu()
 
     @overrides
-    def cuda(self, device: int):
+    def cuda(self, device: int = None):
         self.cuda_device = device
         super().cuda(device)
 
