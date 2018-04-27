@@ -60,6 +60,10 @@ class WikiTablesSemanticParser(Model):
         We compute an attention over the input question at each step of the decoder, using the
         decoder hidden state as the query.  This is the similarity function we use for that
         attention.
+    use_neighbor_similarity_for_linking : ``bool``, optional (default=False)
+        If ``True``, we will compute a max similarity between a question token and the `neighbors`
+        of an entity as a component of the linking scores.  This is meant to capture the same kind
+        of information as the ``related_column`` feature.
     dropout : ``float``, optional (default=0)
         If greater than 0, we will apply dropout with this probability after all encoders (pytorch
         LSTMs do not apply dropout to their last layer).
@@ -87,6 +91,7 @@ class WikiTablesSemanticParser(Model):
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  attention_function: SimilarityFunction,
+                 use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
                  num_linking_features: int = 8,
                  rule_namespace: str = 'rule_labels',
@@ -97,6 +102,7 @@ class WikiTablesSemanticParser(Model):
         self._entity_encoder = TimeDistributed(entity_encoder)
         self._beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
+        self._use_neighbor_similarity_for_linking = use_neighbor_similarity_for_linking
         if dropout > 0:
             self._dropout = torch.nn.Dropout(p=dropout)
         else:
@@ -125,12 +131,18 @@ class WikiTablesSemanticParser(Model):
         self._embedding_dim = question_embedder.get_output_dim()
         self._type_params = torch.nn.Linear(self._num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
+
         if num_linking_features > 0:
             self._linking_params = torch.nn.Linear(num_linking_features, 1)
         else:
             self._linking_params = None
+
+        if self._use_neighbor_similarity_for_linking:
             self._question_entity_params = torch.nn.Linear(1, 1)
             self._question_neighbor_params = torch.nn.Linear(1, 1)
+        else:
+            self._question_entity_params = None
+            self._question_neighbor_params = None
 
         self._decoder_trainer = MaximumMarginalLikelihood()
 
@@ -249,18 +261,24 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, num_entities, num_question_tokens, num_features)
         linking_features = table['linking']
 
-        if self._linking_params is not None:
-            feature_scores = self._linking_params(linking_features).squeeze(3)
-            linking_scores = question_entity_similarity_max_score + feature_scores
-        else:
-            # The linking score is computed as a linear projection of two terms. The first is the maximum
-            # similarity score over the entity's words and the question token. The second is the maximum
-            # similarity over the words in the entity's neighbors and the question token.
-            #   The second term, projected_question_neighbor_similarity, is useful when
-            # a column needs to be selected. For example, the question token might have no similarity
-            # with the column name, but is similar with the cells in the column.
-            #   Note that projected_question_neighbor_similarity is intended to capture the same information
-            # as the related_column feature.
+        linking_scores = question_entity_similarity_max_score
+
+        if self._use_neighbor_similarity_for_linking:
+            # The linking score is computed as a linear projection of two terms. The first is the
+            # maximum similarity score over the entity's words and the question token. The second
+            # is the maximum similarity over the words in the entity's neighbors and the question
+            # token.
+            #
+            # The second term, projected_question_neighbor_similarity, is useful when a column
+            # needs to be selected. For example, the question token might have no similarity with
+            # the column name, but is similar with the cells in the column.
+            #
+            # Note that projected_question_neighbor_similarity is intended to capture the same
+            # information as the related_column feature.
+            #
+            # Also note that this block needs to be _before_ the `linking_params` block, because
+            # we're overwriting `linking_scores`, not adding to it.
+
             # (batch_size, num_entities, num_neighbors, num_question_tokens)
             question_neighbor_similarity = util.batched_index_select(question_entity_similarity_max_score,
                                                                      torch.abs(neighbor_indices))
@@ -271,6 +289,10 @@ class WikiTablesSemanticParser(Model):
             projected_question_neighbor_similarity = self._question_neighbor_params(
                     question_neighbor_similarity_max_score.unsqueeze(-1)).squeeze(-1)
             linking_scores = projected_question_entity_similarity + projected_question_neighbor_similarity
+
+        if self._linking_params is not None:
+            feature_scores = self._linking_params(linking_features).squeeze(3)
+            linking_scores = linking_scores + feature_scores
 
         # (batch_size, num_question_tokens, num_entities)
         linking_probabilities = self._get_linking_probabilities(world, linking_scores.transpose(1, 2),
@@ -788,6 +810,7 @@ class WikiTablesSemanticParser(Model):
             attention_function = SimilarityFunction.from_params(attention_function_type)
         else:
             attention_function = None
+        use_neighbor_similarity_for_linking = params.pop_bool('use_neighbor_similarity_for_linking', False)
         dropout = params.pop_float('dropout', 0.0)
         num_linking_features = params.pop_int('num_linking_features', 8)
         rule_namespace = params.pop('rule_namespace', 'rule_labels')
@@ -801,6 +824,7 @@ class WikiTablesSemanticParser(Model):
                    decoder_beam_search=decoder_beam_search,
                    max_decoding_steps=max_decoding_steps,
                    attention_function=attention_function,
+                   use_neighbor_similarity_for_linking=use_neighbor_similarity_for_linking,
                    dropout=dropout,
                    num_linking_features=num_linking_features,
                    rule_namespace=rule_namespace)
