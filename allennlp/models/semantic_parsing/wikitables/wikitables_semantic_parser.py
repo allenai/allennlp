@@ -72,7 +72,7 @@ class WikiTablesSemanticParser(Model):
     rule_namespace : ``str``, optional (default=rule_labels)
         The vocabulary namespace to use for production rules.  The default corresponds to the
         default used in the dataset reader, so you likely don't need to modify this.
-    table_directory : ``str``, optional (default=/wikitables/)
+    tables_directory : ``str``, optional (default=/wikitables/)
         The directory to find tables when evaluating logical forms.  We rely on a call to SEMPRE to
         evaluate logical forms, and SEMPRE needs to read the table from disk itself.  This tells
         SEMPRE where to find the tables.
@@ -90,7 +90,7 @@ class WikiTablesSemanticParser(Model):
                  dropout: float = 0.0,
                  num_linking_features: int = 8,
                  rule_namespace: str = 'rule_labels',
-                 table_directory: str = '/wikitables/') -> None:
+                 tables_directory: str = '/wikitables/') -> None:
         super(WikiTablesSemanticParser, self).__init__(vocab)
         self._question_embedder = question_embedder
         self._encoder = encoder
@@ -102,7 +102,7 @@ class WikiTablesSemanticParser(Model):
         else:
             self._dropout = lambda x: x
         self._rule_namespace = rule_namespace
-        self._denotation_accuracy = WikiTablesAccuracy(table_directory)
+        self._denotation_accuracy = WikiTablesAccuracy(tables_directory)
         self._action_sequence_accuracy = Average()
         self._has_logical_form = Average()
 
@@ -802,6 +802,7 @@ class WikiTablesSemanticParser(Model):
         dropout = params.pop_float('dropout', 0.0)
         num_linking_features = params.pop_int('num_linking_features', 8)
         rule_namespace = params.pop('rule_namespace', 'rule_labels')
+        tables_directory = params.pop('tables_directory', '/wikitables/')
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    question_embedder=question_embedder,
@@ -814,4 +815,5 @@ class WikiTablesSemanticParser(Model):
                    attention_function=attention_function,
                    dropout=dropout,
                    num_linking_features=num_linking_features,
-                   rule_namespace=rule_namespace)
+                   rule_namespace=rule_namespace,
+                   tables_directory=tables_directory)
