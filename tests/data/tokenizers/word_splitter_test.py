@@ -136,3 +136,16 @@ class TestSpacyWordSplitter(AllenNlpTestCase):
                            "e.g.", ",", "the", "store"]
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
         assert tokens == expected_tokens
+
+    def test_batch_tokenization(self):
+        sentences = ["This is     a sentence",
+                     "This isn't a sentence.",
+                     "This is the 3rd     sentence."
+                     "Here's the 'fourth' sentence."]
+        batch_split = self.word_splitter.batch_split_words(sentences)
+        separately_split = [self.word_splitter.split_words(sentence) for sentence in sentences]
+        assert len(batch_split) == len(separately_split)
+        for batch_sentence, separate_sentence in zip(batch_split, separately_split):
+            assert len(batch_sentence) == len(separate_sentence)
+            for batch_word, separate_word in zip(batch_sentence, separate_sentence):
+                assert batch_word.text == separate_word.text
