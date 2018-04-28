@@ -8,6 +8,7 @@
   "validation_data_path": "tests/fixtures/data/wikitables/sample_data.examples",
   "model": {
     "type": "wikitables_parser",
+    "tables_directory": "tests/fixtures/data/wikitables/",
     "question_embedder": {
       "tokens": {
         "type": "embedding",

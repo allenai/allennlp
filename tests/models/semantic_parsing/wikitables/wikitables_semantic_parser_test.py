@@ -144,7 +144,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
                     ('instance_action', False, None),
                     (rule1, True, rule1_tensor)]]
 
-        embedded_actions, action_indices = model._embed_actions(actions)
+        embedded_actions, _, _, action_indices = model._embed_actions(actions)
         assert action_indices[(0, 0)] == action_indices[(1, 2)]
         assert action_indices[(1, 1)] == -1
         assert len(set(action_indices.values())) == 4
