@@ -99,9 +99,11 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                                                           num_linking_features=num_linking_features,
                                                           rule_namespace=rule_namespace,
                                                           tables_directory=tables_directory)
-        self._decoder_trainer = ExpectedRiskMinimization(beam_size=decoder_beam_size,
-                                                         normalize_by_length=normalize_beam_score_by_length,
-                                                         max_decoding_steps=self._max_decoding_steps)
+        # Not sure why mypy needs a type annotation for this!
+        self._decoder_trainer: ExpectedRiskMinimization = \
+                ExpectedRiskMinimization(beam_size=decoder_beam_size,
+                                         normalize_by_length=normalize_beam_score_by_length,
+                                         max_decoding_steps=self._max_decoding_steps)
 
     @overrides
     def forward(self,  # type: ignore
@@ -167,7 +169,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         return Variable(state.flattened_linking_scores.data.new(cost)).float()
 
     @classmethod
-    def from_params(cls, vocab, params: Params) -> 'WikiTablesMmlSemanticParser':
+    def from_params(cls, vocab, params: Params) -> 'WikiTablesErmSemanticParser':
         question_embedder = TextFieldEmbedder.from_params(vocab, params.pop("question_embedder"))
         action_embedding_dim = params.pop_int("action_embedding_dim")
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
