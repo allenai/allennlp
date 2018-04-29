@@ -166,7 +166,6 @@ class WikiTablesSemanticParser(Model):
                                       example_lisp_string: List[str] = None,
                                       add_world_to_initial_state: bool = False) -> Dict:
         table_text = table['text']
-
         # (batch_size, question_length, embedding_dim)
         embedded_question = self._question_embedder(question)
         question_mask = util.get_text_field_mask(question).float()
@@ -257,6 +256,7 @@ class WikiTablesSemanticParser(Model):
                     question_neighbor_similarity_max_score.unsqueeze(-1)).squeeze(-1)
             linking_scores = projected_question_entity_similarity + projected_question_neighbor_similarity
 
+        feature_scores = None
         if self._linking_params is not None:
             feature_scores = self._linking_params(linking_features).squeeze(3)
             linking_scores = linking_scores + feature_scores

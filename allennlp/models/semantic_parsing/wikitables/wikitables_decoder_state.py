@@ -118,15 +118,6 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         scores = [score for state in states for score in state.score]
         rnn_states = [rnn_state for state in states for rnn_state in state.rnn_state]
         grammar_states = [grammar_state for state in states for grammar_state in state.grammar_state]
-        if states[0].world is not None:
-            world = [instance_world for state in states for instance_world in state.world]
-        else:
-            world = None
-        if states[0].example_lisp_string is not None:
-            example_lisp_string = [instance_string for state in states
-                                   for instance_string in state.example_lisp_string]
-        else:
-            example_lisp_string = None
         if states[0].debug_info is not None:
             debug_info = [debug_info for state in states for debug_info in state.debug_info]
         else:
@@ -144,6 +135,6 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       flattened_linking_scores=states[0].flattened_linking_scores,
                                       actions_to_entities=states[0].actions_to_entities,
                                       entity_types=states[0].entity_types,
-                                      world=world,
-                                      example_lisp_string=example_lisp_string,
+                                      world=states[0].world,
+                                      example_lisp_string=states[0].example_lisp_string,
                                       debug_info=debug_info)
