@@ -43,7 +43,8 @@
     },
     "max_decoding_steps": 200,
     "attention_function": {"type": "dot_product"},
-    "num_linking_features": 0
+    "num_linking_features": 0,
+    "use_neighbor_similarity_for_linking": true
   },
   "iterator": {
     "type": "bucket",
