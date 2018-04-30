@@ -59,8 +59,8 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
         LSTMs do not apply dropout to their last layer). Passed to super class.
     num_linking_features : ``int``, optional (default=10)
         We need to construct a parameter vector for the linking features, so we need to know how
-        many there are.  The default of 8 here matches the default in the ``KnowledgeGraphField``,
-        which is to use all eight defined features. If this is 0, another term will be added to the
+        many there are.  The default of 10 here matches the default in the ``KnowledgeGraphField``,
+        which is to use all ten defined features. If this is 0, another term will be added to the
         linking score. This term contains the maximum similarity value from the entity's neighbors
         and the question. Passed to super class.
     rule_namespace : ``str``, optional (default=rule_labels)
