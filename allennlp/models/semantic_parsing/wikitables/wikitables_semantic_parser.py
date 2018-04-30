@@ -76,7 +76,7 @@ class WikiTablesSemanticParser(Model):
     rule_namespace : ``str``, optional (default=rule_labels)
         The vocabulary namespace to use for production rules.  The default corresponds to the
         default used in the dataset reader, so you likely don't need to modify this.
-    table_directory : ``str``, optional (default=/wikitables/)
+    tables_directory : ``str``, optional (default=/wikitables/)
         The directory to find tables when evaluating logical forms.  We rely on a call to SEMPRE to
         evaluate logical forms, and SEMPRE needs to read the table from disk itself.  This tells
         SEMPRE where to find the tables.
@@ -95,7 +95,7 @@ class WikiTablesSemanticParser(Model):
                  dropout: float = 0.0,
                  num_linking_features: int = 8,
                  rule_namespace: str = 'rule_labels',
-                 table_directory: str = '/wikitables/') -> None:
+                 tables_directory: str = '/wikitables/') -> None:
         super(WikiTablesSemanticParser, self).__init__(vocab)
         self._question_embedder = question_embedder
         self._encoder = encoder
@@ -108,13 +108,15 @@ class WikiTablesSemanticParser(Model):
         else:
             self._dropout = lambda x: x
         self._rule_namespace = rule_namespace
-        self._denotation_accuracy = WikiTablesAccuracy(table_directory)
+        self._denotation_accuracy = WikiTablesAccuracy(tables_directory)
         self._action_sequence_accuracy = Average()
         self._has_logical_form = Average()
 
         self._action_padding_index = -1  # the padding value used by IndexField
-        self._action_embedder = Embedding(num_embeddings=vocab.get_vocab_size(self._rule_namespace),
-                                          embedding_dim=action_embedding_dim)
+        num_actions = vocab.get_vocab_size(self._rule_namespace)
+        self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
+        self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
+        self._action_biases = Embedding(num_embeddings=num_actions, embedding_dim=1)
 
         # This is what we pass as input in the first step of decoding, when we don't have a
         # previous action, or a previous question attention.
@@ -313,7 +315,7 @@ class WikiTablesSemanticParser(Model):
 
         initial_score = Variable(embedded_question.data.new(batch_size).fill_(0))
 
-        action_embeddings, action_indices = self._embed_actions(actions)
+        action_embeddings, output_action_embeddings, action_biases, action_indices = self._embed_actions(actions)
 
         _, num_entities, num_question_tokens = linking_scores.size()
         flattened_linking_scores, actions_to_entities = self._map_entity_productions(linking_scores,
@@ -351,6 +353,8 @@ class WikiTablesSemanticParser(Model):
                                                rnn_state=initial_rnn_state,
                                                grammar_state=initial_grammar_state,
                                                action_embeddings=action_embeddings,
+                                               output_action_embeddings=output_action_embeddings,
+                                               action_biases=action_biases,
                                                action_indices=action_indices,
                                                possible_actions=actions,
                                                flattened_linking_scores=flattened_linking_scores,
@@ -654,6 +658,8 @@ class WikiTablesSemanticParser(Model):
                             type_declaration.is_nonterminal)
 
     def _embed_actions(self, actions: List[List[ProductionRuleArray]]) -> Tuple[torch.Tensor,
+                                                                                torch.Tensor,
+                                                                                torch.Tensor,
                                                                                 Dict[Tuple[int, int], int]]:
         """
         Given all of the possible actions for all batch instances, produce an embedding for them.
@@ -667,6 +673,10 @@ class WikiTablesSemanticParser(Model):
         -------
         action_embeddings : ``torch.Tensor``
             Has shape ``(num_unique_actions, action_embedding_dim)``.
+        output_action_embeddings : ``torch.Tensor``
+            Has shape ``(num_unique_actions, action_embedding_dim)``.
+        action_biases : ``torch.Tensor``
+            Has shape ``(num_unique_actions, 1)``.
         action_map : ``Dict[Tuple[int, int], int]``
             Maps ``(batch_index, action_index)`` in the input action list to ``action_index`` in
             the ``action_embeddings`` tensor.  All non-embeddable actions get mapped to `-1` here.
@@ -678,6 +688,8 @@ class WikiTablesSemanticParser(Model):
         # it like this for now to have a minimal change to go from the LHS/RHS embedding to a
         # single action embedding.
         embedded_actions = self._action_embedder.weight
+        output_embedded_actions = self._output_action_embedder.weight
+        action_biases = self._action_biases.weight
 
         # Now we just need to make a map from `(batch_index, action_index)` to
         # `global_action_index`.  global_action_ids has the list of all unique actions; here we're
@@ -692,7 +704,7 @@ class WikiTablesSemanticParser(Model):
                     continue
                 global_action_id = action_vocab.get(action[0], -1)
                 action_map[(batch_index, action_index)] = global_action_id
-        return embedded_actions, action_map
+        return embedded_actions, output_embedded_actions, action_biases, action_map
 
     @staticmethod
     def _map_entity_productions(linking_scores: torch.FloatTensor,
@@ -784,7 +796,7 @@ class WikiTablesSemanticParser(Model):
                 considered_actions, probabilities = zip(*actions)
                 action_info['considered_actions'] = considered_actions
                 action_info['action_probabilities'] = probabilities
-                action_info['question_attention'] = action_debug_info['question_attention']
+                action_info['question_attention'] = action_debug_info.get('question_attention', [])
                 instance_action_info.append(action_info)
             batch_action_info.append(instance_action_info)
         output_dict["predicted_actions"] = batch_action_info
@@ -814,6 +826,7 @@ class WikiTablesSemanticParser(Model):
         dropout = params.pop_float('dropout', 0.0)
         num_linking_features = params.pop_int('num_linking_features', 8)
         rule_namespace = params.pop('rule_namespace', 'rule_labels')
+        tables_directory = params.pop('tables_directory', '/wikitables/')
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    question_embedder=question_embedder,
@@ -827,4 +840,5 @@ class WikiTablesSemanticParser(Model):
                    use_neighbor_similarity_for_linking=use_neighbor_similarity_for_linking,
                    dropout=dropout,
                    num_linking_features=num_linking_features,
-                   rule_namespace=rule_namespace)
+                   rule_namespace=rule_namespace,
+                   tables_directory=tables_directory)
