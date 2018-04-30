@@ -8,7 +8,6 @@ import os
 from typing import Dict, Optional, Union, List
 
 import numpy
-from overrides import overrides
 import torch
 
 from allennlp.common.params import Params
@@ -52,17 +51,18 @@ class Model(torch.nn.Module, Registrable):
         self.vocab = vocab
         self._regularizer = regularizer
 
-        self.cuda_device: Optional[int] = None
-
-    @overrides
-    def cpu(self):
-        self.cuda_device = -1
-        super().cpu()
-
-    @overrides
-    def cuda(self, device: int = None):
-        self.cuda_device = device
-        super().cuda(device)
+    def cuda_device(self) -> Optional[int]:
+        """
+        This method checks the device of the first parameter to determine the cuda_device
+        this model is to be run on.  If there are no parameters, it returns None.
+        Returns
+        -------
+        The cuda device this model is to be run on.
+        """
+        try:
+            return util.get_device_of(next(self.parameters()))
+        except StopIteration:
+            return None
 
     def get_regularization_penalty(self) -> Union[float, torch.autograd.Variable]:
         """
@@ -131,8 +131,8 @@ class Model(torch.nn.Module, Registrable):
         or ``torch.Tensors`` into numpy arrays and remove the batch dimension.
         """
         if not cuda_device:
-            assert self.cuda_device, "No cuda_device specified and the model's cuda_device is None."
-            cuda_device = self.cuda_device
+            assert self.cuda_device(), "No cuda_device specified and the model's cuda_device is None."
+            cuda_device = self.cuda_device()
 
         return self.forward_on_instances([instance], cuda_device)[0]
 
@@ -161,8 +161,8 @@ class Model(torch.nn.Module, Registrable):
         A list of the models output for each instance.
         """
         if not cuda_device:
-            assert self.cuda_device, "No cuda_device specified and the model's cuda_device is None."
-            cuda_device = self.cuda_device
+            assert self.cuda_device(), "No cuda_device specified and the model's cuda_device is None."
+            cuda_device = self.cuda_device()
 
         dataset = Batch(instances)
         dataset.index_instances(self.vocab)
