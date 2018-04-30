@@ -9,8 +9,28 @@ from allennlp.service.predictors.predictor import Predictor
 @Predictor.register('textual-entailment')
 class DecomposableAttentionPredictor(Predictor):
     """
-    Wrapper for the :class:`~allennlp.models.bidaf.DecomposableAttention` model.
+    Predictor for the :class:`~allennlp.models.bidaf.DecomposableAttention` model.
     """
+
+    def predict(self, premise: str, hypothesis: str, cuda_device: int = -1) -> JsonDict:
+        """
+        Predicts whether the hypothesis is entailed by the premise text.
+
+        Parameters
+        ----------
+        premise : ``str``
+            A passage representing what is assumed to be true.
+
+        hypothesis : ``str``
+            A sentence that may be entailed by the premise.
+
+        Returns
+        -------
+        A dictionary where the key "label_probs" determines the probabilities of each of
+        [entailment, contradiction, neutral].
+        """
+        return self.predict_json({"premise" : premise, "hypothesis": hypothesis}, cuda_device)
+
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
         """

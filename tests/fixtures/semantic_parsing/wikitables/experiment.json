@@ -8,6 +8,7 @@
   "validation_data_path": "tests/fixtures/data/wikitables/sample_data.examples",
   "model": {
     "type": "wikitables_parser",
+    "tables_directory": "tests/fixtures/data/wikitables/",
     "question_embedder": {
       "tokens": {
         "type": "embedding",
@@ -31,8 +32,7 @@
       "beam_size": 3
     },
     "max_decoding_steps": 200,
-    "attention_function": {"type": "dot_product"},
-    "num_linking_features": 8
+    "attention_function": {"type": "dot_product"}
   },
   "iterator": {
     "type": "bucket",
