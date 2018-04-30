@@ -22,6 +22,7 @@ allennlp.modules
    allennlp.modules.span_extractors
    allennlp.modules.similarity_functions
    allennlp.modules.stacked_alternating_lstm
+   allennlp.modules.stacked_bidirectional_lstm
    allennlp.modules.text_field_embedders
    allennlp.modules.time_distributed
    allennlp.modules.token_embedders
