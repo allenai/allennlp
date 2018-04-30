@@ -29,7 +29,8 @@
     },
     "max_decoding_steps": 7,
     "decoder_beam_size": 10,
-    "attention_function": {"type": "dot_product"}
+    "attention_function": {"type": "dot_product"},
+    "mml_model_file": "tests/fixtures/semantic_parsing/wikitables/serialization/model.tar.gz"
   },
   "iterator": {
     "type": "bucket",

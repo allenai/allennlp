@@ -133,15 +133,15 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         logger.info("Initializing weights from MML model.")
         model_parameters = dict(self.named_parameters())
         archived_parameters = dict(archive.model.named_parameters())
-        sentence_embedder_weight = "_sentence_embedder.token_embedder_tokens.weight"
-        if sentence_embedder_weight not in archived_parameters or \
-           sentence_embedder_weight not in model_parameters:
+        question_embedder_weight = "_question_embedder.token_embedder_tokens.weight"
+        if question_embedder_weight not in archived_parameters or \
+           question_embedder_weight not in model_parameters:
             raise RuntimeError("When initializing model weights from an MML model, we need "
-                               "the sentence embedder to be a TokenEmbedder using namespace called "
+                               "the question embedder to be a TokenEmbedder using namespace called "
                                "tokens.")
         for name, weights in archived_parameters.items():
             if name in model_parameters:
-                if name == "_sentence_embedder.token_embedder_tokens.weight":
+                if name == question_embedder_weight:
                     # The shapes of embedding weights will most likely differ between the two models
                     # because the vocabularies will most likely be different. We will get a mapping
                     # of indices from this model's token indices to the archived model's and copy
@@ -302,6 +302,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         num_linking_features = params.pop_int('num_linking_features', 10)
         tables_directory = params.pop('tables_directory', '/wikitables/')
         rule_namespace = params.pop('rule_namespace', 'rule_labels')
+        mml_model_file = params.pop('mml_model_file', None)
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    question_embedder=question_embedder,
@@ -317,4 +318,5 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                    dropout=dropout,
                    num_linking_features=num_linking_features,
                    tables_directory=tables_directory,
-                   rule_namespace=rule_namespace)
+                   rule_namespace=rule_namespace,
+                   initial_mml_model_file=mml_model_file)
