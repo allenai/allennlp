@@ -57,7 +57,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
     dropout : ``float``, optional (default=0)
         If greater than 0, we will apply dropout with this probability after all encoders (pytorch
         LSTMs do not apply dropout to their last layer). Passed to super class.
-    num_linking_features : ``int``, optional (default=8)
+    num_linking_features : ``int``, optional (default=10)
         We need to construct a parameter vector for the linking features, so we need to know how
         many there are.  The default of 8 here matches the default in the ``KnowledgeGraphField``,
         which is to use all eight defined features. If this is 0, another term will be added to the
@@ -84,7 +84,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                  attention_function: SimilarityFunction,
                  use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
-                 num_linking_features: int = 8,
+                 num_linking_features: int = 10,
                  rule_namespace: str = 'rule_labels',
                  tables_directory: str = '/wikitables/') -> None:
         use_similarity = use_neighbor_similarity_for_linking
@@ -244,7 +244,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
             attention_function = None
         use_neighbor_similarity_for_linking = params.pop_bool('use_neighbor_similarity_for_linking', False)
         dropout = params.pop_float('dropout', 0.0)
-        num_linking_features = params.pop_int('num_linking_features', 8)
+        num_linking_features = params.pop_int('num_linking_features', 10)
         tables_directory = params.pop('tables_directory', '/wikitables/')
         rule_namespace = params.pop('rule_namespace', 'rule_labels')
         params.assert_empty(cls.__name__)
