@@ -50,15 +50,15 @@ if __name__ == "__main__":
         train_fixture_gpu("tests/fixtures/srl/")
     else:
         models = [
-                #'bidaf',
-                #'constituency_parser',
-                #'coref',
-                #'decomposable_attention',
-                #'encoder_decoder/simple_seq2seq',
-                #'semantic_parsing/nlvr_coverage_semantic_parser',
-                #'semantic_parsing/nlvr_direct_semantic_parser',
+                'bidaf',
+                'constituency_parser',
+                'coref',
+                'decomposable_attention',
+                'encoder_decoder/simple_seq2seq',
+                'semantic_parsing/nlvr_coverage_semantic_parser',
+                'semantic_parsing/nlvr_direct_semantic_parser',
                 'semantic_parsing/wikitables',
-                #'srl',
+                'srl',
                 ]
         for model in models:
             train_fixture(f"tests/fixtures/{model}/")
