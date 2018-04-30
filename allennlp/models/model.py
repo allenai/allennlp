@@ -202,7 +202,7 @@ class Model(torch.nn.Module, Registrable):
         devices = {util.get_device_of(param) for param in self.parameters()}
 
         if len(devices) > 1:
-            devices_string = ", ".join(devices)
+            devices_string = ", ".join(str(x) for x in devices)
             raise ConfigurationError(f"Parameters have mismatching cuda_devices: {devices_string}")
         elif len(devices) == 1:
             return devices.pop()
