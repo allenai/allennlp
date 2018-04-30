@@ -52,26 +52,24 @@ class Model(torch.nn.Module, Registrable):
         self.vocab = vocab
         self._regularizer = regularizer
 
-    def cuda_device(self) -> int:
+    def _get_prediction_device(self) -> int:
         """
         This method checks the device of the first parameter to determine the cuda_device
-        this model is to be run on.  If there are no parameters, it returns None.
+        this model is to be run on for predictions.  If there are no parameters, it returns -1.
         Returns
         -------
-        The cuda device this model is to be run on.
+        The cuda device this model is to be run on for predictions.
         """
-        device = None
-        for parameter in self.parameters():
-            this_device = util.get_device_of(parameter)
-            if device is None:
-                device = this_device
-            elif device != this_device:
-                raise ConfigurationError(f"Parameters have mismatching cuda_device: {device} != {this_device}")
+        devices = {util.get_device_of(param) for param in self.parameters()}
 
-        if device is None:
-            raise ConfigurationError("cuda_device could not be determined as there are no parameters.")
-
-        return device
+        if len(devices) > 1:
+            devices_string = ", ".join(devices)
+            raise ConfigurationError(f"Parameters have mismatching cuda_devices: {devices_string}")
+        elif len(devices) == 1:
+            # Only has one element, pop it off and return it.
+            return devices.pop()
+        else:
+            return -1
 
     def get_regularization_penalty(self) -> Union[float, torch.autograd.Variable]:
         """
@@ -164,7 +162,7 @@ class Model(torch.nn.Module, Registrable):
         -------
         A list of the models output for each instance.
         """
-        cuda_device = self.cuda_device()
+        cuda_device = self._get_prediction_device()
         dataset = Batch(instances)
         dataset.index_instances(self.vocab)
         model_input = dataset.as_tensor_dict(cuda_device=cuda_device, for_training=False)
