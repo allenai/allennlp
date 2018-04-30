@@ -96,17 +96,16 @@ def _run(predictor: Predictor,
          input_file: IO,
          output_file: Optional[IO],
          batch_size: int,
-         print_to_console: bool,
-         cuda_device: int) -> None:
+         print_to_console: bool) -> None:
 
     def _run_predictor(batch_data):
         if len(batch_data) == 1:
-            result = predictor.predict_json(batch_data[0], cuda_device)
+            result = predictor.predict_json(batch_data[0])
             # Batch results return a list of json objects, so in
             # order to iterate over the result below we wrap this in a list.
             results = [result]
         else:
-            results = predictor.predict_batch_json(batch_data, cuda_device)
+            results = predictor.predict_batch_json(batch_data)
 
         for model_input, output in zip(batch_data, results):
             string_output = predictor.dump_line(output)
@@ -151,5 +150,4 @@ def _predict(args: argparse.Namespace) -> None:
              input_file,
              output_file,
              args.batch_size,
-             not args.silent,
-             args.cuda_device)
+             not args.silent)
