@@ -52,24 +52,6 @@ class Model(torch.nn.Module, Registrable):
         self.vocab = vocab
         self._regularizer = regularizer
 
-    def _get_prediction_device(self) -> int:
-        """
-        This method checks the device of the first parameter to determine the cuda_device
-        this model is to be run on for predictions.  If there are no parameters, it returns -1.
-        Returns
-        -------
-        The cuda device this model is to be run on for predictions.
-        """
-        devices = {util.get_device_of(param) for param in self.parameters()}
-
-        if len(devices) > 1:
-            devices_string = ", ".join(devices)
-            raise ConfigurationError(f"Parameters have mismatching cuda_devices: {devices_string}")
-        elif len(devices) == 1:
-            return devices.pop()
-        else:
-            return -1
-
     def get_regularization_penalty(self) -> Union[float, torch.autograd.Variable]:
         """
         Computes the regularization penalty for the model.
@@ -207,6 +189,25 @@ class Model(torch.nn.Module, Registrable):
         """
         # pylint: disable=unused-argument,no-self-use
         return {}
+
+    def _get_prediction_device(self) -> int:
+        """
+        This method checks the device of the first parameter to determine the cuda_device
+        this model is to be run on for predictions.  If there are no parameters, it returns -1.
+        Returns
+        -------
+        The cuda device this model is to be run on for predictions.
+        """
+        devices = {util.get_device_of(param) for param in self.parameters()}
+
+        if len(devices) > 1:
+            devices_string = ", ".join(devices)
+            raise ConfigurationError(f"Parameters have mismatching cuda_devices: {devices_string}")
+        elif len(devices) == 1:
+            return devices.pop()
+        else:
+            return -1
+
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
