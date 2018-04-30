@@ -1,4 +1,6 @@
 import logging
+import numpy as np
+
 from typing import Any, Dict, List, Optional
 
 import torch
@@ -12,7 +14,7 @@ from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
 from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
-from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy, SquadEmAndF1
+from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy, MultiSquadEmAndF1
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -106,7 +108,7 @@ class BidirectionalAttentionFlow(Model):
         self._span_start_accuracy = CategoricalAccuracy()
         self._span_end_accuracy = CategoricalAccuracy()
         self._span_accuracy = BooleanAccuracy()
-        self._squad_metrics = SquadEmAndF1()
+        self._squad_metrics = MultiSquadEmAndF1()
         if dropout > 0:
             self._dropout = torch.nn.Dropout(p=dropout)
         else:
@@ -248,7 +250,16 @@ class BidirectionalAttentionFlow(Model):
         span_end_probs = util.masked_softmax(span_end_logits, passage_mask)
         span_start_logits = util.replace_masked_values(span_start_logits, passage_mask, -1e7)
         span_end_logits = util.replace_masked_values(span_end_logits, passage_mask, -1e7)
-        best_span = self.get_best_span(span_start_logits, span_end_logits)
+        # answer_len for masking
+        answer_len = [len(elem['answer_texts']) for elem in metadata] if metadata is not None else []
+        if answer_len:
+            mask = torch.zeros((batch_size, max(answer_len), 2)).long()
+            for index, length in enumerate(answer_len):
+                mask[index, :length] = 1
+        else:
+            mask = None
+
+        best_span = self.get_best_span(span_start_logits, span_end_logits, answer_len)
 
         output_dict = {
                 "passage_question_attention": passage_question_attention,
@@ -272,7 +283,7 @@ class BidirectionalAttentionFlow(Model):
             self._span_start_accuracy(span_start_logits, span_start_1D.squeeze(-1)) #TODO
             loss += nll_loss(util.masked_log_softmax(span_end_logits, passage_mask), span_end_1D.squeeze(-1))
             self._span_end_accuracy(span_end_logits, span_end_1D.squeeze(-1)) #TODO
-            self._span_accuracy(best_span, torch.stack([span_start_1D, span_end_1D], -1))#TODO
+            # self._span_accuracy(best_span, torch.stack([span_start_1D, span_end_1D], -1))#TODO
 
             for step in range(1, span_start.size(1)):
                 span_start_1D = span_start[ : , step:step + 1] #batch X 1 
@@ -281,7 +292,8 @@ class BidirectionalAttentionFlow(Model):
                 self._span_start_accuracy(span_start_logits, span_start_1D.squeeze(-1)) #TODO
                 loss += nll_loss(util.masked_log_softmax(span_end_logits, passage_mask), span_end_1D.squeeze(-1), ignore_index=-1)
                 self._span_end_accuracy(span_end_logits, span_end_1D.squeeze(-1)) #TODO
-                self._span_accuracy(best_span, torch.stack([span_start_1D, span_end_1D], -1))#TODO
+                # self._span_accuracy(best_span, torch.stack([span_start_1D, span_end_1D], -1))#TODO
+            self._span_accuracy(best_span, torch.stack([span_start, span_end], -1), mask)
             output_dict["loss"] = loss
 
         # Compute the EM and F1 on SQuAD and add the tokenized input to the output.
@@ -290,18 +302,23 @@ class BidirectionalAttentionFlow(Model):
             question_tokens = []
             passage_tokens = []
             for i in range(batch_size):
+                best_span_strings = []
                 question_tokens.append(metadata[i]['question_tokens'])
                 passage_tokens.append(metadata[i]['passage_tokens'])
                 passage_str = metadata[i]['original_passage']
                 offsets = metadata[i]['token_offsets']
-                predicted_span = tuple(best_span[i].data.cpu().numpy())
-                start_offset = offsets[predicted_span[0]][0]
-                end_offset = offsets[predicted_span[1]][1]
-                best_span_string = passage_str[start_offset:end_offset]
-                output_dict['best_span_str'].append(best_span_string)
+                predicted_spans = tuple(best_span[i].data.cpu().numpy())
+                for predicted_span in predicted_spans:
+                    if predicted_span[0] == -1:
+                        break
+                    start_offset = offsets[predicted_span[0]][0]
+                    end_offset = offsets[predicted_span[1]][1]
+                    best_span_string = passage_str[start_offset:end_offset]
+                    best_span_strings.append(best_span_string)
+                output_dict['best_span_str'].append(best_span_strings)
                 answer_texts = metadata[i].get('answer_texts', [])
                 if answer_texts:
-                    self._squad_metrics(best_span_string, answer_texts)
+                    self._squad_metrics(best_span_strings, answer_texts)
             output_dict['question_tokens'] = question_tokens
             output_dict['passage_tokens'] = passage_tokens
         return output_dict
@@ -317,31 +334,52 @@ class BidirectionalAttentionFlow(Model):
                 }
 
     @staticmethod
-    def get_best_span(span_start_logits: Variable, span_end_logits: Variable) -> Variable:
+    def get_best_span(span_start_logits: Variable, span_end_logits: Variable, answer_len: List[int] = []) -> Variable:
         if span_start_logits.dim() != 2 or span_end_logits.dim() != 2:
             raise ValueError("Input shapes must be (batch_size, passage_length)")
         batch_size, passage_length = span_start_logits.size()
         max_span_log_prob = [-1e20] * batch_size
         span_start_argmax = [0] * batch_size
-        best_word_span = Variable(span_start_logits.data.new()
-                                  .resize_(batch_size, 2).fill_(0)).long()
+        max_answer_length = max(answer_len) if len(answer_len) != 0 else 0
 
-        span_start_logits = span_start_logits.data.cpu().numpy()
-        span_end_logits = span_end_logits.data.cpu().numpy()
+        """
+        best_word_span = Variable(span_start_logits.data.new()
+                                  .resize_(batch_size, 2).fill_(0)).long() # (40 x ans_len x 2)
+        """
+        spanned_answer_length = max_answer_length if max_answer_length != 0 else 3
+        best_word_span = Variable(torch.zeros((batch_size, spanned_answer_length, 2)).fill_(-1).long())
+
+        span_start_logits = span_start_logits.data.cpu().numpy() # (40 x passage_len)
+        span_end_logits = span_end_logits.data.cpu().numpy() # (40 x passage_len)
 
         for b in range(batch_size):  # pylint: disable=invalid-name
-            for j in range(passage_length):
-                val1 = span_start_logits[b, span_start_argmax[b]]
-                if val1 < span_start_logits[b, j]:
-                    span_start_argmax[b] = j
-                    val1 = span_start_logits[b, j]
+            curr_passage_span_list = []
 
-                val2 = span_end_logits[b, j]
+            spanned_answer_length = answer_len[b] if len(answer_len) != 0 else 3
+            for j in range(passage_length): # go through each byte in the passage
+                val1 = span_start_logits[b, span_start_argmax[b]] # get the span_start_logit for highest start index so far
+                if val1 < span_start_logits[b, j]: # compare the existing start logit with current start logit
+                    span_start_argmax[b] = j # we found a better start index, update this index
+                    val1 = span_start_logits[b, j] # update the val1
 
-                if val1 + val2 > max_span_log_prob[b]:
-                    best_word_span[b, 0] = span_start_argmax[b]
-                    best_word_span[b, 1] = j
-                    max_span_log_prob[b] = val1 + val2
+                start_index = span_start_argmax[b]
+                end_index = j
+                val2 = span_end_logits[b, j] # the end logit 
+
+                curr_passage_span_list.append((val1 + val2, start_index, end_index))
+                """
+                if val1 + val2 > max_span_log_prob[b]: # 
+                    best_word_span[b, 0] = span_start_argmax[b] # for the current batch, which is the best start_index
+                    best_word_span[b, 1] = j # for the current batch, which is the best end_index
+                    max_span_log_prob[b] = val1 + val2 # store history for what is the best span's log probability until now
+                """
+
+            curr_passage_span_list = sorted(curr_passage_span_list, key=lambda x: x[0], reverse=True)
+            curr_passage_span_list = curr_passage_span_list[:spanned_answer_length]
+
+            tensor = torch.from_numpy(np.array([(start, end) for _, start, end in curr_passage_span_list])).long()
+            best_word_span[b, :spanned_answer_length] = tensor
+
         return best_word_span
 
     @classmethod
