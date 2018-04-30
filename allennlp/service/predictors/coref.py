@@ -12,7 +12,7 @@ from allennlp.service.predictors.predictor import Predictor
 @Predictor.register("coreference-resolution")
 class CorefPredictor(Predictor):
     """
-    Wrapper for the :class:`~allennlp.models.coreference_resolution.CoreferenceResolver` model.
+    Predictor for the :class:`~allennlp.models.coreference_resolution.CoreferenceResolver` model.
     """
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)
@@ -21,12 +21,9 @@ class CorefPredictor(Predictor):
         # to also know sentence boundaries to propose valid mentions.
         self._spacy = get_spacy_model("en_core_web_sm", pos_tags=True, parse=True, ner=False)
 
-    @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
-
+    def predict(self, document: str, cuda_device: int = -1) -> JsonDict:
         """
-        Expects JSON that looks like ``{"document": "string of document text"}``
-        and returns JSON that looks like:
+        Predict the coreference clusters in the given document.
 
         .. code-block:: js
 
@@ -46,6 +43,22 @@ class CorefPredictor(Predictor):
                 ....
               ]
             }
+
+        Parameters
+        ----------
+        document : ``str``
+            A string representation of a document.
+
+        Returns
+        -------
+        A dictionary representation of the predicted coreference clusters.
+        """
+        return self.predict_json({"document" : document}, cuda_device)
+
+    @overrides
+    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+        """
+        Expects JSON that looks like ``{"document": "string of document text"}``
         """
         document = json_dict["document"]
         spacy_document = self._spacy(document)

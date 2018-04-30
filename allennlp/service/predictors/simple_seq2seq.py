@@ -8,8 +8,12 @@ from allennlp.service.predictors.predictor import Predictor
 @Predictor.register('simple_seq2seq')
 class SimpleSeq2SeqPredictor(Predictor):
     """
-    Wrapper for the :class:`~allennlp.models.encoder_decoder.simple_seq2seq` model.
+    Predictor for the :class:`~allennlp.models.encoder_decoder.simple_seq2seq` model.
     """
+
+    def predict(self, source: str, cuda_device: int = -1) -> JsonDict:
+        return self.predict_json({"source" : source}, cuda_device)
+
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
         """

@@ -57,7 +57,7 @@ if __name__ == "__main__":
                 'encoder_decoder/simple_seq2seq',
                 'semantic_parsing/nlvr_coverage_semantic_parser',
                 'semantic_parsing/nlvr_direct_semantic_parser',
-                'semantic_parsing/wikitables_semantic_parser',
+                'semantic_parsing/wikitables',
                 'srl',
                 ]
         for model in models:

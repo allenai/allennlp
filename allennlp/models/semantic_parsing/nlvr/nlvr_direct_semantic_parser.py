@@ -122,13 +122,13 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                                                              initial_state,
                                                              self._decoder_step,
                                                              keep_final_unfinished_states=False)
-        best_action_sequences: Dict[int, List[int]] = {}
+        best_action_sequences: Dict[int, List[List[int]]] = {}
         for i in range(batch_size):
             # Decoding may not have terminated with any completed logical forms, if `num_steps`
             # isn't long enough (or if the model is not trained enough and gets into an
             # infinite action loop).
             if i in best_final_states:
-                best_action_indices = best_final_states[i][0].action_history[0]
+                best_action_indices = [best_final_states[i][0].action_history[0]]
                 best_action_sequences[i] = best_action_indices
         batch_action_strings = self._get_action_strings(actions, best_action_sequences)
         batch_denotations = self._get_denotations(batch_action_strings, worlds)
@@ -142,10 +142,11 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         return outputs
 
     def _update_metrics(self,
-                        action_strings: List[List[str]],
+                        action_strings: List[List[List[str]]],
                         worlds: List[List[NlvrWorld]],
                         label_strings: List[List[str]]) -> None:
         # TODO(pradeep): Move this to the base class.
+        # TODO(pradeep): Using only the best decoded sequence. Define metrics for top-k sequences?
         batch_size = len(worlds)
         for i in range(batch_size):
             instance_action_strings = action_strings[i]
@@ -153,7 +154,8 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
             if instance_action_strings:
                 instance_label_strings = label_strings[i]
                 instance_worlds = worlds[i]
-                sequence_is_correct = self._check_denotation(instance_action_strings,
+                # Taking only the best sequence.
+                sequence_is_correct = self._check_denotation(instance_action_strings[0],
                                                              instance_label_strings,
                                                              instance_worlds)
             for correct_in_world in sequence_is_correct:

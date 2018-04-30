@@ -16,6 +16,7 @@ class TestConstituencyParserPredictor(TestCase):
 
         archive = load_archive('tests/fixtures/constituency_parser/serialization/model.tar.gz')
         predictor = Predictor.from_archive(archive, 'constituency-parser')
+
         result = predictor.predict_json(inputs)
 
         assert len(result["spans"]) == 21 # number of possible substrings of the sentence.
