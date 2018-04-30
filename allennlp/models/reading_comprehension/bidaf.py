@@ -121,6 +121,7 @@ class BidirectionalAttentionFlow(Model):
                 span_start: torch.IntTensor = None,
                 span_end: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
+
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -217,6 +218,7 @@ class BidirectionalAttentionFlow(Model):
         modeled_passage = self._dropout(self._modeling_layer(final_merged_passage, passage_lstm_mask))
         modeling_dim = modeled_passage.size(-1)
 
+
         # Shape: (batch_size, passage_length, encoding_dim * 4 + modeling_dim))
         span_start_input = self._dropout(torch.cat([final_merged_passage, modeled_passage], dim=-1))
         # Shape: (batch_size, passage_length)
@@ -259,11 +261,27 @@ class BidirectionalAttentionFlow(Model):
 
         # Compute the loss for training.
         if span_start is not None:
-            loss = nll_loss(util.masked_log_softmax(span_start_logits, passage_mask), span_start.squeeze(-1))
-            self._span_start_accuracy(span_start_logits, span_start.squeeze(-1))
-            loss += nll_loss(util.masked_log_softmax(span_end_logits, passage_mask), span_end.squeeze(-1))
-            self._span_end_accuracy(span_end_logits, span_end.squeeze(-1))
-            self._span_accuracy(best_span, torch.stack([span_start, span_end], -1))
+            span_start = span_start.squeeze(-1) #batch X max_answer_L
+            span_end = span_end.squeeze(-1) #batch X max_answer_L
+
+            # TODO answer padding needs to be ignored
+            step = 0
+            span_start_1D = span_start[ : , step:step + 1] #batch X 1 
+            span_end_1D = span_end[ : , step:step + 1] #batch X 1 
+            loss = nll_loss(util.masked_log_softmax(span_start_logits, passage_mask), span_start_1D.squeeze(-1))
+            self._span_start_accuracy(span_start_logits, span_start_1D.squeeze(-1)) #TODO
+            loss += nll_loss(util.masked_log_softmax(span_end_logits, passage_mask), span_end_1D.squeeze(-1))
+            self._span_end_accuracy(span_end_logits, span_end_1D.squeeze(-1)) #TODO
+            self._span_accuracy(best_span, torch.stack([span_start_1D, span_end_1D], -1))#TODO
+
+            for step in range(1, span_start.size(1)):
+                span_start_1D = span_start[ : , step:step + 1] #batch X 1 
+                span_end_1D = span_end[ : , step:step + 1] #batch X 1 
+                loss += nll_loss(util.masked_log_softmax(span_start_logits, passage_mask), span_start_1D.squeeze(-1), ignore_index=-1)
+                self._span_start_accuracy(span_start_logits, span_start_1D.squeeze(-1)) #TODO
+                loss += nll_loss(util.masked_log_softmax(span_end_logits, passage_mask), span_end_1D.squeeze(-1), ignore_index=-1)
+                self._span_end_accuracy(span_end_logits, span_end_1D.squeeze(-1)) #TODO
+                self._span_accuracy(best_span, torch.stack([span_start_1D, span_end_1D], -1))#TODO
             output_dict["loss"] = loss
 
         # Compute the EM and F1 on SQuAD and add the tokenized input to the output.
