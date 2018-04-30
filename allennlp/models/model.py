@@ -194,7 +194,7 @@ class Model(torch.nn.Module, Registrable):
         """
         This method checks the device of the model parameters to determine the cuda_device
         this model should be run on for predictions.  If there are no parameters, it returns -1.
-        
+
         Returns
         -------
         The cuda device this model should run on for predictions.
