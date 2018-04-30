@@ -8,7 +8,10 @@ from allennlp.common.checks import ConfigurationError
 class StackedBidirectionalLstm(torch.nn.Module):
     """
     A standard stacked Bidirectional LSTM where the LSTM layers
-    are concatenated between each layer.
+    are concatenated between each layer. The only difference between
+    this and a regular bidirectional LSTM is the application of
+    variational dropout to the hidden states of the LSTM.
+    Note that this will be slower, as it doesn't use CUDNN.
 
     Parameters
     ----------
@@ -22,14 +25,6 @@ class StackedBidirectionalLstm(torch.nn.Module):
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ .
-
-    Returns
-    -------
-    output_accumulator : PackedSequence
-        The outputs of the forward and backward LSTMs per timestep. A tensor of
-        shape (batch_size, max_timesteps, hidden_size * 2) where for a given batch
-        element, all outputs past the sequence length for that batch are
-        zero tensors.
     """
     def __init__(self,
                  input_size: int,
