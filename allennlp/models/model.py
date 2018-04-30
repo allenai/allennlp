@@ -66,7 +66,6 @@ class Model(torch.nn.Module, Registrable):
             devices_string = ", ".join(devices)
             raise ConfigurationError(f"Parameters have mismatching cuda_devices: {devices_string}")
         elif len(devices) == 1:
-            # Only has one element, pop it off and return it.
             return devices.pop()
         else:
             return -1
