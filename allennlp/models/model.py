@@ -63,12 +63,12 @@ class Model(torch.nn.Module, Registrable):
         device = None
         for parameter in self.parameters():
             this_device = util.get_device_of(parameter)
-            if not device:
+            if device is None:
                 device = this_device
             elif device != this_device:
                 raise ConfigurationError(f"Parameters have mismatching cuda_device: {device} != {this_device}")
 
-        if not device:
+        if device is None:
             raise ConfigurationError("cuda_device could not be determined as there are no parameters.")
 
         return device
