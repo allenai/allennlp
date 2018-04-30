@@ -12,7 +12,9 @@ import allennlp.nn.util as util
 
 def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> List[Tuple[int, int]]:
     """
-    Given tokens and a constraint type, returns the allowed transitions.
+    Given tokens and a constraint type, returns the allowed transitions. It will
+    additionally include transitions for the start and end states, which are used
+    by the conditional random field.
 
     Parameters
     ----------
@@ -74,13 +76,13 @@ def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> List[Tu
                     allowed.append((i, j))
 
         # start transitions
-        for i, (to_bioul, *to_entity) in tokens.items():
-            if to_bioul in ('O', 'B'):
+        for i, (to_bio, *to_entity) in tokens.items():
+            if to_bio in ('O', 'B'):
                 allowed.append((start_tag, i))
 
         # end transitions
-        for i, (from_bioul, *from_entity) in tokens.items():
-            if from_bioul in ('O', 'B', 'I'):
+        for i, (from_bio, *from_entity) in tokens.items():
+            if from_bio in ('O', 'B', 'I'):
                 allowed.append((i, end_tag))
 
     else:
@@ -103,6 +105,8 @@ class ConditionalRandomField(torch.nn.Module):
     constraints : List[Tuple[int, int]], optional (default: None)
         An optional list of allowed transitions (from_tag_id, to_tag_id).
         These are applied to ``viterbi_tags()`` but do not affect ``forward()``.
+        These should be derived from `allowed_transitions` so that the
+        start and end transitions are handled correctly for your tag type.
     include_start_end_transitions : bool, optional (default: True)
         Whether to include the start and end transition parameters.
     """
@@ -299,12 +303,12 @@ class ConditionalRandomField(torch.nn.Module):
 
         if self.include_start_end_transitions:
             transitions[start_tag, :num_tags] = (
-                    self.start_transitions.data * self._constraint_mask[start_tag, :num_tags] +
-                    -10000.0 * (1 - self._constraint_mask[start_tag, :num_tags])
+                    self.start_transitions.data * self._constraint_mask[start_tag, :num_tags].data +
+                    -10000.0 * (1 - self._constraint_mask[start_tag, :num_tags].data)
             )
             transitions[:num_tags, end_tag] = (
-                    self.end_transitions.data * self._constraint_mask[:num_tags, end_tag] +
-                    -10000.0 * (1 - self._constraint_mask[:num_tags, end_tag])
+                    self.end_transitions.data * self._constraint_mask[:num_tags, end_tag].data +
+                    -10000.0 * (1 - self._constraint_mask[:num_tags, end_tag].data)
             )
         else:
             transitions[start_tag, :num_tags] = -10000.0 * (1 - self._constraint_mask[start_tag, :num_tags].data)
