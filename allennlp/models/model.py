@@ -193,10 +193,10 @@ class Model(torch.nn.Module, Registrable):
     def _get_prediction_device(self) -> int:
         """
         This method checks the device of the first parameter to determine the cuda_device
-        this model is to be run on for predictions.  If there are no parameters, it returns -1.
+        this model should be run on for predictions.  If there are no parameters, it returns -1.
         Returns
         -------
-        The cuda device this model is to be run on for predictions.
+        The cuda device this model should run on for predictions.
         """
         devices = {util.get_device_of(param) for param in self.parameters()}
 
