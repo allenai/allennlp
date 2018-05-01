@@ -119,18 +119,57 @@ class Preprocessor(object):
                     result.append(line)
         return entry
 
+def save_json(json_obj, filename):
+    with open(filename, 'w') as f:
+        json.dump(json_obj, f)
+
 
 if __name__ == "__main__":
     p = Preprocessor()
     path = "/Users/prasoon/Desktop/train"
     files = os.listdir(path)
-    train_json = {'data': []}
-    for index, each_file in enumerate(files):
-        if not each_file.startswith('student'):
-            continue
-        print("Preprocessing:", index, each_file)
-        train_json['data'].append(p.preprocess(path + "/" + each_file))
+    student_train_json = {'data': []}
+    bug_train_json = {'data': []}
+    dept_train_json = {'data': []}
+    meet_train_json = {'data': []}
+    shop_train_json = {'data': []}
 
+    for index, each_file in enumerate(files):
+        if not os.path.isfile(each_file):
+            print("Dir", each_file)
+            inner_files = os.listdir(path + "/" + each_file)
+            for filename in inner_files:
+                if filename.startswith('student'):
+                    train_json = student_train_json
+                elif filename.startswith('bug'):
+                    train_json = bug_train_json
+                elif filename.startswith('department'):
+                    train_json = dept_train_json
+                elif filename.startswith('meetings'):
+                    train_json = meet_train_json
+                elif filename.startswith('shopping'):
+                    train_json = shop_train_json
+                else:
+                    print("Ignored file", filename)
+                    continue
+
+                if len(train_json['data']) > 100:
+                    continue
+
+                real_path = path + "/" + each_file + "/" + filename
+                print("Preprocessing:", index, filename)
+                train_json['data'].append(p.preprocess(real_path))
+
+    path += "/"
     print(ignored, "/", total)
-    with open(path + "/train_student.json", "w") as f:
-        json.dump(train_json, f)
+    save_json(student_train_json, path + 'final/student.json')
+    save_json(bug_train_json, path + 'final/bug.json')
+    save_json(dept_train_json, path + 'final/department.json')
+    save_json(meet_train_json, path + 'final/meetings.json')
+    save_json(shop_train_json, path + 'final/shopping.json')
+    train = {'data': student_train_json['data'] + bug_train_json['data'] + dept_train_json['data'] +
+            meet_train_json['data']}
+    dev = shop_train_json
+
+    save_json(train, path + 'final/train.json')
+    save_json(dev, path + 'final/dev.json')
