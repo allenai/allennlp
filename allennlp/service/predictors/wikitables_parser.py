@@ -67,9 +67,9 @@ class WikiTablesParserPredictor(Predictor):
         return instance, extra_info
 
     @overrides
-    def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
+    def predict_json(self, inputs: JsonDict) -> JsonDict:
         instance, return_dict = self._json_to_instance(inputs)
-        outputs = self._model.forward_on_instance(instance, cuda_device)
+        outputs = self._model.forward_on_instance(instance)
         outputs['answer'] = self._execute_logical_form_on_table(outputs['logical_form'],
                                                                 inputs['table'])
 

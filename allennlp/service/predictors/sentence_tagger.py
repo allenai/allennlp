@@ -21,8 +21,8 @@ class SentenceTaggerPredictor(Predictor):
         super().__init__(model, dataset_reader)
         self._tokenizer = SpacyWordSplitter(language='en_core_web_sm', pos_tags=True)
 
-    def predict(self, sentence: str, cuda_device: int = -1) -> JsonDict:
-        return self.predict_json({"sentence" : sentence}, cuda_device)
+    def predict(self, sentence: str) -> JsonDict:
+        return self.predict_json({"sentence" : sentence})
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:

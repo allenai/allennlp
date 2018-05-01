@@ -5,7 +5,13 @@ from allennlp.data.tokenizers.token import Token
 
 
 class InvalidTagSequence(Exception):
-    pass
+    def __init__(self, tag_sequence=None):
+        super().__init__()
+        self.tag_sequence = tag_sequence
+
+    def __str__(self):
+        return ' '.join(self.tag_sequence)
+
 
 T = TypeVar("T", str, Token)
 def enumerate_spans(sentence: List[T],
@@ -89,7 +95,7 @@ def bio_tags_to_spans(tag_sequence: List[str],
         # Actual BIO tag.
         bio_tag = string_tag[0]
         if bio_tag not in ["B", "I", "O"]:
-            raise InvalidTagSequence
+            raise InvalidTagSequence(tag_sequence)
         conll_tag = string_tag[2:]
         if bio_tag == "O" or conll_tag in classes_to_ignore:
             # The span has ended.
@@ -161,14 +167,14 @@ def bioul_tags_to_spans(tag_sequence: List[str],
             while label[0] != 'L':
                 index += 1
                 if index >= len(tag_sequence):
-                    raise InvalidTagSequence
+                    raise InvalidTagSequence(tag_sequence)
                 label = tag_sequence[index]
                 if not (label[0] == 'I' or label[0] == 'L'):
-                    raise InvalidTagSequence
+                    raise InvalidTagSequence(tag_sequence)
             spans.append((label.partition('-')[2], (start, index)))
         else:
             if label != 'O':
-                raise InvalidTagSequence
+                raise InvalidTagSequence(tag_sequence)
         index += 1
     return [span for span in spans if span[0] not in classes_to_ignore]
 
@@ -261,7 +267,7 @@ def iob1_to_bioul(tag_sequence: List[str]) -> List[str]:
                 process_stack(stack, bioul_sequence)
             stack.append(label)
         else:
-            raise InvalidTagSequence
+            raise InvalidTagSequence(tag_sequence)
 
     # process the stack
     if len(stack) > 0:
