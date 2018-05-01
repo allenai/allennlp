@@ -25,32 +25,41 @@ For more details, see `allennlp elmo -h`.
 
 ## Using ELMo programmatically
 
-If you need to include ELMo at multiple layers in a task model or you have other advanced use cases, you will need to create ELMo vectors
-programatically.  This is easily done with the ElmoEmbedder class [(API doc)](https://github.com/allenai/allennlp/tree/master/allennlp/commands/elmo.py).
+If you need to include ELMo at multiple layers in a task model or you have other advanced use cases, you will need to create ELMo vectors programatically.
+This is easily done with the `Elmo` class [(API doc)](https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L27), which provides a mechanism to compute the weighted ELMo representations (Equation (1) in the paper).
 
+This is a `torch.nn.Module` subclass that computes any number of ELMo
+representations and introduces trainable scalar weights for each.
+For example, this code snippet computes two layers of representations
+(as in the SNLI and SQuAD models from our paper):
 
 ```python
-from allennlp.commands.elmo import ElmoEmbedder
+from allennlp.modules.elmo import Elmo, batch_to_ids
 
-ee = ElmoEmbedder()
+options_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
+weight_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
 
-embeddings = ee.embed_sentence("Bitcoin alone has a sixty percent share of global search .".split())
+#weight_file = '/Users/matthewp/data/elmo/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5'
 
-# embeddings has shape (3, 11, 1024)
-#   3    - the number of ELMo vectors.
-#   11   - the number of words in the input sentence
+elmo = Elmo(options_file, weight_file, 2, dropout=0)
+
+# use batch_to_ids to convert sentences to character ids
+sentences = [['First', 'sentence', '.'], ['Another', '.']]
+character_ids = batch_to_ids(sentences)
+
+embeddings = elmo(character_ids)
+
+# embeddings['elmo_representations'] is length two list of tensors.
+# Each element contains one layer of ELMo representations with shape
+# (2, 3, 1024).
+#   2    - the batch size
+#   3    - the sequence length of the batch
 #   1024 - the length of each ELMo vector
 ```
 
-For larger datasets, batching the sentences by using the `batch_to_embeddings` method
-will speed up the computation significantly.
+If you are not training a pytorch model, and just want numpy arrays as output
+then use `allennlp.commands.elmo.ElmoEmbedder`.
 
-Also note that `ElmoEmbedder` is a utility class that bundles together several
-tasks related to computing ELMo representations including mapping strings to character ids and
-running the pre-trained biLM.  It is not designed to be used when training a model and
-is not a subclass of `torch.nn.Module`.  To train a model with ELMo, we recommend using
-the `allennlp.modules.elmo.Elmo` class, which does subclass `torch.nn.Module` and implements
-`forward`.
 
 ## Using ELMo with existing `allennlp` models
 
@@ -126,5 +135,4 @@ general guidelines for an initial training run.
 * Add some dropout (0.5 is a good default value), either in the `Elmo` class directly, or in the next layer of your network.  If the next layer of the network includes dropout then set `dropout=0` when constructing the `Elmo` class.
 * Add a small amount of L2 regularization to the scalar weighting parameters (`lambda=0.001` in the paper).  These are the parameters named `scalar_mix_L.scalar_parameters.X` where `X=[0, 1, 2]` indexes the biLM layer and `L` indexes the number of ELMo representations included in the downstream model.  Often performance is slightly higher for larger datasets without regularizing these parameters, but it can sometimes cause training to be unstable.
 
-Finally, we have found that including pre-trained GloVe or other word vectors in addition to ELMo
-provides little to no improvement over just using ELMo and slows down training.
+Finally, we have found that in some cases including pre-trained GloVe or other word vectors in addition to ELMo provides little to no improvement over just using ELMo and slows down training.  However, we recommend experimenting with your dataset and model architecture for best results.

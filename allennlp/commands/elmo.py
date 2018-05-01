@@ -51,12 +51,9 @@ import torch
 
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import lazy_groups_of
-from allennlp.data.dataset import Batch
-from allennlp.data import Token, Vocabulary, Instance
-from allennlp.data.fields import TextField
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.nn.util import remove_sentence_boundaries
-from allennlp.modules.elmo import _ElmoBiLm
+from allennlp.modules.elmo import _ElmoBiLm, batch_to_ids
 from allennlp.commands.subcommand import Subcommand
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -127,33 +124,6 @@ class ElmoEmbedder():
 
         self.cuda_device = cuda_device
 
-    def batch_to_ids(self, batch: List[List[str]]) -> torch.Tensor:
-        """
-        Converts a batch of tokenized sentences to a tensor representing the sentences with encoded characters
-        (len(batch), max sentence length, max word length).
-
-        Parameters
-        ----------
-        batch : ``List[List[str]]``, required
-            A list of tokenized sentences.
-
-        Returns
-        -------
-            A tensor of padded character ids.
-        """
-        instances = []
-        for sentence in batch:
-            tokens = [Token(token) for token in sentence]
-            field = TextField(tokens,
-                              {'character_ids': self.indexer})
-            instance = Instance({"elmo": field})
-            instances.append(instance)
-
-        dataset = Batch(instances)
-        vocab = Vocabulary()
-        dataset.index_instances(vocab)
-        return dataset.as_tensor_dict()['elmo']['character_ids']
-
     def batch_to_embeddings(self, batch: List[List[str]]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Parameters
@@ -166,7 +136,7 @@ class ElmoEmbedder():
             A tuple of tensors, the first representing activations (batch_size, 3, num_timesteps, 1024) and
         the second a mask (batch_size, num_timesteps).
         """
-        character_ids = self.batch_to_ids(batch)
+        character_ids = batch_to_ids(batch)
         if self.cuda_device >= 0:
             character_ids = character_ids.cuda(device=self.cuda_device)
 
