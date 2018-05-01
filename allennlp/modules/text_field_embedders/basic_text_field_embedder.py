@@ -59,6 +59,6 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         keys = list(params.keys())
         for key in keys:
             embedder_params = params.pop(key)
-            token_embedders[key] = TokenEmbedder.from_params(vocab, embedder_params)
+            token_embedders[key] = TokenEmbedder.from_params(vocab=vocab, params=embedder_params)
         params.assert_empty(cls.__name__)
         return cls(token_embedders)

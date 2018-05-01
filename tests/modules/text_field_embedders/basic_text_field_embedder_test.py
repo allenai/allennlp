@@ -33,7 +33,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                         "embedding_dim": 3
                         }
                 })
-        self.token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        self.token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
         self.inputs = {
                 "words1": Variable(torch.LongTensor([[0, 2, 3, 5]])),
                 "words2": Variable(torch.LongTensor([[1, 4, 3, 2]])),
@@ -75,7 +75,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                                 },
                         }
                 })
-        token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
         inputs = {
                 'words': Variable(torch.rand(3, 4, 5, 6) * 20).long(),
                 'characters': Variable(torch.rand(3, 4, 5, 6, 7) * 15).long(),

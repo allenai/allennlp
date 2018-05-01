@@ -11,7 +11,7 @@ import numpy
 import torch
 
 from allennlp.common.params import Params
-from allennlp.common.registrable import Registrable
+from allennlp.common.registrable import Registrable, create_kwargs
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.nn import util
@@ -189,11 +189,13 @@ class Model(torch.nn.Module, Registrable):
         # pylint: disable=unused-argument,no-self-use
         return {}
 
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
-        choice = params.pop_choice("type", cls.list_available())
-        model = cls.by_name(choice).from_params(vocab, params)
-        return model
+    # @classmethod
+    # def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
+    #     # pylint: disable=arguments-differ
+    #     choice = params.pop_choice("type", cls.list_available())
+    #     subclass = cls.by_name(choice)
+    #     kwargs = create_kwargs(subclass, params, vocab=vocab)
+    #     return subclass(vocab, **kwargs)
 
     @classmethod
     def _load(cls,
@@ -218,7 +220,7 @@ class Model(torch.nn.Module, Registrable):
         # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
         # want the code to look for it, so we remove it from the parameters here.
         remove_pretrained_embedding_params(model_params)
-        model = Model.from_params(vocab, model_params)
+        model = Model.from_params(vocab=vocab, params=model_params)
         model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
         model.load_state_dict(model_state)
 

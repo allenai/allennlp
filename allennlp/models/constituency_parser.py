@@ -460,7 +460,7 @@ class SpanConstituencyParser(Model):
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'SpanConstituencyParser':
         embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
+        text_field_embedder = TextFieldEmbedder.from_params(vocab=vocab, params=embedder_params)
         span_extractor = SpanExtractor.from_params(params.pop("span_extractor"))
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
 
@@ -471,7 +471,7 @@ class SpanConstituencyParser(Model):
             feedforward_layer = None
         pos_tag_embedding_params = params.pop("pos_tag_embedding", None)
         if pos_tag_embedding_params is not None:
-            pos_tag_embedding = Embedding.from_params(vocab, pos_tag_embedding_params)
+            pos_tag_embedding = Embedding.from_params(vocab=vocab, params=pos_tag_embedding_params)
         else:
             pos_tag_embedding = None
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))

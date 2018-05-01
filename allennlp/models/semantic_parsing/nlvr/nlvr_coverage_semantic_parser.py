@@ -421,34 +421,34 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                 "costs": costs,
                 "scores": model_scores}
 
-    @classmethod
-    def from_params(cls, vocab, params: Params) -> 'NlvrCoverageSemanticParser':
-        sentence_embedder_params = params.pop("sentence_embedder")
-        sentence_embedder = TextFieldEmbedder.from_params(vocab, sentence_embedder_params)
-        action_embedding_dim = params.pop_int('action_embedding_dim')
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        attention_function_type = params.pop("attention_function", None)
-        if attention_function_type is not None:
-            attention_function = SimilarityFunction.from_params(attention_function_type)
-        else:
-            attention_function = None
-        beam_size = params.pop_int('beam_size')
-        normalize_beam_score_by_length = params.pop_bool('normalize_beam_score_by_length', False)
-        max_decoding_steps = params.pop_int("max_decoding_steps")
-        checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.8)
-        dynamic_cost_weight = params.pop("dynamic_cost_weight", None)
-        penalize_non_agenda_actions = params.pop_bool("penalize_non_agenda_actions", False)
-        initial_mml_model_file = params.pop("initial_mml_model_file", None)
-        params.assert_empty(cls.__name__)
-        return cls(vocab,
-                   sentence_embedder=sentence_embedder,
-                   action_embedding_dim=action_embedding_dim,
-                   encoder=encoder,
-                   attention_function=attention_function,
-                   beam_size=beam_size,
-                   max_decoding_steps=max_decoding_steps,
-                   normalize_beam_score_by_length=normalize_beam_score_by_length,
-                   checklist_cost_weight=checklist_cost_weight,
-                   dynamic_cost_weight=dynamic_cost_weight,
-                   penalize_non_agenda_actions=penalize_non_agenda_actions,
-                   initial_mml_model_file=initial_mml_model_file)
+    # @classmethod
+    # def from_params(cls, vocab, params: Params) -> 'NlvrCoverageSemanticParser':
+    #     sentence_embedder_params = params.pop("sentence_embedder")
+    #     sentence_embedder = TextFieldEmbedder.from_params(vocab, sentence_embedder_params)
+    #     action_embedding_dim = params.pop_int('action_embedding_dim')
+    #     encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
+    #     attention_function_type = params.pop("attention_function", None)
+    #     if attention_function_type is not None:
+    #         attention_function = SimilarityFunction.from_params(attention_function_type)
+    #     else:
+    #         attention_function = None
+    #     beam_size = params.pop_int('beam_size')
+    #     normalize_beam_score_by_length = params.pop_bool('normalize_beam_score_by_length', False)
+    #     max_decoding_steps = params.pop_int("max_decoding_steps")
+    #     checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.8)
+    #     dynamic_cost_weight = params.pop("dynamic_cost_weight", None)
+    #     penalize_non_agenda_actions = params.pop_bool("penalize_non_agenda_actions", False)
+    #     initial_mml_model_file = params.pop("initial_mml_model_file", None)
+    #     params.assert_empty(cls.__name__)
+    #     return cls(vocab,
+    #                sentence_embedder=sentence_embedder,
+    #                action_embedding_dim=action_embedding_dim,
+    #                encoder=encoder,
+    #                attention_function=attention_function,
+    #                beam_size=beam_size,
+    #                max_decoding_steps=max_decoding_steps,
+    #                normalize_beam_score_by_length=normalize_beam_score_by_length,
+    #                checklist_cost_weight=checklist_cost_weight,
+    #                dynamic_cost_weight=dynamic_cost_weight,
+    #                penalize_non_agenda_actions=penalize_non_agenda_actions,
+    #                initial_mml_model_file=initial_mml_model_file)

@@ -78,15 +78,3 @@ class SequenceTaggingDatasetReader(DatasetReader):
         """
         # pylint: disable=arguments-differ
         return Instance({'tokens': TextField(tokens, token_indexers=self._token_indexers)})
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'SequenceTaggingDatasetReader':
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        word_tag_delimiter = params.pop("word_tag_delimiter", DEFAULT_WORD_TAG_DELIMITER)
-        token_delimiter = params.pop("token_delimiter", None)
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return SequenceTaggingDatasetReader(token_indexers=token_indexers,
-                                            word_tag_delimiter=word_tag_delimiter,
-                                            token_delimiter=token_delimiter,
-                                            lazy=lazy)

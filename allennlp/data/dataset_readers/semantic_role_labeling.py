@@ -103,13 +103,3 @@ class SrlReader(DatasetReader):
         if tags:
             fields['tags'] = SequenceLabelField(tags, text_field)
         return Instance(fields)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'SrlReader':
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        domain_identifier = params.pop("domain_identifier", None)
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return SrlReader(token_indexers=token_indexers,
-                         domain_identifier=domain_identifier,
-                         lazy=lazy)

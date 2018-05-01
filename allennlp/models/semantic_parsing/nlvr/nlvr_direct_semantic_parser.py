@@ -169,24 +169,24 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                 'consistency': self._consistency.get_metric(reset)
         }
 
-    @classmethod
-    def from_params(cls, vocab, params: Params) -> 'NlvrDirectSemanticParser':
-        sentence_embedder_params = params.pop("sentence_embedder")
-        sentence_embedder = TextFieldEmbedder.from_params(vocab, sentence_embedder_params)
-        action_embedding_dim = params.pop_int('action_embedding_dim')
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        attention_function_type = params.pop("attention_function", None)
-        if attention_function_type is not None:
-            attention_function = SimilarityFunction.from_params(attention_function_type)
-        else:
-            attention_function = None
-        decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
-        max_decoding_steps = params.pop_int("max_decoding_steps")
-        params.assert_empty(cls.__name__)
-        return cls(vocab,
-                   sentence_embedder=sentence_embedder,
-                   action_embedding_dim=action_embedding_dim,
-                   encoder=encoder,
-                   attention_function=attention_function,
-                   decoder_beam_search=decoder_beam_search,
-                   max_decoding_steps=max_decoding_steps)
+    # @classmethod
+    # def from_params(cls, vocab, params: Params) -> 'NlvrDirectSemanticParser':
+    #     sentence_embedder_params = params.pop("sentence_embedder")
+    #     sentence_embedder = TextFieldEmbedder.from_params(vocab, sentence_embedder_params)
+    #     action_embedding_dim = params.pop_int('action_embedding_dim')
+    #     encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
+    #     attention_function_type = params.pop("attention_function", None)
+    #     if attention_function_type is not None:
+    #         attention_function = SimilarityFunction.from_params(attention_function_type)
+    #     else:
+    #         attention_function = None
+    #     decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
+    #     max_decoding_steps = params.pop_int("max_decoding_steps")
+    #     params.assert_empty(cls.__name__)
+    #     return cls(vocab,
+    #                sentence_embedder=sentence_embedder,
+    #                action_embedding_dim=action_embedding_dim,
+    #                encoder=encoder,
+    #                attention_function=attention_function,
+    #                decoder_beam_search=decoder_beam_search,
+    #                max_decoding_steps=max_decoding_steps)

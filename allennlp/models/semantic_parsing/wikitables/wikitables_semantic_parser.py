@@ -87,10 +87,10 @@ class WikiTablesSemanticParser(Model):
                  action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
                  entity_encoder: Seq2VecEncoder,
-                 mixture_feedforward: FeedForward,
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  attention_function: SimilarityFunction,
+                 mixture_feedforward: FeedForward = None,
                  use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
                  num_linking_features: int = 10,
@@ -802,43 +802,43 @@ class WikiTablesSemanticParser(Model):
         output_dict["predicted_actions"] = batch_action_info
         return output_dict
 
-    @classmethod
-    def from_params(cls, vocab, params: Params) -> 'WikiTablesSemanticParser':
-        question_embedder = TextFieldEmbedder.from_params(vocab, params.pop("question_embedder"))
-        action_embedding_dim = params.pop_int("action_embedding_dim")
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        entity_encoder = Seq2VecEncoder.from_params(params.pop('entity_encoder'))
-        max_decoding_steps = params.pop_int("max_decoding_steps")
-        mixture_feedforward_type = params.pop('mixture_feedforward', None)
-        if mixture_feedforward_type is not None:
-            mixture_feedforward = FeedForward.from_params(mixture_feedforward_type)
-        else:
-            mixture_feedforward = None
-        decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
-        # If no attention function is specified, we should not use attention, not attention with
-        # default similarity function.
-        attention_function_type = params.pop("attention_function", None)
-        if attention_function_type is not None:
-            attention_function = SimilarityFunction.from_params(attention_function_type)
-        else:
-            attention_function = None
-        use_neighbor_similarity_for_linking = params.pop_bool('use_neighbor_similarity_for_linking', False)
-        dropout = params.pop_float('dropout', 0.0)
-        num_linking_features = params.pop_int('num_linking_features', 10)
-        rule_namespace = params.pop('rule_namespace', 'rule_labels')
-        tables_directory = params.pop('tables_directory', '/wikitables/')
-        params.assert_empty(cls.__name__)
-        return cls(vocab,
-                   question_embedder=question_embedder,
-                   action_embedding_dim=action_embedding_dim,
-                   encoder=encoder,
-                   entity_encoder=entity_encoder,
-                   mixture_feedforward=mixture_feedforward,
-                   decoder_beam_search=decoder_beam_search,
-                   max_decoding_steps=max_decoding_steps,
-                   attention_function=attention_function,
-                   use_neighbor_similarity_for_linking=use_neighbor_similarity_for_linking,
-                   dropout=dropout,
-                   num_linking_features=num_linking_features,
-                   rule_namespace=rule_namespace,
-                   tables_directory=tables_directory)
+    # @classmethod
+    # def from_params(cls, vocab, params: Params) -> 'WikiTablesSemanticParser':
+    #     question_embedder = TextFieldEmbedder.from_params(vocab, params.pop("question_embedder"))
+    #     action_embedding_dim = params.pop_int("action_embedding_dim")
+    #     encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
+    #     entity_encoder = Seq2VecEncoder.from_params(params.pop('entity_encoder'))
+    #     max_decoding_steps = params.pop_int("max_decoding_steps")
+    #     mixture_feedforward_type = params.pop('mixture_feedforward', None)
+    #     if mixture_feedforward_type is not None:
+    #         mixture_feedforward = FeedForward.from_params(mixture_feedforward_type)
+    #     else:
+    #         mixture_feedforward = None
+    #     decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
+    #     # If no attention function is specified, we should not use attention, not attention with
+    #     # default similarity function.
+    #     attention_function_type = params.pop("attention_function", None)
+    #     if attention_function_type is not None:
+    #         attention_function = SimilarityFunction.from_params(attention_function_type)
+    #     else:
+    #         attention_function = None
+    #     use_neighbor_similarity_for_linking = params.pop_bool('use_neighbor_similarity_for_linking', False)
+    #     dropout = params.pop_float('dropout', 0.0)
+    #     num_linking_features = params.pop_int('num_linking_features', 10)
+    #     rule_namespace = params.pop('rule_namespace', 'rule_labels')
+    #     tables_directory = params.pop('tables_directory', '/wikitables/')
+    #     params.assert_empty(cls.__name__)
+    #     return cls(vocab,
+    #                question_embedder=question_embedder,
+    #                action_embedding_dim=action_embedding_dim,
+    #                encoder=encoder,
+    #                entity_encoder=entity_encoder,
+    #                mixture_feedforward=mixture_feedforward,
+    #                decoder_beam_search=decoder_beam_search,
+    #                max_decoding_steps=max_decoding_steps,
+    #                attention_function=attention_function,
+    #                use_neighbor_similarity_for_linking=use_neighbor_similarity_for_linking,
+    #                dropout=dropout,
+    #                num_linking_features=num_linking_features,
+    #                rule_namespace=rule_namespace,
+    #                tables_directory=tables_directory)

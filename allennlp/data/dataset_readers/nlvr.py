@@ -196,18 +196,3 @@ class NlvrDatasetReader(DatasetReader):
 
         return Instance(fields)
 
-    @classmethod
-    def from_params(cls, params: Params) -> 'NlvrDatasetReader':
-        lazy = params.pop('lazy', False)
-        tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        sentence_token_indexers = TokenIndexer.dict_from_params(params.pop('sentence_token_indexers', {}))
-        terminal_indexers = TokenIndexer.dict_from_params(params.pop('terminal_indexers', {}))
-        nonterminal_indexers = TokenIndexer.dict_from_params(params.pop('nonterminal_indexers', {}))
-        output_agendas = params.pop("output_agendas", True)
-        params.assert_empty(cls.__name__)
-        return NlvrDatasetReader(lazy=lazy,
-                                 tokenizer=tokenizer,
-                                 sentence_token_indexers=sentence_token_indexers,
-                                 terminal_indexers=terminal_indexers,
-                                 nonterminal_indexers=nonterminal_indexers,
-                                 output_agendas=output_agendas)

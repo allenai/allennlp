@@ -34,8 +34,3 @@ class Seq2SeqEncoder(_EncoderBase, Registrable):
         second half.
         """
         raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'Seq2SeqEncoder':
-        choice = params.pop_choice('type', cls.list_available())
-        return cls.by_name(choice).from_params(params)

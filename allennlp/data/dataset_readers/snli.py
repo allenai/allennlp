@@ -74,13 +74,3 @@ class SnliReader(DatasetReader):
         if label:
             fields['label'] = LabelField(label)
         return Instance(fields)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'SnliReader':
-        tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return SnliReader(tokenizer=tokenizer,
-                          token_indexers=token_indexers,
-                          lazy=lazy)

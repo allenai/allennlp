@@ -24,7 +24,7 @@ The available initialization functions are
 import logging
 import re
 import math
-from typing import Callable, List, Tuple, Type
+from typing import Callable, List, Tuple, Type, Iterable
 import itertools
 
 import torch
@@ -236,7 +236,7 @@ class InitializerApplicator:
             logger.info("   %s", name)
 
     @classmethod
-    def from_params(cls, params: List[Tuple[str, Params]]) -> "InitializerApplicator":
+    def from_params(cls, params: Iterable[Tuple[str, Params]]=()) -> "InitializerApplicator":
         """
         Converts a Params object into an InitializerApplicator. The json should
         be formatted as follows::

@@ -219,12 +219,3 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
 
         return end
 
-    @classmethod
-    def from_params(cls, params: Params) -> 'PennTreeBankConstituencySpanDatasetReader':
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        use_pos_tags = params.pop('use_pos_tags', True)
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return PennTreeBankConstituencySpanDatasetReader(token_indexers=token_indexers,
-                                                         use_pos_tags=use_pos_tags,
-                                                         lazy=lazy)

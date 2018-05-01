@@ -152,17 +152,3 @@ class TriviaQaReader(DatasetReader):
                                                         passage_text,
                                                         token_spans,
                                                         answer_texts)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'TriviaQaReader':
-        base_tarball_path = params.pop('base_tarball_path')
-        unfiltered_tarball_path = params.pop('unfiltered_tarball_path', None)
-        tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return cls(base_tarball_path=base_tarball_path,
-                   unfiltered_tarball_path=unfiltered_tarball_path,
-                   tokenizer=tokenizer,
-                   token_indexers=token_indexers,
-                   lazy=lazy)

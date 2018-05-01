@@ -157,11 +157,3 @@ class WinobiasReader(DatasetReader):
             fields["span_labels"] = SequenceLabelField(span_labels, span_field)
 
         return Instance(fields)
-
-    @classmethod
-    def from_params(cls, params: Params) -> "WinobiasReader":
-        token_indexers = TokenIndexer.dict_from_params(params.pop("token_indexers", {}))
-        max_span_width = params.pop_int("max_span_width")
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return cls(token_indexers=token_indexers, max_span_width=max_span_width, lazy=lazy)

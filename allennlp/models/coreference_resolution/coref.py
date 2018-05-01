@@ -585,7 +585,7 @@ class CoreferenceResolver(Model):
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> "CoreferenceResolver":
         embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
+        text_field_embedder = TextFieldEmbedder.from_params(vocab=vocab, params=embedder_params)
         context_layer = Seq2SeqEncoder.from_params(params.pop("context_layer"))
         mention_feedforward = FeedForward.from_params(params.pop("mention_feedforward"))
         antecedent_feedforward = FeedForward.from_params(params.pop("antecedent_feedforward"))

@@ -38,7 +38,7 @@ class TestEmbedding(AllenNlpTestCase):
                 'embedding_dim': 300,
                 'projection_dim': 20
                 })
-        embedding_layer = Embedding.from_params(vocab, params)
+        embedding_layer = Embedding.from_params(vocab=vocab, params=params)
         input_tensor = Variable(torch.LongTensor([[3, 2, 1, 0]]))
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 4, 20)
@@ -61,7 +61,7 @@ class TestEmbedding(AllenNlpTestCase):
                 'pretrained_file': embeddings_filename,
                 'embedding_dim': 3,
                 })
-        embedding_layer = Embedding.from_params(vocab, params)
+        embedding_layer = Embedding.from_params(vocab=vocab, params=params)
         word_vector = embedding_layer.weight.data[vocab.get_token_index("word")]
         assert numpy.allclose(word_vector.numpy(), numpy.array([1.0, 2.3, -1.0]))
         word_vector = embedding_layer.weight.data[vocab.get_token_index(unicode_space)]
@@ -80,7 +80,7 @@ class TestEmbedding(AllenNlpTestCase):
                 'pretrained_file': embeddings_filename,
                 'embedding_dim': 3,
                 })
-        embedding_layer = Embedding.from_params(vocab, params)
+        embedding_layer = Embedding.from_params(vocab=vocab, params=params)
         word_vector = embedding_layer.weight.data[vocab.get_token_index("word2")]
         assert not numpy.allclose(word_vector.numpy(), numpy.array([0.0, 0.0, 0.0]))
 
@@ -99,7 +99,7 @@ class TestEmbedding(AllenNlpTestCase):
                 'pretrained_file': embeddings_filename,
                 'embedding_dim': 5,
                 })
-        embedding_layer = Embedding.from_params(vocab, params)
+        embedding_layer = Embedding.from_params(vocab=vocab, params=params)
         assert numpy.allclose(embedding_layer.weight.data.numpy(), embeddings)
 
     def test_read_hdf5_raises_on_invalid_shape(self):
@@ -117,4 +117,4 @@ class TestEmbedding(AllenNlpTestCase):
                 'embedding_dim': 5,
                 })
         with pytest.raises(ConfigurationError):
-            _ = Embedding.from_params(vocab, params)
+            _ = Embedding.from_params(vocab=vocab, params=params)

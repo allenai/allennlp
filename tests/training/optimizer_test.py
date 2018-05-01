@@ -26,7 +26,7 @@ class TestOptimizer(AllenNlpTestCase):
                         "num_layers": 2
                         }
                 })
-        self.model = SimpleTagger.from_params(vocab, self.model_params)
+        self.model = SimpleTagger.from_params(vocab=vocab, params=self.model_params)
 
     def test_optimizer_basic(self):
         optimizer_params = Params({

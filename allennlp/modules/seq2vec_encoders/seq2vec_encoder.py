@@ -26,8 +26,3 @@ class Seq2VecEncoder(_EncoderBase, Registrable):
         the shape of the returned tensor, but the last element of that shape.
         """
         raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'Seq2VecEncoder':
-        choice = params.pop_choice('type', cls.list_available())
-        return cls.by_name(choice).from_params(params)

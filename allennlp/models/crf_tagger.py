@@ -151,22 +151,22 @@ class CrfTagger(Model):
         metric_dict = self.span_metric.get_metric(reset=reset)
         return {x: y for x, y in metric_dict.items() if "overall" in x}
 
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'CrfTagger':
-        embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        label_namespace = params.pop("label_namespace", "labels")
-        constraint_type = params.pop("constraint_type", None)
-        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
-        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
+    # @classmethod
+    # def from_params(cls, vocab: Vocabulary, params: Params) -> 'CrfTagger':
+    #     embedder_params = params.pop("text_field_embedder")
+    #     text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
+    #     encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
+    #     label_namespace = params.pop("label_namespace", "labels")
+    #     constraint_type = params.pop("constraint_type", None)
+    #     initializer = InitializerApplicator.from_params(params.pop('initializer', []))
+    #     regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
 
-        params.assert_empty(cls.__name__)
+    #     params.assert_empty(cls.__name__)
 
-        return cls(vocab=vocab,
-                   text_field_embedder=text_field_embedder,
-                   encoder=encoder,
-                   label_namespace=label_namespace,
-                   constraint_type=constraint_type,
-                   initializer=initializer,
-                   regularizer=regularizer)
+    #     return cls(vocab=vocab,
+    #                text_field_embedder=text_field_embedder,
+    #                encoder=encoder,
+    #                label_namespace=label_namespace,
+    #                constraint_type=constraint_type,
+    #                initializer=initializer,
+    #                regularizer=regularizer)

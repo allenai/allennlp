@@ -147,17 +147,3 @@ class Conll2003DatasetReader(DatasetReader):
         """
         # pylint: disable=arguments-differ
         return Instance({'tokens': TextField(tokens, token_indexers=self._token_indexers)})
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'Conll2003DatasetReader':
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        tag_label = params.pop('tag_label', None)
-        feature_labels = params.pop('feature_labels', ())
-        lazy = params.pop('lazy', False)
-        coding_scheme = params.pop('coding_scheme', 'IOB1')
-        params.assert_empty(cls.__name__)
-        return Conll2003DatasetReader(token_indexers=token_indexers,
-                                      tag_label=tag_label,
-                                      feature_labels=feature_labels,
-                                      lazy=lazy,
-                                      coding_scheme=coding_scheme)
