@@ -132,6 +132,7 @@ class TestTrainer(AllenNlpTestCase):
                               num_epochs=2, serialization_dir=self.TEST_DIR)
             trainer.train()
 
+    # TODO(joelgrus): This test fails because TensorboardX needs updating.
     def test_trainer_can_log_histograms(self):
         # enable activation logging
         for module in self.model.modules():
@@ -245,4 +246,4 @@ class TestSparseClipGrad(AllenNlpTestCase):
         _ = sparse_clip_norm([embedding.weight], 1.5)
         # Final norm should be 1.5
         grad = embedding.weight.grad.data.coalesce()
-        self.assertAlmostEqual(grad._values().norm(2.0), 1.5, places=5) # pylint: disable=protected-access
+        self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5) # pylint: disable=protected-access
