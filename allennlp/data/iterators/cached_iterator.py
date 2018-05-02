@@ -29,6 +29,16 @@ class CachedIterator(BucketIterator):
                                      'Memory needs to be big enough to cache the whole dataset.')
         self.cached_batches: Dict[int, List] = {}
 
+    def _move_to_gpu(self, batch: Dict, cuda_device: int):
+        gpu_batch = dict()
+        for k, v in batch.items():
+            if type(v) == dict:
+                gpu_v = dict((lbl, tnsr.cuda(cuda_device)) for lbl, tnsr in v.items())
+            else:
+                gpu_v = v.cuda(cuda_device)
+            gpu_batch[k] = gpu_v
+        return gpu_batch
+
     @overrides
     def _yield_one_epoch(self, instances: Iterable[Instance], shuffle: bool, cuda_device: int, for_training: bool):
         if is_lazy(instances):
@@ -41,10 +51,12 @@ class CachedIterator(BucketIterator):
             if shuffle:
                 random.shuffle(batches)  # shuffle the list of batches but not the rows of each batch
             for batch in batches:
-                yield batch
+                yield self._move_to_gpu(batch, cuda_device)
         else:
             self.cached_batches[instances_id] = []
             logger.info('caching batches of instances id: %d', instances_id)
-            for batch in super()._yield_one_epoch(instances, shuffle, cuda_device, for_training):
+            for batch in super()._yield_one_epoch(instances, shuffle, -1, for_training):
                 self.cached_batches[instances_id].append(batch)
+                if cuda_device != -1:
+                    batch = self._move_to_gpu(batch, cuda_device)
                 yield batch
