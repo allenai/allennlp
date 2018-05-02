@@ -134,3 +134,15 @@ general guidelines for an initial training run.
 * Add a small amount of L2 regularization to the scalar weighting parameters (`lambda=0.001` in the paper).  These are the parameters named `scalar_mix_L.scalar_parameters.X` where `X=[0, 1, 2]` indexes the biLM layer and `L` indexes the number of ELMo representations included in the downstream model.  Often performance is slightly higher for larger datasets without regularizing these parameters, but it can sometimes cause training to be unstable.
 
 Finally, we have found that in some cases including pre-trained GloVe or other word vectors in addition to ELMo provides little to no improvement over just using ELMo and slows down training.  However, we recommend experimenting with your dataset and model architecture for best results.
+
+## Notes on statefulness and non-determinism
+
+The pre-trained biLM used to compute ELMo representations was trained without resetting the internal LSTM states between sentences.
+Accordingly, the re-implementation in allennlp is stateful, and carries the LSTM states forward from batch to batch.
+Since the biLM was trained on randomly shuffled sentences padded with special `<S>` and `</S>` tokens, it will the internal states to its own internal representation of end-of-sentence when seeing these tokens.
+
+There are a few practical implications of this:
+
+* Due to the statefulness, the ELMo vectors are not deterministic and running the same batch multiple times will result in slightly different embeddings.
+* After loading the pre-trained model, the first few batches will be negatively impacted until the biLM can reset its internal states.  You may want to run a few batches through the model to warm up the states before making predictions (although we have not worried about this issue in practice).
+* It is important to always add the `<S>` and `</S>` tokens to each sentence.  The `allennlp` code handles this behind the scenes, but if you are handing padding and indexing in a different manner then take care to ensure this is handled appropriately.
