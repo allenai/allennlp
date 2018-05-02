@@ -67,6 +67,15 @@ DEFAULT_BATCH_SIZE = 64
 
 
 class Elmo(Subcommand):
+    """
+    Note that ELMo maintains internal state that depends on which questions have been run through ELMo
+    previously.  As a result, ELMo will return differing results if the same sentence is passed to the
+    same ``Elmo`` instance multiple times.
+
+    A fresh ELMo instance will give the same results for a given sentence,
+    but will require a significant amount of time to instantiate.
+    """
+
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         # pylint: disable=protected-access
         description = '''Create word vectors using ELMo.'''
@@ -188,6 +197,9 @@ class ElmoEmbedder():
         """
         Computes the ELMo embeddings for a single tokenized sentence.
 
+        Please note that ELMo has internal state and will give different results for the same input.
+        See the comment under the class definition.
+
         Parameters
         ----------
         sentence : ``List[str]``, required
@@ -203,6 +215,9 @@ class ElmoEmbedder():
     def embed_batch(self, batch: List[List[str]]) -> List[numpy.ndarray]:
         """
         Computes the ELMo embeddings for a batch of tokenized sentences.
+
+        Please note that ELMo has internal state and will give different results for the same input.
+        See the comment under the class definition.
 
         Parameters
         ----------
@@ -237,6 +252,9 @@ class ElmoEmbedder():
         """
         Computes the ELMo embeddings for a iterable of sentences.
 
+        Please note that ELMo has internal state and will give different results for the same input.
+        See the comment under the class definition.
+
         Parameters
         ----------
         sentences : ``Iterable[List[str]]``, required
@@ -259,6 +277,9 @@ class ElmoEmbedder():
         """
         Computes ELMo embeddings from an input_file where each line contains a sentence tokenized by whitespace.
         The ELMo embeddings are written out in HDF5 format, where each sentences is saved in a dataset.
+
+        Please note that ELMo has internal state and will give different results for the same input.
+        See the comment under the class definition.
 
         Parameters
         ----------
