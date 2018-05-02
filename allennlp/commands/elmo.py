@@ -64,6 +64,12 @@ DEFAULT_BATCH_SIZE = 64
 
 
 class Elmo(Subcommand):
+    """
+    Note that ELMo maintains an internal state dependent on previous batches.
+    As a result, ELMo will return differing results if the same sentence is passed to the same ``Elmo`` instance multiple times.
+
+    See https://github.com/allenai/allennlp/blob/master/tutorials/how_to/elmo.md for more details.
+    """
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         # pylint: disable=protected-access
         description = '''Create word vectors using ELMo.'''
@@ -158,6 +164,9 @@ class ElmoEmbedder():
         """
         Computes the ELMo embeddings for a single tokenized sentence.
 
+        Please note that ELMo has internal state and will give different results for the same input.
+        See the comment under the class definition.
+
         Parameters
         ----------
         sentence : ``List[str]``, required
@@ -173,6 +182,9 @@ class ElmoEmbedder():
     def embed_batch(self, batch: List[List[str]]) -> List[numpy.ndarray]:
         """
         Computes the ELMo embeddings for a batch of tokenized sentences.
+
+        Please note that ELMo has internal state and will give different results for the same input.
+        See the comment under the class definition.
 
         Parameters
         ----------
@@ -206,6 +218,9 @@ class ElmoEmbedder():
                         batch_size: int = DEFAULT_BATCH_SIZE) -> Iterable[numpy.ndarray]:
         """
         Computes the ELMo embeddings for a iterable of sentences.
+
+        Please note that ELMo has internal state and will give different results for the same input.
+        See the comment under the class definition.
 
         Parameters
         ----------

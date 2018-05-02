@@ -139,7 +139,7 @@ Finally, we have found that in some cases including pre-trained GloVe or other w
 
 The pre-trained biLM used to compute ELMo representations was trained without resetting the internal LSTM states between sentences.
 Accordingly, the re-implementation in allennlp is stateful, and carries the LSTM states forward from batch to batch.
-Since the biLM was trained on randomly shuffled sentences padded with special `<S>` and `</S>` tokens, it will the internal states to its own internal representation of end-of-sentence when seeing these tokens.
+Since the biLM was trained on randomly shuffled sentences padded with special `<S>` and `</S>` tokens, it will reset the internal states to its own internal representation of sentence break when seeing these tokens.
 
 There are a few practical implications of this:
 
