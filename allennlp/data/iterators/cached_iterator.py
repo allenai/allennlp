@@ -29,14 +29,15 @@ class CachedIterator(BucketIterator):
                                      'Memory needs to be big enough to cache the whole dataset.')
         self.cached_batches: Dict[int, List] = {}
 
-    def _move_to_gpu(self, batch: Dict, cuda_device: int):
+    @classmethod
+    def _move_to_gpu(cls, batch: Dict, cuda_device: int):
         gpu_batch = dict()
-        for k, v in batch.items():
-            if type(v) == dict:
-                gpu_v = dict((lbl, tnsr.cuda(cuda_device)) for lbl, tnsr in v.items())
+        for k, val in batch.items():
+            if isinstance(val, dict):
+                gpu_val = dict((lbl, tnsr.cuda(cuda_device)) for lbl, tnsr in val.items())
             else:
-                gpu_v = v.cuda(cuda_device)
-            gpu_batch[k] = gpu_v
+                gpu_val = val.cuda(cuda_device)
+            gpu_batch[k] = gpu_val
         return gpu_batch
 
     @overrides
@@ -55,8 +56,8 @@ class CachedIterator(BucketIterator):
         else:
             self.cached_batches[instances_id] = []
             logger.info('caching batches of instances id: %d', instances_id)
-            for batch in super()._yield_one_epoch(instances, shuffle, -1, for_training):
+            for batch in super()._yield_one_epoch(instances, shuffle, -1, for_training):  # batches in cpu ram
                 self.cached_batches[instances_id].append(batch)
                 if cuda_device != -1:
-                    batch = self._move_to_gpu(batch, cuda_device)
+                    batch = self._move_to_gpu(batch, cuda_device)  # if cuda device, move batch to gpu
                 yield batch
