@@ -31,6 +31,8 @@ class CachedIterator(BucketIterator):
 
     @classmethod
     def _move_to_gpu(cls, batch: Dict, cuda_device: int):
+        if cuda_device == -1:
+            return batch
         gpu_batch = dict()
         for k, val in batch.items():
             if isinstance(val, dict):
@@ -58,6 +60,4 @@ class CachedIterator(BucketIterator):
             logger.info('caching batches of instances id: %d', instances_id)
             for batch in super()._yield_one_epoch(instances, shuffle, -1, for_training):  # batches in cpu ram
                 self.cached_batches[instances_id].append(batch)
-                if cuda_device != -1:
-                    batch = self._move_to_gpu(batch, cuda_device)  # if cuda device, move batch to gpu
-                yield batch
+                yield self._move_to_gpu(batch, cuda_device)  # if cuda device, move batch to gpu
