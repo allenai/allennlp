@@ -185,10 +185,10 @@ class ESIM(Model):
 
         # The pooling layer -- max and avg pooling.
         # (batch_size, model_dim)
-        v_a_max = replace_masked_values(
+        v_a_max, _ = replace_masked_values(
                 v_ai, premise_mask.unsqueeze(-1), -1e7
         ).max(dim=1)
-        v_b_max = replace_masked_values(
+        v_b_max, _ = replace_masked_values(
                 v_bi, hypothesis_mask.unsqueeze(-1), -1e7
         ).max(dim=1)
 
