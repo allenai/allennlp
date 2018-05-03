@@ -62,6 +62,7 @@ class ESIM(Model):
                  projection_feedforward: FeedForward,
                  inference_encoder: Seq2SeqEncoder,
                  output_feedforward: FeedForward,
+                 output_logit: FeedForward,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  dropout: float = 0.5,
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
@@ -81,6 +82,7 @@ class ESIM(Model):
             self.dropout = None
 
         self._output_feedforward = output_feedforward
+        self._output_logit = output_logit
 
         self._num_labels = vocab.get_vocab_size(namespace="labels")
 
@@ -90,8 +92,6 @@ class ESIM(Model):
                                "encoder output dim", "projection feedforward input")
         check_dimensions_match(projection_feedforward.get_output_dim(), inference_encoder.get_input_dim(),
                                "proj feedforward output dim", "inference lstm input dim")
-        check_dimensions_match(output_feedforward.get_output_dim(), self._num_labels,
-                               "final output dimension", "number of labels")
 
         self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()
@@ -198,7 +198,8 @@ class ESIM(Model):
         if self.dropout:
             v = self.dropout(v)
 
-        label_logits = self._output_feedforward(v)
+        output_hidden = self._output_feedforward(v)
+        label_logits = self._output_logit(output_hidden)
         label_probs = torch.nn.functional.softmax(label_logits, dim=-1)
 
         output_dict = {"label_logits": label_logits, "label_probs": label_probs}
@@ -225,6 +226,7 @@ class ESIM(Model):
         projection_feedforward = FeedForward.from_params(params.pop('projection_feedforward'))
         inference_encoder = Seq2SeqEncoder.from_params(params.pop("inference_encoder"))
         output_feedforward = FeedForward.from_params(params.pop('output_feedforward'))
+        output_logit = FeedForward.from_params(params.pop('output_logit'))
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
 
@@ -238,6 +240,7 @@ class ESIM(Model):
                    projection_feedforward=projection_feedforward,
                    inference_encoder=inference_encoder,
                    output_feedforward=output_feedforward,
+                   output_logit=output_logit,
                    initializer=initializer,
                    dropout=dropout,
                    regularizer=regularizer)
