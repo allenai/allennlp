@@ -149,12 +149,12 @@ class ESIM(Model):
         # Shape: (batch_size, premise_length, hypothesis_length)
         p2h_attention = last_dim_softmax(similarity_matrix, hypothesis_mask)
         # Shape: (batch_size, premise_length, embedding_dim)
-        attended_hypothesis = weighted_sum(embedded_hypothesis, p2h_attention)
+        attended_hypothesis = weighted_sum(encoded_hypothesis, p2h_attention)
 
         # Shape: (batch_size, hypothesis_length, premise_length)
         h2p_attention = last_dim_softmax(similarity_matrix.transpose(1, 2).contiguous(), premise_mask)
         # Shape: (batch_size, hypothesis_length, embedding_dim)
-        attended_premise = weighted_sum(embedded_premise, h2p_attention)
+        attended_premise = weighted_sum(encoded_premise, h2p_attention)
 
         # the "enhancement" layer
         premise_enhanced = torch.cat(
@@ -180,8 +180,8 @@ class ESIM(Model):
         if self.dropout:
             projected_enhanced_premise = self.dropout(projected_enhanced_premise)
             projected_enhanced_hypothesis = self.dropout(projected_enhanced_hypothesis)
-        v_ai = self._inference_encoder(projected_enhanced_premise)
-        v_bi = self._inference_encoder(projected_enhanced_hypothesis)
+        v_ai = self._inference_encoder(projected_enhanced_premise, premise_mask)
+        v_bi = self._inference_encoder(projected_enhanced_hypothesis, hypothesis_mask)
 
         # The pooling layer -- max and avg pooling.
         # (batch_size, model_dim)
