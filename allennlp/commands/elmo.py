@@ -66,7 +66,8 @@ DEFAULT_BATCH_SIZE = 64
 class Elmo(Subcommand):
     """
     Note that ELMo maintains an internal state dependent on previous batches.
-    As a result, ELMo will return differing results if the same sentence is passed to the same ``Elmo`` instance multiple times.
+    As a result, ELMo will return differing results if the same sentence is
+    passed to the same ``Elmo`` instance multiple times.
 
     See https://github.com/allenai/allennlp/blob/master/tutorials/how_to/elmo.md for more details.
     """
