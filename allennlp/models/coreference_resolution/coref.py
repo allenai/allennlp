@@ -344,10 +344,11 @@ class CoreferenceResolver(Model):
                 # most likely antecedent.
                 predicted_index = antecedent_indices[i, predicted_antecedent]
 
-                antecedent_span = (top_spans[predicted_index, 0],
-                                   top_spans[predicted_index, 1])
+                antecedent_span = (top_spans[predicted_index, 0].item(),
+                                   top_spans[predicted_index, 1].item())
+
                 # Check if we've seen the span before.
-                if antecedent_span in spans_to_cluster_ids.keys():
+                if antecedent_span in spans_to_cluster_ids:
                     predicted_cluster_id: int = spans_to_cluster_ids[antecedent_span]
                 else:
                     # We start a new cluster.
@@ -358,7 +359,7 @@ class CoreferenceResolver(Model):
                     spans_to_cluster_ids[antecedent_span] = predicted_cluster_id
 
                 # Now add the span we are currently considering.
-                span_start, span_end = span
+                span_start, span_end = span[0].item(), span[1].item()
                 clusters[predicted_cluster_id].append((span_start, span_end))
                 spans_to_cluster_ids[(span_start, span_end)] = predicted_cluster_id
             batch_clusters.append(clusters)

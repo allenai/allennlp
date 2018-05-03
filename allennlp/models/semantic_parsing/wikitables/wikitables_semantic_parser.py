@@ -583,7 +583,7 @@ class WikiTablesSemanticParser(Model):
         predicted_tensor = targets.new(predicted)
         targets_trimmed = targets[:, :len(predicted)]
         # Return 1 if the predicted sequence is anywhere in the list of targets.
-        return torch.max(torch.min(targets_trimmed.eq(predicted_tensor), dim=1)[0])
+        return torch.max(torch.min(targets_trimmed.eq(predicted_tensor), dim=1)[0]).item()
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
