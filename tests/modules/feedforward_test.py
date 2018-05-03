@@ -29,7 +29,7 @@ class TestFeedForward(AllenNlpTestCase):
                 })
         feedforward = FeedForward.from_params(params)
 
-        constant_init = lambda tensor: torch.nn.init.constant(tensor, 1.)
+        constant_init = lambda tensor: torch.nn.init.constant_(tensor, 1.)
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(feedforward)
 

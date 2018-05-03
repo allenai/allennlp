@@ -43,10 +43,9 @@ class IndexField(Field[torch.Tensor]):
     @overrides
     def as_tensor(self,
                   padding_lengths: Dict[str, int],
-                  cuda_device: int = -1,
-                  for_training: bool = True) -> torch.Tensor:
+                  cuda_device: int = -1) -> torch.Tensor:
         # pylint: disable=unused-argument
-        tensor = Variable(torch.LongTensor([self.sequence_index]), volatile=not for_training)
+        tensor = Variable(torch.LongTensor([self.sequence_index]))
         return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
 
     @overrides

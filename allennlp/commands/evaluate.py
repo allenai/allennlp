@@ -34,6 +34,8 @@ from typing import Dict, Any, Iterable
 import argparse
 import logging
 
+import torch
+
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.util import prepare_environment
 from allennlp.common.tqdm import Tqdm
@@ -83,18 +85,20 @@ def evaluate(model: Model,
              instances: Iterable[Instance],
              data_iterator: DataIterator,
              cuda_device: int) -> Dict[str, Any]:
-    model.eval()
+    with torch.no_grad():
+        model.eval()
 
-    iterator = data_iterator(instances, num_epochs=1, cuda_device=cuda_device, for_training=False)
-    logger.info("Iterating over dataset")
-    generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
-    for batch in generator_tqdm:
-        model(**batch)
-        metrics = model.get_metrics()
-        description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
-        generator_tqdm.set_description(description, refresh=False)
+        with torch.no_grad():
+            iterator = data_iterator(instances, num_epochs=1, cuda_device=cuda_device)
+            logger.info("Iterating over dataset")
+            generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
+            for batch in generator_tqdm:
+                model(**batch)
+                metrics = model.get_metrics()
+                description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
+                generator_tqdm.set_description(description, refresh=False)
 
-    return model.get_metrics(reset=True)
+            return model.get_metrics(reset=True)
 
 
 def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:

@@ -145,7 +145,7 @@ class Model(torch.nn.Module, Registrable):
         """
         dataset = Batch(instances)
         dataset.index_instances(self.vocab)
-        model_input = dataset.as_tensor_dict(cuda_device=cuda_device, for_training=False)
+        model_input = dataset.as_tensor_dict(cuda_device=cuda_device)
         outputs = self.decode(self(**model_input))
 
         instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]

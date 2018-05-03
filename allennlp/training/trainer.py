@@ -622,8 +622,7 @@ class Trainer:
 
         val_generator = self._iterator(self._validation_data,
                                        num_epochs=1,
-                                       cuda_device=self._iterator_device,
-                                       for_training=False)
+                                       cuda_device=self._iterator_device)
         num_validation_batches = self._iterator.get_num_batches(self._validation_data)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
@@ -674,22 +673,23 @@ class Trainer:
             train_metrics = self._train_epoch(epoch)
 
             if self._validation_data is not None:
-                # We have a validation set, so compute all the metrics on it.
-                val_loss, num_batches = self._validation_loss()
-                val_metrics = self._get_metrics(val_loss, num_batches, reset=True)
+                with torch.no_grad():
+                    # We have a validation set, so compute all the metrics on it.
+                    val_loss, num_batches = self._validation_loss()
+                    val_metrics = self._get_metrics(val_loss, num_batches, reset=True)
 
-                # Check validation metric for early stopping
-                this_epoch_val_metric = val_metrics[self._validation_metric]
-                validation_metric_per_epoch.append(this_epoch_val_metric)
-                if self._should_stop_early(validation_metric_per_epoch):
-                    logger.info("Ran out of patience.  Stopping training.")
-                    break
+                    # Check validation metric for early stopping
+                    this_epoch_val_metric = val_metrics[self._validation_metric]
+                    validation_metric_per_epoch.append(this_epoch_val_metric)
+                    if self._should_stop_early(validation_metric_per_epoch):
+                        logger.info("Ran out of patience.  Stopping training.")
+                        break
 
-                # Check validation metric to see if it's the best so far
-                if self._validation_metric_decreases:
-                    is_best_so_far = this_epoch_val_metric == min(validation_metric_per_epoch)
-                else:
-                    is_best_so_far = this_epoch_val_metric == max(validation_metric_per_epoch)
+                    # Check validation metric to see if it's the best so far
+                    if self._validation_metric_decreases:
+                        is_best_so_far = this_epoch_val_metric == min(validation_metric_per_epoch)
+                    else:
+                        is_best_so_far = this_epoch_val_metric == max(validation_metric_per_epoch)
             else:
                 # No validation set, so just assume it's the best so far.
                 is_best_so_far = True

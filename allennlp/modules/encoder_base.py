@@ -90,7 +90,7 @@ class _EncoderBase(torch.nn.Module):
 
         # First count how many sequences are empty.
         batch_size = mask.size(0)
-        num_valid = torch.sum(mask[:, 0]).int().data[0]
+        num_valid = torch.sum(mask[:, 0]).int().item()
 
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         sorted_inputs, sorted_sequence_lengths, restoration_indices, sorting_indices =\

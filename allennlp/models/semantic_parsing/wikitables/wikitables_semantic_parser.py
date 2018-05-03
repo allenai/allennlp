@@ -114,8 +114,8 @@ class WikiTablesSemanticParser(Model):
         # previous action, or a previous question attention.
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
         self._first_attended_question = torch.nn.Parameter(torch.FloatTensor(encoder.get_output_dim()))
-        torch.nn.init.normal(self._first_action_embedding)
-        torch.nn.init.normal(self._first_attended_question)
+        torch.nn.init.normal_(self._first_action_embedding)
+        torch.nn.init.normal_(self._first_attended_question)
 
         check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
                                "entity word average embedding dim", "question embedding dim")

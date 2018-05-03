@@ -464,7 +464,7 @@ class TestNnUtil(AllenNlpTestCase):
 
         correct_loss = 0.0
         for prediction, label in zip(tensor.squeeze(0), targets.squeeze(0)):
-            prediction = torch.nn.functional.log_softmax(prediction)
+            prediction = torch.nn.functional.log_softmax(prediction, dim=-1)
             correct_loss += prediction[label] * 0.9
             # incorrect elements
             correct_loss += prediction.sum() * 0.1/4

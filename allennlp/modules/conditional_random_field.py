@@ -106,9 +106,9 @@ class ConditionalRandomField(torch.nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        torch.nn.init.xavier_normal(self.transitions)
-        torch.nn.init.normal(self.start_transitions)
-        torch.nn.init.normal(self.end_transitions)
+        torch.nn.init.xavier_normal_(self.transitions)
+        torch.nn.init.normal_(self.start_transitions)
+        torch.nn.init.normal_(self.end_transitions)
 
     def _input_likelihood(self, logits: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """

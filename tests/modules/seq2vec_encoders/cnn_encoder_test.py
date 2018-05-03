@@ -38,7 +38,7 @@ class TestCnnEncoder(AllenNlpTestCase):
 
     def test_forward_does_correct_computation(self):
         encoder = CnnEncoder(embedding_dim=2, num_filters=1, ngram_filter_sizes=(1, 2))
-        constant_init = lambda tensor: torch.nn.init.constant(tensor, 1.)
+        constant_init = lambda tensor: torch.nn.init.constant_(tensor, 1.)
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(encoder)
         input_tensor = Variable(torch.FloatTensor([[[.7, .8], [.1, 1.5]]]))
