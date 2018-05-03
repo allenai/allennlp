@@ -3,9 +3,6 @@
 #   multiple ELMO layers
 #   doc
 
-# init:
-# for LSTM, use xavier_uniform for kernel, orthogonal for recurrent
-
 from typing import Dict, Optional
 
 import torch
@@ -169,8 +166,6 @@ class ESIM(Model):
                  encoded_hypothesis * attended_premise],
                 dim=-1
         )
-
-        projected_enhanced_premise = self._projection_feedforward(premise_enhanced)
 
         # the projection layer down to the model dimension
         projected_enhanced_premise = self._projection_feedforward(premise_enhanced)

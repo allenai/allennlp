@@ -153,6 +153,19 @@ def block_orthogonal(tensor: torch.Tensor,
             tensor[block_slice] = torch.nn.init.orthogonal(tensor[block_slice].contiguous(), gain=gain)
 
 
+def zero(tensor: torch.Tensor) -> None:
+    return tensor.data.zero_()
+
+def lstm_hidden_bias(tensor: torch.Tensor) -> None:
+    """
+    Initialize the biases of the forget gate to 1, and all other gates to 0,
+    following Jozefowicz et al., An Empirical Exploration of Recurrent Network Architectures
+    """
+    # gates are (b_hi|b_hf|b_hg|b_ho) of shape (4*hidden_size)
+    tensor.data.zero_()
+    hidden_size = tensor.shape[0] // 4
+    tensor.data[hidden_size:(2 * hidden_size)] = 1.0
+
 def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer]:
     class Init(Initializer):
         def __init__(self, **kwargs):
@@ -182,7 +195,9 @@ Registrable._registry[Initializer] = {  # pylint: disable=protected-access
         "sparse": _initializer_wrapper(torch.nn.init.sparse),
         "eye": _initializer_wrapper(torch.nn.init.eye),
         "block_orthogonal": _initializer_wrapper(block_orthogonal),
-        "uniform_unit_scaling": _initializer_wrapper(uniform_unit_scaling)
+        "uniform_unit_scaling": _initializer_wrapper(uniform_unit_scaling),
+        "zero": _initializer_wrapper(zero),
+        "lstm_hidden_bias": _initializer_wrapper(lstm_hidden_bias),
 }
 
 
