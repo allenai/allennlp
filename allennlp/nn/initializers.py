@@ -129,7 +129,7 @@ def block_orthogonal(tensor: torch.Tensor,
     sizes = list(tensor.size())
     if any([a % b != 0 for a, b in zip(sizes, split_sizes)]):
         raise ConfigurationError("tensor dimensions must be divisible by their respective "
-                                    "split_sizes. Found size: {} and split_sizes: {}".format(sizes, split_sizes))
+                                 "split_sizes. Found size: {} and split_sizes: {}".format(sizes, split_sizes))
     indexes = [list(range(0, max_size, split))
                for max_size, split in zip(sizes, split_sizes)]
     # Iterate over all possible blocks within the tensor.

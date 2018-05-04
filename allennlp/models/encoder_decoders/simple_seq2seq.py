@@ -137,7 +137,7 @@ class SimpleSeq2Seq(Model):
             num_decoding_steps = self._max_decoding_steps
         decoder_hidden = final_encoder_output
         decoder_context = (encoder_outputs.data.new()
-                                .resize_(batch_size, self._decoder_output_dim).fill_(0))
+                           .resize_(batch_size, self._decoder_output_dim).fill_(0))
         last_predictions = None
         step_logits = []
         step_probabilities = []
@@ -150,7 +150,7 @@ class SimpleSeq2Seq(Model):
                     # For the first timestep, when we do not have targets, we input start symbols.
                     # (batch_size,)
                     input_choices = (source_mask.data.new()
-                                        .resize_(batch_size).fill_(self._start_index))
+                                     .resize_(batch_size).fill_(self._start_index))
                 else:
                     input_choices = last_predictions
             decoder_input = self._prepare_decode_step_input(input_choices, decoder_hidden,

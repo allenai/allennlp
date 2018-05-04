@@ -68,9 +68,9 @@ def main(vocab_path: str,
     for i in range((len(sentences) // batch_size) + 1):
         array = numpy.array(sentences[i * batch_size: (i + 1) * batch_size])
         if device != -1:
-            batch =torch.autograd.Variable(torch.from_numpy(array).cuda(device))
+            batch = torch.from_numpy(array).cuda(device)
         else:
-            batch =torch.autograd.Variable(torch.from_numpy(array))
+            batch = torch.from_numpy(array)
 
         token_embedding = elmo_token_embedder(batch)['token_embedding'].data
 

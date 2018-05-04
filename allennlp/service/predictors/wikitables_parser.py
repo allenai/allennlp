@@ -68,13 +68,14 @@ class WikiTablesParserPredictor(Predictor):
 
     @overrides
     def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
-        instance, return_dict = self._json_to_instance(inputs)
-        outputs = self._model.forward_on_instance(instance, cuda_device)
-        outputs['answer'] = self._execute_logical_form_on_table(outputs['logical_form'],
-                                                                inputs['table'])
+        with torch.no_grad():
+            instance, return_dict = self._json_to_instance(inputs)
+            outputs = self._model.forward_on_instance(instance, cuda_device)
+            outputs['answer'] = self._execute_logical_form_on_table(outputs['logical_form'],
+                                                                    inputs['table'])
 
-        return_dict.update(outputs)
-        return sanitize(return_dict)
+            return_dict.update(outputs)
+            return sanitize(return_dict)
 
     @staticmethod
     def _execute_logical_form_on_table(logical_form, table):

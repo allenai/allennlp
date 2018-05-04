@@ -53,7 +53,7 @@ class TestSelfAttentiveSpanExtractor:
 
 
         # Now test the case in which we have some masked spans in our indices.
-        indices_mask =torch.LongTensor([[1, 1], [1, 0]])
+        indices_mask = torch.LongTensor([[1, 1], [1, 0]])
         span_representations = extractor(sequence_tensor, indices, span_indices_mask=indices_mask)
 
         # First element in the batch.

@@ -8,7 +8,7 @@ from allennlp.common.testing import AllenNlpTestCase
 
 class TestLstmCellWithProjection(AllenNlpTestCase):
     def test_elmo_lstm_cell_completes_forward_pass(self):
-        input_tensor =  torch.rand(4, 5, 3)
+        input_tensor = torch.rand(4, 5, 3)
         input_tensor[1, 4:, :] = 0.
         input_tensor[2, 2:, :] = 0.
         input_tensor[3, 1:, :] = 0.
