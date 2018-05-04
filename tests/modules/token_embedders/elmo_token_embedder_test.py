@@ -86,10 +86,10 @@ class TestElmoTokenEmbedder(ModelTestCase):
         word2[2] = 1
         word2[3] = 0
         embedding_layer = ElmoTokenEmbedder.from_params(vocab=None, params=params)
-        input_tensor =torch.autograd.Variable(torch.LongTensor([[word1, word2]]))
+        input_tensor = torch.LongTensor([[word1, word2]])
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 2, 20)
 
-        input_tensor =torch.autograd.Variable(torch.LongTensor([[[word1]]]))
+        input_tensor = torch.LongTensor([[[word1]]])
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 1, 1, 20)

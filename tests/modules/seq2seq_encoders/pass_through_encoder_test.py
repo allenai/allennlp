@@ -15,7 +15,7 @@ class TestStackedSelfAttention(AllenNlpTestCase):
 
     def test_pass_through_encoder_passes_through(self):
         encoder = PassThroughEncoder(input_dim=9)
-        tensor =torch.autograd.Variable(torch.randn([2, 3, 9]))
+        tensor = torch.randn([2, 3, 9])
         output = encoder(tensor)
         numpy.testing.assert_array_almost_equal(tensor.data.cpu().numpy(),
                                                 output.data.cpu().numpy())

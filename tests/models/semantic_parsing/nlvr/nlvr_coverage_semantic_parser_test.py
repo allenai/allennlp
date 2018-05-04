@@ -37,7 +37,7 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
                        ('e -> 6', True, None)]
         # Of the actions above, those at indices 0 and 4 are on the agenda, and there are padding
         # indices at the end.
-        test_agenda =torch.autograd.Variable(torch.Tensor([[0], [4], [-1], [-1]]))
+        test_agenda = torch.Tensor([[0], [4], [-1], [-1]])
         checklist_info = self.model._get_checklist_info(test_agenda, all_actions)
         target_checklist, terminal_actions, checklist_mask = checklist_info
         assert_almost_equal(target_checklist.data.numpy(), [[1], [0], [1]])

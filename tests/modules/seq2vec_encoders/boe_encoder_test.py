@@ -34,20 +34,18 @@ class TestBagOfEmbeddingsEncoder(AllenNlpTestCase):
 
     def test_forward_does_correct_computation(self):
         encoder = BagOfEmbeddingsEncoder(embedding_dim=2)
-        input_tensor =torch.autograd.Variable(
-                torch.FloatTensor([[[.7, .8], [.1, 1.5], [.3, .6]], [[.5, .3], [1.4, 1.1], [.3, .9]]]))
-        mask =torch.autograd.Variable(torch.ByteTensor([[1, 1, 1], [1, 1, 0]]))
+        input_tensor = torch.FloatTensor([[[.7, .8], [.1, 1.5], [.3, .6]], [[.5, .3], [1.4, 1.1], [.3, .9]]])
+        mask = torch.ByteTensor([[1, 1, 1], [1, 1, 0]])
         encoder_output = encoder(input_tensor, mask)
         assert_almost_equal(encoder_output.data.numpy(),
                             numpy.asarray([[.7 + .1 + .3, .8 + 1.5 + .6], [.5 + 1.4, .3 + 1.1]]))
 
     def test_forward_does_correct_computation_with_average(self):
         encoder = BagOfEmbeddingsEncoder(embedding_dim=2, averaged=True)
-        input_tensor =torch.autograd.Variable(
-                torch.FloatTensor([[[.7, .8], [.1, 1.5], [.3, .6]],
-                                   [[.5, .3], [1.4, 1.1], [.3, .9]],
-                                   [[.4, .3], [.4, .3], [1.4, 1.7]]]))
-        mask =torch.autograd.Variable(torch.ByteTensor([[1, 1, 1], [1, 1, 0], [0, 0, 0]]))
+        input_tensor = torch.FloatTensor([[[.7, .8], [.1, 1.5], [.3, .6]],
+                                          [[.5, .3], [1.4, 1.1], [.3, .9]],
+                                          [[.4, .3], [.4, .3], [1.4, 1.7]]])
+        mask = torch.ByteTensor([[1, 1, 1], [1, 1, 0], [0, 0, 0]])
         encoder_output = encoder(input_tensor, mask)
         assert_almost_equal(encoder_output.data.numpy(),
                             numpy.asarray([[(.7 + .1 + .3)/3, (.8 + 1.5 + .6)/3],

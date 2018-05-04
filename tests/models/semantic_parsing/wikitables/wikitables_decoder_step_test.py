@@ -18,14 +18,14 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
 
         batch_indices = [0, 1, 0]
         action_history = [[1], [3, 4], []]
-        score = [torch.autograd.Variable(torch.FloatTensor([x])) for x in [.1, 1.1, 2.2]]
+        score = [torch.FloatTensor([x]) for x in [.1, 1.1, 2.2]]
         hidden_state = torch.FloatTensor([[i, i] for i in range(len(batch_indices))])
         memory_cell = torch.FloatTensor([[i, i] for i in range(len(batch_indices))])
         previous_action_embedding = torch.FloatTensor([[i, i] for i in range(len(batch_indices))])
         attended_question = torch.FloatTensor([[i, i] for i in range(len(batch_indices))])
         grammar_state = [GrammarState(['e'], {}, {}, {}, is_nonterminal) for _ in batch_indices]
         self.encoder_outputs = torch.FloatTensor([[1, 2], [3, 4], [5, 6]])
-        self.encoder_output_mask =torch.autograd.Variable(torch.FloatTensor([[1, 1], [1, 0], [1, 1]]))
+        self.encoder_output_mask = torch.FloatTensor([[1, 1], [1, 0], [1, 1]])
         self.action_embeddings = torch.FloatTensor([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5]])
         self.action_indices = {
                 (0, 0): 1,
@@ -49,16 +49,16 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
                                   ('e -> i', True, None)]]
 
         # (batch_size, num_entities, num_question_tokens) = (2, 5, 3)
-        linking_scores =torch.autograd.Variable(torch.Tensor([[[.1, .2, .3],
-                                                 [.4, .5, .6],
-                                                 [.7, .8, .9],
-                                                 [1.0, 1.1, 1.2],
-                                                 [1.3, 1.4, 1.5]],
-                                                [[-.1, -.2, -.3],
-                                                 [-.4, -.5, -.6],
-                                                 [-.7, -.8, -.9],
-                                                 [-1.0, -1.1, -1.2],
-                                                 [-1.3, -1.4, -1.5]]]))
+        linking_scores = torch.Tensor([[[.1, .2, .3],
+                                        [.4, .5, .6],
+                                        [.7, .8, .9],
+                                        [1.0, 1.1, 1.2],
+                                        [1.3, 1.4, 1.5]],
+                                       [[-.1, -.2, -.3],
+                                        [-.4, -.5, -.6],
+                                        [-.7, -.8, -.9],
+                                        [-1.0, -1.1, -1.2],
+                                        [-1.3, -1.4, -1.5]]])
         flattened_linking_scores = linking_scores.view(2 * 5, 3)
 
         # Maps (batch_index, action_index) to indices into the flattened linking score tensor,
@@ -161,7 +161,7 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         assert considered == expected_considered
 
     def test_get_action_embeddings(self):
-        action_embeddings =torch.autograd.Variable(torch.rand(5, 4))
+        action_embeddings = torch.rand(5, 4)
         self.state.action_embeddings = action_embeddings
         actions_to_embed = [[0, 4], [1], [2, 3, 4]]
         embeddings, mask = WikiTablesDecoderStep._get_action_embeddings(self.state, actions_to_embed)
@@ -181,9 +181,9 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         decoder_step = WikiTablesDecoderStep(1, 5, SimilarityFunction.from_params(Params({})), 5, 3)
         actions_to_link = [[1, 2], [3, 4, 5], [6]]
         # (group_size, num_question_tokens) = (3, 3)
-        attention_weights =torch.autograd.Variable(torch.Tensor([[.2, .8, 0],
-                                                   [.7, .1, .2],
-                                                   [.3, .3, .4]]))
+        attention_weights = torch.Tensor([[.2, .8, 0],
+                                          [.7, .1, .2],
+                                          [.3, .3, .4]])
         action_logits, mask, type_embeddings = decoder_step._get_entity_action_logits(self.state,
                                                                                       actions_to_link,
                                                                                       attention_weights)
@@ -207,9 +207,9 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
 
     def test_compute_new_states(self):
         # pylint: disable=protected-access
-        log_probs =torch.autograd.Variable(torch.FloatTensor([[.1, .9, -.1, .2],
-                                                [.3, 1.1, .1, .8],
-                                                [.1, .25, .3, .4]]))
+        log_probs = torch.FloatTensor([[.1, .9, -.1, .2],
+                                       [.3, 1.1, .1, .8],
+                                       [.1, .25, .3, .4]])
         considered_actions = [[0, 1, 2, 3], [0, -1, 3, -1], [0, 2, 4, -1]]
         allowed_actions = [{2, 3}, {0}, {4}]
         max_actions = 1
@@ -284,9 +284,9 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         # pylint: disable=protected-access
         # This test is basically identical to the previous one, but without specifying
         # `allowed_actions`.  This makes sure we get the right behavior at test time.
-        log_probs =torch.autograd.Variable(torch.FloatTensor([[.1, .9, -.1, .2],
-                                                [.3, 1.1, .1, .8],
-                                                [.1, .25, .3, .4]]))
+        log_probs = torch.FloatTensor([[.1, .9, -.1, .2],
+                                       [.3, 1.1, .1, .8],
+                                       [.1, .25, .3, .4]])
         considered_actions = [[0, 1, 2, 3], [0, -1, 3, -1], [0, 2, 4, -1]]
         max_actions = 1
         step_action_embeddings = torch.FloatTensor([[[1, 1], [9, 9], [2, 2], [3, 3]],

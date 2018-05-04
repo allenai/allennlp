@@ -49,7 +49,7 @@ class TestTokenCharactersEncoder(AllenNlpTestCase):
 
     def test_forward_applies_embedding_then_encoder(self):
         numpy_tensor = numpy.random.randint(6, size=(3, 4, 7))
-        inputs =torch.autograd.Variable(torch.from_numpy(numpy_tensor))
+        inputs = torch.from_numpy(numpy_tensor)
         encoder_output = self.encoder(inputs)
         reshaped_input = inputs.view(12, 7)
         embedded = self.embedding(reshaped_input)

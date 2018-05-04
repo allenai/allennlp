@@ -12,7 +12,7 @@ from ..simple_transition_system import SimpleDecoderState, SimpleDecoderStep
 class TestExpectedRiskMinimization(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.initial_state = SimpleDecoderState([0], [[0]], [torch.autograd.Variable(torch.Tensor([0.0]))])
+        self.initial_state = SimpleDecoderState([0], [[0]], [torch.Tensor([0.0])])
         self.decoder_step = SimpleDecoderStep()
         # Cost is the number of odd elements in the action history.
         self.supervision = lambda state: torch.Tensor([sum([x%2 != 0 for x in

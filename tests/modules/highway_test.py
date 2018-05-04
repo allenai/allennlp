@@ -15,7 +15,7 @@ class TestHighway(AllenNlpTestCase):
         highway._layers[0].bias.data.fill_(0)
         highway._layers[1].weight.data.fill_(2)
         highway._layers[1].bias.data.fill_(-2)
-        input_tensor =torch.autograd.Variable(torch.FloatTensor([[-2, 1], [3, -2]]))
+        input_tensor = torch.FloatTensor([[-2, 1], [3, -2]])
         result = highway(input_tensor).data.numpy()
         assert result.shape == (2, 2)
         # This was checked by hand.

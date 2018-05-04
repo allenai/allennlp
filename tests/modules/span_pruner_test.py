@@ -14,12 +14,12 @@ class TestSpanPruner(AllenNlpTestCase):
         scorer = lambda tensor: tensor.sum(-1).unsqueeze(-1)
         pruner = SpanPruner(scorer=scorer)
 
-        spans =torch.autograd.Variable(torch.randn([3, 4, 5])).clamp(min=0.0, max=1.0)
+        spans = torch.randn([3, 4, 5]).clamp(min=0.0, max=1.0)
         spans[0, :2, :] = 1
         spans[1, 2:, :] = 1
         spans[2, 2:, :] = 1
 
-        mask =torch.autograd.Variable(torch.ones([3, 4]))
+        mask = torch.ones([3, 4])
         mask[1, 0] = 0
         mask[1, 3] = 0
         pruned_embeddings, pruned_mask, pruned_indices, pruned_scores = pruner(spans, mask, 2)
@@ -43,8 +43,8 @@ class TestSpanPruner(AllenNlpTestCase):
         # Mis-configured scorer - doesn't produce a tensor with 1 as it's final dimension.
         scorer = lambda tensor: tensor.sum(-1)
         pruner = SpanPruner(scorer=scorer) # type: ignore
-        spans =torch.autograd.Variable(torch.randn([3, 4, 5])).clamp(min=0.0, max=1.0)
-        mask =torch.autograd.Variable(torch.ones([3, 4]))
+        spans = torch.randn([3, 4, 5]).clamp(min=0.0, max=1.0)
+        mask = torch.ones([3, 4])
 
         with pytest.raises(ValueError):
             _ = pruner(spans, mask, 2)
@@ -54,12 +54,12 @@ class TestSpanPruner(AllenNlpTestCase):
         scorer = lambda tensor: tensor.sum(-1).unsqueeze(-1)
         pruner = SpanPruner(scorer=scorer) # type: ignore
 
-        spans =torch.autograd.Variable(torch.randn([3, 4, 5])).clamp(min=0.0, max=1.0)
+        spans = torch.randn([3, 4, 5]).clamp(min=0.0, max=1.0)
         spans[0, :2, :] = 1
         spans[1, 2:, :] = 1
         spans[2, 2:, :] = 1
 
-        mask =torch.autograd.Variable(torch.ones([3, 4]))
+        mask = torch.ones([3, 4])
         mask[1, 0] = 0
         mask[1, 3] = 0
         mask[2, :] = 0 # fully masked last batch element.

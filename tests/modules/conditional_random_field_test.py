@@ -15,14 +15,14 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestConditionalRandomField(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.logits =torch.autograd.Variable(torch.Tensor([
+        self.logits = torch.Tensor([
                 [[0, 0, .5, .5, .2], [0, 0, .3, .3, .1], [0, 0, .9, 10, 1]],
                 [[0, 0, .2, .5, .2], [0, 0, 3, .3, .1], [0, 0, .9, 1, 1]],
-        ]))
-        self.tags =torch.autograd.Variable(torch.LongTensor([
+        ])
+        self.tags = torch.LongTensor([
                 [2, 3, 4],
                 [3, 2, 2]
-        ]))
+        ])
 
         self.transitions = torch.Tensor([
                 [0.1, 0.2, 0.3, 0.4, 0.5],
@@ -79,10 +79,10 @@ class TestConditionalRandomField(AllenNlpTestCase):
 
     def test_forward_works_with_mask(self):
         # Use a non-trivial mask
-        mask =torch.autograd.Variable(torch.LongTensor([
+        mask = torch.LongTensor([
                 [1, 1, 1],
                 [1, 1, 0]
-        ]))
+        ])
 
         log_likelihood = self.crf(self.logits, self.tags, mask).item()
 
@@ -111,10 +111,10 @@ class TestConditionalRandomField(AllenNlpTestCase):
 
 
     def test_viterbi_tags(self):
-        mask =torch.autograd.Variable(torch.LongTensor([
+        mask = torch.LongTensor([
                 [1, 1, 1],
                 [1, 1, 0]
-        ]))
+        ])
 
         viterbi_tags = self.crf.viterbi_tags(self.logits, mask)
 
@@ -153,10 +153,10 @@ class TestConditionalRandomField(AllenNlpTestCase):
         crf.start_transitions = torch.nn.Parameter(self.transitions_from_start)
         crf.end_transitions = torch.nn.Parameter(self.transitions_to_end)
 
-        mask =torch.autograd.Variable(torch.LongTensor([
+        mask = torch.LongTensor([
                 [1, 1, 1],
                 [1, 1, 0]
-        ]))
+        ])
 
         viterbi_tags = crf.viterbi_tags(self.logits, mask)
 

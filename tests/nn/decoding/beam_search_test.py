@@ -13,10 +13,10 @@ class TestBeamSearch(AllenNlpTestCase):
         beam_search = BeamSearch.from_params(Params({'beam_size': 4}))
         initial_state = SimpleDecoderState([0, 1, 2, 3],
                                            [[], [], [], []],
-                                           [torch.autograd.Variable(torch.Tensor([0.0])),
-                                           torch.autograd.Variable(torch.Tensor([0.0])),
-                                           torch.autograd.Variable(torch.Tensor([0.0])),
-                                           torch.autograd.Variable(torch.Tensor([0.0]))],
+                                           [torch.Tensor([0.0]),
+                                            torch.Tensor([0.0]),
+                                            torch.Tensor([0.0]),
+                                            torch.Tensor([0.0])],
                                            [-3, 1, -20, 5])
         decoder_step = SimpleDecoderStep(include_value_in_score=True)
         best_states = beam_search.search(5,

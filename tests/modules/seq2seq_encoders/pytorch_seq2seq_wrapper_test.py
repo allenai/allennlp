@@ -27,12 +27,12 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2SeqWrapper(lstm)
 
-        tensor = torch.autograd.Variable(torch.rand([5, 7, 3]))
+        tensor = torch.rand([5, 7, 3])
         tensor[1, 6:, :] = 0
         tensor[2, :, :] = 0
         tensor[3, 2:, :] = 0
         tensor[4, :, :] = 0
-        mask = torch.autograd.Variable(torch.ones(5, 7))
+        mask = torch.ones(5, 7)
         mask[1, 6:] = 0
         mask[2, :] = 0
         mask[3, 2:] = 0
@@ -48,7 +48,7 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
     def test_forward_pulls_out_correct_tensor_without_sequence_lengths(self):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=2, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2SeqWrapper(lstm)
-        input_tensor =torch.autograd.Variable(torch.FloatTensor([[[.7, .8], [.1, 1.5]]]))
+        input_tensor = torch.FloatTensor([[[.7, .8], [.1, 1.5]]])
         lstm_output = lstm(input_tensor)
         encoder_output = encoder(input_tensor, None)
         assert_almost_equal(encoder_output.data.numpy(), lstm_output[0].data.numpy())
@@ -56,19 +56,17 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
     def test_forward_pulls_out_correct_tensor_with_sequence_lengths(self):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2SeqWrapper(lstm)
-        tensor = torch.rand([5, 7, 3])
-        tensor[1, 6:, :] = 0
-        tensor[2, 4:, :] = 0
-        tensor[3, 2:, :] = 0
-        tensor[4, 1:, :] = 0
+        input_tensor = torch.rand([5, 7, 3])
+        input_tensor[1, 6:, :] = 0
+        input_tensor[2, 4:, :] = 0
+        input_tensor[3, 2:, :] = 0
+        input_tensor[4, 1:, :] = 0
         mask = torch.ones(5, 7)
         mask[1, 6:] = 0
         mask[2, 4:] = 0
         mask[3, 2:] = 0
         mask[4, 1:] = 0
 
-        input_tensor =torch.autograd.Variable(tensor)
-        mask =torch.autograd.Variable(mask)
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         packed_sequence = pack_padded_sequence(input_tensor, sequence_lengths.data.tolist(), batch_first=True)
         lstm_output, _ = lstm(packed_sequence)
@@ -79,19 +77,17 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
     def test_forward_pulls_out_correct_tensor_for_unsorted_batches(self):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2SeqWrapper(lstm)
-        tensor = torch.rand([5, 7, 3])
-        tensor[0, 3:, :] = 0
-        tensor[1, 4:, :] = 0
-        tensor[2, 2:, :] = 0
-        tensor[3, 6:, :] = 0
+        input_tensor = torch.rand([5, 7, 3])
+        input_tensor[0, 3:, :] = 0
+        input_tensor[1, 4:, :] = 0
+        input_tensor[2, 2:, :] = 0
+        input_tensor[3, 6:, :] = 0
         mask = torch.ones(5, 7)
         mask[0, 3:] = 0
         mask[1, 4:] = 0
         mask[2, 2:] = 0
         mask[3, 6:] = 0
 
-        input_tensor =torch.autograd.Variable(tensor)
-        mask =torch.autograd.Variable(mask)
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         sorted_inputs, sorted_sequence_lengths, restoration_indices, _ = sort_batch_by_length(input_tensor,
                                                                                               sequence_lengths)
@@ -108,13 +104,11 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
 
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2SeqWrapper(lstm)
-        tensor = torch.rand([5, 8, 3])
-        tensor[:, 7, :] = 0
+        input_tensor = torch.rand([5, 8, 3])
+        input_tensor[:, 7, :] = 0
         mask = torch.ones(5, 8)
         mask[:, 7] = 0
 
-        input_tensor =torch.autograd.Variable(tensor)
-        mask =torch.autograd.Variable(mask)
         encoder_output = encoder(input_tensor, mask)
         assert encoder_output.size(1) == 8
 
@@ -127,7 +121,7 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
     def test_wrapper_works_when_passed_state_with_zero_length_sequences(self):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2SeqWrapper(lstm)
-        tensor = torch.rand([5, 7, 3])
+        input_tensor = torch.rand([5, 7, 3])
         mask = torch.ones(5, 7)
         mask[0, 3:] = 0
         mask[1, 4:] = 0
@@ -135,25 +129,20 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         mask[3, 6:] = 0
 
         # Initial states are of shape (num_layers * num_directions, batch_size, hidden_dim)
-        initial_states = (torch.autograd.Variable(torch.randn(6, 5, 7)),
-                         torch.autograd.Variable(torch.randn(6, 5, 7)))
+        initial_states = torch.randn(6, 5, 7), torch.randn(6, 5, 7)
 
-        input_tensor =torch.autograd.Variable(tensor)
-        mask =torch.autograd.Variable(mask)
         _ = encoder(input_tensor, mask, initial_states)
 
     def test_wrapper_can_call_backward_with_zero_length_sequences(self):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2SeqWrapper(lstm)
-        tensor = torch.rand([5, 7, 3])
+        input_tensor = torch.rand([5, 7, 3])
         mask = torch.ones(5, 7)
         mask[0, 3:] = 0
         mask[1, 4:] = 0
         mask[2, 0:] = 0  # zero length sequence
         mask[3, 6:] = 0
 
-        input_tensor =torch.autograd.Variable(tensor)
-        mask =torch.autograd.Variable(mask)
         output = encoder(input_tensor, mask)
 
         output.sum().backward()
@@ -168,8 +157,8 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         sequence_lengths = [4, 6, 7]
         states = []
         for batch_size, sequence_length in zip(batch_sizes, sequence_lengths):
-            tensor =torch.autograd.Variable(torch.rand([batch_size, sequence_length, 3]))
-            mask =torch.autograd.Variable(torch.ones(batch_size, sequence_length))
+            tensor = torch.rand([batch_size, sequence_length, 3])
+            mask = torch.ones(batch_size, sequence_length)
             mask.data[0, 3:] = 0
             encoder_output = encoder(tensor, mask)
             states.append(encoder._states)  # pylint: disable=protected-access
@@ -189,8 +178,8 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         batch_sizes = [10, 5]
         states = []
         for batch_size in batch_sizes:
-            tensor =torch.autograd.Variable(torch.rand([batch_size, 5, 3]))
-            mask =torch.autograd.Variable(torch.ones(batch_size, 5))
+            tensor = torch.rand([batch_size, 5, 3])
+            mask = torch.ones(batch_size, 5)
             mask.data[0, 3:] = 0
             encoder_output = encoder(tensor, mask)
             states.append(encoder._states)   # pylint: disable=protected-access
