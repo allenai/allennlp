@@ -50,7 +50,7 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
 
     Parameters
     ----------
-    parameters : ``(Iterable[torch.autograd.Variable])``
+    parameters : ``(Iterable[torch.Tensor])``
         An iterable oftorch.autograd.Variables that will have gradients normalized.
     max_norm : ``float``
         The max norm of the gradients.
@@ -103,7 +103,7 @@ class TensorboardWriter:
 
     def add_train_histogram(self, name: str, values: torch.Tensor, global_step: int) -> None:
         if self._train_log is not None:
-            if isinstance(values, torch.autograd.Variable):
+            if isinstance(values, torch.Tensor):
                 values_to_write = values.cpu().data.numpy().flatten()
                 self._train_log.add_histogram(name, values_to_write, global_step)
 
@@ -312,7 +312,7 @@ class Trainer:
                     # pylint: disable=unused-argument,cell-var-from-loop
                     log_prefix = 'activation_histogram/{0}'.format(module_.__class__)
                     if self._log_histograms_this_batch:
-                        if isinstance(outputs, torch.autograd.Variable):
+                        if isinstance(outputs, torch.Tensor):
                             log_name = log_prefix
                             self._tensorboard.add_train_histogram(log_name,
                                                                   outputs,

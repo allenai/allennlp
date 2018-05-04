@@ -44,7 +44,7 @@ class Initializer(Registrable):
     """
     default_implementation = 'normal'
 
-    def __call__(self, tensor: torch.autograd.Variable) -> None:
+    def __call__(self, tensor: torch.Tensor) -> None:
         """
         This function is here just to make mypy happy.  We expect initialization functions to
         follow this API; the builtin pytorch initialization functions follow this just fine, even
@@ -152,7 +152,7 @@ def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer
         def __init__(self, **kwargs):
             self._init_function = init_function
             self._kwargs = kwargs
-        def __call__(self, tensor: torch.autograd.Variable) -> None:
+        def __call__(self, tensor: torch.Tensor) -> None:
             self._init_function(tensor, **self._kwargs)
         def __repr__(self):
             return 'Init: %s, with params: %s' % (self._init_function, self._kwargs)

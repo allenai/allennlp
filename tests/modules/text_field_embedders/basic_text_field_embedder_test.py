@@ -35,9 +35,9 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 })
         self.token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
         self.inputs = {
-                "words1":torch.autograd.Variable(torch.LongTensor([[0, 2, 3, 5]])),
-                "words2":torch.autograd.Variable(torch.LongTensor([[1, 4, 3, 2]])),
-                "words3":torch.autograd.Variable(torch.LongTensor([[1, 5, 1, 2]]))
+                "words1": torch.LongTensor([[0, 2, 3, 5]]),
+                "words2": torch.LongTensor([[1, 4, 3, 2]]),
+                "words3": torch.LongTensor([[1, 5, 1, 2]])
                 }
 
     def test_get_output_dim_aggregates_dimension_from_each_embedding(self):
@@ -77,7 +77,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 })
         token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
         inputs = {
-                'words':torch.autograd.Variable(torch.rand(3, 4, 5, 6) * 20).long(),
-                'characters':torch.autograd.Variable(torch.rand(3, 4, 5, 6, 7) * 15).long(),
+                'words': (torch.rand(3, 4, 5, 6) * 20).long(),
+                'characters': (torch.rand(3, 4, 5, 6, 7) * 15).long(),
                 }
         assert token_embedder(inputs, num_wrapping_dims=2).size() == (3, 4, 5, 6, 12)

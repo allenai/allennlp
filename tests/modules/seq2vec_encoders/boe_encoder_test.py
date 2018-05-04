@@ -56,8 +56,9 @@ class TestBagOfEmbeddingsEncoder(AllenNlpTestCase):
 
     def test_forward_does_correct_computation_with_average_no_mask(self):
         encoder = BagOfEmbeddingsEncoder(embedding_dim=2, averaged=True)
-        input_tensor =torch.autograd.Variable(
-                torch.FloatTensor([[[.7, .8], [.1, 1.5], [.3, .6]], [[.5, .3], [1.4, 1.1], [.3, .9]]]))
+        input_tensor = torch.FloatTensor([
+                [[.7, .8], [.1, 1.5], [.3, .6]], [[.5, .3], [1.4, 1.1], [.3, .9]]
+        ])
         encoder_output = encoder(input_tensor)
         assert_almost_equal(encoder_output.data.numpy(),
                             numpy.asarray([[(.7 + .1 + .3)/3, (.8 + 1.5 + .6)/3],

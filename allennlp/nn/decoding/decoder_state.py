@@ -38,7 +38,7 @@ class DecoderState(Generic[T]):
     action_history : ``List[List[int]]``
         The list of actions taken so far in this state.  This is also grouped, so each state in the
         group has a list of actions.
-    score : ``List[torch.autograd.Variable]``
+    score : ``List[torch.Tensor]``
         This state's score.  It's a variable, because typically we'll be computing a loss based on
         this score, and using it for backprop during training.  Like the other variables here, this
         is a ``group_size``-length list.
@@ -46,7 +46,7 @@ class DecoderState(Generic[T]):
     def __init__(self,
                  batch_indices: List[int],
                  action_history: List[List[int]],
-                 score: List[torch.autograd.Variable]) -> None:
+                 score: List[torch.Tensor]) -> None:
         self.batch_indices = batch_indices
         self.action_history = action_history
         self.score = score

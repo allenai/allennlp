@@ -185,6 +185,7 @@ class SpanConstituencyParser(Model):
         elif self.pos_tag_embedding is not None:
             raise ConfigurationError("Model uses a POS embedding, but no POS tags were passed.")
 
+        print(tokens)
         mask = get_text_field_mask(tokens)
         # Looking at the span start index is enough to know if
         # this is padding or not. Shape: (batch_size, num_spans)

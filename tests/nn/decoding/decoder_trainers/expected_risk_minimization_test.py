@@ -15,8 +15,8 @@ class TestExpectedRiskMinimization(AllenNlpTestCase):
         self.initial_state = SimpleDecoderState([0], [[0]], [torch.autograd.Variable(torch.Tensor([0.0]))])
         self.decoder_step = SimpleDecoderStep()
         # Cost is the number of odd elements in the action history.
-        self.supervision = lambda state:torch.autograd.Variable(torch.Tensor([sum([x%2 != 0 for x in
-                                                                     state.action_history[0]])]))
+        self.supervision = lambda state: torch.Tensor([sum([x%2 != 0 for x in
+                                                            state.action_history[0]])])
         # High beam size ensures exhaustive search.
         self.trainer = ExpectedRiskMinimization(beam_size=100,
                                                 normalize_by_length=False,

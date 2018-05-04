@@ -25,8 +25,8 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
 
         - ``self.input_size: int``
         - ``self.hidden_size: int``
-        - ``def forward(inputs: PackedSequence, hidden_state: torch.autograd.Variable) ->
-          Tuple[PackedSequence, torch.autograd.Variable]``.
+        - ``def forward(inputs: PackedSequence, hidden_state: torch.tensor) ->
+          Tuple[PackedSequence, torch.Tensor]``.
         - ``self.bidirectional: bool`` (optional)
 
     This is what pytorch's RNN's look like - just make sure your class looks like those, and it
@@ -83,10 +83,9 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
             # batch size is the second dimension here, because pytorch
             # returns RNN state as a tensor of shape (num_layers * num_directions,
             # batch_size, hidden_size)
-            zeros = state.data.new(num_layers_times_directions,
-                                   batch_size - num_valid,
-                                   encoding_dim).fill_(0)
-            zeros =torch.autograd.Variable(zeros)
+            zeros = state.new_zeros(num_layers_times_directions,
+                                    batch_size - num_valid,
+                                    encoding_dim)
             state = torch.cat([state, zeros], 1)
 
         # Restore the original indices and return the final state of the

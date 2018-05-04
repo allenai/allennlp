@@ -55,4 +55,4 @@ class Metric(Registrable):
         graph. This method ensures that you're using tensors directly and that they are on
         the CPU.
         """
-        return (x.data.cpu() if isinstance(x, torch.autograd.Variable) else x for x in tensors)
+        return (x.data.cpu() if isinstance(x, torch.Tensor) else x for x in tensors)

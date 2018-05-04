@@ -61,7 +61,7 @@ def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
     return mask.long().sum(-1)
 
 
-def get_mask_from_sequence_lengths(sequence_lengths:torch.autograd.Variable, max_length: int) ->torch.autograd.Variable:
+def get_mask_from_sequence_lengths(sequence_lengths: torch.Tensor, max_length: int) -> torch.Tensor:
     """
     Given a variable of shape ``(batch_size,)`` that represents the sequence lengths of each batch
     element, this function returns a ``(batch_size, max_length)`` mask variable.  For example, if
@@ -78,40 +78,40 @@ def get_mask_from_sequence_lengths(sequence_lengths:torch.autograd.Variable, max
     ``long``, but really could be anything, and the data type of the returned mask is ``long``.
     """
     # (batch_size, max_length)
-    ones =torch.autograd.Variable(sequence_lengths.data.new(sequence_lengths.size(0), max_length).fill_(1))
+    ones = sequence_lengths.new_ones(sequence_lengths.size(0), max_length)
     range_tensor = ones.cumsum(dim=1)
     return (sequence_lengths.unsqueeze(1) >= range_tensor).long()
 
 
-def sort_batch_by_length(tensor: torch.autograd.Variable,
-                         sequence_lengths: torch.autograd.Variable):
+def sort_batch_by_length(tensor: torch.Tensor,
+                         sequence_lengths: torch.Tensor):
     """
     Sort a batch first tensor by some specified lengths.
 
     Parameters
     ----------
-    tensor :torch.autograd.Variable(torch.FloatTensor), required.
+    tensor : torch.FloatTensor, required.
         A batch first Pytorch tensor.
-    sequence_lengths :torch.autograd.Variable(torch.LongTensor), required.
+    sequence_lengths : torch.LongTensor, required.
         A tensor representing the lengths of some dimension of the tensor which
         we want to sort by.
 
     Returns
     -------
-    sorted_tensor :torch.autograd.Variable(torch.FloatTensor)
+    sorted_tensor : torch.FloatTensor
         The original tensor sorted along the batch dimension with respect to sequence_lengths.
-    sorted_sequence_lengths :torch.autograd.Variable(torch.LongTensor)
+    sorted_sequence_lengths : torch.LongTensor
         The original sequence_lengths sorted by decreasing size.
-    restoration_indices :torch.autograd.Variable(torch.LongTensor)
+    restoration_indices : torch.LongTensor
         Indices into the sorted_tensor such that
         ``sorted_tensor.index_select(0, restoration_indices) == original_tensor``
-    permuation_index :torch.autograd.Variable(torch.LongTensor)
+    permuation_index : torch.LongTensor
         The indices used to sort the tensor. This is useful if you want to sort many
         tensors using the same ordering.
     """
 
-    if not isinstance(tensor,torch.autograd.Variable) or not isinstance(sequence_lengths,torch.autograd.Variable):
-        raise ConfigurationError("Both the tensor and sequence lengths must be torch.autograd.Variables.")
+    if not isinstance(tensor, torch.Tensor) or not isinstance(sequence_lengths, torch.Tensor):
+        raise ConfigurationError("Both the tensor and sequence lengths must be torch.Tensors.")
 
     sorted_sequence_lengths, permutation_index = sequence_lengths.sort(0, descending=True)
     sorted_tensor = tensor.index_select(0, permutation_index)
@@ -122,7 +122,6 @@ def sort_batch_by_length(tensor: torch.autograd.Variable,
     index_range = sequence_lengths.data.clone().copy_(torch.arange(0, len(sequence_lengths)))
     # This is the equivalent of zipping with index, sorting by the original
     # sequence lengths and returning the now sorted indices.
-    index_range =torch.autograd.Variable(index_range.long())
     _, reverse_mapping = permutation_index.sort(0, descending=False)
     restoration_indices = index_range.index_select(0, reverse_mapping)
     return sorted_tensor, sorted_sequence_lengths, restoration_indices, permutation_index
@@ -161,7 +160,7 @@ def get_final_encoder_states(encoder_outputs: torch.Tensor,
     return final_encoder_output
 
 
-def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.autograd.Variable):
+def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tensor):
     """
     Computes and returns an element-wise dropout mask for a given tensor, where
     each element in the mask is dropped out with probability dropout_probability.
@@ -345,8 +344,9 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
     the mask.  Most frequently this will be a character id tensor, but it could also be a
     featurized representation of each token, etc.
 
+    TODO(joelgrus): can we change this?
     NOTE: Our functions for generating masks create torch.LongTensors, because using
-    torch.ByteTensors insidetorch.autograd.Variables makes it easy to run into overflow errors
+    torch.ByteTensors  makes it easy to run into overflow errors
     when doing mask manipulation, such as summing to get the lengths of sequences - see below.
     >>> mask = torch.ones([260]).byte()
     >>> mask.sum() # equals 260.
@@ -493,7 +493,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         num_classes = logits.size(-1)
         smoothing_value = label_smoothing / num_classes
         # Fill all the correct indices with 1 - smoothing value.
-        one_hot_targets = zeros_like(log_probs_flat).scatter_(-1, targets_flat, 1.0 - label_smoothing)
+        one_hot_targets = torch.zeros_like(log_probs_flat).scatter_(-1, targets_flat, 1.0 - label_smoothing)
         smoothed_targets = one_hot_targets + smoothing_value
         negative_log_likelihood_flat = - log_probs_flat * smoothed_targets
         negative_log_likelihood_flat = negative_log_likelihood_flat.sum(-1, keepdim=True)
@@ -516,7 +516,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     return per_batch_loss
 
 
-def replace_masked_values(tensor:torch.autograd.Variable, mask:torch.autograd.Variable, replace_with: float) ->torch.autograd.Variable:
+def replace_masked_values(tensor: torch.Tensor, mask: torch.Tensor, replace_with: float) -> torch.Tensor:
     """
     Replaces all masked values in ``tensor`` with ``replace_with``.  ``mask`` must be broadcastable
     to the same shape as ``tensor``. We require that ``tensor.dim() == mask.dim()``, as otherwise we
@@ -545,41 +545,24 @@ def device_mapping(cuda_device: int):
     return inner_device_mapping
 
 
-def ones_like(tensor: torch.Tensor) -> torch.Tensor:
+def new_variable_with_data(original: torch.Tensor, data: torch.Tensor) -> torch.Tensor:
     """
-    Use clone() + fill_() to make sure that a ones tensor ends up on the right
-    device at runtime.
-    """
-    return tensor.clone().fill_(1)
-
-
-def zeros_like(tensor: torch.Tensor) -> torch.Tensor:
-    """
-    Use clone() + fill_() to make sure that a zeros tensor ends up on the right
-    device at runtime.
-    """
-    return tensor.clone().fill_(0)
-
-
-def new_variable_with_data(original:torch.autograd.Variable, data: torch.Tensor) ->torch.autograd.Variable:
-    """
+    TODO(joelgrus): update docstring
     ``Variable.clone`` does not necessarily make a new variable on the same device as the original.
     This method takes a variable and some data and makes a new variable on the same device as the original
     variable, but with the provided data. Note that the returned variable will be the same type as the
     passed data, which may be different from the original variable's type.
     """
-    # We cast the variable to the type of the data first before filling it with new data.
-    data_type = data.type()
-    return torch.autograd.Variable(original.type(data_type).data.new(data))
+    return original.new_tensor(data, dtype=data.dtype)
 
 
-def new_variable_with_size(original:torch.autograd.Variable, size: Tuple[int, ...], value) ->torch.autograd.Variable:
+def new_variable_with_size(original: torch.Tensor, size: Tuple[int, ...], value) -> torch.Tensor:
     """
     Returns a new variable on the same device as the ``original``, but containing a tensor of provided
     ``size``, filled with the given ``value``.
     """
     size = torch.Size(size)
-    return torch.autograd.Variable(original.data.new(size).fill_(value))
+    return original.new_full(size, fill_value=value)
 
 
 def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
@@ -841,10 +824,9 @@ def get_range_vector(size: int, device: int) -> torch.Tensor:
     is meant to avoid copy data from CPU to GPU.
     """
     if device > -1:
-        indices = torch.cuda.LongTensor(size, device=device).fill_(1).cumsum(0) - 1
+        return torch.cuda.LongTensor(size, device=device).fill_(1).cumsum(0) - 1
     else:
-        indices = torch.arange(0, size).long()
-    return torch.autograd.Variable(indices, requires_grad=False)
+        return torch.arange(0, size).long()
 
 
 def bucket_values(distances: torch.Tensor,
@@ -924,7 +906,7 @@ def add_sentence_boundary_token_ids(tensor: torch.Tensor,
     tensor_shape = list(tensor.data.shape)
     new_shape = list(tensor_shape)
     new_shape[1] = tensor_shape[1] + 2
-    tensor_with_boundary_tokens =torch.autograd.Variable(tensor.data.new(*new_shape).fill_(0))
+    tensor_with_boundary_tokens = tensor.new_zeros(*new_shape)
     if len(tensor_shape) == 2:
         tensor_with_boundary_tokens[:, 1:-1] = tensor
         tensor_with_boundary_tokens[:, 0] = sentence_begin_token
@@ -975,8 +957,8 @@ def remove_sentence_boundaries(tensor: torch.Tensor,
     tensor_shape = list(tensor.data.shape)
     new_shape = list(tensor_shape)
     new_shape[1] = tensor_shape[1] - 2
-    tensor_without_boundary_tokens =torch.autograd.Variable(tensor.data.new(*new_shape).fill_(0))
-    new_mask =torch.autograd.Variable(tensor.data.new(new_shape[0], new_shape[1]).fill_(0)).long()
+    tensor_without_boundary_tokens = tensor.new_zeros(*new_shape)
+    new_mask = tensor.new_zeros(new_shape[0], new_shape[1]).long()
     for i, j in enumerate(sequence_lengths):
         if j > 2:
             tensor_without_boundary_tokens[i, :(j - 2), :] = tensor[i, 1:(j - 1), :]
@@ -1030,10 +1012,10 @@ def add_positional_features(tensor: torch.Tensor,
     # Broadcasted multiplication - shape (timesteps, num_timescales)
     scaled_time = timestep_range.unsqueeze(1) * inverse_timescales.unsqueeze(0)
     # shape (timesteps, 2 * num_timescales)
-    sinusoids =torch.autograd.Variable(torch.cat([torch.sin(scaled_time), torch.cos(scaled_time)], 1))
+    sinusoids = torch.cat([torch.sin(scaled_time), torch.cos(scaled_time)], 1)
     if hidden_dim % 2 != 0:
         # if the number of dimensions is odd, the cos and sin
         # timescales had size (hidden_dim - 1) / 2, so we need
         # to add a row of zeros to make up the difference.
-        sinusoids = torch.cat([sinusoids,torch.autograd.Variable(sinusoids.data.new(timesteps, 1).fill_(0))], 1)
+        sinusoids = torch.cat([sinusoids, sinusoids.new_zeros(timesteps, 1)], 1)
     return tensor + sinusoids.unsqueeze(0)

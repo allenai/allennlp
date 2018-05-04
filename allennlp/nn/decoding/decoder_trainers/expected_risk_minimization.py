@@ -81,8 +81,8 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
             num_steps += 1
         return finished_states
 
-    def _get_model_scores_by_batch(self, states: List[StateType]) -> Dict[int, List[torch.autograd.Variable]]:
-        batch_scores: Dict[int, List[torch.autograd.Variable]] = defaultdict(list)
+    def _get_model_scores_by_batch(self, states: List[StateType]) -> Dict[int, List[torch.Tensor]]:
+        batch_scores: Dict[int, List[torch.Tensor]] = defaultdict(list)
         for state in states:
             for batch_index, model_score, history in zip(state.batch_indices,
                                                          state.score,
@@ -96,8 +96,8 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
 
     @staticmethod
     def _get_costs_by_batch(states: List[StateType],
-                            cost_function: Callable[[StateType], torch.Tensor]) -> Dict[int, List[torch.autograd.Variable]]:
-        batch_costs: Dict[int, List[torch.autograd.Variable]] = defaultdict(list)
+                            cost_function: Callable[[StateType], torch.Tensor]) -> Dict[int, List[torch.Tensor]]:
+        batch_costs: Dict[int, List[torch.Tensor]] = defaultdict(list)
         for state in states:
             cost = cost_function(state)
             # Since this is a finished state, its group size is 1, and we just take the only batch
