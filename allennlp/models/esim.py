@@ -6,6 +6,7 @@
 from typing import Dict, Optional
 
 import torch
+from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
@@ -16,6 +17,21 @@ from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum, replace_masked_values
 from allennlp.training.metrics import CategoricalAccuracy
+
+class VariationalDropout(torch.nn.Dropout):
+    def forward(self, input):
+        """
+        input is shape (batch_size, timesteps, embedding_dim)
+        Samples one mask of size (batch_size, embedding_dim) and applies it to every time step.
+        """
+        #ones = Variable(torch.ones(input.shape[0], input.shape[-1]))
+        ones = Variable(input.data.new(input.shape[0], input.shape[-1]).fill_(1))
+        dropout_mask = torch.nn.functional.dropout(ones, self.p, self.training, inplace=False)
+        if self.inplace:
+            input *= dropout_mask.unsqueeze(1)
+            return None
+        else:
+            return dropout_mask.unsqueeze(1) * input
 
 
 @Model.register("esim")
@@ -78,8 +94,10 @@ class ESIM(Model):
 
         if dropout:
             self.dropout = torch.nn.Dropout(dropout)
+            self.rnn_input_dropout = VariationalDropout(dropout)
         else:
             self.dropout = None
+            self.rnn_input_dropout = None
 
         self._output_feedforward = output_feedforward
         self._output_logit = output_logit
@@ -131,10 +149,10 @@ class ESIM(Model):
         premise_mask = get_text_field_mask(premise).float()
         hypothesis_mask = get_text_field_mask(hypothesis).float()
 
-        # apply dropout
-        if self.dropout:
-            embedded_premise = self.dropout(embedded_premise)
-            embedded_hypothesis = self.dropout(embedded_hypothesis)
+        # apply dropout for LSTM
+        if self.rnn_input_dropout:
+            embedded_premise = self.rnn_input_dropout(embedded_premise)
+            embedded_hypothesis = self.rnn_input_dropout(embedded_hypothesis)
 
         # encode premise and hypothesis
         encoded_premise = self._encoder(embedded_premise, premise_mask)
@@ -167,14 +185,19 @@ class ESIM(Model):
                 dim=-1
         )
 
+        # embedding -> lstm w/ do -> enhanced attention -> dropout_proj, only if ELMO -> ff proj -> lstm w/ do -> dropout -> ff 300 -> dropout -> output
+
+        # add dropout here with ELMO
+
         # the projection layer down to the model dimension
+        # no dropout in projection
         projected_enhanced_premise = self._projection_feedforward(premise_enhanced)
         projected_enhanced_hypothesis = self._projection_feedforward(hypothesis_enhanced)
 
         # Run the inference layer
-        if self.dropout:
-            projected_enhanced_premise = self.dropout(projected_enhanced_premise)
-            projected_enhanced_hypothesis = self.dropout(projected_enhanced_hypothesis)
+        if self.rnn_input_dropout:
+            projected_enhanced_premise = self.rnn_input_dropout(projected_enhanced_premise)
+            projected_enhanced_hypothesis = self.rnn_input_dropout(projected_enhanced_hypothesis)
         v_ai = self._inference_encoder(projected_enhanced_premise, premise_mask)
         v_bi = self._inference_encoder(projected_enhanced_hypothesis, hypothesis_mask)
 
