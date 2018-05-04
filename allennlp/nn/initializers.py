@@ -124,7 +124,6 @@ def block_orthogonal(tensor: torch.Tensor,
     gain : float, optional (default = 1.0)
         The gain (scaling) applied to the orthogonal initialization.
     """
-
     data = tensor.data
     sizes = list(tensor.size())
     if any([a % b != 0 for a, b in zip(sizes, split_sizes)]):

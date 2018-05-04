@@ -114,8 +114,8 @@ class ModelTestCase(AllenNlpTestCase):
 
     def assert_fields_equal(self, field1, field2, name: str, tolerance: float = 1e-6) -> None:
         if type(field1) == torch.Tensor:
-            assert_allclose(field1.detach().cpu().numpy(),
-                            field2.detach().cpu().numpy(),
+            assert_allclose(field1.data.cpu().numpy(),
+                            field2.data.cpu().numpy(),
                             rtol=tolerance,
                             err_msg=name)
         elif isinstance(field1, dict):
@@ -185,8 +185,8 @@ class ModelTestCase(AllenNlpTestCase):
                     if single_predicted.size() != batch_predicted.size():
                         slices = tuple(slice(0, size) for size in single_predicted.size())
                         batch_predicted = batch_predicted[slices]
-                    assert_allclose(single_predicted.detach().numpy(),
-                                    batch_predicted.detach().numpy(),
+                    assert_allclose(single_predicted.data.numpy(),
+                                    batch_predicted.data.numpy(),
                                     atol=tolerance,
                                     err_msg=key)
                 else:

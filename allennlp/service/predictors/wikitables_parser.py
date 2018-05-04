@@ -2,6 +2,7 @@ import os
 from subprocess import run
 from typing import Tuple
 
+import torch
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path

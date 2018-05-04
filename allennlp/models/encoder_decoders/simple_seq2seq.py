@@ -136,8 +136,7 @@ class SimpleSeq2Seq(Model):
         else:
             num_decoding_steps = self._max_decoding_steps
         decoder_hidden = final_encoder_output
-        decoder_context = (encoder_outputs.data.new()
-                           .resize_(batch_size, self._decoder_output_dim).fill_(0))
+        decoder_context = encoder_outputs.new_zeros(batch_size, self._decoder_output_dim)
         last_predictions = None
         step_logits = []
         step_probabilities = []
