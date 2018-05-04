@@ -234,7 +234,7 @@ class TestSparseClipGrad(AllenNlpTestCase):
         # create a sparse embedding layer, then take gradient
         embedding = torch.nn.Embedding(100, 16, sparse=True)
         embedding.zero_grad()
-        ids = torch.autograd.Variable((torch.rand(17) * 100).long())
+        ids = (torch.rand(17) * 100).long()
         # Set some of the ids to the same value so that the sparse gradient
         # has repeated indices.  This tests some additional logic.
         ids[:5] = 5

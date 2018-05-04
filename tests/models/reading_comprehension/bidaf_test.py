@@ -86,7 +86,7 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
     def test_get_best_span(self):
         # pylint: disable=protected-access
 
-        span_begin_probs =torch.autograd.Variable(torch.FloatTensor([[0.1, 0.3, 0.05, 0.3, 0.25]])).log()
+        span_begin_probs = torch.FloatTensor([[0.1, 0.3, 0.05, 0.3, 0.25]]).log()
         span_end_probs =torch.autograd.Variable(torch.FloatTensor([[0.65, 0.05, 0.2, 0.05, 0.05]])).log()
         begin_end_idxs = BidirectionalAttentionFlow.get_best_span(span_begin_probs, span_end_probs)
         assert_almost_equal(begin_end_idxs.data.numpy(), [[0, 0]])

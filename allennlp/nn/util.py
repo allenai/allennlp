@@ -350,7 +350,7 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
     when doing mask manipulation, such as summing to get the lengths of sequences - see below.
     >>> mask = torch.ones([260]).byte()
     >>> mask.sum() # equals 260.
-    >>> var_mask = torch.autograd.Variable(mask)
+    >>> var_mask = torch.autograd.V(mask)
     >>> var_mask.sum() # equals 4, due to 8 bit precision - the sum overflows.
     """
     tensor_dims = [(tensor.dim(), tensor) for tensor in text_field_tensors.values()]

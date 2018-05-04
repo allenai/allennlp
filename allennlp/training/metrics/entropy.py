@@ -27,7 +27,6 @@ class Entropy(Metric):
         mask: ``torch.Tensor``, optional (default = None).
             A masking tensor of shape (batch_size, ...).
         """
-        # Get the data from thetorch.autograd.Variables.
         logits, mask = self.unwrap_to_tensors(logits, mask)
 
         if mask is None:

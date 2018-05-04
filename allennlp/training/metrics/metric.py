@@ -50,9 +50,11 @@ class Metric(Registrable):
     @staticmethod
     def unwrap_to_tensors(*tensors):
         """
-        If you actually passed intorch.autograd.Variables to a Metric instead of Tensors, there will be
+        If you actually passed gradient-tracking Tensors to a Metric, there will be
         a huge memory leak, because it will prevent garbage collection for the computation
         graph. This method ensures that you're using tensors directly and that they are on
         the CPU.
         """
-        return (x.data.cpu() if isinstance(x, torch.Tensor) else x for x in tensors)
+        # pylint: disable=unidiomatic-typecheck
+        return (x.detach().cpu() if type(x) == torch.Tensor else x
+                for x in tensors)

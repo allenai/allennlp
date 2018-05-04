@@ -30,12 +30,12 @@ class CorefTest(ModelTestCase):
                                                [3, 2, 1, 0, 0, 0],
                                                [4, 3, 2, 1, 0, 0]])
 
-        spans =torch.autograd.Variable(spans.unsqueeze(0))
-        antecedent_indices =torch.autograd.Variable(antecedent_indices)
+        spans = spans.unsqueeze(0)
+        antecedent_indices = antecedent_indices
         # Indices into ``antecedent_indices`` indicating the predicted antecedent
         # index in ``top_spans``.
         predicted_antecedents = torch.LongTensor([-1, 0, -1, -1, 1, 3])
-        predicted_antecedents =torch.autograd.Variable(predicted_antecedents.unsqueeze(0))
+        predicted_antecedents = predicted_antecedents.unsqueeze(0)
         output_dict = {
                 "top_spans": spans,
                 "antecedent_indices": antecedent_indices,

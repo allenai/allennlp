@@ -94,7 +94,7 @@ class SpanBasedF1Measure(Metric):
         """
         if mask is None:
             mask = torch.ones_like(gold_labels)
-        # Get the data from thetorch.autograd.Variables.
+
         predictions, gold_labels, mask, prediction_map = self.unwrap_to_tensors(predictions,
                                                                                 gold_labels,
                                                                                 mask, prediction_map)

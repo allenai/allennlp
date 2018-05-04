@@ -116,12 +116,11 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
             kernel_version.bias.data[bias_index:bias_index + bias.nelement()].copy_(bias.data)
             bias_index += bias.nelement()
 
-        inputs = torch.randn(batch_size, timesteps, input_size).cuda()
+        baseline_input = torch.randn(batch_size, timesteps, input_size, requires_grad=True).cuda()
         # Clone variable so different models are
         # completely separate in the graph.
-        input2 = inputs.clone()
-        baseline_input =torch.autograd.Variable(inputs, requires_grad=True)
-        kernel_version_input =torch.autograd.Variable(input2, requires_grad=True)
+        kernel_version_input = baseline_input.clone()
+
         lengths = [timesteps - int((i / 2)) for i in range(batch_size)]
         lengths = lengths[:batch_size]
 
