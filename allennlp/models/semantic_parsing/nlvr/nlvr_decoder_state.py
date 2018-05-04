@@ -1,7 +1,7 @@
 from typing import List, Dict, Tuple
 
 import torch
-from torch.autograd import Variable
+
 
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.nn.decoding import DecoderState, GrammarState, RnnState
@@ -62,7 +62,7 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         for checklist computation. For example, if the parser is penalizing non-agenda terminal
         actions, all the terminal actions are relevant. Needed only if this state is being used
         while training a parser without logical forms.
-    checklist : ``List[Variable]``, optional
+    checklist : ``List[torch.Tensor]``, optional
         A checklist for each instance indicating how many times each action in its agenda has
         been chosen previously. It contains the actual counts of the agenda actions. Needed only if
         this state is being used while training a parser without logical forms.
@@ -82,7 +82,7 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
                  terminal_actions: List[torch.Tensor] = None,
                  checklist_target: List[torch.Tensor] = None,
                  checklist_masks: List[torch.Tensor] = None,
-                 checklist: List[Variable] = None) -> None:
+                 checklist: List[torch.Tensor] = None) -> None:
         super(NlvrDecoderState, self).__init__(batch_indices, action_history, score)
         self.rnn_state = rnn_state
         self.grammar_state = grammar_state

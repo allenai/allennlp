@@ -50,8 +50,8 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
 
     Parameters
     ----------
-    parameters : ``(Iterable[Variable])``
-        An iterable of Variables that will have gradients normalized.
+    parameters : ``(Iterable[torch.autograd.Variable])``
+        An iterable oftorch.autograd.Variables that will have gradients normalized.
     max_norm : ``float``
         The max norm of the gradients.
     norm_type : ``float``
@@ -436,7 +436,7 @@ class Trainer:
             loss = self._batch_loss(batch, for_training=True)
             loss.backward()
 
-            # Make sure Variable is on the cpu before converting to numpy.
+            # Make suretorch.autograd.Variable is on the cpu before converting to numpy.
             # .cpu() is a no-op if you aren't using GPUs.
             train_loss += loss.data.cpu().numpy()
 

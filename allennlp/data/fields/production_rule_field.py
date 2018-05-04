@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Tuple
 
 import torch
-from torch.autograd import Variable
+
 from overrides import overrides
 
 from allennlp.data.fields.field import Field
@@ -92,7 +92,7 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
                   cuda_device: int = -1) -> ProductionRuleArray:
         # pylint: disable=unused-argument
         if self.is_global_rule:
-            tensor = Variable(torch.LongTensor([self._rule_id]))
+            tensor = torch.LongTensor([self._rule_id])
         else:
             tensor = None
         return (self.rule, self.is_global_rule, tensor)

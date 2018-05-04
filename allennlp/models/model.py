@@ -51,7 +51,7 @@ class Model(torch.nn.Module, Registrable):
         self.vocab = vocab
         self._regularizer = regularizer
 
-    def get_regularization_penalty(self) -> Union[float, torch.autograd.Variable]:
+    def get_regularization_penalty(self) -> Union[float, torch.Tensor]:
         """
         Computes the regularization penalty for the model.
         Returns 0 if the model was not configured to use regularization.
@@ -114,8 +114,8 @@ class Model(torch.nn.Module, Registrable):
         Takes an :class:`~allennlp.data.instance.Instance`, which typically has raw text in it,
         converts that text into arrays using this model's :class:`Vocabulary`, passes those arrays
         through :func:`self.forward()` and :func:`self.decode()` (which by default does nothing)
-        and returns the result.  Before returning the result, we convert any ``torch.autograd.Variables``
-        or ``torch.Tensors`` into numpy arrays and remove the batch dimension.
+        and returns the result.  Before returning the result, we convert any
+        ``torch.Tensors`` into numpy arrays and remove the batch dimension.
         """
         return self.forward_on_instances([instance], cuda_device)[0]
 
@@ -127,7 +127,7 @@ class Model(torch.nn.Module, Registrable):
         arrays using this model's :class:`Vocabulary`, passes those arrays through
         :func:`self.forward()` and :func:`self.decode()` (which by default does nothing)
         and returns the result.  Before returning the result, we convert any
-        ``torch.autograd.Variables`` or ``torch.Tensors`` into numpy arrays and separate the
+        ``torch.Tensors`` into numpy arrays and separate the
         batched output into a list of individual dicts per instance. Note that typically
         this will be faster on a GPU (and conditionally, on a CPU) than repeated calls to
         :func:`forward_on_instance`.
@@ -150,7 +150,7 @@ class Model(torch.nn.Module, Registrable):
 
         instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]
         for name, output in list(outputs.items()):
-            if isinstance(output, torch.autograd.Variable):
+            if type(output) == torch.Tensor:  # pylint: disable=unidiomatic-typecheck
                 output = output.data.cpu().numpy()
             outputs[name] = output
             for instance_output, batch_element in zip(instance_separated_output, output):

@@ -4,7 +4,7 @@ Conditional random field
 from typing import List, Tuple, Dict
 
 import torch
-from torch.autograd import Variable
+
 
 from allennlp.common.checks import ConfigurationError
 import allennlp.nn.util as util
@@ -224,14 +224,14 @@ class ConditionalRandomField(torch.nn.Module):
         """
         # pylint: disable=arguments-differ
         if mask is None:
-            mask = torch.autograd.Variable(torch.ones(*tags.size()).long())
+            mask = torch.ones(*tags.size()).long()
 
         log_denominator = self._input_likelihood(inputs, mask)
         log_numerator = self._joint_likelihood(inputs, tags, mask)
 
         return torch.sum(log_numerator - log_denominator)
 
-    def viterbi_tags(self, logits: Variable, mask: Variable) -> List[List[int]]:
+    def viterbi_tags(self, logits: torch.Tensor, mask: torch.Tensor) -> List[List[int]]:
         """
         Uses viterbi algorithm to find most likely tags for the given inputs.
         If constraints are applied, disallows all other transitions.

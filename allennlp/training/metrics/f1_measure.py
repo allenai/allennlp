@@ -37,7 +37,7 @@ class F1Measure(Metric):
         mask: ``torch.Tensor``, optional (default = None).
             A masking tensor the same size as ``gold_labels``.
         """
-        # Get the data from the Variables.
+        # Get the data from thetorch.autograd.Variables.
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
 
         num_classes = predictions.size(-1)

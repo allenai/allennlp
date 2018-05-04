@@ -3,7 +3,7 @@ import math
 
 from numpy.testing import assert_almost_equal
 import torch
-from torch.autograd import Variable
+
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.decoding import DecoderState
@@ -16,7 +16,7 @@ class TestMaximumMarginalLikelihood(AllenNlpTestCase):
         super().setUp()
         self.initial_state = SimpleDecoderState([0, 1],
                                                 [[], []],
-                                                [Variable(torch.Tensor([0.0])), Variable(torch.Tensor([0.0]))],
+                                                [torch.autograd.Variable(torch.Tensor([0.0])),torch.autograd.Variable(torch.Tensor([0.0]))],
                                                 [0, 1])
         self.decoder_step = SimpleDecoderStep()
         self.targets = torch.autograd.Variable(torch.Tensor([[[2, 3, 4], [1, 3, 4], [1, 2, 4]],

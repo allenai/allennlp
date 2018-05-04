@@ -6,7 +6,7 @@ import shutil
 from flaky import flaky
 from numpy.testing import assert_almost_equal
 import torch
-from torch.autograd import Variable
+
 
 from allennlp.common import Params
 from allennlp.common.testing import ModelTestCase
@@ -40,7 +40,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
 
     def test_get_neighbor_indices(self):
         worlds, num_entities = self.get_fake_worlds()
-        tensor = Variable(torch.LongTensor([]))
+        tensor =torch.autograd.Variable(torch.LongTensor([]))
 
         neighbor_indices = self.model._get_neighbor_indices(worlds, num_entities, tensor)
 
@@ -59,7 +59,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
 
     def test_get_type_vector(self):
         worlds, num_entities = self.get_fake_worlds()
-        tensor = Variable(torch.LongTensor([]))
+        tensor =torch.autograd.Variable(torch.LongTensor([]))
         type_vector, _ = self.model._get_type_vector(worlds, num_entities, tensor)
         # Verify that both types are present and padding used for non existent entities.
         assert_almost_equal(type_vector.data.numpy(), [[[1, 0, 0, 0],
@@ -80,8 +80,8 @@ class WikiTablesSemanticParserTest(ModelTestCase):
                            [4, -1, 5, -3, 4]],
                           [[0, 1, 8, 10, 10],
                            [3, 2, -1, -2, 1]]]
-        linking_scores = Variable(torch.FloatTensor(linking_scores))
-        question_mask = Variable(torch.LongTensor([[1, 1], [1, 0]]))
+        linking_scores =torch.autograd.Variable(torch.FloatTensor(linking_scores))
+        question_mask =torch.autograd.Variable(torch.LongTensor([[1, 1], [1, 0]]))
         _, entity_type_dict = self.model._get_type_vector(worlds, num_entities, linking_scores)
 
         # (batch_size, num_question_tokens, num_entities)
@@ -131,11 +131,11 @@ class WikiTablesSemanticParserTest(ModelTestCase):
         model = Model.from_params(self.vocab, params['model'])
         action_embedding_weights = model._action_embedder.weight
         rule1 = model.vocab.get_token_from_index(1, 'rule_labels')
-        rule1_tensor = Variable(torch.LongTensor([1]))
+        rule1_tensor =torch.autograd.Variable(torch.LongTensor([1]))
         rule2 = model.vocab.get_token_from_index(2, 'rule_labels')
-        rule2_tensor = Variable(torch.LongTensor([2]))
+        rule2_tensor =torch.autograd.Variable(torch.LongTensor([2]))
         rule3 = model.vocab.get_token_from_index(3, 'rule_labels')
-        rule3_tensor = Variable(torch.LongTensor([3]))
+        rule3_tensor =torch.autograd.Variable(torch.LongTensor([3]))
         actions = [[(rule1, True, rule1_tensor),
                     (rule2, True, rule2_tensor),
                     # This one is padding; the tensors shouldn't matter here.
@@ -167,7 +167,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
 
     def test_map_entity_productions(self):
         # (batch_size, num_entities, num_question_tokens) = (3, 4, 5)
-        linking_scores = Variable(torch.rand(3, 4, 5))
+        linking_scores =torch.autograd.Variable(torch.rand(3, 4, 5))
         # Because we only need a small piece of the WikiTablesWorld and TableKnowledgeGraph, we'll
         # just use some namedtuples to fake the part of the API that we need, instead of going to
         # the trouble of constructing the full objects.

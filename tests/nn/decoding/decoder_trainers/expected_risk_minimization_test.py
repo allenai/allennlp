@@ -1,6 +1,6 @@
 # pylint: disable=no-self-use,protected-access
 import torch
-from torch.autograd import Variable
+
 import numpy as np
 from numpy.testing import assert_almost_equal
 
@@ -12,10 +12,10 @@ from ..simple_transition_system import SimpleDecoderState, SimpleDecoderStep
 class TestExpectedRiskMinimization(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.initial_state = SimpleDecoderState([0], [[0]], [Variable(torch.Tensor([0.0]))])
+        self.initial_state = SimpleDecoderState([0], [[0]], [torch.autograd.Variable(torch.Tensor([0.0]))])
         self.decoder_step = SimpleDecoderStep()
         # Cost is the number of odd elements in the action history.
-        self.supervision = lambda state: Variable(torch.Tensor([sum([x%2 != 0 for x in
+        self.supervision = lambda state:torch.autograd.Variable(torch.Tensor([sum([x%2 != 0 for x in
                                                                      state.action_history[0]])]))
         # High beam size ensures exhaustive search.
         self.trainer = ExpectedRiskMinimization(beam_size=100,

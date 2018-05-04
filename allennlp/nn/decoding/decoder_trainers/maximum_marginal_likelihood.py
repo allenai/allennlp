@@ -3,7 +3,7 @@ import logging
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import torch
-from torch.autograd import Variable
+
 
 from allennlp.nn import util
 from allennlp.nn.decoding.decoder_step import DecoderStep
@@ -135,14 +135,14 @@ class MaximumMarginalLikelihood(DecoderTrainer[Tuple[torch.Tensor, torch.Tensor]
         return allowed_actions
 
     @staticmethod
-    def _group_scores_by_batch(finished_states: List[DecoderState]) -> Dict[int, List[Variable]]:
+    def _group_scores_by_batch(finished_states: List[DecoderState]) -> Dict[int, List[torch.autograd.Variable]]:
         """
         Takes a list of finished states and groups all final scores for each batch element into a
         list.  This is not trivial because the instances in the batch all might "finish" at
         different times, so we re-batch them during the training process.  We need to recover the
         original batch grouping so we can compute the loss correctly.
         """
-        batch_scores: Dict[int, List[Variable]] = defaultdict(list)
+        batch_scores: Dict[int, List[torch.autograd.Variable]] = defaultdict(list)
         for state in finished_states:
             for score, batch_index in zip(state.score, state.batch_indices):
                 batch_scores[batch_index].append(score)

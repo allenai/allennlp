@@ -49,8 +49,8 @@ class EpochTrackingBucketIterator(BucketIterator):
                  num_epochs: int = None,
                  shuffle: bool = True,
                  cuda_device: int = -1) -> Generator[Dict[str, Union[numpy.ndarray,
-                                                                         Dict[str, numpy.ndarray]]],
-                                                         None, None]:
+                                                                     Dict[str, numpy.ndarray]]],
+                                                     None, None]:
         """
         See ``DataIterator.__call__`` for parameters.
         """

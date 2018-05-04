@@ -24,8 +24,8 @@ class DataIterator(Registrable):
                  num_epochs: int = None,
                  shuffle: bool = True,
                  cuda_device: int = -1) -> Generator[Dict[str, Union[numpy.ndarray,
-                                                                         Dict[str, numpy.ndarray]]],
-                                                         None, None]:
+                                                                     Dict[str, numpy.ndarray]]],
+                                                     None, None]:
         """
         Returns a generator that yields batches over the given dataset, forever.
 

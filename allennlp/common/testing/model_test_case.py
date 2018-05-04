@@ -1,3 +1,4 @@
+# pylint: disable=unidiomatic-typecheck
 import copy
 import os
 
@@ -112,9 +113,9 @@ class ModelTestCase(AllenNlpTestCase):
         return model, loaded_model
 
     def assert_fields_equal(self, field1, field2, name: str, tolerance: float = 1e-6) -> None:
-        if isinstance(field1, torch.autograd.Variable):
-            assert_allclose(field1.data.cpu().numpy(),
-                            field2.data.cpu().numpy(),
+        if type(field1) == torch.Tensor:
+            assert_allclose(field1.detach().cpu().numpy(),
+                            field2.detach().cpu().numpy(),
                             rtol=tolerance,
                             err_msg=name)
         elif isinstance(field1, dict):
@@ -180,12 +181,12 @@ class ModelTestCase(AllenNlpTestCase):
                     continue
                 single_predicted = single_predicted[0]
                 batch_predicted = batch_predictions[key][i]
-                if isinstance(single_predicted, torch.autograd.Variable):
+                if type(single_predicted) == torch.Tensor:
                     if single_predicted.size() != batch_predicted.size():
                         slices = tuple(slice(0, size) for size in single_predicted.size())
                         batch_predicted = batch_predicted[slices]
-                    assert_allclose(single_predicted.data.numpy(),
-                                    batch_predicted.data.numpy(),
+                    assert_allclose(single_predicted.detach().numpy(),
+                                    batch_predicted.detach().numpy(),
                                     atol=tolerance,
                                     err_msg=key)
                 else:

@@ -4,7 +4,7 @@ import numpy
 from overrides import overrides
 
 import torch
-from torch.autograd import Variable
+
 from torch.nn.modules.rnn import LSTMCell
 from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
@@ -136,8 +136,8 @@ class SimpleSeq2Seq(Model):
         else:
             num_decoding_steps = self._max_decoding_steps
         decoder_hidden = final_encoder_output
-        decoder_context = Variable(encoder_outputs.data.new()
-                                   .resize_(batch_size, self._decoder_output_dim).fill_(0))
+        decoder_context = (encoder_outputs.data.new()
+                                .resize_(batch_size, self._decoder_output_dim).fill_(0))
         last_predictions = None
         step_logits = []
         step_probabilities = []
@@ -149,8 +149,8 @@ class SimpleSeq2Seq(Model):
                 if timestep == 0:
                     # For the first timestep, when we do not have targets, we input start symbols.
                     # (batch_size,)
-                    input_choices = Variable(source_mask.data.new()
-                                             .resize_(batch_size).fill_(self._start_index))
+                    input_choices = (source_mask.data.new()
+                                        .resize_(batch_size).fill_(self._start_index))
                 else:
                     input_choices = last_predictions
             decoder_input = self._prepare_decode_step_input(input_choices, decoder_hidden,

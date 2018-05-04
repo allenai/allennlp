@@ -1,5 +1,5 @@
 import torch
-from torch.autograd import Variable
+
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 import numpy
@@ -56,7 +56,7 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
 
         kernel_model.zero_grad()
         kernel_output.backward(random_error)
-        
+
         numpy.testing.assert_array_almost_equal(baseline_input.grad.data.cpu().numpy(),
                                                 kernel_input.grad.data.cpu().numpy())
         weight_index = 0
@@ -78,7 +78,7 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
             bias_index += bias_grad.nelement()
 
             numpy.testing.assert_array_almost_equal(kernel_input_grad.data.cpu().numpy(),
-                                                    input_grad.data.cpu().numpy(), decimal=4) 
+                                                    input_grad.data.cpu().numpy(), decimal=4)
             numpy.testing.assert_array_almost_equal(kernel_state_grad.data.cpu().numpy(),
                                                     state_grad.data.cpu().numpy(), decimal=4)
             numpy.testing.assert_array_almost_equal(kernel_bias_grad.data.cpu().numpy(),
@@ -120,8 +120,8 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         # Clone variable so different models are
         # completely separate in the graph.
         input2 = inputs.clone()
-        baseline_input = Variable(inputs, requires_grad=True)
-        kernel_version_input = Variable(input2, requires_grad=True)
+        baseline_input =torch.autograd.Variable(inputs, requires_grad=True)
+        kernel_version_input =torch.autograd.Variable(input2, requires_grad=True)
         lengths = [timesteps - int((i / 2)) for i in range(batch_size)]
         lengths = lengths[:batch_size]
 

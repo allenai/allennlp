@@ -123,9 +123,9 @@ class BiattentiveClassificationNetwork(Model):
         """
         Parameters
         ----------
-        tokens : Dict[str, Variable], required
+        tokens : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``.
-        label : Variable, optional (default = None)
+        label : torch.LongTensor, optional (default = None)
             A variable representing the label for each instance in the batch.
         Returns
         -------

@@ -2,7 +2,7 @@ from typing import Tuple
 
 from overrides import overrides
 import torch
-from torch.autograd import Function, Variable
+from torch.autograd import Function
 from torch.nn import Parameter
 from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence, pack_padded_sequence
 
@@ -232,8 +232,8 @@ class AlternatingHighwayLSTM(torch.nn.Module):
 
         sequence_length, batch_size, _ = inputs.size()
         accumulator_shape = [self.num_layers, sequence_length + 1, batch_size, self.hidden_size]
-        state_accumulator = Variable(inputs.data.new(*accumulator_shape).zero_(), requires_grad=False)
-        memory_accumulator = Variable(inputs.data.new(*accumulator_shape).zero_(), requires_grad=False)
+        state_accumulator = inputs.data.new(*accumulator_shape).zero_()
+        memory_accumulator = inputs.data.new(*accumulator_shape).zero_()
 
         dropout_weights = inputs.data.new().resize_(self.num_layers, batch_size, self.hidden_size).fill_(1.0)
         if self.training:
@@ -241,12 +241,11 @@ class AlternatingHighwayLSTM(torch.nn.Module):
             dropout_weights.bernoulli_(1 - self.recurrent_dropout_probability)\
                 .div_((1 - self.recurrent_dropout_probability))
 
-        dropout_weights = Variable(dropout_weights, requires_grad=False)
-        gates = Variable(inputs.data.new().resize_(self.num_layers,
-                                                   sequence_length,
-                                                   batch_size, 6 * self.hidden_size))
+        gates = inputs.data.new().resize_(self.num_layers,
+                                          sequence_length,
+                                          batch_size, 6 * self.hidden_size)
 
-        lengths_variable = Variable(torch.IntTensor(lengths))
+        lengths_variable = torch.IntTensor(lengths)
         implementation = _AlternatingHighwayLSTMFunction(self.input_size,
                                                          self.hidden_size,
                                                          num_layers=self.num_layers,

@@ -3,7 +3,6 @@ import logging
 
 from overrides import overrides
 import torch
-from torch.autograd import Variable
 
 from allennlp.data.fields.field import Field
 from allennlp.data.vocabulary import Vocabulary
@@ -116,7 +115,7 @@ class MultiLabelField(Field[torch.Tensor]):
         if self._label_ids:
             values.scatter_(0, torch.LongTensor(self._label_ids), 1)
 
-        tensor = Variable(values)
+        tensor = values
         return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
 
     @overrides

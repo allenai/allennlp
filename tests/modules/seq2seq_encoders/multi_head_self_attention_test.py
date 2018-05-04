@@ -1,7 +1,7 @@
 # pylint: disable=invalid-name,no-self-use,too-many-public-methods
 import numpy
 import torch
-from torch.autograd import Variable
+
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import MultiHeadSelfAttention
@@ -23,7 +23,7 @@ class MultiHeadSelfAttentionTest(AllenNlpTestCase):
                                            input_dim=5,
                                            attention_dim=6,
                                            values_dim=9)
-        inputs = Variable(torch.randn(2, 12, 5))
+        inputs =torch.autograd.Variable(torch.randn(2, 12, 5))
         assert list(attention(inputs).size()) == [2, 12, 5]
 
     def test_multi_head_self_attention_respects_masking(self):
@@ -32,8 +32,8 @@ class MultiHeadSelfAttentionTest(AllenNlpTestCase):
                                            attention_dim=6,
                                            values_dim=9,
                                            attention_dropout_prob=0.0)
-        tensor = Variable(torch.randn(2, 12, 5))
-        mask = Variable(torch.ones([2, 12]))
+        tensor =torch.autograd.Variable(torch.randn(2, 12, 5))
+        mask =torch.autograd.Variable(torch.ones([2, 12]))
         mask[0, 6:] = 0
         result = attention(tensor, mask)
         # Compute the same function without a mask, but with

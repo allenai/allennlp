@@ -50,7 +50,7 @@ class Metric(Registrable):
     @staticmethod
     def unwrap_to_tensors(*tensors):
         """
-        If you actually passed in Variables to a Metric instead of Tensors, there will be
+        If you actually passed intorch.autograd.Variables to a Metric instead of Tensors, there will be
         a huge memory leak, because it will prevent garbage collection for the computation
         graph. This method ensures that you're using tensors directly and that they are on
         the CPU.

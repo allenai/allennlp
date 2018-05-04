@@ -4,7 +4,7 @@ import math
 
 from pytest import approx, raises
 import torch
-from torch.autograd import Variable
+
 
 from allennlp.modules import ConditionalRandomField
 from allennlp.modules.conditional_random_field import allowed_transitions
@@ -15,11 +15,11 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestConditionalRandomField(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.logits = Variable(torch.Tensor([
+        self.logits =torch.autograd.Variable(torch.Tensor([
                 [[0, 0, .5, .5, .2], [0, 0, .3, .3, .1], [0, 0, .9, 10, 1]],
                 [[0, 0, .2, .5, .2], [0, 0, 3, .3, .1], [0, 0, .9, 1, 1]],
         ]))
-        self.tags = Variable(torch.LongTensor([
+        self.tags =torch.autograd.Variable(torch.LongTensor([
                 [2, 3, 4],
                 [3, 2, 2]
         ]))
@@ -79,7 +79,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
 
     def test_forward_works_with_mask(self):
         # Use a non-trivial mask
-        mask = Variable(torch.LongTensor([
+        mask =torch.autograd.Variable(torch.LongTensor([
                 [1, 1, 1],
                 [1, 1, 0]
         ]))
@@ -111,7 +111,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
 
 
     def test_viterbi_tags(self):
-        mask = Variable(torch.LongTensor([
+        mask =torch.autograd.Variable(torch.LongTensor([
                 [1, 1, 1],
                 [1, 1, 0]
         ]))
@@ -153,7 +153,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
         crf.start_transitions = torch.nn.Parameter(self.transitions_from_start)
         crf.end_transitions = torch.nn.Parameter(self.transitions_to_end)
 
-        mask = Variable(torch.LongTensor([
+        mask =torch.autograd.Variable(torch.LongTensor([
                 [1, 1, 1],
                 [1, 1, 0]
         ]))

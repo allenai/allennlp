@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name, protected-access
 import numpy
 import torch
-from torch.autograd import Variable
+
 
 from allennlp.modules.span_extractors import SpanExtractor, SelfAttentiveSpanExtractor
 from allennlp.common.params import Params
@@ -14,7 +14,7 @@ class TestSelfAttentiveSpanExtractor:
 
     def test_attention_is_normalised_correctly(self):
         input_dim = 7
-        sequence_tensor = Variable(torch.randn([2, 5, input_dim]))
+        sequence_tensor =torch.autograd.Variable(torch.randn([2, 5, input_dim]))
         extractor = SelfAttentiveSpanExtractor(input_dim=input_dim)
         assert extractor.get_output_dim() == input_dim
         assert extractor.get_input_dim() == input_dim
@@ -25,7 +25,7 @@ class TestSelfAttentiveSpanExtractor:
         extractor._global_attention._module.weight.data.fill_(0.0)
         extractor._global_attention._module.bias.data.fill_(0.0)
 
-        indices = Variable(torch.LongTensor([[[1, 3],
+        indices =torch.autograd.Variable(torch.LongTensor([[[1, 3],
                                               [2, 4]],
                                              [[0, 2],
                                               [3, 4]]])) # smaller span tests masking.
@@ -53,7 +53,7 @@ class TestSelfAttentiveSpanExtractor:
 
 
         # Now test the case in which we have some masked spans in our indices.
-        indices_mask = Variable(torch.LongTensor([[1, 1], [1, 0]]))
+        indices_mask =torch.autograd.Variable(torch.LongTensor([[1, 1], [1, 0]]))
         span_representations = extractor(sequence_tensor, indices, span_indices_mask=indices_mask)
 
         # First element in the batch.

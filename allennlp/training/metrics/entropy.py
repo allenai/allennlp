@@ -3,7 +3,7 @@ from typing import Optional
 from overrides import overrides
 import torch
 
-from torch.autograd import Variable
+
 
 from allennlp.training.metrics.metric import Metric
 
@@ -27,13 +27,13 @@ class Entropy(Metric):
         mask: ``torch.Tensor``, optional (default = None).
             A masking tensor of shape (batch_size, ...).
         """
-        # Get the data from the Variables.
+        # Get the data from thetorch.autograd.Variables.
         logits, mask = self.unwrap_to_tensors(logits, mask)
 
         if mask is None:
             mask = torch.ones(logits.size()[:-1])
 
-        log_probs = torch.nn.functional.log_softmax(Variable(logits), dim=-1).data
+        log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
         probabilities = torch.exp(log_probs) * mask.unsqueeze(-1)
         weighted_negative_likelihood = - log_probs * probabilities
         entropy = weighted_negative_likelihood.sum(-1)

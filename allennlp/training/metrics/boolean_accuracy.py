@@ -34,7 +34,7 @@ class BooleanAccuracy(Metric):
         mask: ``torch.Tensor``, optional (default = None).
             A tensor of the same shape as ``predictions``.
         """
-        # Get the data from the Variables.
+        # Get the data from thetorch.autograd.Variables.
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
 
         if mask is not None:

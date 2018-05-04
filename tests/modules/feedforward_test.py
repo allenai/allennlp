@@ -2,7 +2,7 @@
 from numpy.testing import assert_almost_equal
 import pytest
 import torch
-from torch.autograd import Variable
+
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -33,7 +33,7 @@ class TestFeedForward(AllenNlpTestCase):
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(feedforward)
 
-        input_tensor = Variable(torch.FloatTensor([[-3, 1]]))
+        input_tensor =torch.autograd.Variable(torch.FloatTensor([[-3, 1]]))
         output = feedforward(input_tensor).data.numpy()
         assert output.shape == (1, 3)
         # This output was checked by hand - ReLU makes output after first hidden layer [0, 0, 0],

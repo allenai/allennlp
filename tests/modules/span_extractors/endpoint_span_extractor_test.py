@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
 import numpy
 import torch
-from torch.autograd import Variable
+
 
 from allennlp.modules.span_extractors import SpanExtractor, EndpointSpanExtractor
 from allennlp.common.params import Params
@@ -20,11 +20,11 @@ class TestEndpointSpanExtractor:
         assert extractor.get_output_dim() == 17  # 2 * input_dim + span_width_embedding_dim
 
     def test_correct_sequence_elements_are_embedded(self):
-        sequence_tensor = Variable(torch.randn([2, 5, 7]))
+        sequence_tensor =torch.autograd.Variable(torch.randn([2, 5, 7]))
         # Concatentate start and end points together to form our representation.
         extractor = EndpointSpanExtractor(7, "x,y")
 
-        indices = Variable(torch.LongTensor([[[1, 3],
+        indices =torch.autograd.Variable(torch.LongTensor([[[1, 3],
                                               [2, 4]],
                                              [[0, 2],
                                               [3, 4]]]))
@@ -47,18 +47,18 @@ class TestEndpointSpanExtractor:
                                          correct_end_embeddings.data.numpy())
 
     def test_masked_indices_are_handled_correctly(self):
-        sequence_tensor = Variable(torch.randn([2, 5, 7]))
+        sequence_tensor =torch.autograd.Variable(torch.randn([2, 5, 7]))
         # concatentate start and end points together to form our representation.
         extractor = EndpointSpanExtractor(7, "x,y")
 
-        indices = Variable(torch.LongTensor([[[1, 3],
+        indices =torch.autograd.Variable(torch.LongTensor([[[1, 3],
                                               [2, 4]],
                                              [[0, 2],
                                               [3, 4]]]))
         span_representations = extractor(sequence_tensor, indices)
 
         # Make a mask with the second batch element completely masked.
-        indices_mask = Variable(torch.LongTensor([[1, 1], [0, 0]]))
+        indices_mask =torch.autograd.Variable(torch.LongTensor([[1, 1], [0, 0]]))
 
         span_representations = extractor(sequence_tensor, indices, span_indices_mask=indices_mask)
         start_embeddings, end_embeddings = span_representations.split(7, -1)
@@ -76,15 +76,15 @@ class TestEndpointSpanExtractor:
 
 
     def test_masked_indices_are_handled_correctly_with_exclusive_indices(self):
-        sequence_tensor = Variable(torch.randn([2, 5, 8]))
+        sequence_tensor =torch.autograd.Variable(torch.randn([2, 5, 8]))
         # concatentate start and end points together to form our representation
         # for both the forward and backward directions.
         extractor = EndpointSpanExtractor(8, "x,y", use_exclusive_start_indices=True)
-        indices = Variable(torch.LongTensor([[[1, 3],
+        indices =torch.autograd.Variable(torch.LongTensor([[[1, 3],
                                               [2, 4]],
                                              [[0, 2],
                                               [0, 1]]]))
-        sequence_mask = Variable(torch.LongTensor([[1, 1, 1, 1, 1],
+        sequence_mask =torch.autograd.Variable(torch.LongTensor([[1, 1, 1, 1, 1],
                                                    [1, 1, 1, 0, 0]]))
 
         span_representations = extractor(sequence_tensor, indices, sequence_mask=sequence_mask)
@@ -94,7 +94,7 @@ class TestEndpointSpanExtractor:
         start_embeddings, end_embeddings = span_representations.split(8, -1)
 
 
-        correct_start_indices = Variable(torch.LongTensor([[0, 1],
+        correct_start_indices =torch.autograd.Variable(torch.LongTensor([[0, 1],
                                                            [-1, -1]]))
         # These indices should be -1, so they'll be replaced with a sentinel. Here,
         # we'll set them to a value other than -1 so we can index select the indices and
@@ -102,7 +102,7 @@ class TestEndpointSpanExtractor:
         correct_start_indices[1, 0] = 1
         correct_start_indices[1, 1] = 1
 
-        correct_end_indices = Variable(torch.LongTensor([[3, 4], [2, 1]]))
+        correct_end_indices =torch.autograd.Variable(torch.LongTensor([[3, 4], [2, 1]]))
 
         correct_start_embeddings = batched_index_select(sequence_tensor.contiguous(),
                                                         correct_start_indices)

@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
 import torch
-from torch.autograd import Variable
+
 from allennlp.modules.lstm_cell_with_projection import LstmCellWithProjection
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -13,8 +13,8 @@ class TestLstmCellWithProjection(AllenNlpTestCase):
         input_tensor[2, 2:, :] = 0.
         input_tensor[3, 1:, :] = 0.
 
-        initial_hidden_state = Variable(torch.ones([1, 4, 5]))
-        initial_memory_state = Variable(torch.ones([1, 4, 7]))
+        initial_hidden_state =torch.autograd.Variable(torch.ones([1, 4, 5]))
+        initial_memory_state =torch.autograd.Variable(torch.ones([1, 4, 7]))
 
         lstm = LstmCellWithProjection(input_size=3,
                                       hidden_size=5,

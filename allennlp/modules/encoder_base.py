@@ -1,6 +1,6 @@
 from typing import Tuple, Union, Optional, Callable
 import torch
-from torch.autograd import Variable
+
 from torch.nn.utils.rnn import pack_padded_sequence, PackedSequence
 
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, sort_batch_by_length
@@ -178,7 +178,6 @@ class _EncoderBase(torch.nn.Module):
                 zeros = state.data.new(state.size(0),
                                        num_states_to_concat,
                                        state.size(2)).fill_(0)
-                zeros = Variable(zeros)
                 resized_states.append(torch.cat([state, zeros], 1))
             self._states = tuple(resized_states)
             correctly_shaped_states = self._states
@@ -214,7 +213,7 @@ class _EncoderBase(torch.nn.Module):
         This method just sets the state to the updated new state, performing
         several pieces of book-keeping along the way - namely, unsorting the
         states and ensuring that the states of completely padded sequences are
-        not updated. Finally, it also detatches the state variable from the
+        not updated. Finally, it also detaches the state variable from the
         computational graph, such that the graph can be garbage collected after
         each batch iteration.
 
@@ -235,8 +234,7 @@ class _EncoderBase(torch.nn.Module):
         if self._states is None:
             # We don't already have states, so just set the
             # ones we receive to be the current state.
-            self._states = tuple([torch.autograd.Variable(state.data)
-                                  for state in new_unsorted_states])
+            self._states = tuple(new_unsorted_states)
         else:
             # Now we've sorted the states back so that they correspond to the original
             # indices, we need to figure out what states we need to update, because if we
@@ -262,8 +260,8 @@ class _EncoderBase(torch.nn.Module):
                     masked_old_state = old_state[:, :new_state_batch_size, :] * (1 - used_mask)
                     # The old state is larger, so update the relevant parts of it.
                     old_state[:, :new_state_batch_size, :] = new_state + masked_old_state
-                    # Detatch the Variable.
-                    new_states.append(torch.autograd.Variable(old_state.data))
+                    # Detatch.
+                    new_states.append(old_state.detach())
             else:
                 # The states are the same size, so we just have to
                 # deal with the possibility that some rows weren't used.
@@ -275,8 +273,8 @@ class _EncoderBase(torch.nn.Module):
                     masked_old_state = old_state * (1 - used_mask)
                     # The old state is larger, so update the relevant parts of it.
                     new_state += masked_old_state
-                    # Detatch the Variable.
-                    new_states.append(torch.autograd.Variable(new_state.data))
+                    # Detatch.
+                    new_states.append(new_state.detach())
 
             # It looks like there should be another case handled here - when
             # the current_state_batch_size < new_state_batch_size. However,

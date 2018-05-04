@@ -2,7 +2,7 @@
 import pytest
 from numpy.testing import assert_almost_equal
 import torch
-from torch.autograd import Variable
+
 from torch.nn import LSTM
 from torch.nn.utils.rnn import pack_padded_sequence
 
@@ -26,7 +26,7 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
     def test_forward_pulls_out_correct_tensor_without_sequence_lengths(self):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=2, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2VecWrapper(lstm)
-        input_tensor = Variable(torch.FloatTensor([[[.7, .8], [.1, 1.5]]]))
+        input_tensor =torch.autograd.Variable(torch.FloatTensor([[[.7, .8], [.1, 1.5]]]))
         lstm_output = lstm(input_tensor)
         encoder_output = encoder(input_tensor, None)
         assert_almost_equal(encoder_output.data.numpy(), lstm_output[0].data.numpy()[:, -1, :])
@@ -46,8 +46,8 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         mask[3, 2:] = 0
         mask[4, 1:] = 0
 
-        input_tensor = Variable(tensor)
-        mask = Variable(mask)
+        input_tensor =torch.autograd.Variable(tensor)
+        mask =torch.autograd.Variable(mask)
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         packed_sequence = pack_padded_sequence(input_tensor, list(sequence_lengths.data), batch_first=True)
         _, state = lstm(packed_sequence)
@@ -96,8 +96,8 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         mask[2, 2:] = 0
         mask[3, 6:] = 0
 
-        input_tensor = Variable(tensor)
-        mask = Variable(mask)
+        input_tensor =torch.autograd.Variable(tensor)
+        mask =torch.autograd.Variable(mask)
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         sorted_inputs, sorted_sequence_lengths, restoration_indices, _ = sort_batch_by_length(input_tensor,
                                                                                               sequence_lengths)

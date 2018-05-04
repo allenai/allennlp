@@ -6,7 +6,7 @@ connections between layers.
 from typing import Optional, Tuple
 
 import torch
-from torch.autograd import Variable
+
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, PackedSequence
 
 from allennlp.common.checks import ConfigurationError
@@ -123,13 +123,13 @@ class AugmentedLstm(torch.nn.Module):
 
         # We have to use this '.data.new().resize_.fill_' pattern to create tensors with the correct
         # type - forward has no knowledge of whether these are torch.Tensors or torch.cuda.Tensors.
-        output_accumulator = Variable(sequence_tensor.data.new()
-                                      .resize_(batch_size, total_timesteps, self.hidden_size).fill_(0))
+        output_accumulator = (sequence_tensor.data.new()
+                              .resize_(batch_size, total_timesteps, self.hidden_size).fill_(0))
         if initial_state is None:
-            full_batch_previous_memory = Variable(sequence_tensor.data.new()
-                                                  .resize_(batch_size, self.hidden_size).fill_(0))
-            full_batch_previous_state = Variable(sequence_tensor.data.new()
-                                                 .resize_(batch_size, self.hidden_size).fill_(0))
+            full_batch_previous_memory = (sequence_tensor.data.new()
+                                          .resize_(batch_size, self.hidden_size).fill_(0))
+            full_batch_previous_state = (sequence_tensor.data.new()
+                                         .resize_(batch_size, self.hidden_size).fill_(0))
         else:
             full_batch_previous_state = initial_state[0].squeeze(0)
             full_batch_previous_memory = initial_state[1].squeeze(0)
@@ -200,8 +200,8 @@ class AugmentedLstm(torch.nn.Module):
             # We've been doing computation with less than the full batch, so here we create a new
             # variable for the the whole batch at this timestep and insert the result for the
             # relevant elements of the batch into it.
-            full_batch_previous_memory = Variable(full_batch_previous_memory.data.clone())
-            full_batch_previous_state = Variable(full_batch_previous_state.data.clone())
+            full_batch_previous_memory = full_batch_previous_memory.data.clone()
+            full_batch_previous_state = full_batch_previous_state.data.clone()
             full_batch_previous_memory[0:current_length_index + 1] = memory
             full_batch_previous_state[0:current_length_index + 1] = timestep_output
             output_accumulator[0:current_length_index + 1, index] = timestep_output
