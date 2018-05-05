@@ -123,8 +123,6 @@ class LstmCellWithProjection(torch.nn.Module):
         batch_size = inputs.size()[0]
         total_timesteps = inputs.size()[1]
 
-        # We have to use this '.data.new().fill_' pattern to create tensors with the correct
-        # type - forward has no knowledge of whether these are torch.Tensors or torch.cuda.Tensors.
         output_accumulator = inputs.new_zeros(batch_size, total_timesteps, self.hidden_size)
 
         if initial_state is None:

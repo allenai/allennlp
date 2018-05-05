@@ -305,8 +305,7 @@ class BidirectionalAttentionFlow(Model):
         batch_size, passage_length = span_start_logits.size()
         max_span_log_prob = [-1e20] * batch_size
         span_start_argmax = [0] * batch_size
-        best_word_span = (span_start_logits.data.new()
-                          .resize_(batch_size, 2).fill_(0)).long()
+        best_word_span = span_start_logits.new_zeros(batch_size, 2).long()
 
         span_start_logits = span_start_logits.data.cpu().numpy()
         span_end_logits = span_end_logits.data.cpu().numpy()

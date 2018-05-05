@@ -430,7 +430,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         flattened_biases = state.action_biases.index_select(0, flattened_actions)
         biases = flattened_biases.view(group_size, max_num_actions, 1)
 
-        sequence_lengths = torch.autograd.Variable(action_embeddings.data.new(num_actions))
+        sequence_lengths = action_embeddings.new_tensor(num_actions)
         action_mask = util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
         return action_embeddings, output_embeddings, biases, action_mask
 
