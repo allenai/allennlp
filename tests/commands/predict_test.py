@@ -127,7 +127,7 @@ class TestPredict(AllenNlpTestCase):
         @Predictor.register('bidaf-explicit')  # pylint: disable=unused-variable
         class Bidaf3Predictor(BidafPredictor):
             """same as bidaf predictor but with an extra field"""
-            def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
+            def predict_json(self, inputs: JsonDict) -> JsonDict:
                 result = super().predict_json(inputs)
                 result["explicit"] = True
                 return result

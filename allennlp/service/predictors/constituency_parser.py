@@ -61,11 +61,24 @@ NODE_TYPE_TO_STYLE["UCP"] = ["color5"]
 @Predictor.register('constituency-parser')
 class ConstituencyParserPredictor(Predictor):
     """
-    Wrapper for the :class:`~allennlp.models.SpanConstituencyParser` model.
+    Predictor for the :class:`~allennlp.models.SpanConstituencyParser` model.
     """
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)
         self._tokenizer = SpacyWordSplitter(language='en_core_web_sm', pos_tags=True)
+
+    def predict(self, sentence: str) -> JsonDict:
+        """
+        Predict a constituency parse for the given sentence.
+        Parameters
+        ----------
+        sentence The sentence to parse.
+
+        Returns
+        -------
+        A dictionary representation of the constituency tree.
+        """
+        return self.predict_json({"sentence" : sentence})
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
@@ -78,9 +91,9 @@ class ConstituencyParserPredictor(Predictor):
         return self._dataset_reader.text_to_instance(sentence_text, pos_tags), {}
 
     @overrides
-    def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
+    def predict_json(self, inputs: JsonDict) -> JsonDict:
         instance, return_dict = self._json_to_instance(inputs)
-        outputs = self._model.forward_on_instance(instance, cuda_device)
+        outputs = self._model.forward_on_instance(instance)
         return_dict.update(outputs)
 
         # format the NLTK tree as a string on a single line.
@@ -90,9 +103,9 @@ class ConstituencyParserPredictor(Predictor):
         return sanitize(return_dict)
 
     @overrides
-    def predict_batch_json(self, inputs: List[JsonDict], cuda_device: int = -1) -> List[JsonDict]:
+    def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
         instances, return_dicts = zip(*self._batch_json_to_instances(inputs))
-        outputs = self._model.forward_on_instances(instances, cuda_device)
+        outputs = self._model.forward_on_instances(instances)
         for output, return_dict in zip(outputs, return_dicts):
             return_dict.update(output)
             # format the NLTK tree as a string on a single line.

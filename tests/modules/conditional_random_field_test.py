@@ -148,6 +148,12 @@ class TestConditionalRandomField(AllenNlpTestCase):
                        (3, 3), (3, 4),
                        (4, 4), (4, 0)}
 
+        # Add the transitions to the end tag
+        # and from the start tag.
+        for i in range(5):
+            constraints.add((5, i))
+            constraints.add((i, 6))
+
         crf = ConditionalRandomField(num_tags=5, constraints=constraints)
         crf.transitions = torch.nn.Parameter(self.transitions)
         crf.start_transitions = torch.nn.Parameter(self.transitions_from_start)
@@ -168,34 +174,37 @@ class TestConditionalRandomField(AllenNlpTestCase):
 
     def test_allowed_transitions(self):
         # pylint: disable=bad-whitespace,bad-continuation
-        bio_labels = ['O', 'B-X', 'I-X', 'B-Y', 'I-Y']
-        #              0     1      2      3      4
+        bio_labels = ['O', 'B-X', 'I-X', 'B-Y', 'I-Y'] # start tag, end tag
+        #              0     1      2      3      4         5          6
         allowed = allowed_transitions("BIO", dict(enumerate(bio_labels)))
 
         # The empty spaces in this matrix indicate disallowed transitions.
-        assert set(allowed) == {
-            (0, 0), (0, 1),         (0, 3),
-            (1, 0), (1, 1), (1, 2), (1, 3),
-            (2, 0), (2, 1), (2, 2), (2, 3),
-            (3, 0), (3, 1),         (3, 3), (3, 4),
-            (4, 0), (4, 1),         (4, 3), (4, 4)
+        assert set(allowed) == {                         # Extra column for end tag.
+            (0, 0), (0, 1),         (0, 3),              (0, 6),
+            (1, 0), (1, 1), (1, 2), (1, 3),              (1, 6),
+            (2, 0), (2, 1), (2, 2), (2, 3),              (2, 6),
+            (3, 0), (3, 1),         (3, 3), (3, 4),      (3, 6),
+            (4, 0), (4, 1),         (4, 3), (4, 4),      (4, 6),
+            (5, 0), (5, 1),         (5, 3)                      # Extra row for start tag
         }
 
-        bioul_labels = ['O', 'B-X', 'I-X', 'L-X', 'U-X', 'B-Y', 'I-Y', 'L-Y', 'U-Y']
-        #                0     1      2      3      4      5      6      7      8
+        bioul_labels = ['O', 'B-X', 'I-X', 'L-X', 'U-X', 'B-Y', 'I-Y', 'L-Y', 'U-Y'] # start tag, end tag
+        #                0     1      2      3      4      5      6      7      8          9        10
         allowed = allowed_transitions("BIOUL", dict(enumerate(bioul_labels)))
 
         # The empty spaces in this matrix indicate disallowed transitions.
-        assert set(allowed) == {
-            (0, 0), (0, 1),                 (0, 4), (0, 5),                 (0, 8),
+        assert set(allowed) == {                                                   # Extra column for end tag.
+            (0, 0), (0, 1),                 (0, 4), (0, 5),                 (0, 8),       (0, 10),
                             (1, 2), (1, 3),
                             (2, 2), (2, 3),
-            (3, 0), (3, 1),                 (3, 4), (3, 5),                 (3, 8),
-            (4, 0), (4, 1),                 (4, 4), (4, 5),                 (4, 8),
+            (3, 0), (3, 1),                 (3, 4), (3, 5),                 (3, 8),       (3, 10),
+            (4, 0), (4, 1),                 (4, 4), (4, 5),                 (4, 8),       (4, 10),
                                                             (5, 6), (5, 7),
                                                             (6, 6), (6, 7),
-            (7, 0), (7, 1),                 (7, 4), (7, 5),                 (7, 8),
-            (8, 0), (8, 1),                 (8, 4), (8, 5),                 (8, 8)
+            (7, 0), (7, 1),                 (7, 4), (7, 5),                 (7, 8),       (7, 10),
+            (8, 0), (8, 1),                 (8, 4), (8, 5),                 (8, 8),       (8, 10),
+            # Extra row for start tag.
+            (9, 0), (9, 1),                 (9, 4), (9, 5),                 (9, 8)
         }
 
         with raises(ConfigurationError):

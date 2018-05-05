@@ -85,9 +85,13 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         previous_action_embedding = torch.stack([rnn_state.previous_action_embedding
                                                  for rnn_state in state.rnn_state])
 
+        # The scores from all prior state transitions until now.  Shape: (group_size, 1).
+        scores_so_far = torch.stack(state.score).unsqueeze(-1)
+
         # (group_size, decoder_input_dim)
-        decoder_input = self._input_projection_layer(torch.cat([attended_question,
-                                                                previous_action_embedding], -1))
+        projected_input = self._input_projection_layer(torch.cat([attended_question,
+                                                                  previous_action_embedding], -1))
+        decoder_input = torch.nn.functional.relu(projected_input)
 
         hidden_state, memory_cell = self._decoder_cell(decoder_input, (hidden_state, memory_cell))
         hidden_state = self._dropout(hidden_state)
@@ -105,18 +109,22 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         action_query = torch.cat([hidden_state, attended_question], dim=-1)
 
         # (group_size, action_embedding_dim)
-        predicted_action_embedding = self._dropout(self._output_projection_layer(action_query))
+        projected_query = torch.nn.functional.relu(self._output_projection_layer(action_query))
+        predicted_action_embedding = self._dropout(projected_query)
 
         considered_actions, actions_to_embed, actions_to_link = self._get_actions_to_consider(state)
 
         # action_embeddings: (group_size, num_embedded_actions, action_embedding_dim)
+        # output_action_embeddings: (group_size, num_embedded_actions, action_embedding_dim)
         # action_mask: (group_size, num_embedded_actions)
-        action_embeddings, embedded_action_mask = self._get_action_embeddings(state, actions_to_embed)
+        action_embeddings, output_action_embeddings, action_biases, embedded_action_mask = \
+                self._get_action_embeddings(state, actions_to_embed)
         # We'll do a batch dot product here with `bmm`.  We want `dot(predicted_action_embedding,
         # action_embedding)` for each `action_embedding`, and we can get that efficiently with
         # `bmm` and some squeezing.
         # Shape: (group_size, num_embedded_actions)
         embedded_action_logits = action_embeddings.bmm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
+        embedded_action_logits = embedded_action_logits + action_biases.squeeze(-1)
 
         if actions_to_link:
             # entity_action_logits: (group_size, num_entity_actions)
@@ -124,10 +132,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             entity_action_logits, entity_action_mask, entity_type_embeddings = \
                     self._get_entity_action_logits(state, actions_to_link, attention_weights)
 
-            # The `action_embeddings` tensor gets used later as the input to the next decoder step.
-            # For linked actions, we don't have any action embedding, so we use the entity type
-            # instead.
-            action_embeddings = torch.cat([action_embeddings, entity_type_embeddings], dim=1)
+            # The `output_action_embeddings` tensor gets used later as the input to the next
+            # decoder step.  For linked actions, we don't have any action embedding, so we use the
+            # entity type instead.
+            output_action_embeddings = torch.cat([output_action_embeddings, entity_type_embeddings], dim=1)
 
             if self._mixture_feedforward is not None:
                 # The entity and action logits are combined with a mixture weight to prevent the
@@ -141,21 +149,28 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                               entity_action_mask.float()) + mix1
                 embedded_action_probs = util.masked_log_softmax(embedded_action_logits,
                                                                 embedded_action_mask.float()) + mix2
-                log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=1)
+                current_log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=1)
             else:
                 action_logits = torch.cat([embedded_action_logits, entity_action_logits], dim=1)
                 action_mask = torch.cat([embedded_action_mask, entity_action_mask], dim=1).float()
-                log_probs = util.masked_log_softmax(action_logits, action_mask)
+                current_log_probs = util.masked_log_softmax(action_logits, action_mask)
         else:
             action_logits = embedded_action_logits
             action_mask = embedded_action_mask.float()
-            log_probs = util.masked_log_softmax(action_logits, action_mask)
+            current_log_probs = util.masked_log_softmax(action_logits, action_mask)
+
+        # current_log_probs is shape (group_size, num_actions).  We're broadcasting an addition
+        # here with scores_so_far, which has shape (group_size, 1).  This is now the total score
+        # for each state after taking each action.  We're going to sort by this in
+        # `_compute_new_states`, so it's important that this is the total score, not just the score
+        # for the current action.
+        log_probs = scores_so_far + current_log_probs
 
         return self._compute_new_states(state,
                                         log_probs,
                                         hidden_state,
                                         memory_cell,
-                                        action_embeddings,
+                                        output_action_embeddings,
                                         attended_question,
                                         attention_weights,
                                         considered_actions,
@@ -236,6 +251,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                    rnn_state=[new_rnn_state],
                                                    grammar_state=[new_grammar_state],
                                                    action_embeddings=state.action_embeddings,
+                                                   output_action_embeddings=state.output_action_embeddings,
+                                                   action_biases=state.action_biases,
                                                    action_indices=state.action_indices,
                                                    possible_actions=state.possible_actions,
                                                    flattened_linking_scores=state.flattened_linking_scores,
@@ -355,7 +372,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
 
     @staticmethod
     def _get_action_embeddings(state: WikiTablesDecoderState,
-                               actions_to_embed: List[List[int]]) -> Tuple[torch.Tensor, torch.Tensor]:
+                               actions_to_embed: List[List[int]]) -> Tuple[torch.Tensor,
+                                                                           torch.Tensor,
+                                                                           torch.Tensor,
+                                                                           torch.Tensor]:
         """
         Returns an embedded representation for all actions in ``actions_to_embed``, using the state
         in ``WikiTablesDecoderState``.
@@ -375,6 +395,13 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             An embedded representation of all of the given actions.  Shape is ``(group_size,
             num_actions, action_embedding_dim)``, where ``num_actions`` is the maximum number of
             considered actions for any group element.
+        output_action_embeddings : ``torch.FloatTensor``
+            A second embedded representation of all of the given actions.  The first is used when
+            selecting actions, the second is used as the decoder output (which is the input at the
+            next timestep).  This is similar to having separate word embeddings and softmax layer
+            weights in a language model or MT model.
+        action_biases : ``torch.FloatTensor``
+            A bias weight for predicting each action.  Shape is ``(group_size, num_actions, 1)``.
         action_mask : ``torch.LongTensor``
             A mask of shape ``(group_size, num_actions)`` indicating which ``(group_index,
             action_index)`` pairs were merely added as padding.
@@ -392,12 +419,20 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # index_select ourselves.
         group_size = len(state.batch_indices)
         action_embedding_dim = state.action_embeddings.size(-1)
+
         flattened_actions = action_tensor.view(-1)
         flattened_action_embeddings = state.action_embeddings.index_select(0, flattened_actions)
         action_embeddings = flattened_action_embeddings.view(group_size, max_num_actions, action_embedding_dim)
-        sequence_lengths = action_embeddings.data.new(num_actions)
+
+        flattened_output_embeddings = state.output_action_embeddings.index_select(0, flattened_actions)
+        output_embeddings = flattened_output_embeddings.view(group_size, max_num_actions, action_embedding_dim)
+
+        flattened_biases = state.action_biases.index_select(0, flattened_actions)
+        biases = flattened_biases.view(group_size, max_num_actions, 1)
+
+        sequence_lengths = torch.autograd.Variable(action_embeddings.data.new(num_actions))
         action_mask = util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
-        return action_embeddings, action_mask
+        return action_embeddings, output_embeddings, biases, action_mask
 
     def _get_entity_action_logits(self,
                                   state: WikiTablesDecoderState,
@@ -554,7 +589,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # regroup them later, as that's a really easy operation.
                 batch_index = state.batch_indices[group_index]
                 new_action_history = state.action_history[group_index] + [action]
-                new_score = state.score[group_index] + sorted_log_probs[group_index, action_index]
+                new_score = sorted_log_probs[group_index, action_index]
 
                 # `action_index` is the index in the _sorted_ tensors, but the action embedding
                 # matrix is _not_ sorted, so we need to get back the original, non-sorted action
@@ -586,6 +621,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                    rnn_state=[new_rnn_state],
                                                    grammar_state=[new_grammar_state],
                                                    action_embeddings=state.action_embeddings,
+                                                   output_action_embeddings=state.output_action_embeddings,
+                                                   action_biases=state.action_biases,
                                                    action_indices=state.action_indices,
                                                    possible_actions=state.possible_actions,
                                                    flattened_linking_scores=state.flattened_linking_scores,

@@ -14,7 +14,7 @@ The preferred way to install AllenNLP is via `pip`.
 tldr; Just run `pip install allennlp` in your python 3.6 environment and you're good to go!
 If you need pointers on setting up a python 3.6 environment, see below.
 
-_Just want AllenNLP models running as a service via Docker? `docker run --rm  -p 8000:8000 allennlp/allennlp:v0.4.1 python -m allennlp.run serve`_
+_Just want AllenNLP models running as a service via Docker? `docker run --rm  -p 8000:8000 allennlp/allennlp:v0.4.2 python -m allennlp.run serve`_
 
 ### Setting up a virtual environment
 
@@ -54,7 +54,7 @@ please visit http://pytorch.org/ and install the relevant pytorch binary._
 ## Installing using Docker
 
 Once you have [installed Docker](https://docs.docker.com/engine/installation/)
-just run `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.4.0` to get an environment that will run on either the cpu or gpu.
+just run `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.4.2` to get an environment that will run on either the cpu or gpu.
 
 Now you can do any of the following:
 
@@ -171,7 +171,7 @@ new image on every update to the master branch.  To download
 the latest released from [Docker Hub](https://hub.docker.com/r/allennlp/) just run:
 
 ```bash
-docker pull allennlp/allennlp:v0.4.0
+docker pull allennlp/allennlp:v0.4.2
 ```
 
 #### Building a Docker image

@@ -37,7 +37,7 @@ class TestExpectedRiskMinimization(AllenNlpTestCase):
     def test_decode(self):
         decoded_info = self.trainer.decode(self.initial_state, self.decoder_step, self.supervision)
         # The best state corresponds to the shortest path.
-        assert decoded_info['best_action_sequence'][0] == [0, 2, 4]
+        assert decoded_info['best_action_sequences'][0] == [[0, 2, 4]]
         # The scores and costs corresponding to the finished states will be
         # [0, 2, 4] : -2, 0
         # [0, 1, 2, 4] : -3, 1

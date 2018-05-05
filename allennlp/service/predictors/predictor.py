@@ -4,11 +4,23 @@ import json
 import torch
 
 from allennlp.common import Registrable
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.models.archival import Archive, load_archive
 
+# a mapping from model `type` to the default Predictor for that type
+DEFAULT_PREDICTORS = {
+        'srl': 'semantic-role-labeling',
+        'decomposable_attention': 'textual-entailment',
+        'bidaf': 'machine-comprehension',
+        'bidaf-ensemble': 'machine-comprehension',
+        'simple_tagger': 'sentence-tagger',
+        'crf_tagger': 'sentence-tagger',
+        'coref': 'coreference-resolution',
+        'constituency_parser': 'constituency-parser',
+}
 
 class Predictor(Registrable):
     """
@@ -33,9 +45,9 @@ class Predictor(Registrable):
         """
         return json.dumps(outputs) + "\n"
 
-    def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
+    def predict_json(self, inputs: JsonDict) -> JsonDict:
         instance, return_dict = self._json_to_instance(inputs)
-        outputs = self._model.forward_on_instance(instance, cuda_device)
+        outputs = self._model.forward_on_instance(instance)
         return_dict.update(outputs)
         return sanitize(return_dict)
 
@@ -47,9 +59,9 @@ class Predictor(Registrable):
         """
         raise NotImplementedError
 
-    def predict_batch_json(self, inputs: List[JsonDict], cuda_device: int = -1) -> List[JsonDict]:
+    def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
         instances, return_dicts = zip(*self._batch_json_to_instances(inputs))
-        outputs = self._model.forward_on_instances(instances, cuda_device)
+        outputs = self._model.forward_on_instances(instances)
         for output, return_dict in zip(outputs, return_dicts):
             return_dict.update(output)
         return sanitize(return_dicts)
@@ -69,13 +81,38 @@ class Predictor(Registrable):
         return instances
 
     @classmethod
-    def from_archive(cls, archive: Archive, predictor_name: str) -> 'Predictor':
+    def from_path(cls, archive_path: str, predictor_name: str = None) -> 'Predictor':
+        """
+        Instantiate a :class:`Predictor` from an archive path.
+
+        If you need more detailed configuration options, such as running the predictor on the GPU,
+        please use `from_archive`.
+
+        Parameters
+        ----------
+        archive_path The path to the archive.
+
+        Returns
+        -------
+        A Predictor instance.
+        """
+        return Predictor.from_archive(load_archive(archive_path), predictor_name)
+
+    @classmethod
+    def from_archive(cls, archive: Archive, predictor_name: str = None) -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an :class:`~allennlp.models.archival.Archive`;
         that is, from the result of training a model. Optionally specify which `Predictor`
         subclass; otherwise, the default one for the model will be used.
         """
         config = archive.config
+
+        if not predictor_name:
+            model_type = config.get("model").get("type")
+            if not model_type in DEFAULT_PREDICTORS:
+                raise ConfigurationError(f"No default predictor for model type {model_type}.\n"\
+                                         f"Please specify a predictor explicitly.")
+            predictor_name = DEFAULT_PREDICTORS[model_type]
 
         dataset_reader_params = config["dataset_reader"]
         dataset_reader = DatasetReader.from_params(dataset_reader_params)

@@ -118,35 +118,41 @@ class NlvrSemanticParser(Model):
     @classmethod
     def _get_action_strings(cls,
                             possible_actions: List[List[ProductionRuleArray]],
-                            action_indices: Dict[int, List[int]]) -> List[List[str]]:
+                            action_indices: Dict[int, List[List[int]]]) -> List[List[List[str]]]:
         """
         Takes a list of possible actions and indices of decoded actions into those possible actions
-        for a batch and returns sequences of action strings.
+        for a batch and returns sequences of action strings. We assume ``action_indices`` is a dict
+        mapping batch indices to k-best decoded sequence lists.
         """
-        all_action_strings: List[List[str]] = []
+        all_action_strings: List[List[List[str]]] = []
         batch_size = len(possible_actions)
         for i in range(batch_size):
             batch_actions = possible_actions[i]
             batch_best_sequences = action_indices[i] if i in action_indices else []
             # This will append an empty list to ``all_action_strings`` if ``batch_best_sequences``
             # is empty.
-            action_strings = [batch_actions[rule_id][0] for rule_id in batch_best_sequences]
+            action_strings = [[batch_actions[rule_id][0] for rule_id in sequence]
+                              for sequence in batch_best_sequences]
             all_action_strings.append(action_strings)
         return all_action_strings
 
     @staticmethod
-    def _get_denotations(action_strings: List[List[str]],
-                         worlds: List[List[NlvrWorld]]) -> List[List[str]]:
-        all_denotations: List[List[str]] = []
-        for instance_worlds, instance_action_strings in zip(worlds, action_strings):
-            denotations: List[str] = []
-            if instance_action_strings:
+    def _get_denotations(action_strings: List[List[List[str]]],
+                         worlds: List[List[NlvrWorld]]) -> List[List[List[str]]]:
+        all_denotations: List[List[List[str]]] = []
+        for instance_worlds, instance_action_sequences in zip(worlds, action_strings):
+            denotations: List[List[str]] = []
+            for instance_action_strings in instance_action_sequences:
+                if not instance_action_strings:
+                    continue
                 logical_form = instance_worlds[0].get_logical_form(instance_action_strings)
+                instance_denotations: List[str] = []
                 for world in instance_worlds:
                     # Some of the worlds can be None for instances that come with less than 4 worlds
                     # because of padding.
                     if world is not None:
-                        denotations.append(str(world.execute(logical_form)))
+                        instance_denotations.append(str(world.execute(logical_form)))
+                denotations.append(instance_denotations)
             all_denotations.append(denotations)
         return all_denotations
 
@@ -223,21 +229,21 @@ class NlvrSemanticParser(Model):
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
-        time, to finalize predictions.  This is (confusingly) a separate notion from the "decoder"
-        in "encoder/decoder", where that decoder logic lives in ``WikiTablesDecoderStep``.
-
-        This method trims the output predictions to the first end symbol, replaces indices with
-        corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
+        time, to finalize predictions. We only transform the action string sequences into logical
+        forms here.
         """
         best_action_strings = output_dict["best_action_strings"]
         # Instantiating an empty world for getting logical forms.
         world = NlvrWorld([])
         logical_forms = []
-        for action_strings in best_action_strings:
-            if action_strings:
-                logical_forms.append(world.get_logical_form(action_strings))
-            else:
-                logical_forms.append('')
+        for instance_action_sequences in best_action_strings:
+            instance_logical_forms = []
+            for action_strings in instance_action_sequences:
+                if action_strings:
+                    instance_logical_forms.append(world.get_logical_form(action_strings))
+                else:
+                    instance_logical_forms.append('')
+            logical_forms.append(instance_logical_forms)
         output_dict["logical_form"] = logical_forms
         return output_dict
 

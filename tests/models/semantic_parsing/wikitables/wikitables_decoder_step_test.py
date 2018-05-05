@@ -27,6 +27,8 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         self.encoder_outputs = torch.FloatTensor([[1, 2], [3, 4], [5, 6]])
         self.encoder_output_mask = torch.FloatTensor([[1, 1], [1, 0], [1, 1]])
         self.action_embeddings = torch.FloatTensor([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5]])
+        self.output_action_embeddings = torch.FloatTensor([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5]])
+        self.action_biases = torch.FloatTensor([[0], [1], [2], [3], [4], [5]])
         self.action_indices = {
                 (0, 0): 1,
                 (0, 1): 0,
@@ -97,6 +99,8 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
                                             rnn_state=rnn_state,
                                             grammar_state=grammar_state,
                                             action_embeddings=self.action_embeddings,
+                                            output_action_embeddings=self.output_action_embeddings,
+                                            action_biases=self.action_biases,
                                             action_indices=self.action_indices,
                                             possible_actions=self.possible_actions,
                                             flattened_linking_scores=flattened_linking_scores,
@@ -163,8 +167,10 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
     def test_get_action_embeddings(self):
         action_embeddings = torch.rand(5, 4)
         self.state.action_embeddings = action_embeddings
+        self.state.output_action_embeddings = action_embeddings
+        self.state.action_biases = torch.rand(5, 1)
         actions_to_embed = [[0, 4], [1], [2, 3, 4]]
-        embeddings, mask = WikiTablesDecoderStep._get_action_embeddings(self.state, actions_to_embed)
+        embeddings, _, _, mask = WikiTablesDecoderStep._get_action_embeddings(self.state, actions_to_embed)
         assert_almost_equal(mask.data.cpu().numpy(), [[1, 1, 0], [1, 0, 0], [1, 1, 1]])
         assert tuple(embeddings.size()) == (3, 3, 4)
         assert_almost_equal(embeddings[0, 0].data.cpu().numpy(), action_embeddings[0].data.cpu().numpy())
@@ -235,11 +241,10 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         new_state = new_states[0]
         # For batch instance 0, we should have selected action 4 from group index 2.
         assert new_state.batch_indices == [0]
-        # These three have values taken from what's defined in setUp() - the prior action history
-        # (empty in this case), the initial score (2.2), and the nonterminals corresponding to the
-        # action we picked ('j').
+        assert_almost_equal(new_state.score[0].data.cpu().numpy().tolist(), [.3])
+        # These have values taken from what's defined in setUp() - the prior action history
+        # (empty in this case)  and the nonterminals corresponding to the action we picked ('j').
         assert new_state.action_history == [[4]]
-        assert_almost_equal(new_state.score[0].data.cpu().numpy().tolist(), [2.2 + .3])
         assert new_state.grammar_state[0]._nonterminal_stack == ['j']
         # All of these values come from the objects instantiated directly above.
         assert_almost_equal(new_state.rnn_state[0].hidden_state.cpu().numpy().tolist(), [3, 3])
@@ -259,11 +264,10 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         new_state = new_states[1]
         # For batch instance 1, we should have selected action 0 from group index 1.
         assert new_state.batch_indices == [1]
-        # These three have values taken from what's defined in setUp() - the prior action history
-        # ([3, 4]), the initial score (1.1), and the nonterminals corresponding to the action we
-        # picked ('q').
+        assert_almost_equal(new_state.score[0].data.cpu().numpy().tolist(), [.3])
+        # These two have values taken from what's defined in setUp() - the prior action history
+        # ([3, 4]) and the nonterminals corresponding to the action we picked ('q').
         assert new_state.action_history == [[3, 4, 0]]
-        assert_almost_equal(new_state.score[0].data.cpu().numpy().tolist(), [1.1 + .3])
         assert new_state.grammar_state[0]._nonterminal_stack == ['q']
         # All of these values come from the objects instantiated directly above.
         assert_almost_equal(new_state.rnn_state[0].hidden_state.cpu().numpy().tolist(), [2, 2])
@@ -311,11 +315,10 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         new_state = new_states[0]
         # For batch instance 0, we should have selected action 1 from group index 0.
         assert new_state.batch_indices == [0]
-        # These three have values taken from what's defined in setUp() - the prior action history
-        # ([1]), the initial score (0.1), and the nonterminals corresponding to the
-        # action we picked ('j').
+        assert_almost_equal(new_state.score[0].data.cpu().numpy().tolist(), [.9])
+        # These two have values taken from what's defined in setUp() - the prior action history
+        # ([1]) and the nonterminals corresponding to the action we picked ('j').
         assert new_state.action_history == [[1, 1]]
-        assert_almost_equal(new_state.score[0].data.cpu().numpy().tolist(), [0.1 + .9])
         assert new_state.grammar_state[0]._nonterminal_stack == ['g']
         # All of these values come from the objects instantiated directly above.
         assert_almost_equal(new_state.rnn_state[0].hidden_state.cpu().numpy().tolist(), [1, 1])
@@ -335,11 +338,10 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
         new_state = new_states[1]
         # For batch instance 0, we should have selected action 0 from group index 1.
         assert new_state.batch_indices == [1]
-        # These three have values taken from what's defined in setUp() - the prior action history
-        # ([3, 4]), the initial score (1.1), and the nonterminals corresponding to the action we
-        # picked ('q').
+        assert_almost_equal(new_state.score[0].data.cpu().numpy().tolist(), [.3])
+        # These have values taken from what's defined in setUp() - the prior action history
+        # ([3, 4]) and the nonterminals corresponding to the action we picked ('q').
         assert new_state.action_history == [[3, 4, 0]]
-        assert_almost_equal(new_state.score[0].data.cpu().numpy().tolist(), [1.1 + .3])
         assert new_state.grammar_state[0]._nonterminal_stack == ['q']
         # All of these values come from the objects instantiated directly above.
         assert_almost_equal(new_state.rnn_state[0].hidden_state.cpu().numpy().tolist(), [2, 2])
