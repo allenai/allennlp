@@ -72,8 +72,10 @@ class KnowledgeGraph(object):
             if key == CONTEXT:
                 continue
             nodes.extend([(key + "-" + elem) for elem in graph[key]])
+            for entity in graph[key]:
+                nodes.extend([attr[0] for attr in graph[key][entity]['attributes']])
 
-        sorted_nodes = sorted(nodes)
+        sorted_nodes = sorted(list(set(nodes)))
         nodes = {k: v for v, k in enumerate(sorted_nodes)}
         m_len = len(nodes)
 
@@ -83,16 +85,26 @@ class KnowledgeGraph(object):
 
         print(json.dumps(nodes))
         for entry in nodes:
-            class_type, id = entry.split("-")
+            entry_index = nodes[entry]
+
+            entry = entry.split("-")
+            if len(entry) == 1:
+                continue
+            class_type, id = entry
             neighbors = graph[class_type][id]['relation']
 
-            entry_index = nodes[entry]
             edges[entry_index][entry_index] = 0
             for neighbor_class, neighbor_nodes in neighbors.iteritems():
                 for neighbor_node in neighbor_nodes:
                     neighbor = "%s-%s" % (neighbor_class, neighbor_node)
                     neighbor_index = nodes[neighbor]
                     edges[entry_index][neighbor_index] = 1
+
+            attrs = graph[class_type][id]['attributes']
+            for attr in attrs:
+                attr_index = nodes[attr[0]]
+                edges[entry_index][attr_index] = 1
+                edges[attr_index][entry_index] = 1
         return nodes, edges, sorted_nodes
 
 class Dijkstra(object):

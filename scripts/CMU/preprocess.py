@@ -5,6 +5,8 @@ import uuid
 
 total = 0.0
 ignored = 0.0
+
+
 class Preprocessor(object):
     def __init__(self):
         pass
@@ -118,6 +120,7 @@ class Preprocessor(object):
                     line = self._line_cleanup(line) + "."
                     result.append(line)
         return entry
+
 
 def save_json(json_obj, filename):
     with open(filename, 'w') as f:
