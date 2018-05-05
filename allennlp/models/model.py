@@ -143,19 +143,20 @@ class Model(torch.nn.Module, Registrable):
         -------
         A list of the models output for each instance.
         """
-        dataset = Batch(instances)
-        dataset.index_instances(self.vocab)
-        model_input = dataset.as_tensor_dict(cuda_device=cuda_device)
-        outputs = self.decode(self(**model_input))
+        with torch.no_grad():
+            dataset = Batch(instances)
+            dataset.index_instances(self.vocab)
+            model_input = dataset.as_tensor_dict(cuda_device=cuda_device)
+            outputs = self.decode(self(**model_input))
 
-        instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]
-        for name, output in list(outputs.items()):
-            if type(output) == torch.Tensor:  # pylint: disable=unidiomatic-typecheck
-                output = output.data.cpu().numpy()
-            outputs[name] = output
-            for instance_output, batch_element in zip(instance_separated_output, output):
-                instance_output[name] = batch_element
-        return instance_separated_output
+            instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]
+            for name, output in list(outputs.items()):
+                if type(output) == torch.Tensor:  # pylint: disable=unidiomatic-typecheck
+                    output = output.data.cpu().numpy()
+                outputs[name] = output
+                for instance_output, batch_element in zip(instance_separated_output, output):
+                    instance_output[name] = batch_element
+            return instance_separated_output
 
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """

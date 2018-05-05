@@ -34,11 +34,10 @@ class Predictor(Registrable):
         return json.dumps(outputs) + "\n"
 
     def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
-        with torch.no_grad():
-            instance, return_dict = self._json_to_instance(inputs)
-            outputs = self._model.forward_on_instance(instance, cuda_device)
-            return_dict.update(outputs)
-            return sanitize(return_dict)
+        instance, return_dict = self._json_to_instance(inputs)
+        outputs = self._model.forward_on_instance(instance, cuda_device)
+        return_dict.update(outputs)
+        return sanitize(return_dict)
 
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
         """

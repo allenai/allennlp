@@ -170,26 +170,25 @@ class SemanticRoleLabelerPredictor(Predictor):
                 {"verb": "...", "description": "...", "tags": [...]},
             ]}
         """
-        with torch.no_grad():
-            instances, results = self._sentence_to_srl_instances(inputs)
-            # We just added the verbs to the list in _sentence_to_srl_instances
-            # but we actually want to replace them with their frames, so we
-            # reset them here.
-            verbs_for_instances: List[str] = results["verbs"]
-            results["verbs"] = []
+        instances, results = self._sentence_to_srl_instances(inputs)
+        # We just added the verbs to the list in _sentence_to_srl_instances
+        # but we actually want to replace them with their frames, so we
+        # reset them here.
+        verbs_for_instances: List[str] = results["verbs"]
+        results["verbs"] = []
 
-            if not instances:
-                return sanitize(results)
-
-            outputs = self._model.forward_on_instances(instances, cuda_device)
-
-            for output, verb in zip(outputs, verbs_for_instances):
-                tags = output['tags']
-                description = self.make_srl_string(results["words"], tags)
-                results["verbs"].append({
-                        "verb": verb,
-                        "description": description,
-                        "tags": tags,
-                })
-
+        if not instances:
             return sanitize(results)
+
+        outputs = self._model.forward_on_instances(instances, cuda_device)
+
+        for output, verb in zip(outputs, verbs_for_instances):
+            tags = output['tags']
+            description = self.make_srl_string(results["words"], tags)
+            results["verbs"].append({
+                    "verb": verb,
+                    "description": description,
+                    "tags": tags,
+            })
+
+        return sanitize(results)
