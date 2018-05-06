@@ -399,7 +399,7 @@ class WikiTablesSemanticParser(Model):
                     best_action_indices = best_final_states[i][0].action_history[0]
                     if target_action_sequences is not None:
                         # Detach to avoid a memory leak.
-                        targets = target_action_sequences[i].detach()
+                        targets = target_action_sequences[i].data
                         sequence_in_targets = 0
                         sequence_in_targets = self._action_history_match(best_action_indices, targets)
                         self._action_sequence_accuracy(sequence_in_targets)

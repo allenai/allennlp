@@ -56,5 +56,5 @@ class Metric(Registrable):
         the CPU.
         """
         # pylint: disable=unidiomatic-typecheck
-        return (x.detach().cpu() if type(x) == torch.Tensor else x
+        return (x.data.cpu() if type(x) == torch.Tensor else x
                 for x in tensors)
