@@ -411,7 +411,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         padded_actions = [common_util.pad_sequence_to_length(action_list, max_num_actions)
                           for action_list in actions_to_embed]
         # Shape: (group_size, num_actions)
-        action_tensor = state.score[0].data.new(padded_actions).long()
+        action_tensor = state.score[0].new_tensor(padded_actions).long()
         # `state.action_embeddings` is shape (total_num_actions, action_embedding_dim).
         # We want to select from state.action_embeddings using `action_tensor` to get a tensor of
         # shape (group_size, num_actions, action_embedding_dim).  Unfortunately, the index_select
@@ -501,8 +501,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         padded_types = [common_util.pad_sequence_to_length(type_list, max_num_actions)
                         for type_list in entity_types]
         # Shape: (group_size, num_actions)
-        action_tensor = state.score[0].data.new(padded_actions).long()
-        type_tensor = state.score[0].data.new(padded_types).long()
+        action_tensor = state.score[0].new_tensor(padded_actions).long()
+        type_tensor = state.score[0].new_tensor(padded_types).long()
 
         # To get the type embedding tensor, we just use an embedding matrix on the list of entity
         # types.
@@ -525,7 +525,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         action_logits = action_linking.bmm(attention_weights.unsqueeze(-1)).squeeze(-1)
 
         # Finally, we make a mask for our action logit tensor.
-        sequence_lengths = action_linking.data.new(num_actions)
+        sequence_lengths = action_linking.new_tensor(num_actions)
         action_mask = util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
         return action_logits, action_mask, type_embeddings
 

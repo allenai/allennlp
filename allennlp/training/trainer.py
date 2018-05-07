@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def is_sparse(tensor):
-    return tensor.data.is_sparse
+    return tensor.is_sparse
 
 
 def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:

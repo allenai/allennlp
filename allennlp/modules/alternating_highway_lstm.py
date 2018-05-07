@@ -29,8 +29,8 @@ class _AlternatingHighwayLSTMFunction(Function):
                 lengths: torch.Tensor,
                 gates: torch.Tensor) -> Tuple[torch.Tensor, None]:
         sequence_length, batch_size, input_size = inputs.size()
-        tmp_i = inputs.new(batch_size, 6 * self.hidden_size)
-        tmp_h = inputs.new(batch_size, 5 * self.hidden_size)
+        tmp_i = inputs.new_empty(batch_size, 6 * self.hidden_size)
+        tmp_h = inputs.new_empty(batch_size, 5 * self.hidden_size)
         is_training = 1 if self.train else 0
         highway_lstm_layer.highway_lstm_forward_cuda(input_size,  # type: ignore # pylint: disable=no-member
                                                      self.hidden_size,
@@ -71,8 +71,8 @@ class _AlternatingHighwayLSTMFunction(Function):
         grad_input = torch.zeros_like(inputs)
         grad_state_accumulator = inputs.new_zeros(*state_accumulator.size())
         grad_memory_accumulator = inputs.new_zeros(*memory_accumulator.size())
-        grad_weight = inputs.new()
-        grad_bias = inputs.new()
+        grad_weight = inputs.new_empty(0)
+        grad_bias = inputs.new_empty(0)
         grad_dropout = None
         grad_lengths = None
         grad_gates = None
@@ -188,7 +188,7 @@ class AlternatingHighwayLSTM(torch.nn.Module):
             input_size = self.input_size if i == 0 else self.hidden_size
 
             # Create a tensor of the right size and initialize it.
-            init_tensor = self.weight.data.new(input_size, self.hidden_size * 6).zero_()
+            init_tensor = self.weight.new_zeros(input_size, self.hidden_size * 6)
             block_orthogonal(init_tensor, [input_size, self.hidden_size])
             # Copy it into the flat weight.
             self.weight.data[weight_index: weight_index + init_tensor.nelement()]\
@@ -196,7 +196,7 @@ class AlternatingHighwayLSTM(torch.nn.Module):
             weight_index += init_tensor.nelement()
 
             # Same for the recurrent connection weight.
-            init_tensor = self.weight.data.new(self.hidden_size, self.hidden_size * 5).zero_()
+            init_tensor = self.weight.new_zeros(self.hidden_size, self.hidden_size * 5)
             block_orthogonal(init_tensor, [self.hidden_size, self.hidden_size])
             self.weight.data[weight_index: weight_index + init_tensor.nelement()]\
                 .view_as(init_tensor).copy_(init_tensor)
@@ -232,8 +232,8 @@ class AlternatingHighwayLSTM(torch.nn.Module):
 
         sequence_length, batch_size, _ = inputs.size()
         accumulator_shape = [self.num_layers, sequence_length + 1, batch_size, self.hidden_size]
-        state_accumulator = inputs.data.new(*accumulator_shape).zero_()
-        memory_accumulator = inputs.data.new(*accumulator_shape).zero_()
+        state_accumulator = inputs.new_zeros(*accumulator_shape)
+        memory_accumulator = inputs.new_zeros(*accumulator_shape)
 
         dropout_weights = inputs.new_ones(self.num_layers, batch_size, self.hidden_size)
         if self.training:

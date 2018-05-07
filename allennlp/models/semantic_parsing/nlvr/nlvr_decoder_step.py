@@ -331,7 +331,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         padded_actions = [common_util.pad_sequence_to_length(action_list, max_num_actions)
                           for action_list in actions_to_embed]
         # Shape: (group_size, num_actions)
-        action_tensor = state.score[0].data.new(padded_actions).long()
+        action_tensor = state.score[0].new_tensor(padded_actions).long()
         # `state.action_embeddings` is shape (total_num_actions, action_embedding_dim).
         # We want to select from state.action_embeddings using `action_tensor` to get a tensor of
         # shape (group_size, num_actions, action_embedding_dim).  Unfortunately, the index_select
@@ -342,7 +342,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         flattened_actions = action_tensor.view(-1)
         flattened_action_embeddings = state.action_embeddings.index_select(0, flattened_actions)
         action_embeddings = flattened_action_embeddings.view(group_size, max_num_actions, action_embedding_dim)
-        sequence_lengths = action_embeddings.data.new(num_actions)
+        sequence_lengths = action_embeddings.new_tensor(num_actions)
         action_mask = nn_util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
         return action_embeddings, action_mask
 

@@ -175,9 +175,9 @@ class _EncoderBase(torch.nn.Module):
             for state in self._states:
                 # This _must_ be inside the loop because some
                 # RNNs have states with different last dimension sizes.
-                zeros = state.data.new(state.size(0),
-                                       num_states_to_concat,
-                                       state.size(2)).fill_(0)
+                zeros = state.new_zeros(state.size(0),
+                                        num_states_to_concat,
+                                        state.size(2))
                 resized_states.append(torch.cat([state, zeros], 1))
             self._states = tuple(resized_states)
             correctly_shaped_states = self._states
