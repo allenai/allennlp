@@ -26,7 +26,7 @@ from tensorboardX import SummaryWriter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import peak_memory_mb, gpu_memory_mb
+from allennlp.common.util import peak_memory_mb, gpu_memory_mb, is_tensor
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -118,7 +118,7 @@ class TensorboardWriter:
 
     def add_train_histogram(self, name: str, values: torch.Tensor, global_step: int) -> None:
         if self._train_log is not None:
-            if isinstance(values, torch.Tensor):
+            if is_tensor(values):
                 values_to_write = values.cpu().data.numpy().flatten()
                 self._train_log.add_histogram(name, values_to_write, global_step)
 
@@ -327,7 +327,7 @@ class Trainer:
                     # pylint: disable=unused-argument,cell-var-from-loop
                     log_prefix = 'activation_histogram/{0}'.format(module_.__class__)
                     if self._log_histograms_this_batch:
-                        if isinstance(outputs, torch.Tensor):
+                        if is_tensor(outputs):
                             log_name = log_prefix
                             self._tensorboard.add_train_histogram(log_name,
                                                                   outputs,

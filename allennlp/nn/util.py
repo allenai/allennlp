@@ -11,6 +11,7 @@ import torch
 
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import is_tensor
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -105,7 +106,7 @@ def sort_batch_by_length(tensor: torch.Tensor,
         tensors using the same ordering.
     """
 
-    if not isinstance(tensor, torch.Tensor) or not isinstance(sequence_lengths, torch.Tensor):
+    if not is_tensor(tensor) or not is_tensor(sequence_lengths):
         raise ConfigurationError("Both the tensor and sequence lengths must be torch.Tensors.")
 
     sorted_sequence_lengths, permutation_index = sequence_lengths.sort(0, descending=True)

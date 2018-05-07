@@ -13,6 +13,7 @@ import torch
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
+from allennlp.common.util import is_tensor
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.nn import util
@@ -152,7 +153,7 @@ class Model(torch.nn.Module, Registrable):
 
             instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]
             for name, output in list(outputs.items()):
-                if type(output) == torch.Tensor:  # pylint: disable=unidiomatic-typecheck
+                if is_tensor(output):  # pylint: disable=unidiomatic-typecheck
                     output = output.data.cpu().numpy()
                 outputs[name] = output
                 for instance_output, batch_element in zip(instance_separated_output, output):
