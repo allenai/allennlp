@@ -1,5 +1,4 @@
 # pylint: disable=no-self-use,invalid-name
-import os
 from typing import List
 
 import pytest
@@ -9,7 +8,6 @@ from allennlp.data.tokenizers import Token
 from allennlp.semparse import ParsingError
 from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
 from allennlp.semparse.worlds import WikiTablesWorld
-from allennlp.data.dataset_readers import WikiTablesDatasetReader
 
 
 def check_productions_match(actual_rules: List[str], expected_right_sides: List[str]):
