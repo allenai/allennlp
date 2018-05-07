@@ -41,7 +41,7 @@ uses the default predictor (`sentence-tagger`) for the NER model.
 ```python
 from allennlp.service.predictors import Predictor
 predictor = Predictor.from_path("https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.26.tar.gz")
-results = predictor.predict(sentence = "Did Uriah honestly think he could beat The Legend of Zelda in under three hours?")
+results = predictor.predict(sentence="Did Uriah honestly think he could beat The Legend of Zelda in under three hours?")
 for word, tag in zip(results["words"], results["tags"]):
     print(f"{word}\t{tag}")
 ```
