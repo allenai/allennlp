@@ -245,5 +245,5 @@ class TestSparseClipGrad(AllenNlpTestCase):
         # Now try to clip the gradients.
         _ = sparse_clip_norm([embedding.weight], 1.5)
         # Final norm should be 1.5
-        grad = embedding.weight.grad.data.coalesce()
+        grad = embedding.weight.grad.data.coalesce()  # pylint: disable=no-member
         self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5) # pylint: disable=protected-access

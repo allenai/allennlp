@@ -1,7 +1,6 @@
 from typing import List, Tuple
 
 from overrides import overrides
-import torch
 
 from allennlp.common.util import JsonDict, sanitize, group_by_count
 from allennlp.data import DatasetReader, Instance

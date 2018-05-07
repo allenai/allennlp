@@ -3,7 +3,6 @@ from typing import Tuple, List
 from overrides import overrides
 from nltk import Tree
 from spacy.lang.en.tag_map import TAG_MAP
-import torch
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
