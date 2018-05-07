@@ -326,4 +326,4 @@ class TestTableQuestionKnowledgeGraph(AllenNlpTestCase):
                           ['Lake Gala', 'Edirne']]
                 }
         graph = TableQuestionKnowledgeGraph.read_from_json(json)
-        assert graph.get_linked_agenda_items() == ['fb:cell.mersin']
+        assert graph.get_linked_agenda_items() == ['fb:cell.mersin', 'fb:row.row.location']

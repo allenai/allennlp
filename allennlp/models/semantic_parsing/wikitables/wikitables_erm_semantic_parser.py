@@ -314,7 +314,10 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                         action_string = instance_possible_actions[rule_id][0]
                         agenda_actions.append(action_string)
                     actions_in_agenda = [action in action_strings for action in agenda_actions]
-                    in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
+                    if actions_in_agenda:
+                        # Note: This means that when there are no actions on agenda, agenda coverage
+                        # will be 0, not 1.
+                        in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
                 else:
                     outputs['logical_form'].append('')
                     self._has_logical_form(0.0)
