@@ -1,7 +1,7 @@
 # Using Pretrained AllenNLP Models
 
 In this tutorial, we show how to use run the pretrained models in AllenNLP to make predictions.
-While this tutorial will specifically use the Named Entity Recognizer, but will apply to any of
+This tutorial uses the Named Entity Recognition model, but the same procedure applies to any of
 the models [available on our website](http://allennlp.org/models).
 
 ## Making Predictions on the Command Line
@@ -34,21 +34,21 @@ python -m allennlp.run predict \
 
 ## Making Predictions Programatically
 
-You can also make productions from python, using AllenNLP as a library.  The following code example
+You can also make predictions from python, using AllenNLP as a library.  The arguments will be the same as
+the JSON fields in the example, and they vary by the particular predictor.  The following code example
 uses the default predictor (`sentence-tagger`) for the NER model.
 
 ```python
 from allennlp.service.predictors import Predictor
 predictor = Predictor.from_path("https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.26.tar.gz")
-results = predictor.predict("Did Uriah honestly think he could beat The Legend of Zelda in under three hours?")
-for word, tag in list(zip(results["words"], results["tags"])):
-    print(f"{word}\t{tag}"
+results = predictor.predict(sentence = "Did Uriah honestly think he could beat The Legend of Zelda in under three hours?")
+for word, tag in zip(results["words"], results["tags"]):
+    print(f"{word}\t{tag}")
 ```
 
 And the sample output:
 
 ```
-['O', 'U-PER', 'O', 'O', 'O', 'O', 'O', 'B-MISC', 'I-MISC', 'I-MISC', 'L-MISC', 'O', 'O', 'O', 'O', 'O']
 Did	O
 Uriah	U-PER
 honestly	O
