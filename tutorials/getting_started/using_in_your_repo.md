@@ -604,5 +604,6 @@ allennlp train \
 
 When we do this, we get to around 80% validation accuracy after a few epochs of training.
 
-To see how to make predictions and build a demo for our new model, see the [Making Predictions and Creating a Demo]
-(making_predictions_and_creating_a_demo.md) tutorial, which continues where this tutorial leaves off.
+To see how to make predictions and build a demo for our new model, see the 
+[Making Predictions and Creating a Demo](making_predictions_and_creating_a_demo.md) tutorial, which continues
+where this tutorial leaves off.
