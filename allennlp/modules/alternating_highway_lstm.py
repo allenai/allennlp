@@ -241,7 +241,7 @@ class AlternatingHighwayLSTM(torch.nn.Module):
             dropout_weights.bernoulli_(1 - self.recurrent_dropout_probability)\
                 .div_((1 - self.recurrent_dropout_probability))
 
-        gates = inputs.new_tensor(self.num_layers, sequence_length, batch_size, 6 * self.hidden_size)
+        gates = inputs.new_tensor((self.num_layers, sequence_length, batch_size, 6 * self.hidden_size))
 
         lengths_variable = torch.IntTensor(lengths)
         implementation = _AlternatingHighwayLSTMFunction(self.input_size,
