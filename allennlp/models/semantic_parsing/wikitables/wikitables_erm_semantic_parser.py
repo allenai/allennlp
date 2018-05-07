@@ -120,6 +120,24 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 ExpectedRiskMinimization(beam_size=decoder_beam_size,
                                          normalize_by_length=normalize_beam_score_by_length,
                                          max_decoding_steps=self._max_decoding_steps)
+        unlinked_terminals_global_indices = []
+        global_vocab = self.vocab.get_token_to_index_vocabulary(rule_namespace)
+        for production, index in global_vocab.items():
+            right_side = production.split(" -> ")[1]
+            if right_side in types.COMMON_NAME_MAPPING:
+                # This is a terminal production.
+                unlinked_terminals_global_indices.append(index)
+        self._num_unlinked_terminals = len(unlinked_terminals_global_indices)
+        self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
+                                                   action_embedding_dim=action_embedding_dim,
+                                                   attention_function=attention_function,
+                                                   num_start_types=self._num_start_types,
+                                                   num_entity_types=self._num_entity_types,
+                                                   mixture_feedforward=mixture_feedforward,
+                                                   dropout=dropout,
+                                                   unlinked_terminal_indices=unlinked_terminals_global_indices)
+        self._checklist_cost_weight = checklist_cost_weight
+        self._agenda_coverage = Average()
         # TODO (pradeep): Checking whether file exists here to avoid raising an error when we've
         # copied a trained ERM model from a different machine and the original MML model that was
         # used to initialize it does not exist on the current machine. This may not be the best
@@ -134,23 +152,6 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 # the file is really just incorrect. So throwing a warning.
                 logger.warning("MML model file for initializing weights is passed, but does not exist."
                                " This is fine if you're just decoding.")
-        unlinked_terminals_global_indices = []
-        global_vocab = self.vocab.get_token_to_index_vocabulary(rule_namespace)
-        for production, index in global_vocab.items():
-            right_side = production.split(" -> ")[1]
-            if right_side in types.COMMON_NAME_MAPPING:
-                # This is a terminal production.
-                unlinked_terminals_global_indices.append(index)
-        self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
-                                                   action_embedding_dim=action_embedding_dim,
-                                                   attention_function=attention_function,
-                                                   num_start_types=self._num_start_types,
-                                                   num_entity_types=self._num_entity_types,
-                                                   mixture_feedforward=mixture_feedforward,
-                                                   dropout=dropout,
-                                                   unlinked_terminal_indices=unlinked_terminals_global_indices)
-        self._checklist_cost_weight = checklist_cost_weight
-        self._agenda_coverage = Average()
 
     def _initialize_weights_from_archive(self, archive: Archive) -> None:
         logger.info("Initializing weights from MML model.")
@@ -164,7 +165,17 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                                "tokens.")
         for name, weights in archived_parameters.items():
             if name in model_parameters:
-                if name == question_embedder_weight:
+                if name == "_decoder_step._output_projection_layer.weight":
+                    # The dimensions differ for this parameter between the coverage model and
+                    # the direct model. In the direct model, this is of size
+                    # (decoder_output_dim + encoder_output_dim, action_embedding_dim),
+                    # whereas in the coverage model, it is
+                    # (decoder_output_dim + encoder_output_dim + checklist_size, action_embedding_dim)
+                    # We copy only the relevant part of the weights here.
+                    archived_projection_weights = weights.data
+                    new_weights = model_parameters[name].data.clone()
+                    new_weights[:, :-self._num_unlinked_terminals] = archived_projection_weights
+                elif name == question_embedder_weight:
                     # The shapes of embedding weights will most likely differ between the two models
                     # because the vocabularies will most likely be different. We will get a mapping
                     # of indices from this model's token indices to the archived model's and copy
