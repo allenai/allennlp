@@ -61,6 +61,26 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         The lisp strings that come from example files. They're also required for evaluating logical
         forms only if we're learning to search. These too are batched, and will be passed around
         unchanged.
+    terminal_actions : ``List[torch.Tensor]``, optional (default=None)
+        Each element in the list is a vector containing the indices of terminal actions. They are
+        needed for computing checklists for next states, only if this state is made while training a
+        parser without logical forms.
+    checklist_target : ``List[torch.LongTensor]``, optional (default=None)
+        List of targets corresponding to agendas that indicate the states we want the checklists to
+        ideally be. Each element in this list is the same size as the corresponding element in
+        ``terminal_actions``, and it contains 1 for each corresponding action in the relevant
+        actions list that we want to see in the final logical form, and 0 for each corresponding
+        action that we do not. Needed only if this state is being used while training a parser
+        without logical forms.
+    checklist_masks : ``List[torch.Tensor]``, optional (default=None)
+        Masks corresponding to ``terminal_actions``, indicating which of those actions are relevant
+        for checklist computation. For example, if the parser is penalizing non-agenda terminal
+        actions, all the terminal actions are relevant. Needed only if this state is being used
+        while training a parser without logical forms.
+    checklist : ``List[Variable]``, optional (default=None)
+        A checklist for each instance indicating how many times each action in its agenda has
+        been chosen previously. It contains the actual counts of the agenda actions. Needed only if
+        this state is being used while training a parser without logical forms.
     """
     def __init__(self,
                  batch_indices: List[int],
@@ -78,6 +98,10 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                  entity_types: Dict[int, int],
                  world: List[WikiTablesWorld] = None,
                  example_lisp_string: List[str] = None,
+                 terminal_actions: List[torch.Tensor] = None,
+                 checklist_target: List[torch.Tensor] = None,
+                 checklist_masks: List[torch.Tensor] = None,
+                 checklist: List[torch.Tensor] = None,
                  debug_info: List = None) -> None:
         super(WikiTablesDecoderState, self).__init__(batch_indices, action_history, score)
         self.rnn_state = rnn_state
@@ -92,6 +116,10 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         self.entity_types = entity_types
         self.world = world
         self.example_lisp_string = example_lisp_string
+        self.terminal_actions = terminal_actions
+        self.checklist_target = checklist_target
+        self.checklist_mask = checklist_masks
+        self.checklist = checklist
         self.debug_info = debug_info
 
     def print_action_history(self, group_index: int = None) -> None:
@@ -124,6 +152,17 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
             debug_info = [debug_info for state in states for debug_info in state.debug_info]
         else:
             debug_info = None
+        if states[0].terminal_actions is not None:
+            terminal_actions = [actions for state in states for actions in state.terminal_actions]
+            checklist_target = [target_list for state in states for target_list in
+                                state.checklist_target]
+            checklist_masks = [mask for state in states for mask in state.checklist_mask]
+            checklist = [checklist_list for state in states for checklist_list in state.checklist]
+        else:
+            terminal_actions = None
+            checklist_target = None
+            checklist_masks = None
+            checklist = None
         return WikiTablesDecoderState(batch_indices=batch_indices,
                                       action_history=action_histories,
                                       score=scores,
@@ -139,4 +178,8 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       entity_types=states[0].entity_types,
                                       world=states[0].world,
                                       example_lisp_string=states[0].example_lisp_string,
+                                      terminal_actions=terminal_actions,
+                                      checklist_target=checklist_target,
+                                      checklist_masks=checklist_masks,
+                                      checklist=checklist,
                                       debug_info=debug_info)

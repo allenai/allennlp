@@ -49,11 +49,11 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         the vectors are the same for all instances, because we consider all terminals for each
         instance. In the future, we may want to include only world-specific terminal actions here.
         Each of these vectors is needed for computing checklists for next states, only if this state
-        is being while training a parser without logical forms.
+        is being used while training a parser without logical forms.
     checklist_target : ``List[torch.LongTensor]``, optional
         List of targets corresponding to agendas that indicate the states we want the checklists to
         ideally be. Each element in this list is the same size as the corresponding element in
-        ``agenda_relevant_actions``, and it contains 1 for each corresponding action in the relevant
+        ``terminal_actions``, and it contains 1 for each corresponding action in the relevant
         actions list that we want to see in the final logical form, and 0 for each corresponding
         action that we do not. Needed only if this state is being used while training a parser
         without logical forms.

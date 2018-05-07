@@ -317,3 +317,13 @@ class TestTableQuestionKnowledgeGraph(AllenNlpTestCase):
         tokens = [Token(x) for x in ['one', 'million', '7', 'thousand']]
         numbers = TableQuestionKnowledgeGraph._get_numbers_from_tokens(tokens)
         assert numbers == [('1000000', 'one million'), ('7000', '7 thousand')]
+
+    def test_get_linked_agenda_items(self):
+        json = {
+                'question': [Token(x) for x in ['where', 'is', 'mersin', '?']],
+                'columns': ['Name in English', 'Location'],
+                'cells': [['Paradeniz', 'Mersin'],
+                          ['Lake Gala', 'Edirne']]
+                }
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
+        assert graph.get_linked_agenda_items() == ['fb:cell.mersin']

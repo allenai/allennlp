@@ -75,7 +75,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         # an embedding of the decoder input (the last action taken) and an attention over the
         # sentence.  Then we'll update our decoder's hidden state given this input, and recompute
         # an attention over the sentence given our new hidden state.  We'll use a concatenation of
-        # the new hidden state, the new attention and optionall, the checklist balance to predict an
+        # the new hidden state, the new attention, and optionally the checklist balance to predict an
         # output, then yield new states. We will compute and use a checklist balance when
         # ``allowed_actions`` is None, with the assumption that the ``DecoderTrainer`` that is
         # calling this method is trying to train a parser without logical form supervision.
@@ -215,7 +215,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         """
         We return a list of log probabilities and checklists corresponding to next actions that are
         not padding. This method is applicable to the case where we do not have target action
-        sequences an are relying on agendas for training.
+        sequences and are relying on agendas for training.
         """
         considered_action_probs = nn_util.masked_softmax(action_logits, action_mask)
         # Mixing model scores and agenda selection probabilities to compute the probabilities of all
@@ -242,7 +242,6 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                 # checklist_addition will have 1 only for the index corresponding to the current
                 # action and we're adding 1.0 at the corresponding action index.
                 checklist_addition = (terminal_actions == action).float()  # (terminal_actions, 1)
-                checklist_addition = checklist_addition.float()  # (terminal_actions, 1)
                 new_checklist = instance_checklist + checklist_addition  # (terminal_actions, 1)
                 instance_new_checklists.append(new_checklist)
                 logprob = instance_score + torch.log(action_prob + 1e-13)

@@ -9,11 +9,9 @@ from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
 from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
-from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, FeedForward, Embedding
+from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
-from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
 from allennlp.nn.decoding import GrammarState, RnnState
@@ -79,9 +77,7 @@ class WikiTablesSemanticParser(Model):
                  action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
                  entity_encoder: Seq2VecEncoder,
-                 mixture_feedforward: FeedForward,
                  max_decoding_steps: int,
-                 attention_function: SimilarityFunction,
                  use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
                  num_linking_features: int = 10,
@@ -136,14 +132,6 @@ class WikiTablesSemanticParser(Model):
             self._question_entity_params = None
             self._question_neighbor_params = None
 
-        self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
-                                                   action_embedding_dim=action_embedding_dim,
-                                                   attention_function=attention_function,
-                                                   num_start_types=self._num_start_types,
-                                                   num_entity_types=self._num_entity_types,
-                                                   mixture_feedforward=mixture_feedforward,
-                                                   dropout=dropout)
-
     @overrides
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
@@ -161,7 +149,16 @@ class WikiTablesSemanticParser(Model):
                                       world: List[WikiTablesWorld],
                                       actions: List[List[ProductionRuleArray]],
                                       example_lisp_string: List[str] = None,
-                                      add_world_to_initial_state: bool = False) -> Dict:
+                                      add_world_to_initial_state: bool = False,
+                                      terminal_actions: List[torch.LongTensor] = None,
+                                      checklist_targets: List[torch.LongTensor] = None,
+                                      checklist_masks: List[torch.Tensor] = None,
+                                      checklists: List[torch.LongTensor] = None) -> Dict:
+        """
+        Does initial preparation and creates an intiial state for both the semantic parsers. Note
+        that the checklist related fields (terminal_actions, checklist_targets, checklist_masks, and
+        checklists) are all optional, and the ``WikiTablesMmlParser`` is not expected to pass these.
+        """
         table_text = table['text']
         # (batch_size, question_length, embedding_dim)
         embedded_question = self._question_embedder(question)
@@ -317,6 +314,10 @@ class WikiTablesSemanticParser(Model):
                                                entity_types=entity_type_dict,
                                                world=initial_state_world,
                                                example_lisp_string=example_lisp_string,
+                                               terminal_actions=terminal_actions,
+                                               checklist_target=checklist_targets,
+                                               checklist_masks=checklist_masks,
+                                               checklist=checklists,
                                                debug_info=None)
         return {"initial_state": initial_state,
                 "linking_scores": linking_scores,

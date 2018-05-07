@@ -7,6 +7,7 @@ from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
+from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
 from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, FeedForward
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
@@ -93,9 +94,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                                                           action_embedding_dim=action_embedding_dim,
                                                           encoder=encoder,
                                                           entity_encoder=entity_encoder,
-                                                          mixture_feedforward=mixture_feedforward,
                                                           max_decoding_steps=max_decoding_steps,
-                                                          attention_function=attention_function,
                                                           use_neighbor_similarity_for_linking=use_similarity,
                                                           dropout=dropout,
                                                           num_linking_features=num_linking_features,
@@ -103,6 +102,13 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                                                           tables_directory=tables_directory)
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood()
+        self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
+                                                   action_embedding_dim=action_embedding_dim,
+                                                   attention_function=attention_function,
+                                                   num_start_types=self._num_start_types,
+                                                   num_entity_types=self._num_entity_types,
+                                                   mixture_feedforward=mixture_feedforward,
+                                                   dropout=dropout)
 
     @overrides
     def forward(self,  # type: ignore
