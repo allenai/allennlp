@@ -43,9 +43,9 @@ class Predictor(Registrable):
         """
         return json.dumps(outputs) + "\n"
 
-    def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
+    def predict_json(self, inputs: JsonDict) -> JsonDict:
         instance, return_dict = self._json_to_instance(inputs)
-        outputs = self._model.forward_on_instance(instance, cuda_device)
+        outputs = self._model.forward_on_instance(instance)
         return_dict.update(outputs)
         return sanitize(return_dict)
 
@@ -57,9 +57,9 @@ class Predictor(Registrable):
         """
         raise NotImplementedError
 
-    def predict_batch_json(self, inputs: List[JsonDict], cuda_device: int = -1) -> List[JsonDict]:
+    def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
         instances, return_dicts = zip(*self._batch_json_to_instances(inputs))
-        outputs = self._model.forward_on_instances(instances, cuda_device)
+        outputs = self._model.forward_on_instances(instances)
         for output, return_dict in zip(outputs, return_dicts):
             return_dict.update(output)
         return sanitize(return_dicts)

@@ -12,7 +12,7 @@ class DecomposableAttentionPredictor(Predictor):
     Predictor for the :class:`~allennlp.models.bidaf.DecomposableAttention` model.
     """
 
-    def predict(self, premise: str, hypothesis: str, cuda_device: int = -1) -> JsonDict:
+    def predict(self, premise: str, hypothesis: str) -> JsonDict:
         """
         Predicts whether the hypothesis is entailed by the premise text.
 
@@ -29,7 +29,7 @@ class DecomposableAttentionPredictor(Predictor):
         A dictionary where the key "label_probs" determines the probabilities of each of
         [entailment, contradiction, neutral].
         """
-        return self.predict_json({"premise" : premise, "hypothesis": hypothesis}, cuda_device)
+        return self.predict_json({"premise" : premise, "hypothesis": hypothesis})
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
