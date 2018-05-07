@@ -236,11 +236,11 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         checklist_balance = checklist_balance.squeeze(2)  # (group_size, num_terminals)
         # We now need to split the ``checklist_balance`` into two tensors, one corresponding to
         # linked actions and the other to unlinked actions because they affect the output action
-        # logits differently. We use ``actions_to_embed`` and ``actions_to_link`` to do that, but
+        # logits differently. We use ``unlinked_terminal_indices`` and ``actions_to_link`` to do that, but
         # the indices in those lists are indices of all actions, and the checklist balance
         # corresponds only to the terminal actions.
         # To make things more confusing, ``actions_to_link`` has batch action indices, and
-        # ``actions_to_embed`` has global action indices.
+        # ``unlinked_terminal_indices`` has global action indices.
         mapped_actions_to_link = []
         mapped_actions_to_embed = []
         terminal_indices = [terminal_actions.data.cpu()
@@ -252,7 +252,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 if action_index == -1:
                     continue
                 batch_actions_to_checklist[(group_index, action_index)] = checklist_index
-        # For mapping ``actions_to_embed``, we first get a mapping of global action indices to batch
+        # For mapping embeddable actions, we first get a mapping of global action indices to batch
         # action indices within each batch. This is essentially the reverse of ``state.action_indices``
         global_to_batch_action_indices: Dict[Tuple[int, int], int] = {}
         for (batch_index, batch_action_index), global_index in state.action_indices.items():
@@ -584,9 +584,9 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                   state: WikiTablesDecoderState,
                                   actions_to_link: List[List[int]],
                                   attention_weights: torch.Tensor,
-                                  linked_checklist_balance: torch.Tensor) -> Tuple[torch.FloatTensor,
-                                                                                   torch.LongTensor,
-                                                                                   torch.FloatTensor]:
+                                  linked_checklist_balance: torch.Tensor = None) -> Tuple[torch.FloatTensor,
+                                                                                          torch.LongTensor,
+                                                                                          torch.FloatTensor]:
         """
         Returns scores for each action in ``actions_to_link`` that are derived from the linking
         scores between the question and the table entities, and the current attention on the
@@ -614,6 +614,11 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         attention_weights : ``torch.Tensor``
             The current attention weights over the question tokens.  Should have shape
             ``(group_size, num_question_tokens)``.
+        linked_checklist_balance : ``torch.Tensor``, optional (default=None)
+            If the parser is being trained to maximize coverage over an agenda, this is the balance
+            vector corresponding to entity actions, containing 1s and 0s, with 1s showing the
+            actions that are yet to be produced. Required only if the parser is being trained to
+            maximize coverage.
 
         Returns
         -------
@@ -669,10 +674,11 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # Now we get action logits by weighting these entity x token scores by the attention over
         # the question tokens.  We can do this efficiently with torch.bmm.
         action_logits = action_linking.bmm(attention_weights.unsqueeze(-1)).squeeze(-1)
-        # ``linked_checklist_balance`` is a binary tensor of sixe (group_size, num_actions) with 1s
-        # indicating the linked actions that the agenda wants the decoder to produce, but haven't
-        # been produced yet. We're simply doubling the logits of those actions here.
-        action_logits = action_logits + (action_logits * linked_checklist_balance)
+        if linked_checklist_balance is not None:
+            # ``linked_checklist_balance`` is a binary tensor of size (group_size, num_actions) with
+            # 1s indicating the linked actions that the agenda wants the decoder to produce, but
+            # haven't been produced yet. We're simply doubling the logits of those actions here.
+            action_logits = action_logits + (action_logits * linked_checklist_balance)
         # Finally, we make a mask for our action logit tensor.
         sequence_lengths = Variable(action_linking.data.new(num_actions))
         action_mask = util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
