@@ -113,7 +113,6 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                 example_lisp_string: List[str] = None,
                 target_action_sequences: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
-        # pylint: disable=unused-argument
         """
         In this method we encode the table entities, link them to words in the question, then
         encode the question. Then we set up the initial state for the decoder, and pass that
@@ -165,6 +164,8 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                                                 self._decoder_step,
                                                 (target_action_sequences, target_mask))
         else:
+            # TODO(pradeep): Most of the functionality in this black can be moved to the super
+            # class.
             action_mapping = {}
             for batch_index, batch_actions in enumerate(actions):
                 for action_index, action in enumerate(batch_actions):

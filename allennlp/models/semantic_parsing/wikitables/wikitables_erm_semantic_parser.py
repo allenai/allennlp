@@ -179,7 +179,6 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 actions: List[List[ProductionRuleArray]],
                 example_lisp_string: List[str]) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
-        # pylint: disable=unused-argument
         """
         Parameters
         ----------
@@ -203,10 +202,6 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
             The example (lisp-formatted) string corresponding to the given input.  This comes
             directly from the ``.examples`` file provided with the dataset.  We pass this to SEMPRE
             when evaluating denotation accuracy; it is otherwise unused.
-        target_action_sequences : torch.Tensor, optional (default=None)
-           A list of possibly valid action sequences, where each action is an index into the list
-           of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
-           sequence_length)``.
         """
         initial_info = self._get_initial_state_and_scores(question=question,
                                                           table=table,
@@ -221,6 +216,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                                                self._decoder_step,
                                                self._get_state_cost)
         if not self.training:
+            # TODO(pradeep): Can move most of this block to super class.
             linking_scores = initial_info["linking_scores"]
             feature_scores = initial_info["feature_scores"]
             similarity_scores = initial_info["similarity_scores"]
@@ -269,7 +265,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         batch_index = state.batch_indices[0]
         action_strings = [state.possible_actions[batch_index][i][0] for i in action_history]
         logical_form = state.world[batch_index].get_logical_form(action_strings)
-        lisp_string = state.example_lisp_string[0]
+        lisp_string = state.example_lisp_string[batch_index]
         if self._denotation_accuracy.evaluate_logical_form(logical_form, lisp_string):
             cost = torch.FloatTensor([0.0])
         else:

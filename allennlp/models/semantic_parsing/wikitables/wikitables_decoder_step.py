@@ -505,6 +505,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # Shape: (group_size, num_actions)
         action_tensor = Variable(state.score[0].data.new(padded_actions).long())
         type_tensor = Variable(state.score[0].data.new(padded_types).long())
+
         # To get the type embedding tensor, we just use an embedding matrix on the list of entity
         # types.
         type_embeddings = self._entity_type_embedding(type_tensor)

@@ -53,12 +53,14 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         ``actions_to_entities`` dictionary) to entity type indices.  This represents what type each
         entity has, which we will use for getting type embeddings in certain circumstances.
     world : ``List[WikiTablesWorld]``, optional (default=None)
-        The worlds corresponding to grouped elements. We store them here because they're required
+        The worlds corresponding to elements in the batch. We store them here because they're required
         for executing logical forms to determine costs while training, if we're learning to search.
-        Otherwise, they're not required.
+        Otherwise, they're not required. Note that the worlds are batched, and they will be passed
+        around unchanged during the decoding process.
     example_lisp_string : ``List[str]``, optional (default=None)
         The lisp strings that come from example files. They're also required for evaluating logical
-        forms only if we're learning to search.
+        forms only if we're learning to search. These too are batched, and will be passed around
+        unchanged.
     """
     def __init__(self,
                  batch_indices: List[int],
