@@ -276,8 +276,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             mapped_actions_to_embed.append(instance_mapped_embedded_actions)
         # We don't need to pad the unlinked actions because they're all currently the
         # same size as ``unlinked_terminal_indices``.
-        unlinked_action_indices = util.new_variable_with_data(checklist_balance,
-                                                              torch.LongTensor(mapped_actions_to_embed)).long()
+        unlinked_action_indices = Variable(checklist_balance.data.new(mapped_actions_to_embed)).long()
         unlinked_actions_mask = (unlinked_action_indices != -1).long()
         # torch.gather would complain if the indices are -1. So making them all 0 now. We'll use the
         # mask again on the balances.
@@ -300,8 +299,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                                          max_num_linked_actions,
                                                                          default_value=lambda: -1)
                                       for indices in mapped_actions_to_link]
-            linked_action_indices = util.new_variable_with_data(checklist_balance,
-                                                                torch.LongTensor(padded_actions_to_link)).long()
+            linked_action_indices = Variable(checklist_balance.data.new(padded_actions_to_link)).long()
             linked_actions_mask = (linked_action_indices != -1).long()
             linked_action_indices = linked_action_indices * linked_actions_mask
             linked_checklist_balance = torch.gather(checklist_balance, 1, linked_action_indices)

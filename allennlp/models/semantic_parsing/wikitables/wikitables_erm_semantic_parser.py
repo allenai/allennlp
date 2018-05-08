@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple, Set
 
 from overrides import overrides
 import torch
+from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
@@ -17,7 +18,6 @@ from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, FeedForward
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.nn.decoding.decoder_trainers import ExpectedRiskMinimization
-from allennlp.nn import util
 from allennlp.semparse import ParsingError
 from allennlp.semparse.type_declarations import wikitables_type_declaration as types
 from allennlp.semparse.worlds import WikiTablesWorld
@@ -259,9 +259,8 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
             checklist_targets.append(checklist_target)
             all_terminal_actions.append(terminal_actions)
             checklist_masks.append(checklist_mask)
-            initial_checklist_list.append(util.new_variable_with_size(checklist_target,
-                                                                      checklist_target.size(),
-                                                                      0))
+            initial_checklist = Variable(checklist_target.data.new(checklist_target.size()).fill_(0))
+            initial_checklist_list.append(initial_checklist)
         initial_info = self._get_initial_state_and_scores(question=question,
                                                           table=table,
                                                           world=world,
@@ -379,11 +378,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
             target_checklist_list.append([0])
             terminal_indices.append([-1])
         # (max_num_terminals, 1)
-        terminal_actions = util.new_variable_with_data(agenda,
-                                                       torch.Tensor(terminal_indices))
+        terminal_actions = Variable(agenda.data.new(terminal_indices))
         # (max_num_terminals, 1)
-        target_checklist = util.new_variable_with_data(agenda,
-                                                       torch.Tensor(target_checklist_list))
+        target_checklist = Variable(agenda.data.new(target_checklist_list)).float()
         checklist_mask = (target_checklist != 0).float()
         return target_checklist, terminal_actions, checklist_mask
 
