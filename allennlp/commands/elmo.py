@@ -295,8 +295,10 @@ def elmo_command(args):
         output_format = "top"
     elif args.average:
         output_format = "average"
-    elmo_embedder.embed_file(
-            args.input_file,
-            args.output_file,
-            output_format,
-            args.batch_size)
+
+    with torch.no_grad():
+        elmo_embedder.embed_file(
+                args.input_file,
+                args.output_file,
+                output_format,
+                args.batch_size)

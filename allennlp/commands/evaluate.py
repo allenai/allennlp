@@ -88,17 +88,16 @@ def evaluate(model: Model,
     with torch.no_grad():
         model.eval()
 
-        with torch.no_grad():
-            iterator = data_iterator(instances, num_epochs=1, cuda_device=cuda_device)
-            logger.info("Iterating over dataset")
-            generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
-            for batch in generator_tqdm:
-                model(**batch)
-                metrics = model.get_metrics()
-                description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
-                generator_tqdm.set_description(description, refresh=False)
+        iterator = data_iterator(instances, num_epochs=1, cuda_device=cuda_device)
+        logger.info("Iterating over dataset")
+        generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
+        for batch in generator_tqdm:
+            model(**batch)
+            metrics = model.get_metrics()
+            description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
+            generator_tqdm.set_description(description, refresh=False)
 
-            return model.get_metrics(reset=True)
+        return model.get_metrics(reset=True)
 
 
 def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
