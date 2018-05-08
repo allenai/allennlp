@@ -143,7 +143,7 @@ class ElmoEmbedder():
             A tuple of tensors, the first representing activations (batch_size, 3, num_timesteps, 1024) and
         the second a mask (batch_size, num_timesteps).
         """
-        character_ids = batch_to_ids(batch)
+        character_ids = batch_to_ids(batch, for_training=False)
         if self.cuda_device >= 0:
             character_ids = character_ids.cuda(device=self.cuda_device)
 

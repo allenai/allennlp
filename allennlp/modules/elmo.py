@@ -164,7 +164,8 @@ class Elmo(torch.nn.Module):
                    requires_grad=requires_grad, do_layer_norm=do_layer_norm)
 
 
-def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
+def batch_to_ids(batch: List[List[str]],
+                 for_training: bool = True) -> torch.Tensor:
     """
     Converts a batch of tokenized sentences to a tensor representing the sentences with encoded characters
     (len(batch), max sentence length, max word length).
@@ -190,7 +191,7 @@ def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
     dataset = Batch(instances)
     vocab = Vocabulary()
     dataset.index_instances(vocab)
-    return dataset.as_tensor_dict()['elmo']['character_ids']
+    return dataset.as_tensor_dict(for_training=for_training)['elmo']['character_ids']
 
 
 class _ElmoCharacterEncoder(torch.nn.Module):
