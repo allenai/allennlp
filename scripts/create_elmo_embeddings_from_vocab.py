@@ -10,7 +10,6 @@ import gzip
 import numpy
 import torch
 
-
 from allennlp.data.token_indexers import ELMoTokenCharactersIndexer
 from allennlp.modules.elmo import _ElmoCharacterEncoder
 from allennlp.data import Token, Vocabulary

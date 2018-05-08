@@ -2,7 +2,6 @@
 from numpy.testing import assert_allclose
 import torch
 
-
 from allennlp.common import Params
 from allennlp.modules import MatrixAttention
 from allennlp.common.testing import AllenNlpTestCase

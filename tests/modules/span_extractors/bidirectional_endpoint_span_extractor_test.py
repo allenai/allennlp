@@ -3,7 +3,6 @@ import numpy
 import pytest
 import torch
 
-
 from allennlp.modules.span_extractors import SpanExtractor, BidirectionalEndpointSpanExtractor
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params

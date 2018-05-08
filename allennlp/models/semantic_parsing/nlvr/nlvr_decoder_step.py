@@ -4,7 +4,6 @@ from collections import defaultdict
 from overrides import overrides
 
 import torch
-
 from torch.nn.modules.rnn import LSTMCell
 from torch.nn.modules.linear import Linear
 

@@ -4,7 +4,6 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 
 import torch
 
-
 from allennlp.nn import util
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState

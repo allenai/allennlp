@@ -2,7 +2,6 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import torch
-
 from torch.nn.functional import nll_loss
 
 from allennlp.common import Params

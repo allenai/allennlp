@@ -1,7 +1,6 @@
 # pylint: disable=no-self-use,protected-access,invalid-name
 import numpy
 import torch
-
 from torch.nn import LSTM
 
 from allennlp.modules.encoder_base import _EncoderBase

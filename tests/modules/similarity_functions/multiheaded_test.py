@@ -4,7 +4,6 @@ import pytest
 import torch
 from torch.nn.parameter import Parameter
 
-
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase

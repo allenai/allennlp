@@ -2,7 +2,6 @@
 import numpy
 import torch
 
-
 from allennlp.common.testing import ModelTestCase
 from allennlp.data.dataset import Batch
 from allennlp.models.reading_comprehension.bidaf_ensemble import BidafEnsemble, ensemble

@@ -1,7 +1,6 @@
 # pylint: disable=invalid-name,no-self-use,protected-access
 import torch
 
-
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.decoding import BeamSearch

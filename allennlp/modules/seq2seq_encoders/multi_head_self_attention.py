@@ -1,6 +1,5 @@
 from overrides import overrides
 import torch
-
 from torch.nn import Dropout, Linear
 
 from allennlp.nn.util import last_dim_softmax, weighted_sum

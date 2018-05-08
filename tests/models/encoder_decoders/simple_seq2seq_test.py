@@ -2,7 +2,6 @@
 import numpy
 import torch
 
-
 from allennlp.common.testing import ModelTestCase
 from allennlp.nn.util import sequence_cross_entropy_with_logits
 

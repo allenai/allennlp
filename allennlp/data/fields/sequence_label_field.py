@@ -5,7 +5,6 @@ import textwrap
 from overrides import overrides
 import torch
 
-
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.fields.field import Field

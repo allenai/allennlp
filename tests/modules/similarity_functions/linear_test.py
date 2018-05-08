@@ -5,7 +5,6 @@ from numpy.testing import assert_almost_equal
 import torch
 from torch.nn.parameter import Parameter
 
-
 from allennlp.common import Params
 from allennlp.modules.similarity_functions import LinearSimilarity
 from allennlp.common.testing import AllenNlpTestCase

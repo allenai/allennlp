@@ -5,7 +5,6 @@ import math
 from pytest import approx, raises
 import torch
 
-
 from allennlp.modules import ConditionalRandomField
 from allennlp.modules.conditional_random_field import allowed_transitions
 from allennlp.common.checks import ConfigurationError

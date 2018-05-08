@@ -6,7 +6,6 @@ import h5py
 import numpy
 import torch
 
-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.data import Token, Vocabulary, Instance

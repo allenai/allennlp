@@ -4,8 +4,6 @@ import os
 from nltk import Tree
 import torch
 
-
-
 from allennlp.common.testing.model_test_case import ModelTestCase
 from allennlp.models.constituency_parser import SpanInformation
 

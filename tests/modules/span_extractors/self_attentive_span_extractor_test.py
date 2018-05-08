@@ -2,7 +2,6 @@
 import numpy
 import torch
 
-
 from allennlp.modules.span_extractors import SpanExtractor, SelfAttentiveSpanExtractor
 from allennlp.common.params import Params
 

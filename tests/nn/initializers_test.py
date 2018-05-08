@@ -7,7 +7,6 @@ import pytest
 import pyhocon
 import torch
 
-
 from allennlp.nn import InitializerApplicator
 from allennlp.nn.initializers import block_orthogonal, uniform_unit_scaling
 from allennlp.common.checks import ConfigurationError

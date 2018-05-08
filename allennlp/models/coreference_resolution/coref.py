@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
-
 from overrides import overrides
 
 from allennlp.common import Params
@@ -577,7 +576,7 @@ class CoreferenceResolver(Model):
 
         # Shape: (batch_size, num_spans_to_keep, 1)
         shape = [antecedent_scores.size(0), antecedent_scores.size(1), 1]
-        dummy_scores = antecedent_scores.data.new_zeros(*shape)
+        dummy_scores = antecedent_scores.new_zeros(*shape)
 
         # Shape: (batch_size, num_spans_to_keep, max_antecedents + 1)
         coreference_scores = torch.cat([dummy_scores, antecedent_scores], -1)

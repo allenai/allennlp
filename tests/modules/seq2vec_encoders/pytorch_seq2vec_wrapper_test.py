@@ -2,7 +2,6 @@
 import pytest
 from numpy.testing import assert_almost_equal
 import torch
-
 from torch.nn import LSTM
 from torch.nn.utils.rnn import pack_padded_sequence
 

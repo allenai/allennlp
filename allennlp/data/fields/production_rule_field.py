@@ -1,7 +1,6 @@
 from typing import Dict, List, Optional, Tuple
 
 import torch
-
 from overrides import overrides
 
 from allennlp.data.fields.field import Field

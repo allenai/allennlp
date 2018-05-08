@@ -2,7 +2,6 @@
 import numpy
 import torch
 
-
 from allennlp.modules.span_extractors import SpanExtractor, EndpointSpanExtractor
 from allennlp.common.params import Params
 from allennlp.nn.util import batched_index_select

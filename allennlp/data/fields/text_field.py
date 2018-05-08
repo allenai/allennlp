@@ -9,7 +9,6 @@ from overrides import overrides
 from spacy.tokens import Token as SpacyToken
 import torch
 
-
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.data.tokenizers.token import Token

@@ -28,7 +28,6 @@ from typing import Callable, List, Tuple, Type
 import itertools
 
 import torch
-
 import torch.nn.init
 
 from allennlp.common import Registrable

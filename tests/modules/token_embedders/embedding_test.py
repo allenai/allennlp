@@ -4,7 +4,6 @@ import gzip
 import numpy
 import pytest
 import torch
-
 import h5py
 
 from allennlp.common import Params

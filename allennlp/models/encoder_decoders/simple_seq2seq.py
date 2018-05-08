@@ -4,7 +4,6 @@ import numpy
 from overrides import overrides
 
 import torch
-
 from torch.nn.modules.rnn import LSTMCell
 from torch.nn.modules.linear import Linear
 import torch.nn.functional as F

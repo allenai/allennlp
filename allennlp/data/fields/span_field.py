@@ -4,7 +4,6 @@ from typing import Dict
 from overrides import overrides
 import torch
 
-
 from allennlp.data.fields.field import Field
 from allennlp.data.fields.sequence_field import SequenceField
 

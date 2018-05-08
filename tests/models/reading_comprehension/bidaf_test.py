@@ -5,7 +5,6 @@ import numpy
 from numpy.testing import assert_almost_equal
 import torch
 
-
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import ModelTestCase

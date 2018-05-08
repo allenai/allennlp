@@ -1,7 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 import torch
 
-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import StackedSelfAttentionEncoder
 

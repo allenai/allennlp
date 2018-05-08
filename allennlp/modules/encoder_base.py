@@ -1,6 +1,5 @@
 from typing import Tuple, Union, Optional, Callable
 import torch
-
 from torch.nn.utils.rnn import pack_padded_sequence, PackedSequence
 
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, sort_batch_by_length

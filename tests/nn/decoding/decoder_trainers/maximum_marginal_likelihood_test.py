@@ -4,7 +4,6 @@ import math
 from numpy.testing import assert_almost_equal
 import torch
 
-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.decoding import DecoderState
 from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood

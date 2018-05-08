@@ -9,7 +9,6 @@ import logging
 import math
 import torch
 
-
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import is_tensor
 

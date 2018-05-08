@@ -2,7 +2,6 @@
 from numpy.testing import assert_almost_equal
 import torch
 
-
 from allennlp.common import Params
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import Vocabulary

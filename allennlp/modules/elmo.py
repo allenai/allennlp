@@ -3,7 +3,6 @@ import logging
 from typing import Union, List, Dict, Any
 
 import torch
-
 from torch.nn.modules import Dropout
 
 import numpy

@@ -5,7 +5,6 @@ from typing import List, Tuple, Dict
 
 import torch
 
-
 from allennlp.common.checks import ConfigurationError
 import allennlp.nn.util as util
 

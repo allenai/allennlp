@@ -3,7 +3,6 @@ import numpy
 from numpy.testing import assert_almost_equal
 import torch
 
-
 from allennlp.common import Params
 from allennlp.modules.seq2vec_encoders import CnnEncoder
 from allennlp.nn import InitializerApplicator

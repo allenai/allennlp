@@ -3,7 +3,6 @@ from collections import defaultdict
 
 import torch
 
-
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
 from allennlp.nn.decoding.decoder_trainers.decoder_trainer import DecoderTrainer

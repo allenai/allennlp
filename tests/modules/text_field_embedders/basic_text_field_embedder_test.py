@@ -2,8 +2,6 @@
 import pytest
 import torch
 
-
-
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary

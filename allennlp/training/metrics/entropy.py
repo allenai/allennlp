@@ -3,8 +3,6 @@ from typing import Optional
 from overrides import overrides
 import torch
 
-
-
 from allennlp.training.metrics.metric import Metric
 
 
