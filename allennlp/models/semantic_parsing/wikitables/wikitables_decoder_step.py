@@ -258,6 +258,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                    flattened_linking_scores=state.flattened_linking_scores,
                                                    actions_to_entities=state.actions_to_entities,
                                                    entity_types=state.entity_types,
+                                                   world=state.world,
+                                                   example_lisp_string=state.example_lisp_string,
                                                    debug_info=new_debug_info)
                 new_states.append(new_state)
         return new_states
@@ -507,7 +509,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # To get the type embedding tensor, we just use an embedding matrix on the list of entity
         # types.
         type_embeddings = self._entity_type_embedding(type_tensor)
-
         # `state.flattened_linking_scores` is shape (batch_size * num_entities, num_question_tokens).
         # We want to select from this using `action_tensor` to get a tensor of shape (group_size,
         # num_actions, num_question_tokens).  Unfortunately, the index_select functions in nn.util
@@ -614,7 +615,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                          attended_question[group_index],
                                          state.rnn_state[group_index].encoder_outputs,
                                          state.rnn_state[group_index].encoder_output_mask)
-
                 new_state = WikiTablesDecoderState(batch_indices=[batch_index],
                                                    action_history=[new_action_history],
                                                    score=[new_score],
@@ -628,6 +628,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                    flattened_linking_scores=state.flattened_linking_scores,
                                                    actions_to_entities=state.actions_to_entities,
                                                    entity_types=state.entity_types,
+                                                   world=state.world,
+                                                   example_lisp_string=state.example_lisp_string,
                                                    debug_info=new_debug_info)
                 new_states.append(new_state)
         return new_states

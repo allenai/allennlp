@@ -11,6 +11,16 @@ allennlp.models.semantic_parsing.wikitables
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.models.semantic_parsing.wikitables.wikitables_mml_semantic_parser
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.models.semantic_parsing.wikitables.wikitables_erm_semantic_parser
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state
    :members:
    :undoc-members:
