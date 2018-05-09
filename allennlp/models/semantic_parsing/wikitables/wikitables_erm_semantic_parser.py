@@ -50,6 +50,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         attention. Passed to super class.
     decoder_beam_size : ``int``
         Beam size to be used by the ExpectedRiskMinimization algorithm.
+    decoder_num_finished_states : ``int``
+        Number of finished states for which costs will be computed by the ExpectedRiskMinimization
+        algorithm.
     max_decoding_steps : ``int``
         Maximum number of steps the decoder should take before giving up. Used both during training
         and evaluation. Passed to super class.
@@ -95,6 +98,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                  mixture_feedforward: FeedForward,
                  attention_function: SimilarityFunction,
                  decoder_beam_size: int,
+                 decoder_num_finished_states: int,
                  max_decoding_steps: int,
                  normalize_beam_score_by_length: bool = False,
                  checklist_cost_weight: float = 0.6,
@@ -120,7 +124,8 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         self._decoder_trainer: ExpectedRiskMinimization = \
                 ExpectedRiskMinimization(beam_size=decoder_beam_size,
                                          normalize_by_length=normalize_beam_score_by_length,
-                                         max_decoding_steps=self._max_decoding_steps)
+                                         max_decoding_steps=self._max_decoding_steps,
+                                         max_num_finished_states=decoder_num_finished_states)
         unlinked_terminals_global_indices = []
         global_vocab = self.vocab.get_token_to_index_vocabulary(rule_namespace)
         for production, index in global_vocab.items():
@@ -432,6 +437,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         else:
             attention_function = None
         decoder_beam_size = params.pop_int("decoder_beam_size")
+        decoder_num_finished_states = params.pop_int("decoder_num_finished_states", None)
         max_decoding_steps = params.pop_int("max_decoding_steps")
         normalize_beam_score_by_length = params.pop("normalize_beam_score_by_length", False)
         use_neighbor_similarity_for_linking = params.pop_bool("use_neighbor_similarity_for_linking", False)
@@ -450,6 +456,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                    mixture_feedforward=mixture_feedforward,
                    attention_function=attention_function,
                    decoder_beam_size=decoder_beam_size,
+                   decoder_num_finished_states=decoder_num_finished_states,
                    max_decoding_steps=max_decoding_steps,
                    normalize_beam_score_by_length=normalize_beam_score_by_length,
                    checklist_cost_weight=checklist_cost_weight,

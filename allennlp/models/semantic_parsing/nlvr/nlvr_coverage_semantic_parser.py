@@ -51,6 +51,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         attention.
     beam_size : ``int``
         Beam size for the beam search used during training.
+    max_num_finished_states : ``int``
+        Maximum number of finished states the trainer should compute costs for.
     normalize_beam_score_by_length : ``bool``, optional (default=False)
         Should the log probabilities be normalized by length before renormalizing them? Edunov et
         al. do this in their work, but we found that not doing it works better. It's possible they
@@ -81,6 +83,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                  encoder: Seq2SeqEncoder,
                  attention_function: SimilarityFunction,
                  beam_size: int,
+                 max_num_finished_states: int,
                  max_decoding_steps: int,
                  normalize_beam_score_by_length: bool = False,
                  checklist_cost_weight: float = 0.6,
@@ -93,7 +96,10 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                                          encoder=encoder)
         self._agenda_coverage = Average()
         self._decoder_trainer: DecoderTrainer[Callable[[NlvrDecoderState], torch.Tensor]] = \
-                ExpectedRiskMinimization(beam_size, normalize_beam_score_by_length, max_decoding_steps)
+                ExpectedRiskMinimization(beam_size,
+                                         normalize_beam_score_by_length,
+                                         max_decoding_steps,
+                                         max_num_finished_states)
 
         # Instantiating an empty NlvrWorld just to get the number of terminals.
         self._terminal_productions = set(NlvrWorld([]).terminal_productions.values())
@@ -423,6 +429,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         else:
             attention_function = None
         beam_size = params.pop_int('beam_size')
+        max_num_finished_states = params.pop_int('max_num_finished_states', None)
         normalize_beam_score_by_length = params.pop_bool('normalize_beam_score_by_length', False)
         max_decoding_steps = params.pop_int("max_decoding_steps")
         checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.6)
@@ -436,6 +443,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                    encoder=encoder,
                    attention_function=attention_function,
                    beam_size=beam_size,
+                   max_num_finished_states=max_num_finished_states,
                    max_decoding_steps=max_decoding_steps,
                    normalize_beam_score_by_length=normalize_beam_score_by_length,
                    checklist_cost_weight=checklist_cost_weight,
