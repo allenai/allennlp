@@ -393,7 +393,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                                          attended_sentence[group_index],
                                          state.rnn_state[group_index].encoder_outputs,
                                          state.rnn_state[group_index].encoder_output_mask)
-                checklist_state = [new_checklist_state] if new_checklist_state is not None else None
+                new_state_checklist_state = [new_checklist_state] if new_checklist_state is not None else None
                 new_state = NlvrDecoderState(batch_indices=[batch_index],
                                              action_history=[new_action_history],
                                              score=[new_score],
@@ -404,6 +404,6 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                                              possible_actions=state.possible_actions,
                                              worlds=state.worlds,
                                              label_strings=state.label_strings,
-                                             checklist_state=checklist_state)
+                                             checklist_state=new_state_checklist_state)
                 new_states.append(new_state)
         return new_states

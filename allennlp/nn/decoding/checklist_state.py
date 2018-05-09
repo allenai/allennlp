@@ -32,7 +32,7 @@ class ChecklistState:
                  terminal_actions: torch.Tensor,
                  checklist_target: torch.Tensor,
                  checklist_mask: torch.Tensor,
-                 checklist: torch.Tensor):
+                 checklist: torch.Tensor) -> None:
         self.terminal_actions = terminal_actions
         self.checklist_target = checklist_target
         self.checklist_mask = checklist_mask
