@@ -11,7 +11,7 @@ from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
-from allennlp.nn.decoding import DecoderTrainer
+from allennlp.nn.decoding import DecoderTrainer, ChecklistState
 from allennlp.nn.decoding.decoder_trainers import ExpectedRiskMinimization
 from allennlp.nn import util
 from allennlp.models.archival import load_archive, Archive
@@ -215,19 +215,17 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         label_strings = self._get_label_strings(labels) if labels is not None else None
         # Each instance's agenda is of size (agenda_size, 1)
         agenda_list = [agenda[i] for i in range(batch_size)]
-        checklist_targets = []
-        all_terminal_actions = []
-        checklist_masks = []
-        initial_checklist_list = []
+        initial_checklist_states = []
         for instance_actions, instance_agenda in zip(actions, agenda_list):
             checklist_info = self._get_checklist_info(instance_agenda, instance_actions)
             checklist_target, terminal_actions, checklist_mask = checklist_info
-            checklist_targets.append(checklist_target)
-            all_terminal_actions.append(terminal_actions)
-            checklist_masks.append(checklist_mask)
-            initial_checklist_list.append(util.new_variable_with_size(checklist_target,
-                                                                      checklist_target.size(),
-                                                                      0))
+            initial_checklist = util.new_variable_with_size(checklist_target,
+                                                            checklist_target.size(),
+                                                            0)
+            initial_checklist_states.append(ChecklistState(terminal_actions=terminal_actions,
+                                                           checklist_target=checklist_target,
+                                                           checklist_mask=checklist_mask,
+                                                           checklist=initial_checklist))
         initial_state = NlvrDecoderState(batch_indices=list(range(batch_size)),
                                          action_history=[[] for _ in range(batch_size)],
                                          score=initial_score_list,
@@ -238,10 +236,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                          possible_actions=actions,
                                          worlds=worlds,
                                          label_strings=label_strings,
-                                         terminal_actions=all_terminal_actions,
-                                         checklist_target=checklist_targets,
-                                         checklist_masks=checklist_masks,
-                                         checklist=initial_checklist_list)
+                                         checklist_state=initial_checklist_states)
 
         agenda_data = [agenda_[:, 0].cpu().data for agenda_ in agenda_list]
         outputs = self._decoder_trainer.decode(initial_state,
@@ -363,21 +358,16 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         """
         if not state.is_finished():
             raise RuntimeError("_get_state_cost() is not defined for unfinished states!")
-        instance_checklist_target = state.checklist_target[0]
-        instance_checklist = state.checklist[0]
-        instance_checklist_mask = state.checklist_mask[0]
-
         # Our checklist cost is a sum of squared error from where we want to be, making sure we
         # take into account the mask.
-        checklist_balance = instance_checklist_target - instance_checklist
-        checklist_balance = checklist_balance * instance_checklist_mask
+        checklist_balance = state.checklist_state[0].get_balance()
         checklist_cost = torch.sum((checklist_balance) ** 2)
 
         # This is the number of items on the agenda that we want to see in the decoded sequence.
         # We use this as the denotation cost if the path is incorrect.
         # Note: If we are penalizing the model for producing non-agenda actions, this is not the
         # upper limit on the checklist cost. That would be the number of terminal actions.
-        denotation_cost = torch.sum(instance_checklist_target.float())
+        denotation_cost = torch.sum(state.checklist_state[0].checklist_target.float())
         checklist_cost = self._checklist_cost_weight * checklist_cost
         # TODO (pradeep): The denotation based cost below is strict. May be define a cost based on
         # how many worlds the logical form is correct in?

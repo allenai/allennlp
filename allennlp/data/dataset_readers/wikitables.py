@@ -391,8 +391,9 @@ class WikiTablesDatasetReader(DatasetReader):
                   'actions': action_field,
                   'example_lisp_string': example_string_field}
 
-        if 'target_action_sequences' in json_obj:
+        if 'target_action_sequences' in json_obj or 'agenda' in json_obj:
             action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
+        if 'target_action_sequences' in json_obj:
             action_sequence_fields: List[Field] = []
             for sequence in json_obj['target_action_sequences']:
                 index_fields: List[Field] = []
@@ -400,8 +401,11 @@ class WikiTablesDatasetReader(DatasetReader):
                     index_fields.append(IndexField(action_map[production_rule], action_field))
                 action_sequence_fields.append(ListField(index_fields))
             fields['target_action_sequences'] = ListField(action_sequence_fields)
-        # TODO(pradeep): Deal with "agenda" field as well.
-
+        if 'agenda' in json_obj:
+            agenda_index_fields: List[Field] = []
+            for agenda_action in json_obj['agenda']:
+                agenda_index_fields.append(IndexField(action_map[agenda_action], action_field))
+            fields['agenda'] = ListField(agenda_index_fields)
         return Instance(fields)
 
     @staticmethod

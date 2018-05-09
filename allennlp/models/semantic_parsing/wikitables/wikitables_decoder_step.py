@@ -102,7 +102,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # an embedding of the decoder input (the last action taken) and an attention over the
         # question.  Then we'll update our decoder's hidden state given this input, and recompute an
         # attention over the question given our new hidden state.  We'll use a concatenation of the
-        # new hidden state and the new attention, and optionally the checklist balance to predict an
+        # new hidden state and the new attention, and optionally the checklist balance, to predict an
         # output, then yield new states.  Each new state corresponds to one valid action that can be
         # taken from the current state, and they are ordered by their probability of being selected.
         attended_question = torch.stack([rnn_state.attended_input for rnn_state in state.rnn_state])
@@ -130,7 +130,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                                        encoder_output_mask)
         considered_actions, actions_to_embed, actions_to_link = self._get_actions_to_consider(state)
 
-        if state.checklist is not None:
+        if state.checklist_state is not None:
             linked_balance, unlinked_balance = self._get_checklist_balance(state,
                                                                            self._unlinked_terminal_indices,
                                                                            actions_to_link)
@@ -221,17 +221,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # the target wants an unmasked action to be taken, and it is not yet taken. All elements
         # in each balance corresponding to masked actions will be 0.
         checklist_balances = []
-        for instance_target, instance_checklist, checklist_mask in zip(state.checklist_target,
-                                                                       state.checklist,
-                                                                       state.checklist_mask):
-            checklist_balance = torch.clamp(instance_target - instance_checklist, min=0.0)
-            checklist_balance = checklist_balance * checklist_mask
+        for instance_checklist_state in state.checklist_state:
+            checklist_balance = torch.clamp(instance_checklist_state.get_balance(), min=0.0)
             checklist_balances.append(checklist_balance)
 
-        # Note that the checklist balance has 0s for actions that are masked (see comment above).
-        # So, masked actions do not contribute to the projection of ``predicted_action_emebedding``
-        # below.
-        # (group_size, num_terminals, 1)
         checklist_balance = torch.stack([x for x in  checklist_balances])
         checklist_balance = checklist_balance.squeeze(2)  # (group_size, num_terminals)
         # We now need to split the ``checklist_balance`` into two tensors, one corresponding to
@@ -243,31 +236,15 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # ``unlinked_terminal_indices`` has global action indices.
         mapped_actions_to_link = []
         mapped_actions_to_embed = []
-        terminal_indices = [terminal_actions.data.cpu()
-                            for terminal_actions in state.terminal_actions]
-        batch_actions_to_checklist: Dict[Tuple[int, int], int] = {}
-        for group_index, instance_terminal_indices in enumerate(terminal_indices):
-            for checklist_index, batch_action_index in enumerate(instance_terminal_indices):
-                action_index = int(batch_action_index[0])
-                if action_index == -1:
-                    continue
-                batch_actions_to_checklist[(group_index, action_index)] = checklist_index
-        # For mapping embeddable actions, we first get a mapping of global action indices to batch
-        # action indices within each batch. This is essentially the reverse of ``state.action_indices``
-        global_to_batch_action_indices: Dict[Tuple[int, int], int] = {}
-        for (batch_index, batch_action_index), global_index in state.action_indices.items():
-            if global_index == -1:
-                # The batch_action_index here corresponds to a linked action. We don't need to map
-                # it.
-                continue
-            global_to_batch_action_indices[(batch_index, global_index)] = batch_action_index
-
+        # Mapping from batch action indices to checklist indices for each instance in group.
+        batch_actions_to_checklist = [checklist_state.terminal_indices_dict
+                                      for checklist_state in state.checklist_state]
         for group_index, batch_index in enumerate(state.batch_indices):
             instance_mapped_embedded_actions = []
             for action in unlinked_terminal_indices:
-                batch_action_index = global_to_batch_action_indices[(batch_index, action)]
-                if (group_index, batch_action_index) in batch_actions_to_checklist:
-                    checklist_index = batch_actions_to_checklist[(group_index, batch_action_index)]
+                batch_action_index = state.global_to_batch_action_indices[(batch_index, action)]
+                if batch_action_index in batch_actions_to_checklist[group_index]:
+                    checklist_index = batch_actions_to_checklist[group_index][batch_action_index]
                 else:
                     # This means that the embedded action is not a terminal, because the checklist
                     # indices only correspond to terminal actions.
@@ -290,7 +267,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         linked_checklist_balance = None
         if actions_to_link:
             for group_index, instance_actions_to_link in enumerate(actions_to_link):
-                mapped_actions_to_link.append([batch_actions_to_checklist[(group_index, action)]
+                mapped_actions_to_link.append([batch_actions_to_checklist[group_index][action]
                                                for action in instance_actions_to_link])
             # We need to pad the linked action indices before we use them to gather appropriate balances.
             # Some of the indices may be 0s. So we need to make the padding index -1.
@@ -360,16 +337,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
 
                 production_rule = state.possible_actions[batch_index][action][0]
                 new_grammar_state = state.grammar_state[group_index].take_action(production_rule)
-                if state.checklist is not None:
-                    new_terminal_actions = [state.terminal_actions[group_index]]
-                    new_checklist = [state.checklist[group_index]]
-                    new_checklist_target = [state.checklist_target[group_index]]
-                    new_checklist_mask = [state.checklist_mask[group_index]]
+                if state.checklist_state is not None:
+                    new_checklist_state = [state.checklist_state[group_index]]
                 else:
-                    new_checklist = None
-                    new_terminal_actions = None
-                    new_checklist_target = None
-                    new_checklist_mask = None
+                    new_checklist_state = None
                 if state.debug_info is not None:
                     debug_info = {
                             'considered_actions': considered_actions[group_index],
@@ -383,7 +354,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # the previous RNN state, as predicting the start type wasn't included in the
                 # decoder RNN in the original model.
                 new_rnn_state = state.rnn_state[group_index]
-
                 new_state = WikiTablesDecoderState(batch_indices=[batch_index],
                                                    action_history=[new_action_history],
                                                    score=[new_score],
@@ -399,10 +369,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                    entity_types=state.entity_types,
                                                    world=state.world,
                                                    example_lisp_string=state.example_lisp_string,
-                                                   terminal_actions=new_terminal_actions,
-                                                   checklist_target=new_checklist_target,
-                                                   checklist_masks=new_checklist_mask,
-                                                   checklist=new_checklist,
+                                                   checklist_state=new_checklist_state,
                                                    debug_info=new_debug_info)
                 new_states.append(new_state)
         return new_states
@@ -752,20 +719,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 action_embedding = action_embeddings[group_index, action_embedding_index, :]
                 production_rule = state.possible_actions[batch_index][action][0]
                 new_grammar_state = state.grammar_state[group_index].take_action(production_rule)
-                if state.checklist is not None:
-                    terminal_actions = state.terminal_actions[group_index]
-                    # checklist_addition will have 1 only for the index corresponding to the current
-                    # action and we're adding 1.0 at the corresponding action index.
-                    checklist_addition = (terminal_actions == action).float()
-                    new_checklist = [state.checklist[group_index] + checklist_addition]
-                    new_terminal_actions = [terminal_actions]
-                    new_checklist_target = [state.checklist_target[group_index]]
-                    new_checklist_mask = [state.checklist_mask[group_index]]
+                if state.checklist_state is not None:
+                    new_checklist_state = [state.checklist_state[group_index].update(action)]
                 else:
-                    new_checklist = None
-                    new_terminal_actions = None
-                    new_checklist_target = None
-                    new_checklist_mask = None
+                    new_checklist_state = None
                 if state.debug_info is not None:
                     debug_info = {
                             'considered_actions': considered_actions[group_index],
@@ -797,10 +754,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                    entity_types=state.entity_types,
                                                    world=state.world,
                                                    example_lisp_string=state.example_lisp_string,
-                                                   terminal_actions=new_terminal_actions,
-                                                   checklist_target=new_checklist_target,
-                                                   checklist_masks=new_checklist_mask,
-                                                   checklist=new_checklist,
+                                                   checklist_state=new_checklist_state,
                                                    debug_info=new_debug_info)
                 new_states.append(new_state)
         return new_states

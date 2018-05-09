@@ -91,7 +91,7 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
         self._entity_prefixes: Dict[str, List[str]] = defaultdict(list)
         for entity, text in self.entity_text.items():
             parts = text.split()
-            if len(parts) < 1:
+            if not parts:
                 continue
             prefix = parts[0].lower()
             self._entity_prefixes[prefix].append(entity)
@@ -351,7 +351,7 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
         for entity in self._get_longest_span_matching_entities():
             agenda_items.append(entity)
             # If the entity is a cell, we need to add the column to the agenda as well,
-            # because the answer most likely involves getting the row witht he cell.
+            # because the answer most likely involves getting the row with the cell.
             if 'fb:cell' in entity:
                 agenda_items.append(self.neighbors[entity][0])
         return agenda_items
@@ -373,6 +373,8 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
     def __eq__(self, other):
         if isinstance(self, other.__class__):
             for key in self.__dict__:
+                # We need to specially handle question tokens because they are Spacy's ``Token``
+                # objects, and equality is not defined for them.
                 if key == "question_tokens":
                     self_tokens = self.__dict__[key]
                     other_tokens = other.__dict__[key]

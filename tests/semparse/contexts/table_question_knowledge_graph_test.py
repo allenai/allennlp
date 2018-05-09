@@ -327,3 +327,13 @@ class TestTableQuestionKnowledgeGraph(AllenNlpTestCase):
                 }
         graph = TableQuestionKnowledgeGraph.read_from_json(json)
         assert graph.get_linked_agenda_items() == ['fb:cell.mersin', 'fb:row.row.location']
+
+    def test_get_longest_span_matching_entities(self):
+        json = {
+                'question': [Token(x) for x in ['where', 'is', 'lake', 'big', 'gala', '?']],
+                'columns': ['Name in English', 'Location'],
+                'cells': [['Paradeniz', 'Lake Big'],
+                          ['Lake Big Gala', 'Edirne']]
+                }
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
+        assert graph._get_longest_span_matching_entities() == ['fb:cell.lake_big_gala']

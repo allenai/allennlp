@@ -14,7 +14,7 @@ from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
-from allennlp.nn.decoding import GrammarState, RnnState
+from allennlp.nn.decoding import GrammarState, RnnState, ChecklistState
 from allennlp.semparse.type_declarations import type_declaration
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import WikiTablesWorld
@@ -150,10 +150,7 @@ class WikiTablesSemanticParser(Model):
                                       actions: List[List[ProductionRuleArray]],
                                       example_lisp_string: List[str] = None,
                                       add_world_to_initial_state: bool = False,
-                                      terminal_actions: List[torch.LongTensor] = None,
-                                      checklist_targets: List[torch.LongTensor] = None,
-                                      checklist_masks: List[torch.Tensor] = None,
-                                      checklists: List[torch.LongTensor] = None) -> Dict:
+                                      checklist_states: List[ChecklistState] = None) -> Dict:
         """
         Does initial preparation and creates an intiial state for both the semantic parsers. Note
         that the checklist related fields (terminal_actions, checklist_targets, checklist_masks, and
@@ -314,10 +311,7 @@ class WikiTablesSemanticParser(Model):
                                                entity_types=entity_type_dict,
                                                world=initial_state_world,
                                                example_lisp_string=example_lisp_string,
-                                               terminal_actions=terminal_actions,
-                                               checklist_target=checklist_targets,
-                                               checklist_masks=checklist_masks,
-                                               checklist=checklists,
+                                               checklist_state=checklist_states,
                                                debug_info=None)
         return {"initial_state": initial_state,
                 "linking_scores": linking_scores,

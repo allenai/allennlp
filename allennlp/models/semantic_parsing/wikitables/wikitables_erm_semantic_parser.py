@@ -17,6 +17,7 @@ from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser impo
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, FeedForward
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
+from allennlp.nn.decoding import ChecklistState
 from allennlp.nn.decoding.decoder_trainers import ExpectedRiskMinimization
 from allennlp.semparse import ParsingError
 from allennlp.semparse.type_declarations import wikitables_type_declaration as types
@@ -241,10 +242,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         batch_size = list(question.values())[0].size(0)
         # Each instance's agenda is of size (agenda_size, 1)
         agenda_list = [agenda[i] for i in range(batch_size)]
-        checklist_targets = []
-        all_terminal_actions = []
-        checklist_masks = []
-        initial_checklist_list = []
+        checklist_states = []
         all_terminal_productions = [set(instance_world.terminal_productions.values())
                                     for instance_world in world]
         max_num_terminals = max([len(terminals) for terminals in all_terminal_productions])
@@ -256,21 +254,18 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                                                       terminal_productions,
                                                       max_num_terminals)
             checklist_target, terminal_actions, checklist_mask = checklist_info
-            checklist_targets.append(checklist_target)
-            all_terminal_actions.append(terminal_actions)
-            checklist_masks.append(checklist_mask)
             initial_checklist = Variable(checklist_target.data.new(checklist_target.size()).fill_(0))
-            initial_checklist_list.append(initial_checklist)
+            checklist_states.append(ChecklistState(terminal_actions=terminal_actions,
+                                                   checklist_target=checklist_target,
+                                                   checklist_mask=checklist_mask,
+                                                   checklist=initial_checklist))
         initial_info = self._get_initial_state_and_scores(question=question,
                                                           table=table,
                                                           world=world,
                                                           actions=actions,
                                                           example_lisp_string=example_lisp_string,
                                                           add_world_to_initial_state=True,
-                                                          terminal_actions=all_terminal_actions,
-                                                          checklist_targets=checklist_targets,
-                                                          checklist_masks=checklist_masks,
-                                                          checklists=initial_checklist_list)
+                                                          checklist_states=checklist_states)
         initial_state = initial_info["initial_state"]
         # TODO(pradeep): Keep track of debug info. It's not straightforward currently because the
         # ERM's decode does not return the best states.
@@ -387,19 +382,15 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
     def _get_state_cost(self, state: WikiTablesDecoderState) -> torch.Tensor:
         if not state.is_finished():
             raise RuntimeError("_get_state_cost() is not defined for unfinished states!")
-        instance_checklist_target = state.checklist_target[0]
-        instance_checklist = state.checklist[0]
-        instance_checklist_mask = state.checklist_mask[0]
 
         # Our checklist cost is a sum of squared error from where we want to be, making sure we
         # take into account the mask.
-        checklist_balance = instance_checklist_target - instance_checklist
-        checklist_balance = checklist_balance * instance_checklist_mask
+        checklist_balance = state.checklist_state[0].get_balance()
         checklist_cost = torch.sum((checklist_balance) ** 2)
 
         # This is the number of items on the agenda that we want to see in the decoded sequence.
         # We use this as the denotation cost if the path is incorrect.
-        denotation_cost = torch.sum(instance_checklist_target.float())
+        denotation_cost = torch.sum(state.checklist_state[0].checklist_target.float())
         checklist_cost = self._checklist_cost_weight * checklist_cost
         action_history = state.action_history[0]
         batch_index = state.batch_indices[0]
