@@ -51,6 +51,11 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
         We compute an attention over the input question at each step of the decoder, using the
         decoder hidden state as the query.  This is the similarity function we use for that
         attention. Passed to super class.
+    training_beam_size : ``int``, optional (default=None)
+        If given, we will use a constrained beam search of this size during training, so that we
+        use only the top ``training_beam_size`` action sequences according to the model in the MML
+        computation.  If this is ``None``, we will use all of the provided action sequences in the
+        MML computation.
     use_neighbor_similarity_for_linking : ``bool``, optional (default=False)
         If ``True``, we will compute a max similarity between a question token and the `neighbors`
         of an entity as a component of the linking scores.  This is meant to capture the same kind
@@ -83,6 +88,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  attention_function: SimilarityFunction,
+                 training_beam_size: int = None,
                  use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
                  num_linking_features: int = 10,
@@ -101,14 +107,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                          rule_namespace=rule_namespace,
                          tables_directory=tables_directory)
         self._beam_search = decoder_beam_search
-        self._decoder_trainer = MaximumMarginalLikelihood()
-        self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
-                                                   action_embedding_dim=action_embedding_dim,
-                                                   attention_function=attention_function,
-                                                   num_start_types=self._num_start_types,
-                                                   num_entity_types=self._num_entity_types,
-                                                   mixture_feedforward=mixture_feedforward,
-                                                   dropout=dropout)
+        self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
 
     @overrides
     def forward(self,  # type: ignore
@@ -249,6 +248,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
             attention_function = SimilarityFunction.from_params(attention_function_type)
         else:
             attention_function = None
+        training_beam_size = params.pop_int('training_beam_size', None)
         use_neighbor_similarity_for_linking = params.pop_bool('use_neighbor_similarity_for_linking', False)
         dropout = params.pop_float('dropout', 0.0)
         num_linking_features = params.pop_int('num_linking_features', 10)
