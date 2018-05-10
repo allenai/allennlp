@@ -349,6 +349,15 @@ class BidirectionalAttentionFlow(Model):
             """
             output_dict["loss"] = loss
 
+        pscores = top_span_logits[:, :, 0] # 40 X 12
+        span_starts = top_span_logits[:, :, 1] # 40 X 12
+        span_ends = top_span_logits[:, :, 2] # 40 X 12  
+        best_span_starts = best_span[:, :, 0] # 40 X 12 # to check for -1
+
+        lr_list = [] #TODO: Place this is in the right spot
+        label = 0
+        pscore = 0
+
         # Compute the EM and F1 on SQuAD and add the tokenized input to the output.
         if metadata is not None:
             output_dict['best_span_str'] = []
@@ -372,30 +381,18 @@ class BidirectionalAttentionFlow(Model):
                 answer_texts = metadata[i].get('answer_texts', [])
                 if answer_texts:
                     self._squad_metrics(best_span_strings, answer_texts)
+                for j in range(span_starts.shape[1]):
+                    pscore = pscores.data[i][j]
+                    import pdb; pdb.set_trace()
+                    if best_span_starts.data[i][j] != -1:
+                        label = 1
+                    else:
+                        label = 0
+                    lr_list.append((pscore, passage_str[int(span_starts.data[i][j]) : int(span_ends.data[i][j])], metadata[i]['qID'], label))
+                    
             output_dict['question_tokens'] = question_tokens
             output_dict['passage_tokens'] = passage_tokens
 
-
-        pscores = top_span_logits[:, :, 0] # 40 X 12
-        span_starts = top_span_logits[:, :, 1] # 40 X 12
-        span_ends = top_span_logits[:, :, 2] # 40 X 12  
-        best_span_starts = best_span[:, :, 0] # 40 X 12 # to check for -1
-
-        lr_list = [] #TODO: Place this is in the right spot
-        pscore = 0;
-        label = 0;
-        
-        for i in range(span_starts.shape[0]):
-            for j in range(span_starts.shape[1]):
-                pscore = pscores[i][j]
-                if best_span_starts[i][j] != -1:
-                    label = 1
-                else:
-                    label = 0
-                lr_list.append((pscore, metadata['original_passage'][span_starts[i][j] : span_ends[i][j] ], metadata['qID'], label))
-                import pdb; pdb.set_trace()
-       
-        
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
