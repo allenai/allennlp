@@ -3,6 +3,8 @@ import os
 import re
 import uuid
 
+from knowledge_graph_attr import KnowledgeGraph, Dijkstra
+
 total = 0.0
 ignored = 0.0
 
@@ -39,8 +41,8 @@ class Preprocessor(object):
         return result
 
     def _line_cleanup(self, line):
-        ent_pattern = r"\[[a-zA-Z0-9 ]+\([a-zA-Z ]+\[\d+\]\)\]?"
-        ref_pattern = r"\[[a-zA-Z0-9 ]+\]"
+        ent_pattern = r"\[[a-zA-Z0-9' ]+\([a-zA-Z]+\[\d+\]\)\]"
+        ref_pattern = r"\[[a-zA-Z0-9' ]+\]"
         entities = re.findall(ref_pattern + "|" + ent_pattern, line)
         entities_clean = self._word_cleanup(entities)
         for index, entity in enumerate(entities):
@@ -63,8 +65,8 @@ class Preprocessor(object):
         result = result.replace("', '", "\t")
         return result.strip("'").split("\t")
 
-    def generate_qas(self, question, answers, context, qas=[]):
-        qa = {"question": question, "answers": [], "id": str(uuid.uuid4())}
+    def generate_qas(self, question, answers, context, tags, qas=[]):
+        qa = {"question": question, "answers": [], "id": str(uuid.uuid4()) + "," + ",".join(tags)}
         for ans in answers:
             span_start = context.find(ans)
             if span_start == -1:
@@ -81,10 +83,40 @@ class Preprocessor(object):
 
         return result
 
+    def _get_tags(self, line):
+        ent_pattern = r"\[[a-zA-Z0-9' ]+\([a-zA-Z]+\[\d+\]\)\]"
+        ref_pattern = r"\[[a-zA-Z0-9' ]+\]"
+        words = r"[a-zA-Z0-9' ]+"
+
+        entities = re.findall(ent_pattern, line)
+
+        new_line = line
+        for entity in entities:
+            new_line = new_line.replace(entity, '')
+
+        attributes = re.findall(ref_pattern, new_line)
+
+        tags = []
+        for entity in entities:
+            name, class_type, identifier = re.findall(words, entity)
+            tags.append(class_type + "@" + identifier)
+
+        for attr in attributes:
+            attr = re.findall(words, attr)
+            tags.append(attr[0])
+
+        return tags
+
     def preprocess(self, filename):
         result = []
         context_so_far = ""
         entry = {"title": filename, "paragraphs": []}
+        kg = KnowledgeGraph()
+        graph = kg.prepare(filename)
+        nodes, edges, sorted_nodes = kg.prepare_edges(graph)
+        dj = Dijkstra(nodes, edges)
+        shortest_path = dj.shortestPath(sorted_nodes)
+        entry["dijkstra"] = shortest_path
         global ignored
         global total
         with open(filename) as f:
@@ -98,11 +130,18 @@ class Preprocessor(object):
                         qas = []
 
                     line = line.split('\t')
+                    tags = self._get_tags(line[0])
+                    try:
+                        ",".join(tags)
+                    except Exception as e:
+                        print(tags)
+                        print(line[0])
+                        raise e
                     question = self._line_cleanup(line[0])
                     answers = self._remove_brace(line[1])
 
                     context_so_far = " ".join(result)
-                    updated = self.generate_qas(question, answers, context_so_far, qas)
+                    updated = self.generate_qas(question, answers, context_so_far, tags, qas)
                     context_changed = False
                 else:
                     if not context_changed:
@@ -137,11 +176,20 @@ if __name__ == "__main__":
     meet_train_json = {'data': []}
     shop_train_json = {'data': []}
 
+    student_dev_json = {'data': []}
+    bug_dev_json = {'data': []}
+    dept_dev_json = {'data': []}
+    meet_dev_json = {'data': []}
+    shop_dev_json = {'data': []}
+
     for index, each_file in enumerate(files):
         if not os.path.isfile(each_file):
             print("Dir", each_file)
             inner_files = os.listdir(path + "/" + each_file)
             for filename in inner_files:
+                if not filename.endswith("with_hints"):
+                    print("Ignored file", filename)
+                    continue
                 if filename.startswith('student'):
                     train_json = student_train_json
                 elif filename.startswith('bug'):
@@ -157,7 +205,23 @@ if __name__ == "__main__":
                     continue
 
                 if len(train_json['data']) > 100:
-                    continue
+                    if filename.startswith('student'):
+                        train_json = student_dev_json
+                    elif filename.startswith('bug'):
+                        train_json = bug_dev_json
+                    elif filename.startswith('department'):
+                        train_json = dept_dev_json
+                    elif filename.startswith('meetings'):
+                        train_json = meet_dev_json
+                    elif filename.startswith('shopping'):
+                        train_json = shop_dev_json
+                    else:
+                        print("Ignored file", filename)
+                        continue
+
+                    if len(train_json['data']) > 20:
+                        continue
+
 
                 real_path = path + "/" + each_file + "/" + filename
                 print("Preprocessing:", index, filename)
@@ -165,14 +229,20 @@ if __name__ == "__main__":
 
     path += "/"
     print(ignored, "/", total)
-    save_json(student_train_json, path + 'final/student.json')
-    save_json(bug_train_json, path + 'final/bug.json')
-    save_json(dept_train_json, path + 'final/department.json')
-    save_json(meet_train_json, path + 'final/meetings.json')
-    save_json(shop_train_json, path + 'final/shopping.json')
+    save_json(student_train_json, path + 'final/student_train.json')
+    save_json(bug_train_json, path + 'final/bug_train.json')
+    save_json(dept_train_json, path + 'final/department_train.json')
+    save_json(meet_train_json, path + 'final/meetings_train.json')
+    save_json(shop_train_json, path + 'final/shopping_train.json')
+
+    save_json(student_dev_json, path + 'final/student_dev.json')
+    save_json(bug_dev_json, path + 'final/bug_dev.json')
+    save_json(dept_dev_json, path + 'final/department_dev.json')
+    save_json(meet_dev_json, path + 'final/meetings_dev.json')
+    save_json(shop_dev_json, path + 'final/shopping_dev.json')
+
     train = {'data': student_train_json['data'] + bug_train_json['data'] + dept_train_json['data'] +
             meet_train_json['data']}
     dev = shop_train_json
-
     save_json(train, path + 'final/train.json')
     save_json(dev, path + 'final/dev.json')

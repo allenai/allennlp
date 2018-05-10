@@ -1,15 +1,11 @@
 import json
 import re
 import sys
-from preprocess import Preprocessor
 
 CONTEXT = "context"
 
 
 class KnowledgeGraph(object):
-
-    def __init__(self):
-        self._preprocess = Preprocessor()
 
     def _update_line(self, line, graph, context_so_far):
         ent_pattern = r"\[[a-zA-Z0-9 ]+\([a-zA-Z ]+\[\d+\]\)\]?"
@@ -52,6 +48,34 @@ class KnowledgeGraph(object):
                     if attr not in metadata['attributes']:
                         metadata['attributes'].append((attr, context_so_far.rfind(attr)))
 
+    def _word_cleanup(self, lookups):
+        result = []
+
+        for word in lookups:
+            try:
+                assert word[0] == '['
+            except AssertionError as e:
+                print word
+                raise e
+            cleaned = ""
+            for char in word[1:]:
+                if char == '(' or char == ']':
+                    break
+                cleaned += char
+            result.append(cleaned)
+
+        return result
+
+    def _line_cleanup(self, line):
+        ent_pattern = r"\[[a-zA-Z0-9' ]+\([a-zA-Z]+\[\d+\]\)\]"
+        ref_pattern = r"\[[a-zA-Z0-9' ]+\]"
+        entities = re.findall(ref_pattern + "|" + ent_pattern, line)
+        entities_clean = self._word_cleanup(entities)
+        for index, entity in enumerate(entities):
+            line = line.replace(entities[index], entities_clean[index])
+
+        return line.strip()
+
     def prepare(self, path):
         graph = {}
         context_so_far = ""
@@ -60,7 +84,7 @@ class KnowledgeGraph(object):
                 if "question_" in line:
                     continue
 
-                context_so_far += (" " if context_so_far else "") + self._preprocess._line_cleanup(line) + "."
+                context_so_far += (" " if context_so_far else "") + self._line_cleanup(line) + "."
                 self._update_line(line, graph, context_so_far)
 
         graph[CONTEXT] = context_so_far
@@ -160,10 +184,22 @@ class Dijkstra(object):
         for node in self._nodes:
             self.setupShortestPath(node, dist)
 
+        new_dist = {}
+
+        for src, name in enumerate(sorted_nodes):
+            for dst in range(node_len):
+                if dist[src][dst] != sys.maxsize:
+                    dist_dict = new_dist.get(name, {})
+                    dist_dict[sorted_nodes[dst]] = dist[src][dst]
+                    new_dist[name] = dist_dict
+        """
         for src in range(node_len):
             for dst in range(node_len):
                 if dist[src][dst] != sys.maxsize:
                     print((sorted_nodes[src], sorted_nodes[dst], dist[src][dst]))
+        """
+
+        return new_dist
 
 
 
@@ -175,4 +211,5 @@ if __name__ == "__main__":
     # sys.exit(0)
     nodes, edges, sorted_nodes = kg.prepare_edges(graph)
     dj = Dijkstra(nodes, edges)
-    dj.shortestPath(sorted_nodes)
+    shortest_path = dj.shortestPath(sorted_nodes)
+    import pdb; pdb.set_trace()
