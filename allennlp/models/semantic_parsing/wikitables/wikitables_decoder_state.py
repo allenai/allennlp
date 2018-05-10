@@ -4,7 +4,7 @@ import torch
 
 from allennlp.semparse.worlds import WikiTablesWorld
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
-from allennlp.nn.decoding import DecoderState, GrammarState, RnnState
+from allennlp.nn.decoding import DecoderState, GrammarState, RnnState, ChecklistState
 
 
 # This syntax is pretty weird and ugly, but it's necessary to make mypy happy with the API that
@@ -61,6 +61,10 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         The lisp strings that come from example files. They're also required for evaluating logical
         forms only if we're learning to search. These too are batched, and will be passed around
         unchanged.
+    checklist_state : ``List[ChecklistState]``, optional (default=None)
+        If you are using this state within a parser being trained for coverage, we need to store a
+        ``ChecklistState`` which keeps track of the coverage information. Not needed if you are
+        using a non-coverage based training algorithm.
     """
     def __init__(self,
                  batch_indices: List[int],
@@ -78,6 +82,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                  entity_types: Dict[int, int],
                  world: List[WikiTablesWorld] = None,
                  example_lisp_string: List[str] = None,
+                 checklist_state: List[ChecklistState] = None,
                  debug_info: List = None) -> None:
         super(WikiTablesDecoderState, self).__init__(batch_indices, action_history, score)
         self.rnn_state = rnn_state
@@ -86,12 +91,24 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         self.output_action_embeddings = output_action_embeddings
         self.action_biases = action_biases
         self.action_indices = action_indices
+        # This is just the reverse of action indices.
+        self.global_to_batch_action_indices: Dict[Tuple[int, int], int] = {}
+        for (batch_index, batch_action_index), global_index in action_indices.items():
+            if global_index == -1:
+                # The batch_action_index here corresponds to a linked action. We don't need to map
+                # it.
+                continue
+            self.global_to_batch_action_indices[(batch_index, global_index)] = batch_action_index
         self.possible_actions = possible_actions
         self.flattened_linking_scores = flattened_linking_scores
         self.actions_to_entities = actions_to_entities
         self.entity_types = entity_types
         self.world = world
         self.example_lisp_string = example_lisp_string
+        # Converting None to a list of Nones of appropriate size to avoid checking for None in all
+        # state operations.
+        self.checklist_state = checklist_state if checklist_state is not None else [None for _ in
+                                                                                    batch_indices]
         self.debug_info = debug_info
 
     def print_action_history(self, group_index: int = None) -> None:
@@ -120,6 +137,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         scores = [score for state in states for score in state.score]
         rnn_states = [rnn_state for state in states for rnn_state in state.rnn_state]
         grammar_states = [grammar_state for state in states for grammar_state in state.grammar_state]
+        checklist_states = [checklist_state for state in states for checklist_state in state.checklist_state]
         if states[0].debug_info is not None:
             debug_info = [debug_info for state in states for debug_info in state.debug_info]
         else:
@@ -139,4 +157,5 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       entity_types=states[0].entity_types,
                                       world=states[0].world,
                                       example_lisp_string=states[0].example_lisp_string,
+                                      checklist_state=checklist_states,
                                       debug_info=debug_info)

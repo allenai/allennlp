@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Set
 
 from overrides import overrides
 import torch
@@ -12,13 +12,17 @@ from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
 from allennlp.models.archival import load_archive, Archive
 from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
+from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
 from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, FeedForward
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
+from allennlp.nn.decoding import ChecklistState
 from allennlp.nn.decoding.decoder_trainers import ExpectedRiskMinimization
 from allennlp.semparse import ParsingError
+from allennlp.semparse.type_declarations import wikitables_type_declaration as types
 from allennlp.semparse.worlds import WikiTablesWorld
+from allennlp.training.metrics import Average
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -53,6 +57,10 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         Should we normalize the log-probabilities by length before renormalizing the beam? This was
         shown to work better for NML by Edunov et al., but that many not be the case for semantic
         parsing.
+    checklist_cost_weight : ``float``, optional (default=0.6)
+        Mixture weight (0-1) for combining coverage cost and denotation cost. As this increases, we
+        weigh the coverage cost higher, with a value of 1.0 meaning that we do not care about
+        denotation accuracy.
     use_neighbor_similarity_for_linking : ``bool``, optional (default=False)
         If ``True``, we will compute a max similarity between a question token and the `neighbors`
         of an entity as a component of the linking scores.  This is meant to capture the same kind
@@ -89,6 +97,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                  decoder_beam_size: int,
                  max_decoding_steps: int,
                  normalize_beam_score_by_length: bool = False,
+                 checklist_cost_weight: float = 0.6,
                  use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
                  num_linking_features: int = 10,
@@ -96,24 +105,40 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                  tables_directory: str = '/wikitables/',
                  initial_mml_model_file: str = None) -> None:
         use_similarity = use_neighbor_similarity_for_linking
-        super(WikiTablesErmSemanticParser, self).__init__(vocab=vocab,
-                                                          question_embedder=question_embedder,
-                                                          action_embedding_dim=action_embedding_dim,
-                                                          encoder=encoder,
-                                                          entity_encoder=entity_encoder,
-                                                          mixture_feedforward=mixture_feedforward,
-                                                          max_decoding_steps=max_decoding_steps,
-                                                          attention_function=attention_function,
-                                                          use_neighbor_similarity_for_linking=use_similarity,
-                                                          dropout=dropout,
-                                                          num_linking_features=num_linking_features,
-                                                          rule_namespace=rule_namespace,
-                                                          tables_directory=tables_directory)
+        super().__init__(vocab=vocab,
+                         question_embedder=question_embedder,
+                         action_embedding_dim=action_embedding_dim,
+                         encoder=encoder,
+                         entity_encoder=entity_encoder,
+                         max_decoding_steps=max_decoding_steps,
+                         use_neighbor_similarity_for_linking=use_similarity,
+                         dropout=dropout,
+                         num_linking_features=num_linking_features,
+                         rule_namespace=rule_namespace,
+                         tables_directory=tables_directory)
         # Not sure why mypy needs a type annotation for this!
         self._decoder_trainer: ExpectedRiskMinimization = \
                 ExpectedRiskMinimization(beam_size=decoder_beam_size,
                                          normalize_by_length=normalize_beam_score_by_length,
                                          max_decoding_steps=self._max_decoding_steps)
+        unlinked_terminals_global_indices = []
+        global_vocab = self.vocab.get_token_to_index_vocabulary(rule_namespace)
+        for production, index in global_vocab.items():
+            right_side = production.split(" -> ")[1]
+            if right_side in types.COMMON_NAME_MAPPING:
+                # This is a terminal production.
+                unlinked_terminals_global_indices.append(index)
+        self._num_unlinked_terminals = len(unlinked_terminals_global_indices)
+        self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
+                                                   action_embedding_dim=action_embedding_dim,
+                                                   attention_function=attention_function,
+                                                   num_start_types=self._num_start_types,
+                                                   num_entity_types=self._num_entity_types,
+                                                   mixture_feedforward=mixture_feedforward,
+                                                   dropout=dropout,
+                                                   unlinked_terminal_indices=unlinked_terminals_global_indices)
+        self._checklist_cost_weight = checklist_cost_weight
+        self._agenda_coverage = Average()
         # TODO (pradeep): Checking whether file exists here to avoid raising an error when we've
         # copied a trained ERM model from a different machine and the original MML model that was
         # used to initialize it does not exist on the current machine. This may not be the best
@@ -141,7 +166,17 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                                "tokens.")
         for name, weights in archived_parameters.items():
             if name in model_parameters:
-                if name == question_embedder_weight:
+                if name == "_decoder_step._output_projection_layer.weight":
+                    # The dimensions differ for this parameter between the coverage model and
+                    # the direct model. In the direct model, this is of size
+                    # (decoder_output_dim + encoder_output_dim, action_embedding_dim),
+                    # whereas in the coverage model, it is
+                    # (decoder_output_dim + encoder_output_dim + checklist_size, action_embedding_dim)
+                    # We copy only the relevant part of the weights here.
+                    archived_projection_weights = weights.data
+                    new_weights = model_parameters[name].data.clone()
+                    new_weights[:, :-self._num_unlinked_terminals] = archived_projection_weights
+                elif name == question_embedder_weight:
                     # The shapes of embedding weights will most likely differ between the two models
                     # because the vocabularies will most likely be different. We will get a mapping
                     # of indices from this model's token indices to the archived model's and copy
@@ -177,6 +212,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 table: Dict[str, torch.LongTensor],
                 world: List[WikiTablesWorld],
                 actions: List[List[ProductionRuleArray]],
+                agenda: torch.LongTensor,
                 example_lisp_string: List[str]) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
@@ -203,12 +239,33 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
             directly from the ``.examples`` file provided with the dataset.  We pass this to SEMPRE
             when evaluating denotation accuracy; it is otherwise unused.
         """
+        batch_size = list(question.values())[0].size(0)
+        # Each instance's agenda is of size (agenda_size, 1)
+        agenda_list = [agenda[i] for i in range(batch_size)]
+        checklist_states = []
+        all_terminal_productions = [set(instance_world.terminal_productions.values())
+                                    for instance_world in world]
+        max_num_terminals = max([len(terminals) for terminals in all_terminal_productions])
+        for instance_actions, instance_agenda, terminal_productions in zip(actions,
+                                                                           agenda_list,
+                                                                           all_terminal_productions):
+            checklist_info = self._get_checklist_info(instance_agenda,
+                                                      instance_actions,
+                                                      terminal_productions,
+                                                      max_num_terminals)
+            checklist_target, terminal_actions, checklist_mask = checklist_info
+            initial_checklist = Variable(checklist_target.data.new(checklist_target.size()).fill_(0))
+            checklist_states.append(ChecklistState(terminal_actions=terminal_actions,
+                                                   checklist_target=checklist_target,
+                                                   checklist_mask=checklist_mask,
+                                                   checklist=initial_checklist))
         initial_info = self._get_initial_state_and_scores(question=question,
                                                           table=table,
                                                           world=world,
                                                           actions=actions,
                                                           example_lisp_string=example_lisp_string,
-                                                          add_world_to_initial_state=True)
+                                                          add_world_to_initial_state=True,
+                                                          checklist_states=checklist_states)
         initial_state = initial_info["initial_state"]
         # TODO(pradeep): Keep track of debug info. It's not straightforward currently because the
         # ERM's decode does not return the best states.
@@ -233,7 +290,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
             outputs['similarity_scores'] = similarity_scores
             outputs['logical_form'] = []
             best_action_sequences = outputs['best_action_sequences']
+            agenda_indices = [actions_[:, 0].cpu().data for actions_ in agenda]
             for i in range(batch_size):
+                in_agenda_ratio = 0.0
                 # Decoding may not have terminated with any completed logical forms, if `num_steps`
                 # isn't long enough (or if the model is not trained enough and gets into an
                 # infinite action loop).
@@ -251,26 +310,108 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                         self._denotation_accuracy(logical_form, example_lisp_string[i])
                     outputs['logical_form'].append(logical_form)
                     outputs['entities'].append(world[i].table_graph.entities)
+                    instance_possible_actions = actions[i]
+                    agenda_actions = []
+                    for rule_id in agenda_indices[i]:
+                        rule_id = int(rule_id)
+                        if rule_id == -1:
+                            continue
+                        action_string = instance_possible_actions[rule_id][0]
+                        agenda_actions.append(action_string)
+                    actions_in_agenda = [action in action_strings for action in agenda_actions]
+                    if actions_in_agenda:
+                        # Note: This means that when there are no actions on agenda, agenda coverage
+                        # will be 0, not 1.
+                        in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
                 else:
                     outputs['logical_form'].append('')
                     self._has_logical_form(0.0)
                     if example_lisp_string:
                         self._denotation_accuracy(None, example_lisp_string[i])
+                self._agenda_coverage(in_agenda_ratio)
         return outputs
+
+    @staticmethod
+    def _get_checklist_info(agenda: torch.LongTensor,
+                            all_actions: List[ProductionRuleArray],
+                            terminal_productions: Set[str],
+                            max_num_terminals: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Takes an agenda, a list of all actions, a set of terminal productions in the corresponding
+        world, and a length to pad the checklist vectors to, and returns a target checklist against
+        which the checklist at each state will be compared to compute a loss, indices of
+        ``terminal_actions``, and a ``checklist_mask`` that indicates which of the terminal actions
+        are relevant for checklist loss computation.
+
+        Parameters
+        ----------
+        ``agenda`` : ``torch.LongTensor``
+            Agenda of one instance of size ``(agenda_size, 1)``.
+        ``all_actions`` : ``List[ProductionRuleArray]``
+            All actions for one instance.
+        ``terminal_productions`` : ``Set[str]``
+            String representations of terminal productions in the corresponding world.
+        ``max_num_terminals`` : ``int``
+            Length to which the checklist vectors will be padded till. This is the max number of
+            terminal productions in all the worlds in the batch.
+        """
+        terminal_indices = []
+        target_checklist_list = []
+        agenda_indices_set = set([int(x) for x in agenda.squeeze(0).data.cpu().numpy()])
+        # We want to return checklist target and terminal actions that are column vectors to make
+        # computing softmax over the difference between checklist and target easier.
+        for index, action in enumerate(all_actions):
+            # Each action is a ProductionRuleArray, a tuple where the first item is the production
+            # rule string.
+            if action[0] in terminal_productions:
+                terminal_indices.append([index])
+                if index in agenda_indices_set:
+                    target_checklist_list.append([1])
+                else:
+                    target_checklist_list.append([0])
+        while len(target_checklist_list) < max_num_terminals:
+            target_checklist_list.append([0])
+            terminal_indices.append([-1])
+        # (max_num_terminals, 1)
+        terminal_actions = Variable(agenda.data.new(terminal_indices))
+        # (max_num_terminals, 1)
+        target_checklist = Variable(agenda.data.new(target_checklist_list)).float()
+        checklist_mask = (target_checklist != 0).float()
+        return target_checklist, terminal_actions, checklist_mask
 
     def _get_state_cost(self, state: WikiTablesDecoderState) -> torch.Tensor:
         if not state.is_finished():
             raise RuntimeError("_get_state_cost() is not defined for unfinished states!")
+
+        # Our checklist cost is a sum of squared error from where we want to be, making sure we
+        # take into account the mask.
+        checklist_balance = state.checklist_state[0].get_balance()
+        checklist_cost = torch.sum((checklist_balance) ** 2)
+
+        # This is the number of items on the agenda that we want to see in the decoded sequence.
+        # We use this as the denotation cost if the path is incorrect.
+        denotation_cost = torch.sum(state.checklist_state[0].checklist_target.float())
+        checklist_cost = self._checklist_cost_weight * checklist_cost
         action_history = state.action_history[0]
         batch_index = state.batch_indices[0]
         action_strings = [state.possible_actions[batch_index][i][0] for i in action_history]
         logical_form = state.world[batch_index].get_logical_form(action_strings)
         lisp_string = state.example_lisp_string[batch_index]
         if self._denotation_accuracy.evaluate_logical_form(logical_form, lisp_string):
-            cost = torch.FloatTensor([0.0])
+            cost = checklist_cost
         else:
-            cost = torch.FloatTensor([10])
-        return Variable(state.flattened_linking_scores.data.new(cost)).float()
+            cost = checklist_cost + (1 - self._checklist_cost_weight) * denotation_cost
+        return cost
+
+    @overrides
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        """
+        The base class returns a dict with dpd accuracy, denotation accuracy, and logical form
+        percentage metrics. We add the agenda coverage metric here.
+        """
+        metrics = super().get_metrics(reset)
+        metrics["agenda_coverage"] = self._agenda_coverage.get_metric(reset)
+        return metrics
 
     @classmethod
     def from_params(cls, vocab, params: Params) -> 'WikiTablesErmSemanticParser':
@@ -298,6 +439,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         num_linking_features = params.pop_int('num_linking_features', 10)
         tables_directory = params.pop('tables_directory', '/wikitables/')
         rule_namespace = params.pop('rule_namespace', 'rule_labels')
+        checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.6)
         mml_model_file = params.pop('mml_model_file', None)
         params.assert_empty(cls.__name__)
         return cls(vocab,
@@ -310,6 +452,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                    decoder_beam_size=decoder_beam_size,
                    max_decoding_steps=max_decoding_steps,
                    normalize_beam_score_by_length=normalize_beam_score_by_length,
+                   checklist_cost_weight=checklist_cost_weight,
                    use_neighbor_similarity_for_linking=use_neighbor_similarity_for_linking,
                    dropout=dropout,
                    num_linking_features=num_linking_features,

@@ -53,3 +53,8 @@ class Token:
 
     def __repr__(self):
         return self.__str__()
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented

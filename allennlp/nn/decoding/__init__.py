@@ -20,9 +20,10 @@ The key abstractions in this code are the following:
       this is an abstract class that is generic over the type of the supervision signal.
 
 The module also has some classes to help represent the ``DecoderState``, including ``RnnState``,
-which you can use to keep track of a decoder RNN's internal state, and ``GrammarState``, which
+which you can use to keep track of a decoder RNN's internal state, ``GrammarState``, which
 keeps track of what actions are allowed at each timestep of decoding, if your outputs are
-production rules from a grammar.
+production rules from a grammar, and ``ChecklistState`` that keeps track of coverage inforation if
+you are training a coverage based parser.
 
 There is also a generic ``BeamSearch`` class for finding the ``k`` highest-scoring transition
 sequences given a trained ``DecoderStep`` and an initial ``DecoderState``.
@@ -33,3 +34,4 @@ from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_trainers.decoder_trainer import DecoderTrainer
 from allennlp.nn.decoding.grammar_state import GrammarState
 from allennlp.nn.decoding.rnn_state import RnnState
+from allennlp.nn.decoding.checklist_state import ChecklistState

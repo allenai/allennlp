@@ -49,7 +49,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
                supervision: Callable[[StateType], torch.Tensor]) -> Dict[str, torch.Tensor]:
         cost_function = supervision
         finished_states = self._get_finished_states(initial_state, decode_step)
-        loss = nn_util.new_variable_with_data(initial_state.score[0], torch.Tensor([0.0]))
+        loss = Variable(initial_state.score[0].data.new([0.0]))
         finished_model_scores = self._get_model_scores_by_batch(finished_states)
         finished_costs = self._get_costs_by_batch(finished_states, cost_function)
         for batch_index in finished_model_scores:
@@ -93,8 +93,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
                                                          state.score,
                                                          state.action_history):
                 if self._normalize_by_length:
-                    path_length = nn_util.new_variable_with_data(model_score,
-                                                                 torch.Tensor([len(history)]))
+                    path_length = Variable(model_score.data.new([len(history)]))
                     model_score = model_score / path_length
                 batch_scores[batch_index].append(model_score)
         return batch_scores

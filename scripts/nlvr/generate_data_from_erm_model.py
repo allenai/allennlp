@@ -36,7 +36,7 @@ def make_data(input_file: str,
             structured_representations = input_data["worlds"]
             labels = input_data["labels"]
             instance = reader.text_to_instance(sentence, structured_representations)
-            outputs = model.forward_on_instance(instance, cuda_device=-1)
+            outputs = model.forward_on_instance(instance)
             action_strings = outputs["best_action_strings"]
             logical_forms = outputs["logical_form"]
             correct_sequences = []

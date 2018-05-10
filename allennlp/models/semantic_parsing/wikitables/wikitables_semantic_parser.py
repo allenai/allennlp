@@ -9,14 +9,12 @@ from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
 from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
-from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, FeedForward, Embedding
+from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
-from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
-from allennlp.nn.decoding import GrammarState, RnnState
+from allennlp.nn.decoding import GrammarState, RnnState, ChecklistState
 from allennlp.semparse.type_declarations import type_declaration
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import WikiTablesWorld
@@ -73,15 +71,14 @@ class WikiTablesSemanticParser(Model):
         evaluate logical forms, and SEMPRE needs to read the table from disk itself.  This tells
         SEMPRE where to find the tables.
     """
+    # pylint: disable=abstract-method
     def __init__(self,
                  vocab: Vocabulary,
                  question_embedder: TextFieldEmbedder,
                  action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
                  entity_encoder: Seq2VecEncoder,
-                 mixture_feedforward: FeedForward,
                  max_decoding_steps: int,
-                 attention_function: SimilarityFunction,
                  use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
                  num_linking_features: int = 10,
@@ -136,32 +133,19 @@ class WikiTablesSemanticParser(Model):
             self._question_entity_params = None
             self._question_neighbor_params = None
 
-        self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
-                                                   action_embedding_dim=action_embedding_dim,
-                                                   attention_function=attention_function,
-                                                   num_start_types=self._num_start_types,
-                                                   num_entity_types=self._num_entity_types,
-                                                   mixture_feedforward=mixture_feedforward,
-                                                   dropout=dropout)
-
-    @overrides
-    def forward(self,  # type: ignore
-                question: Dict[str, torch.LongTensor],
-                table: Dict[str, torch.LongTensor],
-                world: List[WikiTablesWorld],
-                actions: List[List[ProductionRuleArray]],
-                example_lisp_string: List[str] = None,
-                target_action_sequences: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
-        raise NotImplementedError
-
     def _get_initial_state_and_scores(self,
                                       question: Dict[str, torch.LongTensor],
                                       table: Dict[str, torch.LongTensor],
                                       world: List[WikiTablesWorld],
                                       actions: List[List[ProductionRuleArray]],
                                       example_lisp_string: List[str] = None,
-                                      add_world_to_initial_state: bool = False) -> Dict:
+                                      add_world_to_initial_state: bool = False,
+                                      checklist_states: List[ChecklistState] = None) -> Dict:
+        """
+        Does initial preparation and creates an intiial state for both the semantic parsers. Note
+        that the checklist state is optional, and the ``WikiTablesMmlParser`` is not expected to
+        pass it.
+        """
         table_text = table['text']
         # (batch_size, question_length, embedding_dim)
         embedded_question = self._question_embedder(question)
@@ -317,6 +301,7 @@ class WikiTablesSemanticParser(Model):
                                                entity_types=entity_type_dict,
                                                world=initial_state_world,
                                                example_lisp_string=example_lisp_string,
+                                               checklist_state=checklist_states,
                                                debug_info=None)
         return {"initial_state": initial_state,
                 "linking_scores": linking_scores,

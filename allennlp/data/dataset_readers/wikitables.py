@@ -121,6 +121,9 @@ class WikiTablesDatasetReader(DatasetReader):
         usage of the table representations, truncating cells with really long text.  We specify a
         total number of tokens, not a max cell text length, because the number of table entities
         varies.
+    output_agendas : ``bool``, (optional, default=False)
+        Should we output agenda fields? This needs to be true if you want to train a coverage based
+        parser.
     """
     def __init__(self,
                  lazy: bool = False,
@@ -136,7 +139,8 @@ class WikiTablesDatasetReader(DatasetReader):
                  use_table_for_vocab: bool = False,
                  linking_feature_extractors: List[str] = None,
                  include_table_metadata: bool = False,
-                 max_table_tokens: int = None) -> None:
+                 max_table_tokens: int = None,
+                 output_agendas: bool = False) -> None:
         super().__init__(lazy=lazy)
         self._tables_directory = tables_directory
         self._dpd_output_directory = dpd_output_directory
@@ -152,6 +156,7 @@ class WikiTablesDatasetReader(DatasetReader):
         self._include_table_metadata = include_table_metadata
         self._basic_types = set(str(type_) for type_ in wt_types.BASIC_TYPES)
         self._max_table_tokens = max_table_tokens
+        self._output_agendas = output_agendas
 
     @overrides
     def _read(self, file_path: str):
@@ -297,13 +302,12 @@ class WikiTablesDatasetReader(DatasetReader):
         if example_lisp_string:
             fields['example_lisp_string'] = MetadataField(example_lisp_string)
 
+        # We'll make each target action sequence a List[IndexField], where the index is into
+        # the action list we made above.  We need to ignore the type here because mypy doesn't
+        # like `action.rule` - it's hard to tell mypy that the ListField is made up of
+        # ProductionRuleFields.
+        action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
         if dpd_output:
-            # We'll make each target action sequence a List[IndexField], where the index is into
-            # the action list we made above.  We need to ignore the type here because mypy doesn't
-            # like `action.rule` - it's hard to tell mypy that the ListField is made up of
-            # ProductionRuleFields.
-            action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
-
             action_sequence_fields: List[Field] = []
             for logical_form in dpd_output:
                 if not self._should_keep_logical_form(logical_form):
@@ -344,6 +348,13 @@ class WikiTablesDatasetReader(DatasetReader):
                 # full test data.
                 return None
             fields['target_action_sequences'] = ListField(action_sequence_fields)
+        if self._output_agendas:
+            agenda_index_fields: List[Field] = []
+            for agenda_string in world.get_agenda():
+                agenda_index_fields.append(IndexField(action_map[agenda_string], action_field))
+            if not agenda_index_fields:
+                agenda_index_fields = [IndexField(-1, action_field)]
+            fields['agenda'] = ListField(agenda_index_fields)
         return Instance(fields)
 
     def _json_blob_to_instance(self, json_obj: JsonDict) -> Instance:
@@ -380,8 +391,9 @@ class WikiTablesDatasetReader(DatasetReader):
                   'actions': action_field,
                   'example_lisp_string': example_string_field}
 
-        if 'target_action_sequences' in json_obj:
+        if 'target_action_sequences' in json_obj or 'agenda' in json_obj:
             action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
+        if 'target_action_sequences' in json_obj:
             action_sequence_fields: List[Field] = []
             for sequence in json_obj['target_action_sequences']:
                 index_fields: List[Field] = []
@@ -389,7 +401,11 @@ class WikiTablesDatasetReader(DatasetReader):
                     index_fields.append(IndexField(action_map[production_rule], action_field))
                 action_sequence_fields.append(ListField(index_fields))
             fields['target_action_sequences'] = ListField(action_sequence_fields)
-
+        if 'agenda' in json_obj:
+            agenda_index_fields: List[Field] = []
+            for agenda_action in json_obj['agenda']:
+                agenda_index_fields.append(IndexField(action_map[agenda_action], action_field))
+            fields['agenda'] = ListField(agenda_index_fields)
         return Instance(fields)
 
     @staticmethod
@@ -442,6 +458,7 @@ class WikiTablesDatasetReader(DatasetReader):
         linking_feature_extracters = params.pop('linking_feature_extractors', None)
         include_table_metadata = params.pop_bool('include_table_metadata', False)
         max_table_tokens = params.pop_int('max_table_tokens', None)
+        output_agendas = params.pop_bool('output_agendas', False)
         params.assert_empty(cls.__name__)
         return WikiTablesDatasetReader(lazy=lazy,
                                        tables_directory=tables_directory,
@@ -456,4 +473,5 @@ class WikiTablesDatasetReader(DatasetReader):
                                        use_table_for_vocab=use_table_for_vocab,
                                        linking_feature_extractors=linking_feature_extracters,
                                        include_table_metadata=include_table_metadata,
-                                       max_table_tokens=max_table_tokens)
+                                       max_table_tokens=max_table_tokens,
+                                       output_agendas=output_agendas)
