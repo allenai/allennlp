@@ -15,6 +15,7 @@ class TestSrlPredictor(TestCase):
         predictor = Predictor.from_archive(archive, 'semantic-role-labeling')
 
         result = predictor.predict_json(inputs)
+
         words = result.get("words")
         assert words == ["The", "squirrel", "wrote", "a", "unit", "test",
                          "to", "make", "sure", "its", "nuts", "worked", "as", "designed", "."]

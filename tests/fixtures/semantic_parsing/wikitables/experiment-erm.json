@@ -1,13 +1,12 @@
 {
   "dataset_reader": {
     "type": "wikitables",
-    "tables_directory": "tests/fixtures/data/wikitables/",
-    "dpd_output_directory": "tests/fixtures/data/wikitables/dpd_output/"
+    "tables_directory": "tests/fixtures/data/wikitables/"
   },
   "train_data_path": "tests/fixtures/data/wikitables/sample_data.examples",
   "validation_data_path": "tests/fixtures/data/wikitables/sample_data.examples",
   "model": {
-    "type": "wikitables_mml_parser",
+    "type": "wikitables_erm_parser",
     "tables_directory": "tests/fixtures/data/wikitables/",
     "question_embedder": {
       "tokens": {
@@ -17,13 +16,6 @@
       }
     },
     "action_embedding_dim": 50,
-    "mixture_feedforward": {
-      "input_dim": 10,
-      "num_layers": 3,
-      "hidden_dims": [5, 2, 1],
-      "activations": ["relu", "sigmoid", "sigmoid"],
-      "dropout": [0.2, 0.0, 0.0]
-    },
     "encoder": {
       "type": "lstm",
       "input_size": 50,
@@ -35,11 +27,10 @@
       "embedding_dim": 25,
       "averaged": true
     },
-    "decoder_beam_search": {
-      "beam_size": 3
-    },
-    "max_decoding_steps": 200,
-    "attention_function": {"type": "dot_product"}
+    "max_decoding_steps": 7,
+    "decoder_beam_size": 10,
+    "attention_function": {"type": "dot_product"},
+    "mml_model_file": "tests/fixtures/semantic_parsing/wikitables/serialization/model.tar.gz"
   },
   "iterator": {
     "type": "bucket",

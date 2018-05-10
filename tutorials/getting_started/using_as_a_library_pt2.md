@@ -1,4 +1,4 @@
-# Making Predictions and Creating a Demo
+# Using AllenNLP as a Library (Part 2) - Predictions and Demos
 
 After you've built and trained a model, it's likely that you want to use it
 for something. In this tutorial we'll cover both

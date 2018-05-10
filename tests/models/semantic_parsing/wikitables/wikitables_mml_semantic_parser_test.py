@@ -10,13 +10,13 @@ from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.common.testing import ModelTestCase
-from allennlp.models import Model, WikiTablesSemanticParser
+from allennlp.models import Model, WikiTablesMmlSemanticParser
 from allennlp.training.metrics.wikitables_accuracy import SEMPRE_DIR
 
-class WikiTablesSemanticParserTest(ModelTestCase):
+class WikiTablesMmlSemanticParserTest(ModelTestCase):
     def setUp(self):
         self.should_remove_sempre_dir = not os.path.exists(SEMPRE_DIR)
-        super(WikiTablesSemanticParserTest, self).setUp()
+        super(WikiTablesMmlSemanticParserTest, self).setUp()
         self.set_up_model(f"tests/fixtures/semantic_parsing/wikitables/experiment.json",
                           "tests/fixtures/data/wikitables/sample_data.examples")
 
@@ -144,7 +144,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
                     ('instance_action', False, None),
                     (rule1, True, rule1_tensor)]]
 
-        embedded_actions, action_indices = model._embed_actions(actions)
+        embedded_actions, _, _, action_indices = model._embed_actions(actions)
         assert action_indices[(0, 0)] == action_indices[(1, 2)]
         assert action_indices[(1, 1)] == -1
         assert len(set(action_indices.values())) == 4
@@ -195,7 +195,7 @@ class WikiTablesSemanticParserTest(ModelTestCase):
                     ('c -> fb:cell.2010', False, None),
                     ('<c,r> -> fb:row.row.year', False, None)]]
         flattened_linking_scores, actions_to_entities = \
-                WikiTablesSemanticParser._map_entity_productions(linking_scores, worlds, actions)
+                WikiTablesMmlSemanticParser._map_entity_productions(linking_scores, worlds, actions)
         assert_almost_equal(flattened_linking_scores.data.cpu().numpy(),
                             linking_scores.view(3 * 4, 5).data.cpu().numpy())
         assert actions_to_entities == {

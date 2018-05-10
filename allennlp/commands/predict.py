@@ -45,22 +45,8 @@ import sys
 from typing import Optional, IO
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import ConfigurationError
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
-
-# a mapping from model `type` to the default Predictor for that type
-DEFAULT_PREDICTORS = {
-        'srl': 'semantic-role-labeling',
-        'decomposable_attention': 'textual-entailment',
-        'bidaf': 'machine-comprehension',
-        'bidaf-ensemble': 'machine-comprehension',
-        'simple_tagger': 'sentence-tagger',
-        'crf_tagger': 'sentence-tagger',
-        'coref': 'coreference-resolution',
-        'constituency_parser': 'constituency-parser',
-}
-
 
 class Predict(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
@@ -104,32 +90,22 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
                            cuda_device=args.cuda_device,
                            overrides=args.overrides)
 
-    if args.predictor:
-        # Predictor explicitly specified, so use it
-        return Predictor.from_archive(archive, args.predictor)
-
-    # Otherwise, use the mapping
-    model_type = archive.config.get("model").get("type")
-    if model_type not in DEFAULT_PREDICTORS:
-        raise ConfigurationError(f"No known predictor for model type {model_type}.\n"
-                                 f"Specify one with the --predictor flag.")
-    return Predictor.from_archive(archive, DEFAULT_PREDICTORS[model_type])
+    return Predictor.from_archive(archive, args.predictor)
 
 def _run(predictor: Predictor,
          input_file: IO,
          output_file: Optional[IO],
          batch_size: int,
-         print_to_console: bool,
-         cuda_device: int) -> None:
+         print_to_console: bool) -> None:
 
     def _run_predictor(batch_data):
         if len(batch_data) == 1:
-            result = predictor.predict_json(batch_data[0], cuda_device)
+            result = predictor.predict_json(batch_data[0])
             # Batch results return a list of json objects, so in
             # order to iterate over the result below we wrap this in a list.
             results = [result]
         else:
-            results = predictor.predict_batch_json(batch_data, cuda_device)
+            results = predictor.predict_batch_json(batch_data)
 
         for model_input, output in zip(batch_data, results):
             string_output = predictor.dump_line(output)
@@ -174,5 +150,4 @@ def _predict(args: argparse.Namespace) -> None:
              input_file,
              output_file,
              args.batch_size,
-             not args.silent,
-             args.cuda_device)
+             not args.silent)

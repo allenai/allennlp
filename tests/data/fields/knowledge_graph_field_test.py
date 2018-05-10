@@ -117,56 +117,58 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         assert_almost_equal(tensor_dict['text']['tokens'].data.cpu().numpy(), expected_text_tensor)
 
         linking_tensor = tensor_dict['linking'].data.cpu().numpy()
-        expected_linking_tensor = [[[0, 0, 0, 0, 0, 0, 0, 0],  # -1, "where"
-                                    [0, 0, 0, 0, 0, 0, 0, 0],  # -1, "is"
-                                    [0, 0, 0, 0, 0, 0, 0, 0],  # -1, "mersin"
-                                    [0, 0, 0, 0, -1, 0, 0, 0]],  # -1, "?"
-                                   [[0, 0, 0, 0, 0, 0, 0, 0],  # 0, "where"
-                                    [0, 0, 0, 0, 0, 0, 0, 0],  # 0, "is"
-                                    [0, 0, 0, 0, 0, 0, 0, 0],  # 0, "mersin"
-                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # 0, "?"
-                                   [[0, 0, 0, 0, 0, 0, 0, 0],  # 1, "where"
-                                    [0, 0, 0, 0, 0, 0, 0, 0],  # 1, "is"
-                                    [0, 0, 0, 0, 0, 0, 0, 0],  # 1, "mersin"
-                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # 1, "?"
-                                   [[0, 0, 0, 0, .2, 0, 0, 0],  # fb:cell.edirne, "where"
-                                    [0, 0, 0, 0, -1.5, 0, 0, 0],  # fb:cell.edirne, "is"
-                                    [0, 0, 0, 0, .1666666, 0, 0, 0],  # fb:cell.edirne, "mersin"
-                                    [0, 0, 0, 0, -5, 0, 0, 0],  # fb:cell.edirne, "?"
-                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # fb:cell.edirne, padding
-                                   [[0, 0, 0, 0, -.6, 0, 0, 0],  # fb:cell.lake_gala, "where"
-                                    [0, 0, 0, 0, -3.5, 0, 0, 0],  # fb:cell.lake_gala, "is"
-                                    [0, 0, 0, 0, -.3333333, 0, 0, 0],  # fb:cell.lake_gala, "mersin"
-                                    [0, 0, 0, 0, -8, 0, 0, 0],  # fb:cell.lake_gala, "?"
-                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # fb:cell.lake_gala, padding
-                                   [[0, 0, 0, 0, 0, 0, 0, 0],  # fb:cell.mersin, "where"
-                                    [0, 0, 0, 0, -1.5, 0, 0, 0],  # fb:cell.mersin, "is"
-                                    [1, 1, 1, 1, 1, 0, 0, 1],  # fb:cell.mersin, "mersin"
-                                    [0, 0, 0, 0, -5, 0, 0, 0],  # fb:cell.mersin, "?"
-                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # fb:cell.mersin, padding
-                                   [[0, 0, 0, 0, -.6, 0, 0, 0],  # fb:cell.paradeniz, "where"
-                                    [0, 0, 0, 0, -3, 0, 0, 0],  # fb:cell.paradeniz, "is"
-                                    [0, 0, 0, 0, -.1666666, 0, 0, 0],  # fb:cell.paradeniz, "mersin"
-                                    [0, 0, 0, 0, -8, 0, 0, 0],  # fb:cell.paradeniz, "?"
-                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # fb:cell.paradeniz, padding
-                                   [[0, 0, 0, 0, -2.6, 0, 0, 0],  # fb:row.row.name_in_english, "where"
-                                    [0, 0, 0, 0, -7.5, 0, 0, 0],  # fb:row.row.name_in_english, "is"
-                                    [0, 0, 0, 0, -1.8333333, 1, 1, 0],  # fb:row.row.name_in_english, "mersin"
-                                    [0, 0, 0, 0, -18, 0, 0, 0],  # fb:row.row.name_in_english, "?"
-                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # fb:row.row.name_in_english, padding
-                                   [[0, 0, 0, 0, -1.6, 0, 0, 0],  # fb:row.row.location_in_english, "where"
-                                    [0, 0, 0, 0, -5.5, 0, 0, 0],  # fb:row.row.location_in_english, "is"
-                                    [0, 0, 0, 0, -1, 0, 0, 0],  # fb:row.row.location_in_english, "mersin"
-                                    [0, 0, 0, 0, -14, 0, 0, 0],  # fb:row.row.location_in_english, "?"
-                                    [0, 0, 0, 0, 0, 0, 0, 0]],  # fb:row.row.location_in_english, padding
-                                   [[0, 0, 0, 0, 0, 0, 0, 0],  # padding, "where"
-                                    [0, 0, 0, 0, 0, 0, 0, 0],  # padding, "is"
-                                    [0, 0, 0, 0, 0, 0, 0, 0],  # padding, "mersin"
-                                    [0, 0, 0, 0, 0, 0, 0, 0],  # padding, "?"
-                                    [0, 0, 0, 0, 0, 0, 0, 0]]]  # padding, padding
+        expected_linking_tensor = [[[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # -1, "where"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # -1, "is"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # -1, "mersin"
+                                    [0, 0, 0, 0, 0, -1, 0, 0, 0, 0]],  # -1, "?"
+                                   [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # 0, "where"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # 0, "is"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # 0, "mersin"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],  # 0, "?"
+                                   [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # 1, "where"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # 1, "is"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # 1, "mersin"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],  # 1, "?"
+                                   [[0, 0, 0, 0, 0, .2, 0, 0, 0, 0],  # fb:cell.edirne, "where"
+                                    [0, 0, 0, 0, 0, -1.5, 0, 0, 0, 0],  # fb:cell.edirne, "is"
+                                    [0, 0, 0, 0, 0, .1666, 0, 0, 0, 0],  # fb:cell.edirne, "mersin"
+                                    [0, 0, 0, 0, 0, -5, 0, 0, 0, 0],  # fb:cell.edirne, "?"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],  # fb:cell.edirne, padding
+                                   [[0, 0, 0, 0, 0, -.6, 0, 0, 0, 0],  # fb:cell.lake_gala, "where"
+                                    [0, 0, 0, 0, 0, -3.5, 0, 0, 0, 0],  # fb:cell.lake_gala, "is"
+                                    [0, 0, 0, 0, 0, -.3333, 0, 0, 0, 0],  # fb:cell.lake_gala, "mersin"
+                                    [0, 0, 0, 0, 0, -8, 0, 0, 0, 0],  # fb:cell.lake_gala, "?"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],  # fb:cell.lake_gala, padding
+                                   [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # fb:cell.mersin, "where"
+                                    [0, 0, 0, 0, 0, -1.5, 0, 0, 0, 0],  # fb:cell.mersin, "is"
+                                    [0, 1, 1, 1, 1, 1, 0, 0, 1, 1],  # fb:cell.mersin, "mersin"
+                                    [0, 0, 0, 0, 0, -5, 0, 0, 0, 0],  # fb:cell.mersin, "?"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],  # fb:cell.mersin, padding
+                                   [[0, 0, 0, 0, 0, -.6, 0, 0, 0, 0],  # fb:cell.paradeniz, "where"
+                                    [0, 0, 0, 0, 0, -3, 0, 0, 0, 0],  # fb:cell.paradeniz, "is"
+                                    [0, 0, 0, 0, 0, -.1666, 0, 0, 0, 0],  # fb:cell.paradeniz, "mersin"
+                                    [0, 0, 0, 0, 0, -8, 0, 0, 0, 0],  # fb:cell.paradeniz, "?"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],  # fb:cell.paradeniz, padding
+                                   [[0, 0, 0, 0, 0, -2.6, 0, 0, 0, 0],  # fb:row.row.name_in_english, "where"
+                                    [0, 0, 0, 0, 0, -7.5, 0, 0, 0, 0],  # fb:row.row.name_in_english, "is"
+                                    [0, 0, 0, 0, 0, -1.8333, 1, 1, 0, 0],  # fb:row.row.name_in_english, "mersin"
+                                    [0, 0, 0, 0, 0, -18, 0, 0, 0, 0],  # fb:row.row.name_in_english, "?"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],  # fb:row.row.name_in_english, padding
+                                   [[0, 0, 0, 0, 0, -1.6, 0, 0, 0, 0],  # fb:row.row.location_in_english, "where"
+                                    [0, 0, 0, 0, 0, -5.5, 0, 0, 0, 0],  # fb:row.row.location_in_english, "is"
+                                    [0, 0, 0, 0, 0, -1, 0, 0, 0, 0],  # fb:row.row.location_in_english, "mersin"
+                                    [0, 0, 0, 0, 0, -14, 0, 0, 0, 0],  # fb:row.row.location_in_english, "?"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],  # fb:row.row.location_in_english, padding
+                                   [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # padding, "where"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # padding, "is"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # padding, "mersin"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # padding, "?"
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]]  # padding, padding
         for entity_index, entity_features in enumerate(expected_linking_tensor):
             for question_index, feature_vector in enumerate(entity_features):
-                assert_almost_equal(linking_tensor[entity_index, question_index], feature_vector,
+                assert_almost_equal(linking_tensor[entity_index, question_index],
+                                    feature_vector,
+                                    decimal=4,
                                     err_msg=f"{entity_index} {question_index}")
 
     def test_lemma_feature_extractor(self):

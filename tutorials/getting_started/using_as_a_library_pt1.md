@@ -1,4 +1,4 @@
-# Using AllenNLP in your Project
+# Using AllenNLP as a Library (Part 1) - Datasets and Models
 
 In this tutorial, we take you step-by-step through the process you need to go through to get up and
 running with your own models on your own data in your own repository, using AllenNLP as an imported
@@ -603,3 +603,7 @@ allennlp train \
 ```
 
 When we do this, we get to around 80% validation accuracy after a few epochs of training.
+
+To see how to make predictions and build a demo for our new model, see the 
+[Making Predictions and Creating a Demo](making_predictions_and_creating_a_demo.md) tutorial, which continues
+where this tutorial leaves off.

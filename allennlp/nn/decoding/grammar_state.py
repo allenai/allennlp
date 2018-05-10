@@ -106,7 +106,9 @@ class GrammarState:
             lambda_stack.pop()  # pop to modify the value in the dictionary
 
         productions = self._get_productions_from_string(right_side)
-        if 'lambda' in productions[0]:
+        # Looking for lambda productions, but not for cells or columns with the word "lambda" in
+        # them.
+        if 'lambda' in productions[0] and 'fb:' not in productions[0]:
             production = productions[0]
             if production[0] == "'" and production[-1] == "'":
                 # The production rule with a lambda is typically "<t,d> -> ['lambda x', d]".  We
