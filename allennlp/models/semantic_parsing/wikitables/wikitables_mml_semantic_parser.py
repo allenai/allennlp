@@ -108,6 +108,13 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                          tables_directory=tables_directory)
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
+        self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
+                                                   action_embedding_dim=action_embedding_dim,
+                                                   attention_function=attention_function,
+                                                   num_start_types=self._num_start_types,
+                                                   num_entity_types=self._num_entity_types,
+                                                   mixture_feedforward=mixture_feedforward,
+                                                   dropout=dropout)
 
     @overrides
     def forward(self,  # type: ignore
@@ -264,6 +271,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                    decoder_beam_search=decoder_beam_search,
                    max_decoding_steps=max_decoding_steps,
                    attention_function=attention_function,
+                   training_beam_size=training_beam_size,
                    use_neighbor_similarity_for_linking=use_neighbor_similarity_for_linking,
                    dropout=dropout,
                    num_linking_features=num_linking_features,
