@@ -7,7 +7,6 @@ import torch
 from allennlp.commands.train import train_model_from_file
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
-from allennlp.common.util import is_tensor
 from allennlp.data import DataIterator, DatasetReader, Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.models import Model, load_archive
@@ -113,7 +112,7 @@ class ModelTestCase(AllenNlpTestCase):
         return model, loaded_model
 
     def assert_fields_equal(self, field1, field2, name: str, tolerance: float = 1e-6) -> None:
-        if is_tensor(field1):
+        if isinstance(field1, torch.Tensor):
             assert_allclose(field1.data.cpu().numpy(),
                             field2.data.cpu().numpy(),
                             rtol=tolerance,
@@ -181,7 +180,7 @@ class ModelTestCase(AllenNlpTestCase):
                     continue
                 single_predicted = single_predicted[0]
                 batch_predicted = batch_predictions[key][i]
-                if is_tensor(single_predicted):
+                if isinstance(single_predicted, torch.Tensor):
                     if single_predicted.size() != batch_predicted.size():
                         slices = tuple(slice(0, size) for size in single_predicted.size())
                         batch_predicted = batch_predicted[slices]

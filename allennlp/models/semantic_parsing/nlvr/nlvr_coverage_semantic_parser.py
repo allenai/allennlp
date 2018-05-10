@@ -205,8 +205,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         action_embeddings, action_indices = self._embed_actions(actions)
 
         initial_rnn_state = self._get_initial_rnn_state(sentence)
-        initial_score_list = [util.new_variable_with_data(list(sentence.values())[0],
-                                                          torch.Tensor([0.0]))
+        initial_score_list = [next(iter(sentence.values())).new_zeros(1, dtype=torch.float)
                               for i in range(batch_size)]
         # TODO (pradeep): Assuming all worlds give the same set of valid actions.
         initial_grammar_state = [self._create_grammar_state(worlds[i][0], actions[i]) for i in
@@ -225,9 +224,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             checklist_targets.append(checklist_target)
             all_terminal_actions.append(terminal_actions)
             checklist_masks.append(checklist_mask)
-            initial_checklist_list.append(util.new_variable_with_size(checklist_target,
-                                                                      checklist_target.size(),
-                                                                      0))
+            initial_checklist_list.append(checklist_target.new_zeros(*checklist_target.size()))
         initial_state = NlvrDecoderState(batch_indices=list(range(batch_size)),
                                          action_history=[[] for _ in range(batch_size)],
                                          score=initial_score_list,
@@ -298,11 +295,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         # We want to return checklist target and terminal actions that are column vectors to make
         # computing softmax over the difference between checklist and target easier.
         # (num_terminals, 1)
-        terminal_actions = util.new_variable_with_data(agenda,
-                                                       torch.Tensor(terminal_indices))
+        terminal_actions = agenda.new_tensor(terminal_indices)
         # (num_terminals, 1)
-        target_checklist = util.new_variable_with_data(agenda,
-                                                       torch.Tensor(target_checklist_list))
+        target_checklist = agenda.new_tensor(target_checklist_list, dtype=torch.float)
         if self._penalize_non_agenda_actions:
             # All terminal actions are relevant
             checklist_mask = torch.ones_like(target_checklist)

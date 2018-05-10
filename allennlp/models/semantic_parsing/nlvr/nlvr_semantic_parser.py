@@ -84,9 +84,7 @@ class NlvrSemanticParser(Model):
         final_encoder_output = util.get_final_encoder_states(encoder_outputs,
                                                              sentence_mask,
                                                              self._encoder.is_bidirectional())
-        memory_cell = util.new_variable_with_size(encoder_outputs,
-                                                  (batch_size, self._encoder.get_output_dim()),
-                                                  0)
+        memory_cell = encoder_outputs.new_zeros(batch_size, self._encoder.get_output_dim())
         attended_sentence = self._decoder_step.attend_on_sentence(final_encoder_output,
                                                                   encoder_outputs, sentence_mask)
         encoder_outputs_list = [encoder_outputs[i] for i in range(batch_size)]

@@ -465,7 +465,7 @@ class WikiTablesSemanticParser(Model):
                                                       num_entities,
                                                       lambda: [-1] * num_neighbors)
             batch_neighbors.append(neighbor_indexes)
-        return tensor.new_tensor(batch_neighbors).long()
+        return tensor.new_tensor(batch_neighbors, dtype=torch.long)
 
     @staticmethod
     def _get_type_vector(worlds: List[WikiTablesWorld],
@@ -576,7 +576,7 @@ class WikiTablesSemanticParser(Model):
                 # so we get back something of shape (num_question_tokens,) for each index we're
                 # selecting.  All of the selected indices together then make a tensor of shape
                 # (num_question_tokens, num_entities_per_type + 1).
-                indices = linking_scores.new_tensor(entity_indices).long()
+                indices = linking_scores.new_tensor(entity_indices, dtype=torch.long)
                 entity_scores = linking_scores[batch_index].index_select(1, indices)
 
                 # We used index 0 for the null entity, so this will actually have some values in it.

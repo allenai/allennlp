@@ -271,7 +271,7 @@ class ConditionalRandomField(torch.nn.Module):
         """
         # pylint: disable=arguments-differ
         if mask is None:
-            mask = torch.ones(*tags.size()).long()
+            mask = torch.ones(*tags.size(), dtype=torch.long)
 
         log_denominator = self._input_likelihood(inputs, mask)
         log_numerator = self._joint_likelihood(inputs, tags, mask)

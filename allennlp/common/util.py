@@ -39,10 +39,6 @@ JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 START_SYMBOL = '@start@'
 END_SYMBOL = '@end@'
 
-def is_tensor(obj: Any) -> bool:
-    # pylint: disable=unidiomatic-typecheck
-    return type(obj) == torch.Tensor
-
 
 def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-statements
     """
@@ -52,7 +48,7 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     if isinstance(x, (str, float, int, bool)):
         # x is already serializable
         return x
-    elif is_tensor(x):
+    elif isinstance(x, torch.Tensor):
         # tensor needs to be converted to a list (and moved to cpu if necessary)
         return x.cpu().tolist()
     elif isinstance(x, numpy.ndarray):

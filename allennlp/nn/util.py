@@ -10,7 +10,6 @@ import math
 import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import is_tensor
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -78,8 +77,7 @@ def get_mask_from_sequence_lengths(sequence_lengths: torch.Tensor, max_length: i
     return (sequence_lengths.unsqueeze(1) >= range_tensor).long()
 
 
-def sort_batch_by_length(tensor: torch.Tensor,
-                         sequence_lengths: torch.Tensor):
+def sort_batch_by_length(tensor: torch.Tensor, sequence_lengths: torch.Tensor):
     """
     Sort a batch first tensor by some specified lengths.
 
@@ -105,7 +103,7 @@ def sort_batch_by_length(tensor: torch.Tensor,
         tensors using the same ordering.
     """
 
-    if not is_tensor(tensor) or not is_tensor(sequence_lengths):
+    if not isinstance(tensor, torch.Tensor) or not isinstance(sequence_lengths, torch.Tensor):
         raise ConfigurationError("Both the tensor and sequence lengths must be torch.Tensors.")
 
     sorted_sequence_lengths, permutation_index = sequence_lengths.sort(0, descending=True)
@@ -163,7 +161,7 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
     ----------
     dropout_probability : float, required.
         Probability of dropping a dimension of the input.
-    tensor_for_masking : torch.Variable, required.
+    tensor_for_masking : torch.Tensor, required.
 
 
     Returns
@@ -536,26 +534,6 @@ def device_mapping(cuda_device: int):
     return inner_device_mapping
 
 
-def new_variable_with_data(original: torch.Tensor, data: torch.Tensor) -> torch.Tensor:
-    """
-    TODO(joelgrus): update docstring
-    ``Variable.clone`` does not necessarily make a new variable on the same device as the original.
-    This method takes a variable and some data and makes a new variable on the same device as the original
-    variable, but with the provided data. Note that the returned variable will be the same type as the
-    passed data, which may be different from the original variable's type.
-    """
-    return original.new_tensor(data, dtype=data.dtype)
-
-
-def new_variable_with_size(original: torch.Tensor, size: Tuple[int, ...], value) -> torch.Tensor:
-    """
-    Returns a new variable on the same device as the ``original``, but containing a tensor of provided
-    ``size``, filled with the given ``value``.
-    """
-    size = torch.Size(size)
-    return original.new_full(size, fill_value=value)
-
-
 def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
     """
     Combines a list of tensors using element-wise operations and concatenation, specified by a
@@ -690,7 +668,7 @@ def flatten_and_batch_shift_indices(indices: torch.Tensor,
 
     .. code-block:: python
 
-        indices = torch.ones([2,3]).long()
+        indices = torch.ones([2,3], dtype=torch.long)
         # Sequence length of the target tensor.
         sequence_length = 10
         shifted_indices = flatten_and_batch_shift_indices(indices, sequence_length)
@@ -817,7 +795,7 @@ def get_range_vector(size: int, device: int) -> torch.Tensor:
     if device > -1:
         return torch.cuda.LongTensor(size, device=device).fill_(1).cumsum(0) - 1
     else:
-        return torch.arange(0, size).long()
+        return torch.arange(0, size, dtype=torch.long)
 
 
 def bucket_values(distances: torch.Tensor,

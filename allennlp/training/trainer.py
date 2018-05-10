@@ -26,7 +26,7 @@ from tensorboardX import SummaryWriter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import peak_memory_mb, gpu_memory_mb, is_tensor
+from allennlp.common.util import peak_memory_mb, gpu_memory_mb
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -99,7 +99,7 @@ def move_optimizer_to_cuda(optimizer):
             if param.is_cuda:
                 param_state = optimizer.state[param]
                 for k in param_state.keys():
-                    if torch.is_tensor(param_state[k]):
+                    if isinstance(param_state[k], torch.Tensor):
                         param_state[k] = param_state[k].cuda(device=param.get_device())
 
 
@@ -118,7 +118,7 @@ class TensorboardWriter:
 
     def add_train_histogram(self, name: str, values: torch.Tensor, global_step: int) -> None:
         if self._train_log is not None:
-            if is_tensor(values):
+            if isinstance(values, torch.Tensor):
                 values_to_write = values.cpu().data.numpy().flatten()
                 self._train_log.add_histogram(name, values_to_write, global_step)
 
@@ -327,7 +327,7 @@ class Trainer:
                     # pylint: disable=unused-argument,cell-var-from-loop
                     log_prefix = 'activation_histogram/{0}'.format(module_.__class__)
                     if self._log_histograms_this_batch:
-                        if is_tensor(outputs):
+                        if isinstance(outputs, torch.Tensor):
                             log_name = log_prefix
                             self._tensorboard.add_train_histogram(log_name,
                                                                   outputs,

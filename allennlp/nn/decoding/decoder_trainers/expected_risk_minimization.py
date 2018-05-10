@@ -48,7 +48,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
                supervision: Callable[[StateType], torch.Tensor]) -> Dict[str, torch.Tensor]:
         cost_function = supervision
         finished_states = self._get_finished_states(initial_state, decode_step)
-        loss = nn_util.new_variable_with_data(initial_state.score[0], torch.Tensor([0.0]))
+        loss = initial_state.score[0].new_zeros(1)
         finished_model_scores = self._get_model_scores_by_batch(finished_states)
         finished_costs = self._get_costs_by_batch(finished_states, cost_function)
         for batch_index in finished_model_scores:
@@ -56,7 +56,6 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
             # log probabilities into probabilities and re-normalize them to compute expected cost under
             # the distribution approximated by the beam search.
 
-            print("size:", finished_costs[batch_index])
             costs = torch.cat([tensor.view(-1) for tensor in finished_costs[batch_index]])
             logprobs = torch.cat([tensor.view(-1) for tensor in finished_model_scores[batch_index]])
             # Unmasked softmax of log probabilities will convert them into probabilities and
@@ -94,8 +93,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
                                                          state.score,
                                                          state.action_history):
                 if self._normalize_by_length:
-                    path_length = nn_util.new_variable_with_data(model_score,
-                                                                 torch.Tensor([len(history)]))
+                    path_length = model_score.new_tensor([len(history)])
                     model_score = model_score / path_length
                 batch_scores[batch_index].append(model_score)
         return batch_scores

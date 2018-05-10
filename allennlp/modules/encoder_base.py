@@ -233,7 +233,7 @@ class _EncoderBase(torch.nn.Module):
         if self._states is None:
             # We don't already have states, so just set the
             # ones we receive to be the current state.
-            self._states = tuple(new_unsorted_states)
+            self._states = tuple(state.data for state in new_unsorted_states)
         else:
             # Now we've sorted the states back so that they correspond to the original
             # indices, we need to figure out what states we need to update, because if we

@@ -3,7 +3,6 @@ import torch
 
 from allennlp.common.registrable import Registrable
 from allennlp.common.params import Params
-from allennlp.common.util import is_tensor
 from allennlp.data.vocabulary import Vocabulary
 
 
@@ -56,6 +55,4 @@ class Metric(Registrable):
         graph. This method ensures that you're using tensors directly and that they are on
         the CPU.
         """
-        # pylint: disable=unidiomatic-typecheck
-        return (x.data.cpu() if is_tensor(x) else x
-                for x in tensors)
+        return (x.data.cpu() if isinstance(x, torch.Tensor) else x for x in tensors)

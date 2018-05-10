@@ -86,8 +86,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         action_embeddings, action_indices = self._embed_actions(actions)
 
         initial_rnn_state = self._get_initial_rnn_state(sentence)
-        initial_score_list = [util.new_variable_with_data(list(sentence.values())[0],
-                                                          torch.Tensor([0.0]))
+        initial_score_list = [next(iter(sentence.values())).new_zeros(1, dtype=torch.float)
                               for i in range(batch_size)]
         label_strings = self._get_label_strings(labels) if labels is not None else None
         # TODO (pradeep): Assuming all worlds give the same set of valid actions.
