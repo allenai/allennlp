@@ -1,9 +1,7 @@
-from collections import defaultdict
 import logging
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Tuple
 
 import torch
-from torch.autograd import Variable
 
 from allennlp.nn import util
 from allennlp.nn.decoding.constrained_beam_search import ConstrainedBeamSearch

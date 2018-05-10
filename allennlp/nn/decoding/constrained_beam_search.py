@@ -39,7 +39,8 @@ class ConstrainedBeamSearch:
         the ``allowed_sequences`` tensor is padding.  The allowed sequences could be padded both on
         the ``num_sequences`` dimension and the ``sequence_length`` dimension.
     """
-    def __init__(self, beam_size: int,
+    def __init__(self,
+                 beam_size: int,
                  allowed_sequences: torch.Tensor,
                  allowed_sequence_mask: torch.Tensor) -> None:
         self._beam_size = beam_size
