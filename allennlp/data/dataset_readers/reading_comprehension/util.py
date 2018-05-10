@@ -180,6 +180,7 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
         This dictionary will get added to the ``metadata`` dictionary we already construct.
     """
     additional_metadata = additional_metadata or {}
+    #import pdb; pdb.set_trace()
     fields: Dict[str, Field] = {}
     passage_offsets = [(token.idx, token.idx + len(token.text)) for token in passage_tokens]
 
@@ -213,6 +214,7 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
         fields['span_start'] = ListField(list_span_start)
         fields['span_end'] = ListField(list_span_end)
 
+    #import pdb; pdb.set_trace()
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)

@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 import torch
 from torch.autograd import Variable
-from torch.nn.functional import nll_loss, binary_cross_entropy_with_logits, binary_cross_entropy
+from torch.nn.functional import nll_loss, binary_cross_entropy_with_logits, binary_cross_entropy, cross_entropy
 
 from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
@@ -28,6 +28,7 @@ def to_variable(obj):
 
 def flatten_answer(passage, passage_mask):
     return torch.masked_select(passage, passage_mask.byte())
+
 
 @Model.register("bidaf")
 class BidirectionalAttentionFlow(Model):
@@ -124,7 +125,6 @@ class BidirectionalAttentionFlow(Model):
         else:
             self._dropout = lambda x: x
         self._mask_lstms = mask_lstms
-
         initializer(self)
 
     def forward(self,  # type: ignore
@@ -184,6 +184,7 @@ class BidirectionalAttentionFlow(Model):
             string from the original passage that the model thinks is the best answer to the
             question.
         """
+        #import pdb; pdb.set_trace()
         embedded_question = self._highway_layer(self._text_field_embedder(question))
         embedded_passage = self._highway_layer(self._text_field_embedder(passage))
         batch_size = embedded_question.size(0)
@@ -310,7 +311,6 @@ class BidirectionalAttentionFlow(Model):
             # at this point, we have a 2 - 2d matrix for start, end respectively
             # each matrix has the index of the right answer set to 1
 
-            # import pdb; pdb.set_trace()
             flattened_start_pred = flatten_answer(span_start_logits, passage_mask)
             flattened_end_pred = flatten_answer(span_end_logits, passage_mask)
             flattened_start_ground = flatten_answer(span_start_ground, passage_mask)
@@ -374,6 +374,28 @@ class BidirectionalAttentionFlow(Model):
                     self._squad_metrics(best_span_strings, answer_texts)
             output_dict['question_tokens'] = question_tokens
             output_dict['passage_tokens'] = passage_tokens
+
+
+        pscores = top_span_logits[:, :, 0] # 40 X 12
+        span_starts = top_span_logits[:, :, 1] # 40 X 12
+        span_ends = top_span_logits[:, :, 2] # 40 X 12  
+        best_span_starts = best_span[:, :, 0] # 40 X 12 # to check for -1
+
+        lr_list = [] #TODO: Place this is in the right spot
+        pscore = 0;
+        label = 0;
+        
+        for i in range(span_starts.shape[0]):
+            for j in range(span_starts.shape[1]):
+                pscore = pscores[i][j]
+                if best_span_starts[i][j] != -1:
+                    label = 1
+                else:
+                    label = 0
+                lr_list.append((pscore, metadata['original_passage'][span_starts[i][j] : span_ends[i][j] ], metadata['qID'], label))
+                import pdb; pdb.set_trace()
+       
+        
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
@@ -391,18 +413,19 @@ class BidirectionalAttentionFlow(Model):
             Variable):
         if span_start_logits.dim() != 2 or span_end_logits.dim() != 2:
             raise ValueError("Input shapes must be (batch_size, passage_length)")
+        #span_start_logits, span_end_logits are both 40 X 707
         batch_size, passage_length = span_start_logits.size()
-        max_span_log_prob = [-1e20] * batch_size
-        span_start_argmax = [0] * batch_size
-        max_answer_length = max(answer_len) if len(answer_len) != 0 else 0
+        max_span_log_prob = [-1e20] * batch_size # 40 size list
+        span_start_argmax = [0] * batch_size #40 size list
+        max_answer_length = max(answer_len) if len(answer_len) != 0 else 0 #gives out value 12
 
         """
         best_word_span = Variable(span_start_logits.data.new()
                                   .resize_(batch_size, 2).fill_(0)).long() # (40 x ans_len x 2)
         """
-        spanned_answer_length = max_answer_length if max_answer_length != 0 else 3
-        best_word_span = to_variable(torch.zeros((batch_size, spanned_answer_length, 2)).fill_(-1).long())
-        top_word_span_with_logits = to_variable(torch.zeros((batch_size, spanned_answer_length, 3)).fill_(-1))
+        spanned_answer_length = max_answer_length if max_answer_length != 0 else 3 #gives out value 12
+        best_word_span = to_variable(torch.zeros((batch_size, spanned_answer_length, 2)).fill_(-1).long()) #40 X 12 X 2
+        top_word_span_with_logits = to_variable(torch.zeros((batch_size, spanned_answer_length, 3)).fill_(-1)) #40 X 12 X 3
 
         span_start_logits = span_start_logits.data.cpu().numpy() # (40 x passage_len)
         span_end_logits = span_end_logits.data.cpu().numpy() # (40 x passage_len)
@@ -430,14 +453,14 @@ class BidirectionalAttentionFlow(Model):
                 """
 
             curr_passage_span_list = sorted(curr_passage_span_list, key=lambda x: x[0], reverse=True)
-            top_span_logits = curr_passage_span_list[:spanned_answer_length]
+            top_span_logits = curr_passage_span_list[:spanned_answer_length] #12 tuples of the form (number, index, index)
             curr_passage_span_list = curr_passage_span_list[:curr_answer_span_len]
 
             tensor = torch.from_numpy(np.array([(start, end) for _, start, end in curr_passage_span_list])).long()
             best_word_span[b, :curr_answer_span_len] = tensor
 
-            tensor = torch.from_numpy(np.array(top_span_logits))
-            top_word_span_with_logits[:spanned_answer_length] = tensor
+            tensor = torch.from_numpy(np.array(top_span_logits)) #12 X 3
+            top_word_span_with_logits[b, :spanned_answer_length] = tensor
 
         return best_word_span, top_word_span_with_logits
 

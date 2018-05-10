@@ -64,6 +64,9 @@ class SquadReader(DatasetReader):
                     answer_texts = [answer['text'] for answer in question_answer['answers']]
                     span_starts = [answer['answer_start'] for answer in question_answer['answers']]
                     span_ends = [start + len(answer) for start, answer in zip(span_starts, answer_texts)]
+                    #import pdb; pdb.set_trace()
+                    self.qID = {'qID':question_answer["id"]}
+                   
                     instance = self.text_to_instance(question_text,
                                                      paragraph,
                                                      zip(span_starts, span_ends),
@@ -105,7 +108,8 @@ class SquadReader(DatasetReader):
                                                         self._token_indexers,
                                                         passage_text,
                                                         token_spans,
-                                                        answer_texts)
+                                                        answer_texts,
+                                                        self.qID)
 
     @classmethod
     def from_params(cls, params: Params) -> 'SquadReader':
