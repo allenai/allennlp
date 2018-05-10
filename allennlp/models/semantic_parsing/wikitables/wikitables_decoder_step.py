@@ -130,7 +130,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                                        encoder_output_mask)
         considered_actions, actions_to_embed, actions_to_link = self._get_actions_to_consider(state)
 
-        if state.checklist_state is not None:
+        if state.checklist_state[0] is not None:
             linked_balance, unlinked_balance = self._get_checklist_balance(state,
                                                                            self._unlinked_terminal_indices,
                                                                            actions_to_link)
@@ -337,10 +337,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
 
                 production_rule = state.possible_actions[batch_index][action][0]
                 new_grammar_state = state.grammar_state[group_index].take_action(production_rule)
-                if state.checklist_state is not None:
-                    new_checklist_state = [state.checklist_state[group_index]]
-                else:
-                    new_checklist_state = None
+                new_checklist_state = [state.checklist_state[group_index]]
                 if state.debug_info is not None:
                     debug_info = {
                             'considered_actions': considered_actions[group_index],
@@ -719,7 +716,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 action_embedding = action_embeddings[group_index, action_embedding_index, :]
                 production_rule = state.possible_actions[batch_index][action][0]
                 new_grammar_state = state.grammar_state[group_index].take_action(production_rule)
-                if state.checklist_state is not None:
+                if state.checklist_state[0] is not None:
                     new_checklist_state = [state.checklist_state[group_index].update(action)]
                 else:
                     new_checklist_state = None

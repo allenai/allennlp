@@ -62,7 +62,9 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         super(NlvrDecoderState, self).__init__(batch_indices, action_history, score)
         self.rnn_state = rnn_state
         self.grammar_state = grammar_state
-        self.checklist_state = checklist_state
+        # Converting None to list of Nones if needed, to simplify state operations.
+        self.checklist_state = checklist_state if checklist_state is not None else [None for _ in
+                                                                                    batch_indices]
         self.action_embeddings = action_embeddings
         self.action_indices = action_indices
         self.possible_actions = possible_actions
@@ -89,11 +91,7 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         scores = [score for state in states for score in state.score]
         rnn_states = [rnn_state for state in states for rnn_state in state.rnn_state]
         grammar_states = [grammar_state for state in states for grammar_state in state.grammar_state]
-        if states[0].checklist_state is not None:
-            checklist_states = [checklist_state for state in states
-                                for checklist_state in state.checklist_state]
-        else:
-            checklist_states = None
+        checklist_states = [checklist_state for state in states for checklist_state in state.checklist_state]
         return NlvrDecoderState(batch_indices=batch_indices,
                                 action_history=action_histories,
                                 score=scores,

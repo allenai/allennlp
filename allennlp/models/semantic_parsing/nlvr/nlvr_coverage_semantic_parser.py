@@ -58,7 +58,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         and shouldn't be penalized, while we will mostly want to penalize longer logical forms.
     max_decoding_steps : ``int``
         Maximum number of steps for the beam search during training.
-    checklist_cost_weight : ``float``, optional (default=0.8)
+    checklist_cost_weight : ``float``, optional (default=0.6)
         Mixture weight (0-1) for combining coverage cost and denotation cost. As this increases, we
         weigh the coverage cost higher, with a value of 1.0 meaning that we do not care about
         denotation accuracy.
@@ -83,7 +83,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                  beam_size: int,
                  max_decoding_steps: int,
                  normalize_beam_score_by_length: bool = False,
-                 checklist_cost_weight: float = 0.8,
+                 checklist_cost_weight: float = 0.6,
                  dynamic_cost_weight: Dict[str, Union[int, float]] = None,
                  penalize_non_agenda_actions: bool = False,
                  initial_mml_model_file: str = None) -> None:
@@ -425,7 +425,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         beam_size = params.pop_int('beam_size')
         normalize_beam_score_by_length = params.pop_bool('normalize_beam_score_by_length', False)
         max_decoding_steps = params.pop_int("max_decoding_steps")
-        checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.8)
+        checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.6)
         dynamic_cost_weight = params.pop("dynamic_cost_weight", None)
         penalize_non_agenda_actions = params.pop_bool("penalize_non_agenda_actions", False)
         initial_mml_model_file = params.pop("initial_mml_model_file", None)

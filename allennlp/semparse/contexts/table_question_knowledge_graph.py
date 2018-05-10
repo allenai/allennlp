@@ -86,7 +86,7 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
                  neighbors: Dict[str, List[str]],
                  entity_text: Dict[str, str],
                  question_tokens: List[Token]) -> None:
-        super(TableQuestionKnowledgeGraph, self).__init__(entities, neighbors, entity_text)
+        super().__init__(entities, neighbors, entity_text)
         self.question_tokens = question_tokens
         self._entity_prefixes: Dict[str, List[str]] = defaultdict(list)
         for entity, text in self.entity_text.items():

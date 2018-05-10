@@ -105,7 +105,10 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         self.entity_types = entity_types
         self.world = world
         self.example_lisp_string = example_lisp_string
-        self.checklist_state = checklist_state
+        # Converting None to a list of Nones of appropriate size to avoid checking for None in all
+        # state operations.
+        self.checklist_state = checklist_state if checklist_state is not None else [None for _ in
+                                                                                    batch_indices]
         self.debug_info = debug_info
 
     def print_action_history(self, group_index: int = None) -> None:
@@ -134,15 +137,11 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         scores = [score for state in states for score in state.score]
         rnn_states = [rnn_state for state in states for rnn_state in state.rnn_state]
         grammar_states = [grammar_state for state in states for grammar_state in state.grammar_state]
+        checklist_states = [checklist_state for state in states for checklist_state in state.checklist_state]
         if states[0].debug_info is not None:
             debug_info = [debug_info for state in states for debug_info in state.debug_info]
         else:
             debug_info = None
-        if states[0].checklist_state is not None:
-            checklist_states = [checklist_state for state in states
-                                for checklist_state in state.checklist_state]
-        else:
-            checklist_states = None
         return WikiTablesDecoderState(batch_indices=batch_indices,
                                       action_history=action_histories,
                                       score=scores,

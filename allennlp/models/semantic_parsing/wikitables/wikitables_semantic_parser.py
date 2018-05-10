@@ -71,6 +71,7 @@ class WikiTablesSemanticParser(Model):
         evaluate logical forms, and SEMPRE needs to read the table from disk itself.  This tells
         SEMPRE where to find the tables.
     """
+    # pylint: disable=abstract-method
     def __init__(self,
                  vocab: Vocabulary,
                  question_embedder: TextFieldEmbedder,
@@ -132,17 +133,6 @@ class WikiTablesSemanticParser(Model):
             self._question_entity_params = None
             self._question_neighbor_params = None
 
-    @overrides
-    def forward(self,  # type: ignore
-                question: Dict[str, torch.LongTensor],
-                table: Dict[str, torch.LongTensor],
-                world: List[WikiTablesWorld],
-                actions: List[List[ProductionRuleArray]],
-                example_lisp_string: List[str] = None,
-                target_action_sequences: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
-        raise NotImplementedError
-
     def _get_initial_state_and_scores(self,
                                       question: Dict[str, torch.LongTensor],
                                       table: Dict[str, torch.LongTensor],
@@ -153,8 +143,8 @@ class WikiTablesSemanticParser(Model):
                                       checklist_states: List[ChecklistState] = None) -> Dict:
         """
         Does initial preparation and creates an intiial state for both the semantic parsers. Note
-        that the checklist related fields (terminal_actions, checklist_targets, checklist_masks, and
-        checklists) are all optional, and the ``WikiTablesMmlParser`` is not expected to pass these.
+        that the checklist state is optional, and the ``WikiTablesMmlParser`` is not expected to
+        pass it.
         """
         table_text = table['text']
         # (batch_size, question_length, embedding_dim)

@@ -57,7 +57,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         Should we normalize the log-probabilities by length before renormalizing the beam? This was
         shown to work better for NML by Edunov et al., but that many not be the case for semantic
         parsing.
-    checklist_cost_weight : ``float``, optional (default=0.8)
+    checklist_cost_weight : ``float``, optional (default=0.6)
         Mixture weight (0-1) for combining coverage cost and denotation cost. As this increases, we
         weigh the coverage cost higher, with a value of 1.0 meaning that we do not care about
         denotation accuracy.
@@ -97,7 +97,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                  decoder_beam_size: int,
                  max_decoding_steps: int,
                  normalize_beam_score_by_length: bool = False,
-                 checklist_cost_weight: float = 0.8,
+                 checklist_cost_weight: float = 0.6,
                  use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
                  num_linking_features: int = 10,
@@ -105,17 +105,17 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                  tables_directory: str = '/wikitables/',
                  initial_mml_model_file: str = None) -> None:
         use_similarity = use_neighbor_similarity_for_linking
-        super(WikiTablesErmSemanticParser, self).__init__(vocab=vocab,
-                                                          question_embedder=question_embedder,
-                                                          action_embedding_dim=action_embedding_dim,
-                                                          encoder=encoder,
-                                                          entity_encoder=entity_encoder,
-                                                          max_decoding_steps=max_decoding_steps,
-                                                          use_neighbor_similarity_for_linking=use_similarity,
-                                                          dropout=dropout,
-                                                          num_linking_features=num_linking_features,
-                                                          rule_namespace=rule_namespace,
-                                                          tables_directory=tables_directory)
+        super().__init__(vocab=vocab,
+                         question_embedder=question_embedder,
+                         action_embedding_dim=action_embedding_dim,
+                         encoder=encoder,
+                         entity_encoder=entity_encoder,
+                         max_decoding_steps=max_decoding_steps,
+                         use_neighbor_similarity_for_linking=use_similarity,
+                         dropout=dropout,
+                         num_linking_features=num_linking_features,
+                         rule_namespace=rule_namespace,
+                         tables_directory=tables_directory)
         # Not sure why mypy needs a type annotation for this!
         self._decoder_trainer: ExpectedRiskMinimization = \
                 ExpectedRiskMinimization(beam_size=decoder_beam_size,
@@ -409,7 +409,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         The base class returns a dict with dpd accuracy, denotation accuracy, and logical form
         percentage metrics. We add the agenda coverage metric here.
         """
-        metrics = super(WikiTablesErmSemanticParser, self).get_metrics(reset)
+        metrics = super().get_metrics(reset)
         metrics["agenda_coverage"] = self._agenda_coverage.get_metric(reset)
         return metrics
 
@@ -439,7 +439,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         num_linking_features = params.pop_int('num_linking_features', 10)
         tables_directory = params.pop('tables_directory', '/wikitables/')
         rule_namespace = params.pop('rule_namespace', 'rule_labels')
-        checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.8)
+        checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.6)
         mml_model_file = params.pop('mml_model_file', None)
         params.assert_empty(cls.__name__)
         return cls(vocab,

@@ -143,7 +143,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         action_logits = action_embeddings.bmm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
 
         action_mask = embedded_action_mask.float()
-        if state.checklist_state is not None:
+        if state.checklist_state[0] is not None:
             # We will compute the logprobs and the checklists of potential next states together for
             # efficiency.
             logprobs, new_checklist_states = self._get_next_state_info_with_agenda(state,
@@ -171,7 +171,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
     def _get_action_query(state: NlvrDecoderState,
                           hidden_state: torch.Tensor,
                           attended_sentence: torch.Tensor) -> torch.Tensor:
-        if state.checklist_state is not None:
+        if state.checklist_state[0] is not None:
             # This means the we want to take steps based on an agenda. We will use the checklist
             # balance to compute the action query.
 
@@ -393,7 +393,6 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                                          attended_sentence[group_index],
                                          state.rnn_state[group_index].encoder_outputs,
                                          state.rnn_state[group_index].encoder_output_mask)
-                new_state_checklist_state = [new_checklist_state] if new_checklist_state is not None else None
                 new_state = NlvrDecoderState(batch_indices=[batch_index],
                                              action_history=[new_action_history],
                                              score=[new_score],
@@ -404,6 +403,6 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                                              possible_actions=state.possible_actions,
                                              worlds=state.worlds,
                                              label_strings=state.label_strings,
-                                             checklist_state=new_state_checklist_state)
+                                             checklist_state=[new_checklist_state])
                 new_states.append(new_state)
         return new_states
