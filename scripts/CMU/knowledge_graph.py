@@ -12,9 +12,9 @@ class KnowledgeGraph(object):
         self._preprocess = Preprocessor()
 
     def _update_line(self, line, graph, context_so_far):
-        ent_pattern = r"\[[a-zA-Z0-9 ]+\([a-zA-Z ]+\[\d+\]\)\]?"
-        ref_pattern = r"\[[a-zA-Z0-9 ]+\]"
-        words = r"[a-zA-Z0-9 ]+"
+        ent_pattern = r"\[[a-zA-Z0-9' ]+\([a-zA-Z]+\[\d+\]\)\]"
+        ref_pattern = r"\[[a-zA-Z0-9' ]+\]"
+        words = r"[a-zA-Z0-9' ]+"
         entities = re.findall(ent_pattern, line)
         new_line = line
 
