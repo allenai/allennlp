@@ -393,7 +393,8 @@ class BidirectionalAttentionFlow(Model):
                     dijkstra_comp = metadata[i]['dijkstra']
                     import pdb; pdb.set_trace()
                     dscore = dijkstra_comp[question_comp][answer_comp] if question_comp in dijkstra_comp and answer_comp in dijkstra_comp[question_comp] else None
-                    lr_list.append((pscore, dscore, label))
+                    if dscore is not None:
+                        lr_list.append((pscore, dscore, label))
                     
             output_dict['question_tokens'] = question_tokens
             output_dict['passage_tokens'] = passage_tokens
