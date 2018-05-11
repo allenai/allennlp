@@ -383,12 +383,16 @@ class BidirectionalAttentionFlow(Model):
                     self._squad_metrics(best_span_strings, answer_texts)
                 for j in range(span_starts.shape[1]):
                     pscore = pscores.data[i][j]
-                    import pdb; pdb.set_trace()
                     if best_span_starts.data[i][j] != -1:
                         label = 1
                     else:
                         label = 0
-                    lr_list.append((pscore, passage_str[int(span_starts.data[i][j]) : int(span_ends.data[i][j])], metadata[i]['qID'], label))
+                    
+                    question_comp = metadata[i]['qID'].split(',')[1].replace('@', '-') #TODO: COnsidering only 1 question entity, what if no entity
+                    answer_comp = passage_str[int(span_starts.data[i][j]) : int(span_ends.data[i][j])] #TODO: this will need some further processing
+                    dijkstra_comp = metadata[i]['dijkstra'])
+                    dscore = dijkstra_comp[question_comp][answer_comp]
+                    lr_list.append((pscore, dscore, label))
                     
             output_dict['question_tokens'] = question_tokens
             output_dict['passage_tokens'] = passage_tokens
