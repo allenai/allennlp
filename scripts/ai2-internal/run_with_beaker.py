@@ -3,7 +3,9 @@
 # Script to launch AllenNLP Beaker jobs.
 
 import argparse
+import json
 import os
+import yaml
 import random
 import subprocess
 import sys
@@ -15,22 +17,20 @@ random_int = random.randint(0, 2**32)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(os.path.join(__file__, os.pardir), os.pardir))))
 
-from allennlp.commands.train import Train
 from allennlp.common.params import Params
 
-def main(param_file: str, extra_beaker_commands: List[str]):
-    ecr_repository = "896129387501.dkr.ecr.us-west-2.amazonaws.com"
+def main(param_file: str, output_path: str, args):
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], universal_newlines=True).strip()
-    image = f"{ecr_repository}/allennlp/allennlp:{commit}"
+    image = f"allennlp/allennlp:{commit}"
     overrides = ""
 
     # Reads params and sets environment.
     params = Params.from_file(param_file, overrides)
     flat_params = params.as_flat_dict()
-    env = []
+    env = {}
     for k, v in flat_params.items():
         k = str(k).replace('.', '_')
-        env.append(f"--env={k}={v}")
+        env[k] = str(v)
 
     # If the git repository is dirty, add a random hash.
     result = subprocess.run('git diff-index --quiet HEAD --', shell=True)
@@ -38,22 +38,18 @@ def main(param_file: str, extra_beaker_commands: List[str]):
         dirty_hash = "%x" % random_int
         image += "-" + dirty_hash
 
-    # Get temporary ecr login. For this command to work, you need the python awscli
-    # package with a version more recent than 1.11.91.
-    print("Generating ECR Login Command")
-    login_command = subprocess.check_output('aws --region=us-west-2 ecr get-login --no-include-email', shell=True)
+    if args.blueprint:
+        blueprint = args.blueprint
+        print(f"Using the specified blueprint: {blueprint}")
+    else:
+        print(f"Building the Docker image ({image})...")
+        subprocess.run(f'docker build -t {image} .', shell=True, check=True)
 
-    print("Logging into ECR")
-    subprocess.run(login_command, shell=True, check=True)
-
-    print(f"Building the Docker image ({image})")
-    subprocess.run(f'docker build -t {image} .', shell=True, check=True)
-
-    print(f"Pushing the Docker image ({image})")
-    subprocess.run(f'docker push {image}', shell=True, check=True)
+        print(f"Create a Beaker blueprint...")
+        blueprint = subprocess.check_output(f'beaker blueprint create --quiet {image}', shell=True, universal_newlines=True).strip()
+        print(f"  Blueprint created: {blueprint}")
 
     config_dataset_id = subprocess.check_output(f'beaker dataset create --quiet {param_file}', shell=True, universal_newlines=True).strip()
-    filename = os.path.basename(param_file)
 
     allennlp_command = [
             "python",
@@ -66,28 +62,58 @@ def main(param_file: str, extra_beaker_commands: List[str]):
             "--file-friendly-logging"
         ]
 
-    # TODO(michaels): add back in the env list.
-    # Presently this makes the Beaker UI unusably cluttered.
-    command = [
-            '/usr/local/bin/beaker',
-            'experiment',
-            'run',
-            '--result-path',
-            '/output',
-            "--source",
-            f"{config_dataset_id}:/config.json"] + env + extra_beaker_commands + [image] + allennlp_command
-    print(' '.join(command))
-    subprocess.run(command, check=True)
+    dataset_mounts = []
+    for source in (args.source if args.source else []):
+        datasetId, containerPath = source.split(":") + "\n"
+        dataset_mounts.append({
+            "datasetId": datasetId,
+            "containerPath": containerPath
+        })
+    for source in [f"{config_dataset_id}:/config.json"]:
+        datasetId, containerPath = source.split(":")
+        dataset_mounts.append({
+            "datasetId": datasetId,
+            "containerPath": containerPath
+        })
+
+    for var in (args.env if args.env else []):
+        key, value = var.split("=")
+        env[key] = value
+
+    config_spec = {
+        "description": args.desc,
+        "blueprint": blueprint,
+        "resultPath": "/output",
+        "args": allennlp_command,
+        "datasetMounts": dataset_mounts,
+        "requirements": {
+            "cpu": float(args.cpu),
+            "memory": args.memory,
+            "gpuCount": args.gpu_count if args.gpu_count else 1,
+        },
+        "env": env
+    }
+    config_task = {"spec": config_spec}
+
+    config = {
+        "tasks": [config_task]
+    }
+
+    with open(output_path, "w") as output:
+        output.write(yaml.dump(config))
+
+    print(f"Beaker spec written to {output_path}.  Launch your job with the following command")
+    print(f"")
+    print(f"    beaker experiment create --file {output_path}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument('param_file', type=str, help='The model configuration file.')
-    parser.add_argument('--name', type=str, help='A name for the experiment.')
+    parser.add_argument('output_path', type=str, help='The destination to write the experiment spec.')
+    parser.add_argument('--blueprint', type=str, help='The Blueprint to use (if unspecified one will be built)')
     parser.add_argument('--desc', type=str, help='A description for the experiment.')
-    parser.add_argument('--debug', action='store_true', help='Print verbose stack traces on error.')
     parser.add_argument('--env', action='append', help='Set environment variables (e.g. NAME=value or NAME)')
-    parser.add_argument('--mount', action='append', help='Bind a host directory (e.g. /host/path:/target/path)')
     parser.add_argument('--source', action='append', help='Bind a remote data source (e.g. source-id:/target/path)')
     parser.add_argument('--cpu', help='CPUs to reserve for this experiment (e.g., 0.5)')
     parser.add_argument('--gpu_count', help='GPUs to use for this experiment (e.g., 1 (default))')
@@ -95,27 +121,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    extra_beaker_commands = []
-    if args.desc:
-        extra_beaker_commands.append(f'--desc={args.desc}')
-    if args.name:
-        # Remove spaces from the name, because Beaker doesn't allow them.
-        extra_beaker_commands.append(f'--name={args.name.replace(" ", "-")}')
-    if args.debug:
-        extra_beaker_commands.append("--debug")
-    if args.env:
-        extra_beaker_commands.extend([f"--env={env}" for env in args.env])
-    if args.mount:
-        extra_beaker_commands.extend([f"--mount={mount}" for mount in args.mount])
-    if args.source:
-        extra_beaker_commands.extend([f"--source={source}" for source in args.source])
-    if args.cpu:
-        extra_beaker_commands.append(f"--cpu={args.cpu}")
-    if args.gpu_count:
-        extra_beaker_commands.append(f"--gpu-count={args.gpu_count}")
-    else:
-        extra_beaker_commands.append(f"--gpu-count=1")
-    if args.memory:
-        extra_beaker_commands.append(f"--memory={args.memory}")
-
-    main(args.param_file, extra_beaker_commands)
+    main(args.param_file, args.output_path, args)
