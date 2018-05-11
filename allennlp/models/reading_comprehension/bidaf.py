@@ -390,8 +390,9 @@ class BidirectionalAttentionFlow(Model):
                     
                     question_comp = metadata[i]['qID'].split(',')[1].replace('@', '-') #TODO: COnsidering only 1 question entity, what if no entity
                     answer_comp = passage_str[int(span_starts.data[i][j]) : int(span_ends.data[i][j])] #TODO: this will need some further processing
-                    dijkstra_comp = metadata[i]['dijkstra'])
-                    dscore = dijkstra_comp[question_comp][answer_comp]
+                    dijkstra_comp = metadata[i]['dijkstra']
+                    import pdb; pdb.set_trace()
+                    dscore = dijkstra_comp[question_comp][answer_comp] if question_comp in dijkstra_comp and answer_comp in dijkstra_comp[question_comp] else None
                     lr_list.append((pscore, dscore, label))
                     
             output_dict['question_tokens'] = question_tokens
