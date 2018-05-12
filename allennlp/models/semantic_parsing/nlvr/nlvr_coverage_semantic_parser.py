@@ -60,6 +60,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         and shouldn't be penalized, while we will mostly want to penalize longer logical forms.
     max_decoding_steps : ``int``
         Maximum number of steps for the beam search during training.
+    dropout : ``float``, optional (default=0.0)
+        Probability of dropout to apply on encoder outputs, decoder outputs and predicted actions.
     checklist_cost_weight : ``float``, optional (default=0.6)
         Mixture weight (0-1) for combining coverage cost and denotation cost. As this increases, we
         weigh the coverage cost higher, with a value of 1.0 meaning that we do not care about
@@ -85,6 +87,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                  beam_size: int,
                  max_num_finished_states: int,
                  max_decoding_steps: int,
+                 dropout: float = 0.0,
                  normalize_beam_score_by_length: bool = False,
                  checklist_cost_weight: float = 0.6,
                  dynamic_cost_weight: Dict[str, Union[int, float]] = None,
@@ -93,7 +96,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         super(NlvrCoverageSemanticParser, self).__init__(vocab=vocab,
                                                          sentence_embedder=sentence_embedder,
                                                          action_embedding_dim=action_embedding_dim,
-                                                         encoder=encoder)
+                                                         encoder=encoder,
+                                                         dropout=dropout)
         self._agenda_coverage = Average()
         self._decoder_trainer: DecoderTrainer[Callable[[NlvrDecoderState], torch.Tensor]] = \
                 ExpectedRiskMinimization(beam_size,
@@ -106,6 +110,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
                                              attention_function=attention_function,
+                                             dropout=dropout,
                                              use_coverage=True)
         self._checklist_cost_weight = checklist_cost_weight
         self._dynamic_cost_wait_epochs = None
@@ -413,6 +418,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         sentence_embedder = TextFieldEmbedder.from_params(vocab, sentence_embedder_params)
         action_embedding_dim = params.pop_int('action_embedding_dim')
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
+        dropout = params.pop_float('dropout', 0.0)
         attention_function_type = params.pop("attention_function", None)
         if attention_function_type is not None:
             attention_function = SimilarityFunction.from_params(attention_function_type)
@@ -434,6 +440,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                    attention_function=attention_function,
                    beam_size=beam_size,
                    max_num_finished_states=max_num_finished_states,
+                   dropout=dropout,
                    max_decoding_steps=max_decoding_steps,
                    normalize_beam_score_by_length=normalize_beam_score_by_length,
                    checklist_cost_weight=checklist_cost_weight,

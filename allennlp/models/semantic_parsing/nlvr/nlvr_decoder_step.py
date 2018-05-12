@@ -24,6 +24,8 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
     encoder_output_dim : ``int``
     action_embedding_dim : ``int``
     attention_function : ``SimilarityFunction``
+    dropout : ``float``
+        Dropout to use on decoder outputs and before action prediction.
     use_coverage : ``bool``
         Is this DecoderStep being used in a semantic parser trained using coverage? We need to know
         this to define a learned parameter for using checklist balances in action prediction.
@@ -32,6 +34,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                  encoder_output_dim: int,
                  action_embedding_dim: int,
                  attention_function: SimilarityFunction,
+                 dropout: float = 0.0,
                  use_coverage: bool = False) -> None:
         super(NlvrDecoderStep, self).__init__()
         self._input_attention = Attention(attention_function)
@@ -54,6 +57,10 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
             self._checklist_embedding_multiplier = Parameter(torch.FloatTensor([1.0]))
         # TODO(pradeep): Do not hardcode decoder cell type.
         self._decoder_cell = LSTMCell(input_dim, output_dim)
+        if dropout > 0:
+            self._dropout = torch.nn.Dropout(p=dropout)
+        else:
+            self._dropout = lambda x: x
 
     @overrides
     def take_step(self,  # type: ignore
@@ -91,6 +98,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
 
         hidden_state, memory_cell = self._decoder_cell(decoder_input, (hidden_state, memory_cell))
 
+        hidden_state = self._dropout(hidden_state)
         # (group_size, encoder_output_dim)
         encoder_outputs = torch.stack([state.rnn_state[0].encoder_outputs[i] for i in state.batch_indices])
         encoder_output_mask = torch.stack([state.rnn_state[0].encoder_output_mask[i] for i in state.batch_indices])
@@ -130,6 +138,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         action_query = torch.cat([hidden_state, attended_sentence], dim=-1)
         # (group_size, action_embedding_dim)
         predicted_action_embedding = self._output_projection_layer(action_query)
+        predicted_action_embedding = self._dropout(torch.nn.functional.relu(predicted_action_embedding))
         if state.checklist_state[0] is not None:
             embedding_addition = self._get_predicted_embedding_addition(state)
             predicted_action_embedding += self._checklist_embedding_multiplier * embedding_addition

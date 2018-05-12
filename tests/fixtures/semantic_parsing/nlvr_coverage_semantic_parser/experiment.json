@@ -33,6 +33,7 @@
       "wait_num_epochs": 0,
       "rate": 0.1
     },
+    "dropout": 0.3,
     "penalize_non_agenda_actions": true
   },
   "iterator": {
