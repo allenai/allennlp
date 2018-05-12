@@ -74,6 +74,7 @@ with open("allennlp/version.py", "r") as version_file:
 setup(name='allennlp',
       version=VERSION["VERSION"],
       description='An open-source NLP research library, built on PyTorch.',
+      long_description = open("README.md").read(),
       classifiers=[
           'Intended Audience :: Science/Research',
           'Development Status :: 3 - Alpha',
