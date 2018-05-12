@@ -88,12 +88,17 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
                 else:
                     next_states.append(next_state)
 
-            states = self._prune_beam(next_states, self._beam_size, False)
+            states = self._prune_beam(states=next_states,
+                                      beam_size=self._beam_size,
+                                      sort_states=False)
             num_steps += 1
         if self._max_num_finished_states is not None:
-            finished_states = self._prune_beam(finished_states, self._max_num_finished_states, True)
+            finished_states = self._prune_beam(states=finished_states,
+                                               beam_size=self._max_num_finished_states,
+                                               sort_states=True)
         return finished_states
 
+    # TODO(pradeep): Move this method to nn.decoding.util
     @staticmethod
     def _prune_beam(states: List[DecoderState],
                     beam_size: int,
