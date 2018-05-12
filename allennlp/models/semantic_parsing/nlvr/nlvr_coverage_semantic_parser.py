@@ -106,7 +106,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
                                              attention_function=attention_function,
-                                             checklist_size=len(self._terminal_productions))
+                                             use_coverage=True)
         self._checklist_cost_weight = checklist_cost_weight
         self._dynamic_cost_wait_epochs = None
         self._dynamic_cost_rate = None
@@ -142,17 +142,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                "tokens.")
         for name, weights in archived_parameters.items():
             if name in model_parameters:
-                if name == "_decoder_step._output_projection_layer.weight":
-                    # The dimensions differ for this parameter between the coverage model and
-                    # the direct model. In the direct model, this is of size
-                    # (decoder_output_dim + encoder_output_dim, action_embedding_dim),
-                    # whereas in the coverage model, it is
-                    # (decoder_output_dim + encoder_output_dim + checklist_size, action_embedding_dim)
-                    # We copy only the relevant part of the weights here.
-                    archived_projection_weights = weights.data
-                    new_weights = model_parameters[name].data.clone()
-                    new_weights[:, :-len(self._terminal_productions)] = archived_projection_weights
-                elif name == "_sentence_embedder.token_embedder_tokens.weight":
+                if name == "_sentence_embedder.token_embedder_tokens.weight":
                     # The shapes of embedding weights will most likely differ between the two models
                     # because the vocabularies will most likely be different. We will get a mapping
                     # of indices from this model's token indices to the archived model's and copy
