@@ -166,6 +166,11 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
 
     @staticmethod
     def _get_predicted_embedding_addition(state: NlvrDecoderState) -> torch.Tensor:
+        """
+        Computes checklist balance, uses it to get the embeddings of desired terminal actions yet to
+        be produced by the decoder, and returns their sum for the decoder to add it to the predicted
+        embedding to bias the prediction towards missing actions.
+        """
         # This holds a list of checklist balances for this state. Each balance is a float vector
         # containing just 1s and 0s showing which of the items are filled. We clamp the min at 0
         # to ignore the number of times an action is taken. The value at an index will be 1 iff
@@ -188,6 +193,8 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
             for terminal_index in checklist_state.terminal_actions.data.cpu():
                 global_terminal_index = state.action_indices[(batch_index, int(terminal_index[0]))]
                 global_terminal_indices[-1].append(global_terminal_index)
+        # We don't need to pad this tensor because the terminal indices from all groups will be the
+        # same size.
         terminal_indices_tensor = Variable(state.score[0].data.new(global_terminal_indices)).long()
         group_size = len(state.batch_indices)
         action_embedding_dim = state.action_embeddings.size(-1)
