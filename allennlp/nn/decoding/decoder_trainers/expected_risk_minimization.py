@@ -32,16 +32,22 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
         The maximum number of steps we should take during decoding.
     max_num_decoded_sequences : ``int``, optional (default=1)
         Maximum number of sorted decoded sequences to return. Defaults to 1.
+    max_num_finished_states : ``int``, optional (default = None)
+        Maximum number of finished states to keep after search. This is to finished states as
+        ``beam_size`` is to unfinished ones. Costs are computed for only these number of states per
+        instance. If not set, we will keep all the finished states.
     """
     def __init__(self,
                  beam_size: int,
                  normalize_by_length: bool,
                  max_decoding_steps: int,
-                 max_num_decoded_sequences: int = 1) -> None:
+                 max_num_decoded_sequences: int = 1,
+                 max_num_finished_states: int = None) -> None:
         self._beam_size = beam_size
         self._normalize_by_length = normalize_by_length
         self._max_decoding_steps = max_decoding_steps
         self._max_num_decoded_sequences = max_num_decoded_sequences
+        self._max_num_finished_states = max_num_finished_states
 
     def decode(self,
                initial_state: DecoderState,
@@ -82,9 +88,43 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
                 else:
                     next_states.append(next_state)
 
-            states = self._prune_beam(next_states)
+            states = self._prune_beam(states=next_states,
+                                      beam_size=self._beam_size,
+                                      sort_states=False)
             num_steps += 1
+        if self._max_num_finished_states is not None:
+            finished_states = self._prune_beam(states=finished_states,
+                                               beam_size=self._max_num_finished_states,
+                                               sort_states=True)
         return finished_states
+
+    # TODO(pradeep): Move this method to nn.decoding.util
+    @staticmethod
+    def _prune_beam(states: List[DecoderState],
+                    beam_size: int,
+                    sort_states: bool = False) -> List[DecoderState]:
+        """
+        This method can be used to prune the set of unfinished states on a beam or finished states
+        at the end of search. In the former case, the states need not be sorted because the all come
+        from the same decoding step, which does the sorting. However, if the states are finished and
+        this method is called at the end of the search, they need to be sorted because they come
+        from different decoding steps.
+        """
+        states_by_batch_index: Dict[int, List[DecoderState]] = defaultdict(list)
+        for state in states:
+            assert len(state.batch_indices) == 1
+            batch_index = state.batch_indices[0]
+            states_by_batch_index[batch_index].append(state)
+        pruned_states = []
+        for _, instance_states in states_by_batch_index.items():
+            if sort_states:
+                scores = torch.cat([state.score[0] for state in instance_states])
+                _, sorted_indices = scores.sort(-1, descending=True)
+                sorted_states = [instance_states[i] for i in sorted_indices.data.cpu().numpy()]
+                instance_states = sorted_states
+            for state in instance_states[:beam_size]:
+                pruned_states.append(state)
+        return pruned_states
 
     def _get_model_scores_by_batch(self, states: List[StateType]) -> Dict[int, List[Variable]]:
         batch_scores: Dict[int, List[Variable]] = defaultdict(list)
@@ -132,19 +172,3 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
                                        for i in best_action_indices]
             best_action_sequences[batch_index] = instance_best_sequences
         return best_action_sequences
-
-    def _prune_beam(self, states: List[DecoderState]) -> List[DecoderState]:
-        """
-        Prunes a beam, and keeps at most ``self._beam_size`` states per instance. We
-        assume that the ``states`` are grouped, with a group size of 1, and that they're already
-        sorted.
-        """
-        num_states_per_instance: Dict[int, int] = defaultdict(int)
-        pruned_states = []
-        for state in states:
-            assert len(state.batch_indices) == 1
-            batch_index = state.batch_indices[0]
-            if num_states_per_instance[batch_index] < self._beam_size:
-                pruned_states.append(state)
-                num_states_per_instance[batch_index] += 1
-        return pruned_states
