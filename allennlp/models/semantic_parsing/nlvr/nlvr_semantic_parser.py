@@ -39,6 +39,8 @@ class NlvrSemanticParser(Model):
         Dimension to use for action embeddings.
     encoder : ``Seq2SeqEncoder``
         The encoder to use for the input question.
+    dropout : ``float``, optional (default=0.0)
+        Dropout on the encoder outputs.
     rule_namespace : ``str``, optional (default=rule_labels)
         The vocabulary namespace to use for production rules.  The default corresponds to the
         default used in the dataset reader, so you likely don't need to modify this.
@@ -48,6 +50,7 @@ class NlvrSemanticParser(Model):
                  sentence_embedder: TextFieldEmbedder,
                  action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
+                 dropout: float = 0.0,
                  rule_namespace: str = 'rule_labels') -> None:
         super(NlvrSemanticParser, self).__init__(vocab=vocab)
 
@@ -55,6 +58,10 @@ class NlvrSemanticParser(Model):
         self._denotation_accuracy = Average()
         self._consistency = Average()
         self._encoder = encoder
+        if dropout > 0:
+            self._dropout = torch.nn.Dropout(p=dropout)
+        else:
+            self._dropout = lambda x: x
         self._rule_namespace = rule_namespace
 
         self._action_embedder = Embedding(num_embeddings=vocab.get_vocab_size(self._rule_namespace),
@@ -79,7 +86,7 @@ class NlvrSemanticParser(Model):
         batch_size = embedded_input.size(0)
 
         # (batch_size, sentence_length, encoder_output_dim)
-        encoder_outputs = self._encoder(embedded_input, sentence_mask)
+        encoder_outputs = self._dropout(self._encoder(embedded_input, sentence_mask))
 
         final_encoder_output = util.get_final_encoder_states(encoder_outputs,
                                                              sentence_mask,
