@@ -2,7 +2,7 @@ from typing import Dict
 import argparse
 import logging
 import sys
-
+from allennlp.commands.elmo_perplexities import ElmoPerplexities
 from allennlp.commands.elmo import Elmo
 from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.fine_tune import FineTune
@@ -37,6 +37,7 @@ def main(prog: str = None,
             "predict": Predict(),
             "serve": Serve(),
             "make-vocab": MakeVocab(),
+            "elmo-perplexities": ElmoPerplexities(),
             "elmo": Elmo(),
             "fine-tune": FineTune(),
             "dry-run": DryRun(),
