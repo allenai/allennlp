@@ -4,4 +4,4 @@ include bin/allennlp
 recursive-include scripts *
 recursive-include tutorials *
 recursive-include training_config *.json
-recursive-exclude tests *
+recursive-include tests *
