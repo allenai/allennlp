@@ -147,7 +147,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             embedding_addition = self._get_predicted_embedding_addition(state,
                                                                         self._unlinked_terminal_indices,
                                                                         unlinked_balance)
-            predicted_action_embedding += self._unlinked_checklist_multiplier * embedding_addition
+            addition = embedding_addition * self._unlinked_checklist_multiplier
+            predicted_action_embedding = predicted_action_embedding + addition
 
         # We'll do a batch dot product here with `bmm`.  We want `dot(predicted_action_embedding,
         # action_embedding)` for each `action_embedding`, and we can get that efficiently with
