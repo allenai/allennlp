@@ -13,9 +13,6 @@ jupyter
 # Static type checking
 mypy==0.521
 
-# Makes it so that pytest can handle the code structure we use, with src/main/python, and src/test.
-pytest-pythonpath
-
 # Allows generation of coverage reports with pytest.
 pytest-cov
 
