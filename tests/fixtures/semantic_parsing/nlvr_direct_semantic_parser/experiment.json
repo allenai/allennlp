@@ -28,7 +28,8 @@
       "beam_size": 5
     },
     "max_decoding_steps": 20,
-    "attention_function": {"type": "dot_product"}
+    "attention_function": {"type": "dot_product"},
+    "dropout": 0.2
   },
   "iterator": {
     "type": "bucket",

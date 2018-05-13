@@ -14,23 +14,28 @@ https://arxiv.org/abs/1802.05365
 .. code-block:: bash
 
    $ allennlp elmo --help
-   usage: allennlp [command] elmo [-h] [--vocab-path VOCAB_PATH]
-                                       [--options-file OPTIONS_FILE]
-                                       [--weight-file WEIGHT_FILE]
-                                       [--batch-size BATCH_SIZE]
-                                       [--cuda-device CUDA_DEVICE]
-                                       input_file output_file
+   usage: python -m allennlp.run elmo [-h] (--all | --top | --average)
+                                      [--vocab-path VOCAB_PATH]
+                                      [--options-file OPTIONS_FILE]
+                                      [--weight-file WEIGHT_FILE]
+                                      [--batch-size BATCH_SIZE]
+                                      [--cuda-device CUDA_DEVICE]
+                                      [--include-package INCLUDE_PACKAGE]
+                                      input_file output_file
 
    Create word vectors using ELMo.
 
    positional arguments:
-     input_file            path to input file
-     output_file           path to output file
+     input_file            The path to the input file.
+     output_file           The path to the output file.
 
    optional arguments:
      -h, --help            show this help message and exit
+     --all                 Output all three ELMo vectors.
+     --top                 Output the top ELMo vector.
+     --average             Output the average of the ELMo vectors.
      --vocab-path VOCAB_PATH
-                           A path to a vocabulary file to generate
+                           A path to a vocabulary file to generate.
      --options-file OPTIONS_FILE
                            The path to the ELMo options file.
      --weight-file WEIGHT_FILE
@@ -39,6 +44,8 @@ https://arxiv.org/abs/1802.05365
                            The batch size to use.
      --cuda-device CUDA_DEVICE
                            The cuda_device to run on.
+     --include-package INCLUDE_PACKAGE
+                           additional packages to include
 """
 
 import logging

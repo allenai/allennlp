@@ -5,6 +5,7 @@ from overrides import overrides
 
 import torch
 from torch.autograd import Variable
+from torch.nn import Parameter
 from torch.nn.modules.rnn import LSTMCell
 from torch.nn.modules.linear import Linear
 
@@ -32,9 +33,9 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
     unlinked_terminal_indices : ``List[int]``, (optional, default=None)
         If we are training a parser to maximize coverage using a checklist, we need to know the
         global indices of the unlinked terminal productions to be able to compute the checklist
-        corresponding to those terminals, and project a concatenation of the current hidden state,
-        attended encoder input and the current checklist balance into the action space. This is not
-        needed if we are training the parser using target action sequences.
+        corresponding to those terminals, and project a concatenation of the current hidden
+        state, attended encoder input and the current checklist balance into the action space.
+        This is not needed if we are training the parser using target action sequences.
     """
     def __init__(self,
                  encoder_output_dim: int,
@@ -62,16 +63,16 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # arbitrarily set to be the same as `output_dim`.
         self._input_projection_layer = Linear(output_dim + action_embedding_dim, input_dim)
         # Before making a prediction, we'll compute an attention over the input given our updated
-        # hidden state, and optionally a difference between the current checklist vector and its
-        # target, if we are training to maximize coverage using a checklist. Then we concatenate
-        # those with the decoder state and project to `action_embedding_dim` to make a prediction.
-        if unlinked_terminal_indices is None:
-            self._output_projection_layer = Linear(output_dim + encoder_output_dim,
-                                                   action_embedding_dim)
-        else:
-            unlinked_checklist_size = len(unlinked_terminal_indices)
-            self._output_projection_layer = Linear(output_dim + encoder_output_dim + unlinked_checklist_size,
-                                                   action_embedding_dim)
+        # hidden state. Then we concatenate those with the decoder state and project to
+        # `action_embedding_dim` to make a prediction.
+        self._output_projection_layer = Linear(output_dim + encoder_output_dim, action_embedding_dim)
+        if unlinked_terminal_indices is not None:
+            # This means we are using coverage to train the parser.
+            # These factors are used to add the embeddings of yet to be produced actions to the
+            # predicted embedding, and to boost the action logits of yet to be produced linked
+            # actions, respectively.
+            self._unlinked_checklist_multiplier = Parameter(torch.FloatTensor([1.0]))
+            self._linked_checklist_multiplier = Parameter(torch.FloatTensor([1.0]))
 
         self._unlinked_terminal_indices = unlinked_terminal_indices
         # TODO(pradeep): Do not hardcode decoder cell type.
@@ -128,28 +129,26 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         attended_question, attention_weights = self.attend_on_question(hidden_state,
                                                                        encoder_outputs,
                                                                        encoder_output_mask)
+        action_query = torch.cat([hidden_state, attended_question], dim=-1)
         considered_actions, actions_to_embed, actions_to_link = self._get_actions_to_consider(state)
-
-        if state.checklist_state[0] is not None:
-            linked_balance, unlinked_balance = self._get_checklist_balance(state,
-                                                                           self._unlinked_terminal_indices,
-                                                                           actions_to_link)
-            action_query = torch.cat([hidden_state, attended_question, unlinked_balance], dim=-1)
-        else:
-            linked_balance = None
-            # We'll just concatenate the hidden state and the attended sentence. We're training the
-            # parser with target action sequences.
-            action_query = torch.cat([hidden_state, attended_question], dim=-1)
-        # (group_size, action_embedding_dim)
-        projected_query = torch.nn.functional.relu(self._output_projection_layer(action_query))
-        predicted_action_embedding = self._dropout(projected_query)
-
-
         # action_embeddings: (group_size, num_embedded_actions, action_embedding_dim)
         # output_action_embeddings: (group_size, num_embedded_actions, action_embedding_dim)
         # action_mask: (group_size, num_embedded_actions)
         action_embeddings, output_action_embeddings, action_biases, embedded_action_mask = \
                 self._get_action_embeddings(state, actions_to_embed)
+        # (group_size, action_embedding_dim)
+        projected_query = torch.nn.functional.relu(self._output_projection_layer(action_query))
+        predicted_action_embedding = self._dropout(projected_query)
+        linked_balance = None
+        if state.checklist_state[0] is not None:
+            linked_balance, unlinked_balance = self._get_checklist_balance(state,
+                                                                           self._unlinked_terminal_indices,
+                                                                           actions_to_link)
+            embedding_addition = self._get_predicted_embedding_addition(state,
+                                                                        self._unlinked_terminal_indices,
+                                                                        unlinked_balance)
+            predicted_action_embedding += self._unlinked_checklist_multiplier * embedding_addition
+
         # We'll do a batch dot product here with `bmm`.  We want `dot(predicted_action_embedding,
         # action_embedding)` for each `action_embedding`, and we can get that efficiently with
         # `bmm` and some squeezing.
@@ -282,6 +281,31 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             linked_checklist_balance = torch.gather(checklist_balance, 1, linked_action_indices)
             linked_checklist_balance = linked_checklist_balance * linked_actions_mask.float()
         return linked_checklist_balance, unlinked_checklist_balance
+
+    @staticmethod
+    def _get_predicted_embedding_addition(state: WikiTablesDecoderState,
+                                          unlinked_terminal_indices: List[int],
+                                          unlinked_checklist_balance: torch.Tensor) -> torch.Tensor:
+        """
+        Gets the embeddings of desired unlinked terminal actions yet to be produced by the decoder,
+        and returns their sum for the decoder to add it to the predicted embedding to bias the
+        prediction towards missing actions.
+        """
+        # (group_size, num_unlinked_actions, 1)
+        unlinked_balance = unlinked_checklist_balance.unsqueeze(2)
+        group_size = len(state.batch_indices)
+        action_embedding_dim = state.action_embeddings.size(-1)
+        num_terminals = len(unlinked_terminal_indices)
+        group_terminal_indices = [unlinked_terminal_indices for _ in range(group_size)]
+        # (group_size, num_unlinked_actions)
+        terminal_indices_tensor = Variable(state.score[0].data.new(group_terminal_indices)).long()
+        flattened_terminal_indices = terminal_indices_tensor.view(-1)
+        flattened_action_embeddings = state.action_embeddings.index_select(0,
+                                                                           flattened_terminal_indices)
+        terminal_embeddings = flattened_action_embeddings.view(group_size, num_terminals, action_embedding_dim)
+        checklist_balance_embeddings = terminal_embeddings * unlinked_balance
+        # (group_size, action_embedding_dim)
+        return checklist_balance_embeddings.sum(1)
 
     def _take_first_step(self,
                          state: WikiTablesDecoderState,
@@ -640,7 +664,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             # ``linked_checklist_balance`` is a binary tensor of size (group_size, num_actions) with
             # 1s indicating the linked actions that the agenda wants the decoder to produce, but
             # haven't been produced yet. We're simply doubling the logits of those actions here.
-            action_logits = action_logits + (action_logits * linked_checklist_balance)
+            action_logits_addition = action_logits * linked_checklist_balance
+            action_logits = action_logits + self._linked_checklist_multiplier * action_logits_addition
         # Finally, we make a mask for our action logit tensor.
         sequence_lengths = Variable(action_linking.data.new(num_actions))
         action_mask = util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
