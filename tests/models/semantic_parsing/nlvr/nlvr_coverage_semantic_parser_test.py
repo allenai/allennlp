@@ -77,13 +77,9 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
             # after a call to ``_initialize_weights_from_archive``.
             with self.assertRaises(AssertionError, msg=f"{name} has not changed"):
                 assert_almost_equal(original_weight, changed_weight)
-            if name == "_decoder_step._output_projection_layer.weight":
-                changed_weight = changed_weight[:, :-len(self.model._terminal_productions)]
-                assert_almost_equal(archived_weight, changed_weight)
-            else:
-                # This also includes the sentence token embedder. Those weights will be the same
-                # because the two models have the same vocabulary.
-                assert_almost_equal(archived_weight, changed_weight)
+            # This also includes the sentence token embedder. Those weights will be the same
+            # because the two models have the same vocabulary.
+            assert_almost_equal(archived_weight, changed_weight)
 
     def test_get_vocab_index_mapping(self):
         # pylint: disable=line-too-long
