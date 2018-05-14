@@ -30,11 +30,11 @@ class LearningRateScheduler(Registrable):
     def from_params(cls, optimizer: torch.optim.Optimizer, params: Params):
         scheduler = params.pop_choice("type", LearningRateScheduler.list_available())
 
-        lrs = LearningRateScheduler.by_name(scheduler)(optimizer, **params.as_dict())  # type: ignore
-        if isinstance(lrs, torch.optim.lr_scheduler.ReduceLROnPlateau):
-            return LearningRateWithMetricsWrapper(lrs)
+        schedulers = LearningRateScheduler.by_name(scheduler)(optimizer, **params.as_dict())  # type: ignore
+        if isinstance(schedulers, torch.optim.lr_scheduler.ReduceLROnPlateau):
+            return LearningRateWithMetricsWrapper(schedulers)
         else:
-            return LearningRateWithoutMetricsWrapper(lrs)
+            return LearningRateWithoutMetricsWrapper(schedulers)
 
     def step(self, metrics, epoch=None):
         raise NotImplementedError
