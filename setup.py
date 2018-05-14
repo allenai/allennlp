@@ -123,7 +123,7 @@ setup(name='allennlp',
       ],
       scripts=["bin/allennlp"],
       setup_requires=setup_requirements,
-      tests_require=['pytest'],
+      tests_require=['pytest', 'flaky', 'responses>=0.7', 'jupyter'],
       include_package_data=True,
       python_requires='>=3.6',
       zip_safe=False)
