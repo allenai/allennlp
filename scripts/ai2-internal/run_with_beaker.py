@@ -3,13 +3,12 @@
 # Script to launch AllenNLP Beaker jobs.
 
 import argparse
-import json
 import os
 import yaml
 import random
+import tempfile
 import subprocess
 import sys
-from typing import List
 
 # This has to happen before we import spacy (even indirectly), because for some crazy reason spacy
 # thought it was a good idea to set the random seed on import...
@@ -19,7 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(os.path.join(__f
 
 from allennlp.common.params import Params
 
-def main(param_file: str, output_path: str, args):
+def main(param_file: str, args):
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], universal_newlines=True).strip()
     image = f"allennlp/allennlp:{commit}"
     overrides = ""
@@ -99,18 +98,31 @@ def main(param_file: str, output_path: str, args):
         "tasks": [config_task]
     }
 
+    output_path = args.spec_output_path if args.spec_output_path else tempfile.mkstemp("yaml", "beaker-config")
     with open(output_path, "w") as output:
         output.write(yaml.dump(config))
+    print(f"Beaker spec written to {output_path}.")
 
-    print(f"Beaker spec written to {output_path}.  Launch your job with the following command")
-    print(f"")
-    print(f"    beaker experiment create --file {output_path}")
+    experiment_command = ["beaker", "experiment", "create", "--file", output_path]
+    if args.name:
+        experiment_command.append("--name")
+        experiment_command.append(args.name)
+
+    if args.dry_run:
+        print(f"This is a dry run (--dry-run).  Launch your job with the following command")
+        print(f"    " + " ".join(experiment_command))
+    else:
+        print(f"Running the experiment:")
+        print(f"    " + " ".join(experiment_command))
+        subprocess.run(experiment_command)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument('param_file', type=str, help='The model configuration file.')
-    parser.add_argument('output_path', type=str, help='The destination to write the experiment spec.')
+    parser.add_argument('--name', type=str, help='A name for the experiment.')
+    parser.add_argument('--spec_output_path', type=str, help='The destination to write the experiment spec.')
+    parser.add_argument('--dry-run', action='store_true', help='If specified, an experiment will not be created.')
     parser.add_argument('--blueprint', type=str, help='The Blueprint to use (if unspecified one will be built)')
     parser.add_argument('--desc', type=str, help='A description for the experiment.')
     parser.add_argument('--env', action='append', help='Set environment variables (e.g. NAME=value or NAME)')
@@ -121,4 +133,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    main(args.param_file, args.output_path, args)
+    main(args.param_file, args)
