@@ -6,6 +6,7 @@ import os
 import torch
 
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.train import Train, train_model, train_model_from_args
 from allennlp.data import DatasetReader, Instance
@@ -68,7 +69,7 @@ class TestTrain(AllenNlpTestCase):
             }
         })
 
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(ConfigurationError) as context:
             train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'test_train_model'))
         self.assertTrue('specified a GPU but none is available' in str(context.exception))
 
