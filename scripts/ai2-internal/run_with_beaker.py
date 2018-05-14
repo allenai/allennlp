@@ -98,7 +98,8 @@ def main(param_file: str, args):
         "tasks": [config_task]
     }
 
-    output_path = args.spec_output_path if args.spec_output_path else tempfile.mkstemp("yaml", "beaker-config")
+    output_path = args.spec_output_path if args.spec_output_path else tempfile.mkstemp("yaml",
+            "beaker-config")[1]
     with open(output_path, "w") as output:
         output.write(yaml.dump(config))
     print(f"Beaker spec written to {output_path}.")
