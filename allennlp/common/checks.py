@@ -38,15 +38,14 @@ def check_dimensions_match(dimension_1: int,
                                  f"and {dimension_2} instead")
 
 
-def cuda_is_valid(id: int):
-    if id is None:
+def cuda_is_valid(device_id: int):
+    if device_id is None:
         # this branch is to ensure that existing tests which don't specify cuda pass.
         return
     try:
-        with torch.cuda.device(id):
+        with torch.cuda.device(device_id):
             pass
     except Exception:
         raise ConfigurationError("Experiment specified a GPU but none is available;"
-                                 " if you want to run on CPU use the following override trainer.cuda_device=-1 in the json config file")
-
-
+                                 " if you want to run on CPU use the following override"
+                                 " trainer.cuda_device=-1 in the json config file")
