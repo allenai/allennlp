@@ -94,7 +94,6 @@ class TestMain(AllenNlpTestCase):
                 "iterator": {"type": "basic", "batch_size": 2},
                 "trainer": {
                         "num_epochs": 2,
-                        "cuda_device": -1,
                         "optimizer": "adam"
                 }
             """.replace('$$$', data_path)
