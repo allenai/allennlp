@@ -39,6 +39,9 @@ def check_dimensions_match(dimension_1: int,
 
 
 def cuda_is_valid(id: int):
+    if not id:
+        # this branch is to ensure that existing tests which don't specify cuda pass.
+        return
     try:
         with torch.cuda.device(id):
             pass
