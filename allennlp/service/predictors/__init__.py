@@ -16,3 +16,4 @@ from .sentence_tagger import SentenceTaggerPredictor
 from .simple_seq2seq import SimpleSeq2SeqPredictor
 from .wikitables_parser import WikiTablesParserPredictor
 from .nlvr_parser import NlvrParserPredictor
+from .esim import ESIMPredictor
