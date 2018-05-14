@@ -47,5 +47,5 @@ def cuda_is_valid(device_id: int):
             pass
     except Exception:
         raise ConfigurationError("Experiment specified a GPU but none is available;"
-                                 " if you want to run on CPU use the following override"
-                                 " trainer.cuda_device=-1 in the json config file")
+                                 " if you want to run on CPU use the override"
+                                 " 'trainer.cuda_device=-1' in the json config file.")
