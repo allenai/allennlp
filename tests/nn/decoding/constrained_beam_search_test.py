@@ -2,7 +2,6 @@
 import torch
 from torch.autograd import Variable
 
-from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.decoding import ConstrainedBeamSearch
 from .simple_transition_system import SimpleDecoderState, SimpleDecoderStep
