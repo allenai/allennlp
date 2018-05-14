@@ -38,8 +38,6 @@ import logging
 import os
 from copy import deepcopy
 
-import torch
-
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError, cuda_is_valid
