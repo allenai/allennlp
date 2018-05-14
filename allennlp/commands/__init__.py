@@ -11,6 +11,7 @@ from allennlp.commands.predict import Predict
 from allennlp.commands.serve import Serve
 from allennlp.commands.dry_run import DryRun
 from allennlp.commands.subcommand import Subcommand
+from allennlp.commands.test_install import TestInstall
 from allennlp.commands.train import Train
 from allennlp.service.predictors import DemoModel
 from allennlp.common.util import import_submodules
@@ -40,7 +41,7 @@ def main(prog: str = None,
             "elmo": Elmo(),
             "fine-tune": FineTune(),
             "dry-run": DryRun(),
-
+            "test-install": TestInstall(),
             # Superseded by overrides
             **subcommand_overrides
     }
