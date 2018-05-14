@@ -64,7 +64,7 @@ class LearningRateWithMetricsWrapper(LearningRateScheduler):
     A wrapper around learning rate schedulers that require metrics,
     At the moment there is only a single instance of this lrs. It is the ReduceLROnPlateau
     """
-    def __init__(self, lr_scheduler: torch.optim.lr_scheduler.ReduceLROnPlateau):
+    def __init__(self, lr_scheduler: torch.optim.lr_scheduler.ReduceLROnPlateau) -> None:
         super().__init__(lr_scheduler)
         self.lr_scheduler = lr_scheduler
 
