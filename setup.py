@@ -71,6 +71,15 @@ VERSION = {}
 with open("allennlp/version.py", "r") as version_file:
     exec(version_file.read(), VERSION)
 
+# make pytest-runner a conditional requirement,
+# per: https://github.com/pytest-dev/pytest-runner#considerations
+needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
+pytest_runner = ['pytest-runner'] if needs_pytest else []
+
+setup_requirements = [
+    # add other setup requirements as necessary
+] + pytest_runner
+
 setup(name='allennlp',
       version=VERSION["VERSION"],
       description='An open-source NLP research library, built on PyTorch.',
@@ -103,7 +112,6 @@ setup(name='allennlp',
           'flask-cors==3.0.3',
           'gevent==1.2.2',
           'psycopg2',
-          'argparse',
           'requests>=2.18',
           'tqdm>=4.19',
           'editdistance',
@@ -114,7 +122,7 @@ setup(name='allennlp',
           'unidecode'
       ],
       scripts=["bin/allennlp"],
-      setup_requires=['pytest-runner'],
+      setup_requires=setup_requirements,
       tests_require=['pytest', 'flaky', 'responses>=0.7', 'jupyter'],
       include_package_data=True,
       python_requires='>=3.6',

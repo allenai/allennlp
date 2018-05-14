@@ -25,7 +25,7 @@ class TestBeamSearch(AllenNlpTestCase):
                                          keep_final_unfinished_states=False)
 
         # Instance with batch index 2 needed too many steps to finish, and batch index 3 had no
-        # path to get to a finished state.  (See the simple transition system definitely; goal is
+        # path to get to a finished state.  (See the simple transition system definition; goal is
         # to end up at 4, actions are either add one or two to starting value.)
         assert len(best_states) == 2
         assert best_states[0][0].action_history[0] == [-1, 1, 3, 4]
