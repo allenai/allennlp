@@ -22,8 +22,9 @@ import argparse
 import logging
 import os
 
-from allennlp.commands.subcommand import Subcommand
 import pytest
+
+from allennlp.commands.subcommand import Subcommand
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -43,16 +44,23 @@ class TestInstall(Subcommand):
         return subparser
 
 
+def _get_project_root():
+    return os.path.abspath(
+            os.path.join(
+                    os.path.dirname(os.path.realpath(__file__)),
+                    os.pardir, os.pardir))
+
+
 def _run_test(args: argparse.Namespace):
-    project_root = os.path.abspath(
-        os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            os.pardir, os.pardir))
-    logger.info("Changing directory to {}".format(project_root))
+    initial_working_dir = os.getcwd()
+    project_root = _get_project_root()
+    logger.info("Changing directory to %s", project_root)
     os.chdir(project_root)
     test_dir = os.path.join(project_root, "tests")
-    logger.info("Running tests at {}".format(test_dir))
+    logger.info("Running tests at %s", test_dir)
     if args.run_all:
         pytest.main([test_dir])
     else:
         pytest.main([test_dir, '-k', 'not sniff_test'])
+    # Change back to original working directory after running tests
+    os.chdir(initial_working_dir)
