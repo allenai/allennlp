@@ -5,7 +5,7 @@ AllenNLP and its models are configured correctly.
 
 import logging
 
-import torch
+from torch import cuda
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -43,7 +43,7 @@ def cuda_is_valid(device_id: int):
         # this branch is to ensure that existing tests which don't specify cuda pass.
         return
     try:
-        with torch.cuda.device(device_id):
+        with cuda.device(device_id):
             pass
     except Exception:
         raise ConfigurationError("Experiment specified a GPU but none is available;"
