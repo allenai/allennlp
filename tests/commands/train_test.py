@@ -207,4 +207,3 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
         })
 
         train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'lazy_test_set'))
-
