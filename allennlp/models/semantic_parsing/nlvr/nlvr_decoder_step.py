@@ -390,6 +390,13 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
             batch_scores = torch.cat([info[-1] for info in instance_states_info])
             _, sorted_indices = batch_scores.sort(-1, descending=True)
             sorted_states_info = [instance_states_info[i] for i in sorted_indices.data.cpu().numpy()]
+            allowed_states_info = []
+            for i, (group_index, action_index, _, _) in enumerate(sorted_states_info):
+                action = considered_actions[group_index][action_index]
+                if allowed_actions is not None and action not in allowed_actions[group_index]:
+                    continue
+                allowed_states_info.append(sorted_states_info[i])
+            sorted_states_info = allowed_states_info
             if max_actions is not None:
                 sorted_states_info = sorted_states_info[:max_actions]
             for group_index, action_index, new_checklist_state, new_score in sorted_states_info:
@@ -397,8 +404,6 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
                 # We do not have to check whether it is the padding index because ``take_step``
                 # already took care of that.
                 action = considered_actions[group_index][action_index]
-                if allowed_actions is not None and action not in allowed_actions[group_index]:
-                    continue
                 action_embedding = action_embeddings[group_index, action_index, :]
                 new_action_history = state.action_history[group_index] + [action]
                 production_rule = state.possible_actions[batch_index][action][0]
