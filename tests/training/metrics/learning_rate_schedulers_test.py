@@ -21,6 +21,12 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
                 'The reduce_on_plateau learning rate scheduler requires a validation metric'
                 in str(context.exception))
 
+    def test_reduce_on_plateau_works_when_metrics_exist(self):
+        model = torch.nn.Sequential(torch.nn.Linear(10, 10))
+        LearningRateScheduler.from_params(Optimizer.from_params(model.named_parameters(),
+                                                                Params({"type": "adam"})),
+                                          Params({"type": "reduce_on_plateau"})).step(10, None)
+
     def test_no_metric_wrapper_can_support_none_for_metrics(self):
         model = torch.nn.Sequential(torch.nn.Linear(10, 10))
         lrs = LearningRateScheduler.from_params(Optimizer.from_params(model.named_parameters(),
