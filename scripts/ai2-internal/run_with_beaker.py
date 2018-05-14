@@ -4,7 +4,7 @@
 
 import argparse
 import os
-import yaml
+import json
 import random
 import tempfile
 import subprocess
@@ -103,7 +103,7 @@ def main(param_file: str, args):
     output_path = args.spec_output_path if args.spec_output_path else tempfile.mkstemp(".yaml",
             "beaker-config")[1]
     with open(output_path, "w") as output:
-        output.write(yaml.dump(config))
+        output.write(json.dumps(config, indent=4))
     print(f"Beaker spec written to {output_path}.")
 
     experiment_command = ["beaker", "experiment", "create", "--file", output_path]
