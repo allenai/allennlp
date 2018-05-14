@@ -93,12 +93,14 @@ def main(param_file: str, args):
         "env": env
     }
     config_task = {"spec": config_spec}
+    if args.name:
+        config_task["name"] = args.name
 
     config = {
         "tasks": [config_task]
     }
 
-    output_path = args.spec_output_path if args.spec_output_path else tempfile.mkstemp("yaml",
+    output_path = args.spec_output_path if args.spec_output_path else tempfile.mkstemp(".yaml",
             "beaker-config")[1]
     with open(output_path, "w") as output:
         output.write(yaml.dump(config))
