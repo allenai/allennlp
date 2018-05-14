@@ -3,6 +3,7 @@ import argparse
 from typing import Iterable
 import os
 
+import pytest
 import torch
 
 from allennlp.common import Params
@@ -69,9 +70,11 @@ class TestTrain(AllenNlpTestCase):
                 }
         })
 
-        with self.assertRaises(ConfigurationError) as context:
+        with pytest.raises(ConfigurationError,
+                           message="Experiment specified a GPU but none is available;"
+                                   " if you want to run on CPU use the override"
+                                   " 'trainer.cuda_device=-1' in the json config file."):
             train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'test_train_model'))
-        self.assertTrue('specified a GPU but none is available' in str(context.exception))
 
     def test_train_with_test_set(self):
         params = Params({

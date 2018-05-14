@@ -45,7 +45,7 @@ import sys
 from typing import Optional, IO
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import cuda_is_valid
+from allennlp.common.checks import check_for_gpu
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
@@ -86,7 +86,7 @@ class Predict(Subcommand):
         return subparser
 
 def _get_predictor(args: argparse.Namespace) -> Predictor:
-    cuda_is_valid(args.cuda_device)
+    check_for_gpu(args.cuda_device)
     archive = load_archive(args.archive_file,
                            weights_file=args.weights_file,
                            cuda_device=args.cuda_device,

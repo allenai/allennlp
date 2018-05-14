@@ -40,7 +40,7 @@ from copy import deepcopy
 
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import ConfigurationError, cuda_is_valid
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import Params
 from allennlp.common.util import prepare_environment, prepare_global_logging
 from allennlp.data import Vocabulary
@@ -250,7 +250,7 @@ def train_model(params: Params,
     create_serialization_dir(params, serialization_dir, recover)
     prepare_global_logging(serialization_dir, file_friendly_logging)
 
-    cuda_is_valid(params.params.get('trainer').get('cuda_device', -1))
+    check_for_gpu(params.params.get('trainer').get('cuda_device', -1))
 
     serialization_params = deepcopy(params).as_dict(quiet=True)
     with open(os.path.join(serialization_dir, CONFIG_NAME), "w") as param_file:
