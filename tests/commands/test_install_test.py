@@ -7,7 +7,6 @@ from allennlp.commands.test_install import _get_project_root
 
 class TestTestInstall(AllenNlpTestCase):
     def test_get_project_root(self):
-        # pylint: disable=C0321
         project_root = _get_project_root()
         assert os.path.exists(os.path.join(project_root, "tests"))
         assert os.path.exists(os.path.join(project_root, "LICENSE"))
