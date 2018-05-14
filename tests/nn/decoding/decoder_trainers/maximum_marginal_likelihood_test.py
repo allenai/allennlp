@@ -6,7 +6,6 @@ import torch
 from torch.autograd import Variable
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.nn.decoding import DecoderState
 from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
 from ..simple_transition_system import SimpleDecoderState, SimpleDecoderStep
 
@@ -37,30 +36,3 @@ class TestMaximumMarginalLikelihood(AllenNlpTestCase):
         instance1_loss = math.log(math.exp(-2) + math.exp(-3))  # one has length 2, one has length 3
         expected_loss = -(instance0_loss + instance1_loss) / 2
         assert_almost_equal(decoded_info['loss'].data.numpy(), expected_loss)
-
-    def test_create_allowed_transitions(self):
-        result = self.trainer._create_allowed_transitions(self.targets, self.target_mask)
-        # There were two instances in this batch.
-        assert len(result) == 2
-
-        # The first instance had six valid action sequence prefixes.
-        assert len(result[0]) == 6
-        assert result[0][()] == {1, 2}
-        assert result[0][(1,)] == {2, 3}
-        assert result[0][(1, 2)] == {4}
-        assert result[0][(1, 3)] == {4}
-        assert result[0][(2,)] == {3}
-        assert result[0][(2, 3)] == {4}
-
-        # The second instance had four valid action sequence prefixes.
-        assert len(result[1]) == 4
-        assert result[1][()] == {2, 3}
-        assert result[1][(2,)] == {3}
-        assert result[1][(2, 3)] == {4}
-        assert result[1][(3,)] == {4}
-
-    def test_get_allowed_actions(self):
-        state = DecoderState([0, 1, 0], [[1], [0], []], [])
-        allowed_transitions = [{(1,): {2}, (): {3}}, {(0,): {4, 5}}]
-        allowed_actions = self.trainer._get_allowed_actions(state, allowed_transitions)
-        assert allowed_actions == [{2}, {4, 5}, {3}]
