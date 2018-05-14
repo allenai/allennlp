@@ -42,6 +42,7 @@ def main(prog: str = None,
             "fine-tune": FineTune(),
             "dry-run": DryRun(),
             "test-install": TestInstall(),
+
             # Superseded by overrides
             **subcommand_overrides
     }
