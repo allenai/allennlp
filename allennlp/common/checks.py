@@ -39,7 +39,7 @@ def check_dimensions_match(dimension_1: int,
 
 
 def cuda_is_valid(id: int):
-    if not id:
+    if id is None:
         # this branch is to ensure that existing tests which don't specify cuda pass.
         return
     try:
