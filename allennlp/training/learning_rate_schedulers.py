@@ -23,7 +23,7 @@ class LearningRateScheduler(Registrable):
     """
     This class just allows us to implement ``Registrable`` for Pytorch :class:`LRSchedulers`.
     """
-    def __init__(self, lr_scheduler: object) -> None:
+    def __init__(self, lr_scheduler) -> None:
         self.lr_scheduler = lr_scheduler
 
     @classmethod
