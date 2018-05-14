@@ -60,6 +60,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         and shouldn't be penalized, while we will mostly want to penalize longer logical forms.
     max_decoding_steps : ``int``
         Maximum number of steps for the beam search during training.
+    dropout : ``float``, optional (default=0.0)
+        Probability of dropout to apply on encoder outputs, decoder outputs and predicted actions.
     checklist_cost_weight : ``float``, optional (default=0.6)
         Mixture weight (0-1) for combining coverage cost and denotation cost. As this increases, we
         weigh the coverage cost higher, with a value of 1.0 meaning that we do not care about
@@ -85,6 +87,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                  beam_size: int,
                  max_num_finished_states: int,
                  max_decoding_steps: int,
+                 dropout: float = 0.0,
                  normalize_beam_score_by_length: bool = False,
                  checklist_cost_weight: float = 0.6,
                  dynamic_cost_weight: Dict[str, Union[int, float]] = None,
@@ -93,7 +96,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         super(NlvrCoverageSemanticParser, self).__init__(vocab=vocab,
                                                          sentence_embedder=sentence_embedder,
                                                          action_embedding_dim=action_embedding_dim,
-                                                         encoder=encoder)
+                                                         encoder=encoder,
+                                                         dropout=dropout)
         self._agenda_coverage = Average()
         self._decoder_trainer: DecoderTrainer[Callable[[NlvrDecoderState], torch.Tensor]] = \
                 ExpectedRiskMinimization(beam_size,
@@ -106,7 +110,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
                                              attention_function=attention_function,
-                                             checklist_size=len(self._terminal_productions))
+                                             dropout=dropout,
+                                             use_coverage=True)
         self._checklist_cost_weight = checklist_cost_weight
         self._dynamic_cost_wait_epochs = None
         self._dynamic_cost_rate = None
@@ -142,17 +147,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                "tokens.")
         for name, weights in archived_parameters.items():
             if name in model_parameters:
-                if name == "_decoder_step._output_projection_layer.weight":
-                    # The dimensions differ for this parameter between the coverage model and
-                    # the direct model. In the direct model, this is of size
-                    # (decoder_output_dim + encoder_output_dim, action_embedding_dim),
-                    # whereas in the coverage model, it is
-                    # (decoder_output_dim + encoder_output_dim + checklist_size, action_embedding_dim)
-                    # We copy only the relevant part of the weights here.
-                    archived_projection_weights = weights.data
-                    new_weights = model_parameters[name].data.clone()
-                    new_weights[:, :-len(self._terminal_productions)] = archived_projection_weights
-                elif name == "_sentence_embedder.token_embedder_tokens.weight":
+                if name == "_sentence_embedder.token_embedder_tokens.weight":
                     # The shapes of embedding weights will most likely differ between the two models
                     # because the vocabularies will most likely be different. We will get a mapping
                     # of indices from this model's token indices to the archived model's and copy
@@ -423,6 +418,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         sentence_embedder = TextFieldEmbedder.from_params(vocab, sentence_embedder_params)
         action_embedding_dim = params.pop_int('action_embedding_dim')
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
+        dropout = params.pop_float('dropout', 0.0)
         attention_function_type = params.pop("attention_function", None)
         if attention_function_type is not None:
             attention_function = SimilarityFunction.from_params(attention_function_type)
@@ -444,6 +440,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                    attention_function=attention_function,
                    beam_size=beam_size,
                    max_num_finished_states=max_num_finished_states,
+                   dropout=dropout,
                    max_decoding_steps=max_decoding_steps,
                    normalize_beam_score_by_length=normalize_beam_score_by_length,
                    checklist_cost_weight=checklist_cost_weight,

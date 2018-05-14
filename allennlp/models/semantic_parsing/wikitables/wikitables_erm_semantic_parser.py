@@ -171,17 +171,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                                "tokens.")
         for name, weights in archived_parameters.items():
             if name in model_parameters:
-                if name == "_decoder_step._output_projection_layer.weight":
-                    # The dimensions differ for this parameter between the coverage model and
-                    # the direct model. In the direct model, this is of size
-                    # (decoder_output_dim + encoder_output_dim, action_embedding_dim),
-                    # whereas in the coverage model, it is
-                    # (decoder_output_dim + encoder_output_dim + checklist_size, action_embedding_dim)
-                    # We copy only the relevant part of the weights here.
-                    archived_projection_weights = weights.data
-                    new_weights = model_parameters[name].data.clone()
-                    new_weights[:, :-self._num_unlinked_terminals] = archived_projection_weights
-                elif name == question_embedder_weight:
+                if name == question_embedder_weight:
                     # The shapes of embedding weights will most likely differ between the two models
                     # because the vocabularies will most likely be different. We will get a mapping
                     # of indices from this model's token indices to the archived model's and copy
