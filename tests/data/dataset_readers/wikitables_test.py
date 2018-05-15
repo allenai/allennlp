@@ -7,7 +7,7 @@ from allennlp.semparse.worlds import WikiTablesWorld
 
 def assert_dataset_correct(dataset):
     instances = list(dataset)
-    assert len(instances) == 2
+    assert len(instances) == 6
     instance = instances[0]
 
     assert instance.fields.keys() == {

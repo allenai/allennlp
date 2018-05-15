@@ -1,2 +1,6 @@
 (example (id nt-0) (utterance "what was the last year where this team was a part of the usl a-league?") (context (graph tables.TableKnowledgeGraph tables/590.csv)) (targetValue (list (description "2004"))))
 (example (id nt-1) (utterance "in what city did piotr's last 1st place finish occur?") (context (graph tables.TableKnowledgeGraph tables/622.csv)) (targetValue (list (description "Bangkok, Thailand"))))
+(example (id nt-3460) (utterance "what is the first result listed under playoffs?") (context (graph tables.TableKnowledgeGraph tables/590.csv)) (targetValue (list (description "Quarterfinals"))))
+(example (id nt-5408) (utterance "which year had the most attendance?") (context (graph tables.TableKnowledgeGraph tables/590.csv)) (targetValue (list (description "2010"))))
+(example (id nt-8117) (utterance "of those years in which the team did not qualify for the quarterfinals, in which year was the team not in the usl first division?") (context (graph tables.TableKnowledgeGraph tables/590.csv)) (targetValue (list (description "2003"))))
+(example (id nt-9490) (utterance "how many years did this team not qualify for the open cup?") (context (graph tables.TableKnowledgeGraph tables/590.csv)) (targetValue (list (description "3"))))
