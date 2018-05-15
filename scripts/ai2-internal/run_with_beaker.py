@@ -62,20 +62,14 @@ def main(param_file: str, args):
         ]
 
     dataset_mounts = []
-    for source in (args.source if args.source else []):
-        datasetId, containerPath = source.split(":") + "\n"
-        dataset_mounts.append({
-            "datasetId": datasetId,
-            "containerPath": containerPath
-        })
-    for source in [f"{config_dataset_id}:/config.json"]:
+    for source in args.source + [f"{config_dataset_id}:/config.json"]:
         datasetId, containerPath = source.split(":")
         dataset_mounts.append({
             "datasetId": datasetId,
             "containerPath": containerPath
         })
 
-    for var in (args.env if args.env else []):
+    for var in args.env:
         key, value = var.split("=")
         env[key] = value
 
@@ -101,7 +95,7 @@ def main(param_file: str, args):
     }
 
     output_path = args.spec_output_path if args.spec_output_path else tempfile.mkstemp(".yaml",
-            "beaker-config")[1]
+            "beaker-config-")[1]
     with open(output_path, "w") as output:
         output.write(json.dumps(config, indent=4))
     print(f"Beaker spec written to {output_path}.")
@@ -112,7 +106,7 @@ def main(param_file: str, args):
         experiment_command.append(args.name)
 
     if args.dry_run:
-        print(f"This is a dry run (--dry-run).  Launch your job with the following command")
+        print(f"This is a dry run (--dry-run).  Launch your job with the following command:")
         print(f"    " + " ".join(experiment_command))
     else:
         print(f"Running the experiment:")
@@ -128,8 +122,8 @@ if __name__ == "__main__":
     parser.add_argument('--dry-run', action='store_true', help='If specified, an experiment will not be created.')
     parser.add_argument('--blueprint', type=str, help='The Blueprint to use (if unspecified one will be built)')
     parser.add_argument('--desc', type=str, help='A description for the experiment.')
-    parser.add_argument('--env', action='append', help='Set environment variables (e.g. NAME=value or NAME)')
-    parser.add_argument('--source', action='append', help='Bind a remote data source (e.g. source-id:/target/path)')
+    parser.add_argument('--env', action='append', default=[], help='Set environment variables (e.g. NAME=value or NAME)')
+    parser.add_argument('--source', action='append', default=[], help='Bind a remote data source (e.g. source-id:/target/path)')
     parser.add_argument('--cpu', help='CPUs to reserve for this experiment (e.g., 0.5)')
     parser.add_argument('--gpu_count', help='GPUs to use for this experiment (e.g., 1 (default))')
     parser.add_argument('--memory', help='Memory to reserve for this experiment (e.g., 1GB)')
