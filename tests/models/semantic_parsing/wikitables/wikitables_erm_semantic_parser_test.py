@@ -50,14 +50,15 @@ class WikiTablesErmSemanticParserTest(ModelTestCase):
             assert_almost_equal(archived_weight, changed_weight)
 
     def test_untrained_outputs_are_same_as_initial_models(self):
-        # We want to make sure that the outputs of an untrained mml initialized model are the
-        # same as those from the original mml model.
+        # We want to make sure that the outputs of an untrained, MML-initialized model are the
+        # same as those from the original MML model.
         archive_file = 'tests/fixtures/semantic_parsing/wikitables/serialization/model.tar.gz'
         mml_archive = load_archive(archive_file)
         mml_model = mml_archive.model
         tables_directory = "tests/fixtures/data/wikitables/"
         dpd_directory = "tests/fixtures/data/wikitables/dpd_output/"
         examples_file = "tests/fixtures/data/wikitables/sample_data.examples"
+
         dataset_reader = WikiTablesDatasetReader(tables_directory=tables_directory,
                                                  dpd_output_directory=dpd_directory)
         dataset = Batch(dataset_reader.read(examples_file))
@@ -66,7 +67,12 @@ class WikiTablesErmSemanticParserTest(ModelTestCase):
         mml_model.training = False
         mml_outputs = mml_model(**mml_data)
         mml_logical_forms = mml_outputs["logical_form"]
-        erm_data = self.dataset.as_tensor_dict(cuda_device=-1, for_training=False)
+
+        dataset_reader = WikiTablesDatasetReader(tables_directory=tables_directory,
+                                                 output_agendas=True)
+        dataset = Batch(dataset_reader.read(examples_file))
+        dataset.index_instances(self.model.vocab)
+        erm_data = dataset.as_tensor_dict(cuda_device=-1, for_training=False)
         self.model._initialize_weights_from_archive(mml_archive)
         # Overwriting the checklist multipliers to not let the checklist affect the action
         # predictions.
@@ -76,4 +82,5 @@ class WikiTablesErmSemanticParserTest(ModelTestCase):
         self.model.training = False
         erm_outputs = self.model(**erm_data)
         erm_logical_forms = erm_outputs["logical_form"]
+
         assert mml_logical_forms == erm_logical_forms

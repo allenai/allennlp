@@ -30,7 +30,7 @@
     },
     "checklist_cost_weight": 0.6,
     "max_decoding_steps": 20,
-    "decoder_beam_size": 10,
+    "decoder_beam_size": 5,
     "decoder_num_finished_states": 200,
     "attention_function": {"type": "dot_product"}
   },
