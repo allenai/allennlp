@@ -18,7 +18,6 @@ from typing import Dict, Optional, List, Tuple, Union, Iterable, Any, Set
 
 import torch
 import torch.optim.lr_scheduler
-from torch.optim.lr_scheduler import _LRScheduler as PytorchLRScheduler  # pylint: disable=protected-access
 from torch.nn.parallel import replicate, parallel_apply
 from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
 from tensorboardX import SummaryWriter
@@ -160,7 +159,7 @@ class Trainer:
                  cuda_device: Union[int, List] = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
-                 learning_rate_scheduler: Optional[PytorchLRScheduler] = None,
+                 learning_rate_scheduler: Optional[LearningRateScheduler] = None,
                  summary_interval: int = 100,
                  histogram_interval: int = None) -> None:
         """
@@ -604,28 +603,10 @@ class Trainer:
 
     def _update_learning_rate(self, epoch: int, val_metric: float = None,
                               batch_num_total: int = None) -> None:
-        if not self._learning_rate_scheduler:
-            return
-
-        if batch_num_total is not None:
-            if hasattr(self._learning_rate_scheduler, 'step_batch'):
-                self._learning_rate_scheduler.step_batch(batch_num_total)
-            return
-
-        # Grim hack to determine whether the validation metric we are recording
-        # needs to be passed to the scheduler. This is required because the
-        # step() function of the different schedulers are (understandably)
-        # different to ReduceLROnPlateau.
-        reduce_on_plateau = isinstance(self._learning_rate_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau)
-
-        if reduce_on_plateau and val_metric is None:
-            raise ConfigurationError("The reduce_on_plateau learning rate scheduler requires "
-                                     "a validation metric to compute the schedule and therefore "
-                                     "must be used with a validation dataset.")
-        elif reduce_on_plateau:
+        if self._learning_rate_scheduler:
+            self._learning_rate_scheduler.step_batch(batch_num_total)
             self._learning_rate_scheduler.step(val_metric, epoch)
-        else:
-            self._learning_rate_scheduler.step(epoch)
+
 
     def _validation_loss(self) -> Tuple[float, int]:
         """
