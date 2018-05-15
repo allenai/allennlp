@@ -2,6 +2,7 @@
 import os
 import shutil
 
+import torch
 from numpy.testing import assert_almost_equal
 
 from allennlp.common.testing import ModelTestCase
@@ -67,6 +68,11 @@ class WikiTablesErmSemanticParserTest(ModelTestCase):
         mml_logical_forms = mml_outputs["logical_form"]
         erm_data = self.dataset.as_tensor_dict(cuda_device=-1, for_training=False)
         self.model._initialize_weights_from_archive(mml_archive)
+        # Overwriting the checklist multipliers to not let the checklist affect the action
+        # predictions.
+        model_parameters = dict(self.model.named_parameters())
+        model_parameters["_decoder_step._unlinked_checklist_multiplier"].data.copy_(torch.FloatTensor([0.0]))
+        model_parameters["_decoder_step._linked_checklist_multiplier"].data.copy_(torch.FloatTensor([0.0]))
         self.model.training = False
         erm_outputs = self.model(**erm_data)
         erm_logical_forms = erm_outputs["logical_form"]
