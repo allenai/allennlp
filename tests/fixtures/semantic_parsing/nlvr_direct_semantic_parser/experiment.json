@@ -25,7 +25,7 @@
       "num_layers": 1
     },
     "decoder_beam_search": {
-      "beam_size": 5
+      "beam_size": 20
     },
     "max_decoding_steps": 20,
     "attention_function": {"type": "dot_product"},
@@ -38,12 +38,12 @@
     "batch_size" : 2
   },
   "trainer": {
-    "num_epochs": 1,
-    "patience": 2,
+    "num_epochs": 10,
+    "patience": 5,
     "cuda_device": -1,
     "optimizer": {
-      "type": "sgd",
-      "lr": 0.01
+      "type": "adam",
+      "lr": 0.1
     }
   }
 }

@@ -6,6 +6,8 @@ from torch.autograd import Variable
 from allennlp.common import Params
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import Vocabulary
+from allennlp.data.dataset_readers import NlvrDatasetReader
+from allennlp.data.dataset import Batch
 from allennlp.data.iterators import EpochTrackingBucketIterator
 from allennlp.models import Model
 from allennlp.models.archival import load_archive
@@ -100,3 +102,34 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
         # Mapping of indices from model vocabulary to new vocabulary. 0 and 1 are padding and unk
         # tokens.
         assert mapping == [(0, 0), (1, 1), (5, 2), (7, 3), (10, 4)]
+
+    def test_untrained_outputs_are_same_as_initial_models(self):
+        # We want to make sure that the outputs of an untrained mml initialized model are the
+        # same as those from the original mml model.
+        archive_file = 'tests/fixtures/semantic_parsing/nlvr_direct_semantic_parser/serialization/model.tar.gz'
+        mml_archive = load_archive(archive_file)
+        mml_model = mml_archive.model
+        sample_file = "tests/fixtures/data/nlvr/sample_grouped_data.jsonl"
+        dataset_reader = NlvrDatasetReader(output_agendas=False)
+        dataset = Batch(dataset_reader.read(sample_file))
+        dataset.index_instances(mml_model.vocab)
+        mml_data = dataset.as_tensor_dict(cuda_device=-1, for_training=False)
+        mml_model.training = False
+        mml_outputs = mml_model(**mml_data)
+        mml_action_strings = mml_outputs["best_action_strings"]
+        erm_data = self.dataset.as_tensor_dict(cuda_device=-1, for_training=False)
+        self.model._initialize_weights_from_archive(mml_archive)
+        # Overwriting the checklist multipliers to not let the checklist affect the action
+        # predictions.
+        model_parameters = dict(self.model.named_parameters())
+        model_parameters["_decoder_step._checklist_embedding_multiplier"].data.copy_(torch.FloatTensor([0.0]))
+        self.model.training = False
+        erm_outputs = self.model(**erm_data)
+        print(erm_outputs.keys())
+        erm_action_sequences = erm_outputs["best_action_sequences"]
+        erm_action_strings = []
+        num_sequences = len(erm_action_sequences)
+        for i in range(num_sequences):
+            erm_action_strings.append([[self.vocab.get_token_from_index(index, "rule_labels")
+                                        for index in erm_action_sequences[i][0]]])
+        assert mml_action_strings == erm_action_strings
