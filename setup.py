@@ -51,6 +51,7 @@ run chmod 600 ./pypirc so only you can read/write.
 
 """
 from setuptools import setup, find_packages
+import sys
 
 # PEP0440 compatible formatted version, see:
 # https://www.python.org/dev/peps/pep-0440/
