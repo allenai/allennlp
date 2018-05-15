@@ -86,9 +86,7 @@ def main(param_file: str, args: argparse.Namespace):
         },
         "env": env
     }
-    config_task = {"spec": config_spec}
-    if args.name:
-        config_task["name"] = args.name
+    config_task = {"spec": config_spec, "name": "training"}
 
     config = {
         "tasks": [config_task]
