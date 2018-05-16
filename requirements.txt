@@ -66,3 +66,14 @@ h5py
 
 # For timezone utilities
 pytz==2017.3
+
+#### ESSENTIAL TESTING-RELATED PACKAGES ####
+# We'll use pytest to run our tests; this isn't really necessary to run the code, but it is to run
+# the tests.  With this here, you can run the tests with `py.test` from the base directory.
+pytest
+
+# Allows marking tests as flaky, to be rerun if they fail
+flaky
+
+# Required to mock out `requests` calls
+responses>=0.7
