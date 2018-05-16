@@ -8,6 +8,7 @@ from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
+from allennlp.modules.matrix_attention_factory import MatrixAttentionFactory
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum
 from allennlp.training.metrics import CategoricalAccuracy
@@ -63,7 +64,7 @@ class DecomposableAttention(Model):
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  attend_feedforward: FeedForward,
-                 similarity_function: SimilarityFunction,
+                 matrix_attention: MatrixAttention,
                  compare_feedforward: FeedForward,
                  aggregate_feedforward: FeedForward,
                  premise_encoder: Optional[Seq2SeqEncoder] = None,
@@ -74,7 +75,7 @@ class DecomposableAttention(Model):
 
         self._text_field_embedder = text_field_embedder
         self._attend_feedforward = TimeDistributed(attend_feedforward)
-        self._matrix_attention = MatrixAttention(similarity_function)
+        self._matrix_attention = matrix_attention
         self._compare_feedforward = TimeDistributed(compare_feedforward)
         self._aggregate_feedforward = aggregate_feedforward
         self._premise_encoder = premise_encoder
@@ -197,7 +198,7 @@ class DecomposableAttention(Model):
             hypothesis_encoder = None
 
         attend_feedforward = FeedForward.from_params(params.pop('attend_feedforward'))
-        similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
+        matrix_attention = MatrixAttentionFactory.from_params(params.pop("similarity_function"))
         compare_feedforward = FeedForward.from_params(params.pop('compare_feedforward'))
         aggregate_feedforward = FeedForward.from_params(params.pop('aggregate_feedforward'))
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
@@ -207,7 +208,7 @@ class DecomposableAttention(Model):
         return cls(vocab=vocab,
                    text_field_embedder=text_field_embedder,
                    attend_feedforward=attend_feedforward,
-                   similarity_function=similarity_function,
+                   matrix_attention=matrix_attention,
                    compare_feedforward=compare_feedforward,
                    aggregate_feedforward=aggregate_feedforward,
                    premise_encoder=premise_encoder,

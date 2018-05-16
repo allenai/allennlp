@@ -11,6 +11,7 @@ from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Highway, MatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
+from allennlp.modules.matrix_attention_factory import MatrixAttentionFactory
 from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
 from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy, SquadEmAndF1
 
@@ -68,7 +69,7 @@ class BidirectionalAttentionFlow(Model):
                  text_field_embedder: TextFieldEmbedder,
                  num_highway_layers: int,
                  phrase_layer: Seq2SeqEncoder,
-                 attention_similarity_function: SimilarityFunction,
+                 matrix_attention: MatrixAttention,
                  modeling_layer: Seq2SeqEncoder,
                  span_end_encoder: Seq2SeqEncoder,
                  dropout: float = 0.2,
@@ -81,7 +82,7 @@ class BidirectionalAttentionFlow(Model):
         self._highway_layer = TimeDistributed(Highway(text_field_embedder.get_output_dim(),
                                                       num_highway_layers))
         self._phrase_layer = phrase_layer
-        self._matrix_attention = MatrixAttention(attention_similarity_function)
+        self._matrix_attention = matrix_attention
         self._modeling_layer = modeling_layer
         self._span_end_encoder = span_end_encoder
 
@@ -332,7 +333,7 @@ class BidirectionalAttentionFlow(Model):
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         num_highway_layers = params.pop_int("num_highway_layers")
         phrase_layer = Seq2SeqEncoder.from_params(params.pop("phrase_layer"))
-        similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
+        matrix_attention = MatrixAttentionFactory.from_params(params.pop("similarity_function"))
         modeling_layer = Seq2SeqEncoder.from_params(params.pop("modeling_layer"))
         span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
         dropout = params.pop_float('dropout', 0.2)
@@ -346,7 +347,7 @@ class BidirectionalAttentionFlow(Model):
                    text_field_embedder=text_field_embedder,
                    num_highway_layers=num_highway_layers,
                    phrase_layer=phrase_layer,
-                   attention_similarity_function=similarity_function,
+                   matrix_attention=matrix_attention,
                    modeling_layer=modeling_layer,
                    span_end_encoder=span_end_encoder,
                    dropout=dropout,

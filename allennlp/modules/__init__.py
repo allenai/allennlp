@@ -21,3 +21,7 @@ from allennlp.modules.span_pruner import SpanPruner
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders import TokenEmbedder, Embedding
+from allennlp.modules.dot_product_matrix_attention import DotProductMatrixAttention
+from allennlp.modules.cosine_matrix_attention import CosineMatrixAttention
+from allennlp.modules.multi_headed_matrix_attention import MultiHeadedMatrixAttention
+from allennlp.modules.linear_matrix_attention import LinearMatrixAttention

@@ -52,7 +52,7 @@
       "dropout": 0.2
     },
     "similarity_function": {
-      "type": "linear",
+      "type": "linear_attention",
       "combination": "x,y,x*y",
       "tensor_1_dim": 200,
       "tensor_2_dim": 200

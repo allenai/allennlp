@@ -27,7 +27,7 @@
       "hidden_dims": 2,
       "activations": "relu"
     },
-    "similarity_function": {"type": "dot_product"},
+    "similarity_function": {"type": "dot_product_matrix_attention"},
     "compare_feedforward": {
       "input_dim": 4,
       "num_layers": 1,

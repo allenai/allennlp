@@ -46,7 +46,7 @@
       "num_layers": 1
     },
     "similarity_function": {
-      "type": "linear",
+      "type": "linear_matrix_attention",
       "combination": "x,y,x*y",
       "tensor_1_dim": 10,
       "tensor_2_dim": 10

@@ -3,13 +3,11 @@ A ``Module`` that takes two matrices as input and returns a matrix of attentions
 """
 
 import torch
-from overrides import overrides
+from allennlp.common.params import Params
 
-from allennlp.common import Params
-from allennlp.modules.similarity_functions import DotProductSimilarity, SimilarityFunction
+from allennlp.common.registrable import Registrable
 
-
-class MatrixAttention(torch.nn.Module):
+class MatrixAttention(torch.nn.Module, Registrable):
     '''
     This ``Module`` takes two matrices as input and returns a matrix of attentions.
 
@@ -30,32 +28,8 @@ class MatrixAttention(torch.nn.Module):
 
     Output:
         - ``(batch_size, num_rows_1, num_rows_2)``
-
-    Parameters
-    ----------
-    similarity_function: ``SimilarityFunction``, optional (default=``DotProductSimilarity``)
-        The similarity function to use when computing the attention.
     '''
-    def __init__(self, similarity_function: SimilarityFunction = None) -> None:
-        super(MatrixAttention, self).__init__()
-
-        self._similarity_function = similarity_function or DotProductSimilarity()
-
-    @overrides
-    def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
-        tiled_matrix_1 = matrix_1.unsqueeze(2).expand(matrix_1.size()[0],
-                                                      matrix_1.size()[1],
-                                                      matrix_2.size()[1],
-                                                      matrix_1.size()[2])
-        tiled_matrix_2 = matrix_2.unsqueeze(1).expand(matrix_2.size()[0],
-                                                      matrix_1.size()[1],
-                                                      matrix_2.size()[1],
-                                                      matrix_2.size()[2])
-        return self._similarity_function(tiled_matrix_1, tiled_matrix_2)
-
     @classmethod
     def from_params(cls, params: Params) -> 'MatrixAttention':
-        similarity_function = SimilarityFunction.from_params(params.pop('similarity_function', {}))
-        params.assert_empty(cls.__name__)
-        return cls(similarity_function=similarity_function)
+        clazz = cls.by_name(params.pop_choice("type", cls.list_available()))
+        return clazz.from_params(params)
