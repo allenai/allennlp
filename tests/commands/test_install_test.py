@@ -9,5 +9,5 @@ class TestTestInstall(AllenNlpTestCase):
     def test_get_project_root(self):
         project_root = _get_project_root()
         assert os.path.exists(os.path.join(project_root, "tests"))
-        assert os.path.exists(os.path.join(project_root, "LICENSE"))
-        assert os.path.exists(os.path.join(project_root, "setup.py"))
+        assert os.path.exists(os.path.join(project_root, "tests",
+                                           "commands", "test_install_test.py"))
