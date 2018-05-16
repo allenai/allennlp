@@ -85,7 +85,7 @@ class LabelField(Field[torch.Tensor]):
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:  # pylint: disable=no-self-use
-        return {'label_id': self._label_id}
+        return {}
 
     @overrides
     def as_tensor(self,
