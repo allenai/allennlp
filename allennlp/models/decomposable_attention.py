@@ -162,7 +162,10 @@ class DecomposableAttention(Model):
         label_logits = self._aggregate_feedforward(aggregate_input)
         label_probs = torch.nn.functional.softmax(label_logits, dim=-1)
 
-        output_dict = {"label_logits": label_logits, "label_probs": label_probs}
+        output_dict = {"label_logits": label_logits,
+                       "label_probs": label_probs,
+                       "h2p_attention": h2p_attention,
+                       "p2h_attention": p2h_attention}
 
         if label is not None:
             loss = self._loss(label_logits, label.long().view(-1))

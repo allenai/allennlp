@@ -12,7 +12,7 @@ class BidafPredictor(Predictor):
     Predictor for the :class:`~allennlp.models.bidaf.BidirectionalAttentionFlow` model.
     """
 
-    def predict(self, question: str, passage: str, cuda_device: int = -1) -> JsonDict:
+    def predict(self, question: str, passage: str) -> JsonDict:
         """
         Make a machine comprehension prediction on the supplied input.
         See https://rajpurkar.github.io/SQuAD-explorer/ for more information about the machine comprehension task.
@@ -30,7 +30,7 @@ class BidafPredictor(Predictor):
         A dictionary that represents the prediction made by the system.  The answer string will be under the
         "best_span_str" key.
         """
-        return self.predict_json({"passage" : passage, "question" : question}, cuda_device)
+        return self.predict_json({"passage" : passage, "question" : question})
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:

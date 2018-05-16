@@ -64,9 +64,3 @@ class SpanExtractor(torch.nn.Module, Registrable):
         Returns the expected final dimension of the returned span representation.
         """
         raise NotImplementedError
-
-
-    @classmethod
-    def from_params(cls, params: Params) -> "SpanExtractor":
-        choice = params.pop_choice('type', cls.list_available())
-        return cls.by_name(choice).from_params(params)

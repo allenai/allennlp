@@ -11,7 +11,7 @@ from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
-from allennlp.nn.decoding import DecoderTrainer
+from allennlp.nn.decoding import DecoderTrainer, ChecklistState
 from allennlp.nn.decoding.decoder_trainers import ExpectedRiskMinimization
 from allennlp.nn import util
 from allennlp.models.archival import load_archive, Archive
@@ -51,6 +51,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         attention.
     beam_size : ``int``
         Beam size for the beam search used during training.
+    max_num_finished_states : ``int``
+        Maximum number of finished states the trainer should compute costs for.
     normalize_beam_score_by_length : ``bool``, optional (default=False)
         Should the log probabilities be normalized by length before renormalizing them? Edunov et
         al. do this in their work, but we found that not doing it works better. It's possible they
@@ -58,7 +60,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         and shouldn't be penalized, while we will mostly want to penalize longer logical forms.
     max_decoding_steps : ``int``
         Maximum number of steps for the beam search during training.
-    checklist_cost_weight : ``float``, optional (default=0.8)
+    dropout : ``float``, optional (default=0.0)
+        Probability of dropout to apply on encoder outputs, decoder outputs and predicted actions.
+    checklist_cost_weight : ``float``, optional (default=0.6)
         Mixture weight (0-1) for combining coverage cost and denotation cost. As this increases, we
         weigh the coverage cost higher, with a value of 1.0 meaning that we do not care about
         denotation accuracy.
@@ -81,26 +85,33 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                  encoder: Seq2SeqEncoder,
                  attention_function: SimilarityFunction,
                  beam_size: int,
+                 max_num_finished_states: int,
                  max_decoding_steps: int,
+                 dropout: float = 0.0,
                  normalize_beam_score_by_length: bool = False,
-                 checklist_cost_weight: float = 0.8,
+                 checklist_cost_weight: float = 0.6,
                  dynamic_cost_weight: Dict[str, Union[int, float]] = None,
                  penalize_non_agenda_actions: bool = False,
                  initial_mml_model_file: str = None) -> None:
         super(NlvrCoverageSemanticParser, self).__init__(vocab=vocab,
                                                          sentence_embedder=sentence_embedder,
                                                          action_embedding_dim=action_embedding_dim,
-                                                         encoder=encoder)
+                                                         encoder=encoder,
+                                                         dropout=dropout)
         self._agenda_coverage = Average()
         self._decoder_trainer: DecoderTrainer[Callable[[NlvrDecoderState], torch.Tensor]] = \
-                ExpectedRiskMinimization(beam_size, normalize_beam_score_by_length, max_decoding_steps)
+                ExpectedRiskMinimization(beam_size,
+                                         normalize_beam_score_by_length,
+                                         max_decoding_steps,
+                                         max_num_finished_states)
 
         # Instantiating an empty NlvrWorld just to get the number of terminals.
         self._terminal_productions = set(NlvrWorld([]).terminal_productions.values())
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
                                              attention_function=attention_function,
-                                             checklist_size=len(self._terminal_productions))
+                                             dropout=dropout,
+                                             use_coverage=True)
         self._checklist_cost_weight = checklist_cost_weight
         self._dynamic_cost_wait_epochs = None
         self._dynamic_cost_rate = None
@@ -136,17 +147,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                "tokens.")
         for name, weights in archived_parameters.items():
             if name in model_parameters:
-                if name == "_decoder_step._output_projection_layer.weight":
-                    # The dimensions differ for this parameter between the coverage model and
-                    # the direct model. In the direct model, this is of size
-                    # (decoder_output_dim + encoder_output_dim, action_embedding_dim),
-                    # whereas in the coverage model, it is
-                    # (decoder_output_dim + encoder_output_dim + checklist_size, action_embedding_dim)
-                    # We copy only the relevant part of the weights here.
-                    archived_projection_weights = weights.data
-                    new_weights = model_parameters[name].data.clone()
-                    new_weights[:, :-len(self._terminal_productions)] = archived_projection_weights
-                elif name == "_sentence_embedder.token_embedder_tokens.weight":
+                if name == "_sentence_embedder.token_embedder_tokens.weight":
                     # The shapes of embedding weights will most likely differ between the two models
                     # because the vocabularies will most likely be different. We will get a mapping
                     # of indices from this model's token indices to the archived model's and copy
@@ -215,19 +216,17 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         label_strings = self._get_label_strings(labels) if labels is not None else None
         # Each instance's agenda is of size (agenda_size, 1)
         agenda_list = [agenda[i] for i in range(batch_size)]
-        checklist_targets = []
-        all_terminal_actions = []
-        checklist_masks = []
-        initial_checklist_list = []
+        initial_checklist_states = []
         for instance_actions, instance_agenda in zip(actions, agenda_list):
             checklist_info = self._get_checklist_info(instance_agenda, instance_actions)
             checklist_target, terminal_actions, checklist_mask = checklist_info
-            checklist_targets.append(checklist_target)
-            all_terminal_actions.append(terminal_actions)
-            checklist_masks.append(checklist_mask)
-            initial_checklist_list.append(util.new_variable_with_size(checklist_target,
-                                                                      checklist_target.size(),
-                                                                      0))
+            initial_checklist = util.new_variable_with_size(checklist_target,
+                                                            checklist_target.size(),
+                                                            0)
+            initial_checklist_states.append(ChecklistState(terminal_actions=terminal_actions,
+                                                           checklist_target=checklist_target,
+                                                           checklist_mask=checklist_mask,
+                                                           checklist=initial_checklist))
         initial_state = NlvrDecoderState(batch_indices=list(range(batch_size)),
                                          action_history=[[] for _ in range(batch_size)],
                                          score=initial_score_list,
@@ -238,10 +237,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                          possible_actions=actions,
                                          worlds=worlds,
                                          label_strings=label_strings,
-                                         terminal_actions=all_terminal_actions,
-                                         checklist_target=checklist_targets,
-                                         checklist_masks=checklist_masks,
-                                         checklist=initial_checklist_list)
+                                         checklist_state=initial_checklist_states)
 
         agenda_data = [agenda_[:, 0].cpu().data for agenda_ in agenda_list]
         outputs = self._decoder_trainer.decode(initial_state,
@@ -363,21 +359,16 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         """
         if not state.is_finished():
             raise RuntimeError("_get_state_cost() is not defined for unfinished states!")
-        instance_checklist_target = state.checklist_target[0]
-        instance_checklist = state.checklist[0]
-        instance_checklist_mask = state.checklist_mask[0]
-
         # Our checklist cost is a sum of squared error from where we want to be, making sure we
         # take into account the mask.
-        checklist_balance = instance_checklist_target - instance_checklist
-        checklist_balance = checklist_balance * instance_checklist_mask
+        checklist_balance = state.checklist_state[0].get_balance()
         checklist_cost = torch.sum((checklist_balance) ** 2)
 
         # This is the number of items on the agenda that we want to see in the decoded sequence.
         # We use this as the denotation cost if the path is incorrect.
         # Note: If we are penalizing the model for producing non-agenda actions, this is not the
         # upper limit on the checklist cost. That would be the number of terminal actions.
-        denotation_cost = torch.sum(instance_checklist_target.float())
+        denotation_cost = torch.sum(state.checklist_state[0].checklist_target.float())
         checklist_cost = self._checklist_cost_weight * checklist_cost
         # TODO (pradeep): The denotation based cost below is strict. May be define a cost based on
         # how many worlds the logical form is correct in?
@@ -421,34 +412,3 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                 "costs": costs,
                 "scores": model_scores}
 
-    # @classmethod
-    # def from_params(cls, vocab, params: Params) -> 'NlvrCoverageSemanticParser':
-    #     sentence_embedder_params = params.pop("sentence_embedder")
-    #     sentence_embedder = TextFieldEmbedder.from_params(vocab, sentence_embedder_params)
-    #     action_embedding_dim = params.pop_int('action_embedding_dim')
-    #     encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-    #     attention_function_type = params.pop("attention_function", None)
-    #     if attention_function_type is not None:
-    #         attention_function = SimilarityFunction.from_params(attention_function_type)
-    #     else:
-    #         attention_function = None
-    #     beam_size = params.pop_int('beam_size')
-    #     normalize_beam_score_by_length = params.pop_bool('normalize_beam_score_by_length', False)
-    #     max_decoding_steps = params.pop_int("max_decoding_steps")
-    #     checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.8)
-    #     dynamic_cost_weight = params.pop("dynamic_cost_weight", None)
-    #     penalize_non_agenda_actions = params.pop_bool("penalize_non_agenda_actions", False)
-    #     initial_mml_model_file = params.pop("initial_mml_model_file", None)
-    #     params.assert_empty(cls.__name__)
-    #     return cls(vocab,
-    #                sentence_embedder=sentence_embedder,
-    #                action_embedding_dim=action_embedding_dim,
-    #                encoder=encoder,
-    #                attention_function=attention_function,
-    #                beam_size=beam_size,
-    #                max_decoding_steps=max_decoding_steps,
-    #                normalize_beam_score_by_length=normalize_beam_score_by_length,
-    #                checklist_cost_weight=checklist_cost_weight,
-    #                dynamic_cost_weight=dynamic_cost_weight,
-    #                penalize_non_agenda_actions=penalize_non_agenda_actions,
-    #                initial_mml_model_file=initial_mml_model_file)

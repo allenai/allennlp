@@ -54,6 +54,16 @@ class WikiTablesWorld(World):
             self._map_name(entity, keep_mapping=True)
 
         self._entity_set = set(table_graph.entities)
+        self.terminal_productions: Dict[str, str] = {}
+        for entity in self._entity_set:
+            mapped_name = self.local_name_mapping[entity]
+            signature = self.local_type_signatures[mapped_name]
+            self.terminal_productions[entity] = f"{signature} -> {entity}"
+
+        for predicate, mapped_name in self.global_name_mapping.items():
+            if mapped_name in self.global_type_signatures:
+                signature = self.global_type_signatures[mapped_name]
+                self.terminal_productions[predicate] = f"{signature} -> {predicate}"
 
     def is_table_entity(self, entity_name: str) -> bool:
         """
@@ -159,3 +169,42 @@ class WikiTablesWorld(World):
             else:
                 translated_name = self.local_name_mapping[name]
         return translated_name
+
+    def get_agenda(self):
+        agenda_items = self.table_graph.get_linked_agenda_items()
+        # Global rules
+        question_tokens = [token.text for token in self.table_graph.question_tokens]
+        question = " ".join(question_tokens)
+        for token in question_tokens:
+            if token in ["next", "previous", "before", "after", "above", "below"]:
+                agenda_items.append("fb:row.row.next")
+            if token == "total":
+                agenda_items.append("sum")
+            if token == "difference":
+                agenda_items.append("-")
+            if token == "average":
+                agenda_items.append("avg")
+            if token in ["least", "top", "first", "smallest", "shortest", "lowest"]:
+                # This condition is too brittle. But for most logical forms with "min", there are
+                # semantically equivalent ones with "argmin". The exceptions are rare.
+                if "what is the least" in question:
+                    agenda_items.append("min")
+                else:
+                    agenda_items.append("argmin")
+            if token in ["last", "most", "largest", "highest", "longest", "greatest"]:
+                # This condition is too brittle. But for most logical forms with "max", there are
+                # semantically equivalent ones with "argmax". The exceptions are rare.
+                if "what is the most" in question:
+                    agenda_items.append("max")
+                else:
+                    agenda_items.append("argmax")
+
+        if "how many" in question or "number" in question:
+            if "sum" not in agenda_items and "avg" not in agenda_items:
+                # The question probably just requires counting the rows. But this is not very
+                # accurate. The question could also be asking for a value that is in the table.
+                agenda_items.append("count")
+        agenda = []
+        for agenda_item in set(agenda_items):
+            agenda.append(self.terminal_productions[agenda_item])
+        return agenda
