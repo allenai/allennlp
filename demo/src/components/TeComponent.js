@@ -168,7 +168,7 @@ class TeGraph extends React.Component {
 
 class TeOutput extends React.Component {
     render() {
-      const { labelProbs ,h2p_attention , p2h_attention, premise_tokens , hypothesis_tokens } = this.props;
+      const { labelProbs, h2p_attention, p2h_attention, premise_tokens, hypothesis_tokens } = this.props;
       const [entailment, contradiction, neutral] = labelProbs;
 
       let judgment; // Valid values: "e", "c", "n"
@@ -276,10 +276,10 @@ class TeOutput extends React.Component {
               </table>
             </div>
           </div>
-             <div className="form__field">
+          <div className="form__field">
             <Collapsible trigger="Model internals (beta)">
               <Collapsible trigger="premise to hypothesis attention">
-              <span>
+                <span>
                   For every premise word, the model computes an attention over the hypothesis words.
                   This heatmap shows that attention, which is normalized for every row in the matrix.
                 </span>
@@ -287,20 +287,18 @@ class TeOutput extends React.Component {
                   <HeatMap xLabels={premise_tokens} yLabels={hypothesis_tokens} data={h2p_attention} />
                 </div>
               </Collapsible>
-
-               <Collapsible trigger="hypothesis to premise attention">
-               <span>
-                   For every hypothesis word, the model computes an attention over the premise words.
-                   This heatmap shows that attention, which is normalized for every row in the matrix.
-                 </span>
-                  <div className="heatmap">
-                   <HeatMap xLabels={hypothesis_tokens} yLabels={premise_tokens} data={p2h_attention} />
-                 </div>
-             </Collapsible>
+              <Collapsible trigger="hypothesis to premise attention">
+                <span>
+                  For every hypothesis word, the model computes an attention over the premise words.
+                  This heatmap shows that attention, which is normalized for every row in the matrix.
+                </span>
+                <div className="heatmap">
+                  <HeatMap xLabels={hypothesis_tokens} yLabels={premise_tokens} data={p2h_attention} />
+                </div>
+              </Collapsible>
             </Collapsible>
-
           </div>
-            </div>
+        </div>
       );
     }
 }
