@@ -7,7 +7,7 @@ from overrides import overrides
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, TextField, LabelField, MetadataField
+from allennlp.data.fields import Field, TextField, LabelField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
@@ -71,10 +71,6 @@ class SnliReader(DatasetReader):
         hypothesis_tokens = self._tokenizer.tokenize(hypothesis)
         fields['premise'] = TextField(premise_tokens, self._token_indexers)
         fields['hypothesis'] = TextField(hypothesis_tokens, self._token_indexers)
-        fields['metadata'] = MetadataField({
-                'premise_tokens': [token.text for token in premise_tokens],
-                'hypothesis_tokens': [token.text for token in hypothesis_tokens]
-                })
         if label:
             fields['label'] = LabelField(label)
         return Instance(fields)

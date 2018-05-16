@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional
 
 import torch
 
@@ -95,8 +95,7 @@ class DecomposableAttention(Model):
     def forward(self,  # type: ignore
                 premise: Dict[str, torch.LongTensor],
                 hypothesis: Dict[str, torch.LongTensor],
-                label: torch.IntTensor = None,
-                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
+                label: torch.IntTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -163,9 +162,10 @@ class DecomposableAttention(Model):
         label_logits = self._aggregate_feedforward(aggregate_input)
         label_probs = torch.nn.functional.softmax(label_logits, dim=-1)
 
-        output_dict = {"label_logits": label_logits, "label_probs": label_probs}
-
-        self.add_insight_to_output_dict(metadata, output_dict, p2h_attention, h2p_attention)
+        output_dict = {"label_logits": label_logits,
+                       "label_probs": label_probs,
+                       "h2p_attention": h2p_attention,
+                       "p2h_attention": p2h_attention}
 
         if label is not None:
             loss = self._loss(label_logits, label.long().view(-1))
@@ -174,19 +174,7 @@ class DecomposableAttention(Model):
 
         return output_dict
 
-    @staticmethod
-    def add_insight_to_output_dict(metadata, output_dict, p2h_attention, h2p_attention):
-        premise_tokens = []
-        hypothesis_tokens = []
-        if metadata is not None:
-            for datum in metadata:
-                premise_tokens.append(datum['premise_tokens'][:len(datum['premise_tokens'])-1])
-                hypothesis_tokens.append(datum['hypothesis_tokens'][:len(datum['hypothesis_tokens'])-1])
 
-            output_dict["premise_tokens"] = premise_tokens
-            output_dict["hypothesis_tokens"] = hypothesis_tokens
-            output_dict["h2p_attention"] = h2p_attention
-            output_dict["p2h_attention"] = p2h_attention
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {
