@@ -101,7 +101,7 @@ def main(param_file: str, args: argparse.Namespace):
     experiment_command = ["beaker", "experiment", "create", "--file", output_path]
     if args.name:
         experiment_command.append("--name")
-        experiment_command.append(args.name)
+        experiment_command.append(args.name.replace(" ", "-"))
 
     if args.dry_run:
         print(f"This is a dry run (--dry-run).  Launch your job with the following command:")
