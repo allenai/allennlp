@@ -217,7 +217,7 @@ class ElmoEmbedder():
                 if length == 0:
                     elmo_embeddings.append(empty_embedding())
                 else:
-                    elmo_embeddings.append(embeddings[i, :, :length, :].data.cpu().numpy())
+                    elmo_embeddings.append(embeddings[i, :, :length, :].detach().cpu().numpy())
 
         return elmo_embeddings
 

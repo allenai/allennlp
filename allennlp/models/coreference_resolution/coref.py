@@ -310,17 +310,17 @@ class CoreferenceResolver(Model):
 
         # A tensor of shape (batch_size, num_spans_to_keep, 2), representing
         # the start and end indices of each span.
-        batch_top_spans = output_dict["top_spans"].data.cpu()
+        batch_top_spans = output_dict["top_spans"].detach().cpu()
 
         # A tensor of shape (batch_size, num_spans_to_keep) representing, for each span,
         # the index into ``antecedent_indices`` which specifies the antecedent span. Additionally,
         # the index can be -1, specifying that the span has no predicted antecedent.
-        batch_predicted_antecedents = output_dict["predicted_antecedents"].data.cpu()
+        batch_predicted_antecedents = output_dict["predicted_antecedents"].detach().cpu()
 
         # A tensor of shape (num_spans_to_keep, max_antecedents), representing the indices
         # of the predicted antecedents with respect to the 2nd dimension of ``batch_top_spans``
         # for each antecedent we considered.
-        antecedent_indices = output_dict["antecedent_indices"].data.cpu()
+        antecedent_indices = output_dict["antecedent_indices"].detach().cpu()
         batch_clusters: List[List[List[Tuple[int, int]]]] = []
 
         # Calling zip() on two tensors results in an iterator over their

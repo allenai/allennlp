@@ -12,7 +12,6 @@ from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.nn.decoding import BeamSearch
 from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
-from allennlp.nn import util
 from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.nlvr.nlvr_decoder_state import NlvrDecoderState
 from allennlp.models.semantic_parsing.nlvr.nlvr_decoder_step import NlvrDecoderStep

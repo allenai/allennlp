@@ -13,7 +13,6 @@ from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.nn.decoding import DecoderTrainer, ChecklistState
 from allennlp.nn.decoding.decoder_trainers import ExpectedRiskMinimization
-from allennlp.nn import util
 from allennlp.models.archival import load_archive, Archive
 from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.nlvr.nlvr_decoder_state import NlvrDecoderState
@@ -279,7 +278,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         """
         terminal_indices = []
         target_checklist_list = []
-        agenda_indices_set = set([int(x) for x in agenda.squeeze(0).data.cpu().numpy()])
+        agenda_indices_set = set([int(x) for x in agenda.squeeze(0).detach().cpu().numpy()])
         for index, action in enumerate(all_actions):
             # Each action is a ProductionRuleArray, a tuple where the first item is the production
             # rule string.
@@ -382,10 +381,10 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         is learning. It may be inefficient to call it while training the model on real data.
         """
         if len(state.batch_indices) == 1 and state.is_finished():
-            costs = [float(self._get_state_cost(state).data.cpu().numpy())]
+            costs = [float(self._get_state_cost(state).detach().cpu().numpy())]
         else:
             costs = []
-        model_scores = [float(score.data.cpu().numpy()) for score in state.score]
+        model_scores = [float(score.detach().cpu().numpy()) for score in state.score]
         all_actions = state.possible_actions[0]
         action_sequences = [[self._get_action_string(all_actions[action]) for action in history]
                             for history in state.action_history]
@@ -394,8 +393,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         for agenda, checklist_target in zip(state.terminal_actions, state.checklist_target):
             agenda_indices = []
             for action, is_wanted in zip(agenda, checklist_target):
-                action_int = int(action.data.cpu().numpy())
-                is_wanted_int = int(is_wanted.data.cpu().numpy())
+                action_int = int(action.detach().cpu().numpy())
+                is_wanted_int = int(is_wanted.detach().cpu().numpy())
                 if is_wanted_int != 0:
                     agenda_indices.append(action_int)
             agenda_sequences.append([self._get_action_string(all_actions[action])

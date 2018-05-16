@@ -31,7 +31,7 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         for i in range(3):
             output_new, _ = model(model_input)
             output_new, _ = pad_packed_sequence(output_new, batch_first=True)
-            numpy.testing.assert_array_almost_equal(output.data.cpu().numpy(), output_new.data.cpu().numpy())
+            numpy.testing.assert_array_almost_equal(output.detach().cpu().numpy(), output_new.detach().cpu().numpy())
             output = output_new
 
     @staticmethod
@@ -46,8 +46,8 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         kernel_output, _ = kernel_model(packed_kernel_input)
         kernel_output, _ = pad_packed_sequence(kernel_output, batch_first=True)
 
-        numpy.testing.assert_array_almost_equal(baseline_output.data.cpu().numpy(),
-                                                kernel_output.data.cpu().numpy())
+        numpy.testing.assert_array_almost_equal(baseline_output.detach().cpu().numpy(),
+                                                kernel_output.detach().cpu().numpy())
 
         # Backprop some random error.
         random_error = torch.randn(baseline_output.size()).cuda()
@@ -57,8 +57,8 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         kernel_model.zero_grad()
         kernel_output.backward(random_error)
 
-        numpy.testing.assert_array_almost_equal(baseline_input.grad.data.cpu().numpy(),
-                                                kernel_input.grad.data.cpu().numpy())
+        numpy.testing.assert_array_almost_equal(baseline_input.grad.detach().cpu().numpy(),
+                                                kernel_input.grad.detach().cpu().numpy())
         weight_index = 0
         bias_index = 0
         for layer in range(baseline_model.num_layers):
@@ -77,12 +77,12 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
             kernel_bias_grad = kernel_model.bias.grad[bias_index:bias_index+bias_grad.nelement()]
             bias_index += bias_grad.nelement()
 
-            numpy.testing.assert_array_almost_equal(kernel_input_grad.data.cpu().numpy(),
-                                                    input_grad.data.cpu().numpy(), decimal=4)
-            numpy.testing.assert_array_almost_equal(kernel_state_grad.data.cpu().numpy(),
-                                                    state_grad.data.cpu().numpy(), decimal=4)
-            numpy.testing.assert_array_almost_equal(kernel_bias_grad.data.cpu().numpy(),
-                                                    bias_grad.data.cpu().numpy(), decimal=4)
+            numpy.testing.assert_array_almost_equal(kernel_input_grad.detach().cpu().numpy(),
+                                                    input_grad.detach().cpu().numpy(), decimal=4)
+            numpy.testing.assert_array_almost_equal(kernel_state_grad.detach().cpu().numpy(),
+                                                    state_grad.detach().cpu().numpy(), decimal=4)
+            numpy.testing.assert_array_almost_equal(kernel_bias_grad.detach().cpu().numpy(),
+                                                    bias_grad.detach().cpu().numpy(), decimal=4)
 
     @staticmethod
     def get_models_and_inputs(batch_size, input_size, output_size, num_layers, timesteps, dropout_prob):

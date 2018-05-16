@@ -199,7 +199,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         # computation, to global indices here.
         for batch_index, checklist_state in zip(state.batch_indices, state.checklist_state):
             global_terminal_indices.append([])
-            for terminal_index in checklist_state.terminal_actions.data.cpu():
+            for terminal_index in checklist_state.terminal_actions.detach().cpu():
                 global_terminal_index = state.action_indices[(batch_index, int(terminal_index[0]))]
                 global_terminal_indices[-1].append(global_terminal_index)
         # We don't need to pad this tensor because the terminal indices from all groups will be the
@@ -388,7 +388,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         for batch_index, instance_states_info in states_info.items():
             batch_scores = torch.cat([info[-1] for info in instance_states_info])
             _, sorted_indices = batch_scores.sort(-1, descending=True)
-            sorted_states_info = [instance_states_info[i] for i in sorted_indices.data.cpu().numpy()]
+            sorted_states_info = [instance_states_info[i] for i in sorted_indices.detach().cpu().numpy()]
             allowed_states_info = []
             for i, (group_index, action_index, _, _) in enumerate(sorted_states_info):
                 action = considered_actions[group_index][action_index]

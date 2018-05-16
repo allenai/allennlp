@@ -101,7 +101,7 @@ class WikiTablesMmlSemanticParserTest(ModelTestCase):
                              [0.9820138, 0.0024561, 0.9908675, 0.0008947, 0.9811352]],
                             [[0.5, 0.7310586, 0.9996647, 0.0, 0.0],
                              [0.0, 0.0, 0.0, 0.0, 0.0]]]
-        assert_almost_equal(entity_probability.data.cpu().numpy(), true_probability)
+        assert_almost_equal(entity_probability.detach().cpu().numpy(), true_probability)
 
     def get_fake_worlds(self):
         # Generate a toy WikitablesWorld.
@@ -195,8 +195,8 @@ class WikiTablesMmlSemanticParserTest(ModelTestCase):
                     ('<c,r> -> fb:row.row.year', False, None)]]
         flattened_linking_scores, actions_to_entities = \
                 WikiTablesMmlSemanticParser._map_entity_productions(linking_scores, worlds, actions)
-        assert_almost_equal(flattened_linking_scores.data.cpu().numpy(),
-                            linking_scores.view(3 * 4, 5).data.cpu().numpy())
+        assert_almost_equal(flattened_linking_scores.detach().cpu().numpy(),
+                            linking_scores.view(3 * 4, 5).detach().cpu().numpy())
         assert actions_to_entities == {
                 (0, 3): 0,
                 (0, 4): 1,

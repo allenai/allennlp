@@ -38,5 +38,5 @@ class MultiHeadSelfAttentionTest(AllenNlpTestCase):
         # Compute the same function without a mask, but with
         # only the unmasked elements - should be the same.
         result_without_mask = attention(tensor[:, :6, :])
-        numpy.testing.assert_almost_equal(result[0, :6, :].data.cpu().numpy(),
-                                          result_without_mask[0, :, :].data.cpu().numpy())
+        numpy.testing.assert_almost_equal(result[0, :6, :].detach().cpu().numpy(),
+                                          result_without_mask[0, :, :].detach().cpu().numpy())

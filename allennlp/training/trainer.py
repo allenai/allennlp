@@ -460,11 +460,11 @@ class Trainer:
                 # get the magnitude of parameter updates for logging
                 # We need a copy of current parameters to compute magnitude of updates,
                 # and copy them to CPU so large models won't go OOM on the GPU.
-                param_updates = {name: param.data.cpu().clone()
+                param_updates = {name: param.detach().cpu().clone()
                                  for name, param in self._model.named_parameters()}
                 self._optimizer.step()
                 for name, param in self._model.named_parameters():
-                    param_updates[name].sub_(param.data.cpu())
+                    param_updates[name].sub_(param.detach().cpu())
                     update_norm = torch.norm(param_updates[name].view(-1, ))
                     param_norm = torch.norm(param.view(-1, ))
                     self._tensorboard.add_train_scalar("gradient_update/" + name,
@@ -632,7 +632,7 @@ class Trainer:
                 # count those batches for which we actually have a loss.  If this variable ever
                 # gets used for something else, we might need to change things around a bit.
                 batches_this_epoch += 1
-                val_loss += loss.data.cpu().numpy()
+                val_loss += loss.detach().cpu().numpy()
 
             # Update the description with the latest metrics
             val_metrics = self._get_metrics(val_loss, batches_this_epoch)

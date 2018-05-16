@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name,no-self-use,too-many-public-methods
+# pylint: disable=invalid-name,no-self-use,too-many-public-methods,not-callable
 import numpy
 from numpy.testing import assert_array_almost_equal, assert_almost_equal
 import torch
@@ -513,7 +513,7 @@ class TestNnUtil(AllenNlpTestCase):
                                [[2, 1, 0, 7],
                                 [7, 7, 2, 3],
                                 [0, 0, 4, 2]]])
-        indices = torch.from_numpy(indices).long()
+        indices = torch.tensor(indices, dtype=torch.long)
         shifted_indices = util.flatten_and_batch_shift_indices(indices, 10)
         numpy.testing.assert_array_equal(shifted_indices.data.numpy(),
                                          numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9,
@@ -529,7 +529,7 @@ class TestNnUtil(AllenNlpTestCase):
         targets = torch.ones([2, 10, 3]).cumsum(1) - 1
         # Make the second batch double it's index so they're different.
         targets[1, :, :] *= 2
-        indices = torch.from_numpy(indices).long()
+        indices = torch.tensor(indices, dtype=torch.long)
         selected = util.batched_index_select(targets, indices)
 
         assert list(selected.size()) == [2, 2, 2, 3]
@@ -550,7 +550,7 @@ class TestNnUtil(AllenNlpTestCase):
         targets = torch.ones([2, 6, 3]).cumsum(1) - 1
         # Make the second batch double it's index so they're different.
         targets[1, :, :] *= 2
-        indices = torch.from_numpy(indices).long()
+        indices = torch.tensor(indices, dtype=torch.long)
 
         selected = util.flattened_index_select(targets, indices)
 
@@ -645,8 +645,8 @@ class TestNnUtil(AllenNlpTestCase):
 
         tensor = torch.zeros([2, 3, 4])
         result = util.add_positional_features(tensor, min_timescale=1.0, max_timescale=1.0e4)
-        numpy.testing.assert_almost_equal(result[0].data.cpu().numpy(), tensor2tensor_result)
-        numpy.testing.assert_almost_equal(result[1].data.cpu().numpy(), tensor2tensor_result)
+        numpy.testing.assert_almost_equal(result[0].detach().cpu().numpy(), tensor2tensor_result)
+        numpy.testing.assert_almost_equal(result[1].detach().cpu().numpy(), tensor2tensor_result)
 
         # Check case with odd number of dimensions.
         tensor2tensor_result = numpy.asarray([[0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 1.00000000e+00,
@@ -658,5 +658,5 @@ class TestNnUtil(AllenNlpTestCase):
 
         tensor = torch.zeros([2, 3, 7])
         result = util.add_positional_features(tensor, min_timescale=1.0, max_timescale=1.0e4)
-        numpy.testing.assert_almost_equal(result[0].data.cpu().numpy(), tensor2tensor_result)
-        numpy.testing.assert_almost_equal(result[1].data.cpu().numpy(), tensor2tensor_result)
+        numpy.testing.assert_almost_equal(result[0].detach().cpu().numpy(), tensor2tensor_result)
+        numpy.testing.assert_almost_equal(result[1].detach().cpu().numpy(), tensor2tensor_result)

@@ -267,7 +267,7 @@ class SimpleSeq2Seq(Model):
         """
         predicted_indices = output_dict["predictions"]
         if not isinstance(predicted_indices, numpy.ndarray):
-            predicted_indices = predicted_indices.data.cpu().numpy()
+            predicted_indices = predicted_indices.detach().cpu().numpy()
         all_predicted_tokens = []
         for indices in predicted_indices:
             indices = list(indices)

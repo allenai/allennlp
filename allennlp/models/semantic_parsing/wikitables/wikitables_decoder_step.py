@@ -323,9 +323,9 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         log_probs = util.masked_log_softmax(start_action_logits, None)
         sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
 
-        sorted_actions = sorted_actions.data.cpu().numpy().tolist()
+        sorted_actions = sorted_actions.detach().cpu().numpy().tolist()
         if state.debug_info is not None:
-            probs_cpu = log_probs.exp().data.cpu().numpy().tolist()
+            probs_cpu = log_probs.exp().detach().cpu().numpy().tolist()
 
         # state.get_valid_actions() will return a list that is consistently sorted, so as along as
         # the set of valid start actions never changes, we can just match up the log prob indices
@@ -695,10 +695,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         if max_actions is not None:
             # We might need a version of `sorted_log_probs` on the CPU later, but only if we need
             # to truncate the best states to `max_actions`.
-            sorted_log_probs_cpu = sorted_log_probs.data.cpu().numpy()
+            sorted_log_probs_cpu = sorted_log_probs.detach().cpu().numpy()
         if state.debug_info is not None:
-            probs_cpu = log_probs.exp().data.cpu().numpy().tolist()
-        sorted_actions = sorted_actions.data.cpu().numpy().tolist()
+            probs_cpu = log_probs.exp().detach().cpu().numpy().tolist()
+        sorted_actions = sorted_actions.detach().cpu().numpy().tolist()
         best_next_states: Dict[int, List[Tuple[int, int, int]]] = defaultdict(list)
         for group_index, (batch_index, group_actions) in enumerate(zip(state.batch_indices,
                                                                        sorted_actions)):

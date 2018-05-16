@@ -153,7 +153,7 @@ class Model(torch.nn.Module, Registrable):
             instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]
             for name, output in list(outputs.items()):
                 if isinstance(output, torch.Tensor):
-                    output = output.data.cpu().numpy()
+                    output = output.detach().cpu().numpy()
                 outputs[name] = output
                 for instance_output, batch_element in zip(instance_separated_output, output):
                     instance_output[name] = batch_element

@@ -120,7 +120,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
             if sort_states:
                 scores = torch.cat([state.score[0].view(-1) for state in instance_states])
                 _, sorted_indices = scores.sort(-1, descending=True)
-                sorted_states = [instance_states[i] for i in sorted_indices.data.cpu().numpy()]
+                sorted_states = [instance_states[i] for i in sorted_indices.detach().cpu().numpy()]
                 instance_states = sorted_states
             for state in instance_states[:beam_size]:
                 pruned_states.append(state)
@@ -166,7 +166,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
         best_action_sequences: Dict[int, List[List[int]]] = {}
         for batch_index, scores in batch_scores.items():
             _, sorted_indices = torch.cat([score.view(-1) for score in scores]).sort(-1, descending=True)
-            cpu_indices = [int(index) for index in sorted_indices.data.cpu().numpy()]
+            cpu_indices = [int(index) for index in sorted_indices.detach().cpu().numpy()]
             best_action_indices = cpu_indices[:self._max_num_decoded_sequences]
             instance_best_sequences = [batch_action_histories[batch_index][i]
                                        for i in best_action_indices]

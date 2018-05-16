@@ -275,7 +275,7 @@ class BidirectionalAttentionFlow(Model):
                 passage_tokens.append(metadata[i]['passage_tokens'])
                 passage_str = metadata[i]['original_passage']
                 offsets = metadata[i]['token_offsets']
-                predicted_span = tuple(best_span[i].data.cpu().numpy())
+                predicted_span = tuple(best_span[i].detach().cpu().numpy())
                 start_offset = offsets[predicted_span[0]][0]
                 end_offset = offsets[predicted_span[1]][1]
                 best_span_string = passage_str[start_offset:end_offset]
@@ -304,10 +304,10 @@ class BidirectionalAttentionFlow(Model):
         batch_size, passage_length = span_start_logits.size()
         max_span_log_prob = [-1e20] * batch_size
         span_start_argmax = [0] * batch_size
-        best_word_span = span_start_logits.new_zeros(batch_size, 2).long()
+        best_word_span = span_start_logits.new_zeros((batch_size, 2), dtype=torch.long)
 
-        span_start_logits = span_start_logits.data.cpu().numpy()
-        span_end_logits = span_end_logits.data.cpu().numpy()
+        span_start_logits = span_start_logits.detach().cpu().numpy()
+        span_end_logits = span_end_logits.detach().cpu().numpy()
 
         for b in range(batch_size):  # pylint: disable=invalid-name
             for j in range(passage_length):

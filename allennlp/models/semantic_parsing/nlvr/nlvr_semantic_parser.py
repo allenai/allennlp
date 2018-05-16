@@ -108,7 +108,7 @@ class NlvrSemanticParser(Model):
 
     def _get_label_strings(self, labels):
         # TODO (pradeep): Use an unindexed field for labels?
-        labels_data = labels.data.cpu()
+        labels_data = labels.detach().cpu()
         label_strings: List[List[str]] = []
         for instance_labels_data in labels_data:
             label_strings.append([])
