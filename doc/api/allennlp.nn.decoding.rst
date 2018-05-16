@@ -26,7 +26,22 @@ allennlp.nn.decoding
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.nn.decoding.checklist_state
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.nn.decoding.beam_search
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.nn.decoding.constrained_beam_search
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.nn.decoding.util
    :members:
    :undoc-members:
    :show-inheritance:

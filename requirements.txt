@@ -52,9 +52,6 @@ psycopg2
 unidecode
 
 #### LIBRARIES USED IN SCRIPTS ####
-# argument parsing in for data cleaning scripts
-argparse
-
 # Used for downloading datasets over HTTP
 requests>=2.18
 

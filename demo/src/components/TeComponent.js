@@ -2,6 +2,8 @@ import React from 'react';
 import { API_ROOT } from '../api-config';
 import { withRouter } from 'react-router-dom';
 import {PaneLeft, PaneRight} from './Pane'
+import HeatMap from './heatmap/HeatMap'
+import Collapsible from 'react-collapsible'
 import Button from './Button'
 import ModelIntro from './ModelIntro'
 
@@ -166,7 +168,7 @@ class TeGraph extends React.Component {
 
 class TeOutput extends React.Component {
     render() {
-      const { labelProbs } = this.props;
+      const { labelProbs, h2p_attention, p2h_attention, premise_tokens, hypothesis_tokens } = this.props;
       const [entailment, contradiction, neutral] = labelProbs;
 
       let judgment; // Valid values: "e", "c", "n"
@@ -274,6 +276,28 @@ class TeOutput extends React.Component {
               </table>
             </div>
           </div>
+          <div className="form__field">
+            <Collapsible trigger="Model internals (beta)">
+              <Collapsible trigger="premise to hypothesis attention">
+                <span>
+                  For every premise word, the model computes an attention over the hypothesis words.
+                  This heatmap shows that attention, which is normalized for every row in the matrix.
+                </span>
+                <div className="heatmap">
+                  <HeatMap xLabels={premise_tokens} yLabels={hypothesis_tokens} data={h2p_attention} />
+                </div>
+              </Collapsible>
+              <Collapsible trigger="hypothesis to premise attention">
+                <span>
+                  For every hypothesis word, the model computes an attention over the premise words.
+                  This heatmap shows that attention, which is normalized for every row in the matrix.
+                </span>
+                <div className="heatmap">
+                  <HeatMap xLabels={hypothesis_tokens} yLabels={premise_tokens} data={p2h_attention} />
+                </div>
+              </Collapsible>
+            </Collapsible>
+          </div>
         </div>
       );
     }
@@ -340,6 +364,10 @@ class _TeComponent extends React.Component {
       const premise = requestData && requestData.premise;
       const hypothesis = requestData && requestData.hypothesis;
       const labelProbs = responseData && responseData.label_probs;
+      const h2p_attention = responseData && responseData.h2p_attention;
+      const p2h_attention = responseData && responseData.p2h_attention;
+      const premise_tokens = responseData && responseData.premise_tokens;
+      const hypothesis_tokens = responseData && responseData.hypothesis_tokens;
 
       return (
         <div className="pane model">
@@ -350,7 +378,11 @@ class _TeComponent extends React.Component {
                      hypothesis={hypothesis}/>
           </PaneLeft>
           <PaneRight outputState={this.state.outputState}>
-            <TeOutput labelProbs={labelProbs}/>
+            <TeOutput labelProbs={labelProbs}
+                      h2p_attention={h2p_attention}
+                      p2h_attention={p2h_attention}
+                      premise_tokens={premise_tokens}
+                      hypothesis_tokens={hypothesis_tokens}/>
           </PaneRight>
         </div>
       );

@@ -18,7 +18,7 @@ of sentences to an HDF5 file.  Here is an example of using the `elmo` command:
 ```bash
 echo "The cryptocurrency space is now figuring out to have the highest search on Google globally ." > sentences.txt
 echo "Bitcoin alone has a sixty percent share of global search ." >> sentences.txt
-allennlp elmo sentences.txt elmo_layers.hdf5
+allennlp elmo sentences.txt elmo_layers.hdf5 --all
 ```
 
 For more details, see `allennlp elmo -h`.
