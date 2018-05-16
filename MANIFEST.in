@@ -1,7 +1,8 @@
 include README.md
 include requirements.txt
 include bin/allennlp
-recursive-include scripts *
-recursive-include tutorials *
+graft allennlp
+graft scripts
+graft tutorials
+graft tests
 recursive-include training_config *.json
-recursive-include tests *
