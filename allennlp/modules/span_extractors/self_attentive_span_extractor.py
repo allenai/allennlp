@@ -60,7 +60,7 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         # These indices will then get masked below, such that if the length
         # of a given span is smaller than the max, the rest of the values
         # are masked.
-        max_batch_span_width = int(span_widths.max().data) + 1
+        max_batch_span_width = span_widths.max().item() + 1
 
         # shape (batch_size, sequence_length, 1)
         global_attention_logits = self._global_attention(sequence_tensor)

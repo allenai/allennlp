@@ -23,7 +23,7 @@ class TestExpectedRiskMinimization(AllenNlpTestCase):
 
     def test_get_finished_states(self):
         finished_states = self.trainer._get_finished_states(self.initial_state, self.decoder_step)
-        state_info = [(state.action_history[0], int(state.score[0].data)) for state in finished_states]
+        state_info = [(state.action_history[0], state.score[0].item()) for state in finished_states]
         # There will be exactly five finished states with the following paths. Each score is the
         # negative of one less than the number of elements in the action history.
         assert len(finished_states) == 5

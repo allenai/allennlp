@@ -302,16 +302,16 @@ class ConditionalRandomField(torch.nn.Module):
 
         if self.include_start_end_transitions:
             transitions[start_tag, :num_tags] = (
-                    self.start_transitions.data * self._constraint_mask[start_tag, :num_tags].data +
-                    -10000.0 * (1 - self._constraint_mask[start_tag, :num_tags].data)
+                    self.start_transitions.detach() * self._constraint_mask[start_tag, :num_tags].data +
+                    -10000.0 * (1 - self._constraint_mask[start_tag, :num_tags].detach())
             )
             transitions[:num_tags, end_tag] = (
-                    self.end_transitions.data * self._constraint_mask[:num_tags, end_tag].data +
-                    -10000.0 * (1 - self._constraint_mask[:num_tags, end_tag].data)
+                    self.end_transitions.detach() * self._constraint_mask[:num_tags, end_tag].data +
+                    -10000.0 * (1 - self._constraint_mask[:num_tags, end_tag].detach())
             )
         else:
-            transitions[start_tag, :num_tags] = -10000.0 * (1 - self._constraint_mask[start_tag, :num_tags].data)
-            transitions[:num_tags, end_tag] = -10000.0 * (1 - self._constraint_mask[:num_tags, end_tag].data)
+            transitions[start_tag, :num_tags] = -10000.0 * (1 - self._constraint_mask[start_tag, :num_tags].detach())
+            transitions[:num_tags, end_tag] = -10000.0 * (1 - self._constraint_mask[:num_tags, end_tag].detach())
 
         all_tags = []
         # Pad the max sequence length by 2 to account for start_tag + end_tag.

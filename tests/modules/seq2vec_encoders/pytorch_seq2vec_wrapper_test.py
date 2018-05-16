@@ -46,7 +46,7 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         mask[4, 1:] = 0
 
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
-        packed_sequence = pack_padded_sequence(input_tensor, list(sequence_lengths.data), batch_first=True)
+        packed_sequence = pack_padded_sequence(input_tensor, sequence_lengths.tolist(), batch_first=True)
         _, state = lstm(packed_sequence)
         # Transpose output state, extract the last forward and backward states and
         # reshape to be of dimension (batch_size, 2 * hidden_size).
@@ -97,7 +97,7 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         sorted_inputs, sorted_sequence_lengths, restoration_indices, _ = sort_batch_by_length(input_tensor,
                                                                                               sequence_lengths)
         packed_sequence = pack_padded_sequence(sorted_inputs,
-                                               sorted_sequence_lengths.data.tolist(),
+                                               sorted_sequence_lengths.tolist(),
                                                batch_first=True)
         _, state = lstm(packed_sequence)
         # Transpose output state, extract the last forward and backward states and

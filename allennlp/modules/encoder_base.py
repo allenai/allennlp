@@ -259,8 +259,7 @@ class _EncoderBase(torch.nn.Module):
                     masked_old_state = old_state[:, :new_state_batch_size, :] * (1 - used_mask)
                     # The old state is larger, so update the relevant parts of it.
                     old_state[:, :new_state_batch_size, :] = new_state + masked_old_state
-                    # Detach.
-                    new_states.append(old_state.data)
+                    new_states.append(old_state.detach())
             else:
                 # The states are the same size, so we just have to
                 # deal with the possibility that some rows weren't used.
@@ -272,8 +271,7 @@ class _EncoderBase(torch.nn.Module):
                     masked_old_state = old_state * (1 - used_mask)
                     # The old state is larger, so update the relevant parts of it.
                     new_state += masked_old_state
-                    # Detach.
-                    new_states.append(new_state.data)
+                    new_states.append(new_state.detach())
 
             # It looks like there should be another case handled here - when
             # the current_state_batch_size < new_state_batch_size. However,
