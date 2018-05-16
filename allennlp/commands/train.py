@@ -38,6 +38,7 @@ import logging
 import os
 from copy import deepcopy
 
+import torch
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
@@ -301,6 +302,13 @@ def train_model(params: Params,
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)
 
     if test_data and evaluate_on_test:
+        logger.info("The model will be evaluated using the best epoch weights.")
+
+        logger.info("Loading the best epoch weights.")
+        best_model_state_path = os.path.join(serialization_dir, 'best.th')
+        best_model_state = torch.load(best_model_state_path)
+        model.load_state_dict(best_model_state)
+
         test_metrics = evaluate(model, test_data, iterator, cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
         for key, value in test_metrics.items():
             metrics["test_" + key] = value
