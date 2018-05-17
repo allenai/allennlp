@@ -379,8 +379,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
             raise RuntimeError("_get_state_cost() is not defined for unfinished states!")
 
         # Our checklist cost is a sum of squared error from where we want to be, making sure we
-        # take into account the mask.
-        checklist_balance = state.checklist_state[0].get_balance()
+        # take into account the mask. We clamp the lower limit of the balance at 0 to avoid
+        # penalizing agenda actions produced multiple times.
+        checklist_balance = torch.clamp(state.checklist_state[0].get_balance(), min=0.0)
         checklist_cost = torch.sum((checklist_balance) ** 2)
 
         # This is the number of items on the agenda that we want to see in the decoded sequence.
