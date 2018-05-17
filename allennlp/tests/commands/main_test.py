@@ -50,12 +50,12 @@ class TestMain(AllenNlpTestCase):
 
     def test_other_modules(self):
         # Create a new package in a temporary dir
-        packagedir = os.path.join(self.TEST_DIR, 'testpackage')
-        pathlib.Path(packagedir).mkdir()
-        pathlib.Path(os.path.join(packagedir, '__init__.py')).touch()
+        packagedir = self.TEST_DIR / 'testpackage'
+        packagedir.mkdir()
+        (packagedir / '__init__.py').touch()
 
         # And add that directory to the path
-        sys.path.insert(0, self.TEST_DIR)
+        sys.path.insert(0, str(self.TEST_DIR))
 
         # Write out a duplicate model there, but registered under a different name.
         from allennlp.models import simple_tagger
@@ -63,15 +63,15 @@ class TestMain(AllenNlpTestCase):
             code = model_file.read().replace("""@Model.register("simple_tagger")""",
                                              """@Model.register("duplicate-test-tagger")""")
 
-        with open(os.path.join(packagedir, 'model.py'), 'w') as new_model_file:
+        with open(packagedir / 'model.py', 'w') as new_model_file:
             new_model_file.write(code)
 
         # Copy fixture there too.
-        shutil.copy(os.path.join(os.getcwd(), 'tests/fixtures/data/sequence_tagging.tsv'), self.TEST_DIR)
-        data_path = os.path.join(self.TEST_DIR, 'sequence_tagging.tsv')
+        shutil.copy(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv', self.TEST_DIR)
+        data_path = str(self.TEST_DIR / 'sequence_tagging.tsv')
 
         # Write out config file
-        config_path = os.path.join(self.TEST_DIR, 'config.json')
+        config_path = self.TEST_DIR / 'config.json'
         config_json = """
                 "model": {
                         "type": "duplicate-test-tagger",
@@ -100,12 +100,12 @@ class TestMain(AllenNlpTestCase):
         with open(config_path, 'w') as config_file:
             config_file.write(config_json)
 
-        serialization_dir = os.path.join(self.TEST_DIR, 'serialization')
+        serialization_dir = self.TEST_DIR / 'serialization'
 
         # Run train with using the non-allennlp module.
         sys.argv = ["bin/allennlp",
-                    "train", config_path,
-                    "-s", serialization_dir]
+                    "train", str(config_path),
+                    "-s", str(serialization_dir)]
 
         # Shouldn't be able to find the model.
         with pytest.raises(ConfigurationError):
@@ -125,4 +125,4 @@ class TestMain(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             main()
 
-        sys.path.remove(self.TEST_DIR)
+        sys.path.remove(str(self.TEST_DIR))
