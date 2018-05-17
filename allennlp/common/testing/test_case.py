@@ -1,6 +1,7 @@
 # pylint: disable=invalid-name,protected-access
 import logging
 import os
+import pathlib
 import shutil
 from unittest import TestCase
 
@@ -23,7 +24,11 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
         logging.getLogger('allennlp.modules.token_embedders.embedding').setLevel(logging.INFO)
         log_pytorch_version_info()
 
-        self.TEST_DIR = "/tmp/allennlp_tests/"
+        self.TEST_DIR = pathlib.Path("/tmp/allennlp_tests/")
+        self.PROJECT_ROOT = (pathlib.Path(__file__).parent / ".." / ".." / "..").resolve()
+        self.TESTS_ROOT = self.PROJECT_ROOT / "allennlp" / "tests"
+        self.FIXTURES_ROOT = self.TESTS_ROOT / "fixtures"
+
         os.makedirs(self.TEST_DIR, exist_ok=True)
 
     def tearDown(self):
