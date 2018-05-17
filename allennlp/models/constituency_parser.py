@@ -481,7 +481,7 @@ class SpanConstituencyParser(Model):
             pos_tag_embedding = None
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
-        evalb_directory_path = params.pop("evalb_directory_path", None)
+        evalb_directory_path = params.pop("evalb_directory_path", DEFAULT_EVALB_DIR)
         params.assert_empty(cls.__name__)
 
         return cls(vocab=vocab,
