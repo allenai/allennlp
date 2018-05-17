@@ -66,7 +66,7 @@ COPY setup.py setup.py
 # Compile EVALB - required for parsing evaluation.
 # EVALB produces scary looking c-level output which we don't
 # care about, so we redirect the output to /dev/null.
-RUN pushd . && cd allennlp/tools/EVALB && make &> /dev/null && popd
+RUN cd allennlp/tools/EVALB && make &> /dev/null && cd ../../../
 
 # Caching models when building the image makes a dockerized server start up faster, but is slow for
 # running tests and things, so we skip it by default.
