@@ -11,3 +11,5 @@ allennlp.egg-info/
 build/
 dist/
 .mypy_cache
+
+.idea

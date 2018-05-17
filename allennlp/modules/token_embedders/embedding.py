@@ -1,5 +1,6 @@
 import gzip
 import logging
+import os
 
 from overrides import overrides
 import numpy
@@ -204,7 +205,8 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
     ``(vocab.get_vocab_size(namespace), embedding_dim)``, where the indices of words appearing in
     the pretrained embedding file are initialized to the pretrained embedding value.
     """
-    if embeddings_filename[-3:] == '.h5' or embeddings_filename[-5:] == '.hdf5':
+    file_extension = os.path.splitext(embeddings_filename)[1].lower()
+    if file_extension in {'.h5', '.hdf5'}:
         return _read_pretrained_hdf5_format_embedding_file(embeddings_filename, embedding_dim,
                                                            vocab, namespace)
     else:
@@ -218,7 +220,7 @@ def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str, # 
                                                     vocab: Vocabulary,
                                                     namespace: str = "tokens") -> torch.FloatTensor:
     """
-    Read from a gzipped-word2vec format file.  The embeddings file is assumed to be gzipped and
+    Read from a word2vec format file, eventually gzipped. The embeddings file is assumed to be
     space delimited, e.g. [word] [dim 1] [dim 2] ...
 
     The remainder of the docstring is identical to ``_read_pretrained_embedding_file``.
@@ -229,9 +231,12 @@ def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str, # 
 
     # First we read the embeddings from the file, only keeping vectors for the words we need.
     logger.info("Reading embeddings from file")
-    with gzip.open(cached_path(embeddings_filename), 'rb') as embeddings_file:
+    file_extension = os.path.splitext(embeddings_filename)[1].lower()
+    open_file = gzip.open if file_extension == '.gz' else open
+    file_path = cached_path(embeddings_filename)
+    with open_file(file_path, 'rt', encoding='utf-8') as embeddings_file:
         for line in embeddings_file:
-            fields = line.decode('utf-8').rstrip().split(' ')
+            fields = line.rstrip().split(' ')
             if len(fields) - 1 != embedding_dim:
                 # Sometimes there are funny unicode parsing problems that lead to different
                 # fields lengths (e.g., a word with a unicode space character that splits
