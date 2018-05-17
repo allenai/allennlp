@@ -1,6 +1,4 @@
 # pylint: disable=no-self-use,invalid-name,no-value-for-parameter
-import os
-
 from nltk import Tree
 import torch
 from torch.autograd import Variable
