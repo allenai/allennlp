@@ -14,6 +14,10 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
     more verbose AllenNLP logging and that creates and destroys a temp directory
     as a test fixture.
     """
+    PROJECT_ROOT = (pathlib.Path(__file__).parent / ".." / ".." / "..").resolve()
+    TESTS_ROOT = PROJECT_ROOT / "allennlp" / "tests"
+    FIXTURES_ROOT = TESTS_ROOT / "fixtures"
+
     def setUp(self):
         logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                             level=logging.DEBUG)
@@ -25,9 +29,6 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
         log_pytorch_version_info()
 
         self.TEST_DIR = pathlib.Path("/tmp/allennlp_tests/")
-        self.PROJECT_ROOT = (pathlib.Path(__file__).parent / ".." / ".." / "..").resolve()
-        self.TESTS_ROOT = self.PROJECT_ROOT / "allennlp" / "tests"
-        self.FIXTURES_ROOT = self.TESTS_ROOT / "fixtures"
 
         os.makedirs(self.TEST_DIR, exist_ok=True)
 
