@@ -12,7 +12,10 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.train import Train, train_model, train_model_from_args
 from allennlp.data import DatasetReader, Instance
 
+SEQUENCE_TAGGING_DATA_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
+
 class TestTrain(AllenNlpTestCase):
+
     def test_train_model(self):
         params = lambda: Params({
                 "model": {
@@ -31,8 +34,8 @@ class TestTrain(AllenNlpTestCase):
                         }
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
+                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "iterator": {"type": "basic", "batch_size": 2},
                 "trainer": {
                         "num_epochs": 2,
@@ -114,9 +117,9 @@ class TestTrain(AllenNlpTestCase):
                         }
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "test_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
+                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "test_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "evaluate_on_test": True,
                 "iterator": {"type": "basic", "batch_size": 2},
                 "trainer": {
@@ -188,8 +191,8 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
                         }
                 },
                 "dataset_reader": {"type": "lazy-test"},
-                "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
+                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "iterator": {"type": "basic", "batch_size": 2},
                 "trainer": {
                         "num_epochs": 2,
@@ -217,9 +220,9 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
                         }
                 },
                 "dataset_reader": {"type": "lazy-test"},
-                "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "test_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
+                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "test_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "evaluate_on_test": True,
                 "iterator": {"type": "basic", "batch_size": 2},
                 "trainer": {
