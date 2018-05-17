@@ -1,5 +1,4 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
-import os
 from nltk import Tree
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -10,16 +9,16 @@ class EvalbBracketingScorerTest(AllenNlpTestCase):
 
     def setUp(self):
         super().setUp()
-        os.system("cd ./scripts/EVALB/ && make && cd ../../")
+        EvalbBracketingScorer.compile_evalb()
 
     def tearDown(self):
-        os.system("rm scripts/EVALB/evalb")
+        EvalbBracketingScorer.clean_evalb()
         super().tearDown()
 
     def test_evalb_correctly_scores_identical_trees(self):
         tree1 = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
         tree2 = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
-        evalb_scorer = EvalbBracketingScorer("scripts/EVALB/")
+        evalb_scorer = EvalbBracketingScorer()
         evalb_scorer([tree1], [tree2])
         metrics = evalb_scorer.get_metric()
         assert metrics["evalb_recall"] == 1.0
@@ -31,7 +30,7 @@ class EvalbBracketingScorerTest(AllenNlpTestCase):
         # tag (NP dog) should have no effect.
         tree1 = Tree.fromstring("(S (VP (D the) (NP dog)) (VP (V chased) (NP (D the) (N cat))))")
         tree2 = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
-        evalb_scorer = EvalbBracketingScorer("scripts/EVALB/")
+        evalb_scorer = EvalbBracketingScorer()
         evalb_scorer([tree1], [tree2])
         metrics = evalb_scorer.get_metric()
         assert metrics["evalb_recall"] == 0.75
@@ -41,7 +40,7 @@ class EvalbBracketingScorerTest(AllenNlpTestCase):
     def test_evalb_correctly_calculates_bracketing_metrics_over_multiple_trees(self):
         tree1 = Tree.fromstring("(S (VP (D the) (NP dog)) (VP (V chased) (NP (D the) (N cat))))")
         tree2 = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
-        evalb_scorer = EvalbBracketingScorer("scripts/EVALB/")
+        evalb_scorer = EvalbBracketingScorer()
         evalb_scorer([tree1, tree2], [tree2, tree2])
         metrics = evalb_scorer.get_metric()
         assert metrics["evalb_recall"] == 0.875
@@ -54,7 +53,7 @@ class EvalbBracketingScorerTest(AllenNlpTestCase):
         tree1 = Tree.fromstring("(PP (VROOT (PP That) (VROOT (PP could) "
                                 "(VROOT (PP cost) (VROOT (PP him))))) (PP .))")
         tree2 = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
-        evalb_scorer = EvalbBracketingScorer("scripts/EVALB/")
+        evalb_scorer = EvalbBracketingScorer()
         evalb_scorer([tree1], [tree2])
         metrics = evalb_scorer.get_metric()
         assert metrics["evalb_recall"] == 0.0
