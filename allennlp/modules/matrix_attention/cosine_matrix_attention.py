@@ -7,20 +7,17 @@ import torch.nn.functional as F
 from overrides import overrides
 
 from allennlp.common import Params
-from allennlp.modules.matrix_attention import MatrixAttention
+from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 
 
 @MatrixAttention.register("cosine")
 class CosineMatrixAttention(MatrixAttention):
-
-    def __init__(self) -> None:
-        super(CosineMatrixAttention, self).__init__()
 
     @overrides
     def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
         # pylint: disable=arguments-differ
         return F.cosine_similarity(matrix_1, matrix_1)
 
-
+    @classmethod
     def from_params(cls, params: Params):
         CosineMatrixAttention()

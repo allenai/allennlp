@@ -7,6 +7,7 @@ from allennlp.common.params import Params
 
 from allennlp.common.registrable import Registrable
 
+
 class MatrixAttention(torch.nn.Module, Registrable):
     '''
     This ``Module`` takes two matrices as input and returns a matrix of attentions.
@@ -29,6 +30,11 @@ class MatrixAttention(torch.nn.Module, Registrable):
     Output:
         - ``(batch_size, num_rows_1, num_rows_2)``
     '''
+    def forward(self,  # pylint: disable=arguments-differ
+                matrix_1: torch.Tensor,
+                matrix_2: torch.Tensor) -> torch.Tensor:
+        raise NotImplementedError
+
     @classmethod
     def from_params(cls, params: Params) -> 'MatrixAttention':
         clazz = cls.by_name(params.pop_choice("type", cls.list_available()))

@@ -4,14 +4,13 @@ A ``Module`` that takes two matrices as input and returns a matrix of attentions
 import math
 
 import torch
-
+from torch.nn import Parameter
+from overrides import overrides
 from allennlp.nn import util
 from allennlp.nn.activations import Activation
-from torch.nn import Parameter
-
 from allennlp.common import Params
-from allennlp.modules.matrix_attention import MatrixAttention
-from overrides import overrides
+from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
+
 
 
 @MatrixAttention.register("linear")
@@ -68,7 +67,9 @@ class LinearMatrixAttention(MatrixAttention):
         self._bias.data.fill_(0)
 
     @overrides
-    def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
+    def forward(self,  # pylint: disable=arguments-differ
+                tensor_1: torch.Tensor,
+                tensor_2: torch.Tensor) -> torch.Tensor:
         tiled_matrix_1 = tensor_1.unsqueeze(2).expand(tensor_1.size()[0],
                                                       tensor_1.size()[1],
                                                       tensor_2.size()[1],

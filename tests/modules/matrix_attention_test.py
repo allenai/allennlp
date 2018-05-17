@@ -1,13 +1,14 @@
 # pylint: disable=no-self-use,invalid-name
-from allennlp.modules.legacy_matrix_attention import LegacyMatrixAttention
-from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
+
 from numpy.testing import assert_allclose
 import torch
 from torch.autograd import Variable
 
 from allennlp.common import Params
-from allennlp.modules import MatrixAttention
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
+from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
+from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
 
 
 class TestMatrixAttention(AllenNlpTestCase):

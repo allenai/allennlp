@@ -3,14 +3,12 @@ A ``Module`` that takes two matrices as input and returns a matrix of attentions
 
 """
 import torch
-from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
-
-from allennlp.modules.similarity_functions.similarity_function import SimilarityFunction
-
-
-from allennlp.common import Params
-from allennlp.modules.matrix_attention import MatrixAttention
 from overrides import overrides
+from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
+from allennlp.modules.similarity_functions.similarity_function import SimilarityFunction
+from allennlp.common import Params
+from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
+
 
 
 @MatrixAttention.register("legacy")
@@ -21,7 +19,8 @@ class LegacyMatrixAttention(MatrixAttention):
 
     Responsible for supporting legacy attention.
     New implementations of the attention were added because they have a much smaller memory footprint.
-    The legacy attention is kept around to support backwards compatibility, although no new project should use them.
+    The legacy attention is kept around to support backwards compatibility,
+    although no new project should use them.
 
     We compute the similarity between each row in each matrix and return unnormalized similarity
     scores.  Because these scores are unnormalized, we don't take a mask as input; it's up to the
@@ -69,4 +68,3 @@ class LegacyMatrixAttention(MatrixAttention):
         similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
         params.assert_empty(cls.__name__)
         return cls(similarity_function=similarity_function)
-

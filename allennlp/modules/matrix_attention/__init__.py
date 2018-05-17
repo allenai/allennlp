@@ -1,0 +1,6 @@
+
+
+from allennlp.modules.matrix_attention.dot_product_matrix_attention import DotProductMatrixAttention
+from allennlp.modules.matrix_attention.cosine_matrix_attention import CosineMatrixAttention
+from allennlp.modules.matrix_attention.multi_headed_matrix_attention import MultiHeadedMatrixAttention
+from allennlp.modules.matrix_attention.linear_matrix_attention import LinearMatrixAttention

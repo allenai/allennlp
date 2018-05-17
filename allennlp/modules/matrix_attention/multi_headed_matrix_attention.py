@@ -3,13 +3,11 @@ A ``Module`` that takes two matrices as input and returns a matrix of attentions
 """
 import torch
 from torch.nn import Parameter
-
+from overrides import overrides
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.similarity_functions import SimilarityFunction
-from allennlp.modules.matrix_attention import MatrixAttention
-from overrides import overrides
-
+from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 from allennlp.modules.similarity_functions import DotProductSimilarity
 
 
@@ -51,6 +49,7 @@ class MultiHeadedMatrixAttention(MatrixAttention):
            The ``SimilarityFunction`` to call on the projected, multi-headed tensors.  The default is
            to use a dot product.
        """
+
     def __init__(self,
                  num_heads: int,
                  tensor_1_dim: int,
@@ -75,11 +74,6 @@ class MultiHeadedMatrixAttention(MatrixAttention):
         self._tensor_2_projection = Parameter(torch.Tensor(tensor_2_dim, tensor_2_projected_dim))
         self.reset_parameters()
 
-    @overrides
-    def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
-        return matrix_1.bmm(matrix_2.transpose(2, 1))
-
     @classmethod
     def from_params(cls, params: Params):
         num_heads = params.pop_int("num_heads")
@@ -96,17 +90,14 @@ class MultiHeadedMatrixAttention(MatrixAttention):
                                           tensor_2_projected_dim=tensor_2_projected_dim,
                                           internal_similarity=internal_similarity)
 
-
-
-
-
     def reset_parameters(self):
         torch.nn.init.xavier_uniform(self._tensor_1_projection)
         torch.nn.init.xavier_uniform(self._tensor_2_projection)
 
-
     @overrides
-    def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
+    def forward(self,  # pylint: disable=arguments-differ
+                tensor_1: torch.Tensor,
+                tensor_2: torch.Tensor) -> torch.Tensor:
         projected_tensor_1 = torch.matmul(tensor_1, self._tensor_1_projection)
         projected_tensor_2 = torch.matmul(tensor_2, self._tensor_2_projection)
 
@@ -124,4 +115,3 @@ class MultiHeadedMatrixAttention(MatrixAttention):
         # we don't need to do anything special here.  It will just compute similarity on the
         # projection dimension for each head, returning a tensor of shape (..., num_heads).
         return self._internal_similarity(split_tensor_1, split_tensor_2)
-

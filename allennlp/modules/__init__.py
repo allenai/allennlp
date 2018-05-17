@@ -11,7 +11,6 @@ from allennlp.modules.elmo import Elmo
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.highway import Highway
 from allennlp.modules.layer_norm import LayerNorm
-from allennlp.modules.matrix_attention import MatrixAttention
 from allennlp.modules.maxout import Maxout
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
@@ -21,7 +20,3 @@ from allennlp.modules.span_pruner import SpanPruner
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders import TokenEmbedder, Embedding
-from allennlp.modules.dot_product_matrix_attention import DotProductMatrixAttention
-from allennlp.modules.cosine_matrix_attention import CosineMatrixAttention
-from allennlp.modules.multi_headed_matrix_attention import MultiHeadedMatrixAttention
-from allennlp.modules.linear_matrix_attention import LinearMatrixAttention
