@@ -36,7 +36,6 @@
         "input_dim": 4
       }
     },
-
     "iterator": {
       "type": "bucket",
       "sorting_keys": [["tokens", "num_tokens"]],
