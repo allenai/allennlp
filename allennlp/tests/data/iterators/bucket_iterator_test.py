@@ -4,7 +4,7 @@ import pytest
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.iterators import BucketIterator
-from tests.data.iterators.basic_iterator_test import IteratorTest
+from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
 
 class TestBucketIterator(IteratorTest):

@@ -4,7 +4,7 @@ from pytest import raises
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.iterators import AdaptiveIterator
-from tests.data.iterators.basic_iterator_test import IteratorTest
+from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
 
 class TestAdaptiveIterator(IteratorTest):

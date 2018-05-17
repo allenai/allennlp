@@ -1,5 +1,5 @@
 from allennlp.data.iterators import EpochTrackingBucketIterator
-from tests.data.iterators.basic_iterator_test import IteratorTest
+from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
 
 class EpochTrackingBucketIteratorTest(IteratorTest):
