@@ -10,8 +10,8 @@ from nltk import Tree
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
-DEFAULT_EVALB_DIR = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "tools", "EVALB")
+DEFAULT_EVALB_DIR = os.path.abspath(os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "tools", "EVALB"))
 
 @Metric.register("evalb")
 class EvalbBracketingScorer(Metric):
