@@ -1,0 +1,53 @@
+{
+  "dataset_reader": {
+    "type": "wikitables",
+    "tables_directory": "/wikitables/",
+    "output_agendas": true
+  },
+  "train_data_path": "/data/train.examples",
+  "validation_data_path": "/data/dev.examples",
+  "model": {
+    "type": "wikitables_erm_parser",
+    "question_embedder": {
+      "tokens": {
+        "type": "embedding",
+        "embedding_dim": 25,
+        "trainable": true
+      }
+    },
+    "action_embedding_dim": 50,
+    "encoder": {
+      "type": "lstm",
+      "input_size": 50,
+      "hidden_size": 10,
+      "num_layers": 1
+    },
+    "entity_encoder": {
+      "type": "boe",
+      "embedding_dim": 25,
+      "averaged": true
+    },
+    "max_decoding_steps": 20,
+    "decoder_beam_size": 10,
+    "decoder_num_finished_states": 50,
+    "attention_function": {"type": "dot_product"},
+    "tables_directory": "/wikitables/",
+    "mml_model_file": "/mml_model/model.tar.gz"
+  },
+  "iterator": {
+    "type": "bucket",
+    "sorting_keys": [["question", "num_tokens"]],
+    "padding_noise": 0.0,
+    "batch_size" : 1
+  },
+  "trainer": {
+    "num_epochs": 50,
+    "patience": 10,
+    "validation_metric": "+denotation_acc",
+    "cuda_device": 0,
+    "optimizer": {
+      "type": "adam",
+      "lr": 0.01
+    }
+  }
+}
