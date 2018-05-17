@@ -10,7 +10,7 @@ from nltk import Tree
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
-_DEFAULT_EVALB_DIR = os.path.join(
+DEFAULT_EVALB_DIR = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "tools", "EVALB")
 
 @Metric.register("evalb")
@@ -42,7 +42,7 @@ class EvalbBracketingScorer(Metric):
         This configuration ignores POS tags and some punctuation labels.
     """
     def __init__(self,
-                 evalb_directory_path: str = _DEFAULT_EVALB_DIR,
+                 evalb_directory_path: str = DEFAULT_EVALB_DIR,
                  evalb_param_filename: str = "COLLINS.prm") -> None:
         self._evalb_directory_path = evalb_directory_path
         self._evalb_program_path = os.path.join(evalb_directory_path, "evalb")
@@ -120,10 +120,10 @@ class EvalbBracketingScorer(Metric):
         self._predicted_brackets = 0.0
 
     @staticmethod
-    def compile_evalb(evalb_directory_path: str = _DEFAULT_EVALB_DIR):
+    def compile_evalb(evalb_directory_path: str = DEFAULT_EVALB_DIR):
         os.system("pushd . && cd {} && make && popd".format(evalb_directory_path))
 
     @staticmethod
-    def clean_evalb(evalb_directory_path: str = _DEFAULT_EVALB_DIR):
+    def clean_evalb(evalb_directory_path: str = DEFAULT_EVALB_DIR):
         os.system("rm {}".format(os.path.join(evalb_directory_path, "evalb")))
 
