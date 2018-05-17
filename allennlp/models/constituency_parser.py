@@ -16,7 +16,7 @@ from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.nn.util import last_dim_softmax, get_lengths_from_binary_sequence_mask
 from allennlp.training.metrics import CategoricalAccuracy
-from allennlp.training.metrics import EvalbBracketingScorer
+from allennlp.training.metrics import EvalbBracketingScorer, DEFAULT_EVALB_DIR
 from allennlp.common.checks import ConfigurationError
 
 class SpanInformation(NamedTuple):
@@ -70,9 +70,11 @@ class SpanConstituencyParser(Model):
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
-    evalb_directory_path : ``str``, optional (default=``None``)
-        The path to the directory containing the evalb executable used to score
-        bracketed parses. If ``None``, will use evalb located at allennlp/tools/EVALB .
+    evalb_directory_path : ``str``, optional (default=``DEFAULT_EVALB_DIR``)
+        The path to the directory containing the EVALB executable used to score
+        bracketed parses. By default, will use the EVALB included with allennlp,
+        which is located at allennlp/tools/EVALB . If ``None``, EVALB scoring
+        is not used.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -83,7 +85,7 @@ class SpanConstituencyParser(Model):
                  pos_tag_embedding: Embedding = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None,
-                 evalb_directory_path: str = None) -> None:
+                 evalb_directory_path: str = DEFAULT_EVALB_DIR) -> None:
         super(SpanConstituencyParser, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
@@ -121,7 +123,7 @@ class SpanConstituencyParser(Model):
         if evalb_directory_path is not None:
             self._evalb_score = EvalbBracketingScorer(evalb_directory_path)
         else:
-            self._evalb_score = EvalbBracketingScorer()
+            self._evalb_score = None
         initializer(self)
 
     @overrides
