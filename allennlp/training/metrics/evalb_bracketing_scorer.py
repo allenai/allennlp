@@ -121,7 +121,7 @@ class EvalbBracketingScorer(Metric):
 
     @staticmethod
     def compile_evalb(evalb_directory_path: str = DEFAULT_EVALB_DIR):
-        os.system("pushd . && cd {} && make && popd".format(evalb_directory_path))
+        os.system("cd {} && make && cd ../../../".format(evalb_directory_path))
 
     @staticmethod
     def clean_evalb(evalb_directory_path: str = DEFAULT_EVALB_DIR):
