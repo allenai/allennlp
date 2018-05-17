@@ -53,7 +53,8 @@ def filename_to_url(filename: str, cache_dir: str = None) -> Tuple[str, str]:
     if not os.path.exists(meta_path):
         raise FileNotFoundError("file {} not found".format(meta_path))
 
-    metadata = json.load(open(meta_path))
+    with open(meta_path) as meta_file:
+        metadata = json.load(meta_file)
     url = metadata['url']
     etag = metadata['etag']
 
@@ -137,7 +138,8 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
             logger.info("creating metadata file for %s", cache_path)
             meta = {'url': url, 'etag': etag}
             meta_path = cache_path + '.json'
-            json.dump(meta, open(meta_path, 'w'))
+            with open(meta_path, 'w') as meta_file:
+                json.dump(meta, meta_file)
 
             logger.info("removing temp file %s", temp_file.name)
 
