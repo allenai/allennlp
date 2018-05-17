@@ -20,7 +20,7 @@ class TestMatrixAttention(AllenNlpTestCase):
         assert_allclose(result, [[[3, 0, -3], [0, 2, 0]]])
 
     def test_can_build_from_params(self):
-        params = Params({'type': 'cosine'})
+        params = Params({"type": "legacy", 'similarity_function': {'type': 'cosine'}})
         attention = MatrixAttention.from_params(params)
         # pylint: disable=protected-access
         assert attention._similarity_function.__class__.__name__ == 'CosineSimilarity'
