@@ -29,8 +29,8 @@ class TestMakeVocab(AllenNlpTestCase):
                         }
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
+                "train_data_path": self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv',
+                "validation_data_path": self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv',
                 "iterator": {"type": "basic", "batch_size": 2},
                 "trainer": {
                         "num_epochs": 2,
@@ -43,7 +43,7 @@ class TestMakeVocab(AllenNlpTestCase):
             make_vocab_from_params(self.params)
 
     def test_make_vocab_makes_vocab(self):
-        vocab_path = os.path.join(self.TEST_DIR, 'vocabulary')
+        vocab_path = self.TEST_DIR / 'vocabulary'
 
         self.params['vocabulary'] = {}
         self.params['vocabulary']['directory_path'] = vocab_path
@@ -53,13 +53,13 @@ class TestMakeVocab(AllenNlpTestCase):
         vocab_files = os.listdir(vocab_path)
         assert set(vocab_files) == {'labels.txt', 'non_padded_namespaces.txt', 'tokens.txt'}
 
-        with open(os.path.join(vocab_path, 'tokens.txt')) as f:
+        with open(vocab_path / 'tokens.txt') as f:
             tokens = [line.strip() for line in f]
 
         tokens.sort()
         assert tokens == ['.', '@@UNKNOWN@@', 'animals', 'are', 'birds', 'cats', 'dogs', 'snakes']
 
-        with open(os.path.join(vocab_path, 'labels.txt')) as f:
+        with open(vocab_path / 'labels.txt') as f:
             labels = [line.strip() for line in f]
 
         labels.sort()
