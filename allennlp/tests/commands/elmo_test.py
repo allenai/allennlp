@@ -8,7 +8,7 @@ import numpy
 
 from allennlp.commands import main
 from allennlp.commands.elmo import ElmoEmbedder
-from tests.modules.elmo_test import ElmoTestCase
+from allennlp.tests.modules.elmo_test import ElmoTestCase
 
 
 class TestElmoCommand(ElmoTestCase):
