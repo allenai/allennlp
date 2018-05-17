@@ -1,7 +1,6 @@
 """
 A ``Module`` that takes two matrices as input and returns a matrix of attentions.
 """
-import math
 
 import torch
 
@@ -9,7 +8,8 @@ from allennlp.common import Params
 from allennlp.modules.matrix_attention import MatrixAttention
 from overrides import overrides
 
-@MatrixAttention.register("dot_product_matrix_attention")
+
+@MatrixAttention.register("dot_product")
 class DotProductMatrixAttention(MatrixAttention):
 
     def __init__(self) -> None:

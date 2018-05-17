@@ -10,7 +10,7 @@ from allennlp.common import Params
 from allennlp.modules.matrix_attention import MatrixAttention
 
 
-@MatrixAttention.register("cosine_matrix_attention")
+@MatrixAttention.register("cosine")
 class CosineMatrixAttention(MatrixAttention):
 
     def __init__(self) -> None:

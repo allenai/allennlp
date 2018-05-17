@@ -13,7 +13,7 @@ from overrides import overrides
 from allennlp.modules.similarity_functions import DotProductSimilarity
 
 
-@MatrixAttention.register("multiheaded_matrix_attention")
+@MatrixAttention.register("multiheaded")
 class MultiHeadedMatrixAttention(MatrixAttention):
     """
        This similarity function uses multiple "heads" to compute similarity.  That is, we take the

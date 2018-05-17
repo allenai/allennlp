@@ -14,7 +14,7 @@ from allennlp.modules.matrix_attention import MatrixAttention
 from overrides import overrides
 
 
-@MatrixAttention.register("linear_matrix_attention")
+@MatrixAttention.register("linear")
 class LinearMatrixAttention(MatrixAttention):
     """
     This similarity function performs a dot product between a vector of weights and some
