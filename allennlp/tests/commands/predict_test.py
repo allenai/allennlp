@@ -20,6 +20,13 @@ from allennlp.service.predictors import Predictor, BidafPredictor
 
 
 class TestPredict(AllenNlpTestCase):
+    def setUp(self):
+        super(TestPredict, self).setUp()
+        self.bidaf_model_path = (self.FIXTURES_ROOT / "bidaf" /
+                                 "serialization" / "model.tar.gz")
+        self.tempdir = pathlib.Path(tempfile.mkdtemp())
+        self.infile = self.tempdir / "inputs.txt"
+        self.outfile = self.tempdir / "outputs.txt"
 
     def test_add_predict_subparser(self):
         parser = argparse.ArgumentParser(description="Testing")
@@ -44,11 +51,7 @@ class TestPredict(AllenNlpTestCase):
         assert args.silent
 
     def test_works_with_known_model(self):
-        tempdir = tempfile.mkdtemp()
-        infile = os.path.join(tempdir, "inputs.txt")
-        outfile = os.path.join(tempdir, "outputs.txt")
-
-        with open(infile, 'w') as f:
+        with open(self.infile, 'w') as f:
             f.write("""{"passage": "the seahawks won the super bowl in 2016", """
                     """ "question": "when did the seahawks win the super bowl?"}\n""")
             f.write("""{"passage": "the mariners won the super bowl in 2037", """
@@ -56,16 +59,16 @@ class TestPredict(AllenNlpTestCase):
 
         sys.argv = ["run.py",      # executable
                     "predict",     # command
-                    "tests/fixtures/bidaf/serialization/model.tar.gz",
-                    infile,     # input_file
-                    "--output-file", outfile,
+                    str(self.bidaf_model_path),
+                    str(self.infile),     # input_file
+                    "--output-file", str(self.outfile),
                     "--silent"]
 
         main()
 
-        assert os.path.exists(outfile)
+        assert os.path.exists(self.outfile)
 
-        with open(outfile, 'r') as f:
+        with open(self.outfile, 'r') as f:
             results = [json.loads(line) for line in f]
 
         assert len(results) == 2
@@ -75,14 +78,10 @@ class TestPredict(AllenNlpTestCase):
                                           "passage_tokens", "span_start_probs", "span_end_probs",
                                           "best_span", "best_span_str"}
 
-        shutil.rmtree(tempdir)
+        shutil.rmtree(self.tempdir)
 
     def test_batch_prediction_works_with_known_model(self):
-        tempdir = tempfile.mkdtemp()
-        infile = os.path.join(tempdir, "inputs.txt")
-        outfile = os.path.join(tempdir, "outputs.txt")
-
-        with open(infile, 'w') as f:
+        with open(self.infile, 'w') as f:
             f.write("""{"passage": "the seahawks won the super bowl in 2016", """
                     """ "question": "when did the seahawks win the super bowl?"}\n""")
             f.write("""{"passage": "the mariners won the super bowl in 2037", """
@@ -90,16 +89,16 @@ class TestPredict(AllenNlpTestCase):
 
         sys.argv = ["run.py",  # executable
                     "predict",  # command
-                    "tests/fixtures/bidaf/serialization/model.tar.gz",
-                    infile,  # input_file
-                    "--output-file", outfile,
+                    str(self.bidaf_model_path),
+                    str(self.infile),  # input_file
+                    "--output-file", str(self.outfile),
                     "--silent",
                     "--batch-size", '2']
 
         main()
 
-        assert os.path.exists(outfile)
-        with open(outfile, 'r') as f:
+        assert os.path.exists(self.outfile)
+        with open(self.outfile, 'r') as f:
             results = [json.loads(line) for line in f]
 
         assert len(results) == 2
@@ -109,7 +108,7 @@ class TestPredict(AllenNlpTestCase):
                                           "passage_tokens", "span_start_probs", "span_end_probs",
                                           "best_span", "best_span_str"}
 
-        shutil.rmtree(tempdir)
+        shutil.rmtree(self.tempdir)
 
     def test_fails_without_required_args(self):
         sys.argv = ["run.py",            # executable
@@ -132,11 +131,7 @@ class TestPredict(AllenNlpTestCase):
                 result["explicit"] = True
                 return result
 
-        tempdir = tempfile.mkdtemp()
-        infile = os.path.join(tempdir, "inputs.txt")
-        outfile = os.path.join(tempdir, "outputs.txt")
-
-        with open(infile, 'w') as f:
+        with open(self.infile, 'w') as f:
             f.write("""{"passage": "the seahawks won the super bowl in 2016", """
                     """ "question": "when did the seahawks win the super bowl?"}\n""")
             f.write("""{"passage": "the mariners won the super bowl in 2037", """
@@ -144,16 +139,16 @@ class TestPredict(AllenNlpTestCase):
 
         sys.argv = ["run.py",      # executable
                     "predict",     # command
-                    "tests/fixtures/bidaf/serialization/model.tar.gz",
-                    infile,     # input_file
-                    "--output-file", outfile,
+                    str(self.bidaf_model_path),
+                    str(self.infile),     # input_file
+                    "--output-file", str(self.outfile),
                     "--predictor", "bidaf-explicit",
                     "--silent"]
 
         main()
-        assert os.path.exists(outfile)
+        assert os.path.exists(self.outfile)
 
-        with open(outfile, 'r') as f:
+        with open(self.outfile, 'r') as f:
             results = [json.loads(line) for line in f]
 
         assert len(results) == 2
@@ -164,16 +159,16 @@ class TestPredict(AllenNlpTestCase):
                                           "passage_tokens", "span_start_probs", "span_end_probs",
                                           "best_span", "best_span_str", "explicit"}
 
-        shutil.rmtree(tempdir)
+        shutil.rmtree(self.tempdir)
 
     def test_other_modules(self):
         # Create a new package in a temporary dir
-        packagedir = os.path.join(self.TEST_DIR, 'testpackage')
-        pathlib.Path(packagedir).mkdir()
-        pathlib.Path(os.path.join(packagedir, '__init__.py')).touch()
+        packagedir = self.TEST_DIR / 'testpackage'
+        packagedir.mkdir()
+        (packagedir / '__init__.py').touch()
 
         # And add that directory to the path
-        sys.path.insert(0, self.TEST_DIR)
+        sys.path.insert(0, str(self.TEST_DIR))
 
         # Write out a duplicate predictor there, but registered under a different name.
         from allennlp.service.predictors import bidaf
@@ -184,10 +179,10 @@ class TestPredict(AllenNlpTestCase):
         with open(os.path.join(packagedir, 'predictor.py'), 'w') as f:
             f.write(code)
 
-        infile = os.path.join(self.TEST_DIR, "inputs.txt")
-        outfile = os.path.join(self.TEST_DIR, "outputs.txt")
+        self.infile = os.path.join(self.TEST_DIR, "inputs.txt")
+        self.outfile = os.path.join(self.TEST_DIR, "outputs.txt")
 
-        with open(infile, 'w') as f:
+        with open(self.infile, 'w') as f:
             f.write("""{"passage": "the seahawks won the super bowl in 2016", """
                     """ "question": "when did the seahawks win the super bowl?"}\n""")
             f.write("""{"passage": "the mariners won the super bowl in 2037", """
@@ -195,9 +190,9 @@ class TestPredict(AllenNlpTestCase):
 
         sys.argv = ["run.py",      # executable
                     "predict",     # command
-                    "tests/fixtures/bidaf/serialization/model.tar.gz",
-                    infile,     # input_file
-                    "--output-file", outfile,
+                    str(self.bidaf_model_path),
+                    str(self.infile),     # input_file
+                    "--output-file", str(self.outfile),
                     "--predictor", "duplicate-test-predictor",
                     "--silent"]
 
@@ -209,9 +204,9 @@ class TestPredict(AllenNlpTestCase):
         sys.argv.extend(["--include-package", "testpackage"])
         main()
 
-        assert os.path.exists(outfile)
+        assert os.path.exists(self.outfile)
 
-        with open(outfile, 'r') as f:
+        with open(self.outfile, 'r') as f:
             results = [json.loads(line) for line in f]
 
         assert len(results) == 2
@@ -222,13 +217,9 @@ class TestPredict(AllenNlpTestCase):
                                           "passage_tokens", "span_start_probs", "span_end_probs",
                                           "best_span", "best_span_str"}
 
-        sys.path.remove(self.TEST_DIR)
+        sys.path.remove(str(self.TEST_DIR))
 
     def test_alternative_file_formats(self):
-        tempdir = tempfile.mkdtemp()
-        infile = os.path.join(tempdir, "inputs.txt")
-        outfile = os.path.join(tempdir, "outputs.txt")
-
         @Predictor.register('bidaf-csv')  # pylint: disable=unused-variable
         class BidafCsvPredictor(BidafPredictor):
             """same as bidaf predictor but using CSV inputs and outputs"""
@@ -248,7 +239,7 @@ class TestPredict(AllenNlpTestCase):
                 writer.writerow(row)
                 return output.getvalue()
 
-        with open(infile, 'w') as f:
+        with open(self.infile, 'w') as f:
             writer = csv.writer(f)
             writer.writerow(["the seahawks won the super bowl in 2016",
                              "when did the seahawks win the super bowl?"])
@@ -257,16 +248,16 @@ class TestPredict(AllenNlpTestCase):
 
         sys.argv = ["run.py",      # executable
                     "predict",     # command
-                    "tests/fixtures/bidaf/serialization/model.tar.gz",
-                    infile,     # input_file
-                    "--output-file", outfile,
+                    str(self.bidaf_model_path),
+                    str(self.infile),     # input_file
+                    "--output-file", str(self.outfile),
                     "--predictor", 'bidaf-csv',
                     "--silent"]
 
         main()
-        assert os.path.exists(outfile)
+        assert os.path.exists(self.outfile)
 
-        with open(outfile, 'r') as f:
+        with open(self.outfile, 'r') as f:
             reader = csv.reader(f)
             results = [row for row in reader]
 
@@ -279,4 +270,4 @@ class TestPredict(AllenNlpTestCase):
             assert 0 <= int(span_start) <= int(span_end) <= 8
             assert span != ''
 
-        shutil.rmtree(tempdir)
+        shutil.rmtree(self.tempdir)
