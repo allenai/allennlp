@@ -48,9 +48,6 @@ COPY requirements_test.txt .
 COPY scripts/install_requirements.sh scripts/install_requirements.sh
 RUN INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh
 
-# Same idea as above, but for EVALB this time.
-COPY scripts/EVALB scripts/EVALB
-
 # And the demo; `npm install` and `npm run build` are slow, so we skip them if we can.
 COPY demo/ demo/
 COPY scripts/build_demo.py scripts/build_demo.py
