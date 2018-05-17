@@ -21,11 +21,11 @@ from allennlp.nn.util import remove_sentence_boundaries
 class ElmoTestCase(AllenNlpTestCase):
     def setUp(self):
         super(ElmoTestCase, self).setUp()
-        self.fixtures_path = os.path.join('tests', 'fixtures', 'elmo')
-        self.options_file = os.path.join(self.fixtures_path, 'options.json')
-        self.weight_file = os.path.join(self.fixtures_path, 'lm_weights.hdf5')
-        self.sentences_json_file = os.path.join(self.fixtures_path, 'sentences.json')
-        self.sentences_txt_file = os.path.join(self.fixtures_path, 'sentences.txt')
+        self.elmo_fixtures_path = self.FIXTURES_ROOT / 'elmo'
+        self.options_file = str(self.elmo_fixtures_path / 'options.json')
+        self.weight_file = str(self.elmo_fixtures_path / 'lm_weights.hdf5')
+        self.sentences_json_file = str(self.elmo_fixtures_path / 'sentences.json')
+        self.sentences_txt_file = str(self.elmo_fixtures_path / 'sentences.txt')
 
     def _load_sentences_embeddings(self):
         """
@@ -46,7 +46,7 @@ class ElmoTestCase(AllenNlpTestCase):
         expected_lm_embeddings = []
         for k in range(len(sentences)):
             embed_fname = os.path.join(
-                    self.fixtures_path, 'lm_embeddings_{}.hdf5'.format(k)
+                    self.elmo_fixtures_path, 'lm_embeddings_{}.hdf5'.format(k)
             )
             expected_lm_embeddings.append([])
             with h5py.File(embed_fname, 'r') as fin:
@@ -221,7 +221,7 @@ class TestElmoRequiresGrad(ElmoTestCase):
 class TestElmoTokenRepresentation(ElmoTestCase):
     def test_elmo_token_representation(self):
         # Load the test words and convert to char ids
-        with open(os.path.join(self.fixtures_path, 'vocab_test.txt'), 'r') as fin:
+        with open(os.path.join(self.elmo_fixtures_path, 'vocab_test.txt'), 'r') as fin:
             tokens = fin.read().strip().split('\n')
 
         indexer = ELMoTokenCharactersIndexer()
@@ -247,7 +247,7 @@ class TestElmoTokenRepresentation(ElmoTestCase):
         )[0].data.numpy()
         actual_embeddings = actual_embeddings.reshape(-1, actual_embeddings.shape[-1])
 
-        embedding_file = os.path.join(self.fixtures_path, 'elmo_token_embeddings.hdf5')
+        embedding_file = os.path.join(self.elmo_fixtures_path, 'elmo_token_embeddings.hdf5')
         with h5py.File(embedding_file, 'r') as fin:
             expected_embeddings = fin['embedding'][...]
 

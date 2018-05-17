@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 import os
+import pathlib
 import sys
 import tempfile
 
@@ -12,19 +13,21 @@ from allennlp.tests.modules.elmo_test import ElmoTestCase
 
 
 class TestElmoCommand(ElmoTestCase):
-    def test_all_embedding_works(self):
-        tempdir = tempfile.mkdtemp()
-        sentences_path = os.path.join(tempdir, "sentences.txt")
-        output_path = os.path.join(tempdir, "output.txt")
+    def setUp(self):
+        super(TestElmoCommand, self).setUp()
+        self.tempdir = pathlib.Path(tempfile.mkdtemp())
+        self.sentences_path = str(self.tempdir / "sentences.txt")
+        self.output_path = str(self.tempdir / "output.txt")
 
+    def test_all_embedding_works(self):
         sentence = "Michael went to the store to buy some eggs ."
-        with open(sentences_path, 'w') as f:
+        with open(self.sentences_path, 'w') as f:
             f.write(sentence)
 
         sys.argv = ["run.py",  # executable
                     "elmo",  # command
-                    sentences_path,
-                    output_path,
+                    self.sentences_path,
+                    self.output_path,
                     "--all",
                     "--options-file",
                     self.options_file,
@@ -33,12 +36,12 @@ class TestElmoCommand(ElmoTestCase):
 
         main()
 
-        assert os.path.exists(output_path)
+        assert os.path.exists(self.output_path)
 
         embedder = ElmoEmbedder(options_file=self.options_file, weight_file=self.weight_file)
         expected_embedding = embedder.embed_sentence(sentence.split())
 
-        with h5py.File(output_path, 'r') as h5py_file:
+        with h5py.File(self.output_path, 'r') as h5py_file:
             assert list(h5py_file.keys()) == [sentence]
             # The vectors in the test configuration are smaller (32 length)
             embedding = h5py_file.get(sentence)
@@ -46,18 +49,14 @@ class TestElmoCommand(ElmoTestCase):
             numpy.testing.assert_allclose(embedding, expected_embedding, rtol=1e-4)
 
     def test_top_embedding_works(self):
-        tempdir = tempfile.mkdtemp()
-        sentences_path = os.path.join(tempdir, "sentences.txt")
-        output_path = os.path.join(tempdir, "output.txt")
-
         sentence = "Michael went to the store to buy some eggs ."
-        with open(sentences_path, 'w') as f:
+        with open(self.sentences_path, 'w') as f:
             f.write(sentence)
 
         sys.argv = ["run.py",  # executable
                     "elmo",  # command
-                    sentences_path,
-                    output_path,
+                    self.sentences_path,
+                    self.output_path,
                     "--top",
                     "--options-file",
                     self.options_file,
@@ -66,12 +65,12 @@ class TestElmoCommand(ElmoTestCase):
 
         main()
 
-        assert os.path.exists(output_path)
+        assert os.path.exists(self.output_path)
 
         embedder = ElmoEmbedder(options_file=self.options_file, weight_file=self.weight_file)
         expected_embedding = embedder.embed_sentence(sentence.split())[2]
 
-        with h5py.File(output_path, 'r') as h5py_file:
+        with h5py.File(self.output_path, 'r') as h5py_file:
             assert list(h5py_file.keys()) == [sentence]
             # The vectors in the test configuration are smaller (32 length)
             embedding = h5py_file.get(sentence)
@@ -79,18 +78,14 @@ class TestElmoCommand(ElmoTestCase):
             numpy.testing.assert_allclose(embedding, expected_embedding, rtol=1e-4)
 
     def test_average_embedding_works(self):
-        tempdir = tempfile.mkdtemp()
-        sentences_path = os.path.join(tempdir, "sentences.txt")
-        output_path = os.path.join(tempdir, "output.txt")
-
         sentence = "Michael went to the store to buy some eggs ."
-        with open(sentences_path, 'w') as f:
+        with open(self.sentences_path, 'w') as f:
             f.write(sentence)
 
         sys.argv = ["run.py",  # executable
                     "elmo",  # command
-                    sentences_path,
-                    output_path,
+                    self.sentences_path,
+                    self.output_path,
                     "--average",
                     "--options-file",
                     self.options_file,
@@ -99,13 +94,13 @@ class TestElmoCommand(ElmoTestCase):
 
         main()
 
-        assert os.path.exists(output_path)
+        assert os.path.exists(self.output_path)
 
         embedder = ElmoEmbedder(options_file=self.options_file, weight_file=self.weight_file)
         expected_embedding = embedder.embed_sentence(sentence.split())
         expected_embedding = (expected_embedding[0] + expected_embedding[1] + expected_embedding[2]) / 3
 
-        with h5py.File(output_path, 'r') as h5py_file:
+        with h5py.File(self.output_path, 'r') as h5py_file:
             assert list(h5py_file.keys()) == [sentence]
             # The vectors in the test configuration are smaller (32 length)
             embedding = h5py_file.get(sentence)
@@ -113,23 +108,19 @@ class TestElmoCommand(ElmoTestCase):
             numpy.testing.assert_allclose(embedding, expected_embedding, rtol=1e-4)
 
     def test_batch_embedding_works(self):
-        tempdir = tempfile.mkdtemp()
-        sentences_path = os.path.join(tempdir, "sentences.txt")
-        output_path = os.path.join(tempdir, "output.txt")
-
         sentences = [
                 "Michael went to the store to buy some eggs .",
                 "Joel rolled down the street on his skateboard ."
         ]
 
-        with open(sentences_path, 'w') as f:
+        with open(self.sentences_path, 'w') as f:
             for line in sentences:
                 f.write(line + '\n')
 
         sys.argv = ["run.py",  # executable
                     "elmo",  # command
-                    sentences_path,
-                    output_path,
+                    self.sentences_path,
+                    self.output_path,
                     "--all",
                     "--options-file",
                     self.options_file,
@@ -138,32 +129,28 @@ class TestElmoCommand(ElmoTestCase):
 
         main()
 
-        assert os.path.exists(output_path)
+        assert os.path.exists(self.output_path)
 
-        with h5py.File(output_path, 'r') as h5py_file:
+        with h5py.File(self.output_path, 'r') as h5py_file:
             assert set(h5py_file.keys()) == set(sentences)
             # The vectors in the test configuration are smaller (32 length)
             for sentence in sentences:
                 assert h5py_file.get(sentence).shape == (3, len(sentence.split()), 32)
 
     def test_duplicate_sentences(self):
-        tempdir = tempfile.mkdtemp()
-        sentences_path = os.path.join(tempdir, "sentences.txt")
-        output_path = os.path.join(tempdir, "output.txt")
-
         sentences = [
                 "Michael went to the store to buy some eggs .",
                 "Michael went to the store to buy some eggs .",
         ]
 
-        with open(sentences_path, 'w') as f:
+        with open(self.sentences_path, 'w') as f:
             for line in sentences:
                 f.write(line + '\n')
 
         sys.argv = ["run.py",  # executable
                     "elmo",  # command
-                    sentences_path,
-                    output_path,
+                    self.sentences_path,
+                    self.output_path,
                     "--all",
                     "--options-file",
                     self.options_file,
@@ -172,9 +159,9 @@ class TestElmoCommand(ElmoTestCase):
 
         main()
 
-        assert os.path.exists(output_path)
+        assert os.path.exists(self.output_path)
 
-        with h5py.File(output_path, 'r') as h5py_file:
+        with h5py.File(self.output_path, 'r') as h5py_file:
             assert len(h5py_file.keys()) == 1
             assert set(h5py_file.keys()) == set(sentences)
             # The vectors in the test configuration are smaller (32 length)
@@ -182,10 +169,6 @@ class TestElmoCommand(ElmoTestCase):
                 assert h5py_file.get(sentence).shape == (3, len(sentence.split()), 32)
 
     def test_empty_sentences_are_filtered(self):
-        tempdir = tempfile.mkdtemp()
-        sentences_path = os.path.join(tempdir, "sentences.txt")
-        output_path = os.path.join(tempdir, "output.txt")
-
         sentences = [
                 "A",
                 "",
@@ -193,14 +176,14 @@ class TestElmoCommand(ElmoTestCase):
                 "B"
         ]
 
-        with open(sentences_path, 'w') as f:
+        with open(self.sentences_path, 'w') as f:
             for line in sentences:
                 f.write(line + '\n')
 
         sys.argv = ["run.py",  # executable
                     "elmo",  # command
-                    sentences_path,
-                    output_path,
+                    self.sentences_path,
+                    self.output_path,
                     "--all",
                     "--options-file",
                     self.options_file,
@@ -209,9 +192,9 @@ class TestElmoCommand(ElmoTestCase):
 
         main()
 
-        assert os.path.exists(output_path)
+        assert os.path.exists(self.output_path)
 
-        with h5py.File(output_path, 'r') as h5py_file:
+        with h5py.File(self.output_path, 'r') as h5py_file:
             assert len(h5py_file.keys()) == 2
             assert set(h5py_file.keys()) == set(["A", "B"])
 
