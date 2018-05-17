@@ -1,36 +1,43 @@
 {
   "dataset_reader": {
     "type": "wikitables",
+    "lazy": false,
+    "output_agendas": true,
     "tables_directory": "/wikitables/",
-    "output_agendas": true
+    "keep_if_no_dpd": true
   },
-  "train_data_path": "/data/train.examples",
-  "validation_data_path": "/data/dev.examples",
+  "train_data_path": "/wikitables/data/subsamples/random-split-1-train-100.examples",
+  "validation_data_path": "/wikitables/data/subsamples/random-split-1-dev-100.examples",
   "model": {
     "type": "wikitables_erm_parser",
     "question_embedder": {
       "tokens": {
         "type": "embedding",
-        "embedding_dim": 25,
+        "embedding_dim": 200,
         "trainable": true
       }
     },
-    "action_embedding_dim": 50,
+    "action_embedding_dim": 100,
     "encoder": {
       "type": "lstm",
-      "input_size": 50,
-      "hidden_size": 10,
+      "input_size": 400,
+      "hidden_size": 100,
+      "bidirectional": true,
       "num_layers": 1
     },
     "entity_encoder": {
       "type": "boe",
-      "embedding_dim": 25,
+      "embedding_dim": 200,
       "averaged": true
     },
-    "max_decoding_steps": 20,
+    "max_decoding_steps": 40,
     "decoder_beam_size": 10,
     "decoder_num_finished_states": 50,
-    "attention_function": {"type": "dot_product"},
+    "attention_function": {
+      "type": "bilinear",
+      "tensor_1_dim": 200,
+      "tensor_2_dim": 200
+    },
     "tables_directory": "/wikitables/",
     "mml_model_file": "/mml_model/model.tar.gz"
   },
