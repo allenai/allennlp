@@ -49,7 +49,7 @@ class TestFlask(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         # Create index.html in TEST_DIR
-        pathlib.Path(os.path.join(self.TEST_DIR, 'index.html')).touch()
+        (self.TEST_DIR / 'index.html').touch()
 
         if self.client is None:
 
@@ -175,7 +175,7 @@ class TestFlask(AllenNlpTestCase):
             assert len(predictor.calls) == 1
 
     def test_missing_static_dir(self):
-        fake_dir = os.path.join(self.TEST_DIR, '/this/directory/does/not/exist')
+        fake_dir = self.TEST_DIR / 'this' / 'directory' / 'does' / 'not' / 'exist'
 
         with self.assertRaises(SystemExit) as cm:
             make_app(fake_dir)
