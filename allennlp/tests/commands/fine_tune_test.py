@@ -8,9 +8,9 @@ from allennlp.commands.fine_tune import FineTune, fine_tune_model_from_file_path
 class TestFineTune(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.model_archive = 'tests/fixtures/decomposable_attention/serialization/model.tar.gz'
-        self.config_file = 'tests/fixtures/decomposable_attention/experiment.json'
-        self.serialization_dir = os.path.join(self.TEST_DIR, 'fine_tune')
+        self.model_archive = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
+        self.config_file = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'experiment.json')
+        self.serialization_dir = str(self.TEST_DIR / 'fine_tune')
 
         self.parser = argparse.ArgumentParser(description="Testing")
         subparsers = self.parser.add_subparsers(title='Commands', metavar='')
