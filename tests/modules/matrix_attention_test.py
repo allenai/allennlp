@@ -8,7 +8,6 @@ from torch.autograd import Variable
 from allennlp.common import Params
 from allennlp.modules import MatrixAttention
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules.matrix_attention_factory import MatrixAttentionFactory
 
 
 class TestMatrixAttention(AllenNlpTestCase):
@@ -22,6 +21,6 @@ class TestMatrixAttention(AllenNlpTestCase):
 
     def test_can_build_from_params(self):
         params = Params({'type': 'cosine'})
-        attention = MatrixAttentionFactory.from_params(params)
+        attention = MatrixAttention.from_params(params)
         # pylint: disable=protected-access
         assert attention._similarity_function.__class__.__name__ == 'CosineSimilarity'

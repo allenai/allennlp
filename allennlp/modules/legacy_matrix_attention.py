@@ -1,5 +1,6 @@
 """
 A ``Module`` that takes two matrices as input and returns a matrix of attentions.
+
 """
 import torch
 from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
@@ -12,10 +13,16 @@ from allennlp.modules.matrix_attention import MatrixAttention
 from overrides import overrides
 
 
+@DeprecationWarning
 @MatrixAttention.register("legacy")
 class LegacyMatrixAttention(MatrixAttention):
     '''
+
     This ``Module`` takes two matrices as input and returns a matrix of attentions.
+
+    Responsible for supporting legacy attention.
+    New implementations of the attention were added because they have a much smaller memory footprint.
+    The legacy attention is kept around to support backwards compatibility, although no new project should use them.
 
     We compute the similarity between each row in each matrix and return unnormalized similarity
     scores.  Because these scores are unnormalized, we don't take a mask as input; it's up to the

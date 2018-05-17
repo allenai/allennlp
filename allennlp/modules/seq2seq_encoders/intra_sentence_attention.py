@@ -1,4 +1,3 @@
-from allennlp.modules.similarity_functions.multiheaded import MultiHeadedSimilarity
 from overrides import overrides
 import torch
 from torch.nn import Linear
@@ -6,12 +5,9 @@ from torch.nn import Linear
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.legacy_matrix_attention import LegacyMatrixAttention
-from allennlp.modules.matrix_attention_factory import MatrixAttentionFactory
-from allennlp.modules.multi_headed_matrix_attention import MultiHeadedMatrixAttention
-from allennlp.modules.dot_product_matrix_attention import DotProductMatrixAttention
-from allennlp.modules.matrix_attention import MatrixAttention
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
-from allennlp.modules.similarity_functions import SimilarityFunction
+from allennlp.modules.similarity_functions import DotProductSimilarity, SimilarityFunction
+from allennlp.modules.similarity_functions import MultiHeadedSimilarity
 from allennlp.nn import util
 
 
@@ -54,11 +50,10 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
     def __init__(self,
                  input_dim: int,
                  projection_dim: int = None,
-                 matrix_attention: MatrixAttention = DotProductMatrixAttention(),
+                 similarity_function: SimilarityFunction = DotProductSimilarity(),
                  num_attention_heads: int = 1,
                  combination: str = '1,2',
                  output_dim: int = None) -> None:
-        # pylint: disable=protected-access
         super(IntraSentenceAttentionEncoder, self).__init__()
         self._input_dim = input_dim
         if projection_dim:
@@ -66,23 +61,15 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
         else:
             self._projection = lambda x: x
             projection_dim = input_dim
-        self._matrix_attention = matrix_attention
+        self._matrix_attention = LegacyMatrixAttention(similarity_function)
         self._num_attention_heads = num_attention_heads
-        if isinstance(matrix_attention, MultiHeadedMatrixAttention):
+        if isinstance(similarity_function, MultiHeadedSimilarity):
             if num_attention_heads == 1:
                 raise ConfigurationError("Similarity function has multiple heads but encoder doesn't")
-            if num_attention_heads != matrix_attention.num_heads:
+            if num_attention_heads != similarity_function.num_heads:
                 raise ConfigurationError("Number of heads don't match between similarity function "
                                          "and encoder: %d, %d" % (num_attention_heads,
-                                                                  matrix_attention.num_heads))
-        elif (isinstance(matrix_attention, LegacyMatrixAttention)
-              and isinstance(matrix_attention._similarity_function, MultiHeadedSimilarity)): # pylint: disable=protected-access
-            if num_attention_heads == 1:
-                raise ConfigurationError("Similarity function has multiple heads but encoder doesn't")
-            if num_attention_heads != matrix_attention._similarity_function.num_heads:  # pylint: disable=protected-access
-                raise ConfigurationError("Number of heads don't match between similarity function "
-                                         "and encoder: %d, %d" % (num_attention_heads,
-                                                                  matrix_attention._similarity_function.num_heads))  # pylint: disable=protected-access
+                                                                  similarity_function.num_heads))
         elif num_attention_heads > 1:
             raise ConfigurationError("Encoder has multiple heads but similarity function doesn't")
         self._combination = combination
@@ -155,14 +142,14 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
     def from_params(cls, params: Params) -> 'IntraSentenceAttentionEncoder':
         input_dim = params.pop_int('input_dim')
         projection_dim = params.pop_int('projection_dim', None)
-        matrix_attention = MatrixAttentionFactory.from_params(params.pop('similarity_function', {}))
+        similarity_function = SimilarityFunction.from_params(params.pop('similarity_function', {}))
         num_attention_heads = params.pop_int('num_attention_heads', 1)
         combination = params.pop('combination', '1,2')
         output_dim = params.pop_int('output_dim', None)
         params.assert_empty(cls.__name__)
         return cls(input_dim=input_dim,
                    projection_dim=projection_dim,
-                   matrix_attention=matrix_attention,
+                   similarity_function=similarity_function,
                    num_attention_heads=num_attention_heads,
                    combination=combination,
                    output_dim=output_dim)
