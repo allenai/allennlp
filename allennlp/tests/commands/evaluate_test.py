@@ -17,8 +17,8 @@ class TestEvaluate(AllenNlpTestCase):
 
     @flaky
     def test_evaluate_from_args(self):
-        kebab_args = ["evaluate", "tests/fixtures/bidaf/serialization/model.tar.gz",
-                      "--evaluation-data-file", "tests/fixtures/data/squad.json",
+        kebab_args = ["evaluate", str(self.FIXTURES_ROOT / "bidaf" / "serialization" / "model.tar.gz"),
+                      "--evaluation-data-file", str(self.FIXTURES_ROOT / "data" / "squad.json"),
                       "--cuda-device", "-1"]
 
         args = self.parser.parse_args(kebab_args)
