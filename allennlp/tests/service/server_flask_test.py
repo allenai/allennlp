@@ -15,9 +15,9 @@ from allennlp.service.server_flask import make_app
 from allennlp.service.db import InMemoryDemoDatabase
 
 TEST_ARCHIVE_FILES = {
-        'machine-comprehension': 'tests/fixtures/bidaf/serialization/model.tar.gz',
-        'semantic-role-labeling': 'tests/fixtures/srl/serialization/model.tar.gz',
-        'textual-entailment': 'tests/fixtures/decomposable_attention/serialization/model.tar.gz'
+        'machine-comprehension': AllenNlpTestCase.FIXTURES_ROOT / 'bidaf'/ 'serialization'/ 'model.tar.gz',
+        'semantic-role-labeling': AllenNlpTestCase.FIXTURES_ROOT / 'srl'/ 'serialization'/ 'model.tar.gz',
+        'textual-entailment': AllenNlpTestCase.FIXTURES_ROOT/ 'decomposable_attention'/ 'serialization'/ 'model.tar.gz'
 }
 
 PREDICTORS = {
