@@ -70,6 +70,9 @@ class SpanConstituencyParser(Model):
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
+    evalb_directory_path : ``str``, optional (default=``None``)
+        The path to the directory containing the evalb executable used to score
+        bracketed parses. If ``None``, will use evalb located at allennlp/tools/EVALB .
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -118,7 +121,7 @@ class SpanConstituencyParser(Model):
         if evalb_directory_path is not None:
             self._evalb_score = EvalbBracketingScorer(evalb_directory_path)
         else:
-            self._evalb_score = None
+            self._evalb_score = EvalbBracketingScorer()
         initializer(self)
 
     @overrides
