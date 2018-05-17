@@ -26,8 +26,8 @@ class TestDryRun(AllenNlpTestCase):
                         }
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
+                "train_data_path": self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv',
+                "validation_data_path": self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv',
                 "iterator": {"type": "basic", "batch_size": 2},
                 "trainer": {
                         "num_epochs": 2,
@@ -36,10 +36,10 @@ class TestDryRun(AllenNlpTestCase):
         })
 
     def test_dry_run_doesnt_overwrite_vocab(self):
-        vocab_path = os.path.join(self.TEST_DIR, 'pre-defined-vocab')
+        vocab_path = self.TEST_DIR / 'pre-defined-vocab'
         os.mkdir(vocab_path)
         # Put something in the vocab directory
-        with open(os.path.join(vocab_path, "test.txt"), "a+") as open_file:
+        with open(vocab_path / "test.txt", "a+") as open_file:
             open_file.write("test")
 
         self.params['vocabulary'] = {}
@@ -51,5 +51,5 @@ class TestDryRun(AllenNlpTestCase):
         predefined_vocab_files = os.listdir(vocab_path)
         assert set(predefined_vocab_files) == {'test.txt'}
         # But we should have written the created vocab to serialisation_dir/vocab:
-        new_vocab_files = os.listdir(os.path.join(self.TEST_DIR, 'vocabulary'))
+        new_vocab_files = os.listdir(self.TEST_DIR / 'vocabulary')
         assert set(new_vocab_files) == {'tokens.txt', 'non_padded_namespaces.txt', 'labels.txt'}
