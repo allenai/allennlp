@@ -2,8 +2,9 @@
 from collections import Counter
 import os
 import pathlib
-import pytest
+import json
 
+import pytest
 import responses
 
 from allennlp.common.file_utils import url_to_filename, filename_to_url, get_from_cache, cached_path
@@ -54,11 +55,18 @@ class TestFileUtils(AllenNlpTestCase):
 
     def test_url_to_filename(self):
         for url in ['http://allenai.org', 'http://allennlp.org',
-                    'https://www.google.com', 'http://pytorch.org']:
+                    'https://www.google.com', 'http://pytorch.org',
+                    'https://s3-us-west-2.amazonaws.com/allennlp' + '/long' * 20 + '/url']:
             filename = url_to_filename(url)
             assert "http" not in filename
+            with pytest.raises(FileNotFoundError):
+                filename_to_url(filename, cache_dir=self.TEST_DIR)
             pathlib.Path(os.path.join(self.TEST_DIR, filename)).touch()
-            back_to_url, etag = filename_to_url(filename)
+            with pytest.raises(FileNotFoundError):
+                filename_to_url(filename, cache_dir=self.TEST_DIR)
+            json.dump({'url': url, 'etag': None},
+                      open(os.path.join(self.TEST_DIR, filename + '.json'), 'w'))
+            back_to_url, etag = filename_to_url(filename, cache_dir=self.TEST_DIR)
             assert back_to_url == url
             assert etag is None
 
@@ -68,9 +76,13 @@ class TestFileUtils(AllenNlpTestCase):
             filename = url_to_filename(url, etag="mytag")
             assert "http" not in filename
             pathlib.Path(os.path.join(self.TEST_DIR, filename)).touch()
-            back_to_url, etag = filename_to_url(filename)
+            json.dump({'url': url, 'etag': 'mytag'},
+                      open(os.path.join(self.TEST_DIR, filename + '.json'), 'w'))
+            back_to_url, etag = filename_to_url(filename, cache_dir=self.TEST_DIR)
             assert back_to_url == url
             assert etag == "mytag"
+        baseurl = 'http://allenai.org/'
+        assert url_to_filename(baseurl + '1') != url_to_filename(baseurl, etag='1')
 
     def test_url_to_filename_with_etags_eliminates_quotes(self):
         for url in ['http://allenai.org', 'http://allennlp.org',
@@ -78,7 +90,9 @@ class TestFileUtils(AllenNlpTestCase):
             filename = url_to_filename(url, etag='"mytag"')
             assert "http" not in filename
             pathlib.Path(os.path.join(self.TEST_DIR, filename)).touch()
-            back_to_url, etag = filename_to_url(filename)
+            json.dump({'url': url, 'etag': 'mytag'},
+                      open(os.path.join(self.TEST_DIR, filename + '.json'), 'w'))
+            back_to_url, etag = filename_to_url(filename, cache_dir=self.TEST_DIR)
             assert back_to_url == url
             assert etag == "mytag"
 
