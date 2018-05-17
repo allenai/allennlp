@@ -7,8 +7,6 @@ from torch.autograd import Variable
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules import MultiHeadedMatrixAttention
-from allennlp.modules.legacy_matrix_attention import LegacyMatrixAttention
 from allennlp.modules.seq2seq_encoders import IntraSentenceAttentionEncoder
 from allennlp.modules.similarity_functions import MultiHeadedSimilarity
 
@@ -24,7 +22,7 @@ class TestIntraSentenceAttentionEncoder(AllenNlpTestCase):
         params = Params({'input_dim': 8,
                          'projection_dim': 8,
                          'num_attention_heads': 4,
-                         'similarity_function': {'type': 'multiheaded_matrix_attention',
+                         'similarity_function': {'type': 'multiheaded',
                                                  'num_heads': 4,
                                                  'tensor_1_dim': 8},
                          'combination': '1,2,1*2'})
@@ -36,13 +34,13 @@ class TestIntraSentenceAttentionEncoder(AllenNlpTestCase):
         with pytest.raises(ConfigurationError) as exception_info:
             IntraSentenceAttentionEncoder(input_dim=5, num_attention_heads=4)
         assert 'Encoder has multiple heads' in exception_info.value.message
-        similarity = LegacyMatrixAttention(MultiHeadedSimilarity(3, 6))
+        similarity = MultiHeadedSimilarity(3, 6)
         with pytest.raises(ConfigurationError) as exception_info:
-            IntraSentenceAttentionEncoder(input_dim=5, matrix_attention=similarity)
+            IntraSentenceAttentionEncoder(input_dim=5, similarity_function=similarity)
         assert 'Similarity function has multiple heads' in exception_info.value.message
         with pytest.raises(ConfigurationError) as exception_info:
             IntraSentenceAttentionEncoder(input_dim=5, num_attention_heads=2,
-                                          matrix_attention=similarity)
+                                          similarity_function=similarity)
         assert "Number of heads don't match" in exception_info.value.message
 
     def test_forward_works_with_simple_attention(self):
@@ -56,10 +54,10 @@ class TestIntraSentenceAttentionEncoder(AllenNlpTestCase):
     def test_forward_works_with_multi_headed_attention(self):
         # We're not going to check the output values here, as that's complicated; we'll just make
         # sure the code runs and the shapes are correct.
-        similarity =  LegacyMatrixAttention(MultiHeadedSimilarity(3, 24))
+        similarity = MultiHeadedSimilarity(3, 24)
         encoder = IntraSentenceAttentionEncoder(input_dim=24,
                                                 projection_dim=24,
-                                                matrix_attention=similarity,
+                                                similarity_function=similarity,
                                                 num_attention_heads=3,
                                                 combination="1+2")
         input_tensor = Variable(torch.from_numpy(numpy.random.rand(4, 6, 24))).float()
