@@ -11,8 +11,8 @@ from allennlp.models import Model
 class CrfTaggerTest(ModelTestCase):
     def setUp(self):
         super().setUp()
-        self.set_up_model('tests/fixtures/crf_tagger/experiment.json',
-                          'tests/fixtures/data/conll2003.txt')
+        self.set_up_model(self.FIXTURES_ROOT / 'crf_tagger' / 'experiment.json',
+                          self.FIXTURES_ROOT / 'data' / 'conll2003.txt')
 
     def test_simple_tagger_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
