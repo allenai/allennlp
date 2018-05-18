@@ -47,7 +47,7 @@ class TestTrain(AllenNlpTestCase):
         os.makedirs(serialization_dir2)
         train_model(params(), serialization_dir=serialization_dir2)
 
-        # It's not OK if serialization dir exists and is non-empty:
+        # It's not OK if serialization dir exists and has junk in it non-empty:
         serialization_dir3 = os.path.join(self.TEST_DIR, 'non_empty_directory')
         assert not os.path.exists(serialization_dir3)
         os.makedirs(serialization_dir3)
@@ -56,6 +56,10 @@ class TestTrain(AllenNlpTestCase):
 
         with pytest.raises(ConfigurationError):
             train_model(params(), serialization_dir=serialization_dir3)
+
+        # It's also not OK if serialization dir is a real serialization dir:
+        with pytest.raises(ConfigurationError):
+            train_model(params(), serialization_dir=os.path.join(self.TEST_DIR, 'test_train_model'))
 
     def test_train_with_test_set(self):
         params = Params({

@@ -179,7 +179,7 @@ def create_serialization_dir(params: Params, serialization_dir: str, recover: bo
         the directory doesn't exist, or doesn't match the configuration we're given.
     """
     if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
-        if recover:
+        if not recover:
             raise ConfigurationError(f"Serialization directory ({serialization_dir}) already exists and is "
                                      f"not empty. Specify --recover to recover training from existing output.")
 
