@@ -40,13 +40,12 @@ class TestCommonUtils(AllenNlpTestCase):
         assert util.sanitize(torch.LongTensor([1, 2])) == [1, 2]
 
     def test_import_submodules(self):
-        os.makedirs(os.path.join(self.TEST_DIR, 'mymodule'))
-        pathlib.Path(os.path.join(self.TEST_DIR, 'mymodule/__init__.py')).touch()
-        os.makedirs(os.path.join(self.TEST_DIR, 'mymodule/submodule'))
-        pathlib.Path(os.path.join(self.TEST_DIR, 'mymodule/submodule/__init__.py')).touch()
+        (self.TEST_DIR / 'mymodule').mkdir()
+        (self.TEST_DIR / 'mymodule' / '__init__.py').touch()
+        (self.TEST_DIR / 'mymodule' / 'submodule').mkdir()
+        (self.TEST_DIR / 'mymodule' / 'submodule' / '__init__.py').touch()
 
-        sys.path.insert(0, self.TEST_DIR)
-
+        sys.path.insert(0, str(self.TEST_DIR))
         assert 'mymodule' not in sys.modules
         assert 'mymodule.submodule' not in sys.modules
 
@@ -55,4 +54,4 @@ class TestCommonUtils(AllenNlpTestCase):
         assert 'mymodule' in sys.modules
         assert 'mymodule.submodule' in sys.modules
 
-        sys.path.remove(self.TEST_DIR)
+        sys.path.remove(str(self.TEST_DIR))
