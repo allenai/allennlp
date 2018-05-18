@@ -19,6 +19,10 @@ class ModelTestCase(AllenNlpTestCase):
     """
     def set_up_model(self, param_file, dataset_file):
         # pylint: disable=attribute-defined-outside-init
+        initial_working_dir = os.getcwd()
+        # Change directory to module root.
+        os.chdir(self.MODULE_ROOT)
+
         self.param_file = param_file
         params = Params.from_file(self.param_file)
 
@@ -40,12 +44,19 @@ class ModelTestCase(AllenNlpTestCase):
         self.dataset = Batch(self.instances)
         self.dataset.index_instances(self.vocab)
 
+        # Change directory back to what it was initially
+        os.chdir(initial_working_dir)
+
     def ensure_model_can_train_save_and_load(self,
                                              param_file: str,
                                              tolerance: float = 1e-4,
                                              cuda_device: int = -1):
-        save_dir = os.path.join(self.TEST_DIR, "save_and_load_test")
-        archive_file = os.path.join(save_dir, "model.tar.gz")
+        initial_working_dir = os.getcwd()
+        # Change directory to module root.
+        os.chdir(self.MODULE_ROOT)
+
+        save_dir = self.TEST_DIR / "save_and_load_test"
+        archive_file = save_dir / "model.tar.gz"
         model = train_model_from_file(param_file, save_dir)
         loaded_model = load_archive(archive_file, cuda_device=cuda_device).model
         state_keys = model.state_dict().keys()
@@ -108,6 +119,9 @@ class ModelTestCase(AllenNlpTestCase):
                                      loaded_model_predictions[key],
                                      name=key,
                                      tolerance=tolerance)
+
+        # Change directory back to what it was initially
+        os.chdir(initial_working_dir)
 
         return model, loaded_model
 

@@ -15,7 +15,8 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
     as a test fixture.
     """
     PROJECT_ROOT = (pathlib.Path(__file__).parent / ".." / ".." / "..").resolve()
-    TESTS_ROOT = PROJECT_ROOT / "allennlp" / "tests"
+    MODULE_ROOT = PROJECT_ROOT / "allennlp"
+    TESTS_ROOT = MODULE_ROOT / "tests"
     FIXTURES_ROOT = TESTS_ROOT / "fixtures"
 
     def setUp(self):
