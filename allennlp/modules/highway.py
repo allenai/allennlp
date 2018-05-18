@@ -22,8 +22,8 @@ class Highway(torch.nn.Module):
     Parameters
     ----------
     input_dim : ``int``
-        The dimensionality of :math:`x`.  We assume the input has shape ``(batch_size,
-        input_dim)``.
+        The dimensionality of :math:`x`.  We assume the input has shape ``(batch_size, *,
+        input_dim)``, where * is any number of dimensions.
     num_layers : ``int``, optional (default=``1``)
         The number of highway layers to apply to the input.
     activation : ``Callable[[torch.Tensor], torch.Tensor]``, optional (default=``torch.nn.functional.relu``)
