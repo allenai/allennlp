@@ -14,19 +14,21 @@ from allennlp.models.archival import load_archive
 class NlvrCoverageSemanticParserTest(ModelTestCase):
     def setUp(self):
         super(NlvrCoverageSemanticParserTest, self).setUp()
-        self.set_up_model("tests/fixtures/semantic_parsing/nlvr_coverage_semantic_parser/experiment.json",
-                          "tests/fixtures/data/nlvr/sample_grouped_data.jsonl")
+        self.set_up_model(self.FIXTURES_ROOT / "semantic_parsing" / "nlvr_coverage_semantic_parser" / "experiment.json",
+                          self.FIXTURES_ROOT / "data" / "nlvr" / "sample_grouped_data.jsonl")
 
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_ungrouped_model_can_train_save_and_load(self):
         # pylint: disable=line-too-long
-        self.ensure_model_can_train_save_and_load("tests/fixtures/semantic_parsing/nlvr_coverage_semantic_parser/ungrouped_experiment.json")
+        self.ensure_model_can_train_save_and_load(self.FIXTURES_ROOT / "semantic_parsing" /
+                                                  "nlvr_coverage_semantic_parser" / "ungrouped_experiment.json")
 
     def test_mml_initialized_model_can_train_save_and_load(self):
         # pylint: disable=line-too-long
-        self.ensure_model_can_train_save_and_load("tests/fixtures/semantic_parsing/nlvr_coverage_semantic_parser/mml_init_experiment.json")
+        self.ensure_model_can_train_save_and_load(self.FIXTURES_ROOT / "semantic_parsing" /
+                                                  "nlvr_coverage_semantic_parser" / "mml_init_experiment.json")
 
     def test_get_checklist_info(self):
         # Creating a fake all_actions field where actions 0, 2 and 4 are terminal productions.
@@ -64,7 +66,8 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
         original_model_weights = {name: parameter.data.clone().numpy()
                                   for name, parameter in original_model_parameters}
         # pylint: disable=line-too-long
-        mml_model_archive_file = "tests/fixtures/semantic_parsing/nlvr_direct_semantic_parser/serialization/model.tar.gz"
+        mml_model_archive_file = (self.FIXTURES_ROOT / "semantic_parsing" / "nlvr_direct_semantic_parser" /
+                                  "serialization" / "model.tar.gz")
         archive = load_archive(mml_model_archive_file)
         archived_model_parameters = archive.model.named_parameters()
         self.model._initialize_weights_from_archive(archive)
@@ -83,7 +86,8 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
 
     def test_get_vocab_index_mapping(self):
         # pylint: disable=line-too-long
-        mml_model_archive_file = "tests/fixtures/semantic_parsing/nlvr_direct_semantic_parser/serialization/model.tar.gz"
+        mml_model_archive_file = (self.FIXTURES_ROOT / "semantic_parsing" / "nlvr_direct_semantic_parser" /
+                                  "serialization" / "model.tar.gz")
         archive = load_archive(mml_model_archive_file)
         mapping = self.model._get_vocab_index_mapping(archive.model.vocab)
         expected_mapping = [(i, i) for i in range(16)]
