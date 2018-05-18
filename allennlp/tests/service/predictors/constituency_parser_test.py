@@ -1,20 +1,19 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
-from unittest import TestCase
-
 from nltk import Tree
 
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 from allennlp.service.predictors.constituency_parser import LINK_TO_LABEL, NODE_TYPE_TO_STYLE
 
 
-class TestConstituencyParserPredictor(TestCase):
+class TestConstituencyParserPredictor(AllenNlpTestCase):
     def test_uses_named_inputs(self):
         inputs = {
                 "sentence": "What a great test sentence.",
         }
 
-        archive = load_archive('tests/fixtures/constituency_parser/serialization/model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / 'constituency_parser' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'constituency-parser')
 
         result = predictor.predict_json(inputs)
@@ -33,7 +32,7 @@ class TestConstituencyParserPredictor(TestCase):
                 {"sentence": "Here's another good, interesting one."}
         ]
 
-        archive = load_archive('tests/fixtures/constituency_parser/serialization/model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / 'constituency_parser' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'constituency-parser')
         results = predictor.predict_batch_json(inputs)
 
@@ -58,7 +57,7 @@ class TestConstituencyParserPredictor(TestCase):
 
     def test_build_hierplane_tree(self):
         tree = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
-        archive = load_archive('tests/fixtures/constituency_parser/serialization/model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / 'constituency_parser' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'constituency-parser')
 
         hierplane_tree = predictor._build_hierplane_tree(tree, 0, is_root=True)
