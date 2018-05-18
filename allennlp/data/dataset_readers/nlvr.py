@@ -170,9 +170,9 @@ class NlvrDatasetReader(DatasetReader):
             production_rule_fields.append(field)
         action_field = ListField(production_rule_fields)
         worlds_field = ListField([MetadataField(world) for world in worlds])
-        fields = {"sentence": sentence_field,
-                  "worlds": worlds_field,
-                  "actions": action_field}
+        fields: Dict[str, Field] = {"sentence": sentence_field,
+                                    "worlds": worlds_field,
+                                    "actions": action_field}
         if identifier is not None:
             fields["identifier"] = MetadataField(identifier)
         # Depending on the type of supervision used for training the parser, we may want either
