@@ -1,21 +1,21 @@
 # pylint: disable=no-self-use,invalid-name
-from unittest import TestCase
 import math
 
 from pytest import approx
 
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
 
-class TestDecomposableAttentionPredictor(TestCase):
+class TestDecomposableAttentionPredictor(AllenNlpTestCase):
     def test_uses_named_inputs(self):
         inputs = {
                 "premise": "I always write unit tests for my code.",
                 "hypothesis": "One time I didn't write any unit tests for my code."
         }
 
-        archive = load_archive('tests/fixtures/decomposable_attention/serialization/model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'textual-entailment')
         result = predictor.predict_json(inputs)
 
@@ -52,7 +52,7 @@ class TestDecomposableAttentionPredictor(TestCase):
                 },
         ]
 
-        archive = load_archive('tests/fixtures/decomposable_attention/serialization/model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'textual-entailment')
         results = predictor.predict_batch_json(batch_inputs)
         print(results)
