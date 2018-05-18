@@ -1,7 +1,9 @@
 include README.md
 include requirements.txt
 include bin/allennlp
+recursive-include allennlp *
 recursive-include scripts *
-recursive-include tutorials *
-recursive-include training_config *.json
 recursive-include tests *
+recursive-include training_config *.json
+recursive-include tutorials *
+recursive-exclude * __pycache__

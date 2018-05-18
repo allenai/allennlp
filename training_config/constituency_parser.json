@@ -50,8 +50,7 @@
       "span_extractor": {
         "type": "bidirectional_endpoint",
         "input_dim": 500
-      },
-      "evalb_directory_path": "scripts/EVALB"
+      }
     },
     "iterator": {
       "type": "bucket",
