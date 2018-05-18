@@ -120,7 +120,10 @@ setup(name='allennlp',
           'scikit-learn',
           'scipy',
           'pytz==2017.3',
-          'unidecode'
+          'unidecode',
+          'pytest',
+          'flaky',
+          'responses>=0.7'
       ],
       scripts=["bin/allennlp"],
       setup_requires=setup_requirements,

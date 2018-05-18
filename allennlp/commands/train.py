@@ -38,6 +38,8 @@ import logging
 import os
 from copy import deepcopy
 
+import torch
+
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
@@ -240,10 +242,15 @@ def train_model(params: Params,
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
-    recover : ``bool`, optional (default=False)
+    recover : ``bool``, optional (default=False)
         If ``True``, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
         of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
+
+    Returns
+    -------
+    best_model: ``Model``
+        The model with the best epoch weights.
     """
     prepare_environment(params)
 
@@ -300,8 +307,15 @@ def train_model(params: Params,
     # Now tar up results
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)
 
+    logger.info("Loading the best epoch weights.")
+    best_model_state_path = os.path.join(serialization_dir, 'best.th')
+    best_model_state = torch.load(best_model_state_path)
+    best_model = model
+    best_model.load_state_dict(best_model_state)
+
     if test_data and evaluate_on_test:
-        test_metrics = evaluate(model, test_data, iterator, cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
+        logger.info("The model will be evaluated using the best epoch weights.")
+        test_metrics = evaluate(best_model, test_data, iterator, cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
         for key, value in test_metrics.items():
             metrics["test_" + key] = value
 
@@ -314,4 +328,4 @@ def train_model(params: Params,
         metrics_file.write(metrics_json)
     logger.info("Metrics: %s", metrics_json)
 
-    return model
+    return best_model

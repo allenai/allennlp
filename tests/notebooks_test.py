@@ -1,8 +1,12 @@
 import os
 
-import nbformat
-from nbconvert.preprocessors.execute import CellExecutionError
-from nbconvert.preprocessors import ExecutePreprocessor
+try:
+    import nbformat
+    from nbconvert.preprocessors.execute import CellExecutionError
+    from nbconvert.preprocessors import ExecutePreprocessor
+except ModuleNotFoundError:
+    print("jupyter must be installed in order to run notebook tests. "
+          "To install with pip, run: pip install jupyter")
 
 from allennlp.common.testing import AllenNlpTestCase
 
