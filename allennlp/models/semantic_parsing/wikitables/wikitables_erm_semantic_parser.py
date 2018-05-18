@@ -300,6 +300,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                         action_strings = [action_mapping[(i, action_index)] for action_index in action_sequence]
                         try:
                             logical_form = world[i].get_logical_form(action_strings, add_var_function=False)
+                            outputs['logical_form'][-1].append(logical_form)
                         except ParsingError:
                             logical_form = "Error producing logical form"
                         if not got_top_action_sequence:
@@ -311,7 +312,6 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                                 self._denotation_accuracy(logical_form, example_lisp_string[i])
                             outputs['best_action_sequence'].append(action_strings)
                             got_top_action_sequence = True
-                        outputs['logical_form'][-1].append(logical_form)
                     outputs['entities'].append(world[i].table_graph.entities)
                     instance_possible_actions = actions[i]
                     agenda_actions = []
