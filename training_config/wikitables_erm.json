@@ -6,8 +6,8 @@
     "tables_directory": "/wikitables/",
     "keep_if_no_dpd": true
   },
-  "train_data_path": "/wikitables/data/subsamples/random-split-1-train-100.examples",
-  "validation_data_path": "/wikitables/data/subsamples/random-split-1-dev-100.examples",
+  "train_data_path": "/data/random-split-1-train.examples",
+  "validation_data_path": "/data/random-split-1-dev.examples",
   "model": {
     "type": "wikitables_erm_parser",
     "question_embedder": {
@@ -30,6 +30,7 @@
       "embedding_dim": 200,
       "averaged": true
     },
+    "checklist_cost_weight": 0,
     "max_decoding_steps": 40,
     "decoder_beam_size": 10,
     "decoder_num_finished_states": 50,
@@ -53,7 +54,7 @@
     "validation_metric": "+denotation_acc",
     "cuda_device": 0,
     "optimizer": {
-      "type": "adam",
+      "type": "sgd",
       "lr": 0.01
     }
   }
