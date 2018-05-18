@@ -45,12 +45,12 @@ class TestWorld(AllenNlpTestCase):
         self.world_without_recursion = FakeWorldWithoutRecursion()
         self.world_with_recursion = FakeWorldWithRecursion()
 
-        test_filename = "tests/fixtures/data/nlvr/sample_ungrouped_data.jsonl"
+        test_filename = self.FIXTURES_ROOT / "data" / "nlvr" / "sample_ungrouped_data.jsonl"
         data = [json.loads(line)["structured_rep"] for line in open(test_filename).readlines()]
         self.nlvr_world = NlvrWorld(data[0])
 
         question_tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '2004', '?']]
-        table_file = 'tests/fixtures/data/wikitables/sample_table.tsv'
+        table_file = self.FIXTURES_ROOT / 'data' / 'wikitables' / 'sample_table.tsv'
         table_kg = TableQuestionKnowledgeGraph.read_from_file(table_file, question_tokens)
         self.wikitables_world = WikiTablesWorld(table_kg)
 
