@@ -10,7 +10,8 @@ from allennlp.models.reading_comprehension.bidaf_ensemble import BidafEnsemble, 
 class BidafEnsembleTest(ModelTestCase):
     def setUp(self):
         super(BidafEnsembleTest, self).setUp()
-        self.set_up_model('tests/fixtures/bidaf/experiment.json', 'tests/fixtures/data/squad.json')
+        self.set_up_model(self.FIXTURES_ROOT / 'bidaf' / 'experiment.json',
+                          self.FIXTURES_ROOT / 'data' /  'squad.json')
         self.model.eval()
 
     def test_ensemble_chooses_highest_average_confidence_2(self):
