@@ -2,12 +2,11 @@
 import os
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.commands.test_install import _get_project_root
+from allennlp.commands.test_install import _get_module_root
 
 
 class TestTestInstall(AllenNlpTestCase):
-    def test_get_project_root(self):
-        project_root = _get_project_root()
+    def test_get_module_root(self):
+        project_root = _get_module_root()
         assert os.path.exists(os.path.join(project_root, "tests"))
-        assert os.path.exists(os.path.join(project_root, "tests",
-                                           "commands", "test_install_test.py"))
+        assert os.path.exists(os.path.join(project_root, "run.py"))

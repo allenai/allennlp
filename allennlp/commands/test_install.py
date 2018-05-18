@@ -21,9 +21,11 @@ an installation by running the unit tests.
 import argparse
 import logging
 import os
+import pathlib
 
 import pytest
 
+import allennlp
 from allennlp.commands.subcommand import Subcommand
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -44,16 +46,13 @@ class TestInstall(Subcommand):
         return subparser
 
 
-def _get_project_root():
-    return os.path.abspath(
-            os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)),
-                    os.pardir, os.pardir))
+def _get_module_root():
+    return pathlib.Path(allennlp.__file__).parent
 
 
 def _run_test(args: argparse.Namespace):
     initial_working_dir = os.getcwd()
-    project_root = _get_project_root()
+    project_root = _get_module_root()
     logger.info("Changing directory to %s", project_root)
     os.chdir(project_root)
     test_dir = os.path.join(project_root, "tests")
