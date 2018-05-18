@@ -5,6 +5,7 @@ import pytest
 
 from allennlp.data.dataset_readers import WinobiasReader
 from allennlp.common.util import ensure_list
+from allennlp.common.testing import AllenNlpTestCase
 
 class TestWinobiasReader:
     span_width = 5
@@ -12,7 +13,8 @@ class TestWinobiasReader:
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file(self, lazy):
         conll_reader = WinobiasReader(max_span_width=self.span_width, lazy=lazy)
-        instances = ensure_list(conll_reader.read("tests/fixtures/coref/winobias.sample"))
+        instances = ensure_list(conll_reader.read(str(AllenNlpTestCase.FIXTURES_ROOT /
+                                                      'coref' / 'winobias.sample')))
 
         assert len(instances) == 2
 
