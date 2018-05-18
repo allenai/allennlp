@@ -3,12 +3,13 @@ import pytest
 
 from allennlp.data.dataset_readers import SnliReader
 from allennlp.common.util import ensure_list
+from allennlp.common.testing import AllenNlpTestCase
 
 class TestSnliReader():
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file(self, lazy):
         reader = SnliReader(lazy=lazy)
-        instances = reader.read('tests/fixtures/data/snli.jsonl')
+        instances = reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'snli.jsonl')
         instances = ensure_list(instances)
 
         instance1 = {"premise": ["A", "person", "on", "a", "horse", "jumps", "over", "a", "broken",
