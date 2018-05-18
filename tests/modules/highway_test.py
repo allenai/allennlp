@@ -20,3 +20,9 @@ class TestHighway(AllenNlpTestCase):
         assert result.shape == (2, 2)
         # This was checked by hand.
         assert_almost_equal(result, [[-0.0394, 0.0197], [1.7527, -0.5550]], decimal=4)
+
+    def test_forward_works_on_nd_input(self):
+        highway = Highway(2, 2)
+        input_tensor = Variable(torch.ones(2, 2, 2))
+        output = highway(input_tensor)
+        assert output.size() == (2, 2, 2)
