@@ -1,7 +1,6 @@
 # pylint: disable=invalid-name,no-self-use,protected-access
 from collections import namedtuple
 import os
-import shutil
 
 from flaky import flaky
 from numpy.testing import assert_almost_equal

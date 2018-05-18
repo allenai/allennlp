@@ -1,6 +1,4 @@
 # pylint: disable=no-self-use,invalid-name
-import os
-import pathlib
 import sys
 
 import pytest
@@ -40,7 +38,7 @@ class TestCommonUtils(AllenNlpTestCase):
         assert util.sanitize(torch.LongTensor([1, 2])) == [1, 2]
 
     def test_import_submodules(self):
-        (self.TEST_DIR / 'mymodule').mkdir()
+        (self.TEST_DIR / 'mymodule').mkdir()   # pylint: disable=no-member
         (self.TEST_DIR / 'mymodule' / '__init__.py').touch()
         (self.TEST_DIR / 'mymodule' / 'submodule').mkdir()
         (self.TEST_DIR / 'mymodule' / 'submodule' / '__init__.py').touch()

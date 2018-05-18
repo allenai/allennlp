@@ -1,9 +1,9 @@
 # pylint: disable=invalid-name,protected-access
-from flaky import flaky
-import pytest
-import numpy
 import os
 
+from flaky import flaky
+import numpy
+import pytest
 import torch
 
 from allennlp.common.testing import ModelTestCase

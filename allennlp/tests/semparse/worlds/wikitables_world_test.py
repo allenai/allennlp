@@ -259,8 +259,8 @@ class TestWikiTablesWorld(AllenNlpTestCase):
 
     def test_world_parses_logical_forms_with_decimals(self):
         question_tokens = [Token(x) for x in ['0.2']]
-        table_kg = TableQuestionKnowledgeGraph.read_from_file(self.FIXTURES_ROOT / "data" / "wikitables" / "sample_table.tsv",
-                                                              question_tokens)
+        table_kg = TableQuestionKnowledgeGraph.read_from_file(
+                self.FIXTURES_ROOT / "data" / "wikitables" / "sample_table.tsv", question_tokens)
         world = WikiTablesWorld(table_kg)
         sempre_form = "(fb:cell.cell.number (number 0.200))"
         expression = world.parse_logical_form(sempre_form)
@@ -309,8 +309,8 @@ class TestWikiTablesWorld(AllenNlpTestCase):
 
     def test_world_adds_numbers_from_question(self):
         question_tokens = [Token(x) for x in ['what', '2007', '2,107', '0.2', '1800s', '1950s', '?']]
-        table_kg = TableQuestionKnowledgeGraph.read_from_file(self.FIXTURES_ROOT / "data" / "wikitables" / "sample_table.tsv",
-                                                              question_tokens)
+        table_kg = TableQuestionKnowledgeGraph.read_from_file(
+                self.FIXTURES_ROOT / "data" / "wikitables" / "sample_table.tsv", question_tokens)
         world = WikiTablesWorld(table_kg)
         valid_actions = world.get_valid_actions()
         assert 'n -> 2007' in valid_actions['n']

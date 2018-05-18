@@ -67,7 +67,7 @@ class TestElmoTokenEmbedder(ModelTestCase):
                 'model.text_field_embedder.elmo.options_file': str(pathlib.Path('tests') / 'fixtures' /
                                                                    'elmo' / 'options.json'),
                 'model.text_field_embedder.elmo.weight_file': str(pathlib.Path('tests') / 'fixtures' /
-                                                                   'elmo' / 'lm_weights.hdf5'),
+                                                                  'elmo' / 'lm_weights.hdf5'),
         }
 
         # Check that the unarchived contents of those files match the original contents.

@@ -1,9 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
+import os
+
 from flaky import flaky
 import pytest
 import numpy
 from numpy.testing import assert_almost_equal
-import os
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError

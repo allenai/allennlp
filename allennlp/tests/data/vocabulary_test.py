@@ -1,6 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
 import codecs
-import os
 import gzip
 from copy import deepcopy
 

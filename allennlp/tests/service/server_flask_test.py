@@ -2,7 +2,6 @@
 import copy
 import json
 import os
-import pathlib
 from collections import defaultdict
 
 from flask import Response
@@ -49,7 +48,7 @@ class TestFlask(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         # Create index.html in TEST_DIR
-        (self.TEST_DIR / 'index.html').touch()
+        (self.TEST_DIR / 'index.html').touch()  # pylint: disable=no-member
 
         if self.client is None:
 
