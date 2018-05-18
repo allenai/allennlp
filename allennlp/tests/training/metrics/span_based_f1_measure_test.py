@@ -221,7 +221,7 @@ class SpanBasedF1Test(AllenNlpTestCase):
             # at the perl script output if something is wrong.
             write_to_conll_eval_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
         # Run the official perl script and collect stdout.
-        perl_script_command = ["perl", "./scripts/srl-eval.pl", prediction_file_path, gold_file_path]
+        perl_script_command = ["perl", str(self.TOOLS_ROOT / "srl-eval.pl"), prediction_file_path, gold_file_path]
         stdout = subprocess.check_output(perl_script_command, universal_newlines=True)
         stdout_lines = stdout.split("\n")
         # Parse the stdout of the perl script to find the ARG1 row (this happens to be line 8).

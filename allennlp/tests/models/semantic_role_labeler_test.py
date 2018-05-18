@@ -65,7 +65,7 @@ class SemanticRoleLabelerTest(ModelTestCase):
             write_to_conll_eval_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
             write_to_conll_eval_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
 
-        perl_script_command = ["perl", "./scripts/srl-eval.pl", prediction_file_path, gold_file_path]
+        perl_script_command = ["perl", str(self.TOOLS_ROOT / "srl-eval.pl"), prediction_file_path, gold_file_path]
         exit_code = subprocess.check_call(perl_script_command)
         assert exit_code == 0
 
