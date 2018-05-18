@@ -28,7 +28,7 @@ class TestSimpleServer(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
 
-        archive = load_archive('tests/fixtures/bidaf/serialization/model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / 'bidaf' / 'serialization' / 'model.tar.gz')
         self.bidaf_predictor = Predictor.from_archive(archive, 'machine-comprehension')
 
 
