@@ -9,7 +9,7 @@ from allennlp.semparse.worlds.nlvr_world import NlvrWorld
 class TestNlvrWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        test_filename = "tests/fixtures/data/nlvr/sample_ungrouped_data.jsonl"
+        test_filename = self.FIXTURES_ROOT / "data" / "nlvr" / "sample_ungrouped_data.jsonl"
         data = [json.loads(line)["structured_rep"] for line in open(test_filename).readlines()]
         self.worlds = [NlvrWorld(rep) for rep in data]
         # y_loc increases as we go down from top to bottom, and x_loc from left to right. That is,
