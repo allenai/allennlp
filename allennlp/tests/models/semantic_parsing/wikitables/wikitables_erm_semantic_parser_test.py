@@ -9,8 +9,8 @@ class WikiTablesErmSemanticParserTest(ModelTestCase):
     def setUp(self):
         self.should_remove_sempre_dir = not os.path.exists(SEMPRE_DIR)
         super(WikiTablesErmSemanticParserTest, self).setUp()
-        self.set_up_model(f"tests/fixtures/semantic_parsing/wikitables/experiment-erm.json",
-                          "tests/fixtures/data/wikitables/sample_data.examples")
+        self.set_up_model(str(self.FIXTURES_ROOT / "semantic_parsing" / "wikitables" / "experiment-erm.json"),
+                          str(self.FIXTURES_ROOT / "data" / "wikitables" / "sample_data.examples"))
 
     def tearDown(self):
         super().tearDown()
