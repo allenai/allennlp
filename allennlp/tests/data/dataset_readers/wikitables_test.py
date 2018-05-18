@@ -128,30 +128,30 @@ class WikiTablesDatasetReaderTest(AllenNlpTestCase):
     def test_reader_reads(self):
         params = {
                 'lazy': False,
-                'tables_directory': "tests/fixtures/data/wikitables",
-                'dpd_output_directory': "tests/fixtures/data/wikitables/dpd_output",
+                'tables_directory': self.FIXTURES_ROOT / "data" / "wikitables",
+                'dpd_output_directory': self.FIXTURES_ROOT / "data" / "wikitables" / "dpd_output",
                 }
         reader = WikiTablesDatasetReader.from_params(Params(params))
-        dataset = reader.read("tests/fixtures/data/wikitables/sample_data.examples")
+        dataset = reader.read(str(self.FIXTURES_ROOT / "data" / "wikitables" / "sample_data.examples"))
         assert_dataset_correct(dataset)
 
     def test_reader_reads_preprocessed_file(self):
         # We're should get the exact same results when reading a pre-processed file as we get when
         # we read the original data.
         reader = WikiTablesDatasetReader()
-        dataset = reader.read("tests/fixtures/data/wikitables/sample_data_preprocessed.jsonl")
+        dataset = reader.read(str(self.FIXTURES_ROOT / "data" / "wikitables" / "sample_data_preprocessed.jsonl"))
         assert_dataset_correct(dataset)
 
     def test_read_respects_max_dpd_tries_when_not_sorting(self):
-        tables_directory = "tests/fixtures/data/wikitables"
-        dpd_output_directory = "tests/fixtures/data/wikitables/dpd_output"
+        tables_directory = self.FIXTURES_ROOT / "data" / "wikitables"
+        dpd_output_directory = self.FIXTURES_ROOT / "data" / "wikitables" / "dpd_output"
         reader = WikiTablesDatasetReader(lazy=False,
                                          sort_dpd_logical_forms=False,
                                          max_dpd_logical_forms=1,
                                          max_dpd_tries=1,
                                          tables_directory=tables_directory,
                                          dpd_output_directory=dpd_output_directory)
-        dataset = reader.read("tests/fixtures/data/wikitables/sample_data.examples")
+        dataset = reader.read(str(self.FIXTURES_ROOT / "data" / "wikitables" / "sample_data.examples"))
         instances = list(dataset)
         instance = instances[0]
         actions = [action_field.rule for action_field in instance.fields['actions'].field_list]
@@ -186,7 +186,7 @@ class WikiTablesDatasetReaderTest(AllenNlpTestCase):
 
     def test_parse_example_line(self):
         # pylint: disable=no-self-use,protected-access
-        with open("tests/fixtures/data/wikitables/sample_data.examples") as filename:
+        with open(self.FIXTURES_ROOT / "data" / "wikitables" / "sample_data.examples") as filename:
             lines = filename.readlines()
         example_info = WikiTablesDatasetReader._parse_example_line(lines[0])
         question = 'what was the last year where this team was a part of the usl a-league?'
