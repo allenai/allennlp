@@ -16,7 +16,9 @@ class CosineMatrixAttention(MatrixAttention):
     @overrides
     def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
         # pylint: disable=arguments-differ
-        return F.cosine_similarity(matrix_1, matrix_1)
+        return torch.cat(F.cosine_similarity(matrix_1, matrix_2),
+                         F.cosine_similarity(matrix_1, matrix_2))
+
 
     @classmethod
     def from_params(cls, params: Params):
