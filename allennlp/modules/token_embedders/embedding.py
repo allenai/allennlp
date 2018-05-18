@@ -242,9 +242,18 @@ def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str,  #
 
     # First we read the embeddings from the file, only keeping vectors for the words we need.
     logger.info("Reading embeddings from file")
-    path = cached_path(embeddings_filename)
-    with read_maybe_compressed_file(path, 't', encoding=_WORD2VEC_ENCODING) as embedding_file:
-        for line in embedding_file:
+
+    def read_embedding_file(url_or_path):
+        # read_maybe_compressed_file() can't infer the type from the local file name because
+        # this is hashed if the user provided an URL rather than a local path
+        file_format = get_file_extension(url_or_path)
+        local_path = cached_path(url_or_path)
+        return read_maybe_compressed_file(local_path, mode='t',
+                                          encoding=_WORD2VEC_ENCODING,
+                                          file_format=file_format)
+
+    with read_embedding_file(embeddings_filename) as embeddings_file:
+        for line in embeddings_file:
             fields = line.rstrip().split(' ')
             if len(fields) - 1 != embedding_dim:
                 # Sometimes there are funny unicode parsing problems that lead to different
