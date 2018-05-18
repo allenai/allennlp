@@ -1,4 +1,4 @@
-import gzip
+import io
 import logging
 
 from overrides import overrides
@@ -7,14 +7,17 @@ import torch
 from torch.nn.functional import embedding
 import h5py
 
+import allennlp
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.file_utils import cached_path
+from allennlp.common.file_utils import cached_path, read_maybe_compressed_file, get_file_extension
 from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+_WORD2VEC_ENCODING = 'utf-8'
 
 
 @TokenEmbedder.register("embedding")
@@ -179,7 +182,7 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
                                     namespace: str = "tokens") -> torch.FloatTensor:
     """
     Reads a pre-trained embedding file and generates an Embedding layer that has weights
-    initialized to the pre-trained embeddings.  The Embedding layer can either be trainable or
+    initialized to the pre-trained embeddings. The Embedding layer can either be trainable or
     not.
 
     We use the ``Vocabulary`` to map from the word strings in the embeddings file to the indices
@@ -189,8 +192,11 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
     ----------
     embeddings_filename : str, required.
         The path to a file containing pretrained embeddings. We support two file formats,
-        gzipped-word2vec and hdf5.  If the filename ends with '.hdf5' or '.h5' then we load from
-        hdf5, otherwise assume gzipped-word2vec format.
+        text format and hdf5. The text file can eventually be compressed (currently
+        gzip and zip are the only supported formats). The file is assumed to be utf-8 encoded
+        and space separated: [word] [dim 1] [dim 2] ...
+        If the filename ends with '.hdf5' or '.h5' then we load from hdf5, otherwise we assume
+        word2vec text format.
     vocab : Vocabulary, required.
         A Vocabulary object.
     namespace : str, (optional, default=tokens)
@@ -204,7 +210,8 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
     ``(vocab.get_vocab_size(namespace), embedding_dim)``, where the indices of words appearing in
     the pretrained embedding file are initialized to the pretrained embedding value.
     """
-    if embeddings_filename[-3:] == '.h5' or embeddings_filename[-5:] == '.hdf5':
+    file_ext = get_file_extension(embeddings_filename)
+    if file_ext in {'.h5', '.hdf5'}:
         return _read_pretrained_hdf5_format_embedding_file(embeddings_filename, embedding_dim,
                                                            vocab, namespace)
     else:
@@ -213,13 +220,19 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
                                                                vocab, namespace)
 
 
-def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str, # pylint: disable=invalid-name
+def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str,  # pylint: disable=invalid-name
                                                     embedding_dim: int,
                                                     vocab: Vocabulary,
                                                     namespace: str = "tokens") -> torch.FloatTensor:
     """
-    Read from a gzipped-word2vec format file.  The embeddings file is assumed to be gzipped and
-    space delimited, e.g. [word] [dim 1] [dim 2] ...
+    Read pre-trained word vectors from a text file, eventually compressed. The supported compression
+    formats are those contained in :const:`allennlp.common.file_util.CompressedFileUtils.SUPPORTED_FORMATS`.
+    The embeddings file is assumed to be utf-8 encoded and space separated:
+
+        [word] [dim 1] [dim 2] ...
+
+    Lines that contains more numerical tokens than ``embedding_dim`` raise a warning
+    and are ignored.
 
     The remainder of the docstring is identical to ``_read_pretrained_embedding_file``.
     """
@@ -229,9 +242,10 @@ def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str, # 
 
     # First we read the embeddings from the file, only keeping vectors for the words we need.
     logger.info("Reading embeddings from file")
-    with gzip.open(cached_path(embeddings_filename), 'rb') as embeddings_file:
-        for line in embeddings_file:
-            fields = line.decode('utf-8').rstrip().split(' ')
+    path = cached_path(embeddings_filename)
+    with read_maybe_compressed_file(path, 't', encoding=_WORD2VEC_ENCODING) as embedding_file:
+        for line in embedding_file:
+            fields = line.rstrip().split(' ')
             if len(fields) - 1 != embedding_dim:
                 # Sometimes there are funny unicode parsing problems that lead to different
                 # fields lengths (e.g., a word with a unicode space character that splits

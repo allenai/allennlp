@@ -1,7 +1,9 @@
 """
 Utilities for working with the local dataset cache.
 """
-
+import io
+import gzip
+import zipfile
 from typing import Tuple
 import os
 import base64
@@ -18,6 +20,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 CACHE_ROOT = os.getenv('ALLENNLP_CACHE_ROOT', os.path.expanduser(os.path.join('~', '.allennlp')))
 DATASET_CACHE = os.path.join(CACHE_ROOT, "datasets")
+
 
 def url_to_filename(url: str, etag: str = None) -> str:
     """
@@ -37,6 +40,7 @@ def url_to_filename(url: str, etag: str = None) -> str:
     else:
         return decoded
 
+
 def filename_to_url(filename: str) -> Tuple[str, str]:
     """
     Recovers the the url from the encoded filename. Returns it and the ETag
@@ -52,6 +56,7 @@ def filename_to_url(filename: str) -> Tuple[str, str]:
     filename_bytes = decoded.encode('utf-8')
     url_bytes = base64.b64decode(filename_bytes)
     return url_bytes.decode('utf-8'), etag
+
 
 def cached_path(url_or_filename: str, cache_dir: str = None) -> str:
     """
@@ -127,3 +132,86 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
         os.remove(temp_filename)
 
     return cache_path
+
+
+def get_file_extension(path: str, dot=True, lower: bool = True):
+    """ Returns the file extension, by default case-lowered and including the dot. """
+    ext = os.path.splitext(path)[1]
+    ext = ext if dot else ext[1:]
+    return ext.lower() if lower else ext
+
+
+class CompressedFileUtils:
+
+    SUPPORTED_FORMATS = {'.gz', '.zip'}
+    READ_MODE_CHOICES = {'t', 'rt', 'b', 'rb'}
+    DEFAULT_ENCODING = 'utf-8'
+
+    @staticmethod
+    def read(path: str, mode: str = 't', encoding: str = None,
+             file_format: str = None):
+        """
+        Open an eventually compressed file in binary or text mode (default: text mode
+        with utf-8 encoding). The currently supported compressed file formats are: gzip, zip.
+
+        Arguments:
+        mode: str
+            Aliases for text mode: 't' and 'rt'; aliases for binary mode: 'b' and 'rb'.
+        file_format: str
+            If ``file_format == None``, the format is inferred from the extension.
+            If the file format (specified or inferred) is not supported, an exception is raised.
+
+        Returns:
+        When used in text mode, it returns a :class:`io.TextIOWrapper`.
+        When used in binary mode, the return type depends on the specific input file format.
+        """
+        read_mode_choices = CompressedFileUtils.READ_MODE_CHOICES
+        if mode not in read_mode_choices:
+            raise ValueError("Invalid mode: {}. Supported modes are: {}"
+                             .format(mode, read_mode_choices))
+
+        file_format = file_format or get_file_extension(path)
+
+        if file_format == ".gz":
+            logger.info("Opening gzipped file: %s", path)
+            binary_reader = gzip.open(path, "rb")
+
+        elif file_format == ".zip":
+            logger.info("Opening zipped file: %s", path)
+            zfile = zipfile.ZipFile(path, "r")
+            assert len(zfile.namelist()) == 1, "Multiple files are contained in the zip archive " + path
+            filename = zfile.namelist()[0]
+            binary_reader = zfile.open(filename, "r")
+
+        else:
+            raise ValueError('Unsupported file format: {}. Supported formats are: {}'
+                             .format(file_format, CompressedFileUtils.SUPPORTED_FORMATS))
+
+        if mode == 't':
+            encoding = encoding or CompressedFileUtils.DEFAULT_ENCODING
+            return io.TextIOWrapper(binary_reader, encoding=encoding)
+        else:
+            if encoding is not None:    # same behavior of built-in open()
+                raise ValueError("Binary mode doesn't take an encoding argument")
+            return binary_reader
+
+
+def read_maybe_compressed_file(path: str, mode: str = 't', encoding: str = None,
+                               file_format: str = None):
+    """
+    If the file format is in :const:`CompressedFileUtils.SUPPORTED_FORMATS`, the file is
+    opened using :func:`CompressedFileUtils.read`, otherwise it's assumed to be
+    uncompressed and it's opened using the built-in :func:`open` function.
+
+    The default encoding for text files is :const:`CompressedFileUtils.DEFAULT_ENCODING`.
+    """
+    file_format = file_format or get_file_extension(path)
+
+    if file_format in CompressedFileUtils.SUPPORTED_FORMATS:
+        return CompressedFileUtils.read(path, mode, encoding, file_format)
+    else:
+        assert mode in CompressedFileUtils.READ_MODE_CHOICES
+        logger.info("Reading the file assuming it's not compressed: %s", path)
+        if mode == 't': mode = 'rt'
+        if mode == 'b': mode = 'rb'
+        return open(path, mode, encoding=encoding)
