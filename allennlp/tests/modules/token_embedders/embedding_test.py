@@ -20,7 +20,7 @@ class TestEmbedding(AllenNlpTestCase):
         vocab = Vocabulary()
         vocab.add_token_to_namespace('word1')
         vocab.add_token_to_namespace('word2')
-        embeddings_filename = self.TEST_DIR + "embeddings.gz"
+        embeddings_filename = str(self.TEST_DIR / "embeddings.gz")
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word1 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("word2 0.1 0.4 -4.0\n".encode('utf-8'))
@@ -34,7 +34,7 @@ class TestEmbedding(AllenNlpTestCase):
         vocab.add_token_to_namespace('the')
         vocab.add_token_to_namespace('a')
         params = Params({
-                'pretrained_file': 'tests/fixtures/glove.6B.300d.sample.txt.gz',
+                'pretrained_file': str(self.FIXTURES_ROOT / 'glove.6B.300d.sample.txt.gz'),
                 'embedding_dim': 300,
                 'projection_dim': 20
                 })
@@ -53,7 +53,7 @@ class TestEmbedding(AllenNlpTestCase):
         vocab.add_token_to_namespace("word2")
         unicode_space = "\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0"
         vocab.add_token_to_namespace(unicode_space)
-        embeddings_filename = self.TEST_DIR + "embeddings.gz"
+        embeddings_filename = str(self.TEST_DIR / "embeddings.gz")
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write(f"{unicode_space} 3.4 3.3 5.0\n".encode('utf-8'))
@@ -73,7 +73,7 @@ class TestEmbedding(AllenNlpTestCase):
         vocab = Vocabulary()
         vocab.add_token_to_namespace("word")
         vocab.add_token_to_namespace("word2")
-        embeddings_filename = self.TEST_DIR + "embeddings.gz"
+        embeddings_filename = str(self.TEST_DIR / "embeddings.gz")
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word 1.0 2.3 -1.0\n".encode('utf-8'))
         params = Params({
@@ -88,7 +88,7 @@ class TestEmbedding(AllenNlpTestCase):
         vocab = Vocabulary()
         vocab.add_token_to_namespace("word")
         vocab.add_token_to_namespace("word2")
-        embeddings_filename = self.TEST_DIR + "embeddings.hdf5"
+        embeddings_filename = str(self.TEST_DIR / "embeddings.hdf5")
         embeddings = numpy.random.rand(vocab.get_vocab_size(), 5)
         with h5py.File(embeddings_filename, 'w') as fout:
             _ = fout.create_dataset(
@@ -105,7 +105,7 @@ class TestEmbedding(AllenNlpTestCase):
     def test_read_hdf5_raises_on_invalid_shape(self):
         vocab = Vocabulary()
         vocab.add_token_to_namespace("word")
-        embeddings_filename = self.TEST_DIR + "embeddings.hdf5"
+        embeddings_filename = str(self.TEST_DIR / "embeddings.hdf5")
         embeddings = numpy.random.rand(vocab.get_vocab_size(), 10)
         with h5py.File(embeddings_filename, 'w') as fout:
             _ = fout.create_dataset(
