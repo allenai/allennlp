@@ -49,7 +49,7 @@ def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
 class TestFileUtils(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.glove_file = 'tests/fixtures/glove.6B.100d.sample.txt.gz'
+        self.glove_file = self.FIXTURES_ROOT / 'glove.6B.100d.sample.txt.gz'
         with open(self.glove_file, 'rb') as glove:
             self.glove_bytes = glove.read()
 
@@ -147,14 +147,15 @@ class TestFileUtils(AllenNlpTestCase):
 
         # non-existent file
         with pytest.raises(FileNotFoundError):
-            filename = cached_path("tests/fixtures/does_not_exist/fake_file.tar.gz")
+            filename = cached_path(self.FIXTURES_ROOT / "does_not_exist" /
+                                   "fake_file.tar.gz")
 
         # unparsable URI
         with pytest.raises(ValueError):
             filename = cached_path("fakescheme://path/to/fake/file.tar.gz")
 
         # existing file as path
-        assert cached_path(self.glove_file) == self.glove_file
+        assert cached_path(self.glove_file) == str(self.glove_file)
 
         # caches urls
         filename = cached_path(url, cache_dir=self.TEST_DIR)
