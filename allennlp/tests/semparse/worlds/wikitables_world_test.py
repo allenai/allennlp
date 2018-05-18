@@ -19,7 +19,7 @@ class TestWikiTablesWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         question_tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '2000', '?']]
-        self.table_file = 'tests/fixtures/data/wikitables/sample_table.tsv'
+        self.table_file = self.FIXTURES_ROOT / 'data' / 'wikitables' / 'sample_table.tsv'
         self.table_kg = TableQuestionKnowledgeGraph.read_from_file(self.table_file, question_tokens)
         self.world = WikiTablesWorld(self.table_kg)
 
@@ -259,7 +259,7 @@ class TestWikiTablesWorld(AllenNlpTestCase):
 
     def test_world_parses_logical_forms_with_decimals(self):
         question_tokens = [Token(x) for x in ['0.2']]
-        table_kg = TableQuestionKnowledgeGraph.read_from_file("tests/fixtures/data/wikitables/sample_table.tsv",
+        table_kg = TableQuestionKnowledgeGraph.read_from_file(self.FIXTURES_ROOT / "data" / "wikitables" / "sample_table.tsv",
                                                               question_tokens)
         world = WikiTablesWorld(table_kg)
         sempre_form = "(fb:cell.cell.number (number 0.200))"
@@ -309,7 +309,7 @@ class TestWikiTablesWorld(AllenNlpTestCase):
 
     def test_world_adds_numbers_from_question(self):
         question_tokens = [Token(x) for x in ['what', '2007', '2,107', '0.2', '1800s', '1950s', '?']]
-        table_kg = TableQuestionKnowledgeGraph.read_from_file("tests/fixtures/data/wikitables/sample_table.tsv",
+        table_kg = TableQuestionKnowledgeGraph.read_from_file(self.FIXTURES_ROOT / "data" / "wikitables" / "sample_table.tsv",
                                                               question_tokens)
         world = WikiTablesWorld(table_kg)
         valid_actions = world.get_valid_actions()
@@ -368,7 +368,7 @@ class TestWikiTablesWorld(AllenNlpTestCase):
     @pytest.mark.skip(reason="fibonacci recursion currently going on here")
     def test_with_deeply_nested_logical_form(self):
         question_tokens = [Token(x) for x in ['what', 'was', 'the', 'district', '?']]
-        table_filename = 'tests/fixtures/data/wikitables/table/109.tsv'
+        table_filename = self.FIXTURES_ROOT / 'data' / 'wikitables' / 'table' / '109.tsv'
         table_kg = TableQuestionKnowledgeGraph.read_from_file(table_filename, question_tokens)
         world = WikiTablesWorld(table_kg)
         logical_form = ("(count ((reverse fb:cell.cell.number) (or (or (or (or (or (or (or (or "
