@@ -2,6 +2,7 @@
 from flaky import flaky
 import pytest
 import numpy
+import os
 
 import torch
 
@@ -16,8 +17,8 @@ from allennlp.training import Trainer
 class SimpleTaggerTest(ModelTestCase):
     def setUp(self):
         super(SimpleTaggerTest, self).setUp()
-        self.set_up_model('tests/fixtures/simple_tagger/experiment.json',
-                          'tests/fixtures/data/sequence_tagging.tsv')
+        self.set_up_model(self.FIXTURES_ROOT / 'simple_tagger' / 'experiment.json',
+                          self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
 
     def test_simple_tagger_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
@@ -34,12 +35,19 @@ class SimpleTaggerTest(ModelTestCase):
         numpy.testing.assert_almost_equal(numpy.sum(class_probs, -1), numpy.array([1, 1, 1, 1]))
 
     def test_mismatching_dimensions_throws_configuration_error(self):
+        initial_working_dir = os.getcwd()
+        # Change directory to module root.
+        os.chdir(self.MODULE_ROOT)
+
         params = Params.from_file(self.param_file)
         # Make the encoder wrong - it should be 2 to match
         # the embedding dimension from the text_field_embedder.
         params["model"]["encoder"]["input_size"] = 10
         with pytest.raises(ConfigurationError):
             Model.from_params(self.vocab, params.pop("model"))
+
+        # Change directory back to what it was initially
+        os.chdir(initial_working_dir)
 
     def test_regularization(self):
         penalty = self.model.get_regularization_penalty()
@@ -66,9 +74,9 @@ class SimpleTaggerTest(ModelTestCase):
 class SimpleTaggerRegularizationTest(ModelTestCase):
     def setUp(self):
         super().setUp()
-        param_file = 'tests/fixtures/simple_tagger/experiment_with_regularization.json'
+        param_file = self.FIXTURES_ROOT / 'simple_tagger' / 'experiment_with_regularization.json'
         self.set_up_model(param_file,
-                          'tests/fixtures/data/sequence_tagging.tsv')
+                          self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
         params = Params.from_file(param_file)
         self.reader = DatasetReader.from_params(params['dataset_reader'])
         self.iterator = DataIterator.from_params(params['iterator'])
