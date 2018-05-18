@@ -80,6 +80,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                 sentence: Dict[str, torch.LongTensor],
                 worlds: List[List[NlvrWorld]],
                 actions: List[List[ProductionRuleArray]],
+                identifier: List[str] = None,
                 target_action_sequences: torch.LongTensor = None,
                 labels: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
@@ -119,6 +120,8 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
             target_mask = None
 
         outputs: Dict[str, torch.Tensor] = {}
+        if identifier is not None:
+            outputs["identifier"] = identifier
         if target_action_sequences is not None:
             outputs = self._decoder_trainer.decode(initial_state,
                                                    self._decoder_step,
