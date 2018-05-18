@@ -10,7 +10,7 @@ from allennlp.training.optimizers import Optimizer
 class TestOptimizer(AllenNlpTestCase):
     def setUp(self):
         super(TestOptimizer, self).setUp()
-        self.instances = SequenceTaggingDatasetReader().read('tests/fixtures/data/sequence_tagging.tsv')
+        self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
         vocab = Vocabulary.from_instances(self.instances)
         self.model_params = Params({
                 "text_field_embedder": {
