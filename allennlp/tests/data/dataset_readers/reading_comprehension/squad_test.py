@@ -4,12 +4,13 @@ import pytest
 from allennlp.common import Params
 from allennlp.common.util import ensure_list
 from allennlp.data.dataset_readers import SquadReader
+from allennlp.common.testing import AllenNlpTestCase
 
 class TestSquadReader:
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file(self, lazy):
         reader = SquadReader(lazy=lazy)
-        instances = ensure_list(reader.read('tests/fixtures/data/squad.json'))
+        instances = ensure_list(reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'squad.json'))
         assert len(instances) == 5
 
         assert [t.text for t in instances[0].fields["question"].tokens[:3]] == ["To", "whom", "did"]
