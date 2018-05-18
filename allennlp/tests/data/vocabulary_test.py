@@ -50,7 +50,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'c' in words
 
     def test_from_dataset_respects_exclusive_embedding_file(self):
-        embeddings_filename = self.TEST_DIR + "embeddings.gz"
+        embeddings_filename = self.TEST_DIR / "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("a 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("b 0.1 0.4 -4.0\n".encode('utf-8'))
@@ -73,7 +73,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'c' not in words
 
     def test_from_dataset_respects_inclusive_embedding_file(self):
-        embeddings_filename = self.TEST_DIR + "embeddings.gz"
+        embeddings_filename = self.TEST_DIR / "embeddings.gz"
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("a 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("b 0.1 0.4 -4.0\n".encode('utf-8'))
@@ -156,7 +156,7 @@ class TestVocabulary(AllenNlpTestCase):
 
     def test_set_from_file_reads_padded_files(self):
         # pylint: disable=protected-access
-        vocab_filename = self.TEST_DIR + 'vocab_file'
+        vocab_filename = self.TEST_DIR / 'vocab_file'
         with codecs.open(vocab_filename, 'w', 'utf-8') as vocab_file:
             vocab_file.write('<S>\n')
             vocab_file.write('</S>\n')
@@ -189,7 +189,7 @@ class TestVocabulary(AllenNlpTestCase):
 
     def test_set_from_file_reads_non_padded_files(self):
         # pylint: disable=protected-access
-        vocab_filename = self.TEST_DIR + 'vocab_file'
+        vocab_filename = self.TEST_DIR / 'vocab_file'
         with codecs.open(vocab_filename, 'w', 'utf-8') as vocab_file:
             vocab_file.write('B-PERS\n')
             vocab_file.write('I-PERS\n')
@@ -212,7 +212,7 @@ class TestVocabulary(AllenNlpTestCase):
 
     def test_saving_and_loading(self):
         # pylint: disable=protected-access
-        vocab_dir = os.path.join(self.TEST_DIR, 'vocab_save')
+        vocab_dir = self.TEST_DIR / 'vocab_save'
 
         vocab = Vocabulary(non_padded_namespaces=["a", "c"])
         vocab.add_token_to_namespace("a0", namespace="a")  # non-padded, should start at 0
@@ -263,7 +263,7 @@ class TestVocabulary(AllenNlpTestCase):
         text_field.index(vocab)
         indexed_tokens = deepcopy(text_field._indexed_tokens)  # pylint: disable=protected-access
 
-        vocab_dir = os.path.join(self.TEST_DIR, 'vocab_save')
+        vocab_dir = self.TEST_DIR / 'vocab_save'
         vocab.save_to_files(vocab_dir)
         vocab2 = Vocabulary.from_files(vocab_dir)
         text_field2 = TextField(tokens, {"characters": token_indexer})
@@ -273,7 +273,7 @@ class TestVocabulary(AllenNlpTestCase):
 
     def test_from_params(self):
         # Save a vocab to check we can load it from_params.
-        vocab_dir = os.path.join(self.TEST_DIR, 'vocab_save')
+        vocab_dir = self.TEST_DIR / 'vocab_save'
         vocab = Vocabulary(non_padded_namespaces=["a", "c"])
         vocab.add_token_to_namespace("a0", namespace="a")  # non-padded, should start at 0
         vocab.add_token_to_namespace("a1", namespace="a")
