@@ -1,17 +1,16 @@
 # pylint: disable=no-self-use,invalid-name
-from unittest import TestCase
-
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
 
-class TestSrlPredictor(TestCase):
+class TestSrlPredictor(AllenNlpTestCase):
     def test_uses_named_inputs(self):
         inputs = {
                 "sentence": "The squirrel wrote a unit test to make sure its nuts worked as designed."
         }
 
-        archive = load_archive('tests/fixtures/srl/serialization/model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / 'srl' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'semantic-role-labeling')
 
         result = predictor.predict_json(inputs)
@@ -40,7 +39,7 @@ class TestSrlPredictor(TestCase):
         inputs = {
                 "sentence": "The squirrel wrote a unit test to make sure its nuts worked as designed."
         }
-        archive = load_archive('tests/fixtures/srl/serialization/model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / 'srl' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'semantic-role-labeling')
         result = predictor.predict_batch_json([inputs, inputs])
         assert result[0] == result[1]
@@ -48,7 +47,7 @@ class TestSrlPredictor(TestCase):
     def test_prediction_with_no_verbs(self):
 
         input1 = {"sentence": "Blah no verb sentence."}
-        archive = load_archive('tests/fixtures/srl/serialization/model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / 'srl' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'semantic-role-labeling')
         result = predictor.predict_json(input1)
         assert result == {'words': ['Blah', 'no', 'verb', 'sentence', '.'], 'verbs': []}
