@@ -6,7 +6,8 @@ from allennlp.semparse.worlds import NlvrWorld
 
 class TestNlvrDatasetReader(AllenNlpTestCase):
     def test_reader_reads_ungrouped_data(self):
-        test_file = "tests/fixtures/data/nlvr/sample_ungrouped_data.jsonl"
+        test_file = str(self.FIXTURES_ROOT / "data" / "nlvr" /
+                        "sample_ungrouped_data.jsonl")
         dataset = NlvrDatasetReader().read(test_file)
         instances = list(dataset)
         assert len(instances) == 3
@@ -31,7 +32,8 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
 
     def test_agenda_indices_are_correct(self):
         reader = NlvrDatasetReader()
-        test_file = "tests/fixtures/data/nlvr/sample_ungrouped_data.jsonl"
+        test_file = str(self.FIXTURES_ROOT / "data" / "nlvr" /
+                        "sample_ungrouped_data.jsonl")
         dataset = reader.read(test_file)
         instances = list(dataset)
         instance = instances[0]
@@ -45,7 +47,8 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         assert expected_agenda_actions == agenda_actions
 
     def test_reader_reads_grouped_data(self):
-        test_file = "tests/fixtures/data/nlvr/sample_grouped_data.jsonl"
+        test_file = str(self.FIXTURES_ROOT / "data" / "nlvr" /
+                        "sample_grouped_data.jsonl")
         dataset = NlvrDatasetReader().read(test_file)
         instances = list(dataset)
         assert len(instances) == 2
@@ -72,7 +75,8 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
     def test_reader_reads_processed_data(self):
         # Processed data contains action sequences that yield the correct denotations, obtained from
         # an offline search.
-        test_file = "tests/fixtures/data/nlvr/sample_processed_data.jsonl"
+        test_file = str(self.FIXTURES_ROOT / "data" / "nlvr" /
+                        "sample_processed_data.jsonl")
         dataset = NlvrDatasetReader().read(test_file)
         instances = list(dataset)
         assert len(instances) == 2
