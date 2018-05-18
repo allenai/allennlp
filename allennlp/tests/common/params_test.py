@@ -9,7 +9,7 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestParams(AllenNlpTestCase):
 
     def test_load_from_file(self):
-        filename = 'tests/fixtures/bidaf/experiment.json'
+        filename = self.FIXTURES_ROOT / 'bidaf' / 'experiment.json'
         params = Params.from_file(filename)
 
         assert "dataset_reader" in params
@@ -19,7 +19,7 @@ class TestParams(AllenNlpTestCase):
         assert model_params.pop("type") == "bidaf"
 
     def test_overrides(self):
-        filename = 'tests/fixtures/bidaf/experiment.json'
+        filename = self.FIXTURES_ROOT / 'bidaf' / 'experiment.json'
         overrides = '{ "train_data_path": "FOO", "model": { "type": "BAR" },'\
                     'model.text_field_embedder.tokens.type: "BAZ" }'
         params = Params.from_file(filename, overrides)
