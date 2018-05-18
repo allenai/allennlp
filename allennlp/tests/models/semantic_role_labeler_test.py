@@ -18,7 +18,8 @@ from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 class SemanticRoleLabelerTest(ModelTestCase):
     def setUp(self):
         super(SemanticRoleLabelerTest, self).setUp()
-        self.set_up_model('tests/fixtures/srl/experiment.json', 'tests/fixtures/conll_2012')
+        self.set_up_model(self.FIXTURES_ROOT / 'srl' / 'experiment.json',
+                          self.FIXTURES_ROOT / 'conll_2012')
 
     def test_srl_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
@@ -69,9 +70,16 @@ class SemanticRoleLabelerTest(ModelTestCase):
         assert exit_code == 0
 
     def test_mismatching_dimensions_throws_configuration_error(self):
+        initial_working_dir = os.getcwd()
+        # Change directory to module root.
+        os.chdir(self.MODULE_ROOT)
+
         params = Params.from_file(self.param_file)
         # Make the phrase layer wrong - it should be 150 to match
         # the embedding + binary feature dimensions.
         params["model"]["encoder"]["input_size"] = 10
         with pytest.raises(ConfigurationError):
             Model.from_params(self.vocab, params.pop("model"))
+
+        # Change directory back to what it was initially
+        os.chdir(initial_working_dir)
