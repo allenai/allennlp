@@ -17,7 +17,8 @@ from allennlp.models import BidirectionalAttentionFlow, Model
 class BidirectionalAttentionFlowTest(ModelTestCase):
     def setUp(self):
         super(BidirectionalAttentionFlowTest, self).setUp()
-        self.set_up_model('tests/fixtures/bidaf/experiment.json', 'tests/fixtures/data/squad.json')
+        self.set_up_model(self.FIXTURES_ROOT / 'bidaf' / 'experiment.json',
+                          self.FIXTURES_ROOT / 'data' / 'squad.json')
 
     def test_forward_pass_runs_correctly(self):
         batch = Batch(self.instances)
@@ -69,7 +70,7 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         params = Params.from_file(self.param_file)
         reader = DatasetReader.from_params(params['dataset_reader'])
         reader._token_indexers = {'tokens': reader._token_indexers['tokens']}
-        self.instances = reader.read('tests/fixtures/data/squad.json')
+        self.instances = reader.read(self.FIXTURES_ROOT / 'data' / 'squad.json')
         vocab = Vocabulary.from_instances(self.instances)
         for instance in self.instances:
             instance.index_fields(vocab)
