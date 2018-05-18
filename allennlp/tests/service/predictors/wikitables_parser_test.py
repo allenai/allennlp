@@ -1,13 +1,13 @@
 # pylint: disable=no-self-use,invalid-name
 import os
 import shutil
-from unittest import TestCase
 
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
 
-class TestWikiTablesParserPredictor(TestCase):
+class TestWikiTablesParserPredictor(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.should_remove_data_dir = not os.path.exists('data')
@@ -23,8 +23,8 @@ class TestWikiTablesParserPredictor(TestCase):
                 "table": "name\tdate\nmatt\t2017\npradeep\t2018"
         }
 
-        archive_dir = 'tests/fixtures/semantic_parsing/wikitables/serialization/'
-        archive = load_archive(os.path.join(archive_dir, 'model.tar.gz'))
+        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'serialization' / 'model.tar.gz'
+        archive = load_archive(archive_path)
         predictor = Predictor.from_archive(archive, 'wikitables-parser')
 
         result = predictor.predict_json(inputs)
@@ -48,8 +48,8 @@ class TestWikiTablesParserPredictor(TestCase):
                 "table": "Name\tAge\nShallan\t16\nKaladin\t18"
         }
 
-        archive_dir = 'tests/fixtures/semantic_parsing/wikitables/serialization/'
-        archive = load_archive(os.path.join(archive_dir, 'model.tar.gz'))
+        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'serialization' / 'model.tar.gz'
+        archive = load_archive(archive_path)
         predictor = Predictor.from_archive(archive, 'wikitables-parser')
 
         result = predictor.predict_json(inputs)
