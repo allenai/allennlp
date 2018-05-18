@@ -13,8 +13,8 @@ class SpanConstituencyParserTest(ModelTestCase):
     def setUp(self):
         EvalbBracketingScorer.compile_evalb()
         super(SpanConstituencyParserTest, self).setUp()
-        self.set_up_model("tests/fixtures/constituency_parser/constituency_parser.json",
-                          "tests/fixtures/data/example_ptb.trees")
+        self.set_up_model(self.FIXTURES_ROOT / "constituency_parser" / "constituency_parser.json",
+                          self.FIXTURES_ROOT / "data" / "example_ptb.trees")
 
     def tearDown(self):
         EvalbBracketingScorer.clean_evalb()
