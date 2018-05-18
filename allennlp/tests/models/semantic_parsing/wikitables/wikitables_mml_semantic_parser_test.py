@@ -17,8 +17,8 @@ class WikiTablesMmlSemanticParserTest(ModelTestCase):
     def setUp(self):
         self.should_remove_sempre_dir = not os.path.exists(SEMPRE_DIR)
         super(WikiTablesMmlSemanticParserTest, self).setUp()
-        self.set_up_model(f"tests/fixtures/semantic_parsing/wikitables/experiment.json",
-                          "tests/fixtures/data/wikitables/sample_data.examples")
+        self.set_up_model(str(self.FIXTURES_ROOT / "semantic_parsing" / "wikitables" / "experiment.json"),
+                          str(self.FIXTURES_ROOT / "data" / "wikitables" / "sample_data.examples"))
 
     def tearDown(self):
         super().tearDown()
@@ -30,12 +30,12 @@ class WikiTablesMmlSemanticParserTest(ModelTestCase):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_elmo_mixture_no_features_model_can_train_save_and_load(self):
-        param_file = 'tests/fixtures/semantic_parsing/wikitables/experiment-mixture.json'
+        param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'experiment-mixture.json'
         self.ensure_model_can_train_save_and_load(param_file)
 
     @flaky
     def test_elmo_no_features_can_train_save_and_load(self):
-        param_file = 'tests/fixtures/semantic_parsing/wikitables/experiment-elmo-no-features.json'
+        param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'experiment-elmo-no-features.json'
         self.ensure_model_can_train_save_and_load(param_file, tolerance=1e-2)
 
     def test_get_neighbor_indices(self):
