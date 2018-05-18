@@ -10,8 +10,8 @@ from allennlp.nn.util import sequence_cross_entropy_with_logits
 class SimpleSeq2SeqWithoutAttentionTest(ModelTestCase):
     def setUp(self):
         super(SimpleSeq2SeqWithoutAttentionTest, self).setUp()
-        self.set_up_model("tests/fixtures/encoder_decoder/simple_seq2seq/experiment.json",
-                          "tests/fixtures/data/seq2seq_copy.tsv")
+        self.set_up_model(self.FIXTURES_ROOT / "encoder_decoder" / "simple_seq2seq" / "experiment.json",
+                          self.FIXTURES_ROOT / "data" / "seq2seq_copy.tsv")
 
     def test_encoder_decoder_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
@@ -42,8 +42,8 @@ class SimpleSeq2SeqWithoutAttentionTest(ModelTestCase):
 class SimpleSeq2SeqWithAttentionTest(ModelTestCase):
     def setUp(self):
         super(SimpleSeq2SeqWithAttentionTest, self).setUp()
-        self.set_up_model("tests/fixtures/encoder_decoder/simple_seq2seq/experiment_with_attention.json",
-                          "tests/fixtures/data/seq2seq_copy.tsv")
+        self.set_up_model(self.FIXTURES_ROOT / "encoder_decoder" / "simple_seq2seq" / "experiment_with_attention.json",
+                          self.FIXTURES_ROOT / "data" / "seq2seq_copy.tsv")
 
     def test_encoder_decoder_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
