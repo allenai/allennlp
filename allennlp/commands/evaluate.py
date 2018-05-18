@@ -35,7 +35,7 @@ import argparse
 import logging
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import cuda_is_valid
+from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import prepare_environment
 from allennlp.common.tqdm import Tqdm
 from allennlp.data import Instance
@@ -84,7 +84,7 @@ def evaluate(model: Model,
              instances: Iterable[Instance],
              data_iterator: DataIterator,
              cuda_device: int) -> Dict[str, Any]:
-    cuda_is_valid(cuda_device)
+    check_for_gpu(cuda_device)
     model.eval()
 
     iterator = data_iterator(instances, num_epochs=1, cuda_device=cuda_device, for_training=False)
