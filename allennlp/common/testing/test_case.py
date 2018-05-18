@@ -14,7 +14,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
     more verbose AllenNLP logging and that creates and destroys a temp directory
     as a test fixture.
     """
-    PROJECT_ROOT = (pathlib.Path(__file__).parent / ".." / ".." / "..").resolve()
+    PROJECT_ROOT = (pathlib.Path(__file__).parent / ".." / ".." / "..").resolve()  # pylint: disable=no-member
     MODULE_ROOT = PROJECT_ROOT / "allennlp"
     TOOLS_ROOT = MODULE_ROOT / "tools"
     TESTS_ROOT = MODULE_ROOT / "tests"

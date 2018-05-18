@@ -165,7 +165,7 @@ class TestPredict(AllenNlpTestCase):
         # Create a new package in a temporary dir
         packagedir = self.TEST_DIR / 'testpackage'
         packagedir.mkdir()  # pylint: disable=no-member
-        (packagedir / '__init__.py').touch()
+        (packagedir / '__init__.py').touch()  # pylint: disable=no-member
 
         # And add that directory to the path
         sys.path.insert(0, str(self.TEST_DIR))
