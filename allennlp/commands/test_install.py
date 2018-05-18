@@ -52,10 +52,10 @@ def _get_module_root():
 
 def _run_test(args: argparse.Namespace):
     initial_working_dir = os.getcwd()
-    project_root = _get_module_root()
-    logger.info("Changing directory to %s", project_root)
-    os.chdir(project_root)
-    test_dir = os.path.join(project_root, "tests")
+    module_root = _get_module_root()
+    logger.info("Changing directory to %s", module_root)
+    os.chdir(module_root)
+    test_dir = os.path.join(module_root, "tests")
     logger.info("Running tests at %s", test_dir)
     if args.run_all:
         pytest.main([test_dir])
