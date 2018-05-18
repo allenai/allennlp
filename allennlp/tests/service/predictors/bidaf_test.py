@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
-from unittest import TestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 from pytest import approx
 
@@ -7,14 +7,14 @@ from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
 
 
-class TestBidafPredictor(TestCase):
+class TestBidafPredictor(AllenNlpTestCase):
     def test_uses_named_inputs(self):
         inputs = {
                 "question": "What kind of test succeeded on its first attempt?",
                 "passage": "One time I was writing a unit test, and it succeeded on the first attempt."
         }
 
-        archive = load_archive('tests/fixtures/bidaf/serialization/model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / 'bidaf' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'machine-comprehension')
 
         result = predictor.predict_json(inputs)
@@ -48,7 +48,7 @@ class TestBidafPredictor(TestCase):
                 }
         ]
 
-        archive = load_archive('tests/fixtures/bidaf/serialization/model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / 'bidaf' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'machine-comprehension')
 
         results = predictor.predict_batch_json(inputs)
