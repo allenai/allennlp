@@ -1,21 +1,23 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
 import os
-import shutil
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.metrics import WikiTablesAccuracy
-from allennlp.training.metrics.wikitables_accuracy import SEMPRE_DIR
+from allennlp.training.metrics.wikitables_accuracy import SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH
 
 
 class WikiTablesAccuracyTest(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.should_remove_sempre_dir = not os.path.exists(SEMPRE_DIR)
+        self.should_remove_sempre_abbreviations = not os.path.exists(SEMPRE_ABBREVIATIONS_PATH)
+        self.should_remove_sempre_grammar = not os.path.exists(SEMPRE_GRAMMAR_PATH)
 
     def tearDown(self):
         super().tearDown()
-        if self.should_remove_sempre_dir and os.path.exists(SEMPRE_DIR):
-            shutil.rmtree('data')
+        if self.should_remove_sempre_abbreviations and os.path.exists(SEMPRE_ABBREVIATIONS_PATH):
+            os.remove(SEMPRE_ABBREVIATIONS_PATH)
+        if self.should_remove_sempre_grammar and os.path.exists(SEMPRE_GRAMMAR_PATH):
+            os.remove(SEMPRE_GRAMMAR_PATH)
 
     def test_accuracy_is_scored_correctly(self):
         # This is the first example in our test fixture.
@@ -29,6 +31,7 @@ class WikiTablesAccuracyTest(AllenNlpTestCase):
         logical_form = ('((reverse fb:row.row.year) (fb:row.row.index (max '
                         '((reverse fb:row.row.index) (fb:row.row.league fb:cell.usl_a_league)))))')
 
+        print(os.getcwd())
         wikitables_accuracy = WikiTablesAccuracy(table_directory=str(self.FIXTURES_ROOT / 'data' / 'wikitables/'))
         wikitables_accuracy(logical_form, example_string)
         assert wikitables_accuracy._count == 1

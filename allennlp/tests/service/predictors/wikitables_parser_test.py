@@ -1,21 +1,24 @@
 # pylint: disable=no-self-use,invalid-name
 import os
-import shutil
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.service.predictors import Predictor
+from allennlp.service.predictors.wikitables_parser import (SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH)
 
 
 class TestWikiTablesParserPredictor(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.should_remove_data_dir = not os.path.exists('data')
+        self.should_remove_sempre_abbreviations = not os.path.exists(SEMPRE_ABBREVIATIONS_PATH)
+        self.should_remove_sempre_grammar = not os.path.exists(SEMPRE_GRAMMAR_PATH)
 
     def tearDown(self):
         super().tearDown()
-        if self.should_remove_data_dir and os.path.exists('data'):
-            shutil.rmtree('data')
+        if self.should_remove_sempre_abbreviations and os.path.exists(SEMPRE_ABBREVIATIONS_PATH):
+            os.remove(SEMPRE_ABBREVIATIONS_PATH)
+        if self.should_remove_sempre_grammar and os.path.exists(SEMPRE_GRAMMAR_PATH):
+            os.remove(SEMPRE_GRAMMAR_PATH)
 
     def test_uses_named_inputs(self):
         inputs = {
