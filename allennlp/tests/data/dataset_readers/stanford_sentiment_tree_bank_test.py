@@ -4,12 +4,15 @@ import pytest
 from allennlp.data.dataset_readers import StanfordSentimentTreeBankDatasetReader
 from allennlp.common import Params
 from allennlp.common.util import ensure_list
+from allennlp.common.testing import AllenNlpTestCase
 
 class TestStanfordSentimentTreebankReader():
+    sst_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "sst.txt"
+
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file(self, lazy):
         reader = StanfordSentimentTreeBankDatasetReader(lazy=lazy)
-        instances = reader.read('tests/fixtures/data/sst.txt')
+        instances = reader.read(self.sst_path)
         instances = ensure_list(instances)
 
         instance1 = {"tokens": ["The", "actors", "are", "fantastic", "."],
@@ -32,7 +35,7 @@ class TestStanfordSentimentTreebankReader():
 
     def test_use_subtrees(self):
         reader = StanfordSentimentTreeBankDatasetReader(use_subtrees=True)
-        instances = reader.read('tests/fixtures/data/sst.txt')
+        instances = reader.read(self.sst_path)
         instances = ensure_list(instances)
 
         instance1 = {"tokens": ["The", "actors", "are", "fantastic", "."],
@@ -55,7 +58,7 @@ class TestStanfordSentimentTreebankReader():
 
     def test_3_class(self):
         reader = StanfordSentimentTreeBankDatasetReader(granularity="3-class")
-        instances = reader.read('tests/fixtures/data/sst.txt')
+        instances = reader.read(self.sst_path)
         instances = ensure_list(instances)
 
         instance1 = {"tokens": ["The", "actors", "are", "fantastic", "."],
@@ -78,7 +81,7 @@ class TestStanfordSentimentTreebankReader():
 
     def test_2_class(self):
         reader = StanfordSentimentTreeBankDatasetReader(granularity="2-class")
-        instances = reader.read('tests/fixtures/data/sst.txt')
+        instances = reader.read(self.sst_path)
         instances = ensure_list(instances)
 
         instance1 = {"tokens": ["The", "actors", "are", "fantastic", "."],
