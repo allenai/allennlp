@@ -31,8 +31,8 @@ class ArchivalTest(AllenNlpTestCase):
                         }
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
+                "train_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
+                "validation_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
                 "iterator": {"type": "basic", "batch_size": 2},
                 "trainer": {
                         "num_epochs": 2,
@@ -45,10 +45,10 @@ class ArchivalTest(AllenNlpTestCase):
         params_copy = copy.deepcopy(self.params.as_dict())
 
         # `train_model` should create an archive
-        serialization_dir = os.path.join(self.TEST_DIR, 'archive_test')
+        serialization_dir = self.TEST_DIR / 'archive_test'
         model = train_model(self.params, serialization_dir=serialization_dir)
 
-        archive_path = os.path.join(serialization_dir, "model.tar.gz")
+        archive_path = serialization_dir / "model.tar.gz"
 
         # load from the archive
         archive = load_archive(archive_path)
@@ -76,16 +76,16 @@ class ArchivalTest(AllenNlpTestCase):
 
     def test_extra_files(self):
 
-        serialization_dir = os.path.join(self.TEST_DIR, 'serialization')
+        serialization_dir = self.TEST_DIR / 'serialization'
 
         # Train a model
         train_model(self.params, serialization_dir=serialization_dir)
 
         # Archive model, and also archive the training data
-        files_to_archive = {"train_data_path": 'tests/fixtures/data/sequence_tagging.tsv'}
+        files_to_archive = {"train_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')}
         archive_model(serialization_dir=serialization_dir, files_to_archive=files_to_archive)
 
-        archive = load_archive(os.path.join(serialization_dir, 'model.tar.gz'))
+        archive = load_archive(serialization_dir / 'model.tar.gz')
         params = archive.config
 
         # The param in the data should have been replaced with a temporary path
@@ -93,4 +93,4 @@ class ArchivalTest(AllenNlpTestCase):
         assert params.get('train_data_path').endswith('/fta/train_data_path')
 
         # The validation data path should be the same though.
-        assert params.get('validation_data_path') == 'tests/fixtures/data/sequence_tagging.tsv'
+        assert params.get('validation_data_path') == str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
