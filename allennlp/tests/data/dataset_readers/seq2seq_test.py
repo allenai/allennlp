@@ -3,12 +3,13 @@ import pytest
 
 from allennlp.data.dataset_readers import Seq2SeqDatasetReader
 from allennlp.common.util import ensure_list
+from allennlp.common.testing import AllenNlpTestCase
 
 class TestSeq2SeqDatasetReader:
     @pytest.mark.parametrize("lazy", (True, False))
     def test_default_format(self, lazy):
         reader = Seq2SeqDatasetReader(lazy=lazy)
-        instances = reader.read('tests/fixtures/data/seq2seq_copy.tsv')
+        instances = reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'seq2seq_copy.tsv'))
         instances = ensure_list(instances)
 
         assert len(instances) == 3
@@ -30,7 +31,7 @@ class TestSeq2SeqDatasetReader:
 
     def test_source_add_start_token(self):
         reader = Seq2SeqDatasetReader(source_add_start_token=False)
-        instances = reader.read('tests/fixtures/data/seq2seq_copy.tsv')
+        instances = reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'seq2seq_copy.tsv'))
         instances = ensure_list(instances)
 
         assert len(instances) == 3
