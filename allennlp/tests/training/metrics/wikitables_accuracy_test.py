@@ -29,7 +29,7 @@ class WikiTablesAccuracyTest(AllenNlpTestCase):
         logical_form = ('((reverse fb:row.row.year) (fb:row.row.index (max '
                         '((reverse fb:row.row.index) (fb:row.row.league fb:cell.usl_a_league)))))')
 
-        wikitables_accuracy = WikiTablesAccuracy(table_directory='tests/fixtures/data/wikitables/')
+        wikitables_accuracy = WikiTablesAccuracy(table_directory=str(self.FIXTURES_ROOT / 'data' / 'wikitables/'))
         wikitables_accuracy(logical_form, example_string)
         assert wikitables_accuracy._count == 1
         assert wikitables_accuracy._correct == 1
