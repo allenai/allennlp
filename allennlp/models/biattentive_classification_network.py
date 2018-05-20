@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
-from allennlp.modules import FeedForward, Seq2SeqEncoder, TextFieldEmbedder, Maxout
+from allennlp.modules import Elmo, FeedForward, Maxout, Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn import util
@@ -57,6 +57,8 @@ class BiattentiveClassificationNetwork(Model):
     output_layer : ``Union[Maxout, FeedForward]``
         The maxout or feed forward network that takes the final representations and produces
         a classification prediction.
+    output_elmo : ``Elmo``, optional (default=``None``)
+        If provided, will be used to concatenate pretrained ELMo representations to the integrator output.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
@@ -71,21 +73,29 @@ class BiattentiveClassificationNetwork(Model):
                  integrator: Seq2SeqEncoder,
                  integrator_dropout: float,
                  output_layer: Union[FeedForward, Maxout],
+                 output_elmo: Elmo,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(BiattentiveClassificationNetwork, self).__init__(vocab, regularizer)
 
         self._text_field_embedder = text_field_embedder
+        self._embedding_dropout = nn.Dropout(embedding_dropout)
         self._num_classes = self.vocab.get_vocab_size("labels")
 
         self._pre_encode_feedforward = pre_encode_feedforward
         self._encoder = encoder
         self._integrator = integrator
-        self._self_attentive_pooling_projection = nn.Linear(
-                self._integrator.get_output_dim(), 1)
-        self._output_layer = output_layer
-        self._embedding_dropout = nn.Dropout(embedding_dropout)
         self._integrator_dropout = nn.Dropout(integrator_dropout)
+        self._output_elmo = output_elmo
+
+        if self._output_elmo is None:
+            self._combined_integrator_output = self._integrator.get_output_dim()
+        else:
+            self._combined_integrator_output = (self._integrator.get_output_dim() +
+                                                self._output_elmo.get_output_dim())
+        self._self_attentive_pooling_projection = nn.Linear(
+                self._combined_integrator_output, 1)
+        self._output_layer = output_layer
 
         check_dimensions_match(text_field_embedder.get_output_dim(),
                                self._pre_encode_feedforward.get_input_dim(),
@@ -99,10 +109,16 @@ class BiattentiveClassificationNetwork(Model):
                                self._integrator.get_input_dim(),
                                "Encoder output dim * 3",
                                "Integrator input dim")
-        check_dimensions_match(self._integrator.get_output_dim() * 4,
-                               self._output_layer.get_input_dim(),
-                               "Integrator output dim * 4",
-                               "Output layer input dim")
+        if self._output_elmo is None:
+            check_dimensions_match(self._integrator.get_output_dim() * 4,
+                                   self._output_layer.get_input_dim(),
+                                   "Integrator output dim * 4",
+                                   "Output layer input dim")
+        else:
+            check_dimensions_match(self._combined_integrator_output * 4,
+                                   self._output_layer.get_input_dim(),
+                                   "(Integrator output dim + ELMo output dim) * 4",
+                                   "Output layer input dim")
         check_dimensions_match(self._output_layer.get_output_dim(),
                                self._num_classes,
                                "Output layer output dim",
@@ -153,6 +169,14 @@ class BiattentiveClassificationNetwork(Model):
                                       encoded_tokens - encoded_text,
                                       encoded_tokens * encoded_text], 2)
         integrated_encodings = self._integrator(integrator_input, text_mask)
+
+        # Concatenate ELMo representations to integrated_encodings if specified
+        if self._output_elmo is not None:
+            # TODO(nfliu): This breaks when ELMo num_output_representations > 1.
+            # How should i be dealing with that case? Or perhaps i should just use an ElmoEmbedder here?
+            elmo_encodings = self._output_elmo(tokens["elmo"])["elmo_representations"][-1]
+            integrated_encodings = torch.cat([integrated_encodings,
+                                              elmo_encodings], dim=-1)
 
         # Simple Pooling layers
         max_masked_integrated_encodings = util.replace_masked_values(
@@ -218,6 +242,9 @@ class BiattentiveClassificationNetwork(Model):
             output_layer = FeedForward.from_params(output_layer_params)
         else:
             output_layer = Maxout.from_params(output_layer_params)
+        output_elmo = params.pop("output_elmo", None)
+        if output_elmo is not None:
+            output_elmo = Elmo.from_params(output_elmo)
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
         params.assert_empty(cls.__name__)
@@ -230,5 +257,6 @@ class BiattentiveClassificationNetwork(Model):
                    integrator=integrator,
                    integrator_dropout=integrator_dropout,
                    output_layer=output_layer,
+                   output_elmo=output_elmo,
                    initializer=initializer,
                    regularizer=regularizer)
