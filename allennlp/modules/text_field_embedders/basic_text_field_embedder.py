@@ -36,12 +36,13 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         return output_dim
 
     def forward(self, text_field_input: Dict[str, torch.Tensor], num_wrapping_dims: int = 0) -> torch.Tensor:
-        if self._token_embedders.keys() != text_field_input.keys():
-            message = "Mismatched token keys: %s and %s" % (str(self._token_embedders.keys()),
-                                                            str(text_field_input.keys()))
+        if not set(self._token_embedders.keys()).issubset(set(text_field_input.keys())):
+            message = ("Token embedder keys %s must be a subset "
+                       "of text field input keys %s" % (str(self._token_embedders.keys()),
+                                                        str(text_field_input.keys())))
             raise ConfigurationError(message)
         embedded_representations = []
-        keys = sorted(text_field_input.keys())
+        keys = sorted(self._token_embedders.keys())
         for key in keys:
             tensor = text_field_input[key]
             # Note: need to use getattr here so that the pytorch voodoo

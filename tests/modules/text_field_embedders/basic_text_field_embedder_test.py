@@ -43,7 +43,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
     def test_get_output_dim_aggregates_dimension_from_each_embedding(self):
         assert self.token_embedder.get_output_dim() == 10
 
-    def test_forward_asserts_input_field_match(self):
+    def test_forward_asserts_input_field_superset(self):
         self.inputs['words4'] = self.inputs['words3']
         del self.inputs['words3']
         with pytest.raises(ConfigurationError):
