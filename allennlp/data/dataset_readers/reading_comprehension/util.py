@@ -7,7 +7,7 @@ import logging
 import string
 from typing import Any, Dict, List, Tuple
 
-from allennlp.data.fields import Field, TextField, IndexField, MetadataField
+from allennlp.data.fields import Field, TextField, IndexField, MetadataField, ListField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.tokenizers import Token
@@ -180,6 +180,7 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
         This dictionary will get added to the ``metadata`` dictionary we already construct.
     """
     additional_metadata = additional_metadata or {}
+    #import pdb; pdb.set_trace()
     fields: Dict[str, Field] = {}
     passage_offsets = [(token.idx, token.idx + len(token.text)) for token in passage_tokens]
 
@@ -196,20 +197,24 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     if answer_texts:
         metadata['answer_texts'] = answer_texts
 
+    list_span_start = []
+    list_span_end = []
     if token_spans:
+        
         # There may be multiple answer annotations, so we pick the one that occurs the most.  This
         # only matters on the SQuAD dev set, and it means our computed metrics ("start_acc",
         # "end_acc", and "span_acc") aren't quite the same as the official metrics, which look at
         # all of the annotations.  This is why we have a separate official SQuAD metric calculation
         # (the "em" and "f1" metrics use the official script).
-        candidate_answers: Counter = Counter()
         for span_start, span_end in token_spans:
-            candidate_answers[(span_start, span_end)] += 1
-        span_start, span_end = candidate_answers.most_common(1)[0][0]
+            list_span_start.append(IndexField(span_start, passage_field))
+            list_span_end.append(IndexField(span_end, passage_field))
+        
 
-        fields['span_start'] = IndexField(span_start, passage_field)
-        fields['span_end'] = IndexField(span_end, passage_field)
+        fields['span_start'] = ListField(list_span_start)
+        fields['span_end'] = ListField(list_span_end)
 
+    #import pdb; pdb.set_trace()
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)

@@ -55,6 +55,8 @@ class SquadReader(DatasetReader):
             dataset = dataset_json['data']
         logger.info("Reading the dataset")
         for article in dataset:
+            #import pdb; pdb.set_trace()
+            self.dijkstra = article['dijkstra']
             for paragraph_json in article['paragraphs']:
                 paragraph = paragraph_json["context"]
                 tokenized_paragraph = self._tokenizer.tokenize(paragraph)
@@ -64,6 +66,9 @@ class SquadReader(DatasetReader):
                     answer_texts = [answer['text'] for answer in question_answer['answers']]
                     span_starts = [answer['answer_start'] for answer in question_answer['answers']]
                     span_ends = [start + len(answer) for start, answer in zip(span_starts, answer_texts)]
+                    #import pdb; pdb.set_trace()
+                    self.qID = question_answer["id"]
+                     
                     instance = self.text_to_instance(question_text,
                                                      paragraph,
                                                      zip(span_starts, span_ends),
@@ -105,7 +110,9 @@ class SquadReader(DatasetReader):
                                                         self._token_indexers,
                                                         passage_text,
                                                         token_spans,
-                                                        answer_texts)
+                                                        answer_texts,
+                                                        {'qID': self.qID,
+                                                        'dijkstra':self.dijkstra})
 
     @classmethod
     def from_params(cls, params: Params) -> 'SquadReader':
