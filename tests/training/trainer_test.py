@@ -130,6 +130,7 @@ class TestTrainer(AllenNlpTestCase):
                           optimizer=self.optimizer,
                           iterator=self.iterator,
                           learning_rate_scheduler=lr_scheduler,
+                          validation_metric="-loss",
                           train_dataset=self.instances,
                           validation_dataset=self.instances,
                           num_epochs=2)
