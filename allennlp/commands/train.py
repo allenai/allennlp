@@ -165,8 +165,8 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
 
 def create_serialization_dir(params: Params, serialization_dir: str, recover: bool) -> None:
     """
-    This function creates the serialization directory if it doesn't exist.  If it already exists,
-    then it verifies that we're recovering from a training with an identical configuration.
+    This function creates the serialization directory if it doesn't exist.  If it already exists
+    and is non-empty, then it verifies that we're recovering from a training with an identical configuration.
 
     Parameters
     ----------
@@ -178,14 +178,10 @@ def create_serialization_dir(params: Params, serialization_dir: str, recover: bo
         If ``True``, we will try to recover from an existing serialization directory, and crash if
         the directory doesn't exist, or doesn't match the configuration we're given.
     """
-    if os.path.exists(serialization_dir):
-        if serialization_dir == '/output':
-            # Special-casing the beaker output directory, which will already exist when training
-            # starts.
-            return
+    if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
         if not recover:
-            raise ConfigurationError(f"Serialization directory ({serialization_dir}) already exists.  "
-                                     f"Specify --recover to recover training from existing output.")
+            raise ConfigurationError(f"Serialization directory ({serialization_dir}) already exists and is "
+                                     f"not empty. Specify --recover to recover training from existing output.")
 
         logger.info(f"Recovering from prior training at {serialization_dir}.")
 
@@ -222,7 +218,7 @@ def create_serialization_dir(params: Params, serialization_dir: str, recover: bo
         if recover:
             raise ConfigurationError(f"--recover specified but serialization_dir ({serialization_dir}) "
                                      "does not exist.  There is nothing to recover from.")
-        os.makedirs(serialization_dir)
+        os.makedirs(serialization_dir, exist_ok=True)
 
 
 def train_model(params: Params,
