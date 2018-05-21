@@ -214,6 +214,7 @@ class BiattentiveClassificationNetwork(Model):
                     integrator_output_elmo = elmo_representations.pop()
                 if self._use_input_elmo:
                     input_elmo = elmo_representations.pop()
+                assert len(elmo_representations) == 0
             else:
                 raise ConfigurationError(
                     "Model was built to use Elmo, but input text is not tokenized for Elmo.")
