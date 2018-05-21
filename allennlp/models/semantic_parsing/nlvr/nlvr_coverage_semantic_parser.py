@@ -100,10 +100,10 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                                          dropout=dropout)
         self._agenda_coverage = Average()
         self._decoder_trainer: DecoderTrainer[Callable[[NlvrDecoderState], torch.Tensor]] = \
-                ExpectedRiskMinimization(beam_size,
-                                         normalize_beam_score_by_length,
-                                         max_decoding_steps,
-                                         max_num_finished_states)
+                ExpectedRiskMinimization(beam_size=beam_size,
+                                         normalize_by_length=normalize_beam_score_by_length,
+                                         max_decoding_steps=max_decoding_steps,
+                                         max_num_finished_states=max_num_finished_states)
 
         # Instantiating an empty NlvrWorld just to get the number of terminals.
         self._terminal_productions = set(NlvrWorld([]).terminal_productions.values())
@@ -183,6 +183,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                 worlds: List[List[NlvrWorld]],
                 actions: List[List[ProductionRuleArray]],
                 agenda: torch.LongTensor,
+                identifier: List[str] = None,
                 labels: torch.LongTensor = None,
                 epoch_num: List[int] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
@@ -243,6 +244,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         outputs = self._decoder_trainer.decode(initial_state,
                                                self._decoder_step,
                                                self._get_state_cost)
+        if identifier is not None:
+            outputs['identifier'] = identifier
         best_action_sequences = outputs['best_action_sequences']
         batch_action_strings = self._get_action_strings(actions, best_action_sequences)
         batch_denotations = self._get_denotations(batch_action_strings, worlds)
