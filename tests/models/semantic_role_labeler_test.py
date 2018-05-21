@@ -23,6 +23,10 @@ class SemanticRoleLabelerTest(ModelTestCase):
     def test_srl_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
+    def test_elmo_srl_model_can_train_save_and_load(self):
+        # pylint: disable=line-too-long
+        self.ensure_model_can_train_save_and_load('tests/fixtures/srl/elmo_experiment.json')
+
     @flaky
     def test_batch_predictions_are_consistent(self):
         self.ensure_batch_predictions_are_consistent()
