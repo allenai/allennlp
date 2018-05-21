@@ -206,8 +206,8 @@ class BiattentiveClassificationNetwork(Model):
         elmo_tokens = tokens.pop("elmo", None)
         embedded_text = self._text_field_embedder(tokens)
 
-        # Add the "elmo" key back to "tokens" if not None, since some of the
-        # tests rely on the batch not being modified during forward()
+        # Add the "elmo" key back to "tokens" if not None, since the tests and the
+        # subsequent training epochs rely not being modified during forward()
         if elmo_tokens is not None:
             tokens["elmo"] = elmo_tokens
 
