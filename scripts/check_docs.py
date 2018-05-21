@@ -16,10 +16,7 @@ MODULES_THAT_NEED_NO_DOCS: Set[str] = {
         'allennlp.version',
 
         # No docs for custom extensions, which aren't even in python.
-        'allennlp.custom_extensions*',
-        'allennlp.custom_extensions._ext',
-        'allennlp.custom_extensions._ext.highway_lstm_layer',
-        'allennlp.custom_extensions.build',
+        'allennlp.custom_extensions.*',
 
         # No docs for tests, unnecessary info for users.
         'allennlp.tests.*',
