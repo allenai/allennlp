@@ -7,7 +7,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from allennlp.common import Params
-from allennlp.common.checks import check_dimensions_match
+from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import Elmo, FeedForward, Maxout, Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.models.model import Model
@@ -57,8 +57,14 @@ class BiattentiveClassificationNetwork(Model):
     output_layer : ``Union[Maxout, FeedForward]``
         The maxout or feed forward network that takes the final representations and produces
         a classification prediction.
-    integrator_output_elmo : ``Elmo``, optional (default=``None``)
-        If provided, will be used to concatenate pretrained ELMo representations to the integrator output.
+    elmo : ``Elmo``, optional (default=``None``)
+        If provided, will be used to concatenate pretrained ELMo representations to
+        either the integrator output (``use_integrator_output_elmo``) or the
+        input (``use_input_elmo``).
+    use_input_elmo : ``bool`` (default=``False``)
+        If true, concatenate pretrained ELMo representations to the input vectors.
+    use_integrator_output_elmo : ``bool`` (default=``False``)
+        If true, concatenate pretrained ELMo representations to the integrator output.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
@@ -73,12 +79,19 @@ class BiattentiveClassificationNetwork(Model):
                  integrator: Seq2SeqEncoder,
                  integrator_dropout: float,
                  output_layer: Union[FeedForward, Maxout],
-                 integrator_output_elmo: Elmo,
+                 elmo: Elmo,
+                 use_input_elmo: bool = False,
+                 use_integrator_output_elmo: bool = False,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(BiattentiveClassificationNetwork, self).__init__(vocab, regularizer)
 
         self._text_field_embedder = text_field_embedder
+        if "elmo" in self._text_field_embedder._token_embedders.keys():
+            raise ConfigurationError("To use ELMo in the BiattentiveClassificationNetwork input, "
+                                     "remove elmo from the text_field_embedder and pass an "
+                                     "Elmo object to the BiattentiveClassificationNetwork and set the "
+                                     "'use_input_elmo' and 'use_integrator_output_elmo' flags accordingly.")
         self._embedding_dropout = nn.Dropout(embedding_dropout)
         self._num_classes = self.vocab.get_vocab_size("labels")
 
@@ -86,21 +99,55 @@ class BiattentiveClassificationNetwork(Model):
         self._encoder = encoder
         self._integrator = integrator
         self._integrator_dropout = nn.Dropout(integrator_dropout)
-        self._integrator_output_elmo = integrator_output_elmo
 
-        if self._integrator_output_elmo is None:
-            self._combined_integrator_output = self._integrator.get_output_dim()
+        self._elmo = elmo
+        self._use_input_elmo = use_input_elmo
+        self._use_integrator_output_elmo = use_integrator_output_elmo
+        self._num_elmo_layers = int(self._use_input_elmo) + int(self._use_integrator_output_elmo)
+        # Check that, if elmo is None, none of the elmo flags are set.
+        if self._elmo is None and self._num_elmo_layers != 0:
+            raise ConfigurationError("One of 'use_input_elmo' or 'use_integrator_output_elmo' is True, "
+                                     "but no Elmo object was provided upon construction. Pass in an Elmo "
+                                     "object to use Elmo.")
+
+        if self._elmo is not None:
+            # Check that, if elmo is not None, we use it somewhere.
+            if self._num_elmo_layers == 0:
+                raise ConfigurationError("Elmo object provided upon construction, but both 'use_input_elmo' "
+                                         "and 'use_integrator_output_elmo' are 'False'. Set one of them to "
+                                         "'True' to use Elmo, or do not provide an Elmo object upon construction.")
+            # Check that the number of flags set is equal to the num_output_representations of the Elmo object
+            if len(self._elmo._scalar_mixes) != self._num_elmo_layers:
+                raise ConfigurationError("Elmo object has num_output_representations=%s, but this does not "
+                                         "match the number of use_*_elmo flags set to true. use_input_elmo "
+                                         "is %s, and use_integrator_output_elmo is %s".format(
+                                             str(len(self._elmo._scalar_mixes)),
+                                             str(self._use_input_elmo),
+                                             str(self._use_integrator_output_elmo)))
+
+        # Calculate combined integrator output dim, taking into account elmo
+        if self._use_integrator_output_elmo:
+            self._combined_integrator_output_dim = (self._integrator.get_output_dim() +
+                                                    self._elmo.get_output_dim())
         else:
-            self._combined_integrator_output = (self._integrator.get_output_dim() +
-                                                self._integrator_output_elmo.get_output_dim())
+            self._combined_integrator_output_dim = self._integrator.get_output_dim()
+
         self._self_attentive_pooling_projection = nn.Linear(
-                self._combined_integrator_output, 1)
+                self._combined_integrator_output_dim, 1)
         self._output_layer = output_layer
 
-        check_dimensions_match(text_field_embedder.get_output_dim(),
-                               self._pre_encode_feedforward.get_input_dim(),
-                               "text field embedder output dim",
-                               "Pre-encoder feedforward input dim")
+        if self._use_input_elmo:
+            check_dimensions_match(text_field_embedder.get_output_dim() +
+                                   self._elmo.get_output_dim(),
+                                   self._pre_encode_feedforward.get_input_dim(),
+                                   "text field embedder output dim + ELMo output dim",
+                                   "Pre-encoder feedforward input dim")
+        else:
+            check_dimensions_match(text_field_embedder.get_output_dim(),
+                                   self._pre_encode_feedforward.get_input_dim(),
+                                   "text field embedder output dim",
+                                   "Pre-encoder feedforward input dim")
+
         check_dimensions_match(self._pre_encode_feedforward.get_output_dim(),
                                self._encoder.get_input_dim(),
                                "Pre-encoder feedforward output dim",
@@ -109,16 +156,17 @@ class BiattentiveClassificationNetwork(Model):
                                self._integrator.get_input_dim(),
                                "Encoder output dim * 3",
                                "Integrator input dim")
-        if self._integrator_output_elmo is None:
+        if self._use_integrator_output_elmo:
+            check_dimensions_match(self._combined_integrator_output_dim * 4,
+                                   self._output_layer.get_input_dim(),
+                                   "(Integrator output dim + ELMo output dim) * 4",
+                                   "Output layer input dim")
+        else:
             check_dimensions_match(self._integrator.get_output_dim() * 4,
                                    self._output_layer.get_input_dim(),
                                    "Integrator output dim * 4",
                                    "Output layer input dim")
-        else:
-            check_dimensions_match(self._combined_integrator_output * 4,
-                                   self._output_layer.get_input_dim(),
-                                   "(Integrator output dim + ELMo output dim) * 4",
-                                   "Output layer input dim")
+
         check_dimensions_match(self._output_layer.get_output_dim(),
                                self._num_classes,
                                "Output layer output dim",
@@ -153,9 +201,27 @@ class BiattentiveClassificationNetwork(Model):
             A scalar loss to be optimised.
         """
         text_mask = util.get_text_field_mask(tokens).float()
+        # Pop elmo tokens, since elmo embedder should not be present.
+        elmo_tokens = tokens.pop("elmo", None)
         embedded_text = self._text_field_embedder(tokens)
-        dropped_embedded_text = self._embedding_dropout(embedded_text)
 
+        # Create ELMo embeddings if applicable
+        if self._elmo:
+            if elmo_tokens is not None:
+                elmo_representations = self._elmo(elmo_tokens)["elmo_representations"]
+                # Pop from the end is more performant with list
+                if self._use_integrator_output_elmo:
+                    integrator_output_elmo = elmo_representations.pop()
+                if self._use_input_elmo:
+                    input_elmo = elmo_representations.pop()
+            else:
+                raise ConfigurationError(
+                    "Model was built to use Elmo, but input text is not tokenized for Elmo.")
+
+        if self._use_input_elmo:
+            embedded_text = torch.cat([embedded_text, input_elmo], dim=-1)
+
+        dropped_embedded_text = self._embedding_dropout(embedded_text)
         pre_encoded_text = self._pre_encode_feedforward(dropped_embedded_text)
         encoded_tokens = self._encoder(pre_encoded_text, text_mask)
 
@@ -171,12 +237,9 @@ class BiattentiveClassificationNetwork(Model):
         integrated_encodings = self._integrator(integrator_input, text_mask)
 
         # Concatenate ELMo representations to integrated_encodings if specified
-        if self._integrator_output_elmo is not None:
-            # TODO(nfliu): This breaks when ELMo num_output_representations > 1.
-            # How should i be dealing with that case? Or perhaps i should just use an ElmoEmbedder here?
-            elmo_encodings = self._integrator_output_elmo(tokens["elmo"])["elmo_representations"][-1]
+        if self._use_integrator_output_elmo:
             integrated_encodings = torch.cat([integrated_encodings,
-                                              elmo_encodings], dim=-1)
+                                              integrator_output_elmo], dim=-1)
 
         # Simple Pooling layers
         max_masked_integrated_encodings = util.replace_masked_values(
@@ -242,9 +305,13 @@ class BiattentiveClassificationNetwork(Model):
             output_layer = FeedForward.from_params(output_layer_params)
         else:
             output_layer = Maxout.from_params(output_layer_params)
-        integrator_output_elmo = params.pop("integrator_output_elmo", None)
-        if integrator_output_elmo is not None:
-            integrator_output_elmo = Elmo.from_params(integrator_output_elmo)
+
+        elmo = params.pop("elmo", None)
+        if elmo is not None:
+            elmo = Elmo.from_params(elmo)
+        use_input_elmo = params.pop("use_input_elmo", False)
+        use_integrator_output_elmo = params.pop("use_integrator_output_elmo", False)
+
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
         params.assert_empty(cls.__name__)
@@ -257,6 +324,8 @@ class BiattentiveClassificationNetwork(Model):
                    integrator=integrator,
                    integrator_dropout=integrator_dropout,
                    output_layer=output_layer,
-                   integrator_output_elmo=integrator_output_elmo,
+                   elmo=elmo,
+                   use_input_elmo=use_input_elmo,
+                   use_integrator_output_elmo=use_integrator_output_elmo,
                    initializer=initializer,
                    regularizer=regularizer)

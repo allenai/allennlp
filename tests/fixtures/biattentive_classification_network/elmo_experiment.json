@@ -20,13 +20,6 @@
       "tokens": {
         "type": "embedding",
         "embedding_dim": 10
-      },
-      "elmo": {
-        "type": "elmo_token_embedder",
-        "options_file": "tests/fixtures/elmo/options.json",
-        "weight_file": "tests/fixtures/elmo/lm_weights.hdf5",
-        "do_layer_norm": false,
-        "dropout": 0.3
       }
     },
     "embedding_dropout": 0.2,
@@ -56,12 +49,14 @@
       "num_layers": 1
     },
     "integrator_dropout": 0.2,
-    "output_elmo": {
+    "elmo": {
       "options_file": "tests/fixtures/elmo/options.json",
       "weight_file": "tests/fixtures/elmo/lm_weights.hdf5",
-      "num_output_representations": 1,
+      "num_output_representations": 2,
       "do_layer_norm": false
     },
+    "use_input_elmo": true,
+    "use_integrator_output_elmo": true,
     "output_layer": {
       "input_dim": 140,
       "num_layers": 2,
