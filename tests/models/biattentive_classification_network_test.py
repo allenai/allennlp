@@ -8,9 +8,9 @@ from allennlp.common.params import Params
 from allennlp.models import Model
 
 
-class BiattentiveClassificationNetworkMaxoutTest(ModelTestCase):
+class BiattentiveClassificationNetworkTest(ModelTestCase):
     def setUp(self):
-        super(BiattentiveClassificationNetworkMaxoutTest, self).setUp()
+        super(BiattentiveClassificationNetworkTest, self).setUp()
         self.set_up_model('tests/fixtures/biattentive_classification_network/experiment.json',
                           'tests/fixtures/data/sst.txt')
 

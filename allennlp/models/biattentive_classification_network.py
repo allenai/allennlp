@@ -87,7 +87,7 @@ class BiattentiveClassificationNetwork(Model):
         super(BiattentiveClassificationNetwork, self).__init__(vocab, regularizer)
 
         self._text_field_embedder = text_field_embedder
-        if "elmo" in self._text_field_embedder._token_embedders.keys():
+        if "elmo" in self._text_field_embedder._token_embedders.keys():  # pylint: disable=protected-access
             raise ConfigurationError("To use ELMo in the BiattentiveClassificationNetwork input, "
                                      "remove elmo from the text_field_embedder and pass an "
                                      "Elmo object to the BiattentiveClassificationNetwork and set the "
@@ -117,13 +117,14 @@ class BiattentiveClassificationNetwork(Model):
                                          "and 'use_integrator_output_elmo' are 'False'. Set one of them to "
                                          "'True' to use Elmo, or do not provide an Elmo object upon construction.")
             # Check that the number of flags set is equal to the num_output_representations of the Elmo object
+            # pylint: disable=protected-access,too-many-format-args
             if len(self._elmo._scalar_mixes) != self._num_elmo_layers:
                 raise ConfigurationError("Elmo object has num_output_representations=%s, but this does not "
                                          "match the number of use_*_elmo flags set to true. use_input_elmo "
                                          "is %s, and use_integrator_output_elmo is %s".format(
-                                             str(len(self._elmo._scalar_mixes)),
-                                             str(self._use_input_elmo),
-                                             str(self._use_integrator_output_elmo)))
+                                                 str(len(self._elmo._scalar_mixes)),
+                                                 str(self._use_input_elmo),
+                                                 str(self._use_integrator_output_elmo)))
 
         # Calculate combined integrator output dim, taking into account elmo
         if self._use_integrator_output_elmo:
@@ -205,6 +206,11 @@ class BiattentiveClassificationNetwork(Model):
         elmo_tokens = tokens.pop("elmo", None)
         embedded_text = self._text_field_embedder(tokens)
 
+        # Add the "elmo" key back to "tokens" if not None, since some of the
+        # tests rely on the batch not being modified during forward()
+        if elmo_tokens is not None:
+            tokens["elmo"] = elmo_tokens
+
         # Create ELMo embeddings if applicable
         if self._elmo:
             if elmo_tokens is not None:
@@ -214,10 +220,10 @@ class BiattentiveClassificationNetwork(Model):
                     integrator_output_elmo = elmo_representations.pop()
                 if self._use_input_elmo:
                     input_elmo = elmo_representations.pop()
-                assert len(elmo_representations) == 0
+                assert not elmo_representations
             else:
                 raise ConfigurationError(
-                    "Model was built to use Elmo, but input text is not tokenized for Elmo.")
+                        "Model was built to use Elmo, but input text is not tokenized for Elmo.")
 
         if self._use_input_elmo:
             embedded_text = torch.cat([embedded_text, input_elmo], dim=-1)
