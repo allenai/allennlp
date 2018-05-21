@@ -154,14 +154,21 @@ class CompressedFileUtils:
         Open an eventually compressed file in binary or text mode (default: text mode
         with utf-8 encoding). The currently supported compressed file formats are: gzip, zip.
 
-        Arguments:
+        Parameters
+        ----------
+        path: str
+            Path to the file to read
         mode: str
-            Aliases for text mode: 't' and 'rt'; aliases for binary mode: 'b' and 'rb'.
+            Reading mode; it can be 't' or 'rt' for text mode, 'b' or 'rb' for binary mode.
+        encoding: str
+            Text encoding of the text file. This must be left to None when reading in binary mode
+            or an exception will be raised.
         file_format: str
             If ``file_format == None``, the format is inferred from the extension.
             If the file format (specified or inferred) is not supported, an exception is raised.
 
-        Returns:
+        Returns
+        -------
         When used in text mode, it returns a :class:`io.TextIOWrapper`.
         When used in binary mode, the return type depends on the specific input file format.
         """
