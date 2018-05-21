@@ -84,7 +84,7 @@ class LinearMatrixAttention(MatrixAttention):
         return self._activation(dot_product + self._bias)
 
     @classmethod
-    def from_params(cls, params: Params) -> 'LinearSimilarity':
+    def from_params(cls, params: Params) -> 'LinearMatrixAttention':
         tensor_1_dim = params.pop_int("tensor_1_dim")
         tensor_2_dim = params.pop_int("tensor_2_dim")
         combination = params.pop("combination", "x,y")
