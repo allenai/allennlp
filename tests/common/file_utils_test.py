@@ -8,8 +8,9 @@ import pytest
 import responses
 
 from allennlp.common.file_utils import url_to_filename, filename_to_url, get_from_cache, cached_path, \
-    CompressedFileUtils, read_maybe_compressed_file
+    CompressedFileUtils, open_maybe_compressed_file
 from allennlp.common.testing import AllenNlpTestCase
+
 
 def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
     # Mock response for the datastore url that returns glove vectors
@@ -166,8 +167,22 @@ class TestFileUtils(AllenNlpTestCase):
         with open(filename, 'rb') as cached_file:
             assert cached_file.read() == self.glove_bytes
 
-    def test_read_maybe_compressed_file_utf8(self):
+    def test_CompressedFileUtils_open(self):
+        sample_fixtures = 'tests/fixtures/data/utf8_sample.txt.gz'
+
+        # Unsupported file format
+        with pytest.raises(ValueError):
+            CompressedFileUtils.open('fake.txt.rar')
+        with pytest.raises(ValueError):
+            CompressedFileUtils.open('fake.txt.gz', file_format='.rar')
+
+        # Unsupported mode
+        with pytest.raises(ValueError):
+            CompressedFileUtils.open(sample_fixtures, mode='k')
+
+    def test_open_maybe_compressed_file(self):
         txt_path = 'tests/fixtures/data/utf8_sample.txt'
+
         # This is for sure a correct way to read an utf-8 file
         with open(txt_path, 'rt', encoding='utf-8') as f:
             correct_text = f.read()
@@ -176,6 +191,6 @@ class TestFileUtils(AllenNlpTestCase):
         paths = [txt_path]
         paths += (txt_path + ext for ext in CompressedFileUtils.SUPPORTED_FORMATS)
         for path in paths:
-            with read_maybe_compressed_file(path, 't', encoding='utf-8') as f:
+            with open_maybe_compressed_file(path, 'rt', encoding='utf-8') as f:
                 text = f.read()
             assert text == correct_text, "Test failed for file: " + path

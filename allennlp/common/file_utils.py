@@ -4,7 +4,7 @@ Utilities for working with the local dataset cache.
 import io
 import gzip
 import zipfile
-from typing import Tuple
+from typing import Tuple, Optional
 import os
 from hashlib import sha256
 import logging
@@ -161,12 +161,12 @@ def get_file_extension(path: str, dot=True, lower: bool = True):
 class CompressedFileUtils:
 
     SUPPORTED_FORMATS = {'.gz', '.zip'}
-    READ_MODE_CHOICES = {'t', 'rt', 'b', 'rb'}
+    MODE_CHOICES = {'r', 'rt', 'rb'}
     DEFAULT_ENCODING = 'utf-8'
 
     @staticmethod
-    def read(path: str, mode: str = 't', encoding: str = None,
-             file_format: str = None):
+    def open(path: str, mode: str = 'rt', encoding: Optional[str] = None,
+             file_format: Optional[str] = None) -> io.IOBase:
         """
         Open an eventually compressed file in binary or text mode (default: text mode
         with utf-8 encoding). The currently supported compressed file formats are: gzip, zip.
@@ -176,7 +176,7 @@ class CompressedFileUtils:
         path: str
             Path to the file to read
         mode: str
-            Reading mode; it can be 't' or 'rt' for text mode, 'b' or 'rb' for binary mode.
+            Reading mode; it can be 'r' or 'rt' for text mode, 'rb' for binary mode.
         encoding: str
             Text encoding of the text file. This must be left to None when reading in binary mode
             or an exception will be raised.
@@ -189,16 +189,15 @@ class CompressedFileUtils:
         When used in text mode, it returns a :class:`io.TextIOWrapper`.
         When used in binary mode, the return type depends on the specific input file format.
         """
-        read_mode_choices = CompressedFileUtils.READ_MODE_CHOICES
-        if mode not in read_mode_choices:
+        if mode not in CompressedFileUtils.MODE_CHOICES:
             raise ValueError("Invalid mode: {}. Supported modes are: {}"
-                             .format(mode, read_mode_choices))
+                             .format(mode, CompressedFileUtils.MODE_CHOICES))
 
         file_format = file_format or get_file_extension(path)
 
         if file_format == ".gz":
             logger.info("Opening gzipped file: %s", path)
-            binary_reader = gzip.open(path, "rb")
+            return gzip.open(path, mode, encoding=encoding)
 
         elif file_format == ".zip":
             logger.info("Opening zipped file: %s", path)
@@ -207,20 +206,22 @@ class CompressedFileUtils:
             filename = zfile.namelist()[0]
             binary_reader = zfile.open(filename, "r")
 
+            if mode != 'rb':
+                # Text mode
+                encoding = encoding or CompressedFileUtils.DEFAULT_ENCODING
+                return io.TextIOWrapper(binary_reader, encoding=encoding)
+            else:
+                # Binary mode
+                if encoding is not None:  # same behavior of built-in open()
+                    raise ValueError("Binary mode doesn't take an encoding argument")
+                return binary_reader
+
         else:
             raise ValueError('Unsupported file format: {}. Supported formats are: {}'
                              .format(file_format, CompressedFileUtils.SUPPORTED_FORMATS))
 
-        if mode == 't':
-            encoding = encoding or CompressedFileUtils.DEFAULT_ENCODING
-            return io.TextIOWrapper(binary_reader, encoding=encoding)
-        else:
-            if encoding is not None:    # same behavior of built-in open()
-                raise ValueError("Binary mode doesn't take an encoding argument")
-            return binary_reader
 
-
-def read_maybe_compressed_file(path: str, mode: str = 't', encoding: str = None,
+def open_maybe_compressed_file(path: str, mode: str = 'rt', encoding: str = None,
                                file_format: str = None):
     """
     If the file format is in :const:`CompressedFileUtils.SUPPORTED_FORMATS`, the file is
@@ -232,12 +233,10 @@ def read_maybe_compressed_file(path: str, mode: str = 't', encoding: str = None,
     file_format = file_format or get_file_extension(path)
 
     if file_format in CompressedFileUtils.SUPPORTED_FORMATS:
-        return CompressedFileUtils.read(path, mode, encoding, file_format)
+        return CompressedFileUtils.open(path, mode, encoding, file_format)
     else:
-        assert mode in CompressedFileUtils.READ_MODE_CHOICES
+        if mode not in CompressedFileUtils.MODE_CHOICES:
+            raise ValueError("Invalid mode: {}. Supported modes are: {}"
+                             .format(mode, CompressedFileUtils.MODE_CHOICES))
         logger.info("Reading the file assuming it's not compressed: %s", path)
-        if mode == 't':
-            mode = 'rt'
-        if mode == 'b':
-            mode = 'rb'
         return open(path, mode, encoding=encoding)
