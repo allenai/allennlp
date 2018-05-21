@@ -1,4 +1,3 @@
-import io
 import logging
 
 from overrides import overrides
@@ -7,7 +6,6 @@ import torch
 from torch.nn.functional import embedding
 import h5py
 
-import allennlp
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path, read_maybe_compressed_file, get_file_extension

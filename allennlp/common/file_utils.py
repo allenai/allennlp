@@ -219,6 +219,8 @@ def read_maybe_compressed_file(path: str, mode: str = 't', encoding: str = None,
     else:
         assert mode in CompressedFileUtils.READ_MODE_CHOICES
         logger.info("Reading the file assuming it's not compressed: %s", path)
-        if mode == 't': mode = 'rt'
-        if mode == 'b': mode = 'rb'
+        if mode == 't':
+            mode = 'rt'
+        if mode == 'b':
+            mode = 'rb'
         return open(path, mode, encoding=encoding)
