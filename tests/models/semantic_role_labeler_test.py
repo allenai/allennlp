@@ -23,6 +23,7 @@ class SemanticRoleLabelerTest(ModelTestCase):
     def test_srl_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
+    @flaky
     def test_elmo_srl_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load('tests/fixtures/srl/elmo_experiment.json')
 
