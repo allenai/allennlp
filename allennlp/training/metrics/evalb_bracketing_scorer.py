@@ -98,7 +98,9 @@ class EvalbBracketingScorer(Metric):
                     self._correct_predicted_brackets += numeric_line[5]
                     self._gold_brackets += numeric_line[6]
                     self._predicted_brackets += numeric_line[7]
+
         shutil.rmtree(tempdir)
+
     @overrides
     def get_metric(self, reset: bool = False):
         """
