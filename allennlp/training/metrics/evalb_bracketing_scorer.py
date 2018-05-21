@@ -3,6 +3,7 @@ from typing import List
 import os
 import tempfile
 import subprocess
+import shutil
 
 from overrides import overrides
 from nltk import Tree
@@ -72,7 +73,7 @@ class EvalbBracketingScorer(Metric):
             raise ConfigurationError("You must compile the EVALB scorer before using it."
                                      " Run 'make' in the '{}' directory or run: {}".format(
                                              self._evalb_program_path, compile_command))
-        tempdir = tempfile.gettempdir()
+        tempdir = tempfile.mkdtemp()
         gold_path = os.path.join(tempdir, "gold.txt")
         predicted_path = os.path.join(tempdir, "predicted.txt")
         output_path = os.path.join(tempdir, "output.txt")
@@ -97,6 +98,8 @@ class EvalbBracketingScorer(Metric):
                     self._correct_predicted_brackets += numeric_line[5]
                     self._gold_brackets += numeric_line[6]
                     self._predicted_brackets += numeric_line[7]
+
+        shutil.rmtree(tempdir)
 
     @overrides
     def get_metric(self, reset: bool = False):
