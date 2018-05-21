@@ -133,7 +133,7 @@ class TestTrainer(AllenNlpTestCase):
                           train_dataset=self.instances,
                           validation_dataset=self.instances,
                           num_epochs=2)
-        metrics = trainer.train()
+        trainer.train()
 
     def test_trainer_raises_on_model_with_no_loss_key(self):
         class FakeModel(torch.nn.Module):
