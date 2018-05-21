@@ -101,25 +101,15 @@ class NoamLR(torch.optim.lr_scheduler._LRScheduler): # pylint: disable=protected
                  model_size: int,
                  warmup_steps: int,
                  factor: float = 1.0,
-                 last_epoch: int = -1):
+                 last_epoch: int = -1) -> None:
         self.warmup_steps = warmup_steps
         self.factor = factor
         self.model_size = model_size
         super().__init__(optimizer, last_epoch=last_epoch)
 
     def get_lr(self):
-        """
-        Implements the Noam Learning rate schedule.
-        This corresponds to increasing the learning rate
-        linearly for the first warmup_steps training steps,
-        and decreasing it thereafter proportionally to the
-        inverse square root of the step number, scaled by
-        the inverse square root of the dimensionality of the model.
-        Time will tell if this is just madness or it's actually important.
-        """
         step = self.last_epoch
-
-        scale = self.factor *  (self.model_size ** (-0.5) *  
+        scale = self.factor *  (self.model_size ** (-0.5) *
                                 # We use step + 1 here to avoid division by zero in the first step.
                                 min((step + 1) ** (-0.5), (step + 1) * self.warmup_steps ** (-1.5)))
 
