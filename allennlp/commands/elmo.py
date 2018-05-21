@@ -6,7 +6,12 @@ layers used to compute ELMo representations to a single (potentially large) file
 
 The input file is previously tokenized, whitespace separated text, one sentence per line.
 The output is a hdf5 file (<http://docs.h5py.org/en/latest/>) where, with the --all flag, each
-sentence is a size (3, num_tokens, 1024) array with the biLM representations.
+sentence is a size (3, num_tokens, 1024) array with the biLM representations.  Please note that
+this command keys the h5py entries by the sentence, but in h5py slashes ('/') denote organizing a dataset
+by a group, where the group name is the text before the slash.  In other words, if a sentence contains a slash
+("my / sentence"), then the first part ("my ") becomes the group name and the second part (" sentence") is
+the name of a dataset inside that group.  Because of this complexity, we recommend that you read h5py files
+with read_sentences_from_h5py.
 
 For information, see "Deep contextualized word representations", Peters et al 2018.
 https://arxiv.org/abs/1802.05365
@@ -110,6 +115,16 @@ class Elmo(Subcommand):
 
         return subparser
 
+def read_sentences_from_h5py(obj: h5py.HLObject):
+    """
+    Get all h5py Dataset object from either a Group or a Dataset.
+    """
+    if isinstance(obj, h5py.Dataset):
+        yield obj.name[1:], obj.value
+
+    if isinstance(obj, h5py.Group):
+        for child in obj.values():
+          yield from read_sentences_from_h5py(child)
 
 def empty_embedding() -> numpy.ndarray:
     return numpy.zeros((3, 0, 1024))
