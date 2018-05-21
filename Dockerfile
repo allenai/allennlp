@@ -54,7 +54,6 @@ COPY scripts/build_demo.py scripts/build_demo.py
 ARG BUILD_DEMO=false
 RUN ./scripts/build_demo.py
 
-COPY scripts/ scripts/
 COPY allennlp/ allennlp/
 COPY tests/ tests/
 COPY pytest.ini pytest.ini
@@ -71,6 +70,7 @@ RUN cd allennlp/tools/EVALB && make &> /dev/null && cd ../../../
 # Caching models when building the image makes a dockerized server start up faster, but is slow for
 # running tests and things, so we skip it by default.
 ARG CACHE_MODELS=false
+COPY scripts/cache_models.py scripts/cache_models.py
 RUN ./scripts/cache_models.py
 
 
