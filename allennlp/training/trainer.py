@@ -694,8 +694,8 @@ class Trainer:
 
             if self._learning_rate_scheduler:
                 # The LRScheduler API is agnostic to whether your schedule requires a validation metric -
-                # if it doesn't, the validation metric passed here is ignored.c
-                self._learning_rate_scheduler.step(epoch, val_metric=this_epoch_val_metric)
+                # if it doesn't, the validation metric passed here is ignored.
+                self._learning_rate_scheduler.step(this_epoch_val_metric, epoch)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", time.strftime("%H:%M:%S", time.gmtime(epoch_elapsed_time)))

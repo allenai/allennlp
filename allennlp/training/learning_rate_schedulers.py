@@ -36,7 +36,7 @@ class LearningRateScheduler(Registrable):
             if hasattr(self.lr_scheduler, 'step_batch'):
                 self.lr_scheduler.step_batch(batch_num_total)
             return
-    
+
     @classmethod
     def from_params(cls, optimizer: torch.optim.Optimizer, params: Params):
         scheduler = params.pop_choice("type", LearningRateScheduler.list_available())
