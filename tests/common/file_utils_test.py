@@ -167,30 +167,47 @@ class TestFileUtils(AllenNlpTestCase):
         with open(filename, 'rb') as cached_file:
             assert cached_file.read() == self.glove_bytes
 
-    def test_CompressedFileUtils_open(self):
-        sample_fixtures = 'tests/fixtures/data/utf8_sample.txt.gz'
-
+    def test_CompressedFileUtils_open_with_invalid_params(self):
+        sample_file = 'tests/fixtures/data/utf8_sample.txt.gz'
         # Unsupported file format
         with pytest.raises(ValueError):
-            CompressedFileUtils.open('fake.txt.rar')
-        with pytest.raises(ValueError):
-            CompressedFileUtils.open('fake.txt.gz', file_format='.rar')
-
+            CompressedFileUtils.open('tests/fixtures/')
+        with pytest.raises(ValueError):  # with forced file_format
+            CompressedFileUtils.open(sample_file, file_format='.rar')
         # Unsupported mode
         with pytest.raises(ValueError):
-            CompressedFileUtils.open(sample_fixtures, mode='k')
+            CompressedFileUtils.open(sample_file, mode='w')
+        # Passing encoding arg while reading in binary mode
+        with pytest.raises(ValueError):
+            CompressedFileUtils.open(sample_file, mode='rb', encoding='utf-8')
 
-    def test_open_maybe_compressed_file(self):
+    def test_open_maybe_compressed_file_on_utf8_text(self):
         txt_path = 'tests/fixtures/data/utf8_sample.txt'
 
-        # This is for sure a correct way to read an utf-8 file
+        # This is for sure a correct way to read an utf-8 encoded text file
         with open(txt_path, 'rt', encoding='utf-8') as f:
             correct_text = f.read()
 
-        # Check if the read text is the same for all the formats
-        paths = [txt_path]
-        paths += (txt_path + ext for ext in CompressedFileUtils.SUPPORTED_FORMATS)
+        # Check if we get the correct text on plain and compressed versions of the file
+        paths = [txt_path] + [txt_path + ext for ext in CompressedFileUtils.SUPPORTED_FORMATS]
         for path in paths:
             with open_maybe_compressed_file(path, 'rt', encoding='utf-8') as f:
                 text = f.read()
             assert text == correct_text, "Test failed for file: " + path
+
+    def test_open_maybe_compressed_file_binary_mode(self):
+        file_path = 'tests/fixtures/data/utf8_sample.txt'  # we have compressed versions of this
+
+        with pytest.raises(ValueError):  # passing encoder argument in binary mode
+            open_maybe_compressed_file(file_path, mode='rb', encoding='utf-8')
+
+        # This is for sure a correct way to read a file in binary mode
+        with open(file_path, 'rb') as f:
+            correct_data = f.read()
+
+        # Check if we get the correct data on plain and compressed versions of the file
+        paths = [file_path] + [file_path + ext for ext in CompressedFileUtils.SUPPORTED_FORMATS]
+        for path in paths:
+            with open_maybe_compressed_file(path, 'rb') as f:
+                data = f.read()
+            assert data == correct_data, "Test failed for file: " + path
