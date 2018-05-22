@@ -18,21 +18,19 @@ and shuts down the container when you exit the interactive shell.
 
 ## Installing using pip
 
-You can install `allennlp` using pip in three easy steps.
+You can install `allennlp` using pip in two easy steps.
 
-1.  Create a Python 3.6 virtual environment, and run
+1.  Create a Python 3.6 virtual environment.  For example, if you use Conda:
 
-    ```bash
-    $ pip install allennlp
+    ```
+    $ conda create -n allennlp python=3.6
+    $ source activate allennlp
     ```
 
-2.  You'll also need to install PyTorch 0.3.1, following the appropriate instructions
-    for your platform from [their website](http://pytorch.org/).
+2.  Install `allennlp` via pip.
 
-3.  Finally, you'll need to download spaCy's English models:
-
-    ```bash
-    $ python -m spacy download en
+    ```
+    pip install allennlp
     ```
 
 ## Installing from source
@@ -53,30 +51,32 @@ $ INSTALL_TEST_REQUIREMENTS=true scripts/install_requirements.sh
 changing the flag to `false` if you don't want to be able to run tests.
 (Narrator: You want to be able to run tests.)
 
-You'll also need to install PyTorch 0.3.1, following the appropriate instructions
-for your platform from [their website](http://pytorch.org/).
-
 ## Once You've Installed
 
 If you just want to use the models and helper classes that are included with AllenNLP,
-you can use the included "allennlp" command, which provides a command-line interface to
-common functionality around training and evaluating models.
+you can use the included `allennlp` command, which provides a command-line interface to
+common functionality around training and evaluating models.  Note that if you are using
+the source repository, you need to use `python -m allennlp.run` instead of `allennlp`.
 
 ```
-$ allennlp
-usage: allennlp [command]
-
 Run AllenNLP
 
 optional arguments:
-  -h, --help  show this help message and exit
+  -h, --help    show this help message and exit
 
 Commands:
 
-    predict   Use a trained model to make predictions.
-    train     Train a model
-    serve     Run the web service and demo.
-    evaluate  Evaluate the specified model + dataset
+    train       Train a model
+    evaluate    Evaluate the specified model + dataset
+    predict     Use a trained model to make predictions.
+    serve       Run the web service and demo.
+    make-vocab  Create a vocabulary
+    elmo        Use a trained model to make predictions.
+    fine-tune   Continue training a model on a new dataset
+    dry-run     Create a vocabulary, compute dataset statistics and other
+                training utilities.
+    test-install
+                Run the unit tests.
 ```
 
 It's what we'll be using throughout this tutorial.
@@ -93,12 +93,8 @@ several large serialized models from Amazon S3.
 
 ```
 $ allennlp serve
-Starting a sanic server on port 8000.
-[... lots of logging omitted ...]
-2017-08-16 18:55:12 - (sanic)[INFO]: Goin' Fast @ http://0.0.0.0:8000
-2017-08-16 18:55:12,321 - INFO - sanic - Goin' Fast @ http://0.0.0.0:8000
-2017-08-16 18:55:12 - (sanic)[INFO]: Starting worker [33290]
-2017-08-16 18:55:12,323 - INFO - sanic - Starting worker [33290]
+2018-05-22 09:36:07,565 - INFO - allennlp.service.server_flask - Starting a flask server on port 8000.
+2018-05-22 09:36:07,568 - INFO - allennlp.service.db - Relevant environment variables not found, so no demo database
 ```
 
 (Currently `serve` doesn't work if you installed using `pip`,
