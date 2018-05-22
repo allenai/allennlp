@@ -54,8 +54,9 @@ changing the flag to `false` if you don't want to be able to run tests.
 ## Once You've Installed
 
 If you just want to use the models and helper classes that are included with AllenNLP,
-you can use the included "allennlp" command, which provides a command-line interface to
-common functionality around training and evaluating models.
+you can use the included `allennlp` command, which provides a command-line interface to
+common functionality around training and evaluating models.  Note that if you are using
+the source repository, you need to use `python -m allennlp.run` instead of `allennlp`.
 
 ```
 Run AllenNLP
@@ -92,12 +93,8 @@ several large serialized models from Amazon S3.
 
 ```
 $ allennlp serve
-Starting a sanic server on port 8000.
-[... lots of logging omitted ...]
-2017-08-16 18:55:12 - (sanic)[INFO]: Goin' Fast @ http://0.0.0.0:8000
-2017-08-16 18:55:12,321 - INFO - sanic - Goin' Fast @ http://0.0.0.0:8000
-2017-08-16 18:55:12 - (sanic)[INFO]: Starting worker [33290]
-2017-08-16 18:55:12,323 - INFO - sanic - Starting worker [33290]
+2018-05-22 09:36:07,565 - INFO - allennlp.service.server_flask - Starting a flask server on port 8000.
+2018-05-22 09:36:07,568 - INFO - allennlp.service.db - Relevant environment variables not found, so no demo database
 ```
 
 (Currently `serve` doesn't work if you installed using `pip`,
