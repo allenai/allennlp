@@ -236,7 +236,7 @@ class CompressedFileUtils:
 
 
 def open_maybe_compressed_file(path: str, mode: str = 'rt', encoding: str = None,
-                               file_format: str = None):
+                               file_format: str = None) -> ContextManager[io.IOBase]:
     """
     If the file format is in :const:`CompressedFileUtils.SUPPORTED_FORMATS`, the file is
     opened using :func:`CompressedFileUtils.read`, otherwise it's assumed to be
