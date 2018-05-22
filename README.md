@@ -62,7 +62,7 @@ just run `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.4.2` to get an e
 You can now test your installation with `./scripts/verify.py`.
 
 Our Docker image contains the AllenNLP source rather than a `pip` installation. Consequently, the `allennlp` commandline tool is not
-installed and you will have to use `python -m allennlp.run` instead.
+installed and you will have to use `./bin/allennlp` instead.
 
 ### Installing from source
 
@@ -81,7 +81,7 @@ Create a Python 3.6 virtual environment, and install the necessary requirements 
 Changing the flag to false if you don't want to be able to run tests.
 
 Note that if you use the source installation, you won't be able to use the `allennlp`
-command but rather you'll need to run `python -m allennlp.run`.
+command but rather you'll need to run `./bin/allennlp`.
 
 You can test your installation with `./scripts/verify.py`.
 
