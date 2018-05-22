@@ -6,7 +6,7 @@ a model.
 .. code-block:: bash
 
     $ allennlp dry-run --help
-    usage: python -m allennlp.run dry-run [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
+    usage: allennlp dry-run [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
                                       [--include-package INCLUDE_PACKAGE]
                                       param_path
 
