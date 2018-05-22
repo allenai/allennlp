@@ -5,7 +5,7 @@ import io
 import gzip
 import zipfile
 from contextlib import contextmanager
-from typing import Tuple, Optional, ContextManager
+from typing import Tuple, Optional, IO
 import os
 from hashlib import sha256
 import logging
@@ -167,7 +167,7 @@ class CompressedFileUtils:
 
     @staticmethod
     def open(path: str, mode: str = 'rt', encoding: Optional[str] = None,
-             file_format: Optional[str] = None) -> ContextManager[io.IOBase]:
+             file_format: Optional[str] = None):
         """
         Open an eventually compressed file in binary or text mode (default: text mode
         with utf-8 encoding). The currently supported compressed file formats are: gzip, zip.
@@ -187,7 +187,7 @@ class CompressedFileUtils:
 
         Returns
         -------
-        file_handle: ContextManager[io.IOBase]
+        file_handle:
             a context manager (to be used with ``with``) that returns a file handle. The specific type
             of a file handle is a ``io.TextIOWrapper`` when reading in text mode. When reading in binary
             mode, the specific type depends on the file format.
@@ -212,7 +212,7 @@ class CompressedFileUtils:
     @staticmethod
     @contextmanager
     def _open_zipped_file(path: str, mode: str = 'rt',
-                          encoding: Optional[str] = None) -> ContextManager[io.IOBase]:
+                          encoding: Optional[str] = None):
         zip_archive = zipfile.ZipFile(path, "r")
         namelist = zip_archive.namelist()
         if len(namelist) > 1:
@@ -223,7 +223,7 @@ class CompressedFileUtils:
             # Binary mode
             if encoding is not None:  # same behavior of built-in open()
                 raise ValueError("Binary mode doesn't take an encoding argument")
-            content_file = binary_reader
+            content_file: IO = binary_reader
         else:
             # Text mode
             encoding = encoding or CompressedFileUtils.DEFAULT_ENCODING
@@ -236,7 +236,7 @@ class CompressedFileUtils:
 
 
 def open_maybe_compressed_file(path: str, mode: str = 'rt', encoding: str = None,
-                               file_format: str = None) -> ContextManager[io.IOBase]:
+                               file_format: str = None):
     """
     If the file format is in :const:`CompressedFileUtils.SUPPORTED_FORMATS`, the file is
     opened using :func:`CompressedFileUtils.read`, otherwise it's assumed to be
