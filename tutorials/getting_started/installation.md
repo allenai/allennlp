@@ -18,21 +18,19 @@ and shuts down the container when you exit the interactive shell.
 
 ## Installing using pip
 
-You can install `allennlp` using pip in three easy steps.
+You can install `allennlp` using pip in two easy steps.
 
-1.  Create a Python 3.6 virtual environment, and run
+1.  Create a Python 3.6 virtual environment.  For example, if you use Conda:
 
-    ```bash
-    $ pip install allennlp
+    ```
+    $ conda create -n allennlp python=3.6
+    $ source activate allennlp
     ```
 
-2.  You'll also need to install PyTorch 0.3.1, following the appropriate instructions
-    for your platform from [their website](http://pytorch.org/).
+2.  Install `allennlp` via pip.
 
-3.  Finally, you'll need to download spaCy's English models:
-
-    ```bash
-    $ python -m spacy download en
+    ```
+    pip install allennlp
     ```
 
 ## Installing from source
@@ -52,9 +50,6 @@ $ INSTALL_TEST_REQUIREMENTS=true scripts/install_requirements.sh
 
 changing the flag to `false` if you don't want to be able to run tests.
 (Narrator: You want to be able to run tests.)
-
-You'll also need to install PyTorch 0.3.1, following the appropriate instructions
-for your platform from [their website](http://pytorch.org/).
 
 ## Once You've Installed
 
