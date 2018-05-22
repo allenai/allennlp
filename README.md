@@ -9,7 +9,7 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
 
 ## Installation
 
-The preferred way to install AllenNLP is via `pip`.  Just run `pip install allennlp` in your python 3.6 environment and you're good to go!
+The preferred way to install AllenNLP is via `pip`.  Just run `pip install allennlp` in your Python 3.6 environment and you're good to go!
 
 If you need pointers on setting up a Python 3.6 environment or would like to install AllenNLP using a different method, see below.
 
@@ -25,13 +25,13 @@ environment you want to use, you can skip to the 'installing via pip' section.
 
 2.  Create a Conda environment with Python 3.6
 
-    ```
+    ```bash
     conda create -n allennlp python=3.6
     ```
 
 3.  Activate the Conda environment. You will need to activate the Conda environment in each terminal in which you want to use AllenNLP.
 
-    ```
+    ```bash
     source activate allennlp
     ```
 
@@ -39,9 +39,9 @@ environment you want to use, you can skip to the 'installing via pip' section.
 
 Installing the library and dependencies is simple using `pip`.
 
-    ```
-    pip install allennlp
-    ```
+```bash
+pip install allennlp
+```
 
 That's it! You're now ready to build and train AllenNLP models.
 AllenNLP installs a script when you install the python package, meaning you can run allennlp commands just by typing `allennlp` into a terminal.
@@ -68,15 +68,15 @@ installed and you will have to use `python -m allennlp.run` instead.
 
 You can also install AllenNLP by cloning our git repository:
 
-  	```
-		$ git clone https://github.com/allenai/allennlp.git
-  	```
+  ```bash
+  git clone https://github.com/allenai/allennlp.git
+  ```
 
 Create a Python 3.6 virtual environment, and install the necessary requirements by running:
 
-    ```
-		$ INSTALL_TEST_REQUIREMENTS=true scripts/install_requirements.sh
-    ```
+  ```bash
+  INSTALL_TEST_REQUIREMENTS=true scripts/install_requirements.sh
+  ```
 
 Changing the flag to false if you don't want to be able to run tests.
 
@@ -91,7 +91,7 @@ Once you've installed AllenNLP, you can run the command-line interface either
 with the `allennlp` command (if you installed via `pip`) or `python -m
 allennlp.run` (if you installed via source).
 
-```
+```bash
 $ allennlp
 Run AllenNLP
 
