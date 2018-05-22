@@ -4,7 +4,8 @@ Utilities for working with the local dataset cache.
 import io
 import gzip
 import zipfile
-from typing import Tuple, Optional
+from contextlib import contextmanager
+from typing import Tuple, Optional, ContextManager
 import os
 from hashlib import sha256
 import logging
@@ -166,7 +167,7 @@ class CompressedFileUtils:
 
     @staticmethod
     def open(path: str, mode: str = 'rt', encoding: Optional[str] = None,
-             file_format: Optional[str] = None) -> io.IOBase:
+             file_format: Optional[str] = None) -> ContextManager[io.IOBase]:
         """
         Open an eventually compressed file in binary or text mode (default: text mode
         with utf-8 encoding). The currently supported compressed file formats are: gzip, zip.
@@ -186,8 +187,10 @@ class CompressedFileUtils:
 
         Returns
         -------
-        When used in text mode, it returns a :class:`io.TextIOWrapper`.
-        When used in binary mode, the return type depends on the specific input file format.
+        file_handle: ContextManager[io.IOBase]
+            a context manager (to be used with ``with``) that returns a file handle. The specific type
+            of a file handle is a ``io.TextIOWrapper`` when reading in text mode. When reading in binary
+            mode, the specific type depends on the file format.
         """
         if mode not in CompressedFileUtils.MODE_CHOICES:
             raise ValueError("Invalid mode: {}. Supported modes are: {}"
@@ -201,24 +204,35 @@ class CompressedFileUtils:
 
         elif file_format == ".zip":
             logger.info("Opening zipped file: %s", path)
-            zfile = zipfile.ZipFile(path, "r")
-            assert len(zfile.namelist()) == 1, "Multiple files are contained in the zip archive " + path
-            filename = zfile.namelist()[0]
-            binary_reader = zfile.open(filename, "r")
-
-            if mode != 'rb':
-                # Text mode
-                encoding = encoding or CompressedFileUtils.DEFAULT_ENCODING
-                return io.TextIOWrapper(binary_reader, encoding=encoding)
-            else:
-                # Binary mode
-                if encoding is not None:  # same behavior of built-in open()
-                    raise ValueError("Binary mode doesn't take an encoding argument")
-                return binary_reader
-
+            return CompressedFileUtils._open_zipped_file(path, mode, encoding)
         else:
             raise ValueError('Unsupported file format: {}. Supported formats are: {}'
                              .format(file_format, CompressedFileUtils.SUPPORTED_FORMATS))
+
+    @staticmethod
+    @contextmanager
+    def _open_zipped_file(path: str, mode: str = 'rt',
+                          encoding: Optional[str] = None) -> ContextManager[io.IOBase]:
+        zip_archive = zipfile.ZipFile(path, "r")
+        namelist = zip_archive.namelist()
+        if len(namelist) > 1:
+            raise ValueError("Multiple files are contained in the zip archive " + path)
+        binary_reader = zip_archive.open(namelist[0], "r")
+
+        if mode == 'rb':
+            # Binary mode
+            if encoding is not None:  # same behavior of built-in open()
+                raise ValueError("Binary mode doesn't take an encoding argument")
+            content_file = binary_reader
+        else:
+            # Text mode
+            encoding = encoding or CompressedFileUtils.DEFAULT_ENCODING
+            content_file = io.TextIOWrapper(binary_reader, encoding=encoding)
+
+        yield content_file
+
+        content_file.close()
+        zip_archive.close()
 
 
 def open_maybe_compressed_file(path: str, mode: str = 'rt', encoding: str = None,
