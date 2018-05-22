@@ -58,20 +58,24 @@ you can use the included "allennlp" command, which provides a command-line inter
 common functionality around training and evaluating models.
 
 ```
-$ allennlp
-usage: allennlp [command]
-
 Run AllenNLP
 
 optional arguments:
-  -h, --help  show this help message and exit
+  -h, --help    show this help message and exit
 
 Commands:
 
-    predict   Use a trained model to make predictions.
-    train     Train a model
-    serve     Run the web service and demo.
-    evaluate  Evaluate the specified model + dataset
+    train       Train a model
+    evaluate    Evaluate the specified model + dataset
+    predict     Use a trained model to make predictions.
+    serve       Run the web service and demo.
+    make-vocab  Create a vocabulary
+    elmo        Use a trained model to make predictions.
+    fine-tune   Continue training a model on a new dataset
+    dry-run     Create a vocabulary, compute dataset statistics and other
+                training utilities.
+    test-install
+                Run the unit tests.
 ```
 
 It's what we'll be using throughout this tutorial.
