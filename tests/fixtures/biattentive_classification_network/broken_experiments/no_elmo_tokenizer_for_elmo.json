@@ -1,8 +1,19 @@
+# NOTE: This config is incorrect and used for unit tests only.
+# Do not copy and paste from it!
 {
   "dataset_reader": {
     "type": "sst_tokens",
     "use_subtrees": true,
     "granularity": "5-class"
+    # If you use elmo, you should include an elmo tokenizer as well.
+    # "token_indexers": {
+    #   "tokens": {
+    #     "type": "single_id"
+    #   },
+    #   "elmo": {
+    #     "type": "elmo_characters"
+    #   }
+    # }
   },
   "train_data_path": "tests/fixtures/data/sst.txt",
   "validation_data_path": "tests/fixtures/data/sst.txt",

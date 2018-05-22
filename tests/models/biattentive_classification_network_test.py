@@ -100,10 +100,10 @@ class BiattentiveClassificationNetworkTest(ModelTestCase):
         with pytest.raises(ConfigurationError):
             # pylint: disable=line-too-long
             self.ensure_model_can_train_save_and_load(
-                'tests/fixtures/biattentive_classification_network/broken_experiments/no_elmo_tokenizer_for_elmo.json')
+                    'tests/fixtures/biattentive_classification_network/broken_experiments/no_elmo_tokenizer_for_elmo.json')
 
     def test_elmo_in_text_field_embedder_throws_configuration_error(self):
         with pytest.raises(ConfigurationError):
             # pylint: disable=line-too-long
             self.ensure_model_can_train_save_and_load(
-                'tests/fixtures/biattentive_classification_network/broken_experiments/elmo_in_text_field_embedder.json')
+                    'tests/fixtures/biattentive_classification_network/broken_experiments/elmo_in_text_field_embedder.json')
