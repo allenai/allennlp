@@ -114,8 +114,34 @@ class TestElmoBiLm(ElmoTestCase):
 
     def test_elmo_bilm_can_cache_char_cnn_embeddings(self):
         # load the test model
+                # get the raw data
+        sentences, expected_lm_embeddings = self._load_sentences_embeddings()
+
+        # Deal with the data.
+        indexer = ELMoTokenCharactersIndexer()
+
+        # For each sentence, first create a TextField, then create an instance
+        instances = []
+        for batch in zip(*sentences):
+            for sentence in batch:
+                tokens = [Token(token) for token in sentence.split()]
+                field = TextField(tokens, {'character_ids': indexer})
+                instance = Instance({"elmo": field})
+                instances.append(instance)
+
+        vocab = Vocabulary()
+
+        # Now finally we can iterate through batches.
+        iterator = BasicIterator(3)
+        iterator.index_with(vocab)
+
         elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file, vocab_to_cache=["here", "is", "a", "vocab"])
+
+        for i, batch in enumerate(iterator(instances, num_epochs=1, shuffle=False)):
+            lm_embeddings = elmo_bilm(batch['elmo']['character_ids'])
+
         print(elmo_bilm._id_lookup)
+
 
 
 
