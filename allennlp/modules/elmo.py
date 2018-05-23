@@ -511,7 +511,6 @@ class _ElmoBiLm(torch.nn.Module):
         return character_id_lookup, full_embedding[:len(tokens), :]
 
     def _get_word_ids_from_character_ids(self, inputs: torch.Tensor) -> torch.Tensor:
-
         batch_size, timesteps, _ = list(inputs.size())
         inputs = inputs.cpu().long().data.numpy()
         word_ids = torch.zeros(batch_size, timesteps).long()
@@ -549,11 +548,10 @@ class _ElmoBiLm(torch.nn.Module):
         markers.
         """
         if self._word_embedding is not None:
-            
             try:
                 word_ids = self._get_word_ids_from_character_ids(inputs)
                 token_embedding = self._word_embedding(word_ids)
-            except:
+            except KeyError:
                 token_embedding = self._token_embedder(inputs)
 
         token_embedding = self._token_embedder(inputs)
