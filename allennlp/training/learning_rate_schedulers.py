@@ -12,6 +12,8 @@ The available learning rate schedulers are
 * `"cosine" <http://pytorch.org/docs/master/optim.html#torch.optim.lr_scheduler.CosineAnnealingLR>`_
 """
 
+from typing import Optional
+
 import torch.optim.lr_scheduler
 from overrides import overrides
 from allennlp.common.checks import ConfigurationError
@@ -26,6 +28,15 @@ class LearningRateScheduler(Registrable):
     def __init__(self, lr_scheduler) -> None:
         self.lr_scheduler = lr_scheduler
 
+    def step(self, metrics: float, epoch: Optional[int] = None):
+        raise NotImplementedError
+
+    def step_batch(self, batch_num_total: Optional[int]):
+        if batch_num_total is not None:
+            if hasattr(self.lr_scheduler, 'step_batch'):
+                self.lr_scheduler.step_batch(batch_num_total)
+            return
+
     @classmethod
     def from_params(cls, optimizer: torch.optim.Optimizer, params: Params):
         scheduler = params.pop_choice("type", LearningRateScheduler.list_available())
@@ -35,15 +46,6 @@ class LearningRateScheduler(Registrable):
             return LearningRateWithMetricsWrapper(schedulers)
         else:
             return LearningRateWithoutMetricsWrapper(schedulers)
-
-    def step(self, metrics, epoch=None):
-        raise NotImplementedError
-
-    def step_batch(self, batch_num_total: int):
-        if batch_num_total is not None:
-            if hasattr(self.lr_scheduler, 'step_batch'):
-                self.lr_scheduler.step_batch(batch_num_total)
-            return
 
 
 class LearningRateWithoutMetricsWrapper(LearningRateScheduler):
@@ -55,7 +57,7 @@ class LearningRateWithoutMetricsWrapper(LearningRateScheduler):
         self.lr_scheduler = lr_scheduler
 
     @overrides
-    def step(self, metrics, epoch=None):
+    def step(self, metrics: float, epoch: Optional[int] = None):
         self.lr_scheduler.step(epoch)
 
 
@@ -69,7 +71,7 @@ class LearningRateWithMetricsWrapper(LearningRateScheduler):
         self.lr_scheduler = lr_scheduler
 
     @overrides
-    def step(self, metrics, epoch=None):
+    def step(self, metrics: float, epoch: Optional[int] = None):
         if not metrics:
             raise ConfigurationError("The reduce_on_plateau learning rate scheduler requires "
                                      "a validation metric to compute the schedule and therefore "
