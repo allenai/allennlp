@@ -12,8 +12,9 @@ The available learning rate schedulers are
 * `"cosine" <http://pytorch.org/docs/master/optim.html#torch.optim.lr_scheduler.CosineAnnealingLR>`_
 """
 
-import torch
 import torch.optim.lr_scheduler
+from overrides import overrides
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 
@@ -22,10 +23,58 @@ class LearningRateScheduler(Registrable):
     """
     This class just allows us to implement ``Registrable`` for Pytorch :class:`LRSchedulers`.
     """
+    def __init__(self, lr_scheduler) -> None:
+        self.lr_scheduler = lr_scheduler
+
     @classmethod
     def from_params(cls, optimizer: torch.optim.Optimizer, params: Params):
         scheduler = params.pop_choice("type", LearningRateScheduler.list_available())
-        return LearningRateScheduler.by_name(scheduler)(optimizer, **params.as_dict())  # type: ignore
+
+        schedulers = LearningRateScheduler.by_name(scheduler)(optimizer, **params.as_dict())  # type: ignore
+        if isinstance(schedulers, torch.optim.lr_scheduler.ReduceLROnPlateau):
+            return LearningRateWithMetricsWrapper(schedulers)
+        else:
+            return LearningRateWithoutMetricsWrapper(schedulers)
+
+    def step(self, metrics, epoch=None):
+        raise NotImplementedError
+
+    def step_batch(self, batch_num_total: int):
+        if batch_num_total is not None:
+            if hasattr(self.lr_scheduler, 'step_batch'):
+                self.lr_scheduler.step_batch(batch_num_total)
+            return
+
+
+class LearningRateWithoutMetricsWrapper(LearningRateScheduler):
+    """
+    A wrapper around learning rate schedulers that do not require metrics
+    """
+    def __init__(self, lr_scheduler: torch.optim.lr_scheduler._LRScheduler) -> None:  # pylint: disable=protected-access
+        super().__init__(lr_scheduler)
+        self.lr_scheduler = lr_scheduler
+
+    @overrides
+    def step(self, metrics, epoch=None):
+        self.lr_scheduler.step(epoch)
+
+
+class LearningRateWithMetricsWrapper(LearningRateScheduler):
+    """
+    A wrapper around learning rate schedulers that require metrics,
+    At the moment there is only a single instance of this lrs. It is the ReduceLROnPlateau
+    """
+    def __init__(self, lr_scheduler: torch.optim.lr_scheduler.ReduceLROnPlateau) -> None:
+        super().__init__(lr_scheduler)
+        self.lr_scheduler = lr_scheduler
+
+    @overrides
+    def step(self, metrics, epoch=None):
+        if not metrics:
+            raise ConfigurationError("The reduce_on_plateau learning rate scheduler requires "
+                                     "a validation metric to compute the schedule and therefore "
+                                     "must be used with a validation dataset.")
+        self.lr_scheduler.step(metrics, epoch)
 
 
 # We just use the Pytorch LRSchedulers, so here we force them into

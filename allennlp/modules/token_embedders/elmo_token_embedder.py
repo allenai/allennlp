@@ -3,6 +3,7 @@ import torch
 from allennlp.common import Params
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.elmo import Elmo
+from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.data import Vocabulary
 
 
@@ -25,15 +26,20 @@ class ElmoTokenEmbedder(TokenEmbedder):
         Should we apply layer normalization (passed to ``ScalarMix``)?
     dropout : ``float``, optional.
         The dropout value to be applied to the ELMo representations.
-    requires_grad: ``bool``, optional
+    requires_grad : ``bool``, optional
         If True, compute gradient of ELMo parameters for fine tuning.
+    projection_dim : ``int``, optional
+        If given, we will project the ELMo embedding down to this dimension.  We recommend that you
+        try using ELMo with a lot of dropout and no projection first, but we have found a few cases
+        where projection helps (particulary where there is very limited training data).
     """
     def __init__(self,
                  options_file: str,
                  weight_file: str,
                  do_layer_norm: bool = False,
                  dropout: float = 0.5,
-                 requires_grad: bool = False) -> None:
+                 requires_grad: bool = False,
+                 projection_dim: int = None) -> None:
         super(ElmoTokenEmbedder, self).__init__()
 
         self._elmo = Elmo(options_file,
@@ -42,10 +48,13 @@ class ElmoTokenEmbedder(TokenEmbedder):
                           do_layer_norm=do_layer_norm,
                           dropout=dropout,
                           requires_grad=requires_grad)
+        if projection_dim:
+            self._projection = torch.nn.Linear(self._elmo.get_output_dim(), projection_dim)
+        else:
+            self._projection = None
 
     def get_output_dim(self):
-        # pylint: disable=protected-access
-        return 2 * self._elmo._elmo_lstm._token_embedder.get_output_dim()
+        return self._elmo.get_output_dim()
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor: # pylint: disable=arguments-differ
         """
@@ -60,7 +69,13 @@ class ElmoTokenEmbedder(TokenEmbedder):
         ``(batch_size, timesteps, embedding_dim)``
         """
         elmo_output = self._elmo(inputs)
-        return elmo_output['elmo_representations'][0]
+        elmo_representations = elmo_output['elmo_representations'][0]
+        if self._projection:
+            projection = self._projection
+            for _ in range(elmo_representations.dim() - 2):
+                projection = TimeDistributed(projection)
+            elmo_representations = projection(elmo_representations)
+        return elmo_representations
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'ElmoTokenEmbedder':
@@ -71,5 +86,11 @@ class ElmoTokenEmbedder(TokenEmbedder):
         requires_grad = params.pop('requires_grad', False)
         do_layer_norm = params.pop_bool('do_layer_norm', False)
         dropout = params.pop_float("dropout", 0.5)
+        projection_dim = params.pop_int("projection_dim", None)
         params.assert_empty(cls.__name__)
-        return cls(options_file, weight_file, do_layer_norm, dropout, requires_grad=requires_grad)
+        return cls(options_file=options_file,
+                   weight_file=weight_file,
+                   do_layer_norm=do_layer_norm,
+                   dropout=dropout,
+                   requires_grad=requires_grad,
+                   projection_dim=projection_dim)

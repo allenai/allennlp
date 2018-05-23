@@ -10,13 +10,14 @@ allennlp.training.metrics
 * :ref:`Average<average>`
 * :ref:`BooleanAccuracy<boolean-accuracy>`
 * :ref:`CategoricalAccuracy<categorical-accuracy>`
+* :ref:`ConllCorefScores<conll-coref-scores>`
 * :ref:`Entropy<entropy>`
+* :ref:`EvalbBracketingScorer<evalb>`
 * :ref:`F1Measure<f1-measure>`
+* :ref:`MentionRecall<mention-recall>`
 * :ref:`SpanBasedF1Measure<span-based-f1-measure>`
 * :ref:`SquadEmAndF1<squad-em-and-f1>`
-* :ref:`MentionRecall<mention-recall>`
-* :ref:`ConllCorefScores<conll-coref-scores>`
-* :ref:`EvalbBracketingScorer<evalb>`
+* :ref:`WikiTablesAccuracy<wikitables-accuracy>`
 
 
 .. _metric:
@@ -43,14 +44,32 @@ allennlp.training.metrics
    :undoc-members:
    :show-inheritance:
 
+.. _conll-coref-scores:
+.. automodule:: allennlp.training.metrics.conll_coref_scores
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. _entropy:
 .. automodule:: allennlp.training.metrics.entropy
    :members:
    :undoc-members:
    :show-inheritance:
 
+.. _evalb:
+.. automodule:: allennlp.training.metrics.evalb_bracketing_scorer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. _f1-measure:
 .. automodule:: allennlp.training.metrics.f1_measure
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _mention-recall:
+.. automodule:: allennlp.training.metrics.mention_recall
    :members:
    :undoc-members:
    :show-inheritance:
@@ -67,20 +86,8 @@ allennlp.training.metrics
    :undoc-members:
    :show-inheritance:
 
-.. _mention-recall:
-.. automodule:: allennlp.training.metrics.mention_recall
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. _conll-coref-scores:
-.. automodule:: allennlp.training.metrics.conll_coref_scores
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. _evalb:
-.. automodule:: allennlp.training.metrics.evalb_bracketing_scorer
+.. _wikitables-accuracy:
+.. automodule:: allennlp.training.metrics.wikitables_accuracy
    :members:
    :undoc-members:
    :show-inheritance:

@@ -17,7 +17,11 @@ from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules.highway import Highway
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids
-from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper
+from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper, ELMoTokenCharactersIndexer
+from allennlp.data.dataset import Batch
+from allennlp.data import Token, Vocabulary, Instance
+from allennlp.data.fields import TextField
+
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -87,6 +91,9 @@ class Elmo(torch.nn.Module):
             self.add_module('scalar_mix_{}'.format(k), scalar_mix)
             self._scalar_mixes.append(scalar_mix)
 
+    def get_output_dim(self):
+        return self._elmo_lstm.get_output_dim()
+
     def forward(self,    # pylint: disable=arguments-differ
                 inputs: torch.Tensor) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
         """
@@ -155,6 +162,35 @@ class Elmo(torch.nn.Module):
 
         return cls(options_file, weight_file, num_output_representations,
                    requires_grad=requires_grad, do_layer_norm=do_layer_norm)
+
+
+def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
+    """
+    Converts a batch of tokenized sentences to a tensor representing the sentences with encoded characters
+    (len(batch), max sentence length, max word length).
+
+    Parameters
+    ----------
+    batch : ``List[List[str]]``, required
+        A list of tokenized sentences.
+
+    Returns
+    -------
+        A tensor of padded character ids.
+    """
+    instances = []
+    indexer = ELMoTokenCharactersIndexer()
+    for sentence in batch:
+        tokens = [Token(token) for token in sentence]
+        field = TextField(tokens,
+                          {'character_ids': indexer})
+        instance = Instance({"elmo": field})
+        instances.append(instance)
+
+    dataset = Batch(instances)
+    vocab = Vocabulary()
+    dataset.index_instances(vocab)
+    return dataset.as_tensor_dict()['elmo']['character_ids']
 
 
 class _ElmoCharacterEncoder(torch.nn.Module):
@@ -431,6 +467,9 @@ class _ElmoBiLm(torch.nn.Module):
         self._elmo_lstm.load_weights(weight_file)
         # Number of representation layers including context independent layer
         self.num_layers = options['lstm']['n_layers'] + 1
+
+    def get_output_dim(self):
+        return 2 * self._token_embedder.get_output_dim()
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:

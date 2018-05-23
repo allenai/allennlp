@@ -18,7 +18,6 @@ from typing import Dict, Optional, List, Tuple, Union, Iterable, Any, Set
 
 import torch
 import torch.optim.lr_scheduler
-from torch.optim.lr_scheduler import _LRScheduler as PytorchLRScheduler  # pylint: disable=protected-access
 from torch.nn.parallel import replicate, parallel_apply
 from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
 from tensorboardX import SummaryWriter
@@ -88,6 +87,21 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
     return total_norm
 
 
+def move_optimizer_to_cuda(optimizer):
+    """
+    Move the optimizer state to GPU, if necessary.
+    After calling, any parameter specific state in the optimizer
+    will be located on the same device as the parameter.
+    """
+    for param_group in optimizer.param_groups:
+        for param in param_group['params']:
+            if param.is_cuda:
+                param_state = optimizer.state[param]
+                for k in param_state.keys():
+                    if torch.is_tensor(param_state[k]):
+                        param_state[k] = param_state[k].cuda(device=param.get_device())
+
+
 class TensorboardWriter:
     """
     Wraps a pair of ``SummaryWriter`` instances but is a no-op if they're ``None``.
@@ -145,7 +159,7 @@ class Trainer:
                  cuda_device: Union[int, List] = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
-                 learning_rate_scheduler: Optional[PytorchLRScheduler] = None,
+                 learning_rate_scheduler: Optional[LearningRateScheduler] = None,
                  summary_interval: int = 100,
                  histogram_interval: int = None) -> None:
         """
@@ -375,19 +389,21 @@ class Trainer:
             if for_training:
                 loss += self._model.get_regularization_penalty()
         except KeyError:
-            raise ConfigurationError("The model you are trying to optimize does not contain a"
-                                     " 'loss' key in the output of model.forward(inputs).")
+            if for_training:
+                raise RuntimeError("The model you are trying to optimize does not contain a"
+                                   " 'loss' key in the output of model.forward(inputs).")
+            loss = None
 
         return loss
 
-    def _get_metrics(self, total_loss: float, batch_num: int, reset: bool = False) -> Dict[str, float]:
+    def _get_metrics(self, total_loss: float, num_batches: int, reset: bool = False) -> Dict[str, float]:
         """
         Gets the metrics but sets ``"loss"`` to
-        the total loss divided by the ``batch_num`` so that
+        the total loss divided by the ``num_batches`` so that
         the ``"loss"`` metric is "average loss per batch".
         """
         metrics = self._model.get_metrics(reset=reset)
-        metrics["loss"] = float(total_loss / batch_num)
+        metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
         return metrics
 
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
@@ -587,28 +603,10 @@ class Trainer:
 
     def _update_learning_rate(self, epoch: int, val_metric: float = None,
                               batch_num_total: int = None) -> None:
-        if not self._learning_rate_scheduler:
-            return
-
-        if batch_num_total is not None:
-            if hasattr(self._learning_rate_scheduler, 'step_batch'):
-                self._learning_rate_scheduler.step_batch(batch_num_total)
-            return
-
-        # Grim hack to determine whether the validation metric we are recording
-        # needs to be passed to the scheduler. This is required because the
-        # step() function of the different schedulers are (understandably)
-        # different to ReduceLROnPlateau.
-        reduce_on_plateau = isinstance(self._learning_rate_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau)
-
-        if reduce_on_plateau and val_metric is None:
-            raise ConfigurationError("The reduce_on_plateau learning rate scheduler requires "
-                                     "a validation metric to compute the schedule and therefore "
-                                     "must be used with a validation dataset.")
-        elif reduce_on_plateau:
+        if self._learning_rate_scheduler:
+            self._learning_rate_scheduler.step_batch(batch_num_total)
             self._learning_rate_scheduler.step(val_metric, epoch)
-        else:
-            self._learning_rate_scheduler.step(epoch)
+
 
     def _validation_loss(self) -> Tuple[float, int]:
         """
@@ -628,10 +626,16 @@ class Trainer:
         batches_this_epoch = 0
         val_loss = 0
         for batch in val_generator_tqdm:
-            batches_this_epoch += 1
 
             loss = self._batch_loss(batch, for_training=False)
-            val_loss += loss.data.cpu().numpy()
+            if loss is not None:
+                # You shouldn't necessarily have to compute a loss for validation, so we allow for
+                # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
+                # currently only used as the divisor for the loss function, so we can safely only
+                # count those batches for which we actually have a loss.  If this variable ever
+                # gets used for something else, we might need to change things around a bit.
+                batches_this_epoch += 1
+                val_loss += loss.data.cpu().numpy()
 
             # Update the description with the latest metrics
             val_metrics = self._get_metrics(val_loss, batches_this_epoch)
@@ -729,7 +733,7 @@ class Trainer:
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
         # pylint: disable=no-self-use
-        return ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
+        return ', '.join(["%s: %.4f" % (name, value) for name, value in metrics.items()]) + " ||"
 
     def _save_checkpoint(self,
                          epoch: Union[int, str],
@@ -848,6 +852,7 @@ class Trainer:
         training_state = torch.load(training_state_path, map_location=util.device_mapping(-1))
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
+        move_optimizer_to_cuda(self._optimizer)
 
         # We didn't used to save `validation_metric_per_epoch`, so we can't assume
         # that it's part of the trainer state. If it's not there, an empty list is all

@@ -88,7 +88,7 @@ class Embedding(TokenEmbedder):
         if weight is None:
             weight = torch.FloatTensor(num_embeddings, embedding_dim)
             self.weight = torch.nn.Parameter(weight, requires_grad=trainable)
-            self.weight.data.normal_(0, 1)
+            torch.nn.init.xavier_uniform(self.weight.data)
         else:
             if weight.size() != (num_embeddings, embedding_dim):
                 raise ConfigurationError("A weight matrix was passed with contradictory embedding shapes.")
@@ -231,7 +231,7 @@ def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str, # 
     logger.info("Reading embeddings from file")
     with gzip.open(cached_path(embeddings_filename), 'rb') as embeddings_file:
         for line in embeddings_file:
-            fields = line.decode('utf-8').strip().split(' ')
+            fields = line.decode('utf-8').rstrip().split(' ')
             if len(fields) - 1 != embedding_dim:
                 # Sometimes there are funny unicode parsing problems that lead to different
                 # fields lengths (e.g., a word with a unicode space character that splits

@@ -17,13 +17,17 @@ The included module ``allennlp.run`` is such a script:
       -h, --help  show this help message and exit
 
     Commands:
-        train     Train a model
-        evaluate  Evaluate the specified model + dataset
-        predict   Use a trained model to make predictions.
-        serve     Run the web service and demo.
-        make-vocab
-                  Create a vocabulary
-        elmo      Use a trained model to make predictions.
+        train       Train a model
+        evaluate    Evaluate the specified model + dataset
+        predict     Use a trained model to make predictions.
+        serve       Run the web service and demo.
+        make-vocab  Create a vocabulary
+        elmo        Use a trained model to make predictions.
+        fine-tune   Continue training a model on a new dataset
+        dry-run     Create a vocabulary, compute dataset statistics and other
+                    training utilities.
+        test-install
+                    Run the unit tests.
 
 However, it only knows about the models and classes that are
 included with AllenNLP. Once you start creating custom models,
@@ -39,6 +43,8 @@ calls ``main()``.
     allennlp.commands.train
     allennlp.commands.fine_tune
     allennlp.commands.elmo
+    allennlp.commands.dry_run
+    allennlp.commands.test_install
 
 .. automodule:: allennlp.commands
    :members:

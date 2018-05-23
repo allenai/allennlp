@@ -19,6 +19,9 @@ import spacy
 from spacy.cli.download import download as spacy_download
 from spacy.language import Language as SpacyModelType
 
+# This base import is so we can refer to allennlp.data.Token in `sanitize()` without creating
+# circular dependencies.
+import allennlp
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
@@ -27,6 +30,14 @@ from allennlp.common.tee_logger import TeeLogger
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
+
+# If you want to have start and/or end symbols for any reason in your code, we recommend you use
+# these, to have a common place to import from.  Also, it's important for some edge cases in how
+# data is processed for these symbols to be lowercase, not uppercase (because we have code that
+# will lowercase tokens for you in some circumstances, and we need this symbol to not change in
+# those cases).
+START_SYMBOL = '@start@'
+END_SYMBOL = '@end@'
 
 def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-statements
     """
@@ -53,6 +64,9 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, (list, tuple)):
         # Lists and Tuples need their values sanitized
         return [sanitize(x_i) for x_i in x]
+    elif isinstance(x, (spacy.tokens.Token, allennlp.data.Token)):
+        # Tokens get sanitized to just their text.
+        return x.text
     elif x is None:
         return "None"
     else:
@@ -200,14 +214,15 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) 
         (used to update progress bars on a single terminal line).
     """
     Tqdm.set_slower_interval(file_friendly_logging)
-    sys.stdout = TeeLogger(os.path.join(serialization_dir, "stdout.log"), # type: ignore
+    std_out_file = os.path.join(serialization_dir, "stdout.log")
+    sys.stdout = TeeLogger(std_out_file, # type: ignore
                            sys.stdout,
                            file_friendly_logging)
     sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), # type: ignore
                            sys.stderr,
                            file_friendly_logging)
 
-    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler = logging.FileHandler(std_out_file)
     stdout_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
     logging.getLogger().addHandler(stdout_handler)
 

@@ -36,10 +36,11 @@ class LabelField(Field[torch.Tensor]):
         If your labels are 0-indexed integers, you can pass in this flag, and we'll skip the indexing
         step.  If this is ``False`` and your labels are not strings, this throws a ``ConfigurationError``.
     """
-    # It is possible that users want to use this field with a namespace which uses OOV/PAD tokens.
-    # This warning will be repeated for every instantiation of this class (i.e for every data
-    # instance), spewing a lot of warnings so this class variable is used to only log a single
-    # warning per namespace.
+    # Most often, you probably don't want to have OOV/PAD tokens with a LabelField, so we warn you
+    # about it when you pick a namespace that will getting these tokens by default.  It is
+    # possible, however, that you _do_ actually want OOV/PAD tokens with this Field.  This class
+    # variable is used to make sure that we only log a single warning for this per namespace, and
+    # not every time you create one of these Field objects.
     _already_warned_namespaces: Set[str] = set()
 
     def __init__(self,

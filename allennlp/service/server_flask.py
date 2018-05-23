@@ -173,16 +173,13 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
         # In theory this could result in false positives.
         pre_hits = _caching_prediction.cache_info().hits  # pylint: disable=no-value-for-parameter
 
-        try:
-            if use_cache and cache_size > 0:
-                # lru_cache insists that all function arguments be hashable,
-                # so unfortunately we have to stringify the data.
-                prediction = _caching_prediction(model, json.dumps(data))
-            else:
-                # if cache_size is 0, skip caching altogether
-                prediction = model.predict_json(data)
-        except KeyError as err:
-            raise ServerError("Required JSON field not found: " + err.args[0], status_code=400)
+        if use_cache and cache_size > 0:
+            # lru_cache insists that all function arguments be hashable,
+            # so unfortunately we have to stringify the data.
+            prediction = _caching_prediction(model, json.dumps(data))
+        else:
+            # if cache_size is 0, skip caching altogether
+            prediction = model.predict_json(data)
 
         post_hits = _caching_prediction.cache_info().hits  # pylint: disable=no-value-for-parameter
 
