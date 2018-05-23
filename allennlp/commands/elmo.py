@@ -14,7 +14,7 @@ https://arxiv.org/abs/1802.05365
 .. code-block:: bash
 
    $ allennlp elmo --help
-   usage: python -m allennlp.run elmo [-h] (--all | --top | --average)
+   usage: allennlp elmo [-h] (--all | --top | --average)
                                       [--vocab-path VOCAB_PATH]
                                       [--options-file OPTIONS_FILE]
                                       [--weight-file WEIGHT_FILE]
