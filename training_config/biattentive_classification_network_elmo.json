@@ -20,6 +20,8 @@
       "tokens": {
         "type": "single_id"
       },
+      # If using ELMo in the BCN, add an elmo_characters
+      # token_indexers.
       "elmo": {
         "type": "elmo_characters"
       }
@@ -38,6 +40,8 @@
         "trainable": false
       }
     },
+    # BCN configs that use ELMo should not have an elmo_token_embedder
+    # in their text_field_embedder. They should pass it into the model specification.
     "embedding_dropout": 0.25,
     "pre_encode_feedforward": {
         "input_dim": 1324,
