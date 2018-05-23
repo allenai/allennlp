@@ -22,6 +22,6 @@ class TestHighway(AllenNlpTestCase):
 
     def test_forward_works_on_nd_input(self):
         highway = Highway(2, 2)
-        input_tensor = Variable(torch.ones(2, 2, 2))
+        input_tensor = torch.ones(2, 2, 2)
         output = highway(input_tensor)
         assert output.size() == (2, 2, 2)
