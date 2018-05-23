@@ -316,8 +316,8 @@ class BiattentiveClassificationNetwork(Model):
         elmo = params.pop("elmo", None)
         if elmo is not None:
             elmo = Elmo.from_params(elmo)
-        use_input_elmo = params.pop("use_input_elmo", False)
-        use_integrator_output_elmo = params.pop("use_integrator_output_elmo", False)
+        use_input_elmo = params.pop_bool("use_input_elmo", False)
+        use_integrator_output_elmo = params.pop_bool("use_integrator_output_elmo", False)
 
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
