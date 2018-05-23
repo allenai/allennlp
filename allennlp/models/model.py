@@ -10,7 +10,7 @@ from typing import Dict, Union, List
 import numpy
 import torch
 
-from allennlp.common.checks import ConfigurationError
+from allennlp.common.checks import ConfigurationError, must_override_method, check_is_overridden
 from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary
@@ -211,10 +211,14 @@ class Model(torch.nn.Module, Registrable):
 
 
     @classmethod
+    @must_override_method
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
         choice = params.pop_choice("type", cls.list_available())
-        model = cls.by_name(choice).from_params(vocab, params)
-        return model
+        subclass_from_params = cls.by_name(choice).from_params
+
+        check_is_overridden(subclass_from_params, "Model.from_params")
+
+        return subclass_from_params(vocab, params)
 
     @classmethod
     def _load(cls,
