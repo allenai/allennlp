@@ -509,8 +509,7 @@ class _ElmoBiLm(torch.nn.Module):
         full_embedding = torch.cat(all_embeddings, 0)
 
         for i, token in enumerate(tokens):
-            representation = "".join([str(char_id) for char_id
-                                      in ELMoCharacterMapper.convert_word_to_char_ids(token)])
+            representation = tuple(ELMoCharacterMapper.convert_word_to_char_ids(token))
             character_id_lookup[representation] = i
         # We might have some trailing embeddings from padding in the batch, so
         # we clip the embedding to the right size before returning it.
@@ -524,7 +523,7 @@ class _ElmoBiLm(torch.nn.Module):
 
         for i in range(batch_size):
             for j in range(timesteps):
-                word = "".join(str(word_id) for word_id in inputs[i, j])
+                word = tuple([int(word_id) for word_id in inputs[i, j]])
                 word_ids[i, j] = self._id_lookup[word]
 
         return word_ids
