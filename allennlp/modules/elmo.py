@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Union, List, Dict, Any
+from typing import Union, List, Dict, Any, Tuple
 
 import torch
 from torch.autograd import Variable
@@ -13,6 +13,7 @@ from overrides import overrides
 from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
 from allennlp.common import Params
+from allennlp.common.util import lazy_groups_of
 from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules.highway import Highway
 from allennlp.modules.scalar_mix import ScalarMix
@@ -73,7 +74,8 @@ class Elmo(torch.nn.Module):
                  requires_grad: bool = False,
                  do_layer_norm: bool = False,
                  dropout: float = 0.5,
-                 module: torch.nn.Module = None) -> None:
+                 module: torch.nn.Module = None,
+                 vocab_to_cache: List[str] = None) -> None:
         super(Elmo, self).__init__()
 
         logging.info("Initializing ELMo")
@@ -83,7 +85,10 @@ class Elmo(torch.nn.Module):
                         "Don't provide options_file or weight_file with module")
             self._elmo_lstm = module
         else:
-            self._elmo_lstm = _ElmoBiLm(options_file, weight_file, requires_grad=requires_grad)
+            self._elmo_lstm = _ElmoBiLm(options_file,
+                                        weight_file,
+                                        requires_grad=requires_grad, 
+                                        vocab_to_cache=vocab_to_cache)
         self._dropout = Dropout(p=dropout)
         self._scalar_mixes: Any = []
         for k in range(num_output_representations):
@@ -448,10 +453,28 @@ class _ElmoBiLm(torch.nn.Module):
     def __init__(self,
                  options_file: str,
                  weight_file: str,
-                 requires_grad: bool = False) -> None:
+                 requires_grad: bool = False,
+                 vocab_to_cache: List[str] = None) -> None:
         super(_ElmoBiLm, self).__init__()
 
-        self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=requires_grad)
+        token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=requires_grad)
+
+        if vocab_to_cache is None:
+            self._token_embedder = token_embedder
+            self._has_cached_vocab = False
+
+        else:
+
+            from allennlp.modules.token_embedders import Embedding
+            logging.info("Caching character cnn layers for words in vocabulary.")
+            id_lookup, embedding = self.create_cached_cnn_embeddings(token_embedder, vocab_to_cache)
+            vocab_size, embedding_dim = list(embedding.size())
+            self._token_embedder = Embedding(vocab_size,
+                                             embedding_dim,
+                                             weight=embedding.data,
+                                             trainable=requires_grad)
+            self._id_lookup = id_lookup
+            self._has_cached_vocab = True
 
         with open(cached_path(options_file), 'r') as fin:
             options = json.load(fin)
@@ -467,6 +490,45 @@ class _ElmoBiLm(torch.nn.Module):
         self._elmo_lstm.load_weights(weight_file)
         # Number of representation layers including context independent layer
         self.num_layers = options['lstm']['n_layers'] + 1
+
+    @staticmethod
+    def create_cached_cnn_embeddings(token_embedder: _ElmoCharacterEncoder,
+                                     tokens: List[str]) -> Tuple[Dict[int, int], torch.Tensor]:
+
+        timesteps = 32
+        batch_size = 32
+        chunked_tokens = lazy_groups_of(iter(tokens), timesteps)
+
+        character_id_lookup = {}
+        all_embeddings = []
+        for batch in lazy_groups_of(chunked_tokens, batch_size):
+            # Shape (batch_size, 32, 50)
+            batched_tensor = batch_to_ids(batch)
+            token_embedding = token_embedder(batched_tensor)["token_embedding"]
+            all_embeddings.append(token_embedding.view(-1, token_embedding.size(-1)))
+        full_embedding = torch.cat(all_embeddings, 0)
+
+        for i, token in enumerate(tokens):
+            representation = "".join([str(char_id) for char_id
+                                      in ELMoCharacterMapper.convert_word_to_char_ids(token)])
+            character_id_lookup[representation] = i
+        # We might have some trailing embeddings from padding in the batch, so
+        # we clip the embedding to the right size before returning it.
+        return character_id_lookup, full_embedding[:len(tokens), :]
+
+    def _get_word_ids_from_character_ids(self, inputs: torch.Tensor) -> torch.Tensor:
+
+        inputs = inputs.cpu().int().numpy()
+        batch_size, timesteps, _ = list(inputs.size())
+        word_ids = torch.zeros(batch_size, timesteps).long()
+
+        for i in range(batch_size):
+            for j in range(timesteps):
+                word = "".join(str(word_id) for word_id in inputs[i, j])
+                word_ids[i, j] = self._id_lookup[word]
+
+        return word_ids
+
 
     def get_output_dim(self):
         return 2 * self._token_embedder.get_output_dim()
@@ -492,6 +554,9 @@ class _ElmoBiLm(torch.nn.Module):
         Note that the output tensors all include additional special begin and end of sequence
         markers.
         """
+        if self._has_cached_vocab:
+            word_ids = self._get_word_ids_from_character_ids(inputs)
+            token_embedding = self._token_embedder(word_ids)
         token_embedding = self._token_embedder(inputs)
         type_representation = token_embedding['token_embedding']
         mask = token_embedding['mask']

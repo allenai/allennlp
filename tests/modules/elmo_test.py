@@ -112,6 +112,12 @@ class TestElmoBiLm(ElmoTestCase):
                         )
                 )
 
+    def test_elmo_bilm_can_cache_char_cnn_embeddings(self):
+        # load the test model
+        elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file, vocab_to_cache=["here", "is", "a", "vocab"])
+        print(elmo_bilm._id_lookup)
+
+
 
 class TestElmo(ElmoTestCase):
     def setUp(self):
