@@ -17,7 +17,8 @@ from allennlp.common.util import lazy_groups_of
 from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules.highway import Highway
 from allennlp.modules.scalar_mix import ScalarMix
-from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids, zeros_like
+from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids
+from allennlp.nn.util import zeros_like, get_device_of
 from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper, ELMoTokenCharactersIndexer
 from allennlp.data.dataset import Batch
 from allennlp.data import Token, Vocabulary, Instance
@@ -524,6 +525,9 @@ class _ElmoBiLm(torch.nn.Module):
         for batch in lazy_groups_of(chunked_tokens, batch_size):
             # Shape (batch_size, 32, 50)
             batched_tensor = batch_to_ids(batch)
+            device = get_device_of(next(self.parameters()))
+            if device >=0:
+                batched_tensor = batched_tensor.cuda(device)
             token_embedding = self._token_embedder(batched_tensor)["token_embedding"]
             all_embeddings.append(token_embedding.view(-1, token_embedding.size(-1)))
         full_embedding = torch.cat(all_embeddings, 0)
