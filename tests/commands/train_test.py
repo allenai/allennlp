@@ -4,6 +4,7 @@ from typing import Iterable
 import os
 
 import pytest
+import torch
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -60,6 +61,40 @@ class TestTrain(AllenNlpTestCase):
         # It's also not OK if serialization dir is a real serialization dir:
         with pytest.raises(ConfigurationError):
             train_model(params(), serialization_dir=os.path.join(self.TEST_DIR, 'test_train_model'))
+
+    def test_error_is_throw_when_cuda_device_is_not_available(self):
+        params = Params({
+                "model": {
+                        "type": "simple_tagger",
+                        "text_field_embedder": {
+                                "tokens": {
+                                        "type": "embedding",
+                                        "embedding_dim": 5
+                                }
+                        },
+                        "encoder": {
+                                "type": "lstm",
+                                "input_size": 5,
+                                "hidden_size": 7,
+                                "num_layers": 2
+                        }
+                },
+                "dataset_reader": {"type": "sequence_tagging"},
+                "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
+                "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
+                "iterator": {"type": "basic", "batch_size": 2},
+                "trainer": {
+                        "num_epochs": 2,
+                        "cuda_device": torch.cuda.device_count(),
+                        "optimizer": "adam"
+                }
+        })
+
+        with pytest.raises(ConfigurationError,
+                           message="Experiment specified a GPU but none is available;"
+                                   " if you want to run on CPU use the override"
+                                   " 'trainer.cuda_device=-1' in the json config file."):
+            train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'test_train_model'))
 
     def test_train_with_test_set(self):
         params = Params({
