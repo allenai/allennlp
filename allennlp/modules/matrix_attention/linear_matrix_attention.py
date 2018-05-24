@@ -1,6 +1,3 @@
-"""
-A ``Module`` that takes two matrices as input and returns a matrix of attentions.
-"""
 import math
 
 import torch
@@ -15,8 +12,9 @@ from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 @MatrixAttention.register("linear")
 class LinearMatrixAttention(MatrixAttention):
     """
-    This similarity function performs a dot product between a vector of weights and some
-    combination of the two input vectors, followed by an (optional) activation function.  The
+    This ``MatrixAttention`` takes two matrices as input and returns a matrix of attentions
+    by performing a dot product between a vector of weights and some
+    combination of the two input matrices, followed by an (optional) activation function.  The
     combination used is configurable.
 
     If the two vectors are ``x`` and ``y``, we allow the following kinds of combinations: ``x``,
@@ -52,7 +50,7 @@ class LinearMatrixAttention(MatrixAttention):
                  tensor_2_dim: int,
                  combination: str = 'x,y',
                  activation: Activation = Activation.by_name('linear')()) -> None:
-        super(LinearMatrixAttention, self).__init__()
+        super().__init__()
         self._combination = combination
         combined_dim = util.get_combined_dim(combination, [tensor_1_dim, tensor_2_dim])
         self._weight_vector = Parameter(torch.Tensor(combined_dim))
@@ -66,9 +64,11 @@ class LinearMatrixAttention(MatrixAttention):
         self._bias.data.fill_(0)
 
     @overrides
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 tensor_1: torch.Tensor,
                 tensor_2: torch.Tensor) -> torch.Tensor:
+        # TODO(mattg): Remove the need for this tiling.
+        # https://github.com/allenai/allennlp/pull/1235#issuecomment-391540133
         tiled_matrix_1 = tensor_1.unsqueeze(2).expand(tensor_1.size()[0],
                                                       tensor_1.size()[1],
                                                       tensor_2.size()[1],

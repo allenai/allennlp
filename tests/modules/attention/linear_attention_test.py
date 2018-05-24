@@ -4,11 +4,19 @@ import numpy as np
 from torch.autograd import Variable
 from torch.nn import Parameter
 
+from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.modules.attention import LinearAttention
+from allennlp.modules.attention.attention import Attention
 
 
 class LinearAttentionTests(AllenNlpTestCase):
+
+    def test_can_init_linear(self):
+        legacy_attention = Attention.from_params(Params({"type": "linear",
+                                                         "tensor_1_dim": 3,
+                                                         "tensor_2_dim": 3}))
+        isinstance(legacy_attention, LinearAttention)
 
     def test_linear_similarity(self):
         linear = LinearAttention(3, 3, normalize=True)

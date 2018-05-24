@@ -1,7 +1,3 @@
-"""
-A ``Module`` that takes two matrices as input and returns a matrix of attentions.
-
-"""
 import torch
 from overrides import overrides
 from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
@@ -12,46 +8,21 @@ from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 
 @MatrixAttention.register("legacy")
 class LegacyMatrixAttention(MatrixAttention):
-    '''
-
-    This ``Module`` takes two matrices as input and returns a matrix of attentions.
-
-    Responsible for supporting legacy attention.
-    New implementations of the attention were added because they have a much smaller memory footprint.
-    The legacy attention is kept around to support backwards compatibility,
-    although no new project should use them.
-
-    We compute the similarity between each row in each matrix and return unnormalized similarity
-    scores.  Because these scores are unnormalized, we don't take a mask as input; it's up to the
-    caller to deal with masking properly when this output is used.
-
-    By default similarity is computed with a dot product, but you can alternatively use a
-    parameterized similarity function if you wish.
-
-    This is largely similar to using ``TimeDistributed(Attention)``, except the result is
-    unnormalized.  You should use this instead of ``TimeDistributed(Attention)`` if you want to
-    compute multiple normalizations of the attention matrix.
-
-    Input:
-        - matrix_1: ``(batch_size, num_rows_1, embedding_dim)``
-        - matrix_2: ``(batch_size, num_rows_2, embedding_dim)``
-
-    Output:
-        - ``(batch_size, num_rows_1, num_rows_2)``
+    """
+    The legacy impl of ``MatrixAttention`` It.
+    It should be considered deprecated as it uses much more memory than the newer specialized MatrixAttention modules.
 
     Parameters
     ----------
     similarity_function: ``SimilarityFunction``, optional (default=``DotProductSimilarity``)
         The similarity function to use when computing the attention.
-    '''
+    """
     def __init__(self, similarity_function: SimilarityFunction = None) -> None:
-        super(LegacyMatrixAttention, self).__init__()
-
+        super().__init__()
         self._similarity_function = similarity_function or DotProductSimilarity()
 
     @overrides
     def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
         tiled_matrix_1 = matrix_1.unsqueeze(2).expand(matrix_1.size()[0],
                                                       matrix_1.size()[1],
                                                       matrix_2.size()[1],

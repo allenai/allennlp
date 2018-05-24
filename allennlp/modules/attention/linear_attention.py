@@ -12,7 +12,7 @@ from allennlp.common.params import Params
 @Attention.register("linear")
 class LinearAttention(Attention):
     """
-    This similarity function performs a dot product between a vector of weights and some
+    This ``Attention`` module performs a dot product between a vector of weights and some
     combination of the two input vectors, followed by an (optional) activation function.  The
     combination used is configurable.
 
@@ -50,7 +50,7 @@ class LinearAttention(Attention):
                  combination: str = 'x,y',
                  activation: Activation = Activation.by_name('linear')(),
                  normalize: bool = True) -> None:
-        super(LinearAttention, self).__init__(normalize)
+        super().__init__(normalize)
         self._combination = combination
         combined_dim = util.get_combined_dim(combination, [tensor_1_dim, tensor_2_dim])
         self._weight_vector = Parameter(torch.Tensor(combined_dim))
@@ -63,12 +63,13 @@ class LinearAttention(Attention):
         self._weight_vector.data.uniform_(-std, std)
         self._bias.data.fill_(0)
 
-
     @overrides
-    def _forward_internal(self,  # pylint: disable=arguments-differ
+    def _forward_internal(self,
                           vector: torch.Tensor,
                           matrix: torch.Tensor,
                           matrix_mask: torch.Tensor = None) -> torch.Tensor:
+        # TODO(mattg): Remove the need for this tiling.
+        # https://github.com/allenai/allennlp/pull/1235#issuecomment-391540133
         tiled_vector = vector.unsqueeze(1).expand(vector.size()[0],
                                                   matrix.size()[1],
                                                   vector.size()[1])

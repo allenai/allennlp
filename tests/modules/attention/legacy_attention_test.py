@@ -6,10 +6,16 @@ from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules.attention.attention import Attention
 from allennlp.modules.attention.legacy_attention import LegacyAttention
 
 
-class TestAttention(AllenNlpTestCase):
+class TestLegacyAttention(AllenNlpTestCase):
+
+    def test_can_init_legacy(self):
+        legacy_attention = Attention.from_params(Params({"type": "legacy"}))
+        isinstance(legacy_attention, LegacyAttention)
+
     def test_no_mask(self):
         attention = LegacyAttention()
 

@@ -1,7 +1,3 @@
-"""
-An *attention* module that computes the similarity between
-an input vector and the rows of a matrix.
-"""
 
 import torch
 
@@ -13,11 +9,15 @@ from allennlp.modules.similarity_functions import DotProductSimilarity, Similari
 
 @Attention.register("legacy")
 class LegacyAttention(Attention):
+    """
+    Computes attention between a vector and a matrix using a similarity function.
+    This should be considered deprecated, as it consumes more memory than the specialized attention modules.
+    """
 
     def __init__(self,
                  similarity_function: SimilarityFunction = None,
                  normalize: bool = True) -> None:
-        super(LegacyAttention, self).__init__(normalize)
+        super().__init__(normalize)
         self._similarity_function = similarity_function or DotProductSimilarity()
 
     @overrides

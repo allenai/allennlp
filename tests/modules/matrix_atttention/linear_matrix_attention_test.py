@@ -4,11 +4,19 @@ import numpy as np
 from torch.autograd import Variable
 from torch.nn import Parameter
 
+from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.modules.matrix_attention import LinearMatrixAttention
+from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 
 
-class LinearMatrixAttentionTests(AllenNlpTestCase):
+class TestLinearMatrixAttention(AllenNlpTestCase):
+
+    def test_can_init_dot(self):
+        legacy_attention = MatrixAttention.from_params(Params({"type": "linear",
+                                                               "tensor_1_dim": 3,
+                                                               "tensor_2_dim": 3}))
+        isinstance(legacy_attention, LinearMatrixAttention)
 
     def test_linear_similarity(self):
         linear = LinearMatrixAttention(3, 3)

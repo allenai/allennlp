@@ -11,7 +11,8 @@ from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
 
 
-class TestMatrixAttention(AllenNlpTestCase):
+class TestLegacyMatrixAttention(AllenNlpTestCase):
+
     def test_forward_works_on_simple_input(self):
         attention = LegacyMatrixAttention(DotProductSimilarity())
         sentence_1_tensor = Variable(torch.FloatTensor([[[1, 1, 1], [-1, 0, 1]]]))

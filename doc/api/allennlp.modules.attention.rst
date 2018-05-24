@@ -6,10 +6,28 @@ allennlp.modules.attention
    :undoc-members:
    :show-inheritance:
 
-.. toctree::
+.. automodule:: allennlp.modules.attention.attention
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-  allennlp.modules.attention.attention
-  allennlp.modules.attention.linear_attention
-  allennlp.modules.attention.legacy_attention
-  allennlp.modules.attention.cosine_attention
-  allennlp.modules.attention.dot_product_attention
+.. automodule:: allennlp.modules.attention.cosine_attention
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.modules.attention.dot_product_attention
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.modules.attention.legacy_attention
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.modules.attention.linear_attention
+   :members:
+   :undoc-members:
+   :show-inheritance:
+

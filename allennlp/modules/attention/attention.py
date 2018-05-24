@@ -13,12 +13,10 @@ from allennlp.nn.util import masked_softmax
 
 class Attention(torch.nn.Module, Registrable):
     """
-    This ``Module`` takes two inputs: a (batched) vector and a matrix, plus an optional mask on the
+    An ``Attention`` takes two inputs: a (batched) vector and a matrix, plus an optional mask on the
     rows of the matrix.  We compute the similarity between the vector and each row in the matrix,
     and then (optionally) perform a softmax over rows using those computed similarities.
 
-    By default similarity is computed with a dot product, but you can alternatively use a
-    parameterized similarity function if you wish.
 
     Inputs:
 
@@ -52,11 +50,12 @@ class Attention(torch.nn.Module, Registrable):
         else:
             return similarities
 
+    def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor,
+                          matrix_mask: torch.Tensor = None) -> torch.Tensor:
+        raise NotImplementedError
+
     @classmethod
     def from_params(cls, params: Params) -> 'Attention':
         clazz = cls.by_name(params.pop_choice("type", cls.list_available()))
         return clazz.from_params(params)
 
-    def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor,
-                          matrix_mask: torch.Tensor = None) -> torch.Tensor:
-        raise NotImplementedError

@@ -3,14 +3,20 @@ from numpy.testing import assert_almost_equal
 import numpy as np
 from torch.autograd import Variable
 
+from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
+from allennlp.modules.attention.attention import Attention
 from allennlp.modules.attention.dot_product_attention import DotProductAttention
 
 
-class DotProductAttentionTests(AllenNlpTestCase):
+class TestDotProductAttention(AllenNlpTestCase):
+
+    def test_can_init_dot(self):
+        legacy_attention = Attention.from_params(Params({"type": "dot_product"}))
+        isinstance(legacy_attention, DotProductAttention)
 
     def test_dot_product_similarity(self):
-        linear = DotProductAttention(False)
+        linear = DotProductAttention(normalize=False)
         output = linear(Variable(torch.FloatTensor([[0, 0, 0], [1, 1, 1]])),
                         Variable(torch.FloatTensor([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])))
 
