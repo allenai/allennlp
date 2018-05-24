@@ -12,7 +12,8 @@ from torch.nn.modules.linear import Linear
 from allennlp.common import util as common_util
 from allennlp.common.checks import check_dimensions_match
 from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
-from allennlp.modules import Attention, FeedForward
+from allennlp.modules import FeedForward
+from allennlp.modules.attention.attention import Attention
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util

@@ -11,7 +11,7 @@ from torch.nn.modules.linear import Linear
 
 from allennlp.common import util as common_util
 from allennlp.models.semantic_parsing.nlvr.nlvr_decoder_state import NlvrDecoderState
-from allennlp.modules import Attention
+from allennlp.modules.attention.attention import Attention
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.nn.decoding import DecoderStep, RnnState, ChecklistState
 from allennlp.nn import util as nn_util
