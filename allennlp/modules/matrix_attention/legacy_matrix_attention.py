@@ -10,7 +10,6 @@ from allennlp.common import Params
 from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 
 
-
 @MatrixAttention.register("legacy")
 class LegacyMatrixAttention(MatrixAttention):
     '''

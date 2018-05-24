@@ -12,7 +12,6 @@ from allennlp.common import Params
 from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 
 
-
 @MatrixAttention.register("linear")
 class LinearMatrixAttention(MatrixAttention):
     """
