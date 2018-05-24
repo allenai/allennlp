@@ -3,14 +3,12 @@ import math
 import torch
 from torch.nn import Parameter
 
-from allennlp.nn import util
-from allennlp.nn.activations import Activation
-
 from allennlp.nn.util import masked_softmax
 from overrides import overrides
-
-from allennlp.common.params import Params
 from allennlp.modules.attention.attention import Attention
+from allennlp.nn import util
+from allennlp.nn.activations import Activation
+from allennlp.common.params import Params
 
 @Attention.register("linear")
 class LinearAttention(Attention):

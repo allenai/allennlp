@@ -4,6 +4,7 @@ an input vector and the rows of a matrix.
 """
 
 import torch
+from allennlp.common.registrable import Registrable
 from overrides import overrides
 
 from allennlp.common import Params
@@ -11,7 +12,7 @@ from allennlp.modules.similarity_functions import DotProductSimilarity, Similari
 from allennlp.nn.util import masked_softmax
 
 
-class Attention(torch.nn.Module):
+class Attention(torch.nn.Module, Registrable):
     """
     This ``Module`` takes two inputs: a (batched) vector and a matrix, plus an optional mask on the
     rows of the matrix.  We compute the similarity between the vector and each row in the matrix,
