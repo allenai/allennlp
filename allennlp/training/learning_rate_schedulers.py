@@ -28,7 +28,7 @@ class LearningRateScheduler(Registrable):
     def __init__(self, lr_scheduler) -> None:
         self.lr_scheduler = lr_scheduler
 
-    def step(self, metrics: float, epoch: Optional[int] = None):
+    def step(self, metric: float, epoch: Optional[int] = None):
         raise NotImplementedError
 
     def step_batch(self, batch_num_total: Optional[int]):
@@ -57,7 +57,7 @@ class LearningRateWithoutMetricsWrapper(LearningRateScheduler):
         self.lr_scheduler = lr_scheduler
 
     @overrides
-    def step(self, metrics: float, epoch: Optional[int] = None):
+    def step(self, metric: float, epoch: Optional[int] = None):
         self.lr_scheduler.step(epoch)
 
 
@@ -71,12 +71,12 @@ class LearningRateWithMetricsWrapper(LearningRateScheduler):
         self.lr_scheduler = lr_scheduler
 
     @overrides
-    def step(self, metrics: float, epoch: Optional[int] = None):
-        if not metrics:
+    def step(self, metric: float, epoch: Optional[int] = None):
+        if metric is None:
             raise ConfigurationError("The reduce_on_plateau learning rate scheduler requires "
                                      "a validation metric to compute the schedule and therefore "
                                      "must be used with a validation dataset.")
-        self.lr_scheduler.step(metrics, epoch)
+        self.lr_scheduler.step(metric, epoch)
 
 
 # We just use the Pytorch LRSchedulers, so here we force them into
