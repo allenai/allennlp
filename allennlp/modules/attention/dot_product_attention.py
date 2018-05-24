@@ -16,7 +16,7 @@ class DotProductAttention(Attention):
                           vector: torch.Tensor,
                           matrix: torch.Tensor,
                           matrix_mask: torch.Tensor = None) -> torch.Tensor:
-        return matrix.bmm(vector.unsqueeze(-1))
+        return matrix.bmm(vector.unsqueeze(-1)).squeeze(-1)
 
     @classmethod
     def from_params(cls, params: Params):
