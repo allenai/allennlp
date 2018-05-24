@@ -122,6 +122,24 @@ class TestTrainer(AllenNlpTestCase):
         assert new_trainer._should_stop_early([.02, .3, .2, .1, .4, .4])  # pylint: disable=protected-access
         assert not new_trainer._should_stop_early([.3, .3, .2, .1, .4, .5])  # pylint: disable=protected-access
 
+    def test_should_stop_early_with_non_positive_patience(self):
+        new_trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
+                              validation_dataset=self.instances, num_epochs=100,
+                              patience=-1, validation_metric="+test")
+        assert not new_trainer._should_stop_early(map(float, reversed(range(50))))  # pylint: disable=protected-access
+
+    def test_should_stop_early_with_patience_equal_to_none(self):
+        new_trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
+                              validation_dataset=self.instances, num_epochs=100,
+                              patience=None, validation_metric="+test")
+        assert not new_trainer._should_stop_early(map(float, reversed(range(50))))  # pylint: disable=protected-access
+
+    def test_should_stop_early_with_patience_equal_to_zero(self):
+        with pytest.raises(ValueError):
+            Trainer(self.model, self.optimizer, self.iterator, self.instances,
+                    validation_dataset=self.instances, num_epochs=100,
+                    patience=0, validation_metric="+test")
+
     def test_trainer_can_run_with_lr_scheduler(self):
 
         lr_params = Params({"type": "reduce_on_plateau"})

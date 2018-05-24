@@ -125,6 +125,7 @@ class TensorboardWriter:
         if self._validation_log is not None:
             self._validation_log.add_scalar(name, value, global_step)
 
+
 def time_to_str(timestamp: int) -> str:
     """
     Convert seconds past Epoch to human readable string.
@@ -135,12 +136,14 @@ def time_to_str(timestamp: int) -> str:
             datetimestamp.hour, datetimestamp.minute, datetimestamp.second
     )
 
+
 def str_to_time(time_str: str) -> datetime.datetime:
     """
     Convert human readable string to datetime.datetime.
     """
     pieces: Any = [int(piece) for piece in time_str.split('-')]
     return datetime.datetime(*pieces)
+
 
 class Trainer:
     def __init__(self,
@@ -149,7 +152,7 @@ class Trainer:
                  iterator: DataIterator,
                  train_dataset: Iterable[Instance],
                  validation_dataset: Optional[Iterable[Instance]] = None,
-                 patience: int = 2,
+                 patience: Optional[int] = 2,
                  validation_metric: str = "-loss",
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
@@ -178,8 +181,12 @@ class Trainer:
             A ``Dataset`` to train on. The dataset should have already been indexed.
         validation_dataset : ``Dataset``, optional, (default = None).
             A ``Dataset`` to evaluate on. The dataset should have already been indexed.
-        patience : int, optional (default=2)
-            Number of epochs to be patient before early stopping.
+        patience : int != 0, optional (default=2)
+            If ``patience > 0``, it's the number of epochs to be patient before early stopping:
+            the training is stopped after ``patience`` epochs with no improvement.
+            If ``patience < 0 or patience == None``, early stopping is disabled.
+            Because the behavior for ``patience = 0`` is undefined and prone to misinterpretations,
+            it's required ``patience != 0``.
         validation_metric : str, optional (default="loss")
             Validation metric to measure for whether to stop training using patience
             and whether to serialize an ``is_best`` model each epoch. The metric name
@@ -240,7 +247,12 @@ class Trainer:
         self._train_data = train_dataset
         self._validation_data = validation_dataset
 
-        self._patience = patience
+        if patience == 0:
+            raise ValueError('0 is not a valid value for patience. If you want to stop the training after '
+                             'the first epoch without improvement, set patience to 1. '
+                             'If you want to disable early stopping, please set patience to a negative '
+                             'number or to None.')
+        self._patience = patience or -1
         self._num_epochs = num_epochs
 
         self._serialization_dir = serialization_dir
@@ -509,7 +521,7 @@ class Trainer:
         """
         uses patience and the validation metric to determine if training should stop early
         """
-        if len(metric_history) > self._patience:
+        if 0 < self._patience < len(metric_history):
             # Is the best score in the past N epochs worse than the best score overall?
             if self._validation_metric_decreases:
                 return min(metric_history[-self._patience:]) > min(metric_history)
