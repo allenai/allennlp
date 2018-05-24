@@ -74,37 +74,38 @@ We will use existing SRL model [configuration file](../../training_config/semant
 To add ELMo, there are three relevant changes.  First, modify the `text_field_embedder` section by adding an `elmo` section as follows:
 
 ```json
-   "text_field_embedder": {
-     "tokens": {
-       "type": "embedding",
-       "embedding_dim": 100,
-       "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.100d.txt.gz",
-       "trainable": true
-     },
-     "elmo":{
-       "type": "elmo_token_embedder",
-       "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-       "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
-       "do_layer_norm": false,
-       "dropout": 0.5
-     }
+"text_field_embedder": {
+  "tokens": {
+    "type": "embedding",
+    "embedding_dim": 100,
+    "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.100d.txt.gz",
+    "trainable": true
+  },
+  "elmo": {
+    "type": "elmo_token_embedder",
+    "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
+    "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
+    "do_layer_norm": false,
+    "dropout": 0.5
+  }
+}
 ```
 
 Second, add an `elmo` section to the `dataset_reader` to convert raw text to ELMo character id sequences in addition to GloVe ids:
 
 ```json
- "dataset_reader": {
-   "type": "srl",
-   "token_indexers": {
-     "tokens": {
-       "type": "single_id",
-       "lowercase_tokens": true
-     },
-     "elmo": {
-       "type": "elmo_characters"
-     }
-   }
- }
+"dataset_reader": {
+  "type": "srl",
+  "token_indexers": {
+    "tokens": {
+      "type": "single_id",
+      "lowercase_tokens": true
+    },
+    "elmo": {
+      "type": "elmo_characters"
+    }
+  }
+}
 ```
 
 Third, modify the input dimension (`input_size`) to the stacked LSTM encoder.
@@ -112,14 +113,14 @@ The baseline model uses a 200 dimensional input (100 dimensional GloVe embedding
 ELMo provides a 1024 dimension representation so the new `input_size` is 1224.
 
 ```json
-    "encoder": {
-      "type": "alternating_lstm",
-      "input_size": 1224,
-      "hidden_size": 300,
-      "num_layers": 8,
-      "recurrent_dropout_probability": 0.1,
-      "use_highway": true
-    },
+"encoder": {
+  "type": "alternating_lstm",
+  "input_size": 1224,
+  "hidden_size": 300,
+  "num_layers": 8,
+  "recurrent_dropout_probability": 0.1,
+  "use_highway": true
+}
 ```
 
 ## Recommended hyper-parameter settings for `Elmo` class

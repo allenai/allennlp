@@ -22,7 +22,7 @@ class Highway(torch.nn.Module):
     Parameters
     ----------
     input_dim : ``int``
-        The dimensionality of :math:`x`.  We assume the input has shape ``(batch_size,
+        The dimensionality of :math:`x`.  We assume the input has shape ``(batch_size, ...,
         input_dim)``.
     num_layers : ``int``, optional (default=``1``)
         The number of highway layers to apply to the input.
@@ -41,7 +41,7 @@ class Highway(torch.nn.Module):
         for layer in self._layers:
             # We should bias the highway layer to just carry its input forward.  We do that by
             # setting the bias on `B(x)` to be positive, because that means `g` will be biased to
-            # be high, to we will carry the input forward.  The bias on `B(x)` is the second half
+            # be high, so we will carry the input forward.  The bias on `B(x)` is the second half
             # of the bias vector in each Linear layer.
             layer.bias[input_dim:].data.fill_(1)
 
@@ -53,8 +53,7 @@ class Highway(torch.nn.Module):
             linear_part = current_input
             # NOTE: if you modify this, think about whether you should modify the initialization
             # above, too.
-            nonlinear_part = projected_input[:, (0 * self._input_dim):(1 * self._input_dim)]
-            gate = projected_input[:, (1 * self._input_dim):(2 * self._input_dim)]
+            nonlinear_part, gate = projected_input.chunk(2, dim=-1)
             nonlinear_part = self._activation(nonlinear_part)
             gate = torch.nn.functional.sigmoid(gate)
             current_input = gate * linear_part + (1 - gate) * nonlinear_part

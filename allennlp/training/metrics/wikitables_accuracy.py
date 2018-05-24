@@ -32,7 +32,7 @@ class WikiTablesAccuracy(Metric):
         example_lisp_string : ``str``
             The value to average.
         """
-        denotation_correct = self._evaluate_logical_form(logical_form, example_lisp_string)
+        denotation_correct = self.evaluate_logical_form(logical_form, example_lisp_string)
         if denotation_correct:
             self._correct += 1
         self._count += 1
@@ -52,7 +52,7 @@ class WikiTablesAccuracy(Metric):
     def __str__(self):
         return f"WikiTablesAccuracy(correct={self._correct}, count={self._count})"
 
-    def _evaluate_logical_form(self, logical_form: str, example_lisp_string: str) -> bool:
+    def evaluate_logical_form(self, logical_form: str, example_lisp_string: str) -> bool:
         if not logical_form or logical_form.startswith('Error'):
             return False
         if example_lisp_string[-1] != '\n':

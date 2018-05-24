@@ -54,7 +54,7 @@ model = Model.by_name(model_name).from_params(model_params)
 ```
 
 Because a class doesn't get registered until it's loaded, any code that uses
-`BaseClass.by_name('subclass_name')` must have already imported the code for `Subclass`.
+`BaseClass.by_name('subclass_name')` must have already imported the code for the subclass.
 In particular, this means that once you start creating your own named models and helper classes,
 the included `allennlp.run` command will not be aware of them. However, `allennlp.run` is simply
 a wrapper around the `allennlp.commands.main` function,

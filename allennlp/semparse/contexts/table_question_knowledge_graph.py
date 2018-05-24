@@ -1,7 +1,8 @@
 import re
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, Tuple, Union
+from typing import Any, DefaultDict, Dict, List, Tuple, Union, Set
 
+from overrides import overrides
 from unidecode import unidecode
 
 from allennlp.data.tokenizers import Token
@@ -66,7 +67,9 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
     about the table.  The linkable entities in a table are the cells and the columns of the table,
     and the linkable entities from the question are the numbers in the question.  We use the
     question to define our space of allowable numbers, because there are infinitely many numbers
-    that we could include in our action space, and we really don't want to do that.
+    that we could include in our action space, and we really don't want to do that. Additionally, we
+    have a method that returns the set of entities in the graph that are relevant to the question,
+    and we keep the question for this method. See ``get_linked_agenda_items`` for more information.
 
     To represent the table as a graph, we make each cell and column a node in the graph, and
     consider a column's neighbors to be all cells in that column (and thus each cell has just one
@@ -78,6 +81,21 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
     Additionally, when we encounter cells that can be split, we create ``fb:part.[something]``
     entities, also without any neighbors.
     """
+    def __init__(self,
+                 entities: Set[str],
+                 neighbors: Dict[str, List[str]],
+                 entity_text: Dict[str, str],
+                 question_tokens: List[Token]) -> None:
+        super().__init__(entities, neighbors, entity_text)
+        self.question_tokens = question_tokens
+        self._entity_prefixes: Dict[str, List[str]] = defaultdict(list)
+        for entity, text in self.entity_text.items():
+            parts = text.split()
+            if not parts:
+                continue
+            prefix = parts[0].lower()
+            self._entity_prefixes[prefix].append(entity)
+
     @classmethod
     def read_from_file(cls, filename: str, question: List[Token]) -> 'TableQuestionKnowledgeGraph':
         """
@@ -181,7 +199,7 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
                     for part_entity, part_string in cls._get_cell_parts(cell_string):
                         neighbors[part_entity] = []
                         entity_text[part_entity] = part_string
-        return cls(set(neighbors.keys()), dict(neighbors), entity_text)
+        return cls(set(neighbors.keys()), dict(neighbors), entity_text, question_tokens)
 
     @staticmethod
     def _normalize_string(string: str) -> str:
@@ -322,3 +340,49 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
         if ', ' in cell_text or '\n' in cell_text or '/' in cell_text:
             return True
         return False
+
+    def get_linked_agenda_items(self) -> List[str]:
+        """
+        Returns entities that can be linked to spans in the question, that should be in the agenda,
+        for training a coverage based semantic parser. This method essentially does a heuristic
+        entity linking, to provide weak supervision for a learning to search parser.
+        """
+        agenda_items: List[str] = []
+        for entity in self._get_longest_span_matching_entities():
+            agenda_items.append(entity)
+            # If the entity is a cell, we need to add the column to the agenda as well,
+            # because the answer most likely involves getting the row with the cell.
+            if 'fb:cell' in entity:
+                agenda_items.append(self.neighbors[entity][0])
+        return agenda_items
+
+    def _get_longest_span_matching_entities(self):
+        question = " ".join([token.text for token in self.question_tokens])
+        matches_starting_at: Dict[int, List[str]] = defaultdict(list)
+        for index, token in enumerate(self.question_tokens):
+            if token.text in self._entity_prefixes:
+                for entity in self._entity_prefixes[token.text]:
+                    if self.entity_text[entity].lower() in question:
+                        matches_starting_at[index].append(entity)
+        longest_matches: List[str] = []
+        for index, matches in matches_starting_at.items():
+            longest_matches.append(sorted(matches, key=len)[-1])
+        return longest_matches
+
+    @overrides
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            for key in self.__dict__:
+                # We need to specially handle question tokens because they are Spacy's ``Token``
+                # objects, and equality is not defined for them.
+                if key == "question_tokens":
+                    self_tokens = self.__dict__[key]
+                    other_tokens = other.__dict__[key]
+                    if not all([token1.text == token2.text
+                                for token1, token2 in zip(self_tokens, other_tokens)]):
+                        return False
+                else:
+                    if not self.__dict__[key] == other.__dict__[key]:
+                        return False
+            return True
+        return NotImplemented

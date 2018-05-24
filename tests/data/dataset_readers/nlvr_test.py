@@ -11,7 +11,8 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         instances = list(dataset)
         assert len(instances) == 3
         instance = instances[0]
-        assert instance.fields.keys() == {'sentence', 'agenda', 'worlds', 'actions', 'labels'}
+        assert instance.fields.keys() == {'sentence', 'agenda', 'worlds', 'actions', 'labels',
+                                          'identifier'}
         sentence_tokens = instance.fields["sentence"].tokens
         expected_tokens = ['There', 'is', 'a', 'circle', 'closely', 'touching', 'a', 'corner', 'of',
                            'a', 'box', '.']
@@ -49,7 +50,8 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         instances = list(dataset)
         assert len(instances) == 2
         instance = instances[0]
-        assert instance.fields.keys() == {'sentence', 'agenda', 'worlds', 'actions', 'labels'}
+        assert instance.fields.keys() == {'sentence', 'agenda', 'worlds', 'actions', 'labels',
+                                          'identifier'}
         sentence_tokens = instance.fields["sentence"].tokens
         expected_tokens = ['There', 'is', 'a', 'circle', 'closely', 'touching', 'a', 'corner', 'of',
                            'a', 'box', '.']
@@ -76,7 +78,7 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         assert len(instances) == 2
         instance = instances[0]
         assert instance.fields.keys() == {"sentence", "target_action_sequences",
-                                          "worlds", "actions", "labels"}
+                                          "worlds", "actions", "labels", "identifier"}
         all_action_sequence_indices = instance.fields["target_action_sequences"].field_list
         assert len(all_action_sequence_indices) == 20
         action_sequence_indices = [item.sequence_index for item in

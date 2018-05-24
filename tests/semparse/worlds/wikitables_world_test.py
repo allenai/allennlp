@@ -19,8 +19,8 @@ class TestWikiTablesWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         question_tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '2000', '?']]
-        table_file = 'tests/fixtures/data/wikitables/sample_table.tsv'
-        self.table_kg = TableQuestionKnowledgeGraph.read_from_file(table_file, question_tokens)
+        self.table_file = 'tests/fixtures/data/wikitables/sample_table.tsv'
+        self.table_kg = TableQuestionKnowledgeGraph.read_from_file(self.table_file, question_tokens)
         self.world = WikiTablesWorld(self.table_kg)
 
     def test_get_valid_actions_returns_correct_set(self):
@@ -382,3 +382,44 @@ class TestWikiTablesWorld(AllenNlpTestCase):
                         "fb:cell.virginia_7) fb:cell.virginia_8) fb:cell.virginia_9)))")
         print("Parsing...")
         world.parse_logical_form(logical_form)
+
+    def _get_world_with_question_tokens(self, tokens: List[Token]) -> WikiTablesWorld:
+        table_kg = TableQuestionKnowledgeGraph.read_from_file(self.table_file, tokens)
+        world = WikiTablesWorld(table_kg)
+        return world
+
+    def test_get_agenda(self):
+        tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '2000', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'n -> 2000',
+                                           '<c,r> -> fb:row.row.year',
+                                           '<n,<n,<#1,<<#2,#1>,#1>>>> -> argmax'}
+        tokens = [Token(x) for x in ['what', 'was', 'the', 'difference', 'in', 'attendance',
+                                     'between', 'years', '2001', 'and', '2005', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        # The agenda contains cells here instead of numbers because 2001 and 2005 actually link to
+        # entities in the table whereas 2000 (in the previous case) does not.
+        assert set(world.get_agenda()) == {'c -> fb:cell.2001',
+                                           'c -> fb:cell.2005',
+                                           '<c,r> -> fb:row.row.year',
+                                           '<n,<n,n>> -> -'}
+        tokens = [Token(x) for x in ['what', 'was', 'the', 'total', 'avg.', 'attendance', 'in',
+                                     'years', '2001', 'and', '2005', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        # The agenda contains cells here instead of numbers because 2001 and 2005 actually link to
+        # entities in the table whereas 2000 (in the previous case) does not.
+        assert set(world.get_agenda()) == {'c -> fb:cell.2001',
+                                           'c -> fb:cell.2005',
+                                           '<c,r> -> fb:row.row.year',
+                                           '<c,r> -> fb:row.row.avg_attendance',
+                                           '<n,n> -> sum'}
+        tokens = [Token(x) for x in ['when', 'was', 'the', 'least', 'avg.', 'attendance', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'<c,r> -> fb:row.row.avg_attendance',
+                                           '<n,<n,<#1,<<#2,#1>,#1>>>> -> argmin'
+                                          }
+        tokens = [Token(x) for x in ['what', 'is', 'the', 'least', 'avg.', 'attendance', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'<c,r> -> fb:row.row.avg_attendance',
+                                           '<nd,nd> -> min'
+                                          }
