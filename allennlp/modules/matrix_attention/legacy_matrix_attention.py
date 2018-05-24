@@ -9,8 +9,9 @@ from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 @MatrixAttention.register("legacy")
 class LegacyMatrixAttention(MatrixAttention):
     """
-    The legacy impl of ``MatrixAttention`` It.
-    It should be considered deprecated as it uses much more memory than the newer specialized MatrixAttention modules.
+    The legacy impl of ``MatrixAttention``
+    It should be considered deprecated as it uses much more
+    memory than the newer specialized MatrixAttention modules.
 
     Parameters
     ----------

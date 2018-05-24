@@ -58,4 +58,3 @@ class Attention(torch.nn.Module, Registrable):
     def from_params(cls, params: Params) -> 'Attention':
         clazz = cls.by_name(params.pop_choice("type", cls.list_available()))
         return clazz.from_params(params)
-

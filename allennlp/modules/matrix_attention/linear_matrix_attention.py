@@ -64,19 +64,19 @@ class LinearMatrixAttention(MatrixAttention):
         self._bias.data.fill_(0)
 
     @overrides
-    def forward(self,
-                tensor_1: torch.Tensor,
-                tensor_2: torch.Tensor) -> torch.Tensor:
+    def forward(self,  # pylint: disable=arguments-differ
+                matrix_1: torch.Tensor,
+                matrix_2: torch.Tensor) -> torch.Tensor:
         # TODO(mattg): Remove the need for this tiling.
         # https://github.com/allenai/allennlp/pull/1235#issuecomment-391540133
-        tiled_matrix_1 = tensor_1.unsqueeze(2).expand(tensor_1.size()[0],
-                                                      tensor_1.size()[1],
-                                                      tensor_2.size()[1],
-                                                      tensor_1.size()[2])
-        tiled_matrix_2 = tensor_2.unsqueeze(1).expand(tensor_2.size()[0],
-                                                      tensor_1.size()[1],
-                                                      tensor_2.size()[1],
-                                                      tensor_2.size()[2])
+        tiled_matrix_1 = matrix_1.unsqueeze(2).expand(matrix_1.size()[0],
+                                                      matrix_1.size()[1],
+                                                      matrix_2.size()[1],
+                                                      matrix_1.size()[2])
+        tiled_matrix_2 = matrix_2.unsqueeze(1).expand(matrix_2.size()[0],
+                                                      matrix_1.size()[1],
+                                                      matrix_2.size()[1],
+                                                      matrix_2.size()[2])
 
         combined_tensors = util.combine_tensors(self._combination, [tiled_matrix_1, tiled_matrix_2])
         dot_product = torch.matmul(combined_tensors, self._weight_vector)
