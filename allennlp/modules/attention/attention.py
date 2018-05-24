@@ -4,11 +4,10 @@ an input vector and the rows of a matrix.
 """
 
 import torch
-from allennlp.common.registrable import Registrable
-from overrides import overrides
 
+from overrides import overrides
+from allennlp.common.registrable import Registrable
 from allennlp.common import Params
-from allennlp.modules.similarity_functions import DotProductSimilarity, SimilarityFunction
 from allennlp.nn.util import masked_softmax
 
 
@@ -33,18 +32,13 @@ class Attention(torch.nn.Module, Registrable):
 
     Parameters
     ----------
-    similarity_function : ``SimilarityFunction``, optional (default=``DotProductSimilarity``)
-        The similarity function to use when computing the attention.
     normalize : ``bool``, optional (default: ``True``)
         If true, we normalize the computed similarities with a softmax, to return a probability
         distribution for your attention.  If false, this is just computing a similarity score.
     """
     def __init__(self,
-                 similarity_function: SimilarityFunction = None,
                  normalize: bool = True) -> None:
         super(Attention, self).__init__()
-
-        self._similarity_function = similarity_function or DotProductSimilarity()
         self._normalize = normalize
 
     @overrides
@@ -52,10 +46,7 @@ class Attention(torch.nn.Module, Registrable):
                 vector: torch.Tensor,
                 matrix: torch.Tensor,
                 matrix_mask: torch.Tensor = None) -> torch.Tensor:
-        tiled_vector = vector.unsqueeze(1).expand(vector.size()[0],
-                                                  matrix.size()[1],
-                                                  vector.size()[1])
-        similarities = self._similarity_function(tiled_vector, matrix)
+        similarities = self._forward_internal(vector, matrix, matrix_mask)
         if self._normalize:
             return masked_softmax(similarities, matrix_mask)
         else:
@@ -63,8 +54,9 @@ class Attention(torch.nn.Module, Registrable):
 
     @classmethod
     def from_params(cls, params: Params) -> 'Attention':
-        similarity_function = SimilarityFunction.from_params(params.pop('similarity_function', {}))
-        normalize = params.pop_bool('normalize', True)
-        params.assert_empty(cls.__name__)
-        return cls(similarity_function=similarity_function,
-                   normalize=normalize)
+        clazz = cls.by_name(params.pop_choice("type", cls.list_available()))
+        return clazz.from_params(params)
+
+    def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor,
+                          matrix_mask: torch.Tensor = None) -> torch.Tensor:
+        raise NotImplementedError

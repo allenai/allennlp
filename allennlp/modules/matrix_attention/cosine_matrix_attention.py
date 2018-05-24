@@ -19,8 +19,6 @@ class CosineMatrixAttention(MatrixAttention):
         b_norm = matrix_2 / (matrix_2.norm(p=2, dim=-1, keepdim=True) + 1e-13)
         return torch.bmm(a_norm, b_norm.transpose(-1, -2))
 
-
-
     @classmethod
     def from_params(cls, params: Params):
         CosineMatrixAttention()
