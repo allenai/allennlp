@@ -262,6 +262,18 @@ class _ElmoCharacterEncoder(torch.nn.Module):
     def get_output_dim(self):
         return self.output_dim
 
+    def add_bos_and_eos(self, inputs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+
+        mask = ((inputs > 0).long().sum(dim=-1) > 0).long()
+        character_ids_with_bos_eos, mask_with_bos_eos = add_sentence_boundary_token_ids(
+                inputs,
+                mask,
+                self._beginning_of_sentence_characters,
+                self._end_of_sentence_characters
+        )
+        return character_ids_with_bos_eos, mask_with_bos_eos
+
+
     @overrides
     def forward(self, inputs: torch.Tensor) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
         """
@@ -283,13 +295,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
             Shape ``(batch_size, sequence_length + 2)`` long tensor with sequence mask.
         """
         # Add BOS/EOS
-        mask = ((inputs > 0).long().sum(dim=-1) > 0).long()
-        character_ids_with_bos_eos, mask_with_bos_eos = add_sentence_boundary_token_ids(
-                inputs,
-                mask,
-                self._beginning_of_sentence_characters,
-                self._end_of_sentence_characters
-        )
+        character_ids_with_bos_eos, mask_with_bos_eos = self.add_bos_and_eos(inputs)
 
         # the character id embedding
         max_chars_per_token = self._options['char_cnn']['max_characters_per_token']
@@ -457,20 +463,18 @@ class _ElmoBiLm(torch.nn.Module):
                  vocab_to_cache: List[str] = None) -> None:
         super(_ElmoBiLm, self).__init__()
 
+        self._requires_grad = requires_grad
         self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=requires_grad)
 
         if vocab_to_cache is None:
             self._word_embedding = None
+            self._id_lookup = None
         else:
-            from allennlp.modules.token_embedders import Embedding # type: ignore
             logging.info("Caching character cnn layers for words in vocabulary.")
-            id_lookup, embedding = self.create_cached_cnn_embeddings(vocab_to_cache)
-            vocab_size, embedding_dim = list(embedding.size())
-            self._word_embedding = Embedding(vocab_size,
-                                             embedding_dim,
-                                             weight=embedding.data,
-                                             trainable=requires_grad)
-            self._id_lookup = id_lookup
+            # This sets the two above attributes, _word_embedidng and _id_lookup.
+            # They are set in the method so it can be accessed from outside the
+            # constructor.
+            self.create_cached_cnn_embeddings(vocab_to_cache)
 
         with open(cached_path(options_file), 'r') as fin:
             options = json.load(fin)
@@ -487,7 +491,7 @@ class _ElmoBiLm(torch.nn.Module):
         # Number of representation layers including context independent layer
         self.num_layers = options['lstm']['n_layers'] + 1
 
-    def create_cached_cnn_embeddings(self, tokens: List[str]) -> Tuple[Dict[Tuple[int, ...], int], torch.Tensor]:
+    def create_cached_cnn_embeddings(self, tokens: List[str]) -> None:
 
         timesteps = 32
         batch_size = 32
@@ -506,8 +510,17 @@ class _ElmoBiLm(torch.nn.Module):
             representation = tuple(ELMoCharacterMapper.convert_word_to_char_ids(token))
             character_id_lookup[representation] = i
         # We might have some trailing embeddings from padding in the batch, so
-        # we clip the embedding to the right size before returning it.
-        return character_id_lookup, full_embedding[:len(tokens) + 2, :]
+        # we clip the embedding to the right size.
+        embedding = full_embedding[:len(tokens) + 2, :]
+        self._id_lookup = character_id_lookup
+        vocab_size, embedding_dim = list(embedding.size())
+
+        from allennlp.modules.token_embedders import Embedding # type: ignore
+        self._word_embedding = Embedding(vocab_size,
+                                         embedding_dim,
+                                         weight=embedding.data,
+                                         trainable=self._requires_grad)
+
 
     def _get_word_ids_from_character_ids(self, inputs: torch.Tensor) -> torch.Tensor:
         batch_size, timesteps, _ = list(inputs.size())
@@ -547,19 +560,15 @@ class _ElmoBiLm(torch.nn.Module):
         markers.
         """
         if self._word_embedding is not None:
-            mask = ((inputs > 0).long().sum(dim=-1) > 0).long()
-            character_ids_with_bos_eos, mask_with_bos_eos = add_sentence_boundary_token_ids(
-            inputs,
-            mask,
-            self._token_embedder._beginning_of_sentence_characters,
-            self._token_embedder._end_of_sentence_characters)
+            character_ids_with_bos_eos, mask_with_bos_eos = self._token_embedder.add_bos_and_eos(inputs)
             try:
-                print("Trying cache")
+                # See if words are in the cache. If so, look them up.
                 word_ids = self._get_word_ids_from_character_ids(character_ids_with_bos_eos)
                 type_representation = self._word_embedding(word_ids)
                 mask = mask_with_bos_eos
             except KeyError:
-                print("cache failed")
+                # If we're seeing a new word not in our cached vocabulary,
+                # we need to fall back to using the full CNN encoder.
                 token_embedding = self._token_embedder(inputs)
                 type_representation = token_embedding['token_embedding']
                 mask = token_embedding['mask']
