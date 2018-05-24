@@ -4,7 +4,8 @@ CUDA_PATH=/usr/local/cuda/
 
 # Which CUDA capabilities do we want to pre-build for?
 # https://developer.nvidia.com/cuda-gpus
-#   Compute/shader model   Cards
+#   Compute/shader model  Cards
+#   70                    V100
 #   61                    P4, P40, Titan X
 #   60                    P100
 #   52                    M40
@@ -12,7 +13,7 @@ CUDA_PATH=/usr/local/cuda/
 #   35                    K40, K20
 #   30                    K10, Grid K520 (AWS G2)
 
-CUDA_MODELS=(30 35 37 50 52 60 61)
+CUDA_MODELS=(30 35 37 50 52 60 61 70)
 
 # Nvidia doesn't guarantee binary compatability across GPU versions.
 # However, binary compatibility within one GPU generation can be guaranteed

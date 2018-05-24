@@ -50,6 +50,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         attention. Passed to super class.
     decoder_beam_size : ``int``
         Beam size to be used by the ExpectedRiskMinimization algorithm.
+    decoder_num_finished_states : ``int``
+        Number of finished states for which costs will be computed by the ExpectedRiskMinimization
+        algorithm.
     max_decoding_steps : ``int``
         Maximum number of steps the decoder should take before giving up. Used both during training
         and evaluation. Passed to super class.
@@ -95,6 +98,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                  mixture_feedforward: FeedForward,
                  attention_function: SimilarityFunction,
                  decoder_beam_size: int,
+                 decoder_num_finished_states: int,
                  max_decoding_steps: int,
                  normalize_beam_score_by_length: bool = False,
                  checklist_cost_weight: float = 0.6,
@@ -120,7 +124,8 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         self._decoder_trainer: ExpectedRiskMinimization = \
                 ExpectedRiskMinimization(beam_size=decoder_beam_size,
                                          normalize_by_length=normalize_beam_score_by_length,
-                                         max_decoding_steps=self._max_decoding_steps)
+                                         max_decoding_steps=self._max_decoding_steps,
+                                         max_num_finished_states=decoder_num_finished_states)
         unlinked_terminals_global_indices = []
         global_vocab = self.vocab.get_token_to_index_vocabulary(rule_namespace)
         for production, index in global_vocab.items():
@@ -166,17 +171,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                                "tokens.")
         for name, weights in archived_parameters.items():
             if name in model_parameters:
-                if name == "_decoder_step._output_projection_layer.weight":
-                    # The dimensions differ for this parameter between the coverage model and
-                    # the direct model. In the direct model, this is of size
-                    # (decoder_output_dim + encoder_output_dim, action_embedding_dim),
-                    # whereas in the coverage model, it is
-                    # (decoder_output_dim + encoder_output_dim + checklist_size, action_embedding_dim)
-                    # We copy only the relevant part of the weights here.
-                    archived_projection_weights = weights.data
-                    new_weights = model_parameters[name].data.clone()
-                    new_weights[:, :-self._num_unlinked_terminals] = archived_projection_weights
-                elif name == question_embedder_weight:
+                if name == question_embedder_weight:
                     # The shapes of embedding weights will most likely differ between the two models
                     # because the vocabularies will most likely be different. We will get a mapping
                     # of indices from this model's token indices to the archived model's and copy
@@ -384,8 +379,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
             raise RuntimeError("_get_state_cost() is not defined for unfinished states!")
 
         # Our checklist cost is a sum of squared error from where we want to be, making sure we
-        # take into account the mask.
-        checklist_balance = state.checklist_state[0].get_balance()
+        # take into account the mask. We clamp the lower limit of the balance at 0 to avoid
+        # penalizing agenda actions produced multiple times.
+        checklist_balance = torch.clamp(state.checklist_state[0].get_balance(), min=0.0)
         checklist_cost = torch.sum((checklist_balance) ** 2)
 
         # This is the number of items on the agenda that we want to see in the decoded sequence.
@@ -432,6 +428,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         else:
             attention_function = None
         decoder_beam_size = params.pop_int("decoder_beam_size")
+        decoder_num_finished_states = params.pop_int("decoder_num_finished_states", None)
         max_decoding_steps = params.pop_int("max_decoding_steps")
         normalize_beam_score_by_length = params.pop("normalize_beam_score_by_length", False)
         use_neighbor_similarity_for_linking = params.pop_bool("use_neighbor_similarity_for_linking", False)
@@ -450,6 +447,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                    mixture_feedforward=mixture_feedforward,
                    attention_function=attention_function,
                    decoder_beam_size=decoder_beam_size,
+                   decoder_num_finished_states=decoder_num_finished_states,
                    max_decoding_steps=max_decoding_steps,
                    normalize_beam_score_by_length=normalize_beam_score_by_length,
                    checklist_cost_weight=checklist_cost_weight,

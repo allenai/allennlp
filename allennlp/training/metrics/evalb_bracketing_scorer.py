@@ -3,6 +3,7 @@ from typing import List
 import os
 import tempfile
 import subprocess
+import shutil
 
 from overrides import overrides
 from nltk import Tree
@@ -10,6 +11,8 @@ from nltk import Tree
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
+DEFAULT_EVALB_DIR = os.path.abspath(os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "tools", "EVALB"))
 
 @Metric.register("evalb")
 class EvalbBracketingScorer(Metric):
@@ -24,7 +27,7 @@ class EvalbBracketingScorer(Metric):
 
     AllenNLP contains the EVALB software, but you will need to compile it yourself
     before using it because the binary it generates is system depenedent. To build it,
-    run ``make`` inside the ``scripts/EVALB`` directory.
+    run ``make`` inside the ``allennlp/tools/EVALB`` directory.
 
     Note that this metric reads and writes from disk quite a bit. You probably don't
     want to include it in your training loop; instead, you should calculate this on
@@ -39,7 +42,10 @@ class EvalbBracketingScorer(Metric):
         By default, this uses the COLLINS.prm configuration file which comes with EVALB.
         This configuration ignores POS tags and some punctuation labels.
     """
-    def __init__(self, evalb_directory_path: str, evalb_param_filename: str = "COLLINS.prm") -> None:
+    def __init__(self,
+                 evalb_directory_path: str = DEFAULT_EVALB_DIR,
+                 evalb_param_filename: str = "COLLINS.prm") -> None:
+        self._evalb_directory_path = evalb_directory_path
         self._evalb_program_path = os.path.join(evalb_directory_path, "evalb")
         self._evalb_param_path = os.path.join(evalb_directory_path, evalb_param_filename)
 
@@ -62,9 +68,12 @@ class EvalbBracketingScorer(Metric):
             A list of gold NLTK Trees to use as a reference.
         """
         if not os.path.exists(self._evalb_program_path):
+            compile_command = ("python -c 'from allennlp.training.metrics import EvalbBracketingScorer; "
+                               "EvalbBracketingScorer.compile_evalb()'")
             raise ConfigurationError("You must compile the EVALB scorer before using it."
-                                     " Run 'make' in the 'scripts/EVALB' directory.")
-        tempdir = tempfile.gettempdir()
+                                     " Run 'make' in the '{}' directory or run: {}".format(
+                                             self._evalb_program_path, compile_command))
+        tempdir = tempfile.mkdtemp()
         gold_path = os.path.join(tempdir, "gold.txt")
         predicted_path = os.path.join(tempdir, "predicted.txt")
         output_path = os.path.join(tempdir, "output.txt")
@@ -90,6 +99,8 @@ class EvalbBracketingScorer(Metric):
                     self._gold_brackets += numeric_line[6]
                     self._predicted_brackets += numeric_line[7]
 
+        shutil.rmtree(tempdir)
+
     @overrides
     def get_metric(self, reset: bool = False):
         """
@@ -110,3 +121,11 @@ class EvalbBracketingScorer(Metric):
         self._correct_predicted_brackets = 0.0
         self._gold_brackets = 0.0
         self._predicted_brackets = 0.0
+
+    @staticmethod
+    def compile_evalb(evalb_directory_path: str = DEFAULT_EVALB_DIR):
+        os.system("cd {} && make && cd ../../../".format(evalb_directory_path))
+
+    @staticmethod
+    def clean_evalb(evalb_directory_path: str = DEFAULT_EVALB_DIR):
+        os.system("rm {}".format(os.path.join(evalb_directory_path, "evalb")))

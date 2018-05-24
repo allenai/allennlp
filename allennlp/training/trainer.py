@@ -18,7 +18,6 @@ from typing import Dict, Optional, List, Tuple, Union, Iterable, Any, Set
 
 import torch
 import torch.optim.lr_scheduler
-from torch.optim.lr_scheduler import _LRScheduler as PytorchLRScheduler  # pylint: disable=protected-access
 from torch.nn.parallel import replicate, parallel_apply
 from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
 from tensorboardX import SummaryWriter
@@ -160,7 +159,7 @@ class Trainer:
                  cuda_device: Union[int, List] = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
-                 learning_rate_scheduler: Optional[PytorchLRScheduler] = None,
+                 learning_rate_scheduler: Optional[LearningRateScheduler] = None,
                  summary_interval: int = 100,
                  histogram_interval: int = None) -> None:
         """
@@ -457,7 +456,10 @@ class Trainer:
 
             batch_grad_norm = self._rescale_gradients()
 
-            self._update_learning_rate(None, batch_num_total=batch_num_total)
+            # This does nothing if batch_num_total is None or you are using an
+            # LRScheduler which doesn't update per batch.
+            if self._learning_rate_scheduler:
+                self._learning_rate_scheduler.step_batch(batch_num_total)
 
             if self._log_histograms_this_batch:
                 # get the magnitude of parameter updates for logging
@@ -602,31 +604,6 @@ class Trainer:
             elif train_metric is not None:
                 logger.info(message_template, "Training", name, train_metric)
 
-    def _update_learning_rate(self, epoch: int, val_metric: float = None,
-                              batch_num_total: int = None) -> None:
-        if not self._learning_rate_scheduler:
-            return
-
-        if batch_num_total is not None:
-            if hasattr(self._learning_rate_scheduler, 'step_batch'):
-                self._learning_rate_scheduler.step_batch(batch_num_total)
-            return
-
-        # Grim hack to determine whether the validation metric we are recording
-        # needs to be passed to the scheduler. This is required because the
-        # step() function of the different schedulers are (understandably)
-        # different to ReduceLROnPlateau.
-        reduce_on_plateau = isinstance(self._learning_rate_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau)
-
-        if reduce_on_plateau and val_metric is None:
-            raise ConfigurationError("The reduce_on_plateau learning rate scheduler requires "
-                                     "a validation metric to compute the schedule and therefore "
-                                     "must be used with a validation dataset.")
-        elif reduce_on_plateau:
-            self._learning_rate_scheduler.step(val_metric, epoch)
-        else:
-            self._learning_rate_scheduler.step(epoch)
-
     def _validation_loss(self) -> Tuple[float, int]:
         """
         Computes the validation loss. Returns it and the number of batches.
@@ -714,7 +691,11 @@ class Trainer:
             self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
             self._metrics_to_console(train_metrics, val_metrics)
-            self._update_learning_rate(epoch, val_metric=this_epoch_val_metric)
+
+            if self._learning_rate_scheduler:
+                # The LRScheduler API is agnostic to whether your schedule requires a validation metric -
+                # if it doesn't, the validation metric passed here is ignored.
+                self._learning_rate_scheduler.step(this_epoch_val_metric, epoch)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", time.strftime("%H:%M:%S", time.gmtime(epoch_elapsed_time)))

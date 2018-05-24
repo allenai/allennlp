@@ -1,6 +1,4 @@
 # pylint: disable=no-self-use,invalid-name,no-value-for-parameter
-import os
-
 from nltk import Tree
 import torch
 from torch.autograd import Variable
@@ -8,17 +6,18 @@ from torch.autograd import Variable
 
 from allennlp.common.testing.model_test_case import ModelTestCase
 from allennlp.models.constituency_parser import SpanInformation
+from allennlp.training.metrics import EvalbBracketingScorer
 
 class SpanConstituencyParserTest(ModelTestCase):
 
     def setUp(self):
-        os.system("cd ./scripts/EVALB/ && make && cd ../../")
+        EvalbBracketingScorer.compile_evalb()
         super(SpanConstituencyParserTest, self).setUp()
         self.set_up_model("tests/fixtures/constituency_parser/constituency_parser.json",
                           "tests/fixtures/data/example_ptb.trees")
 
     def tearDown(self):
-        os.system("rm scripts/EVALB/evalb")
+        EvalbBracketingScorer.clean_evalb()
         super().tearDown()
 
     def test_span_parser_can_save_and_load(self):

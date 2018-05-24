@@ -9,6 +9,7 @@ import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.trainer import Trainer, sparse_clip_norm, is_sparse
+from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.data import Vocabulary
 from allennlp.common.params import Params
 from allennlp.models.simple_tagger import SimpleTagger
@@ -121,8 +122,21 @@ class TestTrainer(AllenNlpTestCase):
         assert new_trainer._should_stop_early([.02, .3, .2, .1, .4, .4])  # pylint: disable=protected-access
         assert not new_trainer._should_stop_early([.3, .3, .2, .1, .4, .5])  # pylint: disable=protected-access
 
-    def test_train_driver_raises_on_model_with_no_loss_key(self):
+    def test_trainer_can_run_with_lr_scheduler(self):
 
+        lr_params = Params({"type": "reduce_on_plateau"})
+        lr_scheduler = LearningRateScheduler.from_params(self.optimizer, lr_params)
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          learning_rate_scheduler=lr_scheduler,
+                          validation_metric="-loss",
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=2)
+        trainer.train()
+
+    def test_trainer_raises_on_model_with_no_loss_key(self):
         class FakeModel(torch.nn.Module):
             def forward(self, **kwargs):  # pylint: disable=arguments-differ,unused-argument
                 return {}
