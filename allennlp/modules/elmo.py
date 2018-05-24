@@ -17,7 +17,7 @@ from allennlp.common.util import lazy_groups_of
 from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules.highway import Highway
 from allennlp.modules.scalar_mix import ScalarMix
-from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids
+from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids, zeros_like
 from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper, ELMoTokenCharactersIndexer
 from allennlp.data.dataset import Batch
 from allennlp.data import Token, Vocabulary, Instance
@@ -87,7 +87,7 @@ class Elmo(torch.nn.Module):
         else:
             self._elmo_lstm = _ElmoBiLm(options_file,
                                         weight_file,
-                                        requires_grad=requires_grad, 
+                                        requires_grad=requires_grad,
                                         vocab_to_cache=vocab_to_cache)
         self._dropout = Dropout(p=dropout)
         self._scalar_mixes: Any = []
@@ -467,8 +467,9 @@ class _ElmoBiLm(torch.nn.Module):
         self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=requires_grad)
 
         if vocab_to_cache is None:
-            self._word_embedding = None
-            self._id_lookup = None
+            from allennlp.modules.token_embedders import Embedding # type: ignore
+            self._word_embedding: Embedding = None
+            self._id_lookup: Dict[Tuple[int, ...], int] = None
         else:
             logging.info("Caching character cnn layers for words in vocabulary.")
             # This sets the two above attributes, _word_embedidng and _id_lookup.
@@ -492,6 +493,27 @@ class _ElmoBiLm(torch.nn.Module):
         self.num_layers = options['lstm']['n_layers'] + 1
 
     def create_cached_cnn_embeddings(self, tokens: List[str]) -> None:
+        """
+        Given a list of tokens, this method precomputes word representations
+        by running just the character convolutions and highway layers of elmo,
+        essentially creating uncontextual word vectors. On subsequent forward passes,
+        if all of the words in the batch have cached, the word ids are looked up from
+        an embedding, rather than being computed on the fly via the CNN encoder.
+
+        This function sets 2 attributes:
+
+        _word_embedding : ``Embedding``
+            The word embedding for each word in the tokens passed to this method.
+        _id_lookup : ``Dict[Tuple[int, ...], int]``
+            A dictionary mapping tuples of ELMo character ids representing words
+            to an id usable as a lookup index in _word_embedding.
+
+        Parameters
+        ----------
+
+        tokens : ``List[str]``, required.
+            A list of tokens to precompute character convolutions for.
+        """
 
         timesteps = 32
         batch_size = 32
@@ -523,9 +545,19 @@ class _ElmoBiLm(torch.nn.Module):
 
 
     def _get_word_ids_from_character_ids(self, inputs: torch.Tensor) -> torch.Tensor:
+        """
+        Given a character id tensor of shape (batch_size, timesteps, 50),
+        look up the word id for that word in the cached dictionary and return it.
+
+        Returns
+        -------
+        A tensor of shape (batch_size, timesteps).
+        """
         batch_size, timesteps, _ = list(inputs.size())
+        # Get a zero tensor of the right shape on the right device.
+        # Shape (batch_size, timesteps)
+        word_ids = zeros_like(inputs.sum(-1)).long()
         inputs = inputs.cpu().long().data.numpy()
-        word_ids = torch.zeros(batch_size, timesteps).long()
 
         for i in range(batch_size):
             for j in range(timesteps):
