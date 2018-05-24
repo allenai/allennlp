@@ -82,7 +82,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
             next_states = []
             grouped_state = states[0].combine_states(states)
             # These states already come sorted.
-            for next_state in decode_step.take_step(grouped_state):
+            for next_state in decode_step.take_step(grouped_state, max_actions=self._beam_size):
                 if next_state.is_finished():
                     finished_states.append(next_state)
                 else:
