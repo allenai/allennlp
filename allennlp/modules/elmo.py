@@ -518,34 +518,31 @@ class _ElmoBiLm(torch.nn.Module):
 
         timesteps = 32
         batch_size = 32
+        tokens.append(ELMoCharacterMapper.bos_token)
+        tokens.append(ELMoCharacterMapper.eos_token)
         chunked_tokens = lazy_groups_of(iter(tokens), timesteps)
 
-        character_id_lookup = {}
+        all_ids = []
         all_embeddings = []
         for batch in lazy_groups_of(chunked_tokens, batch_size):
-            # Shape (batch_size, 32, 50)
+            # Shape (batch_size, 32, 32, 50)
             batched_tensor = batch_to_ids(batch)
             device = get_device_of(next(self.parameters()))
             if device >=0:
                 batched_tensor = batched_tensor.cuda(device)
             token_embedding = self._token_embedder(batched_tensor)["token_embedding"]
             all_embeddings.append(token_embedding.view(-1, token_embedding.size(-1)))
-        full_embedding = torch.cat(all_embeddings, 0)
+            all_ids.append(batched_tensor.view(-1, 50))
 
-        for i, token in enumerate(tokens + [ELMoCharacterMapper.bos_token, ELMoCharacterMapper.eos_token]):
-            representation = tuple(ELMoCharacterMapper.convert_word_to_char_ids(token))
-            character_id_lookup[representation] = i
+        full_id_lookup = torch.cat(all_ids, 0)
+        full_embedding = torch.cat(all_embeddings, 0)
         # We might have some trailing embeddings from padding in the batch, so
         # we clip the embedding to the right size.
         embedding = full_embedding[:len(tokens) + 2, :]
-        self._id_lookup = character_id_lookup
-        vocab_size, embedding_dim = list(embedding.size())
+        lookup = full_id_lookup[:len(tokens) + 2, :]
 
-        from allennlp.modules.token_embedders import Embedding # type: ignore
-        self._word_embedding = Embedding(vocab_size,
-                                         embedding_dim,
-                                         weight=embedding.data,
-                                         trainable=self._requires_grad)
+        self._id_lookup = lookup
+        self._word_embedding = embedding
 
 
     def _get_word_ids_from_character_ids(self, inputs: torch.Tensor) -> torch.Tensor:
@@ -557,18 +554,23 @@ class _ElmoBiLm(torch.nn.Module):
         -------
         A tensor of shape (batch_size, timesteps).
         """
-        batch_size, timesteps, _ = list(inputs.size())
-        # Get a zero tensor of the right shape on the right device.
-        # Shape (batch_size, timesteps)
-        word_ids = zeros_like(inputs.sum(-1)).long()
-        inputs = inputs.cpu().long().data.numpy()
+        # shape (batch_size, timesteps, 50)
+        inputs = inputs
+        # shape (vocab_size, 50)
+        lookup = self._id_lookup
+        # Shape (vocab_size, embedding_size)
+        embedding = self._word_embedding
 
-        for i in range(batch_size):
-            for j in range(timesteps):
-                word = tuple([int(word_id) for word_id in inputs[i, j]])
-                word_ids[i, j] = self._id_lookup[word]
+        # Shape (1, 1, vocab_size, 50)
+        lookup = lookup.unsqueeze(0).unsqueeze(0)
+        # shape (batch_size, timesteps, 1, 50)
+        inputs = inputs.unsqueeze(2)
+        # shape (batch_size, timesteps, vocab_size)
+        comparison = (lookup == inputs).sum(-1)
+        binary_lookup = (comparison == 50).float()
+        embedded_words = torch.matmul(binary_lookup, embedding)
 
-        return word_ids
+        return embedded_words
 
 
     def get_output_dim(self):
@@ -599,8 +601,7 @@ class _ElmoBiLm(torch.nn.Module):
             character_ids_with_bos_eos, mask_with_bos_eos = self._token_embedder.add_bos_and_eos(inputs)
             try:
                 # See if words are in the cache. If so, look them up.
-                word_ids = self._get_word_ids_from_character_ids(character_ids_with_bos_eos)
-                type_representation = self._word_embedding(word_ids)
+                type_representation = self._get_word_ids_from_character_ids(character_ids_with_bos_eos)
                 mask = mask_with_bos_eos
             except KeyError:
                 # If we're seeing a new word not in our cached vocabulary,
