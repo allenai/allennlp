@@ -25,7 +25,7 @@ import sys
 
 from flask import Flask, request, Response, jsonify, send_file, send_from_directory
 from flask_cors import CORS
-from gevent.wsgi import WSGIServer
+from gevent.pywsgi import WSGIServer
 
 from allennlp.common import JsonDict
 from allennlp.common.util import import_submodules
