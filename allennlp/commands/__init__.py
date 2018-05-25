@@ -7,7 +7,6 @@ from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.fine_tune import FineTune
 from allennlp.commands.make_vocab import MakeVocab
 from allennlp.commands.predict import Predict
-from allennlp.commands.serve import Serve
 from allennlp.commands.dry_run import DryRun
 from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.test_install import TestInstall
@@ -25,6 +24,10 @@ def main(prog: str = None,
     work for them, unless you use the ``--include-package`` flag.
     """
     # pylint: disable=dangerous-default-value
+
+    # We'll import Serve lazily, because it has extra dependencies and you'd never
+    # want to use it programatically.
+    from allennlp.commands.serve import Serve
     parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s', prog=prog)
 
     subparsers = parser.add_subparsers(title='Commands', metavar='')
