@@ -79,7 +79,6 @@ class LearningRateWithMetricsWrapper(LearningRateScheduler):
         self.lr_scheduler.step(metric, epoch)
 
 
-
 class NoamLR(torch.optim.lr_scheduler._LRScheduler): # pylint: disable=protected-access
     """
     Implements the Noam Learning rate schedule. This corresponds to increasing the learning rate
@@ -107,11 +106,21 @@ class NoamLR(torch.optim.lr_scheduler._LRScheduler): # pylint: disable=protected
         self.model_size = model_size
         super().__init__(optimizer, last_epoch=last_epoch)
 
+    def step(self, epoch=None):
+        pass
+
+    def step_batch(self, epoch=None):
+        if epoch is None:
+            epoch = self.last_epoch + 1
+        self.last_epoch = epoch
+        for param_group, learning_rate in zip(self.optimizer.param_groups, self.get_lr()):
+            param_group['lr'] = learning_rate
+
+
     def get_lr(self):
-        step = self.last_epoch
+        step = max(self.last_epoch, 1)
         scale = self.factor *  (self.model_size ** (-0.5) *
-                                # We use step + 1 here to avoid division by zero in the first step.
-                                min((step + 1) ** (-0.5), (step + 1) * self.warmup_steps ** (-1.5)))
+                                min(step ** (-0.5), step * self.warmup_steps ** (-1.5)))
 
         return [scale for _ in range(len(self.base_lrs))]
 
