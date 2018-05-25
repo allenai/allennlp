@@ -18,7 +18,7 @@ from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules.highway import Highway
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids
-from allennlp.nn.util import zeros_like, get_device_of
+from allennlp.nn.util import get_device_of
 from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper, ELMoTokenCharactersIndexer
 from allennlp.data.dataset import Batch
 from allennlp.data import Token, Vocabulary, Instance
@@ -468,9 +468,8 @@ class _ElmoBiLm(torch.nn.Module):
         self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=requires_grad)
 
         if vocab_to_cache is None:
-            from allennlp.modules.token_embedders import Embedding # type: ignore
-            self._word_embedding: Embedding = None
-            self._id_lookup: Dict[Tuple[int, ...], int] = None
+            self._word_embedding: torch.Tensor = None
+            self._id_lookup: torch.Tensor = None
         else:
             logging.info("Caching character cnn layers for words in vocabulary.")
             # This sets the two above attributes, _word_embedidng and _id_lookup.
@@ -528,7 +527,7 @@ class _ElmoBiLm(torch.nn.Module):
             # Shape (batch_size, 32, 32, 50)
             batched_tensor = batch_to_ids(batch)
             device = get_device_of(next(self.parameters()))
-            if device >=0:
+            if device >= 0:
                 batched_tensor = batched_tensor.cuda(device)
             token_embedding = self._token_embedder(batched_tensor)["token_embedding"]
             all_embeddings.append(token_embedding.view(-1, token_embedding.size(-1)))
@@ -537,7 +536,7 @@ class _ElmoBiLm(torch.nn.Module):
         full_id_lookup = torch.cat(all_ids, 0)
         full_embedding = torch.cat(all_embeddings, 0)
         # We might have some trailing embeddings from padding in the batch, so
-        # we clip the embedding to the right size.
+        # we clip the embedding and lookup to the right size.
         embedding = full_embedding[:len(tokens) + 2, :]
         lookup = full_id_lookup[:len(tokens) + 2, :]
 
@@ -554,22 +553,29 @@ class _ElmoBiLm(torch.nn.Module):
         -------
         A tensor of shape (batch_size, timesteps).
         """
-        # shape (batch_size, timesteps, 50)
-        inputs = inputs
         # shape (vocab_size, 50)
         lookup = self._id_lookup
-        # Shape (vocab_size, embedding_size)
-        embedding = self._word_embedding
 
         # Shape (1, 1, vocab_size, 50)
         lookup = lookup.unsqueeze(0).unsqueeze(0)
         # shape (batch_size, timesteps, 1, 50)
         inputs = inputs.unsqueeze(2)
+
+        # Here we do a broadcasted comparison to get the
+        # equality values for each row in the inputs with
+        # respect to every row of the id_lookup.
+        # We sum and compare to 50 to find only those
+        # rows which exactly match an index in the id_lookup,
+        # as the correct rows will sum to 50 (every element matched).
         # shape (batch_size, timesteps, vocab_size)
         comparison = (lookup == inputs).sum(-1)
+        # This is one-hot.
+        # shape (batch_size, timesteps, vocab_size)
         binary_lookup = (comparison == 50).long()
+        # shape (batch_size, timesteps)
+        # TODO(MARK): Critical - add check for existance before returning.
         argmax = torch.max(binary_lookup, -1)[1]
-        embedded_words = torch.nn.functional.embedding(argmax, embedding)
+        embedded_words = torch.nn.functional.embedding(argmax, self._word_embedding)
 
         return embedded_words
 
