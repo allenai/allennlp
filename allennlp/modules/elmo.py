@@ -570,7 +570,7 @@ class _ElmoBiLm(torch.nn.Module):
         """
         batch_size, timesteps, _ = list(inputs.size())
         word_ids = zeros_like(inputs.sum(-1)).long()
-        inputs = inputs.cpu().long().data.numpy()
+        inputs = inputs.int().cpu().data.numpy()
  
         for i in range(batch_size):
             for j in range(timesteps):
