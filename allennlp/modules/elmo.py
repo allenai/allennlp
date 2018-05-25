@@ -466,11 +466,18 @@ class _ElmoBiLm(torch.nn.Module):
 
         self._requires_grad = requires_grad
         self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=requires_grad)
+        # Registering these as buffers means that pytorch 
+        # handles device copies for us, even though they aren't
+        # parameters
+        self.register_buffer("_id_lookup", None)
+        self.register_buffer("_word_embedding", None)
 
-        if vocab_to_cache is None:
-            self._word_embedding: torch.Tensor = None
-            self._id_lookup: torch.Tensor = None
-        else:
+        if requires_grad and vocab_to_cache:
+            logging.warning("You are fine tuning ELMo and caching char CNN word vectors. "
+                            "This behaviour is not guaranteed to be well defined, particularly. "
+                            "if not all of your inputs will occur in the vocabulary cache.")
+
+        if vocab_to_cache:
             logging.info("Caching character cnn layers for words in vocabulary.")
             # This sets the two above attributes, _word_embedidng and _id_lookup.
             # They are set in the method so it can be accessed from outside the
@@ -543,10 +550,8 @@ class _ElmoBiLm(torch.nn.Module):
         embedding = full_embedding[:len(tokens), :]
         lookup = full_id_lookup[:len(tokens), :]
 
-        # Registering these as buffers means that pytorch 
-        # handles device copies for us.
-        self.register_buffer("_id_lookup", lookup.data)
-        self.register_buffer("_word_embedding", embedding.data)
+        self._word_embedding = embedding.data
+        self._id_lookup = lookup.data
 
     def _get_word_ids_from_character_ids(self, inputs: torch.Tensor) -> torch.Tensor:
         """
