@@ -567,8 +567,9 @@ class _ElmoBiLm(torch.nn.Module):
         inputs = inputs.unsqueeze(2)
         # shape (batch_size, timesteps, vocab_size)
         comparison = (lookup == inputs).sum(-1)
-        binary_lookup = (comparison == 50).float()
-        embedded_words = torch.matmul(binary_lookup, embedding)
+        binary_lookup = (comparison == 50).long()
+        argmax = torch.max(binary_lookup, -1)[1]
+        embedded_words = torch.nn.functional.embedding(argmax, embedding)
 
         return embedded_words
 
