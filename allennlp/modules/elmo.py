@@ -18,7 +18,7 @@ from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules.highway import Highway
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids
-from allennlp.nn.util import get_device_of
+from allennlp.nn.util import get_device_of, zeros_like
 from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper, ELMoTokenCharactersIndexer
 from allennlp.data.dataset import Batch
 from allennlp.data import Token, Vocabulary, Instance
@@ -563,8 +563,8 @@ class _ElmoBiLm(torch.nn.Module):
         A tensor of shape (batch_size, timesteps).
         """
         batch_size, timesteps, _ = list(inputs.size())
+        word_ids = zeros_like(inputs.sum(-1)).long()
         inputs = inputs.cpu().long().data.numpy()
-        word_ids = torch.zeros(batch_size, timesteps).long()
  
         for i in range(batch_size):
             for j in range(timesteps):
