@@ -469,7 +469,7 @@ class _ElmoBiLm(torch.nn.Module):
         # Registering these as buffers means that pytorch 
         # handles device copies for us, even though they aren't
         # parameters
-        self.register_buffer("_word_embedding", None)
+        self._word_embedding = None
         self._id_lookup: Dict[Tuple[int, ...], int]= None
 
         if requires_grad and vocab_to_cache:
@@ -550,7 +550,13 @@ class _ElmoBiLm(torch.nn.Module):
         # we clip the embedding and lookup to the right size.
         embedding = full_embedding[:len(tokens), :]
 
-        self._word_embedding = embedding.data
+        vocab_size, embedding_dim = list(embedding.size())
+ 
+        from allennlp.modules.token_embedders import Embedding # type: ignore
+        self._word_embedding = Embedding(vocab_size,
+                                         embedding_dim,
+                                         weight=embedding.data,
+                                         trainable=self._requires_grad)
         self._id_lookup = character_id_lookup
 
     def _get_word_ids_from_character_ids(self, inputs: torch.Tensor) -> torch.Tensor:
@@ -570,7 +576,7 @@ class _ElmoBiLm(torch.nn.Module):
             for j in range(timesteps):
                 word = tuple([int(word_id) for word_id in inputs[i, j]])
                 word_ids[i, j] = self._id_lookup[word]
-        return torch.nn.functional.embedding(word_ids, self._word_embedding)
+        return self._word_embedding(word_ids)
 
     def get_output_dim(self):
         return 2 * self._token_embedder.get_output_dim()
