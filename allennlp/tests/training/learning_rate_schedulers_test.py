@@ -33,3 +33,11 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
                                                                       Params({"type": "adam"})),
                                                 Params({"type": "step", "step_size": 1}))
         lrs.step(None, None)
+
+    def test_noam_learning_rate_schedule_does_not_crash(self):
+        model = torch.nn.Sequential(torch.nn.Linear(10, 10))
+        lrs = LearningRateScheduler.from_params(Optimizer.from_params(model.named_parameters(),
+                                                                      Params({"type": "adam"})),
+                                                Params({"type": "noam", "model_size": 10, "warmup_steps": 2000}))
+        lrs.step(None)
+        lrs.step_batch(None)
