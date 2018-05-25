@@ -84,7 +84,7 @@ setup_requirements = [
 setup(name='allennlp',
       version=VERSION["VERSION"],
       description='An open-source NLP research library, built on PyTorch.',
-      long_description = open("README.md").read(),
+      long_description=open("README.md").read(),
       long_description_content_type="text/markdown",
       classifiers=[
           'Intended Audience :: Science/Research',
@@ -98,7 +98,8 @@ setup(name='allennlp',
       author='Allen Institute for Artificial Intelligence',
       author_email='allennlp@allenai.org',
       license='Apache',
-      packages=find_packages(),
+      packages=find_packages(exclude=["*.tests", "*.tests.*",
+                                      "tests.*", "tests"]),
       install_requires=[
           'torch==0.3.1',
           'pyhocon==0.3.35',

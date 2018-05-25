@@ -1,6 +1,7 @@
 # pylint: disable=invalid-name,protected-access
 import logging
 import os
+import pathlib
 import shutil
 from unittest import TestCase
 
@@ -13,6 +14,12 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
     more verbose AllenNLP logging and that creates and destroys a temp directory
     as a test fixture.
     """
+    PROJECT_ROOT = (pathlib.Path(__file__).parent / ".." / ".." / "..").resolve()  # pylint: disable=no-member
+    MODULE_ROOT = PROJECT_ROOT / "allennlp"
+    TOOLS_ROOT = MODULE_ROOT / "tools"
+    TESTS_ROOT = MODULE_ROOT / "tests"
+    FIXTURES_ROOT = TESTS_ROOT / "fixtures"
+
     def setUp(self):
         logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                             level=logging.DEBUG)
@@ -23,7 +30,8 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
         logging.getLogger('allennlp.modules.token_embedders.embedding').setLevel(logging.INFO)
         log_pytorch_version_info()
 
-        self.TEST_DIR = "/tmp/allennlp_tests/"
+        self.TEST_DIR = pathlib.Path("/tmp/allennlp_tests/")
+
         os.makedirs(self.TEST_DIR, exist_ok=True)
 
     def tearDown(self):
