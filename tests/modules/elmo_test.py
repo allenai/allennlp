@@ -127,37 +127,26 @@ class TestElmoBiLm(ElmoTestCase):
 
 
     def test_elmo_bilm_can_cache_char_cnn_embeddings(self):
-        # load the test model
-        # get the raw data
-        sentences, expected_lm_embeddings = self._load_sentences_embeddings()
+        sentences = [["This", "is", "a", "sentence"],
+                     ["Here", "'s", "one"],
+                     ["Another", "one"]]
+        tensor = batch_to_ids(sentences)
 
-        # Deal with the data.
-        indexer = ELMoTokenCharactersIndexer()
+        elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file)
+        elmo_bilm.eval()
+        no_cache = elmo_bilm(tensor)
 
-        # For each sentence, first create a TextField, then create an instance
-        instances = []
-        for batch in zip(*sentences):
-            for sentence in batch:
-                tokens = [Token(token) for token in sentence.split()]
-                field = TextField(tokens, {'character_ids': indexer})
-                instance = Instance({"elmo": field})
-                instances.append(instance)
+        # ELMo is stateful, so we need to actually re-initialise it for this comparison to work.
+        elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file)
+        elmo_bilm.eval()
+        elmo_bilm.create_cached_cnn_embeddings([word for sentence in sentences for word in sentence])
+        cached = elmo_bilm(tensor)
 
-        vocab = Vocabulary()
-
-        # Now finally we can iterate through batches.
-        iterator = BasicIterator(3)
-        iterator.index_with(vocab)
-
-        elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file, vocab_to_cache=["here", "is", "a", "vocab"])
-
-        for i, batch in enumerate(iterator(instances, num_epochs=1, shuffle=False)):
-            lm_embeddings = elmo_bilm(batch['elmo']['character_ids'])
-
-        print(elmo_bilm._id_lookup)
-
-
-
+        numpy.testing.assert_array_almost_equal(no_cache["mask"].data.cpu().numpy(),
+                                                cached["mask"].data.cpu().numpy())
+        for activation_cached, activation in zip(cached["activations"], no_cache["activations"]):
+            numpy.testing.assert_array_almost_equal(activation_cached.data.cpu().numpy(),
+                                                    activation.data.cpu().numpy())
 
 class TestElmo(ElmoTestCase):
     def setUp(self):
