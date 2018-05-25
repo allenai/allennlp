@@ -2,6 +2,7 @@
 import os
 import json
 
+import pytest
 import h5py
 import numpy
 import torch
@@ -12,7 +13,7 @@ from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.dataset import Batch
 from allennlp.data.iterators import BasicIterator
-from allennlp.modules.elmo import _ElmoBiLm, Elmo, _ElmoCharacterEncoder
+from allennlp.modules.elmo import _ElmoBiLm, Elmo, _ElmoCharacterEncoder, batch_to_ids
 from allennlp.modules.token_embedders import ElmoTokenEmbedder
 from allennlp.data.fields import TextField
 from allennlp.nn.util import remove_sentence_boundaries
@@ -112,9 +113,22 @@ class TestElmoBiLm(ElmoTestCase):
                         )
                 )
 
+    def test_elmo_char_cnn_cache_raises_error_for_uncached_words(self):
+        elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file, vocab_to_cache=["here", "is", "a", "vocab"])
+
+        sentences = [["This", "is", "OOV"], ["so", "is", "this"]]
+        in_vocab_sentences = [["here", "is"], ["a", "vocab"]]
+        oov_tensor = batch_to_ids(sentences)
+        in_vocab_tensor = batch_to_ids(in_vocab_sentences)
+
+        elmo_bilm._get_word_ids_from_character_ids(in_vocab_tensor)
+        with pytest.raises(KeyError):
+            elmo_bilm._get_word_ids_from_character_ids(oov_tensor)
+
+
     def test_elmo_bilm_can_cache_char_cnn_embeddings(self):
         # load the test model
-                # get the raw data
+        # get the raw data
         sentences, expected_lm_embeddings = self._load_sentences_embeddings()
 
         # Deal with the data.
