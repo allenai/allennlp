@@ -125,7 +125,6 @@ class TestElmoBiLm(ElmoTestCase):
         with pytest.raises(KeyError):
             elmo_bilm._get_word_ids_from_character_ids(oov_tensor)
 
-
     def test_elmo_bilm_can_cache_char_cnn_embeddings(self):
         sentences = [["This", "is", "a", "sentence"],
                      ["Here", "'s", "one"],

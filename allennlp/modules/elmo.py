@@ -512,19 +512,24 @@ class _ElmoBiLm(torch.nn.Module):
         tokens : ``List[str]``, required.
             A list of tokens to precompute character convolutions for.
         """
+        tokens.append(ELMoCharacterMapper.bos_token)
+        tokens.append(ELMoCharacterMapper.eos_token)
         tokens = list(set(tokens))
         timesteps = 32
         batch_size = 32
-        tokens.append(ELMoCharacterMapper.bos_token)
-        tokens.append(ELMoCharacterMapper.eos_token)
         chunked_tokens = lazy_groups_of(iter(tokens), timesteps)
 
         all_ids = []
         all_embeddings = []
+        device = get_device_of(next(self.parameters()))
         for batch in lazy_groups_of(chunked_tokens, batch_size):
             # Shape (batch_size, 32, 32, 50)
             batched_tensor = batch_to_ids(batch)
-            device = get_device_of(next(self.parameters()))
+
+            # NOTE: This device check is for when a user calls this method having
+            # already placed the model on a device. If this is called in the
+            # constructor, it will probably happen on the CPU. This isn't too bad,
+            # because it's only a few convolutions and will likely be very fast.
             if device >= 0:
                 batched_tensor = batched_tensor.cuda(device)
             token_embedding = self._token_embedder(batched_tensor)["token_embedding"]
@@ -535,11 +540,13 @@ class _ElmoBiLm(torch.nn.Module):
         full_embedding = torch.cat(all_embeddings, 0)
         # We might have some trailing embeddings from padding in the batch, so
         # we clip the embedding and lookup to the right size.
-        embedding = full_embedding[:len(tokens) + 2, :]
-        lookup = full_id_lookup[:len(tokens) + 2, :]
+        embedding = full_embedding[:len(tokens), :]
+        lookup = full_id_lookup[:len(tokens), :]
 
-        self._id_lookup = lookup
-        self._word_embedding = embedding
+        # Registering these as buffers means that pytorch 
+        # handles device copies for us.
+        self.register_buffer("_id_lookup", lookup.data)
+        self.register_buffer("_word_embedding", embedding.data)
 
     def _get_word_ids_from_character_ids(self, inputs: torch.Tensor) -> torch.Tensor:
         """
@@ -563,7 +570,7 @@ class _ElmoBiLm(torch.nn.Module):
         A tensor of shape (batch_size, timesteps).
         """
         # shape (vocab_size, 50)
-        lookup = self._id_lookup
+        lookup = Variable(self._id_lookup)
 
         # Shape (1, 1, vocab_size, 50)
         lookup = lookup.unsqueeze(0).unsqueeze(0)
@@ -589,7 +596,7 @@ class _ElmoBiLm(torch.nn.Module):
 
         # shape (batch_size, timesteps)
         argmax = torch.max(one_hot_lookup, -1)[1]
-        embedded_words = torch.nn.functional.embedding(argmax, self._word_embedding)
+        embedded_words = torch.nn.functional.embedding(argmax, Variable(self._word_embedding))
 
         return embedded_words
 
