@@ -26,12 +26,12 @@ for k in ['20', '50']:
         vocab = list(set([word for sent in sents for word in sent]))
         print("vocab_size: ", len(vocab))
         if use_vocab:
-            encoder = _ElmoBiLm(options, weights, vocab_to_cache=vocab).cuda()
+            encoder = _ElmoBiLm(options, weights, vocab_to_cache=vocab)
         else:
-            encoder = _ElmoBiLm(options, weights).cuda()
+            encoder = _ElmoBiLm(options, weights)
         encoder.eval()
 
-        char_ids = batch_to_ids(sents).cuda()
+        char_ids = batch_to_ids(sents)
         #sents = [sentences[k][0]]
 
         # warm up
@@ -44,8 +44,7 @@ for k in ['20', '50']:
 
             if use_vocab:
                 character_ids_with_bos_eos, mask_with_bos_eos = encoder._token_embedder.add_bos_and_eos(char_ids)
-                word_ids = encoder._get_word_ids_from_character_ids(character_ids_with_bos_eos)
-                type_representation = encoder._word_embedding(word_ids)
+                _ = encoder._get_word_ids_from_character_ids(character_ids_with_bos_eos)
 
             else:
                 _ = encoder._token_embedder(char_ids)
