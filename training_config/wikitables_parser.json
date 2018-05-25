@@ -22,8 +22,8 @@
     "min_count": {"tokens": 3},
     "tokens_to_add": {"tokens": ["-1", "0", "1"]}
   },
-  "train_data_path": "/wikitables_preprocessed/train.jsonl",
-  "validation_data_path": "/wikitables_preprocessed/validation.jsonl",
+  "train_data_path": "/wikitables_preprocessed/pnp_10_lfs_additional_features/sample.jsonl",
+  "validation_data_path": "/wikitables_preprocessed/pnp_10_lfs_additional_features/sample.jsonl",
   "model": {
     "type": "wikitables_mml_parser",
     "question_embedder": {
@@ -63,7 +63,7 @@
     "batch_size" : 1
   },
   "trainer": {
-    "num_epochs": 20,
+    "num_epochs": 1,
     "patience": 5,
     "cuda_device": 0,
     "grad_norm": 5.0,

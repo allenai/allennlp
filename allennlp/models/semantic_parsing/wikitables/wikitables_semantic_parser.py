@@ -112,6 +112,7 @@ class WikiTablesSemanticParser(Model):
         self._num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
         self._num_start_types = 5  # TODO(mattg): get this in a more principled way somehow?
         self._embedding_dim = question_embedder.get_output_dim()
+        self._entity_type_embedding = Embedding(self._num_entity_types, action_embedding_dim)
         self._type_params = torch.nn.Linear(self._num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
 
