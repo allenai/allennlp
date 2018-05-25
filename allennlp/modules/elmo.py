@@ -469,8 +469,8 @@ class _ElmoBiLm(torch.nn.Module):
         # Registering these as buffers means that pytorch 
         # handles device copies for us, even though they aren't
         # parameters
-        self.register_buffer("_id_lookup", None)
         self.register_buffer("_word_embedding", None)
+        self._id_lookup: Dict[Tuple[int, ...], int]= None
 
         if requires_grad and vocab_to_cache:
             logging.warning("You are fine tuning ELMo and caching char CNN word vectors. "
@@ -512,8 +512,8 @@ class _ElmoBiLm(torch.nn.Module):
         _word_embedding : ``torch.Tensor``
             The word embedding for each word in the tokens passed to this method.
         _id_lookup : ``torch.Tensor``
-            This is a tensor containing the 50 dimensional character id vectors
-            which ELMo uses to represent words.
+            This is the dictionary lookup containing the 50 dimensional character ids
+            mapped to their word embedding ids.
         Parameters
         ----------
         tokens : ``List[str]``, required.
@@ -526,7 +526,7 @@ class _ElmoBiLm(torch.nn.Module):
         batch_size = 32
         chunked_tokens = lazy_groups_of(iter(tokens), timesteps)
 
-        all_ids = []
+        character_id_lookup = {}
         all_embeddings = []
         device = get_device_of(next(self.parameters()))
         for batch in lazy_groups_of(chunked_tokens, batch_size):
@@ -541,70 +541,36 @@ class _ElmoBiLm(torch.nn.Module):
                 batched_tensor = batched_tensor.cuda(device)
             token_embedding = self._token_embedder(batched_tensor)["token_embedding"]
             all_embeddings.append(token_embedding.view(-1, token_embedding.size(-1)))
-            all_ids.append(batched_tensor.view(-1, 50))
-
-        full_id_lookup = torch.cat(all_ids, 0)
         full_embedding = torch.cat(all_embeddings, 0)
+
+        for i, token in enumerate(tokens):
+            representation = tuple(ELMoCharacterMapper.convert_word_to_char_ids(token))
+            character_id_lookup[representation] = i
         # We might have some trailing embeddings from padding in the batch, so
         # we clip the embedding and lookup to the right size.
         embedding = full_embedding[:len(tokens), :]
-        lookup = full_id_lookup[:len(tokens), :]
 
         self._word_embedding = embedding.data
-        self._id_lookup = lookup.data
+        self._id_lookup = character_id_lookup
 
     def _get_word_ids_from_character_ids(self, inputs: torch.Tensor) -> torch.Tensor:
         """
         Given a character id tensor of shape (batch_size, timesteps, 50),
-        look up the word id for that word in the cached tensor and return it.
-
-        The lookup compares each character id vector to every cached one in
-        parallel, effectively implementing an extremely naive O(N) dictionary
-        lookup. This is acceptable because it happens in parallel using
-        broadcasting and removes the need to create a key-value dictionary
-        on the CPU when computation is happening on the GPU. In practice,
-        on the CPU this is slower by about 10% and faster on the GPU by
-        about 10%, when comparing to using a dictionary of tuple: ids.
-
-        Overall, it speeds up ELMo by about 20-30%, so we'll accept the
-        slightly reduced performance on the CPU, because you're probably
-        using a GPU for the speed critical parts anyway.
+        look up the word id for that word in the cache dictionary and return it.
 
         Returns
         -------
         A tensor of shape (batch_size, timesteps).
         """
-        # shape (vocab_size, 50)
-        lookup = Variable(self._id_lookup)
-
-        # Shape (1, 1, vocab_size, 50)
-        lookup = lookup.unsqueeze(0).unsqueeze(0)
-        # shape (batch_size, timesteps, 1, 50)
-        inputs = inputs.unsqueeze(2)
-
-        # Here we do a broadcasted comparison to get the
-        # equality values for each row in the inputs with
-        # respect to every row of the id_lookup.
-        # We sum and compare to 50 to find only those
-        # rows which exactly match an index in the id_lookup,
-        # as the correct rows will sum to 50 (every element matched).
-        # shape (batch_size, timesteps, vocab_size)
-        comparison = (lookup == inputs).sum(-1)
-        # This is one-hot, indicating whether a key in the lookup
-        # matches the row of the input tensor.
-        # shape (batch_size, timesteps, vocab_size)
-        one_hot_lookup = (comparison == 50).long()
-        all_words_have_a_lookup = (one_hot_lookup.sum(-1) > 0).all()
-
-        if not all_words_have_a_lookup:
-            raise KeyError
-
-        # shape (batch_size, timesteps)
-        argmax = torch.max(one_hot_lookup, -1)[1]
-        embedded_words = torch.nn.functional.embedding(argmax, Variable(self._word_embedding))
-
-        return embedded_words
-
+        batch_size, timesteps, _ = list(inputs.size())
+        inputs = inputs.cpu().long().data.numpy()
+        word_ids = torch.zeros(batch_size, timesteps).long()
+ 
+        for i in range(batch_size):
+            for j in range(timesteps):
+                word = tuple([int(word_id) for word_id in inputs[i, j]])
+                word_ids[i, j] = self._id_lookup[word]
+        return torch.nn.functional.embedding(word_ids, self._word_embedding)
 
     def get_output_dim(self):
         return 2 * self._token_embedder.get_output_dim()
