@@ -12,9 +12,6 @@ class MatrixAttention(torch.nn.Module, Registrable):
     scores.  Because these scores are unnormalized, we don't take a mask as input; it's up to the
     caller to deal with masking properly when this output is used.
 
-    By default similarity is computed with a dot product, but you can alternatively use a
-    parameterized similarity function if you wish.
-
     This is largely similar to using ``TimeDistributed(Attention)``, except the result is
     unnormalized.  You should use this instead of ``TimeDistributed(Attention)`` if you want to
     compute multiple normalizations of the attention matrix.
