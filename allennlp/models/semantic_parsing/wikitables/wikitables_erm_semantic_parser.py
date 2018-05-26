@@ -267,63 +267,62 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         outputs = self._decoder_trainer.decode(initial_state,
                                                self._decoder_step,
                                                self._get_state_cost)
-        if not self.training:
-            # TODO(pradeep): Can move most of this block to super class.
-            linking_scores = initial_info["linking_scores"]
-            feature_scores = initial_info["feature_scores"]
-            similarity_scores = initial_info["similarity_scores"]
-            batch_size = list(question.values())[0].size(0)
-            action_mapping = {}
-            for batch_index, batch_actions in enumerate(actions):
-                for action_index, action in enumerate(batch_actions):
-                    action_mapping[(batch_index, action_index)] = action[0]
-            outputs['action_mapping'] = action_mapping
-            outputs['entities'] = []
-            outputs['linking_scores'] = linking_scores
-            if feature_scores is not None:
-                outputs['feature_scores'] = feature_scores
-            outputs['similarity_scores'] = similarity_scores
-            outputs['logical_form'] = []
-            best_action_sequences = outputs['best_action_sequences']
-            agenda_indices = [actions_[:, 0].cpu().data for actions_ in agenda]
-            for i in range(batch_size):
-                in_agenda_ratio = 0.0
-                # Decoding may not have terminated with any completed logical forms, if `num_steps`
-                # isn't long enough (or if the model is not trained enough and gets into an
-                # infinite action loop).
-                if i in best_action_sequences:
-                    # Taking only the top action sequence.
-                    best_action_sequence = best_action_sequences[i][0]
-                    action_strings = [action_mapping[(i, action_index)] for action_index in best_action_sequence]
-                    try:
-                        self._has_logical_form(1.0)
-                        logical_form = world[i].get_logical_form(action_strings, add_var_function=False)
-                    except ParsingError:
-                        self._has_logical_form(0.0)
-                        logical_form = 'Error producing logical form'
-                    if example_lisp_string:
-                        self._denotation_accuracy(logical_form, example_lisp_string[i])
-                    outputs['logical_form'].append(logical_form)
-                    outputs['entities'].append(world[i].table_graph.entities)
-                    instance_possible_actions = actions[i]
-                    agenda_actions = []
-                    for rule_id in agenda_indices[i]:
-                        rule_id = int(rule_id)
-                        if rule_id == -1:
-                            continue
-                        action_string = instance_possible_actions[rule_id][0]
-                        agenda_actions.append(action_string)
-                    actions_in_agenda = [action in action_strings for action in agenda_actions]
-                    if actions_in_agenda:
-                        # Note: This means that when there are no actions on agenda, agenda coverage
-                        # will be 0, not 1.
-                        in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
-                else:
-                    outputs['logical_form'].append('')
+        # TODO(pradeep): Can move most of this block to super class.
+        linking_scores = initial_info["linking_scores"]
+        feature_scores = initial_info["feature_scores"]
+        similarity_scores = initial_info["similarity_scores"]
+        batch_size = list(question.values())[0].size(0)
+        action_mapping = {}
+        for batch_index, batch_actions in enumerate(actions):
+            for action_index, action in enumerate(batch_actions):
+                action_mapping[(batch_index, action_index)] = action[0]
+        outputs['action_mapping'] = action_mapping
+        outputs['entities'] = []
+        outputs['linking_scores'] = linking_scores
+        if feature_scores is not None:
+            outputs['feature_scores'] = feature_scores
+        outputs['similarity_scores'] = similarity_scores
+        outputs['logical_form'] = []
+        best_action_sequences = outputs['best_action_sequences']
+        agenda_indices = [actions_[:, 0].cpu().data for actions_ in agenda]
+        for i in range(batch_size):
+            in_agenda_ratio = 0.0
+            # Decoding may not have terminated with any completed logical forms, if `num_steps`
+            # isn't long enough (or if the model is not trained enough and gets into an
+            # infinite action loop).
+            if i in best_action_sequences:
+                # Taking only the top action sequence.
+                best_action_sequence = best_action_sequences[i][0]
+                action_strings = [action_mapping[(i, action_index)] for action_index in best_action_sequence]
+                try:
+                    self._has_logical_form(1.0)
+                    logical_form = world[i].get_logical_form(action_strings, add_var_function=False)
+                except ParsingError:
                     self._has_logical_form(0.0)
-                    if example_lisp_string:
-                        self._denotation_accuracy(None, example_lisp_string[i])
-                self._agenda_coverage(in_agenda_ratio)
+                    logical_form = 'Error producing logical form'
+                if example_lisp_string:
+                    self._denotation_accuracy(logical_form, example_lisp_string[i])
+                outputs['logical_form'].append(logical_form)
+                outputs['entities'].append(world[i].table_graph.entities)
+                instance_possible_actions = actions[i]
+                agenda_actions = []
+                for rule_id in agenda_indices[i]:
+                    rule_id = int(rule_id)
+                    if rule_id == -1:
+                        continue
+                    action_string = instance_possible_actions[rule_id][0]
+                    agenda_actions.append(action_string)
+                actions_in_agenda = [action in action_strings for action in agenda_actions]
+                if actions_in_agenda:
+                    # Note: This means that when there are no actions on agenda, agenda coverage
+                    # will be 0, not 1.
+                    in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
+            else:
+                outputs['logical_form'].append('')
+                self._has_logical_form(0.0)
+                if example_lisp_string:
+                    self._denotation_accuracy(None, example_lisp_string[i])
+            self._agenda_coverage(in_agenda_ratio)
         return outputs
 
     @staticmethod

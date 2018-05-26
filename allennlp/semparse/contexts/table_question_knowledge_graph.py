@@ -358,15 +358,34 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
 
     def _get_longest_span_matching_entities(self):
         question = " ".join([token.text for token in self.question_tokens])
-        matches_starting_at: Dict[int, List[str]] = defaultdict(list)
+        matches_starting_at: Dict[int, List[Tuple[str, str]]] = defaultdict(list)
         for index, token in enumerate(self.question_tokens):
+            entities = []
             if token.text in self._entity_prefixes:
-                for entity in self._entity_prefixes[token.text]:
-                    if self.entity_text[entity].lower() in question:
-                        matches_starting_at[index].append(entity)
+                entities.extend(self._entity_prefixes[token.text])
+            if token.lemma_ in self._entity_prefixes:
+                entities.extend(self._entity_prefixes[token.lemma_])
+            for entity in entities:
+                entity_text = self.entity_text[entity].lower()
+                if entity_text in question:
+                    matches_starting_at[index].append((entity, entity_text))
+                else:
+                    entity_text_parts = entity_text.split()
+                    parts_in_question = [part in question for part in entity_text_parts]
+                    if sum(parts_in_question) / len(parts_in_question) > 0.5:
+                        matches_starting_at[index].append((entity, entity_text))
         longest_matches: List[str] = []
         for index, matches in matches_starting_at.items():
-            longest_matches.append(sorted(matches, key=len)[-1])
+            # Sorting by length of entity text
+            sorted_matches = sorted(matches, key=lambda x: len(x[1]), reverse=True)
+            longest_matched_entity, longest_text = sorted_matches[0]
+            # If the longest matched entity is a part and there is another entity with the same
+            # text, it should be a cell, and we should return the cell instead.
+            if "fb:part" in longest_matched_entity and len(sorted_matches) > 1 and \
+               sorted_matches[1][1] == longest_text:
+                longest_matches.append(sorted_matches[1][0])
+            else:
+                longest_matches.append(longest_matched_entity)
         return longest_matches
 
     @overrides

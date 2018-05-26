@@ -184,27 +184,22 @@ class WikiTablesWorld(World):
                 agenda_items.append("-")
             if token == "average":
                 agenda_items.append("avg")
-            if token in ["least", "top", "first", "smallest", "shortest", "lowest"]:
-                # This condition is too brittle. But for most logical forms with "min", there are
-                # semantically equivalent ones with "argmin". The exceptions are rare.
-                if "what is the least" in question:
-                    agenda_items.append("min")
-                else:
-                    agenda_items.append("argmin")
-            if token in ["last", "most", "largest", "highest", "longest", "greatest"]:
-                # This condition is too brittle. But for most logical forms with "max", there are
-                # semantically equivalent ones with "argmax". The exceptions are rare.
-                if "what is the most" in question:
-                    agenda_items.append("max")
-                else:
-                    agenda_items.append("argmax")
-
-        if "how many" in question or "number" in question:
-            if "sum" not in agenda_items and "avg" not in agenda_items:
-                # The question probably just requires counting the rows. But this is not very
-                # accurate. The question could also be asking for a value that is in the table.
+            if token == "number":
                 agenda_items.append("count")
-        agenda = []
-        for agenda_item in set(agenda_items):
-            agenda.append(self.terminal_productions[agenda_item])
+            if token == "last":
+                agenda_items.extend(["fb:row.row.index", "count", "fb:type.row"])
+            if token == "first":
+                agenda_items.append("fb:row.row.index")
+            # The following could trigger argmin and argmax instead of min and max. But ignoring
+            # them for now.
+            if token in ["least", "smallest", "shortest", "lowest"]:
+                agenda_items.append("min")
+            if token in ["most", "largest", "highest", "longest", "greatest"]:
+                agenda_items.append("max")
+
+        if "how many" in question:
+            # The question probably just requires counting the rows. But this is not very
+            # accurate. The question could also be asking for a value that is in the table.
+            agenda_items.append("count")
+        agenda = [self.terminal_productions[agenda_item] for agenda_item in set(agenda_items)]
         return agenda

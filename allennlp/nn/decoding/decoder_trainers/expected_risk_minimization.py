@@ -55,7 +55,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
                supervision: Callable[[StateType], torch.Tensor]) -> Dict[str, torch.Tensor]:
         cost_function = supervision
         finished_states = self._get_finished_states(initial_state, decode_step)
-        loss = Variable(initial_state.score[0].data.new([0.0]))
+        loss = Variable(initial_state.score[0].data.new([0.0]), requires_grad=True)
         finished_model_scores = self._get_model_scores_by_batch(finished_states)
         finished_costs = self._get_costs_by_batch(finished_states, cost_function)
         for batch_index in finished_model_scores:
@@ -67,8 +67,11 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
             # Unmasked softmax of log probabilities will convert them into probabilities and
             # renormalize them.
             renormalized_probs = nn_util.masked_softmax(logprobs, None)
-            loss += renormalized_probs.dot(costs)
-        mean_loss = loss / len(finished_model_scores)
+            loss = loss + renormalized_probs.dot(costs)
+        if finished_model_scores:
+            mean_loss = loss / len(finished_model_scores)
+        else:
+            mean_loss = loss
         return {'loss': mean_loss,
                 'best_action_sequences': self._get_best_action_sequences(finished_states)}
 
@@ -82,7 +85,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
             next_states = []
             grouped_state = states[0].combine_states(states)
             # These states already come sorted.
-            for next_state in decode_step.take_step(grouped_state):
+            for next_state in decode_step.take_step(grouped_state, max_actions=self._beam_size):
                 if next_state.is_finished():
                     finished_states.append(next_state)
                 else:
