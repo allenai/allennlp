@@ -35,7 +35,7 @@ Now to run the demo, you can `cd` to the root AllenNLP directory and run the
 following.
 
 ```
-python -m allennlp.run serve
+./bin/allennlp serve
 ```
 
 You may need to force refresh your web browser.

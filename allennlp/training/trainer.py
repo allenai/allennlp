@@ -456,7 +456,10 @@ class Trainer:
 
             batch_grad_norm = self._rescale_gradients()
 
-            self._update_learning_rate(None, batch_num_total=batch_num_total)
+            # This does nothing if batch_num_total is None or you are using an
+            # LRScheduler which doesn't update per batch.
+            if self._learning_rate_scheduler:
+                self._learning_rate_scheduler.step_batch(batch_num_total)
 
             if self._log_histograms_this_batch:
                 # get the magnitude of parameter updates for logging
@@ -601,13 +604,6 @@ class Trainer:
             elif train_metric is not None:
                 logger.info(message_template, "Training", name, train_metric)
 
-    def _update_learning_rate(self, epoch: int, val_metric: float = None,
-                              batch_num_total: int = None) -> None:
-        if self._learning_rate_scheduler:
-            self._learning_rate_scheduler.step_batch(batch_num_total)
-            self._learning_rate_scheduler.step(val_metric, epoch)
-
-
     def _validation_loss(self) -> Tuple[float, int]:
         """
         Computes the validation loss. Returns it and the number of batches.
@@ -695,7 +691,11 @@ class Trainer:
             self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
             self._metrics_to_console(train_metrics, val_metrics)
-            self._update_learning_rate(epoch, val_metric=this_epoch_val_metric)
+
+            if self._learning_rate_scheduler:
+                # The LRScheduler API is agnostic to whether your schedule requires a validation metric -
+                # if it doesn't, the validation metric passed here is ignored.
+                self._learning_rate_scheduler.step(this_epoch_val_metric, epoch)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", time.strftime("%H:%M:%S", time.gmtime(epoch_elapsed_time)))
