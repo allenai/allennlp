@@ -140,7 +140,8 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_should_stop_early_with_invalid_patience(self):
         for patience in [0, -1, -2, 1.5, 'None']:
-            with pytest.raises(ConfigurationError, message='No ConfigurationError for patience={}'.format(patience)):
+            with pytest.raises(ConfigurationError,
+                               message='No ConfigurationError for patience={}'.format(patience)):
                 Trainer(self.model, self.optimizer, self.iterator, self.instances,
                         validation_dataset=self.instances, num_epochs=100,
                         patience=patience, validation_metric="+test")

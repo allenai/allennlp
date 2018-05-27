@@ -523,6 +523,9 @@ class Trainer:
         uses patience and the validation metric to determine if training should stop early
         """
         if self._patience and self._patience < len(metric_history):
+            # Pylint can't figure out that in this branch `self._patience` is an int.
+            # pylint: disable=invalid-unary-operand-type
+
             # Is the best score in the past N epochs worse than the best score overall?
             if self._validation_metric_decreases:
                 return min(metric_history[-self._patience:]) > min(metric_history)
