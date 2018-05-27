@@ -12,7 +12,8 @@ from torch.nn.modules.linear import Linear
 from allennlp.common import util as common_util
 from allennlp.common.checks import check_dimensions_match
 from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
-from allennlp.modules import Attention, FeedForward
+from allennlp.modules import FeedForward
+from allennlp.modules.attention.legacy_attention import LegacyAttention
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
@@ -49,7 +50,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         super(WikiTablesDecoderStep, self).__init__()
         self._mixture_feedforward = mixture_feedforward
         self._entity_type_embedding = Embedding(num_entity_types, action_embedding_dim)
-        self._input_attention = Attention(attention_function)
+        self._input_attention = LegacyAttention(attention_function)
 
         self._num_start_types = num_start_types
         self._start_type_predictor = Linear(encoder_output_dim, num_start_types)
