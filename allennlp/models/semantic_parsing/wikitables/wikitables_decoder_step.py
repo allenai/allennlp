@@ -132,6 +132,13 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                                        encoder_output_mask)
         action_query = torch.cat([hidden_state, attended_question], dim=-1)
         considered_actions, actions_to_embed, actions_to_link = self._get_actions_to_consider(state)
+
+        if allowed_actions is not None:
+            actions_to_embed, actions_to_link, allowed_logit_indices = self._get_actions_to_consider_optimized(state, allowed_actions)
+            considered_actions = None
+        else:
+            considered_actions, actions_to_embed, actions_to_link = self._get_actions_to_consider(state)
+
         # action_embeddings: (group_size, num_embedded_actions, action_embedding_dim)
         # output_action_embeddings: (group_size, num_embedded_actions, action_embedding_dim)
         # action_mask: (group_size, num_embedded_actions)
@@ -200,6 +207,18 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # for the current action.
         log_probs = scores_so_far + current_log_probs
 
+        if allowed_actions is not None:
+            # This method is slow but integrates well with beam search, so use it
+            # for inference.
+            return self._compute_new_states_optimized(state,
+                                                      log_probs,
+                                                      hidden_state,
+                                                      memory_cell,
+                                                      action_embeddings,
+                                                      attended_question,
+                                                      allowed_actions,
+                                                      self._identifier_literal_action_embedding,
+                                                      allowed_logit_indices)
         return self._compute_new_states(state,
                                         log_probs,
                                         hidden_state,
@@ -781,4 +800,127 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                    checklist_state=new_checklist_state,
                                                    debug_info=new_debug_info)
                 new_states.append(new_state)
+        return new_states
+
+
+    @staticmethod
+    # @timeit
+    def _get_actions_to_consider_optimized(state: WikiTablesDecoderState,
+                                           allowed_action_indices: List[int]) -> Tuple[List[List[int]],
+                                                                         List[List[int]],
+                                                                         List[List[int]]]:
+        # A list of `batch_action_indices` for each group element.
+        valid_actions = state.get_valid_actions()
+        max_num_actions = max([len(action_list) for action_list in valid_actions])
+
+        embedded_actions: List[List[int]] = []
+        linked_actions: List[List[int]] = []
+
+        allowed_logit_indices = [-1] * len(state.batch_indices)
+        for group_index, (batch_index, valid_action_list) in enumerate(zip(state.batch_indices, valid_actions)):
+            # This initialization speeds up action embedding later since amount
+            # of padding inserted is greatly reduced. Note that this doesn't
+            # pad to the exact length, just an approximate one to save time later.
+            embedded_actions.append([0]*max_num_actions)
+            linked_actions.append([])
+            num_embedded = 0
+            for i, action_index in enumerate(valid_action_list):
+                # state.action_indices is a dictionary that maps (batch_index, batch_action_index)
+                # to global_action_index
+                global_action_index = state.action_indices[(batch_index, action_index)]
+                if global_action_index == -1:
+                    linked_actions[-1].append(action_index)
+                else:
+                    # This stores the location in the logits tensor to look
+                    # for the allowed action logit, so we don't have to search
+                    # for it later.
+                    if action_index == allowed_action_indices[group_index]:
+                        allowed_logit_indices[group_index] = num_embedded
+                    embedded_actions[group_index][i] = global_action_index
+                    num_embedded += 1
+
+        num_embedded_actions = max(len(actions) for actions in embedded_actions)
+        num_linked_actions = max(len(actions) for actions in linked_actions)
+        if num_linked_actions == 0:
+            linked_actions = None
+        for group_index, logit_index in enumerate(allowed_logit_indices):
+            if logit_index == -1:
+                # This is a linked action and hasn't been mapped. This shouldn't
+                # be entered if linked actions is None.
+                allowed_action = allowed_action_indices[group_index]
+                # Logits will be padded by num_embedded_actions so we add
+                # that.
+                logit_index = num_embedded_actions + linked_actions[group_index].index(allowed_action)
+                allowed_logit_indices[group_index] = logit_index
+
+        return embedded_actions, linked_actions, allowed_logit_indices
+
+
+    @staticmethod
+    # @timeit
+    def _compute_new_states_optimized(state: WikiTablesDecoderState,
+                            log_probs: torch.Tensor,
+                            hidden_state: torch.Tensor,
+                            memory_cell: torch.Tensor,
+                            action_embeddings: torch.Tensor,
+                            attended_question: torch.Tensor,
+                            allowed_action_indices: List[int],
+                            identifier_literal_action_embedding: torch.Tensor,
+                            allowed_logit_indices: List[Tuple[int, int]]) -> List[WikiTablesDecoderState]:
+        hidden_state = [x.squeeze(0) for x in hidden_state.split(1, 0)]
+        memory_cell = [x.squeeze(0) for x in memory_cell.split(1, 0)]
+        attended_question = [x.squeeze(0) for x in attended_question.split(1, 0)]
+
+        new_states = []
+        for group_index, allowed_action_index in enumerate(allowed_action_indices):
+            # index into scores
+            log_probs_index = allowed_logit_indices[group_index]
+
+            # update the scores
+            batch_index = state.batch_indices[group_index]
+            new_action_history = state.action_history[group_index] + [allowed_action_index]
+
+            # new_score = state.score[group_index] + log_probs[group_index, log_probs_index]
+            new_score = log_probs[group_index, log_probs_index]
+
+            production_rule = state.possible_actions[batch_index][allowed_action_index][0]
+            new_grammar_state = state.grammar_state[group_index].take_action(production_rule)
+
+            lhs, _ = production_rule.split('-->')
+            if 'IdentifierNT' in lhs or '_literal' in lhs:
+                action_embedding = identifier_literal_action_embedding
+            else:
+                action_embedding = action_embeddings[group_index, log_probs_index, :]
+
+            # Pop the old parent states and push the new ones one num nonterminals times since
+            # each of the nonterminals will use it.
+            new_parent_states = [p for p in state.rnn_state[group_index].parent_states]
+            new_parent_states.pop()
+            num_nonterminals_in_rhs = new_grammar_state.number_nonterminals_in_rhs(production_rule)
+            new_parent_states = new_parent_states + ([action_embedding] * num_nonterminals_in_rhs)
+
+            new_rnn_state = RnnState(hidden_state[group_index],
+                                     memory_cell[group_index],
+                                     action_embedding,
+                                     attended_question[group_index],
+                                     state.rnn_state[group_index].encoder_outputs,
+                                     state.rnn_state[group_index].encoder_output_mask,
+                                     new_parent_states,
+                                     )
+
+            new_state = WikiTablesDecoderState(batch_indices=[batch_index],
+                                         action_history=[new_action_history],
+                                         score=[new_score],
+                                         rnn_state=[new_rnn_state],
+                                         grammar_state=[new_grammar_state],
+                                         # action_embeddings=state.action_embeddings,
+                                         action_indices=state.action_indices,
+                                         possible_actions=state.possible_actions,
+                                         flattened_linking_scores=state.flattened_linking_scores,
+                                         actions_to_entities=state.actions_to_entities,
+                                         # entity_types=state.entity_types,
+                                         debug_info=None)
+            new_states.append(new_state)
+
+
         return new_states
