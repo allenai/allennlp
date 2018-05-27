@@ -1,6 +1,7 @@
+# pylint: disable=invalid-name,no-self-use,protected-access
 import torch
 from numpy.testing import assert_almost_equal
-import numpy as np
+import numpy
 
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
@@ -27,7 +28,5 @@ class TestCosineMatrixAttention(AllenNlpTestCase):
         # For the second batch there is
         #     negative correlation for the first words
         #     correlation for the second word
-        assert_almost_equal(output.numpy(), np.array([[[0, 0], [.97, 1]],[[-1, -0.99], [0.99,1]]]), decimal=2)
-
-
-
+        assert_almost_equal(output.numpy(), numpy.array([[[0, 0], [.97, 1]], [[-1, -0.99], [0.99, 1]]]),
+                            decimal=2)

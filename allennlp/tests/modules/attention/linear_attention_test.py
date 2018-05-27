@@ -1,6 +1,7 @@
-import torch
+# pylint: disable=invalid-name,no-self-use,protected-access
 from numpy.testing import assert_almost_equal
-import numpy as np
+import numpy
+import torch
 from torch.autograd import Variable
 from torch.nn import Parameter
 
@@ -25,7 +26,4 @@ class LinearAttentionTests(AllenNlpTestCase):
         output = linear(Variable(torch.FloatTensor([[-7, -8, -9]])),
                         Variable(torch.FloatTensor([[[1, 2, 3], [4, 5, 6]]])))
 
-        assert_almost_equal(output.data.numpy(), np.array([[0.0474, 0.9526]]), decimal=2)
-
-
-
+        assert_almost_equal(output.data.numpy(), numpy.array([[0.0474, 0.9526]]), decimal=2)

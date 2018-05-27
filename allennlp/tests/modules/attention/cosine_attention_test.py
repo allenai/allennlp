@@ -1,6 +1,7 @@
+# pylint: disable=invalid-name,no-self-use,protected-access
 import torch
 from numpy.testing import assert_almost_equal
-import numpy as np
+import numpy
 
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
@@ -19,7 +20,4 @@ class TestCosineAttention(AllenNlpTestCase):
         output = linear(torch.FloatTensor([[0, 0, 0], [1, 1, 1]]),
                         torch.FloatTensor([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]]))
 
-        assert_almost_equal(output.numpy(), np.array([[0.0, 0.0], [0.9948, 0.9973]]), decimal=2)
-
-
-
+        assert_almost_equal(output.numpy(), numpy.array([[0.0, 0.0], [0.9948, 0.9973]]), decimal=2)
