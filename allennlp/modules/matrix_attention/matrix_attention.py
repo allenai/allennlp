@@ -12,10 +12,6 @@ class MatrixAttention(torch.nn.Module, Registrable):
     scores.  Because these scores are unnormalized, we don't take a mask as input; it's up to the
     caller to deal with masking properly when this output is used.
 
-    This is largely similar to using ``TimeDistributed(Attention)``, except the result is
-    unnormalized.  You should use this instead of ``TimeDistributed(Attention)`` if you want to
-    compute multiple normalizations of the attention matrix.
-
     Input:
         - matrix_1: ``(batch_size, num_rows_1, embedding_dim)``
         - matrix_2: ``(batch_size, num_rows_2, embedding_dim)``
