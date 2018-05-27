@@ -84,21 +84,25 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
 
         assert len(new_states) == 2
         new_state = new_states[0]
-        # For batch instance 0, we should have selected action 4 from group index 2.
         assert new_state.batch_indices == [0]
-        # These have values taken from what's defined in setUp() - the prior action history
-        # (empty in this case)  and the nonterminals corresponding to the action we picked ('j').
-        assert new_state.action_history == [[4]]
-        assert new_state.grammar_state[0]._nonterminal_stack == ['j']
-        # And these should just be copied from the prior state.
+
+        # We're not going to try to guess which action was taken (or set model weights so that we
+        # know which action will be taken); we'll just check that we got one of the actions we were
+        # expecting.
+        expected_possibilities = set([((4,), ('j',)), ((1, 2), ('h',)), ((1, 3), ('i',))])
+        actual = (tuple(new_state.action_history[0]), tuple(new_state.grammar_state[0]._nonterminal_stack))
+        assert actual in expected_possibilities
+
+        # These should just be copied from the prior state, no matter which action we took.
         assert_almost_equal(new_state.rnn_state[0].encoder_outputs.cpu().numpy(),
                             self.encoder_outputs.cpu().numpy())
         assert_almost_equal(new_state.rnn_state[0].encoder_output_mask.cpu().numpy(),
-                            self.encoder_output_mask..cpu().numpy())
+                            self.encoder_output_mask.cpu().numpy())
         assert new_state.possible_actions == self.possible_actions
 
         new_state = new_states[1]
-        # For batch instance 1, we should have selected action 0 from group index 1.
+        # For batch instance 1, we should have selected action 0 from group index 1 - there was
+        # only one allowed action.
         assert new_state.batch_indices == [1]
         # These two have values taken from what's defined in setUp() - the prior action history
         # ([3, 4]) and the nonterminals corresponding to the action we picked ('q').

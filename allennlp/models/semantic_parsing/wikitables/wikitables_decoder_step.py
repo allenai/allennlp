@@ -188,15 +188,15 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                     mix1 = torch.log(mixture_weight)
                     mix2 = torch.log(1 - mixture_weight)
 
-                    entity_action_probs = torch.nn.functional.log_softmax(linked_action_logits) + mix1
-                    embedded_action_probs = torch.nn.functional.log_softmax(embedded_action_logits) + mix2
+                    entity_action_probs = torch.nn.functional.log_softmax(linked_action_logits, dim=-1) + mix1
+                    embedded_action_probs = torch.nn.functional.log_softmax(embedded_action_logits, dim=-1) + mix2
                     current_log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=-1)
                 else:
                     action_logits = torch.cat([embedded_action_logits, linked_action_logits], dim=-1)
-                    current_log_probs = torch.nn.functional.log_softmax(action_logits)
+                    current_log_probs = torch.nn.functional.log_softmax(action_logits, dim=-1)
             else:
                 action_logits = embedded_action_logits
-                current_log_probs = torch.nn.functional.log_softmax(action_logits)
+                current_log_probs = torch.nn.functional.log_softmax(action_logits, dim=-1)
 
             # This is now the total score for each state after taking each action.  We're going to
             # sort by this later, so it's important that this is the total score, not just the
@@ -422,7 +422,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         hidden_state = torch.stack([rnn_state.hidden_state for rnn_state in state.rnn_state])
         # (group_size, num_start_type)
         start_action_logits = self._start_type_predictor(hidden_state)
-        log_probs = util.masked_log_softmax(start_action_logits, None)
+        log_probs = torch.nn.functional.log_softmax(start_action_logits, dim=-1)
         sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
 
         sorted_actions = sorted_actions.detach().cpu().numpy().tolist()
