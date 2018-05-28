@@ -2,6 +2,7 @@
 :class:`~allennlp.common.tqdm.Tqdm` wraps tqdm so we can add configurable
 global defaults for certain tqdm parameters.
 """
+from io import IOBase
 
 from tqdm import tqdm as _tqdm
 # This is neccesary to stop tqdm from hanging
@@ -15,10 +16,15 @@ _tqdm.monitor_interval = 0
 class Tqdm:
     # These defaults are the same as the argument defaults in tqdm.
     default_mininterval: float = 0.1
+    io_output: IOBase = None
 
     @staticmethod
     def set_default_mininterval(value: float) -> None:
         Tqdm.default_mininterval = value
+
+    @staticmethod
+    def set_io_output(value: IOBase) -> None:
+        Tqdm.io_output = value
 
     @staticmethod
     def set_slower_interval(use_slower_interval: bool) -> None:
@@ -40,4 +46,4 @@ class Tqdm:
                 **kwargs
         }
 
-        return _tqdm(*args, **new_kwargs)
+        return _tqdm(*args, file=Tqdm.io_output, **new_kwargs)
