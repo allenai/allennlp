@@ -524,11 +524,11 @@ class Trainer:
             # Pylint can't figure out that in this branch `self._patience` is an int.
             # pylint: disable=invalid-unary-operand-type
 
-            # Is the best score in the past N epochs worse than the best score overall?
+            # Is the best score in the past N epochs worse than or equal the best score overall?
             if self._validation_metric_decreases:
-                return min(metric_history[-self._patience:]) > min(metric_history)
+                return min(metric_history[-self._patience:]) >= min(metric_history[:-self._patience])
             else:
-                return max(metric_history[-self._patience:]) < max(metric_history)
+                return max(metric_history[-self._patience:]) <= max(metric_history[:-self._patience])
 
         return False
 
@@ -686,16 +686,15 @@ class Trainer:
 
                     # Check validation metric for early stopping
                     this_epoch_val_metric = val_metrics[self._validation_metric]
+
+                    # Check validation metric to see if it's the best so far
+                    is_best_so_far = self._is_best_so_far(this_epoch_val_metric, validation_metric_per_epoch)
+
                     validation_metric_per_epoch.append(this_epoch_val_metric)
                     if self._should_stop_early(validation_metric_per_epoch):
                         logger.info("Ran out of patience.  Stopping training.")
                         break
 
-                    # Check validation metric to see if it's the best so far
-                    if self._validation_metric_decreases:
-                        is_best_so_far = this_epoch_val_metric == min(validation_metric_per_epoch)
-                    else:
-                        is_best_so_far = this_epoch_val_metric == max(validation_metric_per_epoch)
             else:
                 # No validation set, so just assume it's the best so far.
                 is_best_so_far = True
@@ -744,6 +743,16 @@ class Trainer:
             metrics['best_epoch'] = [i for i, value in enumerate(validation_metric_per_epoch)
                                      if value == best_validation_metric][-1]
         return metrics
+
+    def _is_best_so_far(self,
+                        this_epoch_val_metric: float,
+                        validation_metric_per_epoch: List[float]):
+        if not validation_metric_per_epoch:
+            return True
+        elif self._validation_metric_decreases:
+            return this_epoch_val_metric < min(validation_metric_per_epoch)
+        else:
+            return this_epoch_val_metric > max(validation_metric_per_epoch)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
         # pylint: disable=no-self-use
