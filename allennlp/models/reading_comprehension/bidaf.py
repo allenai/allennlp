@@ -9,8 +9,9 @@ from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import Highway, MatrixAttention
+from allennlp.modules import Highway
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
+from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
 from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
 from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy, SquadEmAndF1
 
@@ -81,7 +82,7 @@ class BidirectionalAttentionFlow(Model):
         self._highway_layer = TimeDistributed(Highway(text_field_embedder.get_output_dim(),
                                                       num_highway_layers))
         self._phrase_layer = phrase_layer
-        self._matrix_attention = MatrixAttention(attention_similarity_function)
+        self._matrix_attention = LegacyMatrixAttention(attention_similarity_function)
         self._modeling_layer = modeling_layer
         self._span_end_encoder = span_end_encoder
 

@@ -12,7 +12,8 @@ import torch.nn.functional as F
 from allennlp.common import Params
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.modules.attention import LegacyAttention
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
@@ -94,7 +95,7 @@ class SimpleSeq2Seq(Model):
         target_embedding_dim = target_embedding_dim or self._source_embedder.get_output_dim()
         self._target_embedder = Embedding(num_classes, target_embedding_dim)
         if self._attention_function:
-            self._decoder_attention = Attention(self._attention_function)
+            self._decoder_attention = LegacyAttention(self._attention_function)
             # The output of attention, a weighted average over encoder outputs, will be
             # concatenated to the input vector of the decoder at each time step.
             self._decoder_input_dim = self._encoder.get_output_dim() + target_embedding_dim

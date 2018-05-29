@@ -1,6 +1,8 @@
 import os
+import pathlib
 from subprocess import run
 from typing import Tuple
+import shutil
 
 from overrides import overrides
 
@@ -18,7 +20,9 @@ from allennlp.service.predictors.predictor import Predictor
 DEFAULT_EXECUTOR_JAR = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-executor-0.1.0.jar"
 ABBREVIATIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-abbreviations.tsv"
 GROW_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-grow.grammar"
-SEMPRE_DIR = 'data/'
+SEMPRE_DIR = str(pathlib.Path('data/'))
+SEMPRE_ABBREVIATIONS_PATH = os.path.join(SEMPRE_DIR, "abbreviations.tsv")
+SEMPRE_GRAMMAR_PATH = os.path.join(SEMPRE_DIR, "grow.grammar")
 
 @Predictor.register('wikitables-parser')
 class WikiTablesParserPredictor(Predictor):
@@ -117,4 +121,11 @@ class WikiTablesParserPredictor(Predictor):
         denotations_file = os.path.join(SEMPRE_DIR, 'logical_forms_denotations.tsv')
         with open(denotations_file) as temp_file:
             line = temp_file.readline().split('\t')
-            return line[1] if len(line) > 1 else line[0]
+
+        # Clean up all the temp files generated from this function.
+        # Take care to not remove the auxiliary sempre files
+        os.remove(logical_form_filename)
+        shutil.rmtree(table_dir)
+        os.remove(denotations_file)
+        os.remove(test_data_filename)
+        return line[1] if len(line) > 1 else line[0]

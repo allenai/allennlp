@@ -5,10 +5,11 @@ import io
 import gzip
 import zipfile
 from contextlib import contextmanager
-from typing import Tuple, Optional, IO
+from typing import Tuple, Union, Optional, IO
 import os
 from hashlib import sha256
 import logging
+from pathlib import Path
 import shutil
 import tempfile
 from urllib.parse import urlparse
@@ -20,8 +21,8 @@ from allennlp.common.tqdm import Tqdm
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-CACHE_ROOT = os.getenv('ALLENNLP_CACHE_ROOT', os.path.expanduser(os.path.join('~', '.allennlp')))
-DATASET_CACHE = os.path.join(CACHE_ROOT, "datasets")
+CACHE_ROOT = Path(os.getenv('ALLENNLP_CACHE_ROOT', Path.home() / '.allennlp'))
+DATASET_CACHE = str(CACHE_ROOT / "datasets")
 
 
 def url_to_filename(url: str, etag: str = None) -> str:
@@ -66,7 +67,7 @@ def filename_to_url(filename: str, cache_dir: str = None) -> Tuple[str, str]:
     return url, etag
 
 
-def cached_path(url_or_filename: str, cache_dir: str = None) -> str:
+def cached_path(url_or_filename: Union[str, Path], cache_dir: str = None) -> str:
     """
     Given something that might be a URL (or might be a local path),
     determine which. If it's a URL, download the file and cache it, and
@@ -75,6 +76,8 @@ def cached_path(url_or_filename: str, cache_dir: str = None) -> str:
     """
     if cache_dir is None:
         cache_dir = DATASET_CACHE
+    if isinstance(url_or_filename, Path):
+        url_or_filename = str(url_or_filename)
 
     parsed = urlparse(url_or_filename)
 

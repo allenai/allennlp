@@ -16,7 +16,7 @@ from functools import lru_cache
 
 from flask import Flask, request, Response, jsonify, send_file, send_from_directory
 from flask_cors import CORS
-from gevent.wsgi import WSGIServer
+from gevent.pywsgi import WSGIServer
 
 import psycopg2
 

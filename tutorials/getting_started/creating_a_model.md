@@ -14,9 +14,9 @@ In this tutorial we'll also implement a custom PyTorch
 but you won't need to do that in general.
 
 Our [simple tagger](training_and_evaluating.md) model
-uses an LSTM to capture dependencies between
+uses a LSTM to capture dependencies between
 the words in the input sentence, but doesn't have a great way
-to capture dependencies between the _tags_. This can be a problem
+to capture dependencies between the tags. This can be a problem
 for tasks like [named-entity recognition](https://en.wikipedia.org/wiki/Named-entity_recognition)
 where you'd never want to (for example) have a "start of a place" tag followed by an "inside a person" tag.
 
@@ -111,7 +111,7 @@ if you want the details. The key points are
 
 ## Implementing the CRF Tagger Model
 
-The `CrfTagger` is not terribly different from the `SimpleTagger` model,
+The `CrfTagger` is quite similar to the `SimpleTagger` model,
 so we can take that as a starting point. We need to make the following changes:
 
 * give our model a `crf` attribute containing an appropriately initialized
@@ -196,9 +196,10 @@ $ allennlp train \
 If you were to create your own model outside of
 the allennlp codebase, they wouldn't be.
 
-In that case `allennlp.run` needs extra info to load the modules in which
-you've defined your classes, they never get registered, and then
-AllenNLP is unable to instantiate them based on the configuration file.
+If you were to create your own model outside of the allennlp codebase,
+you would need to load the modules where you've defined your classes.
+Otherwise they never get registered and then AllenNLP is unable to
+instantiate them based on the configuration file.
 
 You can specify one more more extra packages using the
 `--include-packages` flag. For example, imagine that
