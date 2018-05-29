@@ -26,7 +26,7 @@ MODULES_THAT_NEED_NO_DOCS: Set[str] = {
         'allennlp.modules.alternating_highway_lstm',
         # Private base class, no docs needed.
         'allennlp.modules.encoder_base',
-        # Deprecated in favour of allennlp.predictors.
+        # Deprecated in favor of allennlp.predictors.
         'allennlp.service.predictors.*',
 }
 
