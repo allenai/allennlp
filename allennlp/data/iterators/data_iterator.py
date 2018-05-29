@@ -23,10 +23,9 @@ class DataIterator(Registrable):
                  instances: Iterable[Instance],
                  num_epochs: int = None,
                  shuffle: bool = True,
-                 cuda_device: int = -1,
-                 for_training: bool = True) -> Generator[Dict[str, Union[numpy.ndarray,
-                                                                         Dict[str, numpy.ndarray]]],
-                                                         None, None]:
+                 cuda_device: int = -1) -> Generator[Dict[str, Union[numpy.ndarray,
+                                                                     Dict[str, numpy.ndarray]]],
+                                                     None, None]:
         """
         Returns a generator that yields batches over the given dataset, forever.
 
@@ -46,17 +45,13 @@ class DataIterator(Registrable):
         cuda_device : ``int``
             If cuda_device >= 0, GPUs are available and Pytorch was compiled with CUDA support, the
             tensor will be copied to the cuda_device specified.
-        for_training : ``bool``, optional (default=``True``)
-            If ``False``, we will pass the ``volatile=True`` flag when constructing variables,
-            which disables gradient computations in the graph.  This makes inference more efficient
-            (particularly in memory usage), but is incompatible with training models.
         """
         if num_epochs is None:
             while True:
-                yield from self._yield_one_epoch(instances, shuffle, cuda_device, for_training)
+                yield from self._yield_one_epoch(instances, shuffle, cuda_device)
         else:
             for _ in range(num_epochs):
-                yield from self._yield_one_epoch(instances, shuffle, cuda_device, for_training)
+                yield from self._yield_one_epoch(instances, shuffle, cuda_device)
 
     def get_num_batches(self, instances: Iterable[Instance]) -> int:
         """
@@ -66,7 +61,7 @@ class DataIterator(Registrable):
         """
         raise NotImplementedError
 
-    def _yield_one_epoch(self, instances: Iterable[Instance], shuffle: bool, cuda_device: int, for_training: bool):
+    def _yield_one_epoch(self, instances: Iterable[Instance], shuffle: bool, cuda_device: int):
         batches = self._create_batches(instances, shuffle)
         for batch in batches:
             if self.vocab is not None:
@@ -75,8 +70,7 @@ class DataIterator(Registrable):
             logger.debug("Batch padding lengths: %s", str(padding_lengths))
             logger.debug("Batch size: %d", len(batch.instances))
             yield batch.as_tensor_dict(padding_lengths,
-                                       cuda_device=cuda_device,
-                                       for_training=for_training)
+                                       cuda_device=cuda_device)
 
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         """

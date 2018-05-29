@@ -1,20 +1,20 @@
 # pylint: disable=no-self-use,invalid-name
 import numpy
 import torch
-from torch.autograd import Variable
+
 from allennlp.modules.lstm_cell_with_projection import LstmCellWithProjection
 from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestLstmCellWithProjection(AllenNlpTestCase):
     def test_elmo_lstm_cell_completes_forward_pass(self):
-        input_tensor = torch.autograd.Variable(torch.rand(4, 5, 3))
+        input_tensor = torch.rand(4, 5, 3)
         input_tensor[1, 4:, :] = 0.
         input_tensor[2, 2:, :] = 0.
         input_tensor[3, 1:, :] = 0.
 
-        initial_hidden_state = Variable(torch.ones([1, 4, 5]))
-        initial_memory_state = Variable(torch.ones([1, 4, 7]))
+        initial_hidden_state = torch.ones([1, 4, 5])
+        initial_memory_state = torch.ones([1, 4, 7])
 
         lstm = LstmCellWithProjection(input_size=3,
                                       hidden_size=5,

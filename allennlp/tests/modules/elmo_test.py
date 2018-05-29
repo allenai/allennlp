@@ -5,7 +5,6 @@ import json
 import h5py
 import numpy
 import torch
-from torch.autograd import Variable
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
@@ -198,7 +197,7 @@ class TestElmoRequiresGrad(ElmoTestCase):
         embedder = ElmoTokenEmbedder(self.options_file, self.weight_file, requires_grad=requires_grad)
         batch_size = 3
         seq_len = 4
-        char_ids = Variable(torch.from_numpy(numpy.random.randint(0, 262, (batch_size, seq_len, 50))))
+        char_ids = torch.from_numpy(numpy.random.randint(0, 262, (batch_size, seq_len, 50)))
         embeddings = embedder(char_ids)
         loss = embeddings.sum()
         loss.backward()
@@ -234,7 +233,7 @@ class TestElmoTokenRepresentation(ElmoTestCase):
                             indices[(k * 50):((k + 1) * 50)], desired_num_tokens=50, padding_lengths={}
                     )
             )
-        batch = Variable(torch.from_numpy(numpy.array(sentences)))
+        batch = torch.from_numpy(numpy.array(sentences))
 
         elmo_token_embedder = _ElmoCharacterEncoder(self.options_file, self.weight_file)
         elmo_token_embedder_output = elmo_token_embedder(batch)
@@ -261,6 +260,6 @@ class TestElmoTokenRepresentation(ElmoTestCase):
 
         for correct_index, token in [[0, '<S>'], [2, '</S>']]:
             indices = indexer.token_to_indices(Token(token), Vocabulary())
-            indices = Variable(torch.from_numpy(numpy.array(indices))).view(1, 1, -1)
+            indices = torch.from_numpy(numpy.array(indices)).view(1, 1, -1)
             embeddings = elmo_token_embedder(indices)['token_embedding']
             assert numpy.allclose(embeddings[0, correct_index, :].data.numpy(), embeddings[0, 1, :].data.numpy())

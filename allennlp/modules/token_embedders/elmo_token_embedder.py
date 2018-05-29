@@ -60,7 +60,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
         """
         Parameters
         ----------
-        inputs: ``torch.autograd.Variable``
+        inputs: ``torch.Tensor``
             Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
 
         Returns

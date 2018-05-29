@@ -6,7 +6,6 @@ import numpy
 import pytest
 import pyhocon
 import torch
-from torch.autograd import Variable
 
 from allennlp.nn import InitializerApplicator
 from allennlp.nn.initializers import block_orthogonal, uniform_unit_scaling
@@ -53,7 +52,7 @@ class TestInitializers(AllenNlpTestCase):
         assert torch.equal(parameter.data, torch.ones(parameter.size()) * 7)
 
     def test_block_orthogonal_can_initialize(self):
-        tensor = Variable(torch.zeros([10, 6]))
+        tensor = torch.zeros([10, 6])
         block_orthogonal(tensor, [5, 3])
         tensor = tensor.data.numpy()
 
@@ -72,7 +71,7 @@ class TestInitializers(AllenNlpTestCase):
             block_orthogonal(tensor, [7, 2, 1])
 
     def test_uniform_unit_scaling_can_initialize(self):
-        tensor = Variable(torch.zeros([10, 6]))
+        tensor = torch.zeros([10, 6])
         uniform_unit_scaling(tensor, "linear")
 
         assert tensor.data.max() < math.sqrt(3/10)

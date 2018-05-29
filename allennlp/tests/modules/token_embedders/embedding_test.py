@@ -4,7 +4,6 @@ import gzip
 import numpy
 import pytest
 import torch
-from torch.autograd import Variable
 import h5py
 
 from allennlp.common import Params
@@ -39,11 +38,11 @@ class TestEmbedding(AllenNlpTestCase):
                 'projection_dim': 20
                 })
         embedding_layer = Embedding.from_params(vocab, params)
-        input_tensor = Variable(torch.LongTensor([[3, 2, 1, 0]]))
+        input_tensor = torch.LongTensor([[3, 2, 1, 0]])
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 4, 20)
 
-        input_tensor = Variable(torch.LongTensor([[[3, 2, 1, 0]]]))
+        input_tensor = torch.LongTensor([[[3, 2, 1, 0]]])
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 1, 4, 20)
 

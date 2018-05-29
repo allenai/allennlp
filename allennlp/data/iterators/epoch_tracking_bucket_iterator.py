@@ -48,10 +48,9 @@ class EpochTrackingBucketIterator(BucketIterator):
                  instances: Iterable[Instance],
                  num_epochs: int = None,
                  shuffle: bool = True,
-                 cuda_device: int = -1,
-                 for_training: bool = True) -> Generator[Dict[str, Union[numpy.ndarray,
-                                                                         Dict[str, numpy.ndarray]]],
-                                                         None, None]:
+                 cuda_device: int = -1) -> Generator[Dict[str, Union[numpy.ndarray,
+                                                                     Dict[str, numpy.ndarray]]],
+                                                     None, None]:
         """
         See ``DataIterator.__call__`` for parameters.
         """
@@ -59,12 +58,12 @@ class EpochTrackingBucketIterator(BucketIterator):
         if num_epochs is None:
             while True:
                 self._add_epoch_num_to_instances(instances, dataset_id)
-                yield from self._yield_one_epoch(instances, shuffle, cuda_device, for_training)
+                yield from self._yield_one_epoch(instances, shuffle, cuda_device)
                 self._global_epoch_nums[dataset_id] += 1
         else:
             for _ in range(num_epochs):
                 self._add_epoch_num_to_instances(instances, dataset_id)
-                yield from self._yield_one_epoch(instances, shuffle, cuda_device, for_training)
+                yield from self._yield_one_epoch(instances, shuffle, cuda_device)
                 self._global_epoch_nums[dataset_id] += 1
 
     def _add_epoch_num_to_instances(self,

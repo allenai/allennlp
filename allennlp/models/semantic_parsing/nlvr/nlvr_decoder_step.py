@@ -4,7 +4,6 @@ from collections import defaultdict
 from overrides import overrides
 
 import torch
-from torch.autograd import Variable
 from torch.nn import Parameter
 from torch.nn.modules.rnn import LSTMCell
 from torch.nn.modules.linear import Linear
@@ -200,12 +199,12 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         # computation, to global indices here.
         for batch_index, checklist_state in zip(state.batch_indices, state.checklist_state):
             global_terminal_indices.append([])
-            for terminal_index in checklist_state.terminal_actions.data.cpu():
+            for terminal_index in checklist_state.terminal_actions.detach().cpu():
                 global_terminal_index = state.action_indices[(batch_index, int(terminal_index[0]))]
                 global_terminal_indices[-1].append(global_terminal_index)
         # We don't need to pad this tensor because the terminal indices from all groups will be the
         # same size.
-        terminal_indices_tensor = Variable(state.score[0].data.new(global_terminal_indices)).long()
+        terminal_indices_tensor = state.score[0].new_tensor(global_terminal_indices, dtype=torch.long)
         group_size = len(state.batch_indices)
         action_embedding_dim = state.action_embeddings.size(-1)
         num_terminals = len(global_terminal_indices[0])
@@ -338,7 +337,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         padded_actions = [common_util.pad_sequence_to_length(action_list, max_num_actions)
                           for action_list in actions_to_embed]
         # Shape: (group_size, num_actions)
-        action_tensor = Variable(state.score[0].data.new(padded_actions).long())
+        action_tensor = state.score[0].new_tensor(padded_actions, dtype=torch.long)
         # `state.action_embeddings` is shape (total_num_actions, action_embedding_dim).
         # We want to select from state.action_embeddings using `action_tensor` to get a tensor of
         # shape (group_size, num_actions, action_embedding_dim).  Unfortunately, the index_select
@@ -349,7 +348,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         flattened_actions = action_tensor.view(-1)
         flattened_action_embeddings = state.action_embeddings.index_select(0, flattened_actions)
         action_embeddings = flattened_action_embeddings.view(group_size, max_num_actions, action_embedding_dim)
-        sequence_lengths = Variable(action_embeddings.data.new(num_actions))
+        sequence_lengths = action_embeddings.new_tensor(num_actions)
         action_mask = nn_util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
         return action_embeddings, action_mask
 
@@ -389,7 +388,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         for batch_index, instance_states_info in states_info.items():
             batch_scores = torch.cat([info[-1] for info in instance_states_info])
             _, sorted_indices = batch_scores.sort(-1, descending=True)
-            sorted_states_info = [instance_states_info[i] for i in sorted_indices.data.cpu().numpy()]
+            sorted_states_info = [instance_states_info[i] for i in sorted_indices.detach().cpu().numpy()]
             allowed_states_info = []
             for i, (group_index, action_index, _, _) in enumerate(sorted_states_info):
                 action = considered_actions[group_index][action_index]

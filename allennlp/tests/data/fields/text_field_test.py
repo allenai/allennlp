@@ -143,7 +143,7 @@ class TestTextField(AllenNlpTestCase):
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
         tensor_dict = field.as_tensor(padding_lengths)
-        numpy.testing.assert_array_almost_equal(tensor_dict["words"].data.cpu().numpy(),
+        numpy.testing.assert_array_almost_equal(tensor_dict["words"].detach().cpu().numpy(),
                                                 numpy.array([1, 1, 1, 2, 1]))
 
     def test_as_tensor_handles_longer_lengths(self):
@@ -153,7 +153,7 @@ class TestTextField(AllenNlpTestCase):
         padding_lengths = field.get_padding_lengths()
         padding_lengths["num_tokens"] = 10
         tensor_dict = field.as_tensor(padding_lengths)
-        numpy.testing.assert_array_almost_equal(tensor_dict["words"].data.cpu().numpy(),
+        numpy.testing.assert_array_almost_equal(tensor_dict["words"].detach().cpu().numpy(),
                                                 numpy.array([1, 1, 1, 2, 1, 0, 0, 0, 0, 0]))
 
     def test_as_tensor_handles_characters(self):
@@ -167,7 +167,7 @@ class TestTextField(AllenNlpTestCase):
                                                 [1, 0, 0, 0, 0, 0, 0, 0],
                                                 [3, 4, 5, 6, 4, 5, 7, 4],
                                                 [1, 0, 0, 0, 0, 0, 0, 0]])
-        numpy.testing.assert_array_almost_equal(tensor_dict["characters"].data.cpu().numpy(),
+        numpy.testing.assert_array_almost_equal(tensor_dict["characters"].detach().cpu().numpy(),
                                                 expected_character_array)
 
     def test_as_tensor_handles_words_and_characters_with_longer_lengths(self):
@@ -180,9 +180,9 @@ class TestTextField(AllenNlpTestCase):
         padding_lengths["num_token_characters"] = 10
         tensor_dict = field.as_tensor(padding_lengths)
 
-        numpy.testing.assert_array_almost_equal(tensor_dict["words"].data.cpu().numpy(),
+        numpy.testing.assert_array_almost_equal(tensor_dict["words"].detach().cpu().numpy(),
                                                 numpy.array([1, 2, 1, 0, 0]))
-        numpy.testing.assert_array_almost_equal(tensor_dict["characters"].data.cpu().numpy(),
+        numpy.testing.assert_array_almost_equal(tensor_dict["characters"].detach().cpu().numpy(),
                                                 numpy.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                                              [3, 4, 5, 6, 4, 5, 7, 4, 0, 0],
                                                              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],

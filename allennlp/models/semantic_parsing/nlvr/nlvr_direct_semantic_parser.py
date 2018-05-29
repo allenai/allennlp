@@ -12,7 +12,6 @@ from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.nn.decoding import BeamSearch
 from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
-from allennlp.nn import util
 from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.nlvr.nlvr_decoder_state import NlvrDecoderState
 from allennlp.models.semantic_parsing.nlvr.nlvr_decoder_step import NlvrDecoderStep
@@ -92,8 +91,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         action_embeddings, action_indices = self._embed_actions(actions)
 
         initial_rnn_state = self._get_initial_rnn_state(sentence)
-        initial_score_list = [util.new_variable_with_data(list(sentence.values())[0],
-                                                          torch.Tensor([0.0]))
+        initial_score_list = [next(iter(sentence.values())).new_zeros(1, dtype=torch.float)
                               for i in range(batch_size)]
         label_strings = self._get_label_strings(labels) if labels is not None else None
         # TODO (pradeep): Assuming all worlds give the same set of valid actions.

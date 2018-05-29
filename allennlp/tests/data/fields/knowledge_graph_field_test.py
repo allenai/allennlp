@@ -114,9 +114,9 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
                                 [self.location_index, self.in_index, self.english_index],
                                 [self.name_index, self.in_index, self.english_index],
                                 [0, 0, 0]]
-        assert_almost_equal(tensor_dict['text']['tokens'].data.cpu().numpy(), expected_text_tensor)
+        assert_almost_equal(tensor_dict['text']['tokens'].detach().cpu().numpy(), expected_text_tensor)
 
-        linking_tensor = tensor_dict['linking'].data.cpu().numpy()
+        linking_tensor = tensor_dict['linking'].detach().cpu().numpy()
         expected_linking_tensor = [[[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # -1, "where"
                                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # -1, "is"
                                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # -1, "mersin"
@@ -210,8 +210,8 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
                                   [self.location_index, self.in_index, self.english_index],
                                   [self.name_index, self.in_index, self.english_index]]
         expected_batched_tensor = [expected_single_tensor, expected_single_tensor]
-        assert_almost_equal(batched_tensor_dict['text']['tokens'].data.cpu().numpy(),
+        assert_almost_equal(batched_tensor_dict['text']['tokens'].detach().cpu().numpy(),
                             expected_batched_tensor)
         expected_linking_tensor = torch.stack([tensor_dict1['linking'], tensor_dict2['linking']])
-        assert_almost_equal(batched_tensor_dict['linking'].data.cpu().numpy(),
-                            expected_linking_tensor.data.cpu().numpy())
+        assert_almost_equal(batched_tensor_dict['linking'].detach().cpu().numpy(),
+                            expected_linking_tensor.detach().cpu().numpy())
