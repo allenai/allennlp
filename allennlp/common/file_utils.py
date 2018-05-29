@@ -238,22 +238,25 @@ class CompressedFileUtils:
         zip_archive.close()
 
 
-def open_maybe_compressed_file(path: str, mode: str = 'rt', encoding: str = None,
-                               file_format: str = None):
+def open_maybe_compressed_file(url_or_path: str, mode: str = 'rt', encoding: str = None,
+                               file_format: str = None, cache_dir: Optional[str] = None):
     """
+    Open an eventually compressed local file or a locally cached remote file.
+
     If the file format is in :const:`CompressedFileUtils.SUPPORTED_FORMATS`, the file is
     opened using :func:`CompressedFileUtils.read`, otherwise it's assumed to be
     uncompressed and it's opened using the built-in :func:`open` function.
 
     The default encoding for text files is :const:`CompressedFileUtils.DEFAULT_ENCODING`.
     """
-    file_format = file_format or get_file_extension(path)
+    file_format = file_format or get_file_extension(url_or_path)
+    local_path = cached_path(url_or_path, cache_dir)
 
     if file_format in CompressedFileUtils.SUPPORTED_FORMATS:
-        return CompressedFileUtils.open(path, mode, encoding, file_format)
+        return CompressedFileUtils.open(local_path, mode, encoding, file_format)
     else:
         if mode not in CompressedFileUtils.MODE_CHOICES:
             raise ValueError("Invalid mode: {}. Supported modes are: {}"
                              .format(mode, CompressedFileUtils.MODE_CHOICES))
-        logger.info("Reading the file assuming it's not compressed: %s", path)
-        return open(path, mode, encoding=encoding)
+        logger.info("Reading the file assuming it's not compressed: %s", url_or_path)
+        return open(local_path, mode, encoding=encoding)
