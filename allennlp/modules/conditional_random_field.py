@@ -310,7 +310,8 @@ class ConditionalRandomField(torch.nn.Module):
                     -10000.0 * (1 - self._constraint_mask[:num_tags, end_tag].detach())
             )
         else:
-            transitions[start_tag, :num_tags] = -10000.0 * (1 - self._constraint_mask[start_tag, :num_tags].detach())
+            transitions[start_tag, :num_tags] = (-10000.0 *
+                                                 (1 - self._constraint_mask[start_tag, :num_tags].detach()))
             transitions[:num_tags, end_tag] = -10000.0 * (1 - self._constraint_mask[:num_tags, end_tag].detach())
 
         all_tags = []

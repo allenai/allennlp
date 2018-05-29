@@ -67,7 +67,8 @@ class TestConditionalRandomField(AllenNlpTestCase):
         # (which is the log-sum-exp of the scores for the logits across all possible tags)
         for logits_i, tags_i in zip(self.logits, self.tags):
             numerator = self.score(logits_i.detach(), tags_i.detach())
-            all_scores = [self.score(logits_i.detach(), tags_j) for tags_j in itertools.product(range(5), repeat=3)]
+            all_scores = [self.score(logits_i.detach(), tags_j)
+                          for tags_j in itertools.product(range(5), repeat=3)]
             denominator = math.log(sum(math.exp(score) for score in all_scores))
             # And include them in the manual calculation.
             manual_log_likelihood += numerator - denominator
