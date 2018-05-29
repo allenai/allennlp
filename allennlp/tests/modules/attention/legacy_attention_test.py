@@ -75,21 +75,12 @@ class TestLegacyAttention(AllenNlpTestCase):
                                                  [0.0, 0.0, 0.0]]))
 
     def test_non_normalized_attention_works(self):
-<<<<<<< HEAD:tests/modules/attention_test.py
-        attention = Attention(normalize=False)
+        attention = LegacyAttention(normalize=False)
         sentence_tensor = torch.FloatTensor([[[-1, 0, 4],
                                               [1, 1, 1],
                                               [-1, 0, 4],
                                               [-1, 0, -1]]])
         query_tensor = torch.FloatTensor([[.1, .8, .5]])
-=======
-        attention = LegacyAttention(normalize=False)
-        sentence_tensor = Variable(torch.FloatTensor([[[-1, 0, 4],
-                                                       [1, 1, 1],
-                                                       [-1, 0, 4],
-                                                       [-1, 0, -1]]]))
-        query_tensor = Variable(torch.FloatTensor([[.1, .8, .5]]))
->>>>>>> b26031db4f27d606146f7d5820b1e884559bd4d4:allennlp/tests/modules/attention/legacy_attention_test.py
         result = attention(query_tensor, sentence_tensor).data.numpy()
         assert_almost_equal(result, [[1.9, 1.4, 1.9, -.6]])
 

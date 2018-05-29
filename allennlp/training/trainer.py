@@ -679,7 +679,6 @@ class Trainer:
             train_metrics = self._train_epoch(epoch)
 
             if self._validation_data is not None:
-<<<<<<< HEAD
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, num_batches = self._validation_loss()
@@ -697,24 +696,6 @@ class Trainer:
                         is_best_so_far = this_epoch_val_metric == min(validation_metric_per_epoch)
                     else:
                         is_best_so_far = this_epoch_val_metric == max(validation_metric_per_epoch)
-=======
-                # We have a validation set, so compute all the metrics on it.
-                val_loss, num_batches = self._validation_loss()
-                val_metrics = self._get_metrics(val_loss, num_batches, reset=True)
-
-                # Check validation metric for early stopping
-                this_epoch_val_metric = val_metrics[self._validation_metric]
-                validation_metric_per_epoch.append(this_epoch_val_metric)
-                if self._should_stop_early(validation_metric_per_epoch):
-                    logger.info("Ran out of patience. Stopping training.")
-                    break
-
-                # Check validation metric to see if it's the best so far
-                if self._validation_metric_decreases:
-                    is_best_so_far = this_epoch_val_metric == min(validation_metric_per_epoch)
-                else:
-                    is_best_so_far = this_epoch_val_metric == max(validation_metric_per_epoch)
->>>>>>> b26031db4f27d606146f7d5820b1e884559bd4d4
             else:
                 # No validation set, so just assume it's the best so far.
                 is_best_so_far = True
