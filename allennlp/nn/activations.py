@@ -39,7 +39,7 @@ class Activation(Registrable):
     to think about masking when you do a softmax or other similar activation function, so it
     requires a different API.
     """
-    def __call__(self, tensor: torch.autograd.Variable) -> torch.autograd.Variable:
+    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
         """
         This function is here just to make mypy happy.  We expect activation functions to follow
         this API; the builtin pytorch activation functions follow this just fine, even though they

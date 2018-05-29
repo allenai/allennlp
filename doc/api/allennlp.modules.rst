@@ -9,6 +9,7 @@ allennlp.modules
 .. toctree::
 
    allennlp.modules.attention
+   allennlp.modules.matrix_attention
    allennlp.modules.augmented_lstm
    allennlp.modules.lstm_cell_with_projection
    allennlp.modules.elmo

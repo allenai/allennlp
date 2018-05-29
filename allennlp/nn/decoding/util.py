@@ -28,9 +28,9 @@ def construct_prefix_tree(targets: Union[torch.Tensor, List[List[List[int]]]],
 
     if not isinstance(targets, list):
         assert targets.dim() == 3, "targets tensor needs to be batched!"
-        targets = targets.data.cpu().numpy().tolist()
+        targets = targets.detach().cpu().numpy().tolist()
     if target_mask is not None:
-        target_mask = target_mask.data.cpu().numpy().tolist()
+        target_mask = target_mask.detach().cpu().numpy().tolist()
     else:
         target_mask = [None for _ in targets]
 

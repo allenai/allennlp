@@ -13,7 +13,6 @@ from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.nn.decoding import DecoderTrainer, ChecklistState
 from allennlp.nn.decoding.decoder_trainers import ExpectedRiskMinimization
-from allennlp.nn import util
 from allennlp.models.archival import load_archive, Archive
 from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.nlvr.nlvr_decoder_state import NlvrDecoderState
@@ -207,8 +206,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         action_embeddings, action_indices = self._embed_actions(actions)
 
         initial_rnn_state = self._get_initial_rnn_state(sentence)
-        initial_score_list = [util.new_variable_with_data(list(sentence.values())[0],
-                                                          torch.Tensor([0.0]))
+        initial_score_list = [next(iter(sentence.values())).new_zeros(1, dtype=torch.float)
                               for i in range(batch_size)]
         # TODO (pradeep): Assuming all worlds give the same set of valid actions.
         initial_grammar_state = [self._create_grammar_state(worlds[i][0], actions[i]) for i in
@@ -221,9 +219,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         for instance_actions, instance_agenda in zip(actions, agenda_list):
             checklist_info = self._get_checklist_info(instance_agenda, instance_actions)
             checklist_target, terminal_actions, checklist_mask = checklist_info
-            initial_checklist = util.new_variable_with_size(checklist_target,
-                                                            checklist_target.size(),
-                                                            0)
+
+            initial_checklist = checklist_target.new_zeros(checklist_target.size())
             initial_checklist_states.append(ChecklistState(terminal_actions=terminal_actions,
                                                            checklist_target=checklist_target,
                                                            checklist_mask=checklist_mask,
@@ -284,7 +281,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         """
         terminal_indices = []
         target_checklist_list = []
-        agenda_indices_set = set([int(x) for x in agenda.squeeze(0).data.cpu().numpy()])
+        agenda_indices_set = set([int(x) for x in agenda.squeeze(0).detach().cpu().numpy()])
         for index, action in enumerate(all_actions):
             # Each action is a ProductionRuleArray, a tuple where the first item is the production
             # rule string.
@@ -297,11 +294,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         # We want to return checklist target and terminal actions that are column vectors to make
         # computing softmax over the difference between checklist and target easier.
         # (num_terminals, 1)
-        terminal_actions = util.new_variable_with_data(agenda,
-                                                       torch.Tensor(terminal_indices))
+        terminal_actions = agenda.new_tensor(terminal_indices)
         # (num_terminals, 1)
-        target_checklist = util.new_variable_with_data(agenda,
-                                                       torch.Tensor(target_checklist_list))
+        target_checklist = agenda.new_tensor(target_checklist_list, dtype=torch.float)
         if self._penalize_non_agenda_actions:
             # All terminal actions are relevant
             checklist_mask = torch.ones_like(target_checklist)
@@ -389,10 +384,10 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         is learning. It may be inefficient to call it while training the model on real data.
         """
         if len(state.batch_indices) == 1 and state.is_finished():
-            costs = [float(self._get_state_cost(state).data.cpu().numpy())]
+            costs = [float(self._get_state_cost(state).detach().cpu().numpy())]
         else:
             costs = []
-        model_scores = [float(score.data.cpu().numpy()) for score in state.score]
+        model_scores = [float(score.detach().cpu().numpy()) for score in state.score]
         all_actions = state.possible_actions[0]
         action_sequences = [[self._get_action_string(all_actions[action]) for action in history]
                             for history in state.action_history]
@@ -401,8 +396,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         for agenda, checklist_target in zip(state.terminal_actions, state.checklist_target):
             agenda_indices = []
             for action, is_wanted in zip(agenda, checklist_target):
-                action_int = int(action.data.cpu().numpy())
-                is_wanted_int = int(is_wanted.data.cpu().numpy())
+                action_int = int(action.detach().cpu().numpy())
+                is_wanted_int = int(is_wanted.detach().cpu().numpy())
                 if is_wanted_int != 0:
                     agenda_indices.append(action_int)
             agenda_sequences.append([self._get_action_string(all_actions[action])
