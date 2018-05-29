@@ -146,7 +146,7 @@ class TestTrainer(AllenNlpTestCase):
         assert not new_trainer._should_stop_early([.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
 
     def test_should_stop_early_with_flat_lining_metric(self):
-        flatline = [.2, .2, .2, .2, .2, .2, .2, .2, .2, .2, .2, .2, .2]
+        flatline = [.2] * 6
         assert Trainer(self.model, self.optimizer,  # pylint: disable=protected-access
                        self.iterator, self.instances,
                        validation_dataset=self.instances,
