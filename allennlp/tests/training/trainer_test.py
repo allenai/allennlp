@@ -271,7 +271,7 @@ class TestSparseClipGrad(AllenNlpTestCase):
         # create a sparse embedding layer, then take gradient
         embedding = torch.nn.Embedding(100, 16, sparse=True)
         embedding.zero_grad()
-        ids = torch.autograd.Variable((torch.rand(17) * 100).long())
+        ids = (torch.rand(17) * 100).long()
         # Set some of the ids to the same value so that the sparse gradient
         # has repeated indices.  This tests some additional logic.
         ids[:5] = 5
@@ -282,5 +282,5 @@ class TestSparseClipGrad(AllenNlpTestCase):
         # Now try to clip the gradients.
         _ = sparse_clip_norm([embedding.weight], 1.5)
         # Final norm should be 1.5
-        grad = embedding.weight.grad.data.coalesce()
-        self.assertAlmostEqual(grad._values().norm(2.0), 1.5, places=5) # pylint: disable=protected-access
+        grad = embedding.weight.grad.coalesce()  # pylint: disable=no-member
+        self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5) # pylint: disable=protected-access

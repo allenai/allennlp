@@ -1,8 +1,6 @@
 # pylint: disable=no-self-use,invalid-name,no-value-for-parameter
 from nltk import Tree
 import torch
-from torch.autograd import Variable
-
 
 from allennlp.common.testing.model_test_case import ModelTestCase
 from allennlp.models.constituency_parser import SpanInformation
@@ -30,10 +28,10 @@ class SpanConstituencyParserTest(ModelTestCase):
         # A very annoying edge case: the PTB has several single word sentences.
         # when running with a batch size 1, we have to be very careful
         # about how we .squeeze/.unsqueeze things to make sure it still runs.
-        text = {"tokens": Variable(torch.LongTensor([[1]]).long())}
-        pos_tags = Variable(torch.LongTensor([[1]]).long())
-        spans = Variable(torch.LongTensor([[[0, 0]]]))
-        label = Variable(torch.LongTensor([[1]]))
+        text = {"tokens": torch.LongTensor([[1]])}
+        pos_tags = torch.LongTensor([[1]])
+        spans = torch.LongTensor([[[0, 0]]])
+        label = torch.LongTensor([[1]])
         self.model(text, spans, [{"tokens": ["hello"]}], pos_tags, label)
 
     def test_decode_runs(self):

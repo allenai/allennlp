@@ -4,7 +4,7 @@ from collections import defaultdict
 import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.nn.util import get_lengths_from_binary_sequence_mask, ones_like
+from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.training.metrics.metric import Metric
 from allennlp.data.dataset_readers.dataset_utils.span_utils import (
@@ -93,8 +93,8 @@ class SpanBasedF1Measure(Metric):
             possible roles associated with it).
         """
         if mask is None:
-            mask = ones_like(gold_labels)
-        # Get the data from the Variables.
+            mask = torch.ones_like(gold_labels)
+
         predictions, gold_labels, mask, prediction_map = self.unwrap_to_tensors(predictions,
                                                                                 gold_labels,
                                                                                 mask, prediction_map)

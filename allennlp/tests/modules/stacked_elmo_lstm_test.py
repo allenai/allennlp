@@ -1,7 +1,6 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
 import numpy
 import torch
-from torch.autograd import Variable
 
 from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.common.testing import AllenNlpTestCase
@@ -9,11 +8,11 @@ from allennlp.common.testing import AllenNlpTestCase
 
 class TestElmoLstmCell(AllenNlpTestCase):
     def test_elmo_lstm(self):
-        input_tensor = Variable(torch.rand(4, 5, 3))
+        input_tensor = torch.rand(4, 5, 3)
         input_tensor[1, 4:, :] = 0.
         input_tensor[2, 2:, :] = 0.
         input_tensor[3, 1:, :] = 0.
-        mask = Variable(torch.ones([4, 5]))
+        mask = torch.ones([4, 5])
         mask[1, 4:] = 0.
         mask[2, 2:] = 0.
         mask[3, 1:] = 0.

@@ -2,7 +2,6 @@ from typing import Dict
 
 import numpy
 import torch
-from torch.autograd import Variable
 from overrides import overrides
 
 from allennlp.data.fields.field import Field
@@ -26,8 +25,7 @@ class ArrayField(Field[numpy.ndarray]):
     @overrides
     def as_tensor(self,
                   padding_lengths: Dict[str, int],
-                  cuda_device: int = -1,
-                  for_training: bool = True) -> torch.Tensor:
+                  cuda_device: int = -1) -> torch.Tensor:
         max_shape = [padding_lengths["dimension_{}".format(i)]
                      for i in range(len(padding_lengths))]
 
@@ -40,7 +38,7 @@ class ArrayField(Field[numpy.ndarray]):
             slicing_shape = slicing_shape + [0 for _ in range(len(max_shape) - len(self.array.shape))]
         slices = [slice(0, x) for x in slicing_shape]
         return_array[slices] = self.array
-        tensor = Variable(torch.from_numpy(return_array), volatile=not for_training)
+        tensor = torch.from_numpy(return_array)
         return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
 
     @overrides

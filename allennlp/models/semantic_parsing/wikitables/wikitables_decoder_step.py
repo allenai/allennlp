@@ -4,7 +4,6 @@ from typing import Dict, List, Set, Tuple
 from overrides import overrides
 
 import torch
-from torch.autograd import Variable
 from torch.nn import Parameter
 from torch.nn.modules.rnn import LSTMCell
 from torch.nn.modules.linear import Linear
@@ -114,7 +113,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                  for rnn_state in state.rnn_state])
 
         # The scores from all prior state transitions until now.  Shape: (group_size, 1).
-        scores_so_far = torch.stack(state.score)
+        scores_so_far = torch.stack(state.score).unsqueeze(-1)
 
         # (group_size, decoder_input_dim)
         projected_input = self._input_projection_layer(torch.cat([attended_question,
@@ -254,7 +253,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             mapped_actions_to_embed.append(instance_mapped_embedded_actions)
         # We don't need to pad the unlinked actions because they're all currently the
         # same size as ``unlinked_terminal_indices``.
-        unlinked_action_indices = Variable(checklist_balance.data.new(mapped_actions_to_embed)).long()
+        unlinked_action_indices = checklist_balance.new_tensor(mapped_actions_to_embed, dtype=torch.long)
         unlinked_actions_mask = (unlinked_action_indices != -1).long()
         # torch.gather would complain if the indices are -1. So making them all 0 now. We'll use the
         # mask again on the balances.
@@ -277,7 +276,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                                          max_num_linked_actions,
                                                                          default_value=lambda: -1)
                                       for indices in mapped_actions_to_link]
-            linked_action_indices = Variable(checklist_balance.data.new(padded_actions_to_link)).long()
+            linked_action_indices = checklist_balance.new_tensor(padded_actions_to_link, dtype=torch.long)
             linked_actions_mask = (linked_action_indices != -1).long()
             linked_action_indices = linked_action_indices * linked_actions_mask
             linked_checklist_balance = torch.gather(checklist_balance, 1, linked_action_indices)
@@ -300,7 +299,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         num_terminals = len(unlinked_terminal_indices)
         group_terminal_indices = [unlinked_terminal_indices for _ in range(group_size)]
         # (group_size, num_unlinked_actions)
-        terminal_indices_tensor = Variable(state.score[0].data.new(group_terminal_indices)).long()
+        terminal_indices_tensor = state.score[0].new_tensor(group_terminal_indices, dtype=torch.long)
         flattened_terminal_indices = terminal_indices_tensor.view(-1)
         flattened_action_embeddings = state.action_embeddings.index_select(0,
                                                                            flattened_terminal_indices)
@@ -325,9 +324,9 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         log_probs = util.masked_log_softmax(start_action_logits, None)
         sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
 
-        sorted_actions = sorted_actions.data.cpu().numpy().tolist()
+        sorted_actions = sorted_actions.detach().cpu().numpy().tolist()
         if state.debug_info is not None:
-            probs_cpu = log_probs.exp().data.cpu().numpy().tolist()
+            probs_cpu = log_probs.exp().detach().cpu().numpy().tolist()
 
         # state.get_valid_actions() will return a list that is consistently sorted, so as along as
         # the set of valid start actions never changes, we can just match up the log prob indices
@@ -545,7 +544,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         padded_actions = [common_util.pad_sequence_to_length(action_list, max_num_actions)
                           for action_list in actions_to_embed]
         # Shape: (group_size, num_actions)
-        action_tensor = Variable(state.score[0].data.new(padded_actions).long())
+        action_tensor = state.score[0].new_tensor(padded_actions, dtype=torch.long)
         # `state.action_embeddings` is shape (total_num_actions, action_embedding_dim).
         # We want to select from state.action_embeddings using `action_tensor` to get a tensor of
         # shape (group_size, num_actions, action_embedding_dim).  Unfortunately, the index_select
@@ -564,7 +563,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         flattened_biases = state.action_biases.index_select(0, flattened_actions)
         biases = flattened_biases.view(group_size, max_num_actions, 1)
 
-        sequence_lengths = Variable(action_embeddings.data.new(num_actions))
+        sequence_lengths = action_embeddings.new_tensor(num_actions)
         action_mask = util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
         return action_embeddings, output_embeddings, biases, action_mask
 
@@ -641,8 +640,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         padded_types = [common_util.pad_sequence_to_length(type_list, max_num_actions)
                         for type_list in entity_types]
         # Shape: (group_size, num_actions)
-        action_tensor = Variable(state.score[0].data.new(padded_actions).long())
-        type_tensor = Variable(state.score[0].data.new(padded_types).long())
+        action_tensor = state.score[0].new_tensor(padded_actions, dtype=torch.long)
+        type_tensor = state.score[0].new_tensor(padded_types, dtype=torch.long)
 
         # To get the type embedding tensor, we just use an embedding matrix on the list of entity
         # types.
@@ -669,7 +668,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             action_logits_addition = action_logits * linked_checklist_balance
             action_logits = action_logits + self._linked_checklist_multiplier * action_logits_addition
         # Finally, we make a mask for our action logit tensor.
-        sequence_lengths = Variable(action_linking.data.new(num_actions))
+        sequence_lengths = action_linking.new_tensor(num_actions)
         action_mask = util.get_mask_from_sequence_lengths(sequence_lengths, max_num_actions)
         return action_logits, action_mask, type_embeddings
 
@@ -697,10 +696,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         if max_actions is not None:
             # We might need a version of `sorted_log_probs` on the CPU later, but only if we need
             # to truncate the best states to `max_actions`.
-            sorted_log_probs_cpu = sorted_log_probs.data.cpu().numpy()
+            sorted_log_probs_cpu = sorted_log_probs.detach().cpu().numpy()
         if state.debug_info is not None:
-            probs_cpu = log_probs.exp().data.cpu().numpy().tolist()
-        sorted_actions = sorted_actions.data.cpu().numpy().tolist()
+            probs_cpu = log_probs.exp().detach().cpu().numpy().tolist()
+        sorted_actions = sorted_actions.detach().cpu().numpy().tolist()
         best_next_states: Dict[int, List[Tuple[int, int, int]]] = defaultdict(list)
         for group_index, (batch_index, group_actions) in enumerate(zip(state.batch_indices,
                                                                        sorted_actions)):

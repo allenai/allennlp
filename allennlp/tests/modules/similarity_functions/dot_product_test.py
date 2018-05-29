@@ -3,7 +3,6 @@
 import numpy
 from numpy.testing import assert_almost_equal
 import torch
-from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.modules.similarity_functions import DotProductSimilarity
@@ -15,7 +14,7 @@ class TestDotProductSimilarityFunction(AllenNlpTestCase):
         dot_product = DotProductSimilarity()
         a_vectors = torch.LongTensor([[1, 1, 1], [-1, -1, -1]])
         b_vectors = torch.LongTensor([[1, 0, 1], [1, 0, 0]])
-        result = dot_product(Variable(a_vectors), Variable(b_vectors)).data.numpy()
+        result = dot_product(a_vectors, b_vectors).data.numpy()
         assert result.shape == (2,)
         assert numpy.all(result == [2, -1])
 
@@ -24,8 +23,8 @@ class TestDotProductSimilarityFunction(AllenNlpTestCase):
         a_vectors = numpy.random.rand(5, 4, 3, 6, 7)
         b_vectors = numpy.random.rand(5, 4, 3, 6, 7)
         desired_result = numpy.sum(a_vectors * b_vectors, axis=-1)
-        result = dot_product(Variable(torch.from_numpy(a_vectors)),
-                             Variable(torch.from_numpy(b_vectors))).data.numpy()
+        result = dot_product(torch.from_numpy(a_vectors),
+                             torch.from_numpy(b_vectors)).data.numpy()
         assert result.shape == (5, 4, 3, 6)
         # We're cutting this down here with a random partial index, so that if this test fails the
         # output isn't so huge and slow.

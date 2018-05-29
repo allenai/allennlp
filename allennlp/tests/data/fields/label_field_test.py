@@ -11,7 +11,7 @@ from allennlp.data.vocabulary import Vocabulary
 class TestLabelField(AllenNlpTestCase):
     def test_as_tensor_returns_integer_tensor(self):
         label = LabelField(5, skip_indexing=True)
-        tensor = label.as_tensor(label.get_padding_lengths()).data.cpu().numpy()
+        tensor = label.as_tensor(label.get_padding_lengths()).detach().cpu().numpy()
         numpy.testing.assert_array_almost_equal(tensor, numpy.array([5]))
 
     def test_label_field_can_index_with_vocab(self):
@@ -22,7 +22,7 @@ class TestLabelField(AllenNlpTestCase):
 
         label = LabelField("entailment")
         label.index(vocab)
-        tensor = label.as_tensor(label.get_padding_lengths()).data.cpu().numpy()
+        tensor = label.as_tensor(label.get_padding_lengths()).detach().cpu().numpy()
         numpy.testing.assert_array_almost_equal(tensor, numpy.array([0]))
 
     def test_label_field_raises_with_non_integer_labels_and_no_indexing(self):
@@ -58,4 +58,3 @@ class TestLabelField(AllenNlpTestCase):
     def test_printing_doesnt_crash(self):
         label = LabelField("label", label_namespace="namespace")
         print(label)
- 

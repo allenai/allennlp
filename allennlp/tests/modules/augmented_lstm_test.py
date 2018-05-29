@@ -21,8 +21,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         tensor[1, 4:, :] = 0
         tensor[2, 2:, :] = 0
         tensor[3, 6:, :] = 0
-        tensor = torch.autograd.Variable(tensor)
-        sequence_lengths = torch.autograd.Variable(torch.LongTensor([3, 4, 2, 6, 7]))
+        sequence_lengths = torch.LongTensor([3, 4, 2, 6, 7])
         self.random_tensor = tensor
         self.sequence_lengths = sequence_lengths
 
@@ -54,12 +53,12 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         augmented_lstm = AugmentedLstm(10, 11)
         pytorch_lstm = LSTM(10, 11, num_layers=1, batch_first=True)
         # Initialize all weights to be == 1.
-        initializer = InitializerApplicator([(".*", lambda tensor: torch.nn.init.constant(tensor, 1.))])
+        initializer = InitializerApplicator([(".*", lambda tensor: torch.nn.init.constant_(tensor, 1.))])
         initializer(augmented_lstm)
         initializer(pytorch_lstm)
 
-        initial_state = torch.autograd.Variable(torch.zeros([1, 5, 11]))
-        initial_memory = torch.autograd.Variable(torch.zeros([1, 5, 11]))
+        initial_state = torch.zeros([1, 5, 11])
+        initial_memory = torch.zeros([1, 5, 11])
 
         # Use bigger numbers to avoid floating point instability.
         sorted_tensor, sorted_sequence, _, _ = sort_batch_by_length(self.random_tensor * 5., self.sequence_lengths)

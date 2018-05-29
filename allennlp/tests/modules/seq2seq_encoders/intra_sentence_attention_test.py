@@ -2,7 +2,6 @@
 import numpy
 import pytest
 import torch
-from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -47,7 +46,7 @@ class TestIntraSentenceAttentionEncoder(AllenNlpTestCase):
         # We're not going to check the output values here, as that's complicated; we'll just make
         # sure the code runs and the shapes are correct.
         encoder = IntraSentenceAttentionEncoder(input_dim=2)
-        input_tensor = Variable(torch.from_numpy(numpy.random.rand(4, 3, 2)))
+        input_tensor = torch.from_numpy(numpy.random.rand(4, 3, 2))
         encoder_output = encoder(input_tensor, None)
         assert list(encoder_output.size()) == [4, 3, 4]  # default combination is 1,2
 
@@ -60,6 +59,6 @@ class TestIntraSentenceAttentionEncoder(AllenNlpTestCase):
                                                 similarity_function=similarity,
                                                 num_attention_heads=3,
                                                 combination="1+2")
-        input_tensor = Variable(torch.from_numpy(numpy.random.rand(4, 6, 24))).float()
+        input_tensor = torch.from_numpy(numpy.random.rand(4, 6, 24)).float()
         encoder_output = encoder(input_tensor, None)
         assert list(encoder_output.size()) == [4, 6, 24]

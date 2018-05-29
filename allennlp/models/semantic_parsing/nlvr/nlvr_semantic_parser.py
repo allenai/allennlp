@@ -70,7 +70,7 @@ class NlvrSemanticParser(Model):
         # This is what we pass as input in the first step of decoding, when we don't have a
         # previous action.
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
-        torch.nn.init.normal(self._first_action_embedding)
+        torch.nn.init.normal_(self._first_action_embedding)
 
     @overrides
     def forward(self):  # type: ignore
@@ -91,9 +91,7 @@ class NlvrSemanticParser(Model):
         final_encoder_output = util.get_final_encoder_states(encoder_outputs,
                                                              sentence_mask,
                                                              self._encoder.is_bidirectional())
-        memory_cell = util.new_variable_with_size(encoder_outputs,
-                                                  (batch_size, self._encoder.get_output_dim()),
-                                                  0)
+        memory_cell = encoder_outputs.new_zeros(batch_size, self._encoder.get_output_dim())
         attended_sentence = self._decoder_step.attend_on_sentence(final_encoder_output,
                                                                   encoder_outputs, sentence_mask)
         encoder_outputs_list = [encoder_outputs[i] for i in range(batch_size)]
@@ -110,7 +108,7 @@ class NlvrSemanticParser(Model):
 
     def _get_label_strings(self, labels):
         # TODO (pradeep): Use an unindexed field for labels?
-        labels_data = labels.data.cpu()
+        labels_data = labels.detach().cpu()
         label_strings: List[List[str]] = []
         for instance_labels_data in labels_data:
             label_strings.append([])

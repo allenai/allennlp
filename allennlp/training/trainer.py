@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def is_sparse(tensor):
-    return tensor.data.is_sparse
+    return tensor.is_sparse
 
 
 def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
@@ -49,8 +49,8 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
 
     Parameters
     ----------
-    parameters : ``(Iterable[Variable])``
-        An iterable of Variables that will have gradients normalized.
+    parameters : ``(Iterable[torch.Tensor])``
+        An iterable of Tensors that will have gradients normalized.
     max_norm : ``float``
         The max norm of the gradients.
     norm_type : ``float``
@@ -98,7 +98,7 @@ def move_optimizer_to_cuda(optimizer):
             if param.is_cuda:
                 param_state = optimizer.state[param]
                 for k in param_state.keys():
-                    if torch.is_tensor(param_state[k]):
+                    if isinstance(param_state[k], torch.Tensor):
                         param_state[k] = param_state[k].cuda(device=param.get_device())
 
 
@@ -117,7 +117,7 @@ class TensorboardWriter:
 
     def add_train_histogram(self, name: str, values: torch.Tensor, global_step: int) -> None:
         if self._train_log is not None:
-            if isinstance(values, torch.autograd.Variable):
+            if isinstance(values, torch.Tensor):
                 values_to_write = values.cpu().data.numpy().flatten()
                 self._train_log.add_histogram(name, values_to_write, global_step)
 
@@ -338,7 +338,7 @@ class Trainer:
                     # pylint: disable=unused-argument,cell-var-from-loop
                     log_prefix = 'activation_histogram/{0}'.format(module_.__class__)
                     if self._log_histograms_this_batch:
-                        if isinstance(outputs, torch.autograd.Variable):
+                        if isinstance(outputs, torch.Tensor):
                             log_name = log_prefix
                             self._tensorboard.add_train_histogram(log_name,
                                                                   outputs,
@@ -463,9 +463,7 @@ class Trainer:
             loss = self._batch_loss(batch, for_training=True)
             loss.backward()
 
-            # Make sure Variable is on the cpu before converting to numpy.
-            # .cpu() is a no-op if you aren't using GPUs.
-            train_loss += loss.data.cpu().numpy()
+            train_loss += loss.item()
 
             batch_grad_norm = self._rescale_gradients()
 
@@ -478,11 +476,11 @@ class Trainer:
                 # get the magnitude of parameter updates for logging
                 # We need a copy of current parameters to compute magnitude of updates,
                 # and copy them to CPU so large models won't go OOM on the GPU.
-                param_updates = {name: param.detach().data.cpu().clone()
+                param_updates = {name: param.detach().cpu().clone()
                                  for name, param in self._model.named_parameters()}
                 self._optimizer.step()
                 for name, param in self._model.named_parameters():
-                    param_updates[name].sub_(param.detach().data.cpu())
+                    param_updates[name].sub_(param.detach().cpu())
                     update_norm = torch.norm(param_updates[name].view(-1, ))
                     param_norm = torch.norm(param.view(-1, ))
                     self._tensorboard.add_train_scalar("gradient_update/" + name,
@@ -630,8 +628,7 @@ class Trainer:
 
         val_generator = self._iterator(self._validation_data,
                                        num_epochs=1,
-                                       cuda_device=self._iterator_device,
-                                       for_training=False)
+                                       cuda_device=self._iterator_device)
         num_validation_batches = self._iterator.get_num_batches(self._validation_data)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
@@ -647,7 +644,7 @@ class Trainer:
                 # count those batches for which we actually have a loss.  If this variable ever
                 # gets used for something else, we might need to change things around a bit.
                 batches_this_epoch += 1
-                val_loss += loss.data.cpu().numpy()
+                val_loss += loss.detach().cpu().numpy()
 
             # Update the description with the latest metrics
             val_metrics = self._get_metrics(val_loss, batches_this_epoch)
@@ -682,22 +679,23 @@ class Trainer:
             train_metrics = self._train_epoch(epoch)
 
             if self._validation_data is not None:
-                # We have a validation set, so compute all the metrics on it.
-                val_loss, num_batches = self._validation_loss()
-                val_metrics = self._get_metrics(val_loss, num_batches, reset=True)
+                with torch.no_grad():
+                    # We have a validation set, so compute all the metrics on it.
+                    val_loss, num_batches = self._validation_loss()
+                    val_metrics = self._get_metrics(val_loss, num_batches, reset=True)
 
-                # Check validation metric for early stopping
-                this_epoch_val_metric = val_metrics[self._validation_metric]
-                validation_metric_per_epoch.append(this_epoch_val_metric)
-                if self._should_stop_early(validation_metric_per_epoch):
-                    logger.info("Ran out of patience. Stopping training.")
-                    break
+                    # Check validation metric for early stopping
+                    this_epoch_val_metric = val_metrics[self._validation_metric]
+                    validation_metric_per_epoch.append(this_epoch_val_metric)
+                    if self._should_stop_early(validation_metric_per_epoch):
+                        logger.info("Ran out of patience.  Stopping training.")
+                        break
 
-                # Check validation metric to see if it's the best so far
-                if self._validation_metric_decreases:
-                    is_best_so_far = this_epoch_val_metric == min(validation_metric_per_epoch)
-                else:
-                    is_best_so_far = this_epoch_val_metric == max(validation_metric_per_epoch)
+                    # Check validation metric to see if it's the best so far
+                    if self._validation_metric_decreases:
+                        is_best_so_far = this_epoch_val_metric == min(validation_metric_per_epoch)
+                    else:
+                        is_best_so_far = this_epoch_val_metric == max(validation_metric_per_epoch)
             else:
                 # No validation set, so just assume it's the best so far.
                 is_best_so_far = True

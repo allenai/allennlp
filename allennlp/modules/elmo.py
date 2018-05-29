@@ -3,7 +3,6 @@ import logging
 from typing import Union, List, Dict, Any
 
 import torch
-from torch.autograd import Variable
 from torch.nn.modules import Dropout
 
 import numpy
@@ -99,7 +98,7 @@ class Elmo(torch.nn.Module):
         """
         Parameters
         ----------
-        inputs : ``torch.autograd.Variable``
+        inputs : ``torch.Tensor``
             Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
             We also accept tensors with additional optional dimensions:
             ``(batch_size, dim0, dim1, ..., dimn, timesteps, 50)``
@@ -107,10 +106,10 @@ class Elmo(torch.nn.Module):
         Returns
         -------
         Dict with keys:
-        ``'elmo_representations'``: ``List[torch.autograd.Variable]``
+        ``'elmo_representations'``: ``List[torch.Tensor]``
             A ``num_output_representations`` list of ELMo representations for the input sequence.
             Each representation is shape ``(batch_size, timesteps, embedding_dim)``
-        ``'mask'``:  ``torch.autograd.Variable``
+        ``'mask'``:  ``torch.Tensor``
             Shape ``(batch_size, timesteps)`` long tensor with sequence mask.
         """
         # reshape the input if needed
@@ -247,12 +246,12 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         self._load_weights()
 
         # Cache the arrays for use in forward -- +1 due to masking.
-        self._beginning_of_sentence_characters = Variable(torch.from_numpy(
+        self._beginning_of_sentence_characters = torch.from_numpy(
                 numpy.array(ELMoCharacterMapper.beginning_of_sentence_characters) + 1
-        ))
-        self._end_of_sentence_characters = Variable(torch.from_numpy(
+        )
+        self._end_of_sentence_characters = torch.from_numpy(
                 numpy.array(ELMoCharacterMapper.end_of_sentence_characters) + 1
-        ))
+        )
 
     def get_output_dim(self):
         return self.output_dim
@@ -264,17 +263,17 @@ class _ElmoCharacterEncoder(torch.nn.Module):
 
         Parameters
         ----------
-        inputs: ``torch.autograd.Variable``
+        inputs: ``torch.Tensor``
             Shape ``(batch_size, sequence_length, 50)`` of character ids representing the
             current batch.
 
         Returns
         -------
         Dict with keys:
-        ``'token_embedding'``: ``torch.autograd.Variable``
+        ``'token_embedding'``: ``torch.Tensor``
             Shape ``(batch_size, sequence_length + 2, embedding_dim)`` tensor with context
             insensitive token representations.
-        ``'mask'``:  ``torch.autograd.Variable``
+        ``'mask'``:  ``torch.Tensor``
             Shape ``(batch_size, sequence_length + 2)`` long tensor with sequence mask.
         """
         # Add BOS/EOS
@@ -476,17 +475,17 @@ class _ElmoBiLm(torch.nn.Module):
         """
         Parameters
         ----------
-        inputs: ``torch.autograd.Variable``
+        inputs: ``torch.Tensor``
             Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
 
         Returns
         -------
         Dict with keys:
 
-        ``'activations'``: ``List[torch.autograd.Variable]``
+        ``'activations'``: ``List[torch.Tensor]``
             A list of activations at each layer of the network, each of shape
             ``(batch_size, timesteps + 2, embedding_dim)``
-        ``'mask'``:  ``torch.autograd.Variable``
+        ``'mask'``:  ``torch.Tensor``
             Shape ``(batch_size, timesteps + 2)`` long tensor with sequence mask.
 
         Note that the output tensors all include additional special begin and end of sequence
