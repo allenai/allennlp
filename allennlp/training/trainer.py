@@ -32,7 +32,7 @@ from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
 from allennlp.nn import util
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
-from allennlp.training.metrics.loss_tracker import ModelMetricsFacade
+from allennlp.training.metrics.model_metrics_facade import ModelMetricsFacade
 from allennlp.training.metrics.tqdm_metrics_reporter import TqdmMetricsReporter
 from allennlp.training.optimizers import Optimizer
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name

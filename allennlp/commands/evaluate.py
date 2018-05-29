@@ -43,7 +43,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
-from allennlp.training.metrics.loss_tracker import ModelMetricsFacade
+from allennlp.training.metrics.model_metrics_facade import ModelMetricsFacade
 from allennlp.training.metrics.tqdm_metrics_reporter import TqdmMetricsReporter
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
