@@ -8,12 +8,10 @@ from typing import Any, Callable, Dict, Union, Sequence, Set, Optional, Iterable
 import codecs
 import logging
 import os
-import gzip
-
 from allennlp.common.util import namespace_match
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.file_utils import cached_path
+from allennlp.common.file_utils import open_maybe_compressed_file
 from allennlp.common.tqdm import Tqdm
 from allennlp.data import instance as adi  # pylint: disable=unused-import
 
@@ -91,11 +89,12 @@ class _IndexToTokenDefaultDict(_NamespaceDependentDefaultDict):
                                                        lambda: {0: padding_token, 1: oov_token},
                                                        lambda: {})
 
+
 def _read_pretrained_words(embeddings_filename: str)-> Set[str]:
     words = set()
-    with gzip.open(cached_path(embeddings_filename), 'rb') as embeddings_file:
+    with open_maybe_compressed_file(embeddings_filename) as embeddings_file:
         for line in embeddings_file:
-            fields = line.decode('utf-8').strip().split(' ')
+            fields = line.split(' ')
             word = fields[0]
             words.add(word)
     return words
