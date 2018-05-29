@@ -71,7 +71,7 @@ class TestBasicIterator(IteratorTest):
             iterator = BasicIterator(batch_size=2)
             batches = list(iterator(test_instances, num_epochs=1))
             # We just want to get the single-token array for the text field in the instance.
-            instances = [tuple(instance.data.cpu().numpy())
+            instances = [tuple(instance.detach().cpu().numpy())
                          for batch in batches
                          for instance in batch['text']["tokens"]]
             assert len(instances) == 5
@@ -82,7 +82,7 @@ class TestBasicIterator(IteratorTest):
             generator = BasicIterator(batch_size=2)(test_instances)
             batches = [next(generator) for _ in range(18)]  # going over the data 6 times
             # We just want to get the single-token array for the text field in the instance.
-            instances = [tuple(instance.data.cpu().numpy())
+            instances = [tuple(instance.detach().cpu().numpy())
                          for batch in batches
                          for instance in batch['text']["tokens"]]
             assert len(instances) == 5 * 6

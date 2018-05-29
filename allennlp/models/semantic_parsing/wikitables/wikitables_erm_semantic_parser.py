@@ -4,7 +4,6 @@ from typing import Dict, List, Tuple, Set
 
 from overrides import overrides
 import torch
-from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
@@ -249,7 +248,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                                                       terminal_productions,
                                                       max_num_terminals)
             checklist_target, terminal_actions, checklist_mask = checklist_info
-            initial_checklist = Variable(checklist_target.data.new(checklist_target.size()).fill_(0))
+            initial_checklist = checklist_target.new_zeros(checklist_target.size())
             checklist_states.append(ChecklistState(terminal_actions=terminal_actions,
                                                    checklist_target=checklist_target,
                                                    checklist_mask=checklist_mask,
@@ -352,7 +351,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         """
         terminal_indices = []
         target_checklist_list = []
-        agenda_indices_set = set([int(x) for x in agenda.squeeze(0).data.cpu().numpy()])
+        agenda_indices_set = set([int(x) for x in agenda.squeeze(0).detach().cpu().numpy()])
         # We want to return checklist target and terminal actions that are column vectors to make
         # computing softmax over the difference between checklist and target easier.
         for index, action in enumerate(all_actions):
@@ -368,9 +367,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
             target_checklist_list.append([0])
             terminal_indices.append([-1])
         # (max_num_terminals, 1)
-        terminal_actions = Variable(agenda.data.new(terminal_indices))
+        terminal_actions = agenda.new_tensor(terminal_indices)
         # (max_num_terminals, 1)
-        target_checklist = Variable(agenda.data.new(target_checklist_list)).float()
+        target_checklist = agenda.new_tensor(target_checklist_list, dtype=torch.float)
         checklist_mask = (target_checklist != 0).float()
         return target_checklist, terminal_actions, checklist_mask
 

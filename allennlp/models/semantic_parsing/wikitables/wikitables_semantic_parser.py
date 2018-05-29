@@ -2,7 +2,6 @@ from typing import Dict, List, Tuple
 
 from overrides import overrides
 import torch
-from torch.autograd import Variable
 
 from allennlp.common.checks import check_dimensions_match
 from allennlp.common.util import pad_sequence_to_length
@@ -109,8 +108,8 @@ class WikiTablesSemanticParser(Model):
         # previous action, or a previous question attention.
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
         self._first_attended_question = torch.nn.Parameter(torch.FloatTensor(encoder.get_output_dim()))
-        torch.nn.init.normal(self._first_action_embedding)
-        torch.nn.init.normal(self._first_attended_question)
+        torch.nn.init.normal_(self._first_action_embedding)
+        torch.nn.init.normal_(self._first_attended_question)
 
         check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
                                "entity word average embedding dim", "question embedding dim")
@@ -257,9 +256,9 @@ class WikiTablesSemanticParser(Model):
         final_encoder_output = util.get_final_encoder_states(encoder_outputs,
                                                              question_mask,
                                                              self._encoder.is_bidirectional())
-        memory_cell = Variable(encoder_outputs.data.new(batch_size, self._encoder.get_output_dim()).fill_(0))
+        memory_cell = encoder_outputs.new_zeros(batch_size, self._encoder.get_output_dim())
 
-        initial_score = Variable(embedded_question.data.new(batch_size).fill_(0))
+        initial_score = embedded_question.data.new_zeros(batch_size)
 
         action_embeddings, output_action_embeddings, action_biases, action_indices = self._embed_actions(actions)
 
@@ -311,7 +310,7 @@ class WikiTablesSemanticParser(Model):
     @staticmethod
     def _get_neighbor_indices(worlds: List[WikiTablesWorld],
                               num_entities: int,
-                              tensor: Variable) -> torch.LongTensor:
+                              tensor: torch.Tensor) -> torch.LongTensor:
         """
         This method returns the indices of each entity's neighbors. A tensor
         is accepted as a parameter for copying purposes.
@@ -320,7 +319,7 @@ class WikiTablesSemanticParser(Model):
         ----------
         worlds : ``List[WikiTablesWorld]``
         num_entities : ``int``
-        tensor : ``Variable``
+        tensor : ``torch.Tensor``
             Used for copying the constructed list onto the right device.
 
         Returns
@@ -351,12 +350,12 @@ class WikiTablesSemanticParser(Model):
                                                       num_entities,
                                                       lambda: [-1] * num_neighbors)
             batch_neighbors.append(neighbor_indexes)
-        return Variable(tensor.data.new(batch_neighbors)).long()
+        return tensor.new_tensor(batch_neighbors, dtype=torch.long)
 
     @staticmethod
     def _get_type_vector(worlds: List[WikiTablesWorld],
                          num_entities: int,
-                         tensor: Variable) -> Tuple[torch.LongTensor, Dict[int, int]]:
+                         tensor: torch.Tensor) -> Tuple[torch.LongTensor, Dict[int, int]]:
         """
         Produces the one hot encoding for each entity's type. In addition,
         a map from a flattened entity index to type is returned to combine
@@ -401,7 +400,7 @@ class WikiTablesSemanticParser(Model):
                 entity_types[flattened_entity_index] = entity_type
             padded = pad_sequence_to_length(types, num_entities, lambda: [0, 0, 0, 0])
             batch_types.append(padded)
-        return Variable(tensor.data.new(batch_types)), entity_types
+        return tensor.new_tensor(batch_types), entity_types
 
     def _get_linking_probabilities(self,
                                    worlds: List[WikiTablesWorld],
@@ -462,7 +461,7 @@ class WikiTablesSemanticParser(Model):
                 # so we get back something of shape (num_question_tokens,) for each index we're
                 # selecting.  All of the selected indices together then make a tensor of shape
                 # (num_question_tokens, num_entities_per_type + 1).
-                indices = Variable(linking_scores.data.new(entity_indices)).long()
+                indices = linking_scores.new_tensor(entity_indices, dtype=torch.long)
                 entity_scores = linking_scores[batch_index].index_select(1, indices)
 
                 # We used index 0 for the null entity, so this will actually have some values in it.
@@ -475,8 +474,8 @@ class WikiTablesSemanticParser(Model):
 
             # We need to add padding here if we don't have the right number of entities.
             if num_entities_in_instance != num_entities:
-                zeros = Variable(linking_scores.data.new(num_question_tokens,
-                                                         num_entities - num_entities_in_instance).fill_(0))
+                zeros = linking_scores.new_zeros(num_question_tokens,
+                                                 num_entities - num_entities_in_instance)
                 all_probabilities.append(zeros)
 
             # (num_question_tokens, num_entities)
@@ -491,10 +490,10 @@ class WikiTablesSemanticParser(Model):
         # Check if target is big enough to cover prediction (including start/end symbols)
         if len(predicted) > targets.size(1):
             return 0
-        predicted_tensor = targets.new(predicted)
+        predicted_tensor = targets.new_tensor(predicted)
         targets_trimmed = targets[:, :len(predicted)]
         # Return 1 if the predicted sequence is anywhere in the list of targets.
-        return torch.max(torch.min(targets_trimmed.eq(predicted_tensor), dim=1)[0])
+        return torch.max(torch.min(targets_trimmed.eq(predicted_tensor), dim=1)[0]).item()
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:

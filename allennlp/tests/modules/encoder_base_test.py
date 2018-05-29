@@ -1,7 +1,6 @@
 # pylint: disable=no-self-use,protected-access,invalid-name
 import numpy
 import torch
-from torch.autograd import Variable
 from torch.nn import LSTM
 
 from allennlp.modules.encoder_base import _EncoderBase
@@ -16,11 +15,11 @@ class TestEncoderBase(AllenNlpTestCase):
         self.lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
         self.encoder_base = _EncoderBase(stateful=True)
 
-        tensor = Variable(torch.rand([5, 7, 3]))
+        tensor = torch.rand([5, 7, 3])
         tensor[1, 6:, :] = 0
         tensor[3, 2:, :] = 0
         self.tensor = tensor
-        mask = Variable(torch.ones(5, 7))
+        mask = torch.ones(5, 7)
         mask[1, 6:] = 0
         mask[2, :] = 0  # <= completely masked
         mask[3, 2:] = 0
@@ -36,8 +35,7 @@ class TestEncoderBase(AllenNlpTestCase):
 
     def test_non_stateful_states_are_sorted_correctly(self):
         encoder_base = _EncoderBase(stateful=False)
-        initial_states = (Variable(torch.randn(6, 5, 7)),
-                          Variable(torch.randn(6, 5, 7)))
+        initial_states = (torch.randn(6, 5, 7), torch.randn(6, 5, 7))
         # Check that we sort the state for non-stateful encoders. To test
         # we'll just use a "pass through" encoder, as we aren't actually testing
         # the functionality of the encoder here anyway.
@@ -49,7 +47,7 @@ class TestEncoderBase(AllenNlpTestCase):
         # to concat a tensor of shape
         # (num_layers * num_directions, batch_size - num_valid, hidden_dim),
         # to the output before unsorting it.
-        zeros = Variable(torch.zeros([6, 2, 7]))
+        zeros = torch.zeros([6, 2, 7])
 
         # sort_and_run_forward strips fully-padded instances from the batch;
         # in order to use the restoration_indices we need to add back the two
@@ -67,14 +65,14 @@ class TestEncoderBase(AllenNlpTestCase):
         assert self.encoder_base._get_initial_states(self.batch_size, self.num_valid, self.sorting_indices) is None
 
         # First test the case that the previous state is _smaller_ than the current state input.
-        initial_states = (Variable(torch.randn([1, 3, 7])), Variable(torch.randn([1, 3, 7])))
+        initial_states = (torch.randn([1, 3, 7]), torch.randn([1, 3, 7]))
         self.encoder_base._states = initial_states
         # sorting indices are: [0, 1, 3, 2, 4]
         returned_states = self.encoder_base._get_initial_states(self.batch_size,
                                                                 self.num_valid,
                                                                 self.sorting_indices)
 
-        correct_expanded_states = [torch.cat([state, Variable(torch.zeros([1, 2, 7]))], 1)
+        correct_expanded_states = [torch.cat([state, torch.zeros([1, 2, 7])], 1)
                                    for state in initial_states]
         # State should have been expanded with zeros to have shape (1, batch_size, hidden_size).
         numpy.testing.assert_array_equal(self.encoder_base._states[0].data.numpy(),
@@ -95,7 +93,7 @@ class TestEncoderBase(AllenNlpTestCase):
                                          correct_returned_states[1].data.numpy())
 
         # Now test the case that the previous state is larger:
-        original_states = (Variable(torch.randn([1, 10, 7])), Variable(torch.randn([1, 10, 7])))
+        original_states = (torch.randn([1, 10, 7]), torch.randn([1, 10, 7]))
         self.encoder_base._states = original_states
         # sorting indices are: [0, 1, 3, 2, 4]
         returned_states = self.encoder_base._get_initial_states(self.batch_size,
@@ -119,8 +117,7 @@ class TestEncoderBase(AllenNlpTestCase):
 
     def test_update_states(self):
         assert self.encoder_base._states is None
-        initial_states = (Variable(torch.randn([1, 5, 7])),
-                          Variable(torch.randn([1, 5, 7])))
+        initial_states = torch.randn([1, 5, 7]), torch.randn([1, 5, 7])
 
         index_selected_initial_states = (initial_states[0].index_select(1, self.restoration_indices),
                                          initial_states[1].index_select(1, self.restoration_indices))
@@ -132,8 +129,7 @@ class TestEncoderBase(AllenNlpTestCase):
         numpy.testing.assert_array_equal(self.encoder_base._states[1].data.numpy(),
                                          index_selected_initial_states[1].data.numpy())
 
-        new_states = (Variable(torch.randn([1, 5, 7])),
-                      Variable(torch.randn([1, 5, 7])))
+        new_states = torch.randn([1, 5, 7]), torch.randn([1, 5, 7])
         # tensor has 2 completely masked rows, so the last 2 rows of the _sorted_ states
         # will be completely zero, having been appended after calling the respective encoder.
         new_states[0][:, -2:, :] = 0
@@ -158,10 +154,9 @@ class TestEncoderBase(AllenNlpTestCase):
                                              index_selected_new_states[1][:, index, :].data.numpy())
 
         # Now test the case that the new state is smaller:
-        small_new_states = (Variable(torch.randn([1, 3, 7])),
-                            Variable(torch.randn([1, 3, 7])))
+        small_new_states = torch.randn([1, 3, 7]), torch.randn([1, 3, 7])
         # pretend the 2nd sequence in the batch was fully masked.
-        small_restoration_indices = Variable(torch.LongTensor([2, 0, 1]))
+        small_restoration_indices = torch.LongTensor([2, 0, 1])
         small_new_states[0][:, 0, :] = 0
         small_new_states[1][:, 0, :] = 0
 

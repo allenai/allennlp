@@ -4,7 +4,6 @@ import math
 
 from pytest import approx, raises
 import torch
-from torch.autograd import Variable
 
 from allennlp.modules import ConditionalRandomField
 from allennlp.modules.conditional_random_field import allowed_transitions
@@ -15,14 +14,14 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestConditionalRandomField(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.logits = Variable(torch.Tensor([
+        self.logits = torch.Tensor([
                 [[0, 0, .5, .5, .2], [0, 0, .3, .3, .1], [0, 0, .9, 10, 1]],
                 [[0, 0, .2, .5, .2], [0, 0, 3, .3, .1], [0, 0, .9, 1, 1]],
-        ]))
-        self.tags = Variable(torch.LongTensor([
+        ])
+        self.tags = torch.LongTensor([
                 [2, 3, 4],
                 [3, 2, 2]
-        ]))
+        ])
 
         self.transitions = torch.Tensor([
                 [0.1, 0.2, 0.3, 0.4, 0.5],
@@ -57,7 +56,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
         return total
 
     def test_forward_works_without_mask(self):
-        log_likelihood = self.crf(self.logits, self.tags).data[0]
+        log_likelihood = self.crf(self.logits, self.tags).item()
 
         # Now compute the log-likelihood manually
         manual_log_likelihood = 0.0
@@ -67,24 +66,25 @@ class TestConditionalRandomField(AllenNlpTestCase):
         # and the denominator
         # (which is the log-sum-exp of the scores for the logits across all possible tags)
         for logits_i, tags_i in zip(self.logits, self.tags):
-            numerator = self.score(logits_i.data, tags_i.data)
-            all_scores = [self.score(logits_i.data, tags_j) for tags_j in itertools.product(range(5), repeat=3)]
+            numerator = self.score(logits_i.detach(), tags_i.detach())
+            all_scores = [self.score(logits_i.detach(), tags_j)
+                          for tags_j in itertools.product(range(5), repeat=3)]
             denominator = math.log(sum(math.exp(score) for score in all_scores))
             # And include them in the manual calculation.
             manual_log_likelihood += numerator - denominator
 
         # The manually computed log likelihood should equal the result of crf.forward.
-        assert manual_log_likelihood == approx(log_likelihood)
+        assert manual_log_likelihood.item() == approx(log_likelihood)
 
 
     def test_forward_works_with_mask(self):
         # Use a non-trivial mask
-        mask = Variable(torch.LongTensor([
+        mask = torch.LongTensor([
                 [1, 1, 1],
                 [1, 1, 0]
-        ]))
+        ])
 
-        log_likelihood = self.crf(self.logits, self.tags, mask).data[0]
+        log_likelihood = self.crf(self.logits, self.tags, mask).item()
 
         # Now compute the log-likelihood manually
         manual_log_likelihood = 0.0
@@ -95,7 +95,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
         #   (which is the log-sum-exp of the scores for the logits across all possible tags)
         for logits_i, tags_i, mask_i in zip(self.logits, self.tags, mask):
             # Find the sequence length for this input and only look at that much of each sequence.
-            sequence_length = torch.sum(mask_i.data)
+            sequence_length = torch.sum(mask_i.detach())
             logits_i = logits_i.data[:sequence_length]
             tags_i = tags_i.data[:sequence_length]
 
@@ -107,14 +107,14 @@ class TestConditionalRandomField(AllenNlpTestCase):
             manual_log_likelihood += numerator - denominator
 
         # The manually computed log likelihood should equal the result of crf.forward.
-        assert manual_log_likelihood == approx(log_likelihood)
+        assert manual_log_likelihood.item() == approx(log_likelihood)
 
 
     def test_viterbi_tags(self):
-        mask = Variable(torch.LongTensor([
+        mask = torch.LongTensor([
                 [1, 1, 1],
                 [1, 1, 0]
-        ]))
+        ])
 
         viterbi_tags = self.crf.viterbi_tags(self.logits, mask)
 
@@ -130,7 +130,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
         most_likely_tags = []
 
         for logit, mas in zip(self.logits, mask):
-            sequence_length = torch.sum(mas.data)
+            sequence_length = torch.sum(mas.detach())
             most_likely, most_likelihood = None, -float('inf')
             for tags in itertools.product(range(5), repeat=sequence_length):
                 score = self.score(logit.data, tags)
@@ -159,10 +159,10 @@ class TestConditionalRandomField(AllenNlpTestCase):
         crf.start_transitions = torch.nn.Parameter(self.transitions_from_start)
         crf.end_transitions = torch.nn.Parameter(self.transitions_to_end)
 
-        mask = Variable(torch.LongTensor([
+        mask = torch.LongTensor([
                 [1, 1, 1],
                 [1, 1, 0]
-        ]))
+        ])
 
         viterbi_tags = crf.viterbi_tags(self.logits, mask)
 

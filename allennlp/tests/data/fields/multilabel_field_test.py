@@ -11,7 +11,7 @@ from allennlp.data.vocabulary import Vocabulary
 class TestMultiLabelField(AllenNlpTestCase):
     def test_as_tensor_returns_integer_tensor(self):
         f = MultiLabelField([2, 3], skip_indexing=True, label_namespace="test1", num_labels=5)
-        tensor = f.as_tensor(f.get_padding_lengths()).data.cpu().numpy()
+        tensor = f.as_tensor(f.get_padding_lengths()).detach().cpu().numpy()
         numpy.testing.assert_array_almost_equal(tensor, numpy.array([0, 0, 1, 1, 0]))
 
     def test_multilabel_field_can_index_with_vocab(self):
@@ -22,7 +22,7 @@ class TestMultiLabelField(AllenNlpTestCase):
 
         f = MultiLabelField(["rel1", "rel0"], label_namespace="rel_labels")
         f.index(vocab)
-        tensor = f.as_tensor(f.get_padding_lengths()).data.cpu().numpy()
+        tensor = f.as_tensor(f.get_padding_lengths()).detach().cpu().numpy()
         numpy.testing.assert_array_almost_equal(tensor, numpy.array([1, 1, 0]))
 
     def test_multilabel_field_raises_with_non_integer_labels_and_no_indexing(self):
@@ -52,7 +52,7 @@ class TestMultiLabelField(AllenNlpTestCase):
 
         f = MultiLabelField([], label_namespace="test_empty_labels")
         f.index(vocab)
-        tensor = f.as_tensor(f.get_padding_lengths()).data.cpu().numpy()
+        tensor = f.as_tensor(f.get_padding_lengths()).detach().cpu().numpy()
         numpy.testing.assert_array_almost_equal(tensor, numpy.array([0, 0]))
 
     def test_class_variables_for_namespace_warnings_work_correctly(self):

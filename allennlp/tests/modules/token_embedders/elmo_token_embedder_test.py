@@ -6,7 +6,6 @@ import pathlib
 import tarfile
 
 import torch
-from torch.autograd import Variable
 
 from allennlp.commands.train import train_model
 from allennlp.common import Params
@@ -94,10 +93,10 @@ class TestElmoTokenEmbedder(ModelTestCase):
         word2[2] = 1
         word2[3] = 0
         embedding_layer = ElmoTokenEmbedder.from_params(vocab=None, params=params)
-        input_tensor = Variable(torch.LongTensor([[word1, word2]]))
+        input_tensor = torch.LongTensor([[word1, word2]])
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 2, 20)
 
-        input_tensor = Variable(torch.LongTensor([[[word1]]]))
+        input_tensor = torch.LongTensor([[[word1]]])
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 1, 1, 20)
