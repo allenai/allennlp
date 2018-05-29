@@ -127,9 +127,9 @@ class Demo extends React.Component {
         const modelDescription = (
           <span>
             <span>
-              AllenNLP is looking to add contributed models implemented using AllenNLP as both library components and as demos (with free hosting!). 
-              If you have a published result or novel model demonstrating strong performance on a dataset and you are interested 
-              in contributing to the library, please consider opening an issue on our
+              AllenNLP is looking to add contributed models implemented using AllenNLP as either library components or demos (with free hosting!).
+              If you have a published result or novel model demonstrating strong performance on a dataset and you are interested
+              in adding your model as a service to this demo, or as a component in the library itself, please consider opening an issue on our
             </span>
             <a href="https://github.com/allenai/allennlp/issues" target="_blank" rel="noopener noreferrer">{' '} public Github repository </a>
             <span>
