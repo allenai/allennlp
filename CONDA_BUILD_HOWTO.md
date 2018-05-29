@@ -13,7 +13,7 @@ recipes](https://conda-forge.org/docs/recipe.html). I'd also recommend taking a 
 
 Let's go through the AllenNLP recipe (as of May 2018) and take a look at its components:
 
-```
+```yaml
 # Recipes support Jinja templating, so this is basically a variable that we can use later. 
 # This makes maintenance easier, since usually all you have to do is increment the version
 # and modify the sha256 hash of the tarball for the new release.
@@ -193,7 +193,7 @@ process is called "rerendering", and you can read about how to do it here: https
 `conda-smithy` takes in a configuration file (`conda-forge.yml`) that affects how some components are rendered.
 Here's what the AllenNLP configuration looks like:
 
-```
+```yaml
 channels:
   # The target [channel, label] to upload to. main is usually ok for a label.
   targets:
