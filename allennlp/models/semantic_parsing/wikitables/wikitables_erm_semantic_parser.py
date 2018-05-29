@@ -294,16 +294,16 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 # infinite action loop).
                 outputs['logical_form'].append([])
                 if i in best_action_sequences:
-                    # Taking only the top action sequence.
-                    got_top_action_sequence = False
-                    for action_sequence in best_action_sequences[i]:
+                    for j, action_sequence in enumerate(best_action_sequences[i]):
                         action_strings = [action_mapping[(i, action_index)] for action_index in action_sequence]
                         try:
                             logical_form = world[i].get_logical_form(action_strings, add_var_function=False)
                             outputs['logical_form'][-1].append(logical_form)
                         except ParsingError:
                             logical_form = "Error producing logical form"
-                        if not got_top_action_sequence:
+                        if j == 0:
+                            # Updating denotation accuracy and has_logical_form only based on the
+                            # first logical form.
                             if logical_form.startswith("Error"):
                                 self._has_logical_form(0.0)
                             else:
@@ -311,7 +311,6 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                             if example_lisp_string:
                                 self._denotation_accuracy(logical_form, example_lisp_string[i])
                             outputs['best_action_sequence'].append(action_strings)
-                            got_top_action_sequence = True
                     outputs['entities'].append(world[i].table_graph.entities)
                     instance_possible_actions = actions[i]
                     agenda_actions = []

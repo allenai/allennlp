@@ -10,7 +10,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(
 
 from allennlp.data.dataset_readers import WikiTablesDatasetReader
 from allennlp.models.archival import load_archive
-from allennlp.training.metrics import WikiTablesAccuracy
 
 
 def make_data(input_examples_file: str,
@@ -22,13 +21,16 @@ def make_data(input_examples_file: str,
                                      keep_if_no_dpd=True,
                                      output_agendas=True)
     dataset = reader.read(input_examples_file)
-    input_lines = open(input_examples_file).readlines()
-    archive = load_archive(archived_model_file)
+    input_lines = []
+    with open(input_examples_file) as input_file:
+        input_lines = input_file.readlines()
+    # Note: Double { for escaping {.
+    new_tables_config = f"{{model: {{tables_directory: {tables_directory}}}}}"
+    archive = load_archive(archived_model_file,
+                           overrides=new_tables_config)
     model = archive.model
     model.training = False
     model._decoder_trainer._max_num_decoded_sequences = 100
-    denotation_accuracy = WikiTablesAccuracy(tables_directory)
-    model._denotation_accuracy = denotation_accuracy
     for instance, example_line in zip(dataset, input_lines):
         outputs = model.forward_on_instance(instance)
         parsed_info = reader._parse_example_line(example_line)
@@ -36,7 +38,7 @@ def make_data(input_examples_file: str,
         logical_forms = outputs["logical_form"]
         correct_logical_forms = []
         for logical_form in logical_forms:
-            if denotation_accuracy.evaluate_logical_form(logical_form, example_line):
+            if model._denotation_accuracy.evaluate_logical_form(logical_form, example_line):
                 correct_logical_forms.append(logical_form)
                 if len(correct_logical_forms) >= num_logical_forms:
                     break
