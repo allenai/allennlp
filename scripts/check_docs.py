@@ -27,7 +27,7 @@ MODULES_THAT_NEED_NO_DOCS: Set[str] = {
         # Private base class, no docs needed.
         'allennlp.modules.encoder_base',
         # Deprecated in favour of allennlp.predictors.
-        'allennlp.service.predictors',
+        'allennlp.service.predictors.*',
 }
 
 DOCS_THAT_NEED_NO_MODULES: Set[str] = {
