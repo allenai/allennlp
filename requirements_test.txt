@@ -37,4 +37,4 @@ sphinx_rtd_theme
 pypandoc
 
 # Pypi uploads
-twine
+twine==1.11.0

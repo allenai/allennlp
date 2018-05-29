@@ -37,6 +37,7 @@ import logging
 import torch
 
 from allennlp.commands.subcommand import Subcommand
+from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import prepare_environment
 from allennlp.common.tqdm import Tqdm
 from allennlp.data import Instance
@@ -85,6 +86,7 @@ def evaluate(model: Model,
              instances: Iterable[Instance],
              data_iterator: DataIterator,
              cuda_device: int) -> Dict[str, Any]:
+    check_for_gpu(cuda_device)
     with torch.no_grad():
         model.eval()
 

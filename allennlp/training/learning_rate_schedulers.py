@@ -12,6 +12,8 @@ The available learning rate schedulers are
 * `"cosine" <http://pytorch.org/docs/master/optim.html#torch.optim.lr_scheduler.CosineAnnealingLR>`_
 """
 
+from typing import Optional
+
 import torch.optim.lr_scheduler
 from overrides import overrides
 from allennlp.common.checks import ConfigurationError
@@ -26,6 +28,15 @@ class LearningRateScheduler(Registrable):
     def __init__(self, lr_scheduler) -> None:
         self.lr_scheduler = lr_scheduler
 
+    def step(self, metric: float, epoch: Optional[int] = None):
+        raise NotImplementedError
+
+    def step_batch(self, batch_num_total: Optional[int]):
+        if batch_num_total is not None:
+            if hasattr(self.lr_scheduler, 'step_batch'):
+                self.lr_scheduler.step_batch(batch_num_total)
+            return
+
     @classmethod
     def from_params(cls, optimizer: torch.optim.Optimizer, params: Params):
         scheduler = params.pop_choice("type", LearningRateScheduler.list_available())
@@ -35,15 +46,6 @@ class LearningRateScheduler(Registrable):
             return LearningRateWithMetricsWrapper(schedulers)
         else:
             return LearningRateWithoutMetricsWrapper(schedulers)
-
-    def step(self, metrics, epoch=None):
-        raise NotImplementedError
-
-    def step_batch(self, batch_num_total: int):
-        if batch_num_total is not None:
-            if hasattr(self.lr_scheduler, 'step_batch'):
-                self.lr_scheduler.step_batch(batch_num_total)
-            return
 
 
 class LearningRateWithoutMetricsWrapper(LearningRateScheduler):
@@ -55,7 +57,7 @@ class LearningRateWithoutMetricsWrapper(LearningRateScheduler):
         self.lr_scheduler = lr_scheduler
 
     @overrides
-    def step(self, metrics, epoch=None):
+    def step(self, metric: float, epoch: Optional[int] = None):
         self.lr_scheduler.step(epoch)
 
 
@@ -69,13 +71,58 @@ class LearningRateWithMetricsWrapper(LearningRateScheduler):
         self.lr_scheduler = lr_scheduler
 
     @overrides
-    def step(self, metrics, epoch=None):
-        if not metrics:
+    def step(self, metric: float, epoch: Optional[int] = None):
+        if metric is None:
             raise ConfigurationError("The reduce_on_plateau learning rate scheduler requires "
                                      "a validation metric to compute the schedule and therefore "
                                      "must be used with a validation dataset.")
-        self.lr_scheduler.step(metrics, epoch)
+        self.lr_scheduler.step(metric, epoch)
 
+
+class NoamLR(torch.optim.lr_scheduler._LRScheduler): # pylint: disable=protected-access
+    """
+    Implements the Noam Learning rate schedule. This corresponds to increasing the learning rate
+    linearly for the first ``warmup_steps`` training steps, and decreasing it thereafter proportionally
+    to the inverse square root of the step number, scaled by the inverse square root of the
+    dimensionality of the model. Time will tell if this is just madness or it's actually important.
+
+    Parameters
+    ----------
+    model_size : ``int``, required.
+        The hidden size parameter which dominates the number of parameters in your model.
+    warmup_steps: ``int``, required.
+        The number of steps to linearly increase the learning rate.
+    factor : ``float``, optional (default = 1.0).
+        The overall scale factor for the learning rate decay.
+    """
+    def __init__(self,
+                 optimizer: torch.optim.Optimizer,
+                 model_size: int,
+                 warmup_steps: int,
+                 factor: float = 1.0,
+                 last_epoch: int = -1) -> None:
+        self.warmup_steps = warmup_steps
+        self.factor = factor
+        self.model_size = model_size
+        super().__init__(optimizer, last_epoch=last_epoch)
+
+    def step(self, epoch=None):
+        pass
+
+    def step_batch(self, epoch=None):
+        if epoch is None:
+            epoch = self.last_epoch + 1
+        self.last_epoch = epoch
+        for param_group, learning_rate in zip(self.optimizer.param_groups, self.get_lr()):
+            param_group['lr'] = learning_rate
+
+
+    def get_lr(self):
+        step = max(self.last_epoch, 1)
+        scale = self.factor *  (self.model_size ** (-0.5) *
+                                min(step ** (-0.5), step * self.warmup_steps ** (-1.5)))
+
+        return [scale for _ in range(len(self.base_lrs))]
 
 # We just use the Pytorch LRSchedulers, so here we force them into
 # Registry._registry so we can build them from params.
@@ -85,4 +132,5 @@ Registrable._registry[LearningRateScheduler] = {   # pylint: disable=protected-a
         "exponential": torch.optim.lr_scheduler.ExponentialLR,
         "reduce_on_plateau": torch.optim.lr_scheduler.ReduceLROnPlateau,
         "cosine": torch.optim.lr_scheduler.CosineAnnealingLR,
+        "noam": NoamLR,
 }

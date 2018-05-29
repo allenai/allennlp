@@ -57,7 +57,7 @@ isolation and consistency, and also makes it easy to distribute your
 environment to a compute cluster.
 
 Once you have [installed Docker](https://docs.docker.com/engine/installation/)
-just run `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.4.2` to get an environment that will run on either the cpu or gpu.
+just run `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.4.3` to get an environment that will run on either the cpu or gpu.
 
 You can now test your installation with `./scripts/verify.py`.
 
