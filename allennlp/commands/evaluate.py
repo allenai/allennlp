@@ -43,6 +43,8 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
+from allennlp.training.metrics.model_metrics_facade import ModelMetricsFacade
+from allennlp.training.metrics.tqdm_metrics_reporter import TqdmMetricsReporter
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -89,12 +91,11 @@ def evaluate(model: Model,
 
     iterator = data_iterator(instances, num_epochs=1, cuda_device=cuda_device, for_training=False)
     logger.info("Iterating over dataset")
-    generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
+    generator_tqdm = TqdmMetricsReporter(Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances)))
+    metric_facade = ModelMetricsFacade(model)
     for batch in generator_tqdm:
         model(**batch)
-        metrics = model.get_metrics()
-        description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
-        generator_tqdm.set_description(description, refresh=False)
+        generator_tqdm.report(metric_facade.compute_for_running_epoch())
 
     return model.get_metrics(reset=True)
 

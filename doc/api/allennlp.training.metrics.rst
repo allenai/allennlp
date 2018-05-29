@@ -91,3 +91,15 @@ allennlp.training.metrics
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. _model-metrics-facade:
+.. automodule:: allennlp.training.metrics.model_metrics_facade
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _tqdm-metrics-reporter:
+.. automodule:: allennlp.training.metrics.tqdm_metrics_reporter
+   :members:
+   :undoc-members:
+   :show-inheritance:

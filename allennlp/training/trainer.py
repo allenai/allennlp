@@ -32,6 +32,8 @@ from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models.model import Model
 from allennlp.nn import util
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
+from allennlp.training.metrics.model_metrics_facade import ModelMetricsFacade
+from allennlp.training.metrics.tqdm_metrics_reporter import TqdmMetricsReporter
 from allennlp.training.optimizers import Optimizer
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -409,16 +411,6 @@ class Trainer:
 
         return loss
 
-    def _get_metrics(self, total_loss: float, num_batches: int, reset: bool = False) -> Dict[str, float]:
-        """
-        Gets the metrics but sets ``"loss"`` to
-        the total loss divided by the ``num_batches`` so that
-        the ``"loss"`` metric is "average loss per batch".
-        """
-        metrics = self._model.get_metrics(reset=reset)
-        metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
-        return metrics
-
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
         """
         Trains one epoch and returns metrics.
@@ -428,7 +420,6 @@ class Trainer:
         for gpu, memory in gpu_memory_mb().items():
             logger.info(f"GPU {gpu} memory usage MB: {memory}")
 
-        train_loss = 0.0
         # Set the model to "train" mode.
         self._model.train()
 
@@ -437,12 +428,12 @@ class Trainer:
                                          num_epochs=1,
                                          cuda_device=self._iterator_device)
         num_training_batches = self._iterator.get_num_batches(self._train_data)
-        train_generator_tqdm = Tqdm.tqdm(train_generator,
-                                         total=num_training_batches)
+
+        train_generator_tqdm = TqdmMetricsReporter(Tqdm.tqdm(train_generator,
+                                                             total=num_training_batches))
         self._last_log = time.time()
         last_save_time = time.time()
 
-        batches_this_epoch = 0
         if self._batch_num_total is None:
             self._batch_num_total = 0
 
@@ -450,8 +441,10 @@ class Trainer:
             histogram_parameters = set(self._model.get_parameters_for_histogram_tensorboard_logging())
 
         logger.info("Training")
+        metrics_facade = ModelMetricsFacade(self._model)
         for batch in train_generator_tqdm:
-            batches_this_epoch += 1
+            metrics_facade.new_batch()
+
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
 
@@ -465,7 +458,7 @@ class Trainer:
 
             # Make sure Variable is on the cpu before converting to numpy.
             # .cpu() is a no-op if you aren't using GPUs.
-            train_loss += loss.data.cpu().numpy()
+            metrics_facade.increase_loss(loss.data.cpu().numpy())
 
             batch_grad_norm = self._rescale_gradients()
 
@@ -492,10 +485,9 @@ class Trainer:
                 self._optimizer.step()
 
             # Update the description with the latest metrics
-            metrics = self._get_metrics(train_loss, batches_this_epoch)
-            description = self._description_from_metrics(metrics)
+            metrics = metrics_facade.compute_for_running_epoch()
+            train_generator_tqdm.report(metrics)
 
-            train_generator_tqdm.set_description(description, refresh=False)
 
             # Log parameter values to Tensorboard
             if batch_num_total % self._summary_interval == 0:
@@ -516,7 +508,7 @@ class Trainer:
                         '{0}.{1}'.format(epoch, time_to_str(int(last_save_time))), [], is_best=False
                 )
 
-        return self._get_metrics(train_loss, batches_this_epoch, reset=True)
+        return metrics_facade.compute_for_completed_epoch()
 
     def _should_stop_early(self, metric_history: List[float]) -> bool:
         """
@@ -620,7 +612,7 @@ class Trainer:
             elif train_metric is not None:
                 logger.info(message_template, "Training", name, train_metric)
 
-    def _validation_loss(self) -> Tuple[float, int]:
+    def _validation_loss(self) -> Dict[str, float]:
         """
         Computes the validation loss. Returns it and the number of batches.
         """
@@ -633,10 +625,10 @@ class Trainer:
                                        cuda_device=self._iterator_device,
                                        for_training=False)
         num_validation_batches = self._iterator.get_num_batches(self._validation_data)
-        val_generator_tqdm = Tqdm.tqdm(val_generator,
-                                       total=num_validation_batches)
-        batches_this_epoch = 0
-        val_loss = 0
+        val_generator_tqdm = TqdmMetricsReporter(Tqdm.tqdm(val_generator,
+                                                           total=num_validation_batches))
+
+        metrics_facade = ModelMetricsFacade(self._model)
         for batch in val_generator_tqdm:
 
             loss = self._batch_loss(batch, for_training=False)
@@ -646,15 +638,14 @@ class Trainer:
                 # currently only used as the divisor for the loss function, so we can safely only
                 # count those batches for which we actually have a loss.  If this variable ever
                 # gets used for something else, we might need to change things around a bit.
-                batches_this_epoch += 1
-                val_loss += loss.data.cpu().numpy()
+                metrics_facade.new_batch()
+                metrics_facade.increase_loss(loss.data.cpu().numpy())
 
             # Update the description with the latest metrics
-            val_metrics = self._get_metrics(val_loss, batches_this_epoch)
-            description = self._description_from_metrics(val_metrics)
-            val_generator_tqdm.set_description(description, refresh=False)
+            val_metrics = metrics_facade.compute_for_running_epoch()
+            val_generator_tqdm.report(val_metrics)
 
-        return val_loss, batches_this_epoch
+        return metrics_facade.compute_for_completed_epoch()
 
     def train(self) -> Dict[str, Any]:
         """
@@ -683,8 +674,7 @@ class Trainer:
 
             if self._validation_data is not None:
                 # We have a validation set, so compute all the metrics on it.
-                val_loss, num_batches = self._validation_loss()
-                val_metrics = self._get_metrics(val_loss, num_batches, reset=True)
+                val_metrics = self._validation_loss()
 
                 # Check validation metric for early stopping
                 this_epoch_val_metric = val_metrics[self._validation_metric]
@@ -746,10 +736,6 @@ class Trainer:
             metrics['best_epoch'] = [i for i, value in enumerate(validation_metric_per_epoch)
                                      if value == best_validation_metric][-1]
         return metrics
-
-    def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
-        # pylint: disable=no-self-use
-        return ', '.join(["%s: %.4f" % (name, value) for name, value in metrics.items()]) + " ||"
 
     def _save_checkpoint(self,
                          epoch: Union[int, str],
