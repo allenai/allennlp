@@ -166,10 +166,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             # This is just a matrix product between a (num_actions, embedding_dim) matrix and an
             # (embedding_dim, 1) matrix.
             embedded_action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
-            instance_actions = embedded_actions[:]
+            instance_action_ids = embedded_actions[:]
             if 'linked' in instance_actions:
                 linking_scores, type_embeddings, linked_actions = instance_actions['linked']
-                instance_actions.extend(linked_actions)
+                instance_action_ids.extend(linked_actions)
                 # TODO(mattg): Add back in the checklist balance addition to the linked logits.
                 # Another matrix product, this time (num_actions, num_question_tokens) x
                 # (num_question_tokens, 1)
@@ -205,7 +205,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             batch_results[state.batch_indices[group_index]].append((group_index,
                                                                     log_probs,
                                                                     output_action_embeddings,
-                                                                    instance_actions))
+                                                                    instance_action_ids))
 
         ############################
         # 3: Constructing new states
@@ -241,13 +241,14 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 new_checklist_state = None
             if state.debug_info is not None:
                 considered_actions = []
-                for i, _, actions in batch_results[batch_index]:
+                for i, log_probs, _, actions in batch_results[batch_index]:
                     if i == group_index:
                         considered_actions = actions
+                        probabilities = log_probs.exp().cpu()
                 debug_info = {
                         'considered_actions': considered_actions,
                         'question_attention': attention_weights[group_index],
-                        'probabilities': probs_cpu[group_index],
+                        'probabilities': probabilities,
                         }
                 new_debug_info = [state.debug_info[group_index] + [debug_info]]
             else:
@@ -432,8 +433,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # state.get_valid_actions() will return a list that is consistently sorted, so as along as
         # the set of valid start actions never changes, we can just match up the log prob indices
         # above with the position of each considered action, and we're good.
-        # TODO(mattg): Get the list of start actions in a better way.
-        considered_actions, _, _ = self._get_actions_to_consider(state)
+        valid_actions = state.get_valid_actions()
+        considered_actions = [actions['global'][2] for actions in valid_actions]
         if len(considered_actions[0]) != self._num_start_types:
             raise RuntimeError("Calculated wrong number of initial actions.  Expected "
                                f"{self._num_start_types}, found {len(considered_actions[0])}.")
