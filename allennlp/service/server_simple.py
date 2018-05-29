@@ -30,7 +30,7 @@ from gevent.pywsgi import WSGIServer
 from allennlp.common import JsonDict
 from allennlp.common.util import import_submodules
 from allennlp.models.archival import load_archive
-from allennlp.service.predictors import Predictor
+from allennlp.predictors import Predictor
 from allennlp.service.server_flask import ServerError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name

@@ -47,7 +47,7 @@ from typing import Optional, IO
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu
 from allennlp.models.archival import load_archive
-from allennlp.service.predictors import Predictor
+from allennlp.predictors import Predictor
 
 class Predict(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
