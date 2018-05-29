@@ -243,7 +243,7 @@ def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str,  #
 
     with open_maybe_compressed_file(embeddings_filename) as embeddings_file:
         for line in embeddings_file:
-            fields = line.split(' ')
+            fields = line.rstrip().split(' ')
             if len(fields) - 1 != embedding_dim:
                 # Sometimes there are funny unicode parsing problems that lead to different
                 # fields lengths (e.g., a word with a unicode space character that splits

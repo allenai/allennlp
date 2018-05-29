@@ -94,7 +94,7 @@ def _read_pretrained_words(embeddings_filename: str)-> Set[str]:
     words = set()
     with open_maybe_compressed_file(embeddings_filename) as embeddings_file:
         for line in embeddings_file:
-            fields = line.split(' ')
+            fields = line.rstrip().split(' ')
             word = fields[0]
             words.add(word)
     return words
