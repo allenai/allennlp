@@ -68,14 +68,6 @@ class NlvrDatasetReader(DatasetReader):
     sentence_token_indexers : ``Dict[str, TokenIndexer]`` (optional)
         Token indexers for tokens in input sentences.
         Default is ``{"tokens": SingleIdTokenIndexer()}``
-    nonterminal_indexers : ``Dict[str, TokenIndexer]`` (optional)
-        Indexers for non-terminals in production rules. The default is to index terminals and
-        non-terminals in the same way, but you may want to change it.
-        Default is ``{"tokens": SingleIdTokenIndexer("rule_labels")}``
-    terminal_indexers : ``Dict[str, TokenIndexer]`` (optional)
-        Indexers for terminals in production rules. The default is to index terminals and
-        non-terminals in the same way, but you may want to change it.
-        Default is ``{"tokens": SingleIdTokenIndexer("rule_labels")}``
     output_agendas : ``bool`` (optional)
         If preparing data for a trainer that uses agendas, set this flag and the datset reader will
         output agendas.
@@ -84,15 +76,10 @@ class NlvrDatasetReader(DatasetReader):
                  lazy: bool = False,
                  tokenizer: Tokenizer = None,
                  sentence_token_indexers: Dict[str, TokenIndexer] = None,
-                 nonterminal_indexers: Dict[str, TokenIndexer] = None,
-                 terminal_indexers: Dict[str, TokenIndexer] = None,
                  output_agendas: bool = True) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._sentence_token_indexers = sentence_token_indexers or {"tokens": SingleIdTokenIndexer()}
-        self._nonterminal_indexers = nonterminal_indexers or {"tokens":
-                                                              SingleIdTokenIndexer("rule_labels")}
-        self._terminal_indexers = terminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
         self._output_agendas = output_agendas
 
     @overrides
@@ -208,13 +195,9 @@ class NlvrDatasetReader(DatasetReader):
         lazy = params.pop('lazy', False)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         sentence_token_indexers = TokenIndexer.dict_from_params(params.pop('sentence_token_indexers', {}))
-        terminal_indexers = TokenIndexer.dict_from_params(params.pop('terminal_indexers', {}))
-        nonterminal_indexers = TokenIndexer.dict_from_params(params.pop('nonterminal_indexers', {}))
         output_agendas = params.pop("output_agendas", True)
         params.assert_empty(cls.__name__)
         return NlvrDatasetReader(lazy=lazy,
                                  tokenizer=tokenizer,
                                  sentence_token_indexers=sentence_token_indexers,
-                                 terminal_indexers=terminal_indexers,
-                                 nonterminal_indexers=nonterminal_indexers,
                                  output_agendas=output_agendas)
