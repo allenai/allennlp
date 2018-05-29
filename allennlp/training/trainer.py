@@ -125,6 +125,7 @@ class TensorboardWriter:
         if self._validation_log is not None:
             self._validation_log.add_scalar(name, value, global_step)
 
+
 def time_to_str(timestamp: int) -> str:
     """
     Convert seconds past Epoch to human readable string.
@@ -135,12 +136,14 @@ def time_to_str(timestamp: int) -> str:
             datetimestamp.hour, datetimestamp.minute, datetimestamp.second
     )
 
+
 def str_to_time(time_str: str) -> datetime.datetime:
     """
     Convert human readable string to datetime.datetime.
     """
     pieces: Any = [int(piece) for piece in time_str.split('-')]
     return datetime.datetime(*pieces)
+
 
 class Trainer:
     def __init__(self,
@@ -149,7 +152,7 @@ class Trainer:
                  iterator: DataIterator,
                  train_dataset: Iterable[Instance],
                  validation_dataset: Optional[Iterable[Instance]] = None,
-                 patience: int = 2,
+                 patience: Optional[int] = None,
                  validation_metric: str = "-loss",
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
@@ -178,8 +181,10 @@ class Trainer:
             A ``Dataset`` to train on. The dataset should have already been indexed.
         validation_dataset : ``Dataset``, optional, (default = None).
             A ``Dataset`` to evaluate on. The dataset should have already been indexed.
-        patience : int, optional (default=2)
-            Number of epochs to be patient before early stopping.
+        patience : Optional[int] > 0, optional (default=None)
+            Number of epochs to be patient before early stopping: the training is stopped
+            after ``patience`` epochs with no improvement. If given, it must be ``> 0``.
+            If None, early stopping is disabled.
         validation_metric : str, optional (default="loss")
             Validation metric to measure for whether to stop training using patience
             and whether to serialize an ``is_best`` model each epoch. The metric name
@@ -240,6 +245,13 @@ class Trainer:
         self._train_data = train_dataset
         self._validation_data = validation_dataset
 
+        if patience is None:  # no early stopping
+            if validation_dataset:
+                logger.warning('You provided a validation dataset but patience was set to None, '
+                               'meaning that early stopping is disabled')
+        elif (not isinstance(patience, int)) or patience <= 0:
+            raise ConfigurationError('{} is an invalid value for "patience": it must be a positive integer '
+                                     'or None (if you want to disable early stopping)'.format(patience))
         self._patience = patience
         self._num_epochs = num_epochs
 
@@ -358,6 +370,7 @@ class Trainer:
                                   if p.grad is not None]
             return sparse_clip_norm(parameters_to_clip, self._grad_norm)
         return None
+
     def _data_parallel(self, batch):
         """
         Do the forward pass using multiple GPUs.  This is a simplification
@@ -509,7 +522,10 @@ class Trainer:
         """
         uses patience and the validation metric to determine if training should stop early
         """
-        if len(metric_history) > self._patience:
+        if self._patience and self._patience < len(metric_history):
+            # Pylint can't figure out that in this branch `self._patience` is an int.
+            # pylint: disable=invalid-unary-operand-type
+
             # Is the best score in the past N epochs worse than the best score overall?
             if self._validation_metric_decreases:
                 return min(metric_history[-self._patience:]) > min(metric_history)
@@ -674,7 +690,7 @@ class Trainer:
                 this_epoch_val_metric = val_metrics[self._validation_metric]
                 validation_metric_per_epoch.append(this_epoch_val_metric)
                 if self._should_stop_early(validation_metric_per_epoch):
-                    logger.info("Ran out of patience.  Stopping training.")
+                    logger.info("Ran out of patience. Stopping training.")
                     break
 
                 # Check validation metric to see if it's the best so far
@@ -885,7 +901,7 @@ class Trainer:
                     validation_data: Optional[Iterable[Instance]],
                     params: Params) -> 'Trainer':
 
-        patience = params.pop_int("patience", 2)
+        patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
         num_epochs = params.pop_int("num_epochs", 20)
         cuda_device = params.pop_int("cuda_device", -1)

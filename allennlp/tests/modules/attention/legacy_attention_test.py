@@ -5,13 +5,19 @@ import torch
 from torch.autograd import Variable
 
 from allennlp.common import Params
-from allennlp.modules import Attention
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules.attention.attention import Attention
+from allennlp.modules.attention.legacy_attention import LegacyAttention
 
 
-class TestAttention(AllenNlpTestCase):
+class TestLegacyAttention(AllenNlpTestCase):
+
+    def test_can_init_legacy(self):
+        legacy_attention = Attention.from_params(Params({"type": "legacy"}))
+        isinstance(legacy_attention, LegacyAttention)
+
     def test_no_mask(self):
-        attention = Attention()
+        attention = LegacyAttention()
 
         # Testing general non-batched case.
         vector = Variable(torch.FloatTensor([[0.3, 0.1, 0.5]]))
@@ -28,7 +34,7 @@ class TestAttention(AllenNlpTestCase):
         assert_almost_equal(result, numpy.array([[0.5, 0.5]]))
 
     def test_masked(self):
-        attention = Attention()
+        attention = LegacyAttention()
         # Testing general masked non-batched case.
         vector = Variable(torch.FloatTensor([[0.3, 0.1, 0.5]]))
         matrix = Variable(torch.FloatTensor([[[0.6, 0.8, 0.1], [0.15, 0.5, 0.2], [0.1, 0.4, 0.3]]]))
@@ -37,7 +43,7 @@ class TestAttention(AllenNlpTestCase):
         assert_almost_equal(result, numpy.array([[0.52248482, 0.0, 0.47751518]]))
 
     def test_batched_no_mask(self):
-        attention = Attention()
+        attention = LegacyAttention()
 
         # Testing general batched case.
         vector = Variable(torch.FloatTensor([[0.3, 0.1, 0.5], [0.3, 0.1, 0.5]]))
@@ -49,7 +55,7 @@ class TestAttention(AllenNlpTestCase):
                                                  [0.52871835, 0.47128162]]))
 
     def test_batched_masked(self):
-        attention = Attention()
+        attention = LegacyAttention()
 
         # Testing general masked non-batched case.
         vector = Variable(torch.FloatTensor([[0.3, 0.1, 0.5], [0.3, 0.1, 0.5]]))
@@ -70,7 +76,7 @@ class TestAttention(AllenNlpTestCase):
                                                  [0.0, 0.0, 0.0]]))
 
     def test_non_normalized_attention_works(self):
-        attention = Attention(normalize=False)
+        attention = LegacyAttention(normalize=False)
         sentence_tensor = Variable(torch.FloatTensor([[[-1, 0, 4],
                                                        [1, 1, 1],
                                                        [-1, 0, 4],
@@ -81,7 +87,7 @@ class TestAttention(AllenNlpTestCase):
 
     def test_can_build_from_params(self):
         params = Params({'similarity_function': {'type': 'cosine'}, 'normalize': False})
-        attention = Attention.from_params(params)
+        attention = LegacyAttention.from_params(params)
         # pylint: disable=protected-access
         assert attention._similarity_function.__class__.__name__ == 'CosineSimilarity'
         assert attention._normalize is False

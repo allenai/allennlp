@@ -6,6 +6,7 @@ import time
 
 import torch
 import pytest
+from allennlp.common.checks import ConfigurationError
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.trainer import Trainer, sparse_clip_norm, is_sparse
@@ -121,6 +122,29 @@ class TestTrainer(AllenNlpTestCase):
                               patience=5, validation_metric="-test")
         assert new_trainer._should_stop_early([.02, .3, .2, .1, .4, .4])  # pylint: disable=protected-access
         assert not new_trainer._should_stop_early([.3, .3, .2, .1, .4, .5])  # pylint: disable=protected-access
+
+    def test_should_stop_early_with_early_stopping_disabled(self):
+        # Increasing metric
+        trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
+                          validation_dataset=self.instances, num_epochs=100,
+                          patience=None, validation_metric="+test")
+        decreasing_history = [float(i) for i in reversed(range(20))]
+        assert not trainer._should_stop_early(decreasing_history)  # pylint: disable=protected-access
+
+        # Decreasing metric
+        trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
+                          validation_dataset=self.instances, num_epochs=100,
+                          patience=None, validation_metric="-test")
+        increasing_history = [float(i) for i in range(20)]
+        assert not trainer._should_stop_early(increasing_history)  # pylint: disable=protected-access
+
+    def test_should_stop_early_with_invalid_patience(self):
+        for patience in [0, -1, -2, 1.5, 'None']:
+            with pytest.raises(ConfigurationError,
+                               message='No ConfigurationError for patience={}'.format(patience)):
+                Trainer(self.model, self.optimizer, self.iterator, self.instances,
+                        validation_dataset=self.instances, num_epochs=100,
+                        patience=patience, validation_metric="+test")
 
     def test_trainer_can_run_with_lr_scheduler(self):
 
