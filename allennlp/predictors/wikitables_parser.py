@@ -10,7 +10,7 @@ from allennlp.common.file_utils import cached_path
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
-from allennlp.service.predictors.predictor import Predictor
+from allennlp.predictors.predictor import Predictor
 
 # TODO(mattg): We should merge how this works with how the `WikiTablesAccuracy` metric works, maybe
 # just removing the need for adding this stuff at all, because the parser already runs the java

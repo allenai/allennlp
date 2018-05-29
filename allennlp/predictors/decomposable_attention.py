@@ -4,7 +4,7 @@ from overrides import overrides
 from allennlp.data.dataset_readers.snli import SnliReader
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
-from allennlp.service.predictors.predictor import Predictor
+from allennlp.predictors.predictor import Predictor
 
 
 @Predictor.register('textual-entailment')

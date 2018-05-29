@@ -3,8 +3,8 @@ from nltk import Tree
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
-from allennlp.service.predictors import Predictor
-from allennlp.service.predictors.constituency_parser import LINK_TO_LABEL, NODE_TYPE_TO_STYLE
+from allennlp.predictors import Predictor
+from allennlp.predictors.constituency_parser import LINK_TO_LABEL, NODE_TYPE_TO_STYLE
 
 
 class TestConstituencyParserPredictor(AllenNlpTestCase):

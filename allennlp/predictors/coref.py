@@ -6,7 +6,7 @@ from allennlp.common.util import get_spacy_model
 from allennlp.common.util import JsonDict
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
-from allennlp.service.predictors.predictor import Predictor
+from allennlp.predictors.predictor import Predictor
 
 
 @Predictor.register("coreference-resolution")
