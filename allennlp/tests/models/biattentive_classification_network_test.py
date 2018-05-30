@@ -1,5 +1,6 @@
 # pylint: disable=invalid-name,protected-access
 from copy import deepcopy
+import os
 import pytest
 
 
@@ -66,12 +67,17 @@ class BiattentiveClassificationNetworkTest(ModelTestCase):
             Model.from_params(self.vocab, tmp_params.get("model"))
 
     def test_elmo_but_no_set_flags_throws_configuration_error(self):
+        initial_working_dir = os.getcwd()
+        # Change directory to module root.
+        os.chdir(self.MODULE_ROOT)
         params = Params.from_file(self.FIXTURES_ROOT / 'biattentive_classification_network' / 'elmo_experiment.json')
         # Elmo is specified in the model, but set both flags to false.
         params["model"]["use_input_elmo"] = False
         params["model"]["use_integrator_output_elmo"] = False
         with pytest.raises(ConfigurationError):
             Model.from_params(self.vocab, params.get("model"))
+        # Change directory back to what it was initially
+        os.chdir(initial_working_dir)
 
     def test_elmo_num_repr_set_flags_mismatch_throws_configuration_error(self):
         params = Params.from_file(self.FIXTURES_ROOT / 'biattentive_classification_network' / 'elmo_experiment.json')
