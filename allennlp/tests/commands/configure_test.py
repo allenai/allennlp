@@ -11,7 +11,7 @@ class TestConfigure(AllenNlpTestCase):
 
     def test_other_modules(self):
         # Create a new package in a temporary dir
-        packagedir = self.TEST_DIR / 'testpackage'
+        packagedir = self.TEST_DIR / 'configuretestpackage'
         packagedir.mkdir()  # pylint: disable=no-member
         (packagedir / '__init__.py').touch()  # pylint: disable=no-member
 
@@ -22,7 +22,7 @@ class TestConfigure(AllenNlpTestCase):
         from allennlp.predictors import bidaf
         with open(bidaf.__file__) as f:
             code = f.read().replace("""@Predictor.register('machine-comprehension')""",
-                                    """@Predictor.register('duplicate-test-predictor')""")
+                                    """@Predictor.register('configure-test-predictor')""")
 
         with open(os.path.join(packagedir, 'predictor.py'), 'w') as f:
             f.write(code)
@@ -34,11 +34,11 @@ class TestConfigure(AllenNlpTestCase):
 
         sys.argv = ["run.py",      # executable
                     "configure",     # command
-                    "testpackage.predictor.BidafPredictor"]
+                    "configuretestpackage.predictor.BidafPredictor"]
 
         main()
         output = stdout_captured.getvalue()
-        assert "duplicate-test-predictor" in output
+        assert "configure-test-predictor" in output
 
         sys.stdout = stdout_saved
 

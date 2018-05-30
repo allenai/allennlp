@@ -5,7 +5,7 @@ the specified class (or for the top level configuration if no class specified).
 .. code-block:: bash
 
     $ allennlp configure --help
-    usage: allennlp configure [-h] [--include-package INCLUDE_PACKAGE] [class]
+    usage: allennlp configure [-h] [class]
 
     Generate a configuration stub for a specific class (or for config as a whole if [class] is omitted).
 
@@ -14,8 +14,6 @@ the specified class (or for the top level configuration if no class specified).
 
     optional arguments:
     -h, --help            show this help message and exit
-    --include-package INCLUDE_PACKAGE
-                          additional packages to include
 """
 
 import argparse
