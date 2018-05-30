@@ -7,17 +7,17 @@ as named arguments to the constructor.
 
 The available initialization functions are
 
-* `"normal" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.normal>`_
-* `"uniform" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.uniform>`_
-* `"constant" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.constant>`_
-* `"eye" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.eye>`_
-* `"dirac" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.dirac>`_
-* `"xavier_uniform" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.xavier_uniform>`_
-* `"xavier_normal" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.xavier_normal>`_
-* `"kaiming_uniform" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.kaiming_uniform>`_
-* `"kaiming_normal" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.kaiming_normal>`_
-* `"orthogonal" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.orthogonal>`_
-* `"sparse" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.sparse>`_
+* `"normal" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.normal_>`_
+* `"uniform" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.uniform_>`_
+* `"constant" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.constant_>`_
+* `"eye" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.eye_>`_
+* `"dirac" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.dirac_>`_
+* `"xavier_uniform" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.xavier_uniform_>`_
+* `"xavier_normal" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.xavier_normal_>`_
+* `"kaiming_uniform" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.kaiming_uniform_>`_
+* `"kaiming_normal" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.kaiming_normal_>`_
+* `"orthogonal" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.orthogonal_>`_
+* `"sparse" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.sparse_>`_
 * :func:`"block_orthogonal" <block_orthogonal>`
 * :func:`"uniform_unit_scaling" <uniform_unit_scaling>`
 """
@@ -28,7 +28,6 @@ from typing import Callable, List, Tuple, Type
 import itertools
 
 import torch
-from torch.autograd import Variable
 import torch.nn.init
 
 from allennlp.common import Registrable
@@ -44,7 +43,7 @@ class Initializer(Registrable):
     """
     default_implementation = 'normal'
 
-    def __call__(self, tensor: torch.autograd.Variable) -> None:
+    def __call__(self, tensor: torch.Tensor) -> None:
         """
         This function is here just to make mypy happy.  We expect initialization functions to
         follow this API; the builtin pytorch initialization functions follow this just fine, even
@@ -88,10 +87,6 @@ def uniform_unit_scaling(tensor: torch.Tensor, nonlinearity: str = "linear"):
     -------
     The initialised tensor.
     """
-    if isinstance(tensor, Variable):
-        uniform_unit_scaling(tensor.data, nonlinearity)
-        return tensor
-
     size = 1.
     # Estimate the input size. This won't work perfectly,
     # but it covers almost all use cases where this initialiser
@@ -128,29 +123,26 @@ def block_orthogonal(tensor: torch.Tensor,
     gain : float, optional (default = 1.0)
         The gain (scaling) applied to the orthogonal initialization.
     """
-
-    if isinstance(tensor, Variable):
-        block_orthogonal(tensor.data, split_sizes, gain)
-    else:
-        sizes = list(tensor.size())
-        if any([a % b != 0 for a, b in zip(sizes, split_sizes)]):
-            raise ConfigurationError("tensor dimensions must be divisible by their respective "
-                                     "split_sizes. Found size: {} and split_sizes: {}".format(sizes, split_sizes))
-        indexes = [list(range(0, max_size, split))
-                   for max_size, split in zip(sizes, split_sizes)]
-        # Iterate over all possible blocks within the tensor.
-        for block_start_indices in itertools.product(*indexes):
-            # A list of tuples containing the index to start at for this block
-            # and the appropriate step size (i.e split_size[i] for dimension i).
-            index_and_step_tuples = zip(block_start_indices, split_sizes)
-            # This is a tuple of slices corresponding to:
-            # tensor[index: index + step_size, ...]. This is
-            # required because we could have an arbitrary number
-            # of dimensions. The actual slices we need are the
-            # start_index: start_index + step for each dimension in the tensor.
-            block_slice = tuple([slice(start_index, start_index + step)
-                                 for start_index, step in index_and_step_tuples])
-            tensor[block_slice] = torch.nn.init.orthogonal(tensor[block_slice].contiguous(), gain=gain)
+    data = tensor.data
+    sizes = list(tensor.size())
+    if any([a % b != 0 for a, b in zip(sizes, split_sizes)]):
+        raise ConfigurationError("tensor dimensions must be divisible by their respective "
+                                 "split_sizes. Found size: {} and split_sizes: {}".format(sizes, split_sizes))
+    indexes = [list(range(0, max_size, split))
+               for max_size, split in zip(sizes, split_sizes)]
+    # Iterate over all possible blocks within the tensor.
+    for block_start_indices in itertools.product(*indexes):
+        # A list of tuples containing the index to start at for this block
+        # and the appropriate step size (i.e split_size[i] for dimension i).
+        index_and_step_tuples = zip(block_start_indices, split_sizes)
+        # This is a tuple of slices corresponding to:
+        # tensor[index: index + step_size, ...]. This is
+        # required because we could have an arbitrary number
+        # of dimensions. The actual slices we need are the
+        # start_index: start_index + step for each dimension in the tensor.
+        block_slice = tuple([slice(start_index, start_index + step)
+                             for start_index, step in index_and_step_tuples])
+        data[block_slice] = torch.nn.init.orthogonal_(tensor[block_slice].contiguous(), gain=gain)
 
 
 def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer]:
@@ -158,7 +150,7 @@ def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer
         def __init__(self, **kwargs):
             self._init_function = init_function
             self._kwargs = kwargs
-        def __call__(self, tensor: torch.autograd.Variable) -> None:
+        def __call__(self, tensor: torch.Tensor) -> None:
             self._init_function(tensor, **self._kwargs)
         def __repr__(self):
             return 'Init: %s, with params: %s' % (self._init_function, self._kwargs)
@@ -170,17 +162,17 @@ def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer
 
 # There are no classes to decorate, so we hack these into Registrable._registry
 Registrable._registry[Initializer] = {  # pylint: disable=protected-access
-        "normal": _initializer_wrapper(torch.nn.init.normal),
-        "uniform": _initializer_wrapper(torch.nn.init.uniform),
-        "orthogonal": _initializer_wrapper(torch.nn.init.orthogonal),
-        "constant": _initializer_wrapper(torch.nn.init.constant),
-        "dirac": _initializer_wrapper(torch.nn.init.dirac),
-        "xavier_normal": _initializer_wrapper(torch.nn.init.xavier_normal),
-        "xavier_uniform": _initializer_wrapper(torch.nn.init.xavier_uniform),
-        "kaiming_normal": _initializer_wrapper(torch.nn.init.kaiming_normal),
-        "kaiming_uniform": _initializer_wrapper(torch.nn.init.kaiming_uniform),
-        "sparse": _initializer_wrapper(torch.nn.init.sparse),
-        "eye": _initializer_wrapper(torch.nn.init.eye),
+        "normal": _initializer_wrapper(torch.nn.init.normal_),
+        "uniform": _initializer_wrapper(torch.nn.init.uniform_),
+        "orthogonal": _initializer_wrapper(torch.nn.init.orthogonal_),
+        "constant": _initializer_wrapper(torch.nn.init.constant_),
+        "dirac": _initializer_wrapper(torch.nn.init.dirac_),
+        "xavier_normal": _initializer_wrapper(torch.nn.init.xavier_normal_),
+        "xavier_uniform": _initializer_wrapper(torch.nn.init.xavier_uniform_),
+        "kaiming_normal": _initializer_wrapper(torch.nn.init.kaiming_normal_),
+        "kaiming_uniform": _initializer_wrapper(torch.nn.init.kaiming_uniform_),
+        "sparse": _initializer_wrapper(torch.nn.init.sparse_),
+        "eye": _initializer_wrapper(torch.nn.init.eye_),
         "block_orthogonal": _initializer_wrapper(block_orthogonal),
         "uniform_unit_scaling": _initializer_wrapper(uniform_unit_scaling)
 }

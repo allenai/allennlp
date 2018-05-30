@@ -1,7 +1,7 @@
-allennlp.service.predictors
-=================================
+allennlp.predictors
+===================
 
-.. automodule:: allennlp.service.predictors
+.. automodule:: allennlp.predictors
    :members:
    :undoc-members:
    :show-inheritance:
@@ -18,61 +18,61 @@ allennlp.service.predictors
 * :ref:`NlvrParserPredictor<nlvr-parser>`
 
 .. _predictor:
-.. automodule:: allennlp.service.predictors.predictor
+.. automodule:: allennlp.predictors.predictor
    :members:
    :undoc-members:
    :show-inheritance:
 
 .. _bidaf:
-.. automodule:: allennlp.service.predictors.bidaf
+.. automodule:: allennlp.predictors.bidaf
    :members:
    :undoc-members:
    :show-inheritance:
 
 .. _decomposable-attention:
-.. automodule:: allennlp.service.predictors.decomposable_attention
+.. automodule:: allennlp.predictors.decomposable_attention
    :members:
    :undoc-members:
    :show-inheritance:
 
 .. _semantic-role-labeler:
-.. automodule:: allennlp.service.predictors.semantic_role_labeler
+.. automodule:: allennlp.predictors.semantic_role_labeler
    :members:
    :undoc-members:
    :show-inheritance:
 
 .. _sentence-tagger:
-.. automodule:: allennlp.service.predictors.sentence_tagger
+.. automodule:: allennlp.predictors.sentence_tagger
    :members:
    :undoc-members:
    :show-inheritance:
 
 .. _coreference-resolution:
-.. automodule:: allennlp.service.predictors.coref
+.. automodule:: allennlp.predictors.coref
    :members:
    :undoc-members:
    :show-inheritance:
 
 .. _constituency-parser:
-.. automodule:: allennlp.service.predictors.constituency_parser
+.. automodule:: allennlp.predictors.constituency_parser
    :members:
    :undoc-members:
    :show-inheritance:
 
 .. _simple-seq2seq:
-.. automodule:: allennlp.service.predictors.simple_seq2seq
+.. automodule:: allennlp.predictors.simple_seq2seq
    :members:
    :undoc-members:
    :show-inheritance:
 
 .. _wikitables-parser:
-.. automodule:: allennlp.service.predictors.wikitables_parser
+.. automodule:: allennlp.predictors.wikitables_parser
    :members:
    :undoc-members:
    :show-inheritance:
 
 .. _nlvr-parser:
-.. automodule:: allennlp.service.predictors.nlvr_parser
+.. automodule:: allennlp.predictors.nlvr_parser
    :members:
    :undoc-members:
    :show-inheritance:

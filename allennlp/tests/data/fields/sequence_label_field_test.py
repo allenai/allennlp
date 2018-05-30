@@ -58,7 +58,7 @@ class TestSequenceLabelField(AllenNlpTestCase):
         sequence_label_field = SequenceLabelField(tags, self.text, label_namespace="*labels")
         sequence_label_field.index(vocab)
         padding_lengths = sequence_label_field.get_padding_lengths()
-        tensor = sequence_label_field.as_tensor(padding_lengths).data.cpu().numpy()
+        tensor = sequence_label_field.as_tensor(padding_lengths).detach().cpu().numpy()
         numpy.testing.assert_array_almost_equal(tensor, numpy.array([0, 1, 2, 2, 2]))
 
     def test_sequence_label_field_raises_on_incorrect_type(self):

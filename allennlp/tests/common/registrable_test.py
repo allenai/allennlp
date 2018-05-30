@@ -85,17 +85,17 @@ class TestRegistrable(AllenNlpTestCase):
 
     def test_registry_has_builtin_initializers(self):
         all_initializers = {
-                "normal": torch.nn.init.normal,
-                "uniform": torch.nn.init.uniform,
-                "orthogonal": torch.nn.init.orthogonal,
-                "constant": torch.nn.init.constant,
-                "dirac": torch.nn.init.dirac,
-                "xavier_normal": torch.nn.init.xavier_normal,
-                "xavier_uniform": torch.nn.init.xavier_uniform,
-                "kaiming_normal": torch.nn.init.kaiming_normal,
-                "kaiming_uniform": torch.nn.init.kaiming_uniform,
-                "sparse": torch.nn.init.sparse,
-                "eye": torch.nn.init.eye,
+                "normal": torch.nn.init.normal_,
+                "uniform": torch.nn.init.uniform_,
+                "orthogonal": torch.nn.init.orthogonal_,
+                "constant": torch.nn.init.constant_,
+                "dirac": torch.nn.init.dirac_,
+                "xavier_normal": torch.nn.init.xavier_normal_,
+                "xavier_uniform": torch.nn.init.xavier_uniform_,
+                "kaiming_normal": torch.nn.init.kaiming_normal_,
+                "kaiming_uniform": torch.nn.init.kaiming_uniform_,
+                "sparse": torch.nn.init.sparse_,
+                "eye": torch.nn.init.eye_,
         }
         for key, value in all_initializers.items():
             # pylint: disable=protected-access

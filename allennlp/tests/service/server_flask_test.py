@@ -9,7 +9,7 @@ from flask import Response
 from allennlp.common.util import JsonDict
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
-from allennlp.service.predictors import Predictor
+from allennlp.predictors import Predictor
 from allennlp.service.server_flask import make_app
 from allennlp.service.db import InMemoryDemoDatabase
 

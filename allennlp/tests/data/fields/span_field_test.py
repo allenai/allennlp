@@ -15,7 +15,7 @@ class TestSpanField(AllenNlpTestCase):
 
     def test_as_tensor_converts_span_field_correctly(self):
         span_field = SpanField(2, 3, self.text)
-        tensor = span_field.as_tensor(span_field.get_padding_lengths()).data.cpu().numpy()
+        tensor = span_field.as_tensor(span_field.get_padding_lengths()).detach().cpu().numpy()
         numpy.testing.assert_array_equal(tensor, numpy.array([2, 3]))
 
     def test_span_field_raises_on_incorrect_label_type(self):

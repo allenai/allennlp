@@ -1,5 +1,5 @@
 import torch
-from torch.autograd import Variable
+
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 import numpy
@@ -31,7 +31,7 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         for i in range(3):
             output_new, _ = model(model_input)
             output_new, _ = pad_packed_sequence(output_new, batch_first=True)
-            numpy.testing.assert_array_almost_equal(output.data.cpu().numpy(), output_new.data.cpu().numpy())
+            numpy.testing.assert_array_almost_equal(output.detach().cpu().numpy(), output_new.detach().cpu().numpy())
             output = output_new
 
     @staticmethod
@@ -46,8 +46,8 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
         kernel_output, _ = kernel_model(packed_kernel_input)
         kernel_output, _ = pad_packed_sequence(kernel_output, batch_first=True)
 
-        numpy.testing.assert_array_almost_equal(baseline_output.data.cpu().numpy(),
-                                                kernel_output.data.cpu().numpy())
+        numpy.testing.assert_array_almost_equal(baseline_output.detach().cpu().numpy(),
+                                                kernel_output.detach().cpu().numpy())
 
         # Backprop some random error.
         random_error = torch.randn(baseline_output.size()).cuda()
@@ -56,9 +56,9 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
 
         kernel_model.zero_grad()
         kernel_output.backward(random_error)
-        
-        numpy.testing.assert_array_almost_equal(baseline_input.grad.data.cpu().numpy(),
-                                                kernel_input.grad.data.cpu().numpy())
+
+        numpy.testing.assert_array_almost_equal(baseline_input.grad.detach().cpu().numpy(),
+                                                kernel_input.grad.detach().cpu().numpy())
         weight_index = 0
         bias_index = 0
         for layer in range(baseline_model.num_layers):
@@ -77,12 +77,12 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
             kernel_bias_grad = kernel_model.bias.grad[bias_index:bias_index+bias_grad.nelement()]
             bias_index += bias_grad.nelement()
 
-            numpy.testing.assert_array_almost_equal(kernel_input_grad.data.cpu().numpy(),
-                                                    input_grad.data.cpu().numpy(), decimal=4) 
-            numpy.testing.assert_array_almost_equal(kernel_state_grad.data.cpu().numpy(),
-                                                    state_grad.data.cpu().numpy(), decimal=4)
-            numpy.testing.assert_array_almost_equal(kernel_bias_grad.data.cpu().numpy(),
-                                                    bias_grad.data.cpu().numpy(), decimal=4)
+            numpy.testing.assert_array_almost_equal(kernel_input_grad.detach().cpu().numpy(),
+                                                    input_grad.detach().cpu().numpy(), decimal=4)
+            numpy.testing.assert_array_almost_equal(kernel_state_grad.detach().cpu().numpy(),
+                                                    state_grad.detach().cpu().numpy(), decimal=4)
+            numpy.testing.assert_array_almost_equal(kernel_bias_grad.detach().cpu().numpy(),
+                                                    bias_grad.detach().cpu().numpy(), decimal=4)
 
     @staticmethod
     def get_models_and_inputs(batch_size, input_size, output_size, num_layers, timesteps, dropout_prob):
@@ -116,12 +116,11 @@ class TestCustomHighwayLSTM(AllenNlpTestCase):
             kernel_version.bias.data[bias_index:bias_index + bias.nelement()].copy_(bias.data)
             bias_index += bias.nelement()
 
-        inputs = torch.randn(batch_size, timesteps, input_size).cuda()
+        baseline_input = torch.randn(batch_size, timesteps, input_size, requires_grad=True).cuda()
         # Clone variable so different models are
         # completely separate in the graph.
-        input2 = inputs.clone()
-        baseline_input = Variable(inputs, requires_grad=True)
-        kernel_version_input = Variable(input2, requires_grad=True)
+        kernel_version_input = baseline_input.clone()
+
         lengths = [timesteps - int((i / 2)) for i in range(batch_size)]
         lengths = lengths[:batch_size]
 

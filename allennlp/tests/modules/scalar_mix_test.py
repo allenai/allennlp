@@ -1,6 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 import torch
-from torch.autograd import Variable
+
 import pytest
 import numpy
 
@@ -12,7 +12,7 @@ from allennlp.modules import ScalarMix
 class TestScalarMix(AllenNlpTestCase):
     def test_scalar_mix_can_run_forward(self):
         mixture = ScalarMix(3)
-        tensors = [Variable(torch.randn([3, 4, 5])) for _ in range(3)]
+        tensors = [torch.randn([3, 4, 5]) for _ in range(3)]
         for k in range(3):
             mixture.scalar_parameters[k].data[0] = 0.1 * (k + 1)
         mixture.gamma.data[0] = 0.5
@@ -26,17 +26,17 @@ class TestScalarMix(AllenNlpTestCase):
 
     def test_scalar_mix_throws_error_on_incorrect_number_of_inputs(self):
         mixture = ScalarMix(3)
-        tensors = [Variable(torch.randn([3, 4, 5])) for _ in range(5)]
+        tensors = [torch.randn([3, 4, 5]) for _ in range(5)]
         with pytest.raises(ConfigurationError):
             _ = mixture(tensors)
 
     def test_scalar_mix_layer_norm(self):
         mixture = ScalarMix(3, do_layer_norm='scalar_norm_reg')
 
-        tensors = [Variable(torch.randn([3, 4, 5])) for _ in range(3)]
+        tensors = [torch.randn([3, 4, 5]) for _ in range(3)]
         numpy_mask = numpy.ones((3, 4), dtype='int32')
         numpy_mask[1, 2:] = 0
-        mask = Variable(torch.from_numpy(numpy_mask))
+        mask = torch.from_numpy(numpy_mask)
 
         weights = [0.1, 0.2, 0.3]
         for k in range(3):

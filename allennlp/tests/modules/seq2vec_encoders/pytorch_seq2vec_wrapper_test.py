@@ -2,7 +2,6 @@
 import pytest
 from numpy.testing import assert_almost_equal
 import torch
-from torch.autograd import Variable
 from torch.nn import LSTM
 from torch.nn.utils.rnn import pack_padded_sequence
 
@@ -26,7 +25,7 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
     def test_forward_pulls_out_correct_tensor_without_sequence_lengths(self):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=2, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2VecWrapper(lstm)
-        input_tensor = Variable(torch.FloatTensor([[[.7, .8], [.1, 1.5]]]))
+        input_tensor = torch.FloatTensor([[[.7, .8], [.1, 1.5]]])
         lstm_output = lstm(input_tensor)
         encoder_output = encoder(input_tensor, None)
         assert_almost_equal(encoder_output.data.numpy(), lstm_output[0].data.numpy()[:, -1, :])
@@ -35,21 +34,19 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2VecWrapper(lstm)
 
-        tensor = torch.rand([5, 7, 3])
-        tensor[1, 6:, :] = 0
-        tensor[2, 4:, :] = 0
-        tensor[3, 2:, :] = 0
-        tensor[4, 1:, :] = 0
+        input_tensor = torch.rand([5, 7, 3])
+        input_tensor[1, 6:, :] = 0
+        input_tensor[2, 4:, :] = 0
+        input_tensor[3, 2:, :] = 0
+        input_tensor[4, 1:, :] = 0
         mask = torch.ones(5, 7)
         mask[1, 6:] = 0
         mask[2, 4:] = 0
         mask[3, 2:] = 0
         mask[4, 1:] = 0
 
-        input_tensor = Variable(tensor)
-        mask = Variable(mask)
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
-        packed_sequence = pack_padded_sequence(input_tensor, list(sequence_lengths.data), batch_first=True)
+        packed_sequence = pack_padded_sequence(input_tensor, sequence_lengths.tolist(), batch_first=True)
         _, state = lstm(packed_sequence)
         # Transpose output state, extract the last forward and backward states and
         # reshape to be of dimension (batch_size, 2 * hidden_size).
@@ -63,12 +60,12 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=11, batch_first=True)
         encoder = PytorchSeq2VecWrapper(lstm)
 
-        tensor = torch.autograd.Variable(torch.rand([5, 7, 3]))
+        tensor = torch.rand([5, 7, 3])
         tensor[1, 6:, :] = 0
         tensor[2, :, :] = 0
         tensor[3, 2:, :] = 0
         tensor[4, :, :] = 0
-        mask = torch.autograd.Variable(torch.ones(5, 7))
+        mask = torch.ones(5, 7)
         mask[1, 6:] = 0
         mask[2, :] = 0
         mask[3, 2:] = 0
@@ -85,24 +82,22 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2VecWrapper(lstm)
 
-        tensor = torch.rand([5, 7, 3])
-        tensor[0, 3:, :] = 0
-        tensor[1, 4:, :] = 0
-        tensor[2, 2:, :] = 0
-        tensor[3, 6:, :] = 0
+        input_tensor = torch.rand([5, 7, 3])
+        input_tensor[0, 3:, :] = 0
+        input_tensor[1, 4:, :] = 0
+        input_tensor[2, 2:, :] = 0
+        input_tensor[3, 6:, :] = 0
         mask = torch.ones(5, 7)
         mask[0, 3:] = 0
         mask[1, 4:] = 0
         mask[2, 2:] = 0
         mask[3, 6:] = 0
 
-        input_tensor = Variable(tensor)
-        mask = Variable(mask)
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         sorted_inputs, sorted_sequence_lengths, restoration_indices, _ = sort_batch_by_length(input_tensor,
                                                                                               sequence_lengths)
         packed_sequence = pack_padded_sequence(sorted_inputs,
-                                               sorted_sequence_lengths.data.tolist(),
+                                               sorted_sequence_lengths.tolist(),
                                                batch_first=True)
         _, state = lstm(packed_sequence)
         # Transpose output state, extract the last forward and backward states and

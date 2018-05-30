@@ -7,6 +7,12 @@ import torch
 from allennlp.common import util
 from allennlp.common.testing import AllenNlpTestCase
 
+class Unsanitizable:
+    pass
+
+class Sanitizable:
+    def to_json(self):
+        return {"sanitizable": True}
 
 class TestCommonUtils(AllenNlpTestCase):
     def test_group_by_count(self):
@@ -36,6 +42,11 @@ class TestCommonUtils(AllenNlpTestCase):
     def test_sanitize(self):
         assert util.sanitize(torch.Tensor([1, 2])) == [1, 2]
         assert util.sanitize(torch.LongTensor([1, 2])) == [1, 2]
+
+        with pytest.raises(ValueError):
+            util.sanitize(Unsanitizable())
+
+        assert util.sanitize(Sanitizable()) == {"sanitizable": True}
 
     def test_import_submodules(self):
         # pylint: disable=no-member

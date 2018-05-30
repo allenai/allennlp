@@ -2,8 +2,6 @@
 import pytest
 import torch
 
-from torch.autograd import Variable
-
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
@@ -35,9 +33,9 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 })
         self.token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
         self.inputs = {
-                "words1": Variable(torch.LongTensor([[0, 2, 3, 5]])),
-                "words2": Variable(torch.LongTensor([[1, 4, 3, 2]])),
-                "words3": Variable(torch.LongTensor([[1, 5, 1, 2]]))
+                "words1": torch.LongTensor([[0, 2, 3, 5]]),
+                "words2": torch.LongTensor([[1, 4, 3, 2]]),
+                "words3": torch.LongTensor([[1, 5, 1, 2]])
                 }
 
     def test_get_output_dim_aggregates_dimension_from_each_embedding(self):
@@ -77,7 +75,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 })
         token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
         inputs = {
-                'words': Variable(torch.rand(3, 4, 5, 6) * 20).long(),
-                'characters': Variable(torch.rand(3, 4, 5, 6, 7) * 15).long(),
+                'words': (torch.rand(3, 4, 5, 6) * 20).long(),
+                'characters': (torch.rand(3, 4, 5, 6, 7) * 15).long(),
                 }
         assert token_embedder(inputs, num_wrapping_dims=2).size() == (3, 4, 5, 6, 12)

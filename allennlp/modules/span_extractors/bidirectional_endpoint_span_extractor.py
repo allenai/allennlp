@@ -147,7 +147,8 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             sequence_lengths = util.get_lengths_from_binary_sequence_mask(sequence_mask)
         else:
             # shape (batch_size), filled with the sequence length size of the sequence_tensor.
-            sequence_lengths = util.ones_like(sequence_tensor[:, 0, 0]).long() * sequence_tensor.size(1)
+            sequence_lengths = (torch.ones_like(sequence_tensor[:, 0, 0], dtype=torch.long) *
+                                sequence_tensor.size(1))
 
         # shape (batch_size, num_spans, 1)
         end_sentinel_mask = (exclusive_span_ends == sequence_lengths.unsqueeze(-1)).long().unsqueeze(-1)
