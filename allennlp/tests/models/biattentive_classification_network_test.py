@@ -70,6 +70,8 @@ class BiattentiveClassificationNetworkTest(ModelTestCase):
         initial_working_dir = os.getcwd()
         # Change directory to module root.
         os.chdir(self.MODULE_ROOT)
+
+        # pylint: disable=line-too-long
         params = Params.from_file(self.FIXTURES_ROOT / 'biattentive_classification_network' / 'elmo_experiment.json')
         # Elmo is specified in the model, but set both flags to false.
         params["model"]["use_input_elmo"] = False
@@ -80,6 +82,7 @@ class BiattentiveClassificationNetworkTest(ModelTestCase):
         os.chdir(initial_working_dir)
 
     def test_elmo_num_repr_set_flags_mismatch_throws_configuration_error(self):
+        # pylint: disable=line-too-long
         params = Params.from_file(self.FIXTURES_ROOT / 'biattentive_classification_network' / 'elmo_experiment.json')
         # Elmo is specified in the model, with num_output_representations=2. Set
         # only one flag to true.
