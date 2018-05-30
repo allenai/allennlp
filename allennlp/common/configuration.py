@@ -76,9 +76,9 @@ class Config(Generic[T]):
 # ``None`` is sometimes the default value for a function parameter,
 # so we use a special sentinel to indicate that a parameter has no
 # default value.
-NO_DEFAULT = object()
+_NO_DEFAULT = object()
 
-def get_config_type(cla55: type) -> Optional[str]:
+def _get_config_type(cla55: type) -> Optional[str]:
     """
     Find the name (if any) that a subclass was registered under.
     We do this simply by iterating through the registry until we
@@ -91,7 +91,7 @@ def get_config_type(cla55: type) -> Optional[str]:
     return None
 
 
-def auto_config(cla55: Type[T]) -> Config[T]:
+def _auto_config(cla55: Type[T]) -> Config[T]:
     """
     Create the ``Config`` for a class by reflecting on its ``__init__``
     method and applying a few hacks.
@@ -106,7 +106,7 @@ def auto_config(cla55: Type[T]) -> Config[T]:
     num_non_default_args = num_args - num_default_args
 
     # Required args all come first, default args at the end.
-    defaults = [NO_DEFAULT for _ in range(num_non_default_args)] + defaults
+    defaults = [_NO_DEFAULT for _ in range(num_non_default_args)] + defaults
 
     for name, default in zip(argspec.args, defaults):
         # Don't include self
@@ -132,7 +132,7 @@ def auto_config(cla55: Type[T]) -> Config[T]:
 
         items.append(ConfigItem(name, annotation, default))
 
-    return Config(items, typ3=get_config_type(cla55))
+    return Config(items, typ3=_get_config_type(cla55))
 
 
 def render_config(config: Config, indent: str = "") -> str:
@@ -148,17 +148,17 @@ def render_config(config: Config, indent: str = "") -> str:
             # "type": "...", (if present)
             f'{new_indent}"type": "{config.typ3}",\n' if config.typ3 else '',
             # render each item
-            "".join(render(item, new_indent) for item in config.items),
+            "".join(_render(item, new_indent) for item in config.items),
             # indent and close the brace
             indent,
             "}\n"
     ])
 
-def render(item: ConfigItem, indent: str = "") -> str:
+def _render(item: ConfigItem, indent: str = "") -> str:
     """
     Render a single config item, with the provided indent
     """
-    optional = item.default_value != NO_DEFAULT
+    optional = item.default_value != _NO_DEFAULT
 
     # Anything with a from_params method is itself configurable
     if hasattr(item.annotation, 'from_params'):
@@ -182,7 +182,7 @@ def render(item: ConfigItem, indent: str = "") -> str:
 BASE_CONFIG: Config = Config([
         ConfigItem(name="dataset_reader",
                    annotation=DatasetReader,
-                   default_value=NO_DEFAULT,
+                   default_value=_NO_DEFAULT,
                    comment="specify your dataset reader here"),
         ConfigItem(name="validation_dataset_reader",
                    annotation=DatasetReader,
@@ -190,7 +190,7 @@ BASE_CONFIG: Config = Config([
                    comment="same as dataset_reader by default"),
         ConfigItem(name="train_data_path",
                    annotation=str,
-                   default_value=NO_DEFAULT,
+                   default_value=_NO_DEFAULT,
                    comment="path to the training data"),
         ConfigItem(name="validation_data_path",
                    annotation=str,
@@ -206,15 +206,15 @@ BASE_CONFIG: Config = Config([
                    comment="whether to evaluate on the test dataset at the end of training (don't do it!"),
         ConfigItem(name="model",
                    annotation=Model,
-                   default_value=NO_DEFAULT,
+                   default_value=_NO_DEFAULT,
                    comment="specify your model here"),
         ConfigItem(name="iterator",
                    annotation=DataIterator,
-                   default_value=NO_DEFAULT,
+                   default_value=_NO_DEFAULT,
                    comment="specify your data iterator here"),
         ConfigItem(name="trainer",
                    annotation=Trainer,
-                   default_value=NO_DEFAULT,
+                   default_value=_NO_DEFAULT,
                    comment="specify the trainer parameters here"),
         ConfigItem(name="datasets_for_vocab_creation",
                    annotation=List[str],
@@ -227,7 +227,7 @@ BASE_CONFIG: Config = Config([
 
 ])
 
-def valid_choices(cla55: type) -> Dict[str, str]:
+def _valid_choices(cla55: type) -> Dict[str, str]:
     """
     Return a mapping {registered_name -> subclass_name}
     for the registered subclasses of `cla55`.
@@ -257,6 +257,6 @@ def configure(full_path: str = '') -> Union[Config, List[str]]:
     cla55 = getattr(module, class_name)
 
     if Registrable in cla55.__bases__:
-        return list(valid_choices(cla55).values())
+        return list(_valid_choices(cla55).values())
     else:
-        return auto_config(cla55)
+        return _auto_config(cla55)
