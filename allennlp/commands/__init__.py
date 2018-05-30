@@ -2,6 +2,7 @@ from typing import Dict
 import argparse
 import logging
 
+from allennlp.commands.configure import Configure
 from allennlp.commands.elmo import Elmo
 from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.fine_tune import FineTune
@@ -31,6 +32,7 @@ def main(prog: str = None,
 
     subcommands = {
             # Default commands
+            "configure": Configure(),
             "train": Train(),
             "evaluate": Evaluate(),
             "predict": Predict(),
