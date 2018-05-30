@@ -68,8 +68,12 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
         return x.text
     elif x is None:
         return "None"
+    elif hasattr(x, 'to_json'):
+        return x.to_json()
     else:
-        raise ValueError("cannot sanitize {} of type {}".format(x, type(x)))
+        raise ValueError(f"Cannot sanitize {x} of type {type(x)}. "
+                         "If this is your own custom class, add a `to_json(self)` method "
+                         "that returns a JSON-like object.")
 
 def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[List[Any]]:
     """

@@ -20,7 +20,7 @@ import argparse
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.service import server_flask as server
-from allennlp.service.predictors import DemoModel
+from allennlp.predictors import DemoModel
 
 # This maps from the name of the task
 # to the ``DemoModel`` indicating the location of the trained model

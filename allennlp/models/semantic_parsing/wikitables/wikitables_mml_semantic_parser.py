@@ -217,8 +217,8 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                         self._action_sequence_accuracy(sequence_in_targets)
                     action_strings = [action_mapping[(i, action_index)] for action_index in best_action_indices]
                     try:
-                        self._has_logical_form(1.0)
                         logical_form = world[i].get_logical_form(action_strings, add_var_function=False)
+                        self._has_logical_form(1.0)
                     except ParsingError:
                         self._has_logical_form(0.0)
                         logical_form = 'Error producing logical form'
