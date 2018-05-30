@@ -28,11 +28,12 @@ Right at this instant you might care about the `trainer` section, which specifie
 
 Here the `num_epochs` parameter specifies that we want to make 40 training passes through the training dataset.
 On a recent Macbook each epoch of this model on this dataset takes about a minute,
-so this training should take about 40, unless it stops early. `patience`
+so this training should take about 40 minutes, unless it stops early. `patience`
 controls the early stopping -- if our validation metric doesn't improve for
 this many epochs, training halts. And if you have a GPU you can change `cuda_device` to 0 to use it.
 
-Change any of those if you want to, and then run
+Change any of those if you want to (for example, you can reduce the epochs to 5
+if you want the training to take less time), and then run
 
 ```
 $ allennlp train tutorials/getting_started/simple_tagger.json --serialization-dir /tmp/tutorials/getting_started

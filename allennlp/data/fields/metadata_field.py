@@ -34,8 +34,7 @@ class MetadataField(Field[DataArray]):
     @overrides
     def as_tensor(self,
                   padding_lengths: Dict[str, int],
-                  cuda_device: int = -1,
-                  for_training: bool = True) -> DataArray:
+                  cuda_device: int = -1) -> DataArray:
         # pylint: disable=unused-argument
         return self.metadata  # type: ignore
 

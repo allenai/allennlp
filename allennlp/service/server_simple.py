@@ -25,12 +25,12 @@ import sys
 
 from flask import Flask, request, Response, jsonify, send_file, send_from_directory
 from flask_cors import CORS
-from gevent.wsgi import WSGIServer
+from gevent.pywsgi import WSGIServer
 
 from allennlp.common import JsonDict
 from allennlp.common.util import import_submodules
 from allennlp.models.archival import load_archive
-from allennlp.service.predictors import Predictor
+from allennlp.predictors import Predictor
 from allennlp.service.server_flask import ServerError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name

@@ -6,8 +6,9 @@ from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import FeedForward, MatrixAttention
+from allennlp.modules import FeedForward
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
+from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum
 from allennlp.training.metrics import CategoricalAccuracy
@@ -74,7 +75,7 @@ class DecomposableAttention(Model):
 
         self._text_field_embedder = text_field_embedder
         self._attend_feedforward = TimeDistributed(attend_feedforward)
-        self._matrix_attention = MatrixAttention(similarity_function)
+        self._matrix_attention = LegacyMatrixAttention(similarity_function)
         self._compare_feedforward = TimeDistributed(compare_feedforward)
         self._aggregate_feedforward = aggregate_feedforward
         self._premise_encoder = premise_encoder
@@ -162,7 +163,10 @@ class DecomposableAttention(Model):
         label_logits = self._aggregate_feedforward(aggregate_input)
         label_probs = torch.nn.functional.softmax(label_logits, dim=-1)
 
-        output_dict = {"label_logits": label_logits, "label_probs": label_probs}
+        output_dict = {"label_logits": label_logits,
+                       "label_probs": label_probs,
+                       "h2p_attention": h2p_attention,
+                       "p2h_attention": p2h_attention}
 
         if label is not None:
             loss = self._loss(label_logits, label.long().view(-1))

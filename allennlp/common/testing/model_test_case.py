@@ -19,6 +19,10 @@ class ModelTestCase(AllenNlpTestCase):
     """
     def set_up_model(self, param_file, dataset_file):
         # pylint: disable=attribute-defined-outside-init
+        initial_working_dir = os.getcwd()
+        # Change directory to module root.
+        os.chdir(self.MODULE_ROOT)
+
         self.param_file = param_file
         params = Params.from_file(self.param_file)
 
@@ -40,12 +44,19 @@ class ModelTestCase(AllenNlpTestCase):
         self.dataset = Batch(self.instances)
         self.dataset.index_instances(self.vocab)
 
+        # Change directory back to what it was initially
+        os.chdir(initial_working_dir)
+
     def ensure_model_can_train_save_and_load(self,
                                              param_file: str,
                                              tolerance: float = 1e-4,
                                              cuda_device: int = -1):
-        save_dir = os.path.join(self.TEST_DIR, "save_and_load_test")
-        archive_file = os.path.join(save_dir, "model.tar.gz")
+        initial_working_dir = os.getcwd()
+        # Change directory to module root.
+        os.chdir(self.MODULE_ROOT)
+
+        save_dir = self.TEST_DIR / "save_and_load_test"
+        archive_file = save_dir / "model.tar.gz"
         model = train_model_from_file(param_file, save_dir)
         loaded_model = load_archive(archive_file, cuda_device=cuda_device).model
         state_keys = model.state_dict().keys()
@@ -109,12 +120,15 @@ class ModelTestCase(AllenNlpTestCase):
                                      name=key,
                                      tolerance=tolerance)
 
+        # Change directory back to what it was initially
+        os.chdir(initial_working_dir)
+
         return model, loaded_model
 
     def assert_fields_equal(self, field1, field2, name: str, tolerance: float = 1e-6) -> None:
-        if isinstance(field1, torch.autograd.Variable):
-            assert_allclose(field1.data.cpu().numpy(),
-                            field2.data.cpu().numpy(),
+        if isinstance(field1, torch.Tensor):
+            assert_allclose(field1.detach().cpu().numpy(),
+                            field2.detach().cpu().numpy(),
                             rtol=tolerance,
                             err_msg=name)
         elif isinstance(field1, dict):
@@ -150,7 +164,7 @@ class ModelTestCase(AllenNlpTestCase):
                     has_zero_or_none_grads[name] = "No gradient computed (i.e parameter.grad is None)"
                 # Some parameters will only be partially updated,
                 # like embeddings, so we just check that any gradient is non-zero.
-                if (parameter.grad.data.cpu() == zeros).all():
+                elif (parameter.grad.cpu() == zeros).all():
                     has_zero_or_none_grads[name] = f"zeros with shape ({tuple(parameter.grad.size())})"
             else:
                 assert parameter.grad is None
@@ -165,11 +179,11 @@ class ModelTestCase(AllenNlpTestCase):
         single_predictions = []
         for i, instance in enumerate(self.instances):
             dataset = Batch([instance])
-            tensors = dataset.as_tensor_dict(dataset.get_padding_lengths(), for_training=False)
+            tensors = dataset.as_tensor_dict(dataset.get_padding_lengths())
             result = self.model(**tensors)
             single_predictions.append(result)
         full_dataset = Batch(self.instances)
-        batch_tensors = full_dataset.as_tensor_dict(full_dataset.get_padding_lengths(), for_training=False)
+        batch_tensors = full_dataset.as_tensor_dict(full_dataset.get_padding_lengths())
         batch_predictions = self.model(**batch_tensors)
         for i, instance_predictions in enumerate(single_predictions):
             for key, single_predicted in instance_predictions.items():
@@ -180,7 +194,7 @@ class ModelTestCase(AllenNlpTestCase):
                     continue
                 single_predicted = single_predicted[0]
                 batch_predicted = batch_predictions[key][i]
-                if isinstance(single_predicted, torch.autograd.Variable):
+                if isinstance(single_predicted, torch.Tensor):
                     if single_predicted.size() != batch_predicted.size():
                         slices = tuple(slice(0, size) for size in single_predicted.size())
                         batch_predicted = batch_predicted[slices]

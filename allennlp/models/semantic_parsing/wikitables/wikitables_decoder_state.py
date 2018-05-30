@@ -2,8 +2,9 @@ from typing import Dict, List, Tuple
 
 import torch
 
+from allennlp.semparse.worlds import WikiTablesWorld
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
-from allennlp.nn.decoding import DecoderState, GrammarState, RnnState
+from allennlp.nn.decoding import DecoderState, GrammarState, RnnState, ChecklistState
 
 
 # This syntax is pretty weird and ugly, but it's necessary to make mypy happy with the API that
@@ -51,6 +52,19 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         A mapping from flattened entity indices (same as the `values` in the
         ``actions_to_entities`` dictionary) to entity type indices.  This represents what type each
         entity has, which we will use for getting type embeddings in certain circumstances.
+    world : ``List[WikiTablesWorld]``, optional (default=None)
+        The worlds corresponding to elements in the batch. We store them here because they're required
+        for executing logical forms to determine costs while training, if we're learning to search.
+        Otherwise, they're not required. Note that the worlds are batched, and they will be passed
+        around unchanged during the decoding process.
+    example_lisp_string : ``List[str]``, optional (default=None)
+        The lisp strings that come from example files. They're also required for evaluating logical
+        forms only if we're learning to search. These too are batched, and will be passed around
+        unchanged.
+    checklist_state : ``List[ChecklistState]``, optional (default=None)
+        If you are using this state within a parser being trained for coverage, we need to store a
+        ``ChecklistState`` which keeps track of the coverage information. Not needed if you are
+        using a non-coverage based training algorithm.
     """
     def __init__(self,
                  batch_indices: List[int],
@@ -66,6 +80,9 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                  flattened_linking_scores: torch.FloatTensor,
                  actions_to_entities: Dict[Tuple[int, int], int],
                  entity_types: Dict[int, int],
+                 world: List[WikiTablesWorld] = None,
+                 example_lisp_string: List[str] = None,
+                 checklist_state: List[ChecklistState] = None,
                  debug_info: List = None) -> None:
         super(WikiTablesDecoderState, self).__init__(batch_indices, action_history, score)
         self.rnn_state = rnn_state
@@ -74,10 +91,24 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         self.output_action_embeddings = output_action_embeddings
         self.action_biases = action_biases
         self.action_indices = action_indices
+        # This is just the reverse of action indices.
+        self.global_to_batch_action_indices: Dict[Tuple[int, int], int] = {}
+        for (batch_index, batch_action_index), global_index in action_indices.items():
+            if global_index == -1:
+                # The batch_action_index here corresponds to a linked action. We don't need to map
+                # it.
+                continue
+            self.global_to_batch_action_indices[(batch_index, global_index)] = batch_action_index
         self.possible_actions = possible_actions
         self.flattened_linking_scores = flattened_linking_scores
         self.actions_to_entities = actions_to_entities
         self.entity_types = entity_types
+        self.world = world
+        self.example_lisp_string = example_lisp_string
+        # Converting None to a list of Nones of appropriate size to avoid checking for None in all
+        # state operations.
+        self.checklist_state = checklist_state if checklist_state is not None else [None for _ in
+                                                                                    batch_indices]
         self.debug_info = debug_info
 
     def print_action_history(self, group_index: int = None) -> None:
@@ -85,7 +116,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         batch_indices = self.batch_indices if group_index is None else [self.batch_indices[group_index]]
         histories = self.action_history if group_index is None else [self.action_history[group_index]]
         for score, batch_index, action_history in zip(scores, batch_indices, histories):
-            print('  ', score.data.cpu().numpy()[0],
+            print('  ', score.detach().cpu().numpy()[0],
                   [self.possible_actions[batch_index][action][0] for action in action_history])
 
     def get_valid_actions(self) -> List[List[int]]:
@@ -106,6 +137,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         scores = [score for state in states for score in state.score]
         rnn_states = [rnn_state for state in states for rnn_state in state.rnn_state]
         grammar_states = [grammar_state for state in states for grammar_state in state.grammar_state]
+        checklist_states = [checklist_state for state in states for checklist_state in state.checklist_state]
         if states[0].debug_info is not None:
             debug_info = [debug_info for state in states for debug_info in state.debug_info]
         else:
@@ -123,4 +155,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                       flattened_linking_scores=states[0].flattened_linking_scores,
                                       actions_to_entities=states[0].actions_to_entities,
                                       entity_types=states[0].entity_types,
+                                      world=states[0].world,
+                                      example_lisp_string=states[0].example_lisp_string,
+                                      checklist_state=checklist_states,
                                       debug_info=debug_info)

@@ -77,7 +77,7 @@ class BeamSearch:
         for batch_index, batch_states in finished_states.items():
             # The time this sort takes is pretty negligible, no particular need to optimize this
             # yet.  Maybe with a larger beam size...
-            finished_to_sort = [(-state.score[0].data[0], state) for state in batch_states]
+            finished_to_sort = [(-state.score[0].item(), state) for state in batch_states]
             finished_to_sort.sort(key=lambda x: x[0])
             best_states[batch_index] = [state[1] for state in finished_to_sort[:self._beam_size]]
         return best_states

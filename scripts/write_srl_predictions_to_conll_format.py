@@ -1,6 +1,8 @@
 import os
 import sys
 
+import torch
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 import argparse
 from allennlp.common import Params
@@ -18,6 +20,7 @@ def main(serialization_directory, device):
     device: int, default = -1
         The device to run the evaluation on.
     """
+    torch.set_grad_enabled(False)
 
     config = Params.from_file(os.path.join(serialization_directory, "config.json"))
     dataset_reader = DatasetReader.from_params(config['dataset_reader'])
@@ -37,7 +40,7 @@ def main(serialization_directory, device):
     iterator.index_with(model.vocab)
 
     model_predictions = []
-    batches = iterator(instances, num_epochs=1, shuffle=False, cuda_device=device, for_training=False)
+    batches = iterator(instances, num_epochs=1, shuffle=False, cuda_device=device)
     for batch in Tqdm.tqdm(batches):
         result = model(**batch)
         predictions = model.decode(result)

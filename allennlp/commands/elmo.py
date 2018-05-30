@@ -14,23 +14,28 @@ https://arxiv.org/abs/1802.05365
 .. code-block:: bash
 
    $ allennlp elmo --help
-   usage: allennlp [command] elmo [-h] [--vocab-path VOCAB_PATH]
-                                       [--options-file OPTIONS_FILE]
-                                       [--weight-file WEIGHT_FILE]
-                                       [--batch-size BATCH_SIZE]
-                                       [--cuda-device CUDA_DEVICE]
-                                       input_file output_file
+   usage: allennlp elmo [-h] (--all | --top | --average)
+                                      [--vocab-path VOCAB_PATH]
+                                      [--options-file OPTIONS_FILE]
+                                      [--weight-file WEIGHT_FILE]
+                                      [--batch-size BATCH_SIZE]
+                                      [--cuda-device CUDA_DEVICE]
+                                      [--include-package INCLUDE_PACKAGE]
+                                      input_file output_file
 
    Create word vectors using ELMo.
 
    positional arguments:
-     input_file            path to input file
-     output_file           path to output file
+     input_file            The path to the input file.
+     output_file           The path to the output file.
 
    optional arguments:
      -h, --help            show this help message and exit
+     --all                 Output all three ELMo vectors.
+     --top                 Output the top ELMo vector.
+     --average             Output the average of the ELMo vectors.
      --vocab-path VOCAB_PATH
-                           A path to a vocabulary file to generate
+                           A path to a vocabulary file to generate.
      --options-file OPTIONS_FILE
                            The path to the ELMo options file.
      --weight-file WEIGHT_FILE
@@ -39,6 +44,8 @@ https://arxiv.org/abs/1802.05365
                            The batch size to use.
      --cuda-device CUDA_DEVICE
                            The cuda_device to run on.
+     --include-package INCLUDE_PACKAGE
+                           additional packages to include
 """
 
 import logging
@@ -51,12 +58,9 @@ import torch
 
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import lazy_groups_of
-from allennlp.data.dataset import Batch
-from allennlp.data import Token, Vocabulary, Instance
-from allennlp.data.fields import TextField
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.nn.util import remove_sentence_boundaries
-from allennlp.modules.elmo import _ElmoBiLm
+from allennlp.modules.elmo import _ElmoBiLm, batch_to_ids
 from allennlp.commands.subcommand import Subcommand
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -67,6 +71,13 @@ DEFAULT_BATCH_SIZE = 64
 
 
 class Elmo(Subcommand):
+    """
+    Note that ELMo maintains an internal state dependent on previous batches.
+    As a result, ELMo will return differing results if the same sentence is
+    passed to the same ``Elmo`` instance multiple times.
+
+    See https://github.com/allenai/allennlp/blob/master/tutorials/how_to/elmo.md for more details.
+    """
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         # pylint: disable=protected-access
         description = '''Create word vectors using ELMo.'''
@@ -127,33 +138,6 @@ class ElmoEmbedder():
 
         self.cuda_device = cuda_device
 
-    def batch_to_ids(self, batch: List[List[str]]) -> torch.Tensor:
-        """
-        Converts a batch of tokenized sentences to a tensor representing the sentences with encoded characters
-        (len(batch), max sentence length, max word length).
-
-        Parameters
-        ----------
-        batch : ``List[List[str]]``, required
-            A list of tokenized sentences.
-
-        Returns
-        -------
-            A tensor of padded character ids.
-        """
-        instances = []
-        for sentence in batch:
-            tokens = [Token(token) for token in sentence]
-            field = TextField(tokens,
-                              {'character_ids': self.indexer})
-            instance = Instance({"elmo": field})
-            instances.append(instance)
-
-        dataset = Batch(instances)
-        vocab = Vocabulary()
-        dataset.index_instances(vocab)
-        return dataset.as_tensor_dict()['elmo']['character_ids']
-
     def batch_to_embeddings(self, batch: List[List[str]]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Parameters
@@ -166,7 +150,7 @@ class ElmoEmbedder():
             A tuple of tensors, the first representing activations (batch_size, 3, num_timesteps, 1024) and
         the second a mask (batch_size, num_timesteps).
         """
-        character_ids = self.batch_to_ids(batch)
+        character_ids = batch_to_ids(batch)
         if self.cuda_device >= 0:
             character_ids = character_ids.cuda(device=self.cuda_device)
 
@@ -188,6 +172,9 @@ class ElmoEmbedder():
         """
         Computes the ELMo embeddings for a single tokenized sentence.
 
+        Please note that ELMo has internal state and will give different results for the same input.
+        See the comment under the class definition.
+
         Parameters
         ----------
         sentence : ``List[str]``, required
@@ -203,6 +190,9 @@ class ElmoEmbedder():
     def embed_batch(self, batch: List[List[str]]) -> List[numpy.ndarray]:
         """
         Computes the ELMo embeddings for a batch of tokenized sentences.
+
+        Please note that ELMo has internal state and will give different results for the same input.
+        See the comment under the class definition.
 
         Parameters
         ----------
@@ -227,7 +217,7 @@ class ElmoEmbedder():
                 if length == 0:
                     elmo_embeddings.append(empty_embedding())
                 else:
-                    elmo_embeddings.append(embeddings[i, :, :length, :].data.cpu().numpy())
+                    elmo_embeddings.append(embeddings[i, :, :length, :].detach().cpu().numpy())
 
         return elmo_embeddings
 
@@ -236,6 +226,9 @@ class ElmoEmbedder():
                         batch_size: int = DEFAULT_BATCH_SIZE) -> Iterable[numpy.ndarray]:
         """
         Computes the ELMo embeddings for a iterable of sentences.
+
+        Please note that ELMo has internal state and will give different results for the same input.
+        See the comment under the class definition.
 
         Parameters
         ----------
@@ -309,8 +302,10 @@ def elmo_command(args):
         output_format = "top"
     elif args.average:
         output_format = "average"
-    elmo_embedder.embed_file(
-            args.input_file,
-            args.output_file,
-            output_format,
-            args.batch_size)
+
+    with torch.no_grad():
+        elmo_embedder.embed_file(
+                args.input_file,
+                args.output_file,
+                output_format,
+                args.batch_size)

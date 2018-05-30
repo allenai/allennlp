@@ -3,7 +3,6 @@ import logging
 
 from overrides import overrides
 import torch
-from torch.autograd import Variable
 
 from allennlp.data.fields.field import Field
 from allennlp.data.vocabulary import Vocabulary
@@ -90,10 +89,9 @@ class LabelField(Field[torch.Tensor]):
     @overrides
     def as_tensor(self,
                   padding_lengths: Dict[str, int],
-                  cuda_device: int = -1,
-                  for_training: bool = True) -> torch.Tensor:
+                  cuda_device: int = -1) -> torch.Tensor:
         # pylint: disable=unused-argument
-        tensor = Variable(torch.LongTensor([self._label_id]), volatile=not for_training)
+        tensor = torch.LongTensor([self._label_id])
         return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
 
     @overrides

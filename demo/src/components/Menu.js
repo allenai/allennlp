@@ -40,6 +40,7 @@ class Menu extends React.Component {
                 {buildLink("coreference-resolution", "Coreference Resolution")}
                 {buildLink("named-entity-recognition", "Named Entity Recognition")}
                 {buildLink("constituency-parsing", "Constituency Parsing")}
+                {buildLink("user-models", "Your model here!")}
               </ul>
             </nav>
           </div>

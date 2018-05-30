@@ -18,39 +18,46 @@ of sentences to an HDF5 file.  Here is an example of using the `elmo` command:
 ```bash
 echo "The cryptocurrency space is now figuring out to have the highest search on Google globally ." > sentences.txt
 echo "Bitcoin alone has a sixty percent share of global search ." >> sentences.txt
-allennlp elmo sentences.txt elmo_layers.hdf5
+allennlp elmo sentences.txt elmo_layers.hdf5 --all
 ```
 
 For more details, see `allennlp elmo -h`.
 
 ## Using ELMo programmatically
 
-If you need to include ELMo at multiple layers in a task model or you have other advanced use cases, you will need to create ELMo vectors
-programatically.  This is easily done with the ElmoEmbedder class [(API doc)](https://github.com/allenai/allennlp/tree/master/allennlp/commands/elmo.py).
+If you need to include ELMo at multiple layers in a task model or you have other advanced use cases, you will need to create ELMo vectors programatically.
+This is easily done with the `Elmo` class [(API doc)](https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L27), which provides a mechanism to compute the weighted ELMo representations (Equation (1) in the paper).
 
+This is a `torch.nn.Module` subclass that computes any number of ELMo
+representations and introduces trainable scalar weights for each.
+For example, this code snippet computes two layers of representations
+(as in the SNLI and SQuAD models from our paper):
 
 ```python
-from allennlp.commands.elmo import ElmoEmbedder
+from allennlp.modules.elmo import Elmo, batch_to_ids
 
-ee = ElmoEmbedder()
+options_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
+weight_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
 
-embeddings = ee.embed_sentence("Bitcoin alone has a sixty percent share of global search .".split())
+elmo = Elmo(options_file, weight_file, 2, dropout=0)
 
-# embeddings has shape (3, 11, 1024)
-#   3    - the number of ELMo vectors.
-#   11   - the number of words in the input sentence
+# use batch_to_ids to convert sentences to character ids
+sentences = [['First', 'sentence', '.'], ['Another', '.']]
+character_ids = batch_to_ids(sentences)
+
+embeddings = elmo(character_ids)
+
+# embeddings['elmo_representations'] is length two list of tensors.
+# Each element contains one layer of ELMo representations with shape
+# (2, 3, 1024).
+#   2    - the batch size
+#   3    - the sequence length of the batch
 #   1024 - the length of each ELMo vector
 ```
 
-For larger datasets, batching the sentences by using the `batch_to_embeddings` method
-will speed up the computation significantly.
+If you are not training a pytorch model, and just want numpy arrays as output
+then use `allennlp.commands.elmo.ElmoEmbedder`.
 
-Also note that `ElmoEmbedder` is a utility class that bundles together several
-tasks related to computing ELMo representations including mapping strings to character ids and
-running the pre-trained biLM.  It is not designed to be used when training a model and
-is not a subclass of `torch.nn.Module`.  To train a model with ELMo, we recommend using
-the `allennlp.modules.elmo.Elmo` class, which does subclass `torch.nn.Module` and implements
-`forward`.
 
 ## Using ELMo with existing `allennlp` models
 
@@ -67,37 +74,38 @@ We will use existing SRL model [configuration file](../../training_config/semant
 To add ELMo, there are three relevant changes.  First, modify the `text_field_embedder` section by adding an `elmo` section as follows:
 
 ```json
-   "text_field_embedder": {
-     "tokens": {
-       "type": "embedding",
-       "embedding_dim": 100,
-       "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.100d.txt.gz",
-       "trainable": true
-     },
-     "elmo":{
-       "type": "elmo_token_embedder",
-       "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-       "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
-       "do_layer_norm": false,
-       "dropout": 0.5
-     }
+"text_field_embedder": {
+  "tokens": {
+    "type": "embedding",
+    "embedding_dim": 100,
+    "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.100d.txt.gz",
+    "trainable": true
+  },
+  "elmo": {
+    "type": "elmo_token_embedder",
+    "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
+    "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
+    "do_layer_norm": false,
+    "dropout": 0.5
+  }
+}
 ```
 
 Second, add an `elmo` section to the `dataset_reader` to convert raw text to ELMo character id sequences in addition to GloVe ids:
 
 ```json
- "dataset_reader": {
-   "type": "srl",
-   "token_indexers": {
-     "tokens": {
-       "type": "single_id",
-       "lowercase_tokens": true
-     },
-     "elmo": {
-       "type": "elmo_characters"
-     }
-   }
- }
+"dataset_reader": {
+  "type": "srl",
+  "token_indexers": {
+    "tokens": {
+      "type": "single_id",
+      "lowercase_tokens": true
+    },
+    "elmo": {
+      "type": "elmo_characters"
+    }
+  }
+}
 ```
 
 Third, modify the input dimension (`input_size`) to the stacked LSTM encoder.
@@ -105,14 +113,14 @@ The baseline model uses a 200 dimensional input (100 dimensional GloVe embedding
 ELMo provides a 1024 dimension representation so the new `input_size` is 1224.
 
 ```json
-    "encoder": {
-      "type": "alternating_lstm",
-      "input_size": 1224,
-      "hidden_size": 300,
-      "num_layers": 8,
-      "recurrent_dropout_probability": 0.1,
-      "use_highway": true
-    },
+"encoder": {
+  "type": "alternating_lstm",
+  "input_size": 1224,
+  "hidden_size": 300,
+  "num_layers": 8,
+  "recurrent_dropout_probability": 0.1,
+  "use_highway": true
+}
 ```
 
 ## Recommended hyper-parameter settings for `Elmo` class
@@ -126,5 +134,16 @@ general guidelines for an initial training run.
 * Add some dropout (0.5 is a good default value), either in the `Elmo` class directly, or in the next layer of your network.  If the next layer of the network includes dropout then set `dropout=0` when constructing the `Elmo` class.
 * Add a small amount of L2 regularization to the scalar weighting parameters (`lambda=0.001` in the paper).  These are the parameters named `scalar_mix_L.scalar_parameters.X` where `X=[0, 1, 2]` indexes the biLM layer and `L` indexes the number of ELMo representations included in the downstream model.  Often performance is slightly higher for larger datasets without regularizing these parameters, but it can sometimes cause training to be unstable.
 
-Finally, we have found that including pre-trained GloVe or other word vectors in addition to ELMo
-provides little to no improvement over just using ELMo and slows down training.
+Finally, we have found that in some cases including pre-trained GloVe or other word vectors in addition to ELMo provides little to no improvement over just using ELMo and slows down training.  However, we recommend experimenting with your dataset and model architecture for best results.
+
+## Notes on statefulness and non-determinism
+
+The pre-trained biLM used to compute ELMo representations was trained without resetting the internal LSTM states between sentences.
+Accordingly, the re-implementation in allennlp is stateful, and carries the LSTM states forward from batch to batch.
+Since the biLM was trained on randomly shuffled sentences padded with special `<S>` and `</S>` tokens, it will reset the internal states to its own internal representation of sentence break when seeing these tokens.
+
+There are a few practical implications of this:
+
+* Due to the statefulness, the ELMo vectors are not deterministic and running the same batch multiple times will result in slightly different embeddings.
+* After loading the pre-trained model, the first few batches will be negatively impacted until the biLM can reset its internal states.  You may want to run a few batches through the model to warm up the states before making predictions (although we have not worried about this issue in practice).
+* It is important to always add the `<S>` and `</S>` tokens to each sentence.  The `allennlp` code handles this behind the scenes, but if you are handing padding and indexing in a different manner then take care to ensure this is handled appropriately.

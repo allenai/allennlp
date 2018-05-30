@@ -5,7 +5,7 @@
 
 # This installs Pytorch for CUDA 8 only. If you are using a newer version,
 # please visit http://pytorch.org/ and install the relevant version.
-torch==0.3.1
+torch==0.4.0
 
 # Parameter parsing.
 pyhocon==0.3.35
@@ -32,7 +32,7 @@ scikit-learn
 
 # Write logs for training visualisation with the Tensorboard application
 # Install the Tensorboard application separately (part of tensorflow) to view them.
-tensorboardX==1.0
+tensorboardX==1.2
 
 # Required by torch.utils.ffi
 cffi==1.11.2
@@ -46,15 +46,12 @@ flask-cors==3.0.3
 gevent==1.2.2
 
 # Talk to postgres demo database
-psycopg2
+psycopg2-binary
 
 # Used by semantic parsing code to strip diacritics from unicode strings.
 unidecode
 
 #### LIBRARIES USED IN SCRIPTS ####
-# argument parsing in for data cleaning scripts
-argparse
-
 # Used for downloading datasets over HTTP
 requests>=2.18
 
@@ -69,3 +66,14 @@ h5py
 
 # For timezone utilities
 pytz==2017.3
+
+#### ESSENTIAL TESTING-RELATED PACKAGES ####
+# We'll use pytest to run our tests; this isn't really necessary to run the code, but it is to run
+# the tests.  With this here, you can run the tests with `py.test` from the base directory.
+pytest
+
+# Allows marking tests as flaky, to be rerun if they fail
+flaky
+
+# Required to mock out `requests` calls
+responses>=0.7

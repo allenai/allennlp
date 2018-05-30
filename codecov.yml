@@ -10,4 +10,6 @@ coverage:
         threshold: 1%
     changes: false
 comment: false
-ignore: allennlp/custom_extensions
+ignore:
+  - "allennlp/custom_extensions"
+  - "allennlp/tests"
