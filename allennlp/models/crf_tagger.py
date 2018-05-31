@@ -14,6 +14,7 @@ from allennlp.nn import InitializerApplicator, RegularizerApplicator
 import allennlp.nn.util as util
 from allennlp.training.metrics import SpanBasedF1Measure
 
+
 @Model.register("crf_tagger")
 class CrfTagger(Model):
     """
@@ -113,7 +114,7 @@ class CrfTagger(Model):
             The logits that are the output of the ``tag_projection_layer``
         mask : ``torch.LongTensor``
             The text field mask for the input tokens
-        tags : ``List[List[str]]``
+        tags : ``List[List[int]]``
             The predicted tags using the Viterbi algorithm.
         loss : ``torch.FloatTensor``, optional
             A scalar loss to be optimised. Only computed if gold label ``tags`` are provided.
@@ -130,7 +131,10 @@ class CrfTagger(Model):
             encoded_text = self.dropout(encoded_text)
 
         logits = self.tag_projection_layer(encoded_text)
-        predicted_tags = self.crf.viterbi_tags(logits, mask)
+        best_paths = self.crf.viterbi_tags(logits, mask)
+
+        # Just get the tags and ignore the score.
+        predicted_tags = [x for x, y in best_paths]
 
         output = {"logits": logits, "mask": mask, "tags": predicted_tags}
 
