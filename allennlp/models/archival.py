@@ -116,7 +116,7 @@ def load_archive(archive_file: str,
     else:
         # Extract archive to temp dir
         tempdir = tempfile.mkdtemp()
-        logger.info("extracting archive file %s to temp dir %s", resolved_archive_file, tempdir)
+        logger.info(f"extracting archive file {resolved_archive_file} to temp dir {tempdir}")
         with tarfile.open(resolved_archive_file, 'r:gz') as archive:
             archive.extractall(tempdir)
 
