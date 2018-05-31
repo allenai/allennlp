@@ -51,7 +51,7 @@ using `allennlp.commands.main()`.
 
 First, create a wrapper script that puts your command-line args into `sys.argv` and calls `main()`:
 
-![wrapper script](debugging_images/debug_wrapper.png)
+![wrapper script](debugging_images/debug_wrapper_with_rmtree.png)
 
 Then you can set a breakpoint somewhere in your code:
 
