@@ -340,7 +340,7 @@ DEFAULT_MODELS = {
 
 def main(args):
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-                    level=logging.INFO)
+                        level=logging.INFO)
 
     # pylint: disable=protected-access
     description = '''Run the web service, which provides an HTTP API as well as a web demo.'''
