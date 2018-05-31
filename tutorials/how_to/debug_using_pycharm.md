@@ -18,16 +18,16 @@ Our recommended workflow is using our command-line tool `allennlp`.
 The example repo contains the training command:
 
 ```
-allennlp train experiments/venue_classifier.json -s /tmp/your_output_dir_here --include-package my_library
+allennlp train experiments/venue_classifier.json -s /tmp/your_output_dir_here --include-package my_library -o '{"trainer": {"cuda_device": -1}}'
 ```
+
+(I added an override to train on the CPU, since the machine you're running PyCharm on probably doesn't have a GPU.)
 
 It turns out that `allennlp` is just (in essence) an alias for `python -m allennlp.run`, so you could equivalently do
 
 ```
 python -m allennlp.run train experiments/venue_classifier.json -s /tmp/your_output_dir_here --include-package my_library -o '{"trainer": {"cuda_device": -1}}'
 ```
-
-(The overrides is because you probably don't have a GPU).
 
 After which you can select "Run > Attach to Local Process",
 
@@ -43,7 +43,9 @@ and get results in the debugger:
 
 # How to Debug in PyCharm, Using "Run > Debug"
 
-Some people find "attach to process" to be a nuisance.
+Some people find the "attach to local process" workflow to be a nuisance,
+especially if you are repeatedly debugging things.
+
 Fortunately, it's easy to launch the training process from code,
 using `allennlp.commands.main()`.
 
