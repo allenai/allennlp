@@ -1,5 +1,8 @@
 #### TESTING-RELATED PACKAGES ####
 
+# Allows running tests in parallel
+pytest-xdist==1.22.2
+
 # Checks style, syntax, and other useful errors.
 pylint==1.8.1
 

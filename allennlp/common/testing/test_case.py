@@ -30,7 +30,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
         logging.getLogger('allennlp.modules.token_embedders.embedding').setLevel(logging.INFO)
         log_pytorch_version_info()
 
-        self.TEST_DIR = pathlib.Path("/tmp/allennlp_tests/")
+        self.TEST_DIR = pathlib.Path(f"/tmp/allennlp_tests/{os.getpid()}/")
 
         os.makedirs(self.TEST_DIR, exist_ok=True)
 
