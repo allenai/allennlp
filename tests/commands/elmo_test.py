@@ -188,9 +188,9 @@ class TestElmoCommand(ElmoTestCase):
         output_path = os.path.join(tempdir, "output.txt")
 
         sentences = [
-            "my / sentence",
-            "my / test / sentence",
-            "one / two / three",
+                "my / sentence",
+                "my / test / sentence",
+                "one / two / three",
         ]
 
         with open(sentences_path, 'w') as f:
