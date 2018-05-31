@@ -9,7 +9,6 @@ from allennlp.common.checks import ConfigurationError
 import allennlp.nn.util as util
 
 
-
 def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> List[Tuple[int, int]]:
     """
     Given tokens and a constraint type, returns the allowed transitions. It will
