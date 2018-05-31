@@ -21,10 +21,7 @@ class LegacyAttention(Attention):
         self._similarity_function = similarity_function or DotProductSimilarity()
 
     @overrides
-    def _forward_internal(self,
-                          vector: torch.Tensor,
-                          matrix: torch.Tensor,
-                          matrix_mask: torch.Tensor = None) -> torch.Tensor:
+    def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
         tiled_vector = vector.unsqueeze(1).expand(vector.size()[0],
                                                   matrix.size()[1],
                                                   vector.size()[1])

@@ -3,7 +3,6 @@ import json
 import logging
 
 from overrides import overrides
-import tqdm
 
 from allennlp.common import Params
 from allennlp.common.util import JsonDict
@@ -99,7 +98,7 @@ class NlvrDatasetReader(DatasetReader):
     def _read(self, file_path: str):
         with open(file_path, "r") as data_file:
             logger.info("Reading instances from lines in file: %s", file_path)
-            for line in tqdm.tqdm(data_file):
+            for line in data_file:
                 line = line.strip("\n")
                 if not line:
                     continue
