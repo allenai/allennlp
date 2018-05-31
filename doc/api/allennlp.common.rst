@@ -7,6 +7,7 @@ that's used by datasets, models, trainers, and so on.
 .. toctree::
 
    allennlp.common.checks
+   allennlp.common.configuration
    allennlp.common.file_utils
    allennlp.common.params
    allennlp.common.registrable
