@@ -65,6 +65,9 @@ class WikiTablesWorld(World):
                 signature = self.global_type_signatures[mapped_name]
                 self.terminal_productions[predicate] = f"{signature} -> {predicate}"
 
+        # We don't need to recompute this ever; let's just compute it once and cache it.
+        self._valid_actions: Dict[str, List[str]] = None
+
     def is_table_entity(self, entity_name: str) -> bool:
         """
         Returns ``True`` if the given entity is one of the entities in the table.
@@ -80,6 +83,8 @@ class WikiTablesWorld(World):
 
     @overrides
     def get_valid_actions(self) -> Dict[str, List[str]]:
+        if self._valid_actions:
+            return self._valid_actions
         valid_actions = super().get_valid_actions()
 
         # We need to add a few things here that don't get added by our world-general logic, and
@@ -115,6 +120,7 @@ class WikiTablesWorld(World):
         for type_ in ['<c,r>', '<p,c>', '<r,d>']:
             self._remove_action_from_type(valid_actions, type_, lambda x: '<<#1,#2>,<#2,#1>>' in x)
 
+        self._valid_actions = valid_actions
         return valid_actions
 
     @staticmethod
