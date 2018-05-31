@@ -25,22 +25,13 @@ allennlp train experiments/venue_classifier.json -s /tmp/your_output_dir_here --
 
 (I added an override to train on the CPU, since the machine you're running PyCharm on probably doesn't have a GPU.)
 
-It turns out that `allennlp` is just (in essence) an alias for `python -m allennlp.run`, so you could equivalently do
-
-```
-python -m allennlp.run train experiments/venue_classifier.json -s /tmp/your_output_dir_here --include-package my_library -o '{"trainer": {"cuda_device": -1}}'
-```
-
-(This alternate invocation is required because (seemingly) "attach to local process"
- only lets you attach to explicit `python` processes.)
-
 After which you can select "Run > Attach to Local Process",
 
 ![attach to local process](debugging_images/attach_to_process_1.png)
 
 search for the one that's running `allennlp`,
 
-![attach to local process](debugging_images/attach_to_process_2.png)
+![attach to local process](debugging_images/attach_to_local_process.png)
 
 and get results in the debugger:
 
