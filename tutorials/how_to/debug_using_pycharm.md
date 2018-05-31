@@ -1,4 +1,4 @@
-# How to Debug AllenNLP
+# How to Debug Your AllenNLP Code
 
 Recently several people have asked how to debug allennlp code
 using PyCharm, so I set out to figure it out. It turns out that
@@ -7,14 +7,14 @@ it's not terribly difficult. It's also easy to do it in VSCode.
 If you have a different preferred debugger,
 these instructions will probably work for you too.
 
-# Some Code To Debug
+## Some Code To Debug
 
 We'll demonstrate the debugger using the Academic Paper Classifier model
 from our ["AllenNLP-as-a-Library" example](https://github.com/allenai/allennlp-as-a-library-example).
 
 If you'd like to follow along, clone that repo and install its requirements.
 
-# How to Debug in PyCharm, Using "Run > Attach to Local Process"
+## How to Debug in PyCharm, Using "Run > Attach to Local Process"
 
 Our recommended workflow is using our command-line tool `allennlp`.
 The example repo contains the training command:
@@ -43,7 +43,7 @@ and get results in the debugger:
 
 ![attach to local process](debugging_images/attach_to_process_3.png)
 
-# How to Debug in PyCharm, Using "Run > Debug"
+## How to Debug in PyCharm, Using "Run > Debug"
 
 Some people find the "attach to local process" workflow to be a nuisance,
 especially if you are repeatedly debugging things.
