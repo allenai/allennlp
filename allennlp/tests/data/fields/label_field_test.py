@@ -1,5 +1,4 @@
 # pylint: disable=no-self-use,invalid-name
-import numpy
 import pytest
 
 from allennlp.common.checks import ConfigurationError
