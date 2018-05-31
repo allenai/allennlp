@@ -1,12 +1,12 @@
 import json
 import logging
 from typing import Union, List, Dict, Any
+import warnings
 
 import torch
 from torch.nn.modules import Dropout
 
 import numpy
-import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py

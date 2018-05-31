@@ -1,11 +1,11 @@
 import gzip
 import logging
+import warnings
 
 from overrides import overrides
 import numpy
 import torch
 from torch.nn.functional import embedding
-import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py

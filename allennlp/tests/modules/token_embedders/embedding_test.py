@@ -1,10 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
 import gzip
+import warnings
 
 import numpy
 import pytest
 import torch
-import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py

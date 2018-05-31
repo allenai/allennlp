@@ -1,12 +1,11 @@
 """
 A stacked bidirectional LSTM with skip connections between layers.
 """
-
 from typing import Optional, Tuple, List
+import warnings
 
 import torch
 from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence
-import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
