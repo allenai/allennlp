@@ -131,10 +131,10 @@ class CrfTagger(Model):
             encoded_text = self.dropout(encoded_text)
 
         logits = self.tag_projection_layer(encoded_text)
-        predicted_tags = self.crf.viterbi_tags(logits, mask)
+        best_paths = self.crf.viterbi_tags(logits, mask)
 
         # Just get the tags and ignore the score.
-        predicted_tags = [x for x, y in predicted_tags]
+        predicted_tags = [x for x, y in best_paths]
 
         output = {"logits": logits, "mask": mask, "tags": predicted_tags}
 
