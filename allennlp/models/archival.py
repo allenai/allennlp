@@ -103,16 +103,21 @@ def load_archive(archive_file: str,
         HOCON overrides to apply to the unarchived ``Params`` object.
     """
     # redirect to the cache, if necessary
-    archive_file = cached_path(archive_file)
+    resolved_archive_file = cached_path(archive_file)
+
+    if resolved_archive_file == archive_file:
+        logger.info(f"loading archive file {archive_file}")
+    else:
+        logger.info(f"loading archive file {archive_file} from cache at {resolved_archive_file}")
 
     tempdir = None
-    if os.path.isdir(archive_file):
-        serialization_dir = archive_file
+    if os.path.isdir(resolved_archive_file):
+        serialization_dir = resolved_archive_file
     else:
         # Extract archive to temp dir
         tempdir = tempfile.mkdtemp()
-        logger.info("extracting archive file %s to temp dir %s", archive_file, tempdir)
-        with tarfile.open(archive_file, 'r:gz') as archive:
+        logger.info(f"extracting archive file {resolved_archive_file} to temp dir {tempdir}")
+        with tarfile.open(resolved_archive_file, 'r:gz') as archive:
             archive.extractall(tempdir)
 
         serialization_dir = tempdir
