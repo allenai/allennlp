@@ -256,7 +256,7 @@ def viterbi_decode(tag_sequence: torch.Tensor,
     -------
     viterbi_path : List[int]
         The tag indices of the maximum likelihood tag sequence.
-    viterbi_score : float
+    viterbi_score : torch.Tensor
         The score of the viterbi path.
     """
     sequence_length, num_tags = list(tag_sequence.size())
