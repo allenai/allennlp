@@ -8,11 +8,10 @@ and you want to use the default HTML, you could run this like
 
 ```
 python -m allennlp.service.server_simple \
-    --archive-path /path/to/trained/model/archive.tar.gz \
-    --predictor my-predictor-name \
-    --title "Demo of My Stuff" \
-    --field-name question --field-name passage --field-name hint \
-    --include-package my_stuff
+    --archive-path allennlp/tests/fixtures/bidaf/serialization/model.tar.gz \
+    --predictor machine-comprehension \
+    --title "Demo of the Machine Comprehension Text Fixture" \
+    --field-name question --field-name passage
 ```
 """
 from typing import List, Callable
@@ -118,11 +117,12 @@ def main(args):
 
     parser = argparse.ArgumentParser(description='Serve up a simple model')
 
-    parser.add_argument('--archive-path', type=str, help='path to trained archive file')
-    parser.add_argument('--predictor', type=str, help='name of predictor')
+    parser.add_argument('--archive-path', type=str, required=True, help='path to trained archive file')
+    parser.add_argument('--predictor', type=str, required=True, help='name of predictor')
     parser.add_argument('--static-dir', type=str, help='serve index.html from this directory')
     parser.add_argument('--title', type=str, help='change the default page title', default="AllenNLP Demo")
-    parser.add_argument('--field-name', type=str, action='append', help='field names to include in the demo')
+    parser.add_argument('--field-name', type=str, required=True, action='append',
+                        help='field names to include in the demo')
     parser.add_argument('--port', type=int, default=8000, help='port to serve the demo on')
 
     parser.add_argument('--include-package',
@@ -137,9 +137,9 @@ def main(args):
     for package_name in args.include_package:
         import_submodules(package_name)
 
-    archive = load_archive(args.archive_path or 'tests/fixtures/bidaf/serialization/model.tar.gz')
-    predictor = Predictor.from_archive(archive, args.predictor or 'machine-comprehension')
-    field_names = args.field_name or ['passage', 'question']
+    archive = load_archive(args.archive_path)
+    predictor = Predictor.from_archive(archive, args.predictor)
+    field_names = args.field_name
 
     app = make_app(predictor=predictor,
                    field_names=field_names,
