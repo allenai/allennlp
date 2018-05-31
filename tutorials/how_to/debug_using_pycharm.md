@@ -1,9 +1,11 @@
-# How to Debug AllenNLP Using PyCharm
+# How to Debug AllenNLP
 
 Recently several people have asked how to debug allennlp code
 using PyCharm, so I set out to figure it out. It turns out that
-it's not terribly difficult. If you have a different preferred
-debugger, these instructions will probably work for you too.
+it's not terribly difficult. It's also easy to do it in VSCode.
+
+If you have a different preferred debugger,
+these instructions will probably work for you too.
 
 # Some Code To Debug
 
@@ -96,5 +98,36 @@ Right-click in the editor and choose "Debug":
 And then once you hit your breakpoint, you can inspect variables or step through code to your heart's content:
 
 ![inspect variable](debugging_images/inspect_variable.png)
+
+# How to Debug in VSCode
+
+You can use the same debug wrapper script as in the previous section.
+
+Then click on the debug icon all the way on the left,
+
+![debug icon](debugging_images/vscode_debug_icon.png)
+
+select "Python > Current File" as the debugging profile,
+
+![debug profile](debugging_images/vscode_debugging_profile.png)
+
+set a breakpoint somewhere,
+
+![debug breakpoint](debugging_images/vscode_breakpoint.png)
+
+and select "Debug > Start Debugging" from the menu.
+
+![debug start](debugging_images/vscode_start_debugging.png)
+
+Your code will run in the integrated terminal, and when you hit
+your breakpoint you'll be able to inspect variables
+
+![debug inspect](debugging_images/vscode_watched_variable.png)
+
+and the call stack
+
+![debug stack](debugging_images/vscode_call_stack.png)
+
+and whatever else you need to do to debug your code.
 
 Happy debugging!
