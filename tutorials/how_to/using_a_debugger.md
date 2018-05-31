@@ -1,11 +1,11 @@
 # How to Debug Your AllenNLP Code
 
-Recently several people have asked how to debug allennlp code
-using PyCharm, so I set out to figure it out. It turns out that
-it's not terribly difficult. It's also easy to do it in VSCode.
+Recently several people have asked how to debug AllenNLP code
+using their IDEs. Here is a guide how to do so in both PyCharm
+and VSCode.
 
 If you have a different preferred debugger,
-these instructions will probably work for you too.
+these instructions will hopefully get you most of the way there.
 
 ## Some Code To Debug
 
@@ -30,6 +30,9 @@ It turns out that `allennlp` is just (in essence) an alias for `python -m allenn
 ```
 python -m allennlp.run train experiments/venue_classifier.json -s /tmp/your_output_dir_here --include-package my_library -o '{"trainer": {"cuda_device": -1}}'
 ```
+
+(This alternate invocation is required because (seemingly) "attach to local process"
+ only lets you attach to explicit `python` processes.)
 
 After which you can select "Run > Attach to Local Process",
 
@@ -91,7 +94,7 @@ Then you can set a breakpoint somewhere in your code:
 
 ![breakpoint](debugging_images/breakpoint.png)
 
-Right-click in the editor and choose "Debug":
+Go back to the wrapper script, right-click in the editor and choose "Debug":
 
 ![debug debug](debugging_images/debug_debug.png)
 
@@ -115,7 +118,7 @@ set a breakpoint somewhere,
 
 ![debug breakpoint](debugging_images/vscode_breakpoint.png)
 
-and select "Debug > Start Debugging" from the menu.
+go back to the wrapper script, and select "Debug > Start Debugging" from the menu.
 
 ![debug start](debugging_images/vscode_start_debugging.png)
 
