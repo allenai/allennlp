@@ -1,7 +1,7 @@
 """
 Conditional random field
 """
-from typing import List, Tuple, Dict, Union
+from typing import List, Tuple, Dict
 
 import torch
 
@@ -280,8 +280,7 @@ class ConditionalRandomField(torch.nn.Module):
 
     def viterbi_tags(self,
                      logits: torch.Tensor,
-                     mask: torch.Tensor,
-                     keep_scores: bool = False) -> Union[List[List[int]], Tuple[List[List[int]], List[float]]]:
+                     mask: torch.Tensor) -> List[Tuple[List[int], float]]:
         """
         Uses viterbi algorithm to find most likely tags for the given inputs.
         If constraints are applied, disallows all other transitions.
@@ -317,8 +316,7 @@ class ConditionalRandomField(torch.nn.Module):
                                                  (1 - self._constraint_mask[start_tag, :num_tags].detach()))
             transitions[:num_tags, end_tag] = -10000.0 * (1 - self._constraint_mask[:num_tags, end_tag].detach())
 
-        all_tags = []
-        all_scores = []
+        best_paths = []
         # Pad the max sequence length by 2 to account for start_tag + end_tag.
         tag_sequence = torch.Tensor(max_seq_length + 2, num_tags + 2)
 
@@ -336,10 +334,8 @@ class ConditionalRandomField(torch.nn.Module):
 
             # We pass the tags and the transitions to ``viterbi_decode``.
             viterbi_path, viterbi_score = util.viterbi_decode(tag_sequence[:(sequence_length + 2)], transitions)
-            all_scores.append(viterbi_score.item())
             # Get rid of START and END sentinels and append.
-            all_tags.append(viterbi_path[1:-1])
+            viterbi_path = viterbi_path[1:-1]
+            best_paths.append((viterbi_path, viterbi_score.item()))
 
-        if keep_scores:
-            return all_tags, all_scores
-        return all_tags
+        return best_paths
