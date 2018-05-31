@@ -157,10 +157,15 @@ class Elmo(torch.nn.Module):
         requires_grad = params.pop('requires_grad', False)
         num_output_representations = params.pop('num_output_representations')
         do_layer_norm = params.pop_bool('do_layer_norm', False)
+        dropout = params.pop_float('dropout', 0.5)
         params.assert_empty(cls.__name__)
 
-        return cls(options_file, weight_file, num_output_representations,
-                   requires_grad=requires_grad, do_layer_norm=do_layer_norm)
+        return cls(options_file=options_file,
+                   weight_file=weight_file,
+                   num_output_representations=num_output_representations,
+                   requires_grad=requires_grad,
+                   do_layer_norm=do_layer_norm,
+                   dropout=dropout)
 
 
 def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
