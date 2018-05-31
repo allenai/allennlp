@@ -2,6 +2,7 @@ from typing import Dict
 import argparse
 import logging
 
+from allennlp import __version__
 from allennlp.commands.elmo import Elmo
 from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.fine_tune import FineTune
@@ -26,6 +27,7 @@ def main(prog: str = None,
     """
     # pylint: disable=dangerous-default-value
     parser = argparse.ArgumentParser(description="Run AllenNLP", usage='%(prog)s', prog=prog)
+    parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
     subparsers = parser.add_subparsers(title='Commands', metavar='')
 
