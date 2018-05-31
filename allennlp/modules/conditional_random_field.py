@@ -1,12 +1,13 @@
 """
 Conditional random field
 """
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Union
 
 import torch
 
 from allennlp.common.checks import ConfigurationError
 import allennlp.nn.util as util
+
 
 
 def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> List[Tuple[int, int]]:
@@ -278,7 +279,10 @@ class ConditionalRandomField(torch.nn.Module):
 
         return torch.sum(log_numerator - log_denominator)
 
-    def viterbi_tags(self, logits: torch.Tensor, mask: torch.Tensor) -> List[List[int]]:
+    def viterbi_tags(self,
+                     logits: torch.Tensor,
+                     mask: torch.Tensor,
+                     keep_scores: bool = False) -> Union[List[List[int]], Tuple[List[List[int]], List[float]]]:
         """
         Uses viterbi algorithm to find most likely tags for the given inputs.
         If constraints are applied, disallows all other transitions.
@@ -315,6 +319,7 @@ class ConditionalRandomField(torch.nn.Module):
             transitions[:num_tags, end_tag] = -10000.0 * (1 - self._constraint_mask[:num_tags, end_tag].detach())
 
         all_tags = []
+        all_scores = []
         # Pad the max sequence length by 2 to account for start_tag + end_tag.
         tag_sequence = torch.Tensor(max_seq_length + 2, num_tags + 2)
 
@@ -331,8 +336,11 @@ class ConditionalRandomField(torch.nn.Module):
             tag_sequence[sequence_length + 1, end_tag] = 0.
 
             # We pass the tags and the transitions to ``viterbi_decode``.
-            viterbi_path, _ = util.viterbi_decode(tag_sequence[:(sequence_length + 2)], transitions)
+            viterbi_path, viterbi_score = util.viterbi_decode(tag_sequence[:(sequence_length + 2)], transitions)
+            all_scores.append(viterbi_score.item())
             # Get rid of START and END sentinels and append.
             all_tags.append(viterbi_path[1:-1])
 
+        if keep_scores:
+            return all_tags, all_scores
         return all_tags
