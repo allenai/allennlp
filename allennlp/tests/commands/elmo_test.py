@@ -4,7 +4,10 @@ import pathlib
 import sys
 import tempfile
 
-import h5py
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import h5py
 import numpy
 
 from allennlp.commands import main

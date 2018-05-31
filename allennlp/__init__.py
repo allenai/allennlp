@@ -5,11 +5,6 @@ import sys
 if sys.version_info < (3, 6):
     raise RuntimeError("AllenNLP requires Python 3.6 or later")
 
-# Disable FutureWarnings raised by h5py
-# TODO(joelgrus): remove this (and pin requirements) when h5py 2.8.0 is available.
-import warnings
-warnings.filterwarnings("ignore", category=FutureWarning)
-
 try:
     # On some systems this prevents the dreaded
     # ImportError: dlopen: cannot load any more object with static TLS

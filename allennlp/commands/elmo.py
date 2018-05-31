@@ -52,7 +52,12 @@ import logging
 from typing import IO, List, Iterable, Tuple
 
 import argparse
-import h5py
+
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import h5py
+
 import numpy
 import torch
 

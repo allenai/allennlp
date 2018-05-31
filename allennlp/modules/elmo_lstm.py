@@ -6,7 +6,10 @@ from typing import Optional, Tuple, List
 
 import torch
 from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence
-import h5py
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import h5py
 import numpy
 
 from allennlp.modules.lstm_cell_with_projection import LstmCellWithProjection

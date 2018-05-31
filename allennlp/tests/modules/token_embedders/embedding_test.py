@@ -4,7 +4,10 @@ import gzip
 import numpy
 import pytest
 import torch
-import h5py
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import h5py
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError

@@ -6,7 +6,10 @@ import torch
 from torch.nn.modules import Dropout
 
 import numpy
-import h5py
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import h5py
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
