@@ -124,7 +124,7 @@ def read_sentences_from_h5py(obj: h5py.HLObject):
 
     if isinstance(obj, h5py.Group):
         for child in obj.values():
-          yield from read_sentences_from_h5py(child)
+            yield from read_sentences_from_h5py(child)
 
 def empty_embedding() -> numpy.ndarray:
     return numpy.zeros((3, 0, 1024))
