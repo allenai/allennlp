@@ -116,7 +116,11 @@ class TestConditionalRandomField(AllenNlpTestCase):
                 [1, 1, 0]
         ])
 
-        viterbi_tags = self.crf.viterbi_tags(self.logits, mask)
+        viterbi_path = self.crf.viterbi_tags(self.logits, mask)
+
+        # Separate the tags and scores.
+        viterbi_tags = [x for x, y in viterbi_path]
+        viterbi_scores = [y for x, y in viterbi_path]
 
         # Check that the viterbi tags are what I think they should be.
         assert viterbi_tags == [
@@ -128,6 +132,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
         # to check the likelihood of each. The most likely sequence should be the
         # same as what we get from viterbi_tags.
         most_likely_tags = []
+        best_scores = []
 
         for logit, mas in zip(self.logits, mask):
             sequence_length = torch.sum(mas.detach())
@@ -138,8 +143,10 @@ class TestConditionalRandomField(AllenNlpTestCase):
                     most_likely, most_likelihood = tags, score
             # Convert tuple to list; otherwise == complains.
             most_likely_tags.append(list(most_likely))
+            best_scores.append(most_likelihood)
 
         assert viterbi_tags == most_likely_tags
+        assert viterbi_scores == best_scores
 
     def test_constrained_viterbi_tags(self):
         constraints = {(0, 0), (0, 1),
@@ -164,7 +171,10 @@ class TestConditionalRandomField(AllenNlpTestCase):
                 [1, 1, 0]
         ])
 
-        viterbi_tags = crf.viterbi_tags(self.logits, mask)
+        viterbi_path = crf.viterbi_tags(self.logits, mask)
+
+        # Get just the tags from each tuple of (tags, score).
+        viterbi_tags = [x for x, y in viterbi_path]
 
         # Now the tags should respect the constraints
         assert viterbi_tags == [
