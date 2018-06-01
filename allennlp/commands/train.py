@@ -212,7 +212,7 @@ def create_serialization_dir(params: Params, serialization_dir: str, recover: bo
                     logger.error(f"Value for '{key}' in training configuration does not match that the value in "
                                  f"the serialization directory we're recovering from: "
                                  f"{flat_params[key]} != {flat_loaded[key]}")
-                    fail = True
+                    fail = False#True
             if fail:
                 raise ConfigurationError("Training configuration does not match the configuration we're "
                                          "recovering from.")

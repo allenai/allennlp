@@ -77,7 +77,14 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         padded_tokens = pad_sequence_to_length(tokens, desired_num_tokens, default_value=self.get_padding_token)
 
         # Pad the characters within the tokens.
-        desired_token_length = padding_lengths['num_token_characters']
+        try:
+          desired_token_length = padding_lengths['num_token_characters']
+        except:
+          desired_token_length = 25
+          print("TOKEN ERROR: {}".format(tokens))
+          print("{}".format(padding_lengths))
+          print("{}".format(desired_num_tokens))
+         
         longest_token: List[int] = max(tokens, key=len, default=[])
         padding_value = 0
         if desired_token_length > len(longest_token):

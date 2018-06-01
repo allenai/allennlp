@@ -129,7 +129,7 @@ def block_orthogonal(tensor: torch.Tensor,
         The gain (scaling) applied to the orthogonal initialization.
     """
 
-    if isinstance(tensor, Variable):
+    if False and isinstance(tensor, Variable):
         block_orthogonal(tensor.data, split_sizes, gain)
     else:
         sizes = list(tensor.size())
