@@ -44,6 +44,9 @@ class WikiTablesSemanticParser(Model):
     max_decoding_steps : ``int``
         When we're decoding with a beam search, what's the maximum number of steps we should take?
         This only applies at evaluation time, not during training.
+    add_action_bias : ``bool``, optional (default=True)
+        If ``True``, we will learn a bias weight for each action that gets used when predicting
+        that action, in addition to its embedding.
     use_neighbor_similarity_for_linking : ``bool``, optional (default=False)
         If ``True``, we will compute a max similarity between a question token and the `neighbors`
         of an entity as a component of the linking scores.  This is meant to capture the same kind
@@ -73,6 +76,7 @@ class WikiTablesSemanticParser(Model):
                  encoder: Seq2SeqEncoder,
                  entity_encoder: Seq2VecEncoder,
                  max_decoding_steps: int,
+                 add_action_bias: bool = True,
                  use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
                  num_linking_features: int = 10,
@@ -83,6 +87,7 @@ class WikiTablesSemanticParser(Model):
         self._encoder = encoder
         self._entity_encoder = TimeDistributed(entity_encoder)
         self._max_decoding_steps = max_decoding_steps
+        self._add_action_bias = add_action_bias
         self._use_neighbor_similarity_for_linking = use_neighbor_similarity_for_linking
         if dropout > 0:
             self._dropout = torch.nn.Dropout(p=dropout)
@@ -95,7 +100,11 @@ class WikiTablesSemanticParser(Model):
 
         self._action_padding_index = -1  # the padding value used by IndexField
         num_actions = vocab.get_vocab_size(self._rule_namespace)
-        self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
+        if self._add_action_bias:
+            input_action_dim = action_embedding_dim + 1
+        else:
+            input_action_dim = action_embedding_dim
+        self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=input_action_dim)
         self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
 
 

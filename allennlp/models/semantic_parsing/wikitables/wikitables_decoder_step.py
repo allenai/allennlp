@@ -25,7 +25,15 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
     action_embedding_dim : ``int``
     input_attention : ``Attention``
     num_start_types : ``int``
-    mixture_feedforward : ``FeedForward`` (optional, default=None)
+    predict_start_type_separately : ``bool``, optional (default=True)
+        If ``True``, we will predict the initial action (which is typically the base type of the
+        logical form) using a different mechanism than our typical action decoder.  We basically
+        just do a projection of the hidden state, and don't update the decoder RNN.
+    add_action_bias : ``bool``, optional (default=True)
+        If ``True``, there has been a bias dimension added to the embedding of each action, which
+        gets used when predicting the next action.  We add a dimension of ones to our predicted
+        action vector in this case to account for that.
+    mixture_feedforward : ``FeedForward`` optional (default=None)
     dropout : ``float`` (optional, default=0.0)
     unlinked_terminal_indices : ``List[int]``, (optional, default=None)
         If we are training a parser to maximize coverage using a checklist, we need to know the
@@ -39,18 +47,23 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                  action_embedding_dim: int,
                  input_attention: Attention,
                  num_start_types: int,
+                 predict_start_type_separately: bool = True,
+                 add_action_bias: bool = True,
                  mixture_feedforward: FeedForward = None,
                  dropout: float = 0.0,
                  unlinked_terminal_indices: List[int] = None) -> None:
         super(WikiTablesDecoderStep, self).__init__()
         self._mixture_feedforward = mixture_feedforward
         self._input_attention = input_attention
+        self._add_action_bias = add_action_bias
 
         self._num_start_types = num_start_types
-        self._start_type_predictor = Linear(encoder_output_dim, num_start_types)
-        if num_start_types == 1:
-            self._start_type_predictor.weight.requires_grad = False
-            self._start_type_predictor.bias.requires_grad = False
+        self._predict_start_type_separately = predict_start_type_separately
+        if predict_start_type_separately:
+            self._start_type_predictor = Linear(encoder_output_dim, num_start_types)
+        else:
+            self._start_type_predictor = None
+
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with the final hidden state of the encoder.
@@ -92,7 +105,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                   state: WikiTablesDecoderState,
                   max_actions: int = None,
                   allowed_actions: List[Set[int]] = None) -> List[WikiTablesDecoderState]:
-        if not state.action_history[0]:
+        if self._predict_start_type_separately and not state.action_history[0]:
             # The wikitables parser did something different when predicting the start type, which
             # is our first action.  So in this case we break out into a different function.  We'll
             # ignore max_actions on our first step, assuming there aren't that many start types.
@@ -141,6 +154,12 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # (group_size, action_embedding_dim)
         projected_query = torch.nn.functional.relu(self._output_projection_layer(action_query))
         predicted_action_embeddings = self._dropout(projected_query)
+        if self._add_action_bias:
+            # NOTE: It's important that this happens right before the dot product with the action
+            # embeddings.  Otherwise this isn't a proper bias.  We do it here instead of right next
+            # to the `.mm` below just so we only do it once for the whole group.
+            ones = predicted_action_embeddings.new([[1] for _ in range(group_size)])
+            predicted_action_embeddings = torch.cat([predicted_action_embeddings, ones], dim=-1)
 
         ################################
         # 2: Predicting the next actions
@@ -164,8 +183,6 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             action_embeddings, output_action_embeddings, embedded_actions = instance_actions['global']
             # TODO(mattg): Add back in the checklist balance modification to the predicted action
             # embedding.
-            # TODO(mattg): Add an option to get an action bias, probably just by appending 1 to the
-            # predicted action embedding, and increasing the action embedding dim by 1.
             # This is just a matrix product between a (num_actions, embedding_dim) matrix and an
             # (embedding_dim, 1) matrix.
             embedded_action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
