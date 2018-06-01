@@ -35,7 +35,7 @@ def full_name(cla55: Optional[type]) -> str:
         return "?"
 
     if issubclass(cla55, Initializer) and cla55 != Initializer:
-        init_fn = cla55._init_function
+        init_fn = cla55()._init_function
         return f"{init_fn.__module__}.{init_fn.__name__}"
 
     origin = getattr(cla55, '__origin__', None)
@@ -127,11 +127,11 @@ def _get_config_type(cla55: type) -> Optional[str]:
             if subclass == cla55:
                 return name
 
-            # Special handling for initializer functions
+        # Special handling for initializer functions
             if hasattr(subclass, '_initializer_wrapper'):
-                sif = subclass._init_function
+                sif = subclass()._init_function
                 if sif == cla55:
-                    return subclass._init_function.__name__.rstrip("_")
+                    return sif.__name__.rstrip("_")
 
     return None
 
