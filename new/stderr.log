@@ -1,0 +1,22 @@
+Traceback (most recent call last):
+  File "/home/eunsol/anaconda3/envs/allennlp/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/home/eunsol/anaconda3/envs/allennlp/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/home/eunsol/Project/quac/allennlp-quac/allennlp/run.py", line 18, in <module>
+    main(prog="python -m allennlp.run")
+  File "/home/eunsol/Project/quac/allennlp-quac/allennlp/commands/__init__.py", line 65, in main
+    args.func(args)
+  File "/home/eunsol/Project/quac/allennlp-quac/allennlp/commands/train.py", line 99, in train_model_from_args
+    args.recover)
+  File "/home/eunsol/Project/quac/allennlp-quac/allennlp/commands/train.py", line 129, in train_model_from_file
+    return train_model(params, serialization_dir, file_friendly_logging, recover)
+  File "/home/eunsol/Project/quac/allennlp-quac/allennlp/commands/train.py", line 257, in train_model
+    all_datasets = datasets_from_params(params)
+  File "/home/eunsol/Project/quac/allennlp-quac/allennlp/commands/train.py", line 136, in datasets_from_params
+    dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
+  File "/home/eunsol/Project/quac/allennlp-quac/allennlp/data/dataset_readers/dataset_reader.py", line 112, in from_params
+    choice = params.pop_choice('type', cls.list_available())
+  File "/home/eunsol/Project/quac/allennlp-quac/allennlp/common/params.py", line 183, in pop_choice
+    raise ConfigurationError(message)
+allennlp.common.checks.ConfigurationError: "dqa not in acceptable choices for dataset_reader.type: ['conll2003', 'coref', 'winobias', 'language_modeling', 'nlvr', 'ptb_trees', 'squad', 'triviaqa', 'srl', 'seq2seq', 'sequence_tagging', 'snli', 'sst_tokens', 'wikitables']"

@@ -1,0 +1,35 @@
+2018-05-31 17:23:06,875 - INFO - allennlp.common.params - dataset_reader.type = dqa
+2018-05-31 17:23:06,875 - INFO - allennlp.common.params - dataset_reader.tokenizer.type = word
+2018-05-31 17:23:06,875 - INFO - allennlp.common.params - dataset_reader.tokenizer.word_splitter.type = spacy
+2018-05-31 17:23:06,875 - INFO - allennlp.common.params - dataset_reader.tokenizer.word_splitter.language = en_core_web_sm
+2018-05-31 17:23:06,875 - INFO - allennlp.common.params - dataset_reader.tokenizer.word_splitter.pos_tags = False
+2018-05-31 17:23:06,875 - INFO - allennlp.common.params - dataset_reader.tokenizer.word_splitter.parse = False
+2018-05-31 17:23:06,875 - INFO - allennlp.common.params - dataset_reader.tokenizer.word_splitter.ner = False
+2018-05-31 17:23:07,117 - INFO - allennlp.common.params - dataset_reader.tokenizer.word_filter.type = pass_through
+2018-05-31 17:23:07,117 - INFO - allennlp.common.params - dataset_reader.tokenizer.word_stemmer.type = pass_through
+2018-05-31 17:23:07,118 - INFO - allennlp.common.params - dataset_reader.tokenizer.start_tokens = None
+2018-05-31 17:23:07,118 - INFO - allennlp.common.params - dataset_reader.tokenizer.end_tokens = None
+2018-05-31 17:23:07,118 - INFO - allennlp.common.params - dataset_reader.token_indexers.token_characters.type = characters
+2018-05-31 17:23:07,118 - INFO - allennlp.common.params - dataset_reader.token_indexers.token_characters.namespace = token_characters
+2018-05-31 17:23:07,118 - INFO - allennlp.common.params - dataset_reader.token_indexers.token_characters.character_tokenizer.byte_encoding = utf-8
+2018-05-31 17:23:07,118 - INFO - allennlp.common.params - dataset_reader.token_indexers.token_characters.character_tokenizer.lowercase_characters = False
+2018-05-31 17:23:07,118 - INFO - allennlp.common.params - dataset_reader.token_indexers.token_characters.character_tokenizer.start_tokens = [259]
+2018-05-31 17:23:07,118 - INFO - allennlp.common.params - dataset_reader.token_indexers.token_characters.character_tokenizer.end_tokens = [260]
+2018-05-31 17:23:07,118 - INFO - allennlp.common.params - dataset_reader.token_indexers.elmo.type = elmo_characters
+2018-05-31 17:23:07,118 - INFO - allennlp.common.params - dataset_reader.token_indexers.elmo.namespace = elmo_characters
+2018-05-31 17:23:07,118 - INFO - allennlp.common.params - dataset_reader.lazy = True
+2018-05-31 17:23:07,118 - INFO - allennlp.common.params - validation_dataset_reader = None
+2018-05-31 17:23:07,118 - INFO - allennlp.common.params - train_data_path = /home/eunsol/Data/dqa/data/train_bits_c2.json
+2018-05-31 17:23:07,118 - INFO - allennlp.commands.train - Reading training data from /home/eunsol/Data/dqa/data/train_bits_c2.json
+2018-05-31 17:23:07,119 - INFO - allennlp.common.params - validation_data_path = /home/eunsol/Data/dqa/data/val_bits_c2.json
+2018-05-31 17:23:07,119 - INFO - allennlp.commands.train - Reading validation data from /home/eunsol/Data/dqa/data/val_bits_c2.json
+2018-05-31 17:23:07,119 - INFO - allennlp.common.params - test_data_path = None
+2018-05-31 17:23:07,119 - INFO - allennlp.commands.train - Creating a vocabulary using validation, train data.
+2018-05-31 17:23:07,119 - INFO - allennlp.common.params - vocabulary.directory_path = None
+2018-05-31 17:23:07,119 - INFO - allennlp.common.params - vocabulary.min_count = None
+2018-05-31 17:23:07,119 - INFO - allennlp.common.params - vocabulary.max_vocab_size = None
+2018-05-31 17:23:07,119 - INFO - allennlp.common.params - vocabulary.non_padded_namespaces = ('*tags', '*labels')
+2018-05-31 17:23:07,119 - INFO - allennlp.common.params - vocabulary.only_include_pretrained_words = False
+2018-05-31 17:23:07,119 - INFO - allennlp.data.vocabulary - Fitting token dictionary from dataset.
+2018-05-31 17:23:07,120 - INFO - allennlp.data.dataset_readers.reading_comprehension.dqa - Reading file at /home/eunsol/Data/dqa/data/train_bits_c2.json
+2018-05-31 17:23:08,338 - INFO - allennlp.data.dataset_readers.reading_comprehension.dqa - Reading the dataset
