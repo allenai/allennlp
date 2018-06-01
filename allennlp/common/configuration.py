@@ -3,9 +3,10 @@ Tools for programmatically generating config files for AllenNLP models.
 """
 # pylint: disable=protected-access
 
-from typing import NamedTuple, Optional, Any, List, TypeVar, Generic, Type, Dict, Union
+from typing import NamedTuple, Optional, Any, List, TypeVar, Generic, Type, Dict, Union, Sequence, Tuple
 import inspect
 import importlib
+import re
 
 import torch
 
@@ -19,12 +20,35 @@ from allennlp.modules.seq2vec_encoders import _Seq2VecWrapper
 from allennlp.training.optimizers import Optimizer as AllenNLPOptimizer
 from allennlp.training.trainer import Trainer
 
+def _remove_prefix(class_name: str) -> str:
+    rgx = r"^(typing\.|builtins\.)"
+    return re.sub(rgx, "", class_name)
 
-def full_name(cla55: type) -> str:
+def full_name(cla55: Optional[type]) -> str:
     """
     Return the full name (including module) of the given class.
     """
-    return f"{cla55.__module__}.{cla55.__name__}"
+    # Special case to handle None:
+    if cla55 is None:
+        return "?"
+
+    origin = getattr(cla55, '__origin__', None)
+    args = getattr(cla55, '__args__', ())
+
+    # Special handling for compound types
+    if origin == Dict:
+        key_type, value_type = args
+        return f"""Dict[{full_name(key_type)}, {full_name(value_type)}]"""
+    elif origin in (Tuple, List, Sequence):
+        return f"""{_remove_prefix(str(origin))}[{", ".join(full_name(arg) for arg in args)}]"""
+    elif origin == Union:
+        # Special special case to handle optional types:
+        if len(args) == 2 and args[-1] == type(None):
+            return f"""Optional[{full_name(args[0])}]"""
+        else:
+            return f"""Union[{", ".join(full_name(arg) for arg in args)}]"""
+    else:
+        return _remove_prefix(f"{cla55.__module__}.{cla55.__name__}")
 
 
 class ConfigItem(NamedTuple):
@@ -84,6 +108,14 @@ def _get_config_type(cla55: type) -> Optional[str]:
     We do this simply by iterating through the registry until we
     find it.
     """
+    # Special handling for pytorch RNN types:
+    if cla55 == torch.nn.RNN:
+        return "rnn"
+    elif cla55 == torch.nn.LSTM:
+        return "lstm"
+    elif cla55 == torch.nn.GRU:
+        return "gru"
+
     for subclass_dict in Registrable._registry.values():
         for name, subclass in subclass_dict.items():
             if subclass == cla55:
@@ -96,6 +128,16 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
     Create the ``Config`` for a class by reflecting on its ``__init__``
     method and applying a few hacks.
     """
+    typ3 = _get_config_type(cla55)
+
+    # Don't include self
+    names_to_ignore = {"self"}
+
+    # Hack for RNNs
+    if cla55 in [torch.nn.RNN, torch.nn.LSTM, torch.nn.GRU]:
+        cla55 = torch.nn.RNNBase
+        names_to_ignore.add("mode")
+
     argspec = inspect.getfullargspec(cla55.__init__)
 
     items: List[ConfigItem] = []
@@ -109,8 +151,7 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
     defaults = [_NO_DEFAULT for _ in range(num_non_default_args)] + defaults
 
     for name, default in zip(argspec.args, defaults):
-        # Don't include self
-        if name == "self":
+        if name in names_to_ignore:
             continue
         annotation = argspec.annotations.get(name)
 
@@ -132,7 +173,7 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
 
         items.append(ConfigItem(name, annotation, default))
 
-    return Config(items, typ3=_get_config_type(cla55))
+    return Config(items, typ3=typ3)
 
 
 def render_config(config: Config, indent: str = "") -> str:
