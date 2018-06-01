@@ -273,9 +273,9 @@ class BiattentiveClassificationNetwork(Model):
 
         output_dict = {'logits': logits, 'class_probabilities': class_probabilities}
         if label is not None:
-            loss = self.loss(logits, label.squeeze(-1))
+            loss = self.loss(logits, label)
             for metric in self.metrics.values():
-                metric(logits, label.squeeze(-1))
+                metric(logits, label)
             output_dict["loss"] = loss
 
         return output_dict
