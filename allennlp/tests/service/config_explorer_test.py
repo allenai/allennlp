@@ -49,6 +49,32 @@ class TestConfigExplorer(AllenNlpTestCase):
         assert '"type": "lstm"' in html
         assert '// "batch_first"' in html
 
+    def test_initializers(self):
+        response = self.client.get('/?class=allennlp.nn.initializers.Initializer')
+        html = response.get_data().decode('utf-8')
+
+        assert 'torch.nn.init.constant_' in html
+        assert '/?class=torch.nn.init.constant_' in html
+        assert 'allennlp.nn.initializers.block_orthogonal' in html
+        assert '/?class=allennlp.nn.initializers.block_orthogonal' in html
+
+        response = self.client.get('/?class=torch.nn.init.uniform_')
+        html = response.get_data().decode('utf-8')
+        assert '"type": "uniform"' in html
+        assert '// "a":' in html
+
+    def test_regularizers(self):
+        response = self.client.get('/?class=allennlp.nn.regularizers.regularizer.Regularizer')
+        html = response.get_data().decode('utf-8')
+
+        assert 'allennlp.nn.regularizers.regularizers.L1Regularizer' in html
+        assert '/?class=allennlp.nn.regularizers.regularizers.L1Regularizer' in html
+
+        response = self.client.get('/?class=allennlp.nn.regularizers.regularizers.L1Regularizer')
+        html = response.get_data().decode('utf-8')
+        assert '"type": "l1"' in html
+        assert '// "alpha":' in html
+
     def test_other_modules(self):
         # Create a new package in a temporary dir
         packagedir = self.TEST_DIR / 'configexplorer'

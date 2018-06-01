@@ -1,5 +1,6 @@
 """
-config explorer
+This is a tiny webapp for generating configuration stubs for your models.
+It's very hacky and very experimental, so don't rely on it for anything important.
 """
 from typing import List, Union, Optional, Dict, Sequence, Tuple
 import argparse
@@ -12,7 +13,7 @@ from flask import Flask, request, Response, jsonify
 from flask_cors import CORS
 from gevent.pywsgi import WSGIServer
 
-from allennlp.common.configuration import configure, Config, ConfigItem, full_name, _NO_DEFAULT
+from allennlp.common.configuration import configure, Config, ConfigItem, full_name, _NO_DEFAULT, is_configurable
 from allennlp.common.util import import_submodules
 from allennlp.service.server_flask import ServerError
 
@@ -121,7 +122,7 @@ def _render_annotation(annotation: Optional[type]) -> str:
             return f"""Optional[{_render_annotation(args[0])}]"""
         else:
             return f"""Union[{", ".join(_render_annotation(arg) for arg in annotation.__args__)}]"""
-    elif hasattr(annotation, 'from_params'):
+    elif is_configurable(annotation):
         return f"""<a href="/?class={class_name}">{class_name}</a>"""
     else:
         return class_name
@@ -155,7 +156,6 @@ def _api_link(class_name: str) -> str:
         url = f"https://allenai.github.io/allennlp-docs/search.html?q={class_name}&check_keywords=no"
     else:
         # no url
-        print("just returning class name")
         return class_name
 
     return f"""<a href = "{url}" target="_blank">{class_name}</a>"""
@@ -186,7 +186,7 @@ def choices_html(class_name: str, choices: List[str]) -> str:
     rendered_choices = "".join(_render_choice(choice) for choice in choices)
 
     body = f"""
-    <div class="label">Choose a subclass of {_api_link(class_name)}:</div>
+    <div class="label">Choose a specific {_api_link(class_name)}:</div>
     <div class="choices">
         <ul>
             {rendered_choices}

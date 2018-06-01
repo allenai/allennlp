@@ -17,6 +17,8 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.seq2seq_encoders import _Seq2SeqWrapper
 from allennlp.modules.seq2vec_encoders import _Seq2VecWrapper
+from allennlp.nn.initializers import Initializer
+from allennlp.nn.regularizers import Regularizer
 from allennlp.training.optimizers import Optimizer as AllenNLPOptimizer
 from allennlp.training.trainer import Trainer
 
@@ -31,6 +33,10 @@ def full_name(cla55: Optional[type]) -> str:
     # Special case to handle None:
     if cla55 is None:
         return "?"
+
+    if issubclass(cla55, Initializer) and cla55 != Initializer:
+        init_fn = cla55._init_function
+        return f"{init_fn.__module__}.{init_fn.__name__}"
 
     origin = getattr(cla55, '__origin__', None)
     args = getattr(cla55, '__args__', ())
@@ -120,6 +126,13 @@ def _get_config_type(cla55: type) -> Optional[str]:
         for name, subclass in subclass_dict.items():
             if subclass == cla55:
                 return name
+
+            # Special handling for initializer functions
+            if hasattr(subclass, '_initializer_wrapper'):
+                sif = subclass._init_function
+                if sif == cla55:
+                    return subclass._init_function.__name__.rstrip("_")
+
     return None
 
 
@@ -138,7 +151,15 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
         cla55 = torch.nn.RNNBase
         names_to_ignore.add("mode")
 
-    argspec = inspect.getfullargspec(cla55.__init__)
+    if isinstance(cla55, type):
+        # It's a class, so inspect its constructor
+        function_to_inspect = cla55.__init__
+    else:
+        # It's a function, so inspect it, and ignore tensor
+        function_to_inspect = cla55
+        names_to_ignore.add("tensor")
+
+    argspec = inspect.getfullargspec(function_to_inspect)
 
     items: List[ConfigItem] = []
 
@@ -160,7 +181,7 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
             continue
 
         # Don't include params for an Optimizer
-        if torch.optim.Optimizer in cla55.__bases__ and name == "params":
+        if torch.optim.Optimizer in getattr(cla55, '__bases__', ()) and name == "params":
             continue
 
         # Don't include datasets in the trainer
@@ -195,14 +216,18 @@ def render_config(config: Config, indent: str = "") -> str:
             "}\n"
     ])
 
+def is_configurable(obj) -> bool:
+    # Anything with a from_params method is itself configurable.
+    # So are regularizers even though they don't.
+    return hasattr(obj, 'from_params') or obj == Regularizer
+
 def _render(item: ConfigItem, indent: str = "") -> str:
     """
     Render a single config item, with the provided indent
     """
     optional = item.default_value != _NO_DEFAULT
 
-    # Anything with a from_params method is itself configurable
-    if hasattr(item.annotation, 'from_params'):
+    if is_configurable(item.annotation):
         rendered_annotation = f"{item.annotation} (configurable)"
     else:
         rendered_annotation = str(item.annotation)
@@ -297,7 +322,7 @@ def configure(full_path: str = '') -> Union[Config, List[str]]:
     module = importlib.import_module(module_name)
     cla55 = getattr(module, class_name)
 
-    if Registrable in cla55.__bases__:
+    if Registrable in getattr(cla55, '__bases__', ()):
         return list(_valid_choices(cla55).values())
     else:
         return _auto_config(cla55)

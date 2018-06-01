@@ -147,8 +147,10 @@ def block_orthogonal(tensor: torch.Tensor,
 
 def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer]:
     class Init(Initializer):
+        _init_function = init_function
+        _initializer_wrapper = True
+
         def __init__(self, **kwargs):
-            self._init_function = init_function
             self._kwargs = kwargs
         def __call__(self, tensor: torch.Tensor) -> None:
             self._init_function(tensor, **self._kwargs)
