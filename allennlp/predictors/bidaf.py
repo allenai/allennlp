@@ -5,7 +5,6 @@ from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
 
-
 @Predictor.register('machine-comprehension')
 class BidafPredictor(Predictor):
     """

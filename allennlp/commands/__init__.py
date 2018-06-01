@@ -3,6 +3,7 @@ import argparse
 import logging
 
 from allennlp import __version__
+from allennlp.commands.configure import Configure
 from allennlp.commands.elmo import Elmo
 from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.fine_tune import FineTune
@@ -33,6 +34,7 @@ def main(prog: str = None,
 
     subcommands = {
             # Default commands
+            "configure": Configure(),
             "train": Train(),
             "evaluate": Evaluate(),
             "predict": Predict(),
@@ -49,11 +51,14 @@ def main(prog: str = None,
 
     for name, subcommand in subcommands.items():
         subparser = subcommand.add_subparser(name, subparsers)
-        subparser.add_argument('--include-package',
-                               type=str,
-                               action='append',
-                               default=[],
-                               help='additional packages to include')
+        # configure doesn't need include-package because it imports
+        # whatever classes it needs.
+        if name != "configure":
+            subparser.add_argument('--include-package',
+                                   type=str,
+                                   action='append',
+                                   default=[],
+                                   help='additional packages to include')
 
     args = parser.parse_args()
 
@@ -62,7 +67,7 @@ def main(prog: str = None,
     # so give the user some help.
     if 'func' in dir(args):
         # Import any additional modules needed (to register custom classes).
-        for package_name in args.include_package:
+        for package_name in getattr(args, 'include_package', ()):
             import_submodules(package_name)
         args.func(args)
     else:

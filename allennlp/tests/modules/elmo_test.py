@@ -1,8 +1,11 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
 import os
 import json
+import warnings
 
-import h5py
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import h5py
 import numpy
 import torch
 

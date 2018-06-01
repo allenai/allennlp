@@ -18,6 +18,7 @@ The included module ``allennlp.run`` is such a script:
 
     Commands:
         train       Train a model
+        configure   Generate a stub configuration
         evaluate    Evaluate the specified model + dataset
         predict     Use a trained model to make predictions.
         serve       Run the web service and demo.
@@ -36,6 +37,7 @@ calls ``main()``.
 
 .. toctree::
     allennlp.commands.subcommand
+    allennlp.commands.configure
     allennlp.commands.evaluate
     allennlp.commands.make_vocab
     allennlp.commands.predict
