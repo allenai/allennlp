@@ -19,10 +19,13 @@ from allennlp.service.server_flask import ServerError
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def make_app() -> Flask:
+def make_app(include_packages: Sequence[str] = ()) -> Flask:
     """
     Creates a Flask app that serves up a simple configuration wizard.
     """
+    # Load modules
+    for package_name in include_packages:
+        import_submodules(package_name)
 
     app = Flask(__name__)  # pylint: disable=invalid-name
 
@@ -65,11 +68,7 @@ def main(args):
 
     args = parser.parse_args(args)
 
-    # Load modules
-    for package_name in args.include_package:
-        import_submodules(package_name)
-
-    app = make_app()
+    app = make_app(args.include_package)
     CORS(app)
 
     http_server = WSGIServer(('0.0.0.0', args.port), app)
