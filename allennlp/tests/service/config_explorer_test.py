@@ -51,7 +51,7 @@ class TestConfigExplorer(AllenNlpTestCase):
 
     def test_other_modules(self):
         # Create a new package in a temporary dir
-        packagedir = self.TEST_DIR / 'testpackage'
+        packagedir = self.TEST_DIR / 'configexplorer'
         packagedir.mkdir()  # pylint: disable=no-member
         (packagedir / '__init__.py').touch()  # pylint: disable=no-member
 
@@ -74,15 +74,15 @@ class TestConfigExplorer(AllenNlpTestCase):
         response = client.get('/?class=allennlp.predictors.predictor.Predictor')
         html = response.get_data().decode('utf-8')
         assert "allennlp.predictors.bidaf.BidafPredictor" in html
-        assert "testpackage.predictor.BidafPredictor" not in html
+        assert "configexplorer.predictor.BidafPredictor" not in html
 
         # With specifying extra modules, it should be there.
-        app = make_app(['testpackage'])
+        app = make_app(['configexplorer'])
         app.testing = True
         client = app.test_client()
         response = client.get('/?class=allennlp.predictors.predictor.Predictor')
         html = response.get_data().decode('utf-8')
         assert "allennlp.predictors.bidaf.BidafPredictor" in html
-        assert "testpackage.predictor.BidafPredictor" in html
+        assert "configexplorer.predictor.BidafPredictor" in html
 
         sys.path.remove(str(self.TEST_DIR))
