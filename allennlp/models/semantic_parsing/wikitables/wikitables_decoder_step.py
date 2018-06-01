@@ -92,11 +92,11 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                   state: WikiTablesDecoderState,
                   max_actions: int = None,
                   allowed_actions: List[Set[int]] = None) -> List[WikiTablesDecoderState]:
-        #if not state.action_history[0]:
+        if not state.action_history[0]:
             # The wikitables parser did something different when predicting the start type, which
             # is our first action.  So in this case we break out into a different function.  We'll
             # ignore max_actions on our first step, assuming there aren't that many start types.
-            #return self._take_first_step(state, allowed_actions)
+            return self._take_first_step(state, allowed_actions)
 
         # This method is long and involved, but because of some closures we construct, it's better
         # to keep it one method than to separate it out into several.  We'll at least group it into
