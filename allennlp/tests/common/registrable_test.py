@@ -99,7 +99,7 @@ class TestRegistrable(AllenNlpTestCase):
         }
         for key, value in all_initializers.items():
             # pylint: disable=protected-access
-            assert Initializer.by_name(key)()._init_function == value
+            assert Initializer.by_name(key)._init_function == value
 
     def test_registry_has_builtin_learning_rate_schedulers(self):
         all_schedulers = {
