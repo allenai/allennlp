@@ -456,7 +456,7 @@ class Trainer:
 
             batch_grad_norm = self._rescale_gradients()
 
-            self._update_learning_rate(None, batch_num_total=batch_num_total)
+            #self._update_learning_rate(None, batch_num_total=batch_num_total)
 
             if self._log_histograms_this_batch:
                 # get the magnitude of parameter updates for logging
