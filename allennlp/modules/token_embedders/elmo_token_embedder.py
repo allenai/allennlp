@@ -1,5 +1,6 @@
 import torch
 
+from typing import Union, List
 from allennlp.common import Params
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.elmo import Elmo
@@ -39,12 +40,14 @@ class ElmoTokenEmbedder(TokenEmbedder):
                  do_layer_norm: bool = False,
                  dropout: float = 0.5,
                  requires_grad: bool = False,
-                 projection_dim: int = None) -> None:
+                 projection_dim: int = None,
+                 num_output_representations: int = 1) -> None:
         super(ElmoTokenEmbedder, self).__init__()
 
+        self._num_output_representations = num_output_representations
         self._elmo = Elmo(options_file,
                           weight_file,
-                          1,
+                          num_output_representations=num_output_representations,
                           do_layer_norm=do_layer_norm,
                           dropout=dropout,
                           requires_grad=requires_grad)
@@ -56,7 +59,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
     def get_output_dim(self):
         return self._elmo.get_output_dim()
 
-    def forward(self, inputs: torch.Tensor) -> torch.Tensor: # pylint: disable=arguments-differ
+    def forward(self, inputs: torch.Tensor) -> Union[torch.Tensor, List[torch.Tensor]]: # pylint: disable=arguments-differ
         """
         Parameters
         ----------
@@ -69,13 +72,25 @@ class ElmoTokenEmbedder(TokenEmbedder):
         ``(batch_size, timesteps, embedding_dim)``
         """
         elmo_output = self._elmo(inputs)
-        elmo_representations = elmo_output['elmo_representations'][0]
-        if self._projection:
-            projection = self._projection
-            for _ in range(elmo_representations.dim() - 2):
-                projection = TimeDistributed(projection)
-            elmo_representations = projection(elmo_representations)
-        return elmo_representations
+
+        if self._num_output_representations == 1:
+            elmo_representations = elmo_output['elmo_representations'][0]
+            if self._projection:
+                projection = self._projection
+                for _ in range(elmo_representations.dim() - 2):
+                    projection = TimeDistributed(projection)
+                elmo_representations = projection(elmo_representations)
+            return elmo_representations
+        else:
+            multi_elmo_representations = []
+            for elmo_representations in elmo_output['elmo_representations']:
+                if self._projection:
+                    projection = self._projection
+                    for _ in range(elmo_representations.dim() - 2):
+                        projection = TimeDistributed(projection)
+                    elmo_representations = projection(elmo_representations)
+                multi_elmo_representations.append(elmo_representations)
+            return multi_elmo_representations
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'ElmoTokenEmbedder':

@@ -1,13 +1,10 @@
 # pylint: disable=no-self-use,invalid-name
 import gzip
-import warnings
 
 import numpy
 import pytest
 import torch
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    import h5py
+import h5py
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError

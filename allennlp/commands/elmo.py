@@ -50,14 +50,9 @@ https://arxiv.org/abs/1802.05365
 
 import logging
 from typing import IO, List, Iterable, Tuple
-import warnings
 
 import argparse
-
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    import h5py
-
+import h5py
 import numpy
 import torch
 
