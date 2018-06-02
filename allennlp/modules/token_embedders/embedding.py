@@ -1,14 +1,11 @@
 import gzip
 import logging
-import warnings
 
 from overrides import overrides
 import numpy
 import torch
 from torch.nn.functional import embedding
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    import h5py
+import h5py
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
