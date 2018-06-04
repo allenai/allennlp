@@ -1,7 +1,7 @@
 """
 Tools for programmatically generating config files for AllenNLP models.
 """
-# pylint: disable=protected-access
+# pylint: disable=protected-access,too-many-return-statements
 
 from typing import NamedTuple, Optional, Any, List, TypeVar, Generic, Type, Dict, Union, Sequence, Tuple
 import inspect

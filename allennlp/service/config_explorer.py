@@ -2,6 +2,7 @@
 This is a tiny webapp for generating configuration stubs for your models.
 It's very hacky and very experimental, so don't rely on it for anything important.
 """
+# pylint: disable=too-many-return-statements
 from typing import List, Union, Optional, Dict, Sequence, Tuple
 import argparse
 import logging
