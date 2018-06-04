@@ -122,7 +122,7 @@ def _render_annotation(annotation: Optional[type]) -> str:
         if len(args) == 2 and args[-1] == type(None):
             return f"""Optional[{_render_annotation(args[0])}]"""
         else:
-            return f"""Union[{", ".join(_render_annotation(arg) for arg in annotation.__args__)}]"""
+            return f"""Union[{", ".join(_render_annotation(arg) for arg in args)}]"""
     elif is_configurable(annotation):
         return f"""<a href="/?class={class_name}">{class_name}</a>"""
     else:
