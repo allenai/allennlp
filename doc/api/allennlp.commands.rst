@@ -41,7 +41,6 @@ calls ``main()``.
     allennlp.commands.evaluate
     allennlp.commands.make_vocab
     allennlp.commands.predict
-    allennlp.commands.serve
     allennlp.commands.train
     allennlp.commands.fine_tune
     allennlp.commands.elmo
