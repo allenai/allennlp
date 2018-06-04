@@ -1,7 +1,36 @@
 # pylint: disable=no-self-use,line-too-long
 
-from allennlp.commands.serve import DEFAULT_MODELS
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.predictors import DemoModel
+
+# TODO(joelgrus): this is duplicated in the demo repo
+# figure out where it really belongs
+DEFAULT_MODELS = {
+        'machine-comprehension': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz',  # pylint: disable=line-too-long
+                'machine-comprehension'
+        ),
+        'semantic-role-labeling': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2018.05.25.tar.gz', # pylint: disable=line-too-long
+                'semantic-role-labeling'
+        ),
+        'textual-entailment': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-elmo-2018.02.19.tar.gz',  # pylint: disable=line-too-long
+                'textual-entailment'
+        ),
+        'coreference-resolution': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2018.02.05.tar.gz',  # pylint: disable=line-too-long
+                'coreference-resolution'
+        ),
+        'named-entity-recognition': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.30.tar.gz',  # pylint: disable=line-too-long
+                'sentence-tagger'
+        ),
+        'constituency-parsing': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/elmo-constituency-parser-2018.03.14.tar.gz',  # pylint: disable=line-too-long
+                'constituency-parser'
+        )
+}
 
 
 class SniffTest(AllenNlpTestCase):

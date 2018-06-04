@@ -16,7 +16,7 @@ from gevent.pywsgi import WSGIServer
 
 from allennlp.common.configuration import configure, Config, ConfigItem, full_name, _NO_DEFAULT, is_configurable
 from allennlp.common.util import import_submodules
-from allennlp.service.server_flask import ServerError
+from allennlp.service.server_simple import ServerError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
