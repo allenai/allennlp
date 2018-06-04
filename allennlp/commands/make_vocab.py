@@ -72,7 +72,7 @@ def make_vocab_from_params(params: Params):
     prepare_environment(params)
 
     vocab_params = params.pop("vocabulary", {})
-    vocab_dir = vocab_params.get('directory_path')
+    vocab_dir = vocab_params.pop('directory_path', {})
     if vocab_dir is None:
         raise ConfigurationError("To use `make-vocab` your configuration must contain a value "
                                  "at vocabulary.directory_path")
