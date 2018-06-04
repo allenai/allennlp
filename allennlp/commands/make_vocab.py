@@ -7,7 +7,7 @@ each training run.
 
    $ allennlp make-vocab --help
 
-    usage: allennlp make-vocab [-h] [-o OVERRIDES] param_path
+    usage: allennlp make-vocab [-h] [-o OVERRIDES] [--include-package INCLUDE_PACKAGE] param_path
 
     Create a vocabulary from the specified dataset.
 
@@ -20,6 +20,8 @@ each training run.
     -o OVERRIDES, --overrides OVERRIDES
                           a HOCON structure used to override the experiment
                           configuration
+    --include-package INCLUDE_PACKAGE
+                            additional packages to include
 """
 import argparse
 import logging
@@ -86,7 +88,7 @@ def make_vocab_from_params(params: Params):
             raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
 
     logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
-    vocab = Vocabulary.from_params(Params({}),
+    vocab = Vocabulary.from_params(vocab_params,
                                    (instance for key, dataset in all_datasets.items()
                                     for instance in dataset
                                     if key in datasets_for_vocab_creation))
