@@ -47,7 +47,7 @@ class TestMakeVocab(AllenNlpTestCase):
 
         self.params['vocabulary'] = {}
         self.params['vocabulary']['directory_path'] = vocab_path
-        self.params['vocabulary'] = {"tokens" : 3},
+        self.params['vocabulary']['min_count'] = {"tokens" : 3},
 
         make_vocab_from_params(self.params)
 
