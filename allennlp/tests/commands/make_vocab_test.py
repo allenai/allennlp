@@ -47,6 +47,7 @@ class TestMakeVocab(AllenNlpTestCase):
 
         self.params['vocabulary'] = {}
         self.params['vocabulary']['directory_path'] = vocab_path
+        self.params['vocabulary'] = {"tokens" : 3},
 
         make_vocab_from_params(self.params)
 
@@ -57,7 +58,7 @@ class TestMakeVocab(AllenNlpTestCase):
             tokens = [line.strip() for line in f]
 
         tokens.sort()
-        assert tokens == ['.', '@@UNKNOWN@@', 'animals', 'are', 'birds', 'cats', 'dogs', 'snakes']
+        assert tokens == ['.', '@@UNKNOWN@@', 'animals', 'are']
 
         with open(vocab_path / 'labels.txt') as f:
             labels = [line.strip() for line in f]
