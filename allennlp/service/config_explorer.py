@@ -10,7 +10,7 @@ from string import Template
 import re
 import sys
 
-from flask import Flask, request, Response, jsonify
+from flask import Flask, request, Response, jsonify, send_file
 from flask_cors import CORS
 from gevent.pywsgi import WSGIServer
 
@@ -38,7 +38,7 @@ def make_app(include_packages: Sequence[str] = ()) -> Flask:
         return response
 
     @app.route('/')
-    def index() -> Response: # pylint: disable=unused-variable
+    def index() -> Response:  # pylint: disable=unused-variable
         class_name = request.args.get('class', '')
 
         try:
@@ -53,6 +53,28 @@ def make_app(include_packages: Sequence[str] = ()) -> Flask:
             html = choices_html(class_name, config)
 
         return Response(response=html, status=200)
+
+    @app.route('/api/')
+    def api() -> Response:  # pylint: disable=unused-variable
+        class_name = request.args.get('class', '')
+
+        config = configure(class_name)
+
+        if isinstance(config, Config):
+            return jsonify({
+                    "className": class_name,
+                    "configItems": config.to_json()
+            })
+        else:
+            return jsonify({
+                    "className": class_name,
+                    "choices": config
+            })
+
+
+    @app.route('/wizard/')
+    def wizard() -> Response:  # pylint: disable=unused-variable
+        return send_file('configurator.html')
 
     return app
 

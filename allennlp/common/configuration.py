@@ -6,6 +6,7 @@ Tools for programmatically generating config files for AllenNLP models.
 from typing import NamedTuple, Optional, Any, List, TypeVar, Generic, Type, Dict, Union, Sequence, Tuple
 import inspect
 import importlib
+import json
 import re
 
 import torch
@@ -57,6 +58,35 @@ def full_name(cla55: Optional[type]) -> str:
         return _remove_prefix(f"{cla55.__module__}.{cla55.__name__}")
 
 
+def json_annotation(cla55: Optional[type]):
+    # Special case to handle None:
+    if cla55 is None:
+        return ["?"]
+
+    # Hack because e.g. typing.Union isn't a type.
+    if isinstance(cla55, type) and issubclass(cla55, Initializer) and cla55 != Initializer:
+        init_fn = cla55()._init_function
+        return [f"{init_fn.__module__}.{init_fn.__name__}"]
+
+    origin = getattr(cla55, '__origin__', None)
+    args = getattr(cla55, '__args__', ())
+
+    # Special handling for compound types
+    if origin == Dict:
+        key_type, value_type = args
+        return ["Dict", json_annotation(key_type), json_annotation(value_type)]
+    elif origin in (Tuple, List, Sequence):
+        return [_remove_prefix(str(origin))] + [json_annotation(arg) for arg in args]
+    elif origin == Union:
+        # Special special case to handle optional types:
+        if len(args) == 2 and args[-1] == type(None):
+            return ["Optional", json_annotation(args[0])]
+        else:
+            return ["Union"] + [json_annotation(arg) for arg in args]
+    else:
+        return [_remove_prefix(f"{cla55.__module__}.{cla55.__name__}")]
+
+
 class ConfigItem(NamedTuple):
     """
     Each ``ConfigItem`` represents a single entry in a configuration JsonDict.
@@ -67,11 +97,28 @@ class ConfigItem(NamedTuple):
     comment: str = ''
 
     def to_json(self) -> JsonDict:
-        return {
-                "annotation": full_name(self.annotation),
-                "default_value": str(self.default_value),
-                "comment": self.comment
+        json_dict = {
+                "name": self.name,
+                "annotation": json_annotation(self.annotation),
         }
+
+        if is_configurable(self.annotation):
+            json_dict["configurable"] = True
+
+        if self.default_value != _NO_DEFAULT:
+            try:
+                # Ugly check that default value is actually serializable
+                json.dumps(self.default_value)
+                json_dict["defaultValue"] = self.default_value
+            except TypeError:
+                print(f"unable to json serialize {self.default_value}, using None instead")
+                json_dict["defaultValue"] = None
+
+
+        if self.comment:
+            json_dict["comment"] = self.comment
+
+        return json_dict
 
 
 T = TypeVar("T")
@@ -91,16 +138,14 @@ class Config(Generic[T]):
     def __repr__(self) -> str:
         return f"Config({self.items})"
 
-    def to_json(self) -> JsonDict:
-        item_dict: JsonDict = {
-                item.name: item.to_json()
-                for item in self.items
-        }
+    def to_json(self) -> List[JsonDict]:
+        items = [item.to_json() for item in self.items]
 
         if self.typ3:
-            item_dict["type"] = self.typ3
+            items.insert(0, {"type": self.typ3})
 
-        return item_dict
+
+        return items
 
 
 # ``None`` is sometimes the default value for a function parameter,

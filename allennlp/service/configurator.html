@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>AllenNLP Configuration Wizard</title>
+    <style>
+    </style>
+  </head>
+  <body>
+    <h1>AllenNLP Configuration Wizard</h1>
+
+    <div id="app"></div>
+
+    <script crossorigin src="https://unpkg.com/react@16/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.js"></script>
+
+    <script type="text/babel">
+class App extends React.Component {
+    state = {config: {}}
+
+    componentDidMount() {
+        fetch('/api/')
+            .then(res => res.json())
+            .then(config => this.setState({config}))
+    }
+
+    render() {
+        //console.log(this.state)
+        return (
+            <div>
+                <Configuration path={[]} config={this.state.config}/>
+                <button id="generate">GENERATE</button>
+            </div>
+        )
+    }
+}
+
+class Configuration extends React.Component {
+
+    render() {
+        const {config, path} = this.props
+        const {className, configItems, choices} = config
+
+        if (configItems !== undefined) {
+            return (
+                <div class="configuration">
+                    <ul>
+                        {configItems.map((configItem) => <ConfigItem path={path} item={configItem}/>)}
+                    </ul>
+                </div>
+            )
+        } else if (choices !== undefined) {
+            return (<div>choices</div>)
+        } else {
+            return null
+        }
+    }
+}
+
+class ConfigItem extends React.Component {
+
+    constructor(props) {
+        super(props)
+        this.state = {
+            path: props.path.concat(props.item.name),
+            childConfig: null,
+            subclasses: null,
+            value: null,
+            choice: ''
+        }
+        this.subconfigure = this.subconfigure.bind(this)
+        this.remove = this.remove.bind(this)
+        this.valueChange = this.valueChange.bind(this)
+        this.select = this.select.bind(this)
+    }
+
+    remove(e) {
+        e.preventDefault()
+        this.setState({childConfig: null, subclasses: null, value: null, choice: ''})
+    }
+
+    valueChange(e) {
+        this.setState({value: e.target.value})
+    }
+
+    select(e) {
+        const subclass = e.target.value
+
+        if (subclass) {
+            fetch('/api/?class=' + subclass)
+                .then(res => res.json())
+                .then(config => {
+                    this.setState({
+                        childConfig: config,
+                        choice: subclass
+                    })
+                })
+        } else {
+            this.setState({choice: subclass})
+        }
+    }
+
+    subconfigure(e) {
+        e.preventDefault()
+
+        const [subname] = this.props.item.annotation;
+
+        fetch("/api/?class=" + subname)
+            .then(res => res.json())
+            .then(config => {
+                if (config.configItems) {
+                    this.setState({childConfig: config})
+                } else {
+                    this.setState({subclasses: config.choices})
+                }
+            })
+    }
+
+    render() {
+        const {item} = this.props
+        const {name, annotation, configurable, defaultValue, comment, subconfig} = item
+        const {path, childConfig, subclasses, value, choice} = this.state
+
+        const marginLeft = 30 * path.length
+
+        // Short circuit for type
+        if (item.type) {
+            return <div marginLeft={marginLeft} class="config-item">type: {item.type}</div>
+        }
+
+
+
+        const pathStr = path.join('-')
+        const hasData = childConfig || subclasses || value
+
+        let input
+        if (subclasses) {
+            input = (
+                <select value={choice} onChange={this.select}>
+                    <option value=""></option>
+                    {subclasses.map((subclass) => <option value={subclass}>{subclass}</option>)}
+                </select>
+            )
+        } else if (configurable && !hasData) {
+            input = (<button id={pathStr} onClick={this.subconfigure}>CONFIGURE</button>)
+        } else if (configurable) {
+            input = null
+        } else {
+            input = (<input type="text" value={this.state.value} onChange={this.valueChange}/>)
+        }
+
+        const remove = hasData ? (<button onClick={this.remove}>X</button>) : null
+
+        const child = childConfig ? <Configuration path={path} config={childConfig}/> : null
+
+        return (
+            <div marginLeft={marginLeft} class="config-item">
+                <span>{defaultValue === undefined ? "" : "// "}{name}:</span>
+                {input}
+                {remove}
+                <span>{annotation} / </span>
+                <span>{configurable} /</span>
+                <span>{defaultValue} /</span>
+                <span>{comment} /</span>
+                {child}
+            </div>
+        )
+    }
+}
+
+ReactDOM.render(<App />, document.getElementById("app"))
+    </script>
+
+  </body>
+</html>
