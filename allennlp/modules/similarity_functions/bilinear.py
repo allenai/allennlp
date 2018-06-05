@@ -39,7 +39,7 @@ class BilinearSimilarity(SimilarityFunction):
         self.reset_parameters()
 
     def reset_parameters(self):
-        torch.nn.init.xavier_uniform(self._weight_matrix)
+        torch.nn.init.xavier_uniform_(self._weight_matrix)
         self._bias.data.fill_(0)
 
     @overrides

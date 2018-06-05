@@ -6,6 +6,7 @@ import time
 
 import torch
 import pytest
+from allennlp.common.checks import ConfigurationError
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.trainer import Trainer, sparse_clip_norm, is_sparse
@@ -104,6 +105,37 @@ class TestTrainer(AllenNlpTestCase):
         assert val_metrics_per_epoch[0] != 0.
         new_trainer.train()
 
+    def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_increasing_metric(
+            self):
+        new_trainer = Trainer(self.model, self.optimizer,
+                              self.iterator, self.instances,
+                              validation_dataset=self.instances,
+                              num_epochs=3, serialization_dir=self.TEST_DIR,
+                              patience=5, validation_metric="+test")
+        # when it is the only metric it should be considered the best
+        assert new_trainer._is_best_so_far(1, [])  # pylint: disable=protected-access
+        # when it is the same as one before it it is not considered the best
+        assert not new_trainer._is_best_so_far(.3, [.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
+        # when it is the best it is considered the best
+        assert new_trainer._is_best_so_far(13.00, [.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
+        # when it is not the the best it is not considered the best
+        assert not new_trainer._is_best_so_far(.0013, [.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
+
+    def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_decreasing_metric(self):
+        new_trainer = Trainer(self.model, self.optimizer,
+                              self.iterator, self.instances,
+                              validation_dataset=self.instances,
+                              num_epochs=3, serialization_dir=self.TEST_DIR,
+                              patience=5, validation_metric="-test")
+        # when it is the only metric it should be considered the best
+        assert new_trainer._is_best_so_far(1, [])  # pylint: disable=protected-access
+        # when it is the same as one before it it is not considered the best
+        assert not new_trainer._is_best_so_far(.3, [.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
+        # when it is the best it is considered the best
+        assert new_trainer._is_best_so_far(.013, [.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
+        # when it is not the the best it is not considered the best
+        assert not new_trainer._is_best_so_far(13.00, [.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
+
     def test_should_stop_early_with_increasing_metric(self):
         new_trainer = Trainer(self.model, self.optimizer,
                               self.iterator, self.instances,
@@ -113,6 +145,23 @@ class TestTrainer(AllenNlpTestCase):
         assert new_trainer._should_stop_early([.5, .3, .2, .1, .4, .4])  # pylint: disable=protected-access
         assert not new_trainer._should_stop_early([.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
 
+    def test_should_stop_early_with_flat_lining_metric(self):
+        flatline = [.2] * 6
+        assert Trainer(self.model, self.optimizer,  # pylint: disable=protected-access
+                       self.iterator, self.instances,
+                       validation_dataset=self.instances,
+                       num_epochs=3,
+                       serialization_dir=self.TEST_DIR,
+                       patience=5,
+                       validation_metric="+test")._should_stop_early(flatline)  # pylint: disable=protected-access
+        assert Trainer(self.model, self.optimizer,  # pylint: disable=protected-access
+                       self.iterator, self.instances,
+                       validation_dataset=self.instances,
+                       num_epochs=3,
+                       serialization_dir=self.TEST_DIR,
+                       patience=5,
+                       validation_metric="-test")._should_stop_early(flatline)  # pylint: disable=protected-access
+
     def test_should_stop_early_with_decreasing_metric(self):
         new_trainer = Trainer(self.model, self.optimizer,
                               self.iterator, self.instances,
@@ -121,6 +170,30 @@ class TestTrainer(AllenNlpTestCase):
                               patience=5, validation_metric="-test")
         assert new_trainer._should_stop_early([.02, .3, .2, .1, .4, .4])  # pylint: disable=protected-access
         assert not new_trainer._should_stop_early([.3, .3, .2, .1, .4, .5])  # pylint: disable=protected-access
+        assert new_trainer._should_stop_early([.1, .3, .2, .1, .4, .5])  # pylint: disable=protected-access
+
+    def test_should_stop_early_with_early_stopping_disabled(self):
+        # Increasing metric
+        trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
+                          validation_dataset=self.instances, num_epochs=100,
+                          patience=None, validation_metric="+test")
+        decreasing_history = [float(i) for i in reversed(range(20))]
+        assert not trainer._should_stop_early(decreasing_history)  # pylint: disable=protected-access
+
+        # Decreasing metric
+        trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
+                          validation_dataset=self.instances, num_epochs=100,
+                          patience=None, validation_metric="-test")
+        increasing_history = [float(i) for i in range(20)]
+        assert not trainer._should_stop_early(increasing_history)  # pylint: disable=protected-access
+
+    def test_should_stop_early_with_invalid_patience(self):
+        for patience in [0, -1, -2, 1.5, 'None']:
+            with pytest.raises(ConfigurationError,
+                               message='No ConfigurationError for patience={}'.format(patience)):
+                Trainer(self.model, self.optimizer, self.iterator, self.instances,
+                        validation_dataset=self.instances, num_epochs=100,
+                        patience=patience, validation_metric="+test")
 
     def test_trainer_can_run_with_lr_scheduler(self):
 
@@ -236,10 +309,10 @@ class TestTrainer(AllenNlpTestCase):
                                   self.iterator, self.instances, num_epochs=2,
                                   serialization_dir=self.TEST_DIR,
                                   model_save_interval=0.0001)
-        epoch, _ = restore_trainer._restore_checkpoint() # pylint: disable=protected-access
+        epoch, _ = restore_trainer._restore_checkpoint()  # pylint: disable=protected-access
         assert epoch == 2
         # One batch per epoch.
-        assert restore_trainer._batch_num_total == 2 # pylint: disable=protected-access
+        assert restore_trainer._batch_num_total == 2  # pylint: disable=protected-access
 
 
 class TestSparseClipGrad(AllenNlpTestCase):
@@ -247,7 +320,7 @@ class TestSparseClipGrad(AllenNlpTestCase):
         # create a sparse embedding layer, then take gradient
         embedding = torch.nn.Embedding(100, 16, sparse=True)
         embedding.zero_grad()
-        ids = torch.autograd.Variable((torch.rand(17) * 100).long())
+        ids = (torch.rand(17) * 100).long()
         # Set some of the ids to the same value so that the sparse gradient
         # has repeated indices.  This tests some additional logic.
         ids[:5] = 5
@@ -258,5 +331,5 @@ class TestSparseClipGrad(AllenNlpTestCase):
         # Now try to clip the gradients.
         _ = sparse_clip_norm([embedding.weight], 1.5)
         # Final norm should be 1.5
-        grad = embedding.weight.grad.data.coalesce()
-        self.assertAlmostEqual(grad._values().norm(2.0), 1.5, places=5) # pylint: disable=protected-access
+        grad = embedding.weight.grad.coalesce()  # pylint: disable=no-member
+        self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5) # pylint: disable=protected-access

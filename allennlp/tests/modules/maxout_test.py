@@ -2,7 +2,6 @@
 from numpy.testing import assert_almost_equal
 import pytest
 import torch
-from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -46,11 +45,11 @@ class TestMaxout(AllenNlpTestCase):
                 })
         maxout = Maxout.from_params(params)
 
-        constant_init = lambda tensor: torch.nn.init.constant(tensor, 1.)
+        constant_init = lambda tensor: torch.nn.init.constant_(tensor, 1.)
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(maxout)
 
-        input_tensor = Variable(torch.FloatTensor([[-3, 1]]))
+        input_tensor = torch.FloatTensor([[-3, 1]])
         output = maxout(input_tensor).data.numpy()
         assert output.shape == (1, 3)
         # This output was checked by hand

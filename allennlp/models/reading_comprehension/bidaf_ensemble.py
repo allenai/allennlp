@@ -87,7 +87,7 @@ class BidafEnsemble(Ensemble):
             if metadata is not None:
                 passage_str = metadata[index]['original_passage']
                 offsets = metadata[index]['token_offsets']
-                predicted_span = tuple(best_span[index].data.cpu().numpy())
+                predicted_span = tuple(best_span[index].detach().cpu().numpy())
                 start_offset = offsets[predicted_span[0]][0]
                 end_offset = offsets[predicted_span[1]][1]
                 best_span_string = passage_str[start_offset:end_offset]

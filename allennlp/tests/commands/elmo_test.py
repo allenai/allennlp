@@ -3,8 +3,11 @@ import os
 import pathlib
 import sys
 import tempfile
+import warnings
 
-import h5py
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import h5py
 import numpy
 
 from allennlp.commands import main

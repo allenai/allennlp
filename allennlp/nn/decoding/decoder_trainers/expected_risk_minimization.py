@@ -2,7 +2,6 @@ from typing import Callable, Dict, List, TypeVar
 from collections import defaultdict
 
 import torch
-from torch.autograd import Variable
 
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
@@ -55,15 +54,16 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
                supervision: Callable[[StateType], torch.Tensor]) -> Dict[str, torch.Tensor]:
         cost_function = supervision
         finished_states = self._get_finished_states(initial_state, decode_step)
-        loss = Variable(initial_state.score[0].data.new([0.0]))
+        loss = initial_state.score[0].new_zeros(1)
         finished_model_scores = self._get_model_scores_by_batch(finished_states)
         finished_costs = self._get_costs_by_batch(finished_states, cost_function)
         for batch_index in finished_model_scores:
             # Finished model scores are log-probabilities of the predicted sequences. We convert
             # log probabilities into probabilities and re-normalize them to compute expected cost under
             # the distribution approximated by the beam search.
-            costs = torch.cat(finished_costs[batch_index])
-            logprobs = torch.cat(finished_model_scores[batch_index])
+
+            costs = torch.cat([tensor.view(-1) for tensor in finished_costs[batch_index]])
+            logprobs = torch.cat([tensor.view(-1) for tensor in finished_model_scores[batch_index]])
             # Unmasked softmax of log probabilities will convert them into probabilities and
             # renormalize them.
             renormalized_probs = nn_util.masked_softmax(logprobs, None)
@@ -118,30 +118,30 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
         pruned_states = []
         for _, instance_states in states_by_batch_index.items():
             if sort_states:
-                scores = torch.cat([state.score[0] for state in instance_states])
+                scores = torch.cat([state.score[0].view(-1) for state in instance_states])
                 _, sorted_indices = scores.sort(-1, descending=True)
-                sorted_states = [instance_states[i] for i in sorted_indices.data.cpu().numpy()]
+                sorted_states = [instance_states[i] for i in sorted_indices.detach().cpu().numpy()]
                 instance_states = sorted_states
             for state in instance_states[:beam_size]:
                 pruned_states.append(state)
         return pruned_states
 
-    def _get_model_scores_by_batch(self, states: List[StateType]) -> Dict[int, List[Variable]]:
-        batch_scores: Dict[int, List[Variable]] = defaultdict(list)
+    def _get_model_scores_by_batch(self, states: List[StateType]) -> Dict[int, List[torch.Tensor]]:
+        batch_scores: Dict[int, List[torch.Tensor]] = defaultdict(list)
         for state in states:
             for batch_index, model_score, history in zip(state.batch_indices,
                                                          state.score,
                                                          state.action_history):
                 if self._normalize_by_length:
-                    path_length = Variable(model_score.data.new([len(history)]))
+                    path_length = model_score.new_tensor([len(history)])
                     model_score = model_score / path_length
                 batch_scores[batch_index].append(model_score)
         return batch_scores
 
     @staticmethod
     def _get_costs_by_batch(states: List[StateType],
-                            cost_function: Callable[[StateType], torch.Tensor]) -> Dict[int, List[Variable]]:
-        batch_costs: Dict[int, List[Variable]] = defaultdict(list)
+                            cost_function: Callable[[StateType], torch.Tensor]) -> Dict[int, List[torch.Tensor]]:
+        batch_costs: Dict[int, List[torch.Tensor]] = defaultdict(list)
         for state in states:
             cost = cost_function(state)
             # Since this is a finished state, its group size is 1, and we just take the only batch
@@ -165,8 +165,8 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
         batch_scores = self._get_model_scores_by_batch(finished_states)
         best_action_sequences: Dict[int, List[List[int]]] = {}
         for batch_index, scores in batch_scores.items():
-            _, sorted_indices = torch.cat(scores).sort(-1, descending=True)
-            cpu_indices = [int(index) for index in sorted_indices.data.cpu().numpy()]
+            _, sorted_indices = torch.cat([score.view(-1) for score in scores]).sort(-1, descending=True)
+            cpu_indices = [int(index) for index in sorted_indices.detach().cpu().numpy()]
             best_action_indices = cpu_indices[:self._max_num_decoded_sequences]
             instance_best_sequences = [batch_action_histories[batch_index][i]
                                        for i in best_action_indices]

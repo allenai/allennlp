@@ -18,7 +18,7 @@ class SimpleDecoderState(DecoderState['SimpleDecoderState']):
     def __init__(self,
                  batch_indices: List[int],
                  action_history: List[List[int]],
-                 score: List[torch.autograd.Variable],
+                 score: List[torch.Tensor],
                  start_values: List[int] = None) -> None:
         super().__init__(batch_indices, action_history, score)
         self.start_values = start_values or [0] * len(batch_indices)

@@ -16,7 +16,7 @@ class TestIndexField(AllenNlpTestCase):
 
     def test_as_tensor_converts_field_correctly(self):
         index_field = IndexField(4, self.text)
-        tensor = index_field.as_tensor(index_field.get_padding_lengths()).data.cpu().numpy()
+        tensor = index_field.as_tensor(index_field.get_padding_lengths()).detach().cpu().numpy()
         numpy.testing.assert_array_equal(tensor, numpy.array([4]))
 
     def test_index_field_raises_on_incorrect_label_type(self):

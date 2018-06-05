@@ -1,6 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
 import torch
-from torch.autograd import Variable
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import StackedSelfAttentionEncoder
@@ -27,6 +26,6 @@ class TestStackedSelfAttention(AllenNlpTestCase):
                                               feedforward_hidden_dim=5,
                                               num_layers=3,
                                               num_attention_heads=3)
-        inputs = Variable(torch.randn([3, 5, 9]))
+        inputs = torch.randn([3, 5, 9])
         encoder_output = encoder(inputs, None)
         assert list(encoder_output.size()) == [3, 5, 12]

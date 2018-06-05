@@ -1,7 +1,6 @@
 from overrides import overrides
 
 import torch
-from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
@@ -51,9 +50,9 @@ class BagOfEmbeddingsEncoder(Seq2VecEncoder):
                 length_mask = (lengths > 0)
 
                 # Set any length 0 to 1, to avoid dividing by zero.
-                lengths = torch.max(lengths, Variable(lengths.data.new().resize_(1).fill_(1)))
+                lengths = torch.max(lengths, lengths.new_ones(1))
             else:
-                lengths = Variable(tokens.data.new().resize_(1).fill_(tokens.size(1)), requires_grad=False)
+                lengths = tokens.new_full((1,), fill_value=tokens.size(1))
                 length_mask = None
 
             summed = summed / lengths.unsqueeze(-1).float()
