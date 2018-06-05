@@ -44,7 +44,7 @@ class TestProductionRuleField(AllenNlpTestCase):
         assert len(tensor_tuple) == 3
         assert tensor_tuple[0] == 'S -> [NP, VP]'
         assert tensor_tuple[1] is True
-        assert_almost_equal(tensor_tuple[2].data.cpu().numpy(), [self.s_rule_index])
+        assert_almost_equal(tensor_tuple[2].detach().cpu().numpy(), [self.s_rule_index])
 
         field = ProductionRuleField('S -> [NP, VP]', is_global_rule=False)
         field.index(self.vocab)
@@ -87,12 +87,12 @@ class TestProductionRuleField(AllenNlpTestCase):
         tensor_tuple = tensors[0][0]
         assert tensor_tuple[0] == 'S -> [NP, VP]'
         assert tensor_tuple[1] is True
-        assert_almost_equal(tensor_tuple[2].data.cpu().numpy(), [self.s_rule_index])
+        assert_almost_equal(tensor_tuple[2].detach().cpu().numpy(), [self.s_rule_index])
 
         tensor_tuple = tensors[0][1]
         assert tensor_tuple[0] == 'NP -> test'
         assert tensor_tuple[1] is True
-        assert_almost_equal(tensor_tuple[2].data.cpu().numpy(), [self.np_index])
+        assert_almost_equal(tensor_tuple[2].detach().cpu().numpy(), [self.np_index])
 
         tensor_tuple = tensors[0][2]
         assert tensor_tuple[0] == 'VP -> eat'
@@ -102,12 +102,12 @@ class TestProductionRuleField(AllenNlpTestCase):
         tensor_tuple = tensors[1][0]
         assert tensor_tuple[0] == 'S -> [NP, VP]'
         assert tensor_tuple[1] is True
-        assert_almost_equal(tensor_tuple[2].data.cpu().numpy(), [self.s_rule_index])
+        assert_almost_equal(tensor_tuple[2].detach().cpu().numpy(), [self.s_rule_index])
 
         tensor_tuple = tensors[1][1]
         assert tensor_tuple[0] == 'NP -> test'
         assert tensor_tuple[1] is True
-        assert_almost_equal(tensor_tuple[2].data.cpu().numpy(), [self.np_index])
+        assert_almost_equal(tensor_tuple[2].detach().cpu().numpy(), [self.np_index])
 
         # This item was just padding.
         tensor_tuple = tensors[1][2]

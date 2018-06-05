@@ -50,9 +50,14 @@ https://arxiv.org/abs/1802.05365
 
 import logging
 from typing import IO, List, Iterable, Tuple
+import warnings
 
 import argparse
-import h5py
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import h5py
+
 import numpy
 import torch
 
@@ -217,7 +222,7 @@ class ElmoEmbedder():
                 if length == 0:
                     elmo_embeddings.append(empty_embedding())
                 else:
-                    elmo_embeddings.append(embeddings[i, :, :length, :].data.cpu().numpy())
+                    elmo_embeddings.append(embeddings[i, :, :length, :].detach().cpu().numpy())
 
         return elmo_embeddings
 
@@ -302,8 +307,10 @@ def elmo_command(args):
         output_format = "top"
     elif args.average:
         output_format = "average"
-    elmo_embedder.embed_file(
-            args.input_file,
-            args.output_file,
-            output_format,
-            args.batch_size)
+
+    with torch.no_grad():
+        elmo_embedder.embed_file(
+                args.input_file,
+                args.output_file,
+                output_format,
+                args.batch_size)

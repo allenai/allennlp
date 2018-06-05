@@ -2,7 +2,6 @@
 import numpy
 from numpy.testing import assert_almost_equal
 import torch
-from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.modules.seq2vec_encoders import CnnEncoder
@@ -38,10 +37,10 @@ class TestCnnEncoder(AllenNlpTestCase):
 
     def test_forward_does_correct_computation(self):
         encoder = CnnEncoder(embedding_dim=2, num_filters=1, ngram_filter_sizes=(1, 2))
-        constant_init = lambda tensor: torch.nn.init.constant(tensor, 1.)
+        constant_init = lambda tensor: torch.nn.init.constant_(tensor, 1.)
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(encoder)
-        input_tensor = Variable(torch.FloatTensor([[[.7, .8], [.1, 1.5]]]))
+        input_tensor = torch.FloatTensor([[[.7, .8], [.1, 1.5]]])
         encoder_output = encoder(input_tensor, None)
         assert_almost_equal(encoder_output.data.numpy(),
                             numpy.asarray([[1.6 + 1.0, 3.1 + 1.0]]),
@@ -52,5 +51,5 @@ class TestCnnEncoder(AllenNlpTestCase):
                              num_filters=13,
                              ngram_filter_sizes=(1, 2, 3, 4, 5),
                              output_dim=30)
-        tensor = Variable(torch.rand(4, 8, 7))
+        tensor = torch.rand(4, 8, 7)
         assert encoder(tensor, None).size() == (4, 30)

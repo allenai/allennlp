@@ -1,11 +1,13 @@
 # pylint: disable=no-self-use,invalid-name
 import gzip
+import warnings
 
 import numpy
 import pytest
 import torch
-from torch.autograd import Variable
-import h5py
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import h5py
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -39,11 +41,11 @@ class TestEmbedding(AllenNlpTestCase):
                 'projection_dim': 20
                 })
         embedding_layer = Embedding.from_params(vocab, params)
-        input_tensor = Variable(torch.LongTensor([[3, 2, 1, 0]]))
+        input_tensor = torch.LongTensor([[3, 2, 1, 0]])
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 4, 20)
 
-        input_tensor = Variable(torch.LongTensor([[[3, 2, 1, 0]]]))
+        input_tensor = torch.LongTensor([[[3, 2, 1, 0]]])
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 1, 4, 20)
 

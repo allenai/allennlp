@@ -1,7 +1,6 @@
 # pylint: disable=invalid-name
 import numpy
 import torch
-from torch.autograd import Variable
 
 from allennlp.common.testing import ModelTestCase
 from allennlp.nn.util import sequence_cross_entropy_with_logits
@@ -20,12 +19,12 @@ class SimpleSeq2SeqWithoutAttentionTest(ModelTestCase):
         batch_size = 5
         num_decoding_steps = 5
         num_classes = 10
-        sample_logits = Variable(torch.randn(batch_size, num_decoding_steps-1, num_classes))
-        sample_targets = Variable(torch.from_numpy(numpy.random.randint(0, num_classes,
-                                                                        (batch_size, num_decoding_steps))))
+        sample_logits = torch.randn(batch_size, num_decoding_steps-1, num_classes)
+        sample_targets = torch.from_numpy(numpy.random.randint(0, num_classes,
+                                                               (batch_size, num_decoding_steps)))
         # Mask should be either 0 or 1
-        sample_mask = Variable(torch.from_numpy(numpy.random.randint(0, 2,
-                                                                     (batch_size, num_decoding_steps))))
+        sample_mask = torch.from_numpy(numpy.random.randint(0, 2,
+                                                            (batch_size, num_decoding_steps)))
         expected_loss = sequence_cross_entropy_with_logits(sample_logits, sample_targets[:, 1:].contiguous(),
                                                            sample_mask[:, 1:].contiguous())
         # pylint: disable=protected-access
