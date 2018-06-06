@@ -520,7 +520,8 @@ class _ElmoBiLm(torch.nn.Module):
         markers.
         """
         if self._word_embedding is not None:
-            mask_without_bos_eos = (inputs != 0).long()
+            print(inputs)
+            mask_without_bos_eos = (inputs > 0).long()
             # The character cnn part is cached - just look it up.
             type_representation = self._word_embedding(inputs)
             # shape (batch_size, timesteps + 2, embedding_dim)

@@ -2,15 +2,18 @@
 import os
 import json
 import warnings
+from typing import List
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
 import numpy
 import torch
+import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
+from allennlp.data.token_indexers.single_id_token_indexer import SingleIdTokenIndexer
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.dataset import Batch
 from allennlp.data.iterators import BasicIterator
@@ -113,6 +116,59 @@ class TestElmoBiLm(ElmoTestCase):
                                 atol=1.0e-6
                         )
                 )
+
+    def test_elmo_char_cnn_cache_raises_error_for_uncached_words(self):
+        sentences = [["This", "is", "OOV"], ["so", "is", "this"]]
+        in_vocab_sentences = [["here", "is"], ["a", "vocab"]]
+        oov_tensor = self.batch_to_ids(sentences)[1]
+        vocab, in_vocab_tensor = self.batch_to_ids(in_vocab_sentences)
+        words_to_cache = vocab.get_token_to_index_vocabulary("tokens").keys()
+        elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file, vocab_to_cache=words_to_cache)
+
+        elmo_bilm(in_vocab_tensor["tokens"])
+        with pytest.raises(RuntimeError):
+            elmo_bilm(oov_tensor["tokens"])
+
+    def test_elmo_bilm_can_cache_char_cnn_embeddings(self):
+        sentences = [["This", "is", "a", "sentence"],
+                     ["Here", "'s", "one"],
+                     ["Another", "one"]]
+        vocab, tensor = self.batch_to_ids(sentences)
+        words_to_cache = vocab.get_token_to_index_vocabulary("tokens").keys()
+        print(list(words_to_cache))
+        elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file)
+        elmo_bilm.eval()
+        no_cache = elmo_bilm(tensor["character_ids"])
+ 
+        # ELMo is stateful, so we need to actually re-initialise it for this comparison to work.
+        elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file)
+        elmo_bilm.eval()
+        elmo_bilm.create_cached_cnn_embeddings(words_to_cache)
+        cached = elmo_bilm(tensor["tokens"])
+ 
+        numpy.testing.assert_array_almost_equal(no_cache["mask"].data.cpu().numpy(),
+                                                cached["mask"].data.cpu().numpy())
+        for activation_cached, activation in zip(cached["activations"], no_cache["activations"]):
+            numpy.testing.assert_array_almost_equal(activation_cached.data.cpu().numpy(),
+                                                    activation.data.cpu().numpy())
+    
+    @staticmethod
+    def batch_to_ids(batch: List[List[str]]):
+        instances = []
+        indexer = ELMoTokenCharactersIndexer()
+        indexer2 = SingleIdTokenIndexer()
+        for sentence in batch:
+            tokens = [Token(token) for token in sentence]
+            field = TextField(tokens,
+                            {'character_ids': indexer,
+                             'tokens': indexer2})
+            instance = Instance({"elmo": field})
+            instances.append(instance)
+
+        dataset = Batch(instances)
+        vocab = Vocabulary.from_instances(instances)
+        dataset.index_instances(vocab)
+        return vocab, dataset.as_tensor_dict()["elmo"]
 
 
 class TestElmo(ElmoTestCase):
