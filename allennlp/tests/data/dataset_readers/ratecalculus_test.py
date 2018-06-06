@@ -122,9 +122,9 @@ def assert_sample_dataset_correct(dataset):
     for i, instance in enumerate(instances):
         assert_sample_instances_correct(instance, expected_sample_actions[i])
 
-def assert_alg514_dataset_correct(dataset):
+def assert_sample_alg514_dataset_correct(dataset):
     instances = list(dataset)
-    assert len(instances) == 512
+    assert len(instances) == 10
 
     #for i, instance in enumerate(instances):
     #    assert_alg514_instances_correct(instance, expected_alg514_actions[i])
@@ -138,7 +138,7 @@ class RateCalculusDatasetReaderTest(AllenNlpTestCase):
 
     def test_reader_reads_alg514(self):
         reader = RateCalculusDatasetReader(lazy=False)
-        filename = "alg514_binaryAnd_unitDims_simplifiedVars.json"
+        filename = "sample_alg514_binaryAnd_unitDims_simplifiedVars.json"
         filepath = str(self.FIXTURES_ROOT / "data" / "ratecalculus" / filename)
         dataset = reader.read(filepath)
-        assert_alg514_dataset_correct(dataset)
+        assert_sample_alg514_dataset_correct(dataset)
