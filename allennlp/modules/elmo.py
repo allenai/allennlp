@@ -459,11 +459,13 @@ class _ElmoBiLm(torch.nn.Module):
 
         self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=requires_grad)
 
+        self._requires_grad = requires_grad
         if requires_grad and vocab_to_cache:
             logging.warning("You are fine tuning ELMo and caching char CNN word vectors. "
                             "This behaviour is not guaranteed to be well defined, particularly. "
                             "if not all of your inputs will occur in the vocabulary cache.")
 
+        self._word_embedding = None
         if vocab_to_cache:
             logging.info("Caching character cnn layers for words in vocabulary.")
             # This sets the two above attributes, _word_embedidng and _id_lookup.
@@ -520,7 +522,7 @@ class _ElmoBiLm(torch.nn.Module):
             type_representation = self._word_embedding(inputs)
             # shape (batch_size, timesteps + 2, embedding_dim)
             type_representation, mask = add_sentence_boundary_token_ids(
-                    inputs,
+                    type_representation,
                     mask_without_bos_eos,
                     self._bos_embedding,
                     self._eos_embedding
