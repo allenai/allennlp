@@ -4,7 +4,7 @@ out-of-vocabulary token.
 """
 
 from collections import defaultdict
-from typing import Any, Callable, Dict, Union, Sequence, Set, Optional, Iterable
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Union
 import codecs
 import logging
 import os
@@ -169,7 +169,8 @@ class Vocabulary:
                  max_vocab_size: Union[int, Dict[str, int]] = None,
                  non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
                  pretrained_files: Optional[Dict[str, str]] = None,
-                 only_include_pretrained_words: bool = False) -> None:
+                 only_include_pretrained_words: bool = False,
+                 tokens_to_add: Dict[str, List[str]] = None) -> None:
         self._padding_token = DEFAULT_PADDING_TOKEN
         self._oov_token = DEFAULT_OOV_TOKEN
         if not isinstance(max_vocab_size, dict):
@@ -204,6 +205,11 @@ class Vocabulary:
                             self.add_token_to_namespace(token, namespace)
                     elif count >= min_count.get(namespace, 1):
                         self.add_token_to_namespace(token, namespace)
+
+        if tokens_to_add:
+            for namespace, tokens in tokens_to_add.items():
+                for token in tokens:
+                    self.add_token_to_namespace(token, namespace)
 
     def save_to_files(self, directory: str) -> None:
         """
@@ -320,7 +326,8 @@ class Vocabulary:
                        max_vocab_size: Union[int, Dict[str, int]] = None,
                        non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
                        pretrained_files: Optional[Dict[str, str]] = None,
-                       only_include_pretrained_words: bool = False) -> 'Vocabulary':
+                       only_include_pretrained_words: bool = False,
+                       tokens_to_add: Dict[str, List[str]] = None) -> 'Vocabulary':
         """
         Constructs a vocabulary given a collection of `Instances` and some parameters.
         We count all of the vocabulary items in the instances, then pass those counts
@@ -337,7 +344,8 @@ class Vocabulary:
                           max_vocab_size=max_vocab_size,
                           non_padded_namespaces=non_padded_namespaces,
                           pretrained_files=pretrained_files,
-                          only_include_pretrained_words=only_include_pretrained_words)
+                          only_include_pretrained_words=only_include_pretrained_words,
+                          tokens_to_add=tokens_to_add)
 
     @classmethod
     def from_params(cls, params: Params, instances: Iterable['adi.Instance'] = None):
@@ -375,13 +383,15 @@ class Vocabulary:
         non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
         pretrained_files = params.pop("pretrained_files", {})
         only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
+        tokens_to_add = params.pop("tokens_to_add", None)
         params.assert_empty("Vocabulary - from dataset")
         return Vocabulary.from_instances(instances=instances,
                                          min_count=min_count,
                                          max_vocab_size=max_vocab_size,
                                          non_padded_namespaces=non_padded_namespaces,
                                          pretrained_files=pretrained_files,
-                                         only_include_pretrained_words=only_include_pretrained_words)
+                                         only_include_pretrained_words=only_include_pretrained_words,
+                                         tokens_to_add=tokens_to_add)
 
     def is_padded(self, namespace: str) -> bool:
         """
