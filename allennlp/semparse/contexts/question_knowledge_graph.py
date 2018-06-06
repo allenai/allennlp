@@ -85,18 +85,6 @@ class QuestionKnowledgeGraph(KnowledgeGraph):
         return cls(set(neighbors.keys()), dict(neighbors), entity_text)
 
     @staticmethod
-    def _get_dimensions_from_tokens(tokens: List[Token]) -> List[Tuple[str, str]]:
-        """
-        Finds units in the input tokens and returns them as strings.  We do some simple heuristic
-        for dimension recognition.
-
-        We return a list of tuples, where each tuple is the (dim_string, token_text) for a
-        dimension found in the input tokens.
-        """
-        dimensions = [('dollar', 'dollar')]
-        return dimensions
-
-    @staticmethod
     def _get_numbers_from_tokens(tokens: List[Token]) -> List[Tuple[str, str]]:
         """
         Finds numbers in the input tokens and returns them as strings.  We do some simple heuristic

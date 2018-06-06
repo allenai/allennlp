@@ -53,15 +53,15 @@ class RateCalculusDatasetReader(DatasetReader):
 
     @overrides
     def _read(self, file_path: str):
-        with open(file_path, 'r') as f:
-            data = f.read().replace('\r\n', '').replace('\n', '').replace('\t', '')
+        with open(file_path, 'r') as file_id:
+            data = file_id.read().replace('\r\n', '').replace('\n', '').replace('\t', '')
             questions = json.loads(data)
 
-            for q in list(questions):
-                sem = q["lSemantics"]
-                if( sem == "" ):
+            for question in list(questions):
+                sem = question["lSemantics"]
+                if sem == "":
                     sem = "(Equals fb:p fb:q)"
-                instance = self.text_to_instance(q["sQuestion"], [sem])
+                instance = self.text_to_instance(question["sQuestion"], [sem])
                 if instance is not None:
                     yield instance
 
@@ -95,9 +95,9 @@ class RateCalculusDatasetReader(DatasetReader):
         question_field = TextField(tokenized_question, self._question_token_indexers)
         question_knowledge_graph = QuestionKnowledgeGraph.read(tokenized_question)
         question_knowledge_graph_field = KnowledgeGraphField(question_knowledge_graph,
-                                          tokenized_question,
-                                          self._question_token_indexers,
-                                          tokenizer=self._tokenizer)
+                                                             tokenized_question,
+                                                             self._question_token_indexers,
+                                                             tokenizer=self._tokenizer)
 
         world = RateCalculusWorld(question_knowledge_graph)
         world_field = MetadataField(world)
@@ -168,8 +168,8 @@ class RateCalculusDatasetReader(DatasetReader):
         question_token_indexers = TokenIndexer.dict_from_params(params.pop('question_token_indexers', {}))
         params.assert_empty(cls.__name__)
         return RateCalculusDatasetReader(lazy=lazy,
-                                       max_dpd_logical_forms=max_dpd_logical_forms,
-                                       tokenizer=tokenizer,
-                                       question_token_indexers=question_token_indexers,
-                                         nonterminal_indexers = None,
-                                         terminal_indexers = None)
+                                         max_dpd_logical_forms=max_dpd_logical_forms,
+                                         tokenizer=tokenizer,
+                                         question_token_indexers=question_token_indexers,
+                                         nonterminal_indexers=None,
+                                         terminal_indexers=None)
