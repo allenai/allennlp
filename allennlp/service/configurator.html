@@ -4,6 +4,25 @@
     <meta charset="utf-8">
     <title>AllenNLP Configuration Wizard</title>
     <style>
+        div {
+            display: table;
+        }
+
+        .wizard {
+            font-family: 'Source Sans Pro', sans-serif;
+        }
+
+        .optional {
+            color: gray;
+        }
+
+        .required {
+            color: black;
+        }
+
+        .required.no-value {
+            background-color: lightcoral;
+        }
     </style>
   </head>
   <body>
@@ -16,8 +35,113 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.js"></script>
 
     <script type="text/babel">
+
+// A "config" is empty if it's undefined, if it has zero length
+// (i.e. is an empty string or list), or if it's an empty object.
+function isEmpty(config) {
+    return (
+        config === undefined ||
+        config.length == 0 || (config.constructor === Object && Object.keys(config).length == 0)
+    )
+}
+
+function renderAnnotation(annotation) {
+    if (!annotation) {
+        return ""
+    }
+
+    const [origin, ...args] = annotation
+
+    if (args.length == 0) {
+        return origin
+    } else {
+
+        return origin + "[" + args.map(renderAnnotation).join(",") + "]"
+    }
+}
+
+// Represent some config item as JSON.
+function configToJson(config, annotation) {
+    const origin = annotation[0]
+
+    if (origin === "str") {
+        // strings can stay as is
+        return config
+
+    } else if (origin === "bool") {
+        // return only valid booleans
+        if (config === "true") {
+            return true
+        } else if (config === "false") {
+            return false
+        } else {
+            return undefined
+        }
+
+    } else if (origin === "int" || origin === "float") {
+        // return only valid numbers
+        if (isNaN(config)) {
+            return undefined
+        } else {
+            return +config
+        }
+
+    } else if (origin === "List" || origin === "Sequence") {
+        // recurse on List items and throw away undefined ones
+        // (e.g. missing items in a list)
+        return config
+            .map((item) => configToJson(item.value, annotation[1]))
+            .filter((item) => item)
+
+    } else if (origin === "Dict") {
+        // recurse on Dict items
+        let blob = {}
+        config.forEach((item) => blob[item.key] = configToJson(item.value, annotation[2]))
+        return blob
+    } else {
+        // otherwise just return an empty dictionary
+        return {}
+    }
+}
+
 class App extends React.Component {
-    state = {config: {}}
+    constructor() {
+        super()
+
+        // config is the state used for rendering the page
+        // json is the actual output
+        this.state = {config: {}, json: {}}
+
+        this.generate = this.generate.bind(this)
+        this.setJson = this.setJson.bind(this)
+    }
+
+    generate() {
+        // Generate the configuration JSON
+        // TODO(joelgrus): a better way than console.log
+        console.log(this.state.json)
+    }
+
+    setJson(path, childConfig, annotation) {
+        // add the specified childConfig with the specified annotation
+        // to the master json object at the given path
+        let {json} = this.state
+
+        path.forEach((name, idx) => {
+            // walk the first n-1 steps of the path
+            if (idx < path.length - 1) {
+                json = json[name]
+            } else {
+                // and add the jsonized item if it isn't empty
+                // delete it if it is
+                if (!isEmpty(childConfig)) {
+                    json[name] = configToJson(childConfig, annotation)
+                } else {
+                    delete json[name]
+                }
+            }
+        })
+    }
 
     componentDidMount() {
         fetch('/api/')
@@ -26,68 +150,148 @@ class App extends React.Component {
     }
 
     render() {
-        //console.log(this.state)
         return (
-            <div>
-                <Configuration path={[]} config={this.state.config}/>
-                <button id="generate">GENERATE</button>
+            <div class="wizard">
+                <Configuration path={[]} config={this.state.config} setJson={this.setJson}/>
+                <button id="generate" onClick={this.generate}>GENERATE</button>
             </div>
         )
     }
 }
 
 class Configuration extends React.Component {
+    // Component representing a Config as returned by an API call
 
     render() {
-        const {config, path} = this.props
-        const {className, configItems, choices} = config
+        const {config, path, setJson} = this.props
+        const {className, configItems} = config
 
         if (configItems !== undefined) {
             return (
                 <div class="configuration">
                     <ul>
-                        {configItems.map((configItem) => <ConfigItem path={path} item={configItem}/>)}
+                        {configItems.map((configItem) => <ConfigItem path={path} item={configItem} setJson={setJson}/>)}
                     </ul>
                 </div>
             )
-        } else if (choices !== undefined) {
-            return (<div>choices</div>)
         } else {
             return null
         }
     }
 }
 
+class DictOrList extends React.Component {
+    constructor(props) {
+        super(props)
+
+        this.state = {items: []}
+        this.remove = this.remove.bind(this)
+        this.update = this.update.bind(this)
+        this.add = this.add.bind(this)
+    }
+
+    remove(idx) {
+        return ((i) => (() => {
+            const {items} = this.state
+            const beforeItems = items.slice(0, i)
+            const afterItems = items.slice(i + 1)
+            const newItems = beforeItems.concat(afterItems)
+            this.props.setJson(this.props.path, newItems, this.props.annotation)
+            this.setState({items: newItems})
+        }))(idx)
+    }
+
+    update(key, idx) {
+        return ((i) => ((e) => {
+            const value = e.target.value
+            const newItems = this.state.items.slice()
+            newItems[i][key] = value
+            this.props.setJson(this.props.path, newItems, this.props.annotation)
+            this.setState({items: newItems})
+        }))(idx)
+    }
+
+    add() {
+        this.setState({items: this.state.items.concat([{}])})
+    }
+
+    render() {
+        const {annotation, value} = this.props
+        let keyType, valueType
+        if (annotation.length == 2) {
+            valueType = annotation[1]
+        } else {
+            keyType = annotation[1]
+            valueType = annotation[2]
+        }
+
+        const renderedItems = this.state.items.map((item, idx) => {
+            const {key, value} = item
+
+            return (
+                <div>
+                    <button class="remove-button" onClick={this.remove(idx)}>X</button>
+                    {keyType ? <input type="text" value={key} onChange={this.update("key", idx)}/> : null}
+                    <input type="text" value={value} onChange={this.update("value", idx)}/>
+                </div>
+            )
+        })
+
+        return (
+            <div>
+                {renderedItems}
+                <div><button class="add-button" onClick={this.add}>+</button></div>
+            </div>
+        )
+    }
+
+}
+
 class ConfigItem extends React.Component {
 
     constructor(props) {
         super(props)
+        const {path, item, setComplete} = props
+        const {name, annotation, defaultValue} = item
+        const optional = defaultValue !== undefined
+
         this.state = {
-            path: props.path.concat(props.item.name),
             childConfig: null,
             subclasses: null,
             value: null,
             choice: ''
         }
+
+        this.path = path.concat(name),
+        this.optional = optional
+
         this.subconfigure = this.subconfigure.bind(this)
         this.remove = this.remove.bind(this)
         this.valueChange = this.valueChange.bind(this)
         this.select = this.select.bind(this)
+        this.updateJson = this.updateJson.bind(this)
     }
 
-    remove(e) {
-        e.preventDefault()
+    updateJson(childConfig) {
+        this.props.setJson(this.path, childConfig, this.props.item.annotation)
+    }
+
+    remove() {
+        this.updateJson(undefined)
         this.setState({childConfig: null, subclasses: null, value: null, choice: ''})
     }
 
     valueChange(e) {
-        this.setState({value: e.target.value})
+        const value = e.target.value
+        this.updateJson(value)
+        this.setState({value: value})
     }
 
     select(e) {
         const subclass = e.target.value
 
         if (subclass) {
+            this.updateJson(subclass)
             fetch('/api/?class=' + subclass)
                 .then(res => res.json())
                 .then(config => {
@@ -97,7 +301,7 @@ class ConfigItem extends React.Component {
                     })
                 })
         } else {
-            this.setState({choice: subclass})
+            this.remove()
         }
     }
 
@@ -110,6 +314,7 @@ class ConfigItem extends React.Component {
             .then(res => res.json())
             .then(config => {
                 if (config.configItems) {
+                    this.updateJson(config)
                     this.setState({childConfig: config})
                 } else {
                     this.setState({subclasses: config.choices})
@@ -118,18 +323,19 @@ class ConfigItem extends React.Component {
     }
 
     render() {
-        const {item} = this.props
+        const {path, props, state, optional} = this
+        const {item, setJson} = props
         const {name, annotation, configurable, defaultValue, comment, subconfig} = item
-        const {path, childConfig, subclasses, value, choice} = this.state
+        const {childConfig, subclasses, value, choice} = state
 
+        const indent = path.length
         const marginLeft = 30 * path.length
 
         // Short circuit for type
         if (item.type) {
+            setJson(path, item.type, ["str"])
             return <div marginLeft={marginLeft} class="config-item">type: {item.type}</div>
         }
-
-
 
         const pathStr = path.join('-')
         const hasData = childConfig || subclasses || value
@@ -146,20 +352,40 @@ class ConfigItem extends React.Component {
             input = (<button id={pathStr} onClick={this.subconfigure}>CONFIGURE</button>)
         } else if (configurable) {
             input = null
+        } else if (annotation[0] == "Dict") {
+            input = null
         } else {
-            input = (<input type="text" value={this.state.value} onChange={this.valueChange}/>)
+            input = (<input type="text" value={value || ''} onChange={this.valueChange}/>)
         }
 
-        const remove = hasData ? (<button onClick={this.remove}>X</button>) : null
+        const remove = hasData ? (<button class="remove-button" onClick={this.remove}>X</button>) : null
 
-        const child = childConfig ? <Configuration path={path} config={childConfig}/> : null
+        let child = null
+        if (childConfig) {
+            child = (<Configuration path={path} config={childConfig} setJson={setJson}/>)
+        } else if (annotation[0] === "Dict" || annotation[0] === "List" || annotation[0] === "Sequence") {
+            // TODO(joelgrus): a dict needs to know how many valid items it has so that its parent can know if it's complete
+            child = (<DictOrList path={path} setJson={setJson} annotation={annotation}/>)
+            input = null
+        }
+
+
+        let className = "config-item"
+        if (optional) {
+            className += " optional"
+        } else {
+            className += " required"
+        }
+        if (!value && !childConfig) {
+            className += " no-value"
+        }
 
         return (
-            <div marginLeft={marginLeft} class="config-item">
-                <span>{defaultValue === undefined ? "" : "// "}{name}:</span>
+            <div marginLeft={marginLeft} className={className}>
+                <span>{optional ? "(optional) " : ""}{name}:</span>
                 {input}
                 {remove}
-                <span>{annotation} / </span>
+                <span>{renderAnnotation(annotation)} / </span>
                 <span>{configurable} /</span>
                 <span>{defaultValue} /</span>
                 <span>{comment} /</span>

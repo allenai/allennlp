@@ -142,7 +142,7 @@ class Config(Generic[T]):
         items = [item.to_json() for item in self.items]
 
         if self.typ3:
-            items.insert(0, {"type": self.typ3})
+            items.insert(0, {"name": "type", "type": self.typ3})
 
 
         return items
@@ -188,8 +188,8 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
     """
     typ3 = _get_config_type(cla55)
 
-    # Don't include self
-    names_to_ignore = {"self"}
+    # Don't include self, or vocab
+    names_to_ignore = {"self", "vocab"}
 
     # Hack for RNNs
     if cla55 in [torch.nn.RNN, torch.nn.LSTM, torch.nn.GRU]:
