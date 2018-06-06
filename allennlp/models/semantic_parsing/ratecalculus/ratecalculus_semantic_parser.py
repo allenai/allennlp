@@ -20,6 +20,7 @@ from allennlp.semparse.worlds import RateCalculusWorld
 from allennlp.training.metrics import Average
 
 
+@Model.register("ratecalculus_parser")
 class RateCalculusSemanticParser(Model):
     """
     A ``RateCalculusSemanticParser`` is a :class:`Model` which takes as input a table and a question,
@@ -296,7 +297,7 @@ class RateCalculusSemanticParser(Model):
     @staticmethod
     def _get_neighbor_indices(worlds: List[RateCalculusWorld],
                               num_entities: int,
-                              tensor: Variable) -> torch.LongTensor:
+                              tensor: torch.Tensor) -> torch.LongTensor:
         """
         This method returns the indices of each entity's neighbors. A tensor
         is accepted as a parameter for copying purposes.
@@ -305,7 +306,7 @@ class RateCalculusSemanticParser(Model):
         ----------
         worlds : ``List[RateCalculusWorld]``
         num_entities : ``int``
-        tensor : ``Variable``
+        tensor : ``torch.Tensor``
             Used for copying the constructed list onto the right device.
 
         Returns
@@ -339,8 +340,7 @@ class RateCalculusSemanticParser(Model):
                                                       num_entities,
                                                       lambda: [-1] * num_neighbors)
             batch_neighbors.append(neighbor_indexes)
-        return Variable(tensor.data.new(batch_neighbors)).long()
-
+        return tensor.new_tensor(batch_neighbors, dtype=torch.long)
 
 
     @staticmethod
