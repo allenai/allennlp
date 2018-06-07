@@ -80,7 +80,7 @@ def json_annotation(cla55: Optional[type]):
     elif origin == Union:
         # Special special case to handle optional types:
         if len(args) == 2 and args[-1] == type(None):
-            return ["Optional", json_annotation(args[0])]
+            return [json_annotation(args[0])]
         else:
             return ["Union"] + [json_annotation(arg) for arg in args]
     else:
@@ -261,10 +261,26 @@ def render_config(config: Config, indent: str = "") -> str:
             "}\n"
     ])
 
-def is_configurable(obj) -> bool:
+
+def _remove_optional(typ3: type) -> type:
+    origin = getattr(typ3, '__origin__', None)
+    args = getattr(typ3, '__args__', None)
+
+    if origin == Union and len(args) == 2 and args[-1] == type(None):
+        return _remove_optional(args[0])
+    else:
+        return typ3
+
+def is_configurable(typ3: type) -> bool:
+    # Throw out optional:
+    typ3 = _remove_optional(typ3)
+
     # Anything with a from_params method is itself configurable.
     # So are regularizers even though they don't.
-    return hasattr(obj, 'from_params') or obj == Regularizer
+    return any([
+            hasattr(typ3, 'from_params'),
+            typ3 == Regularizer,
+    ])
 
 def _render(item: ConfigItem, indent: str = "") -> str:
     """

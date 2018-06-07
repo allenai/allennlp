@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>AllenNLP Configuration Wizard</title>
+    <title>AllenNLP Configuration Wizard (beta)</title>
     <style>
         div {
             display: table;
@@ -23,10 +23,17 @@
         .required.no-value {
             background-color: lightcoral;
         }
+
+        div#rendered-json {
+            margin: 10px;
+            border: 1px solid black;
+            font-family: monospace;
+            white-space: pre;
+        }
     </style>
   </head>
   <body>
-    <h1>AllenNLP Configuration Wizard</h1>
+    <h1>AllenNLP Configuration Wizard (beta)</h1>
 
     <div id="app"></div>
 
@@ -60,11 +67,34 @@ function renderAnnotation(annotation) {
     }
 }
 
+// Sometimes we don't have type annotations
+// (e.g. for torch classes)
+// and we have to best guess how to serialize an input.
+function bestGuess(x) {
+    const asNumber = +x
+
+    if (x === "true") {
+        return true
+    } else if (x === "false") {
+        return false
+    } else if (!isNaN(asNumber)) {
+        return asNumber
+    } else {
+        // Assume string
+        return x
+    }
+}
+
 // Represent some config item as JSON.
 function configToJson(config, annotation) {
     const origin = annotation[0]
 
-    if (origin === "str") {
+    if (origin === "?") {
+        // No type annotation, so do a best guess
+        return bestGuess(config)
+    }
+
+    else if (origin === "str") {
         // strings can stay as is
         return config
 
@@ -109,8 +139,9 @@ class App extends React.Component {
         super()
 
         // config is the state used for rendering the page
-        // json is the actual output
-        this.state = {config: {}, json: {}}
+        // json is what gets rendered out
+        // this is not a good design
+        this.state = {config: {}, json: {}, renderedJson: ""}
 
         this.generate = this.generate.bind(this)
         this.setJson = this.setJson.bind(this)
@@ -118,8 +149,7 @@ class App extends React.Component {
 
     generate() {
         // Generate the configuration JSON
-        // TODO(joelgrus): a better way than console.log
-        console.log(this.state.json)
+        this.setState({renderedJson: JSON.stringify(this.state.json, null, 4)})
     }
 
     setJson(path, childConfig, annotation) {
@@ -144,16 +174,27 @@ class App extends React.Component {
     }
 
     componentDidMount() {
+        // Fetch the top level configuration
         fetch('/api/')
             .then(res => res.json())
             .then(config => this.setState({config}))
+    }
+
+    // If you click anywhere in the rendered JSON config, it selects the whole thing.
+    selectRenderedJson() {
+        window.getSelection().selectAllChildren(document.getElementById('rendered-json'))
     }
 
     render() {
         return (
             <div class="wizard">
                 <Configuration path={[]} config={this.state.config} setJson={this.setJson}/>
-                <button id="generate" onClick={this.generate}>GENERATE</button>
+                <div>
+                    <button id="generate" onClick={this.generate}>GENERATE</button>
+                </div>
+                <div id="rendered-json" onClick={this.selectRenderedJson}>
+                    {this.state.renderedJson}
+                </div>
             </div>
         )
     }
@@ -163,6 +204,8 @@ class Configuration extends React.Component {
     // Component representing a Config as returned by an API call
 
     render() {
+        // "config" contains the items making up JSON blob as returned by the API
+
         const {config, path, setJson} = this.props
         const {className, configItems} = config
 
@@ -188,6 +231,15 @@ class DictOrList extends React.Component {
         this.remove = this.remove.bind(this)
         this.update = this.update.bind(this)
         this.add = this.add.bind(this)
+        this.reportItemCount = this.reportItemCount.bind(this)
+    }
+
+    reportItemCount() {
+        const itemCount = this.state.items.filter((item) => {
+            return item.key || item.value
+        }).length
+
+        this.props.setValue(itemCount)
     }
 
     remove(idx) {
@@ -197,7 +249,7 @@ class DictOrList extends React.Component {
             const afterItems = items.slice(i + 1)
             const newItems = beforeItems.concat(afterItems)
             this.props.setJson(this.props.path, newItems, this.props.annotation)
-            this.setState({items: newItems})
+            this.setState({items: newItems}, this.reportItemCount)
         }))(idx)
     }
 
@@ -207,7 +259,7 @@ class DictOrList extends React.Component {
             const newItems = this.state.items.slice()
             newItems[i][key] = value
             this.props.setJson(this.props.path, newItems, this.props.annotation)
-            this.setState({items: newItems})
+            this.setState({items: newItems}, this.reportItemCount)
         }))(idx)
     }
 
@@ -225,14 +277,20 @@ class DictOrList extends React.Component {
             valueType = annotation[2]
         }
 
+        // This is probably a bad assumption
+        const configurable = valueType[0].startsWith('allennlp.') || valueType[0].startsWith('torch.')
+
         const renderedItems = this.state.items.map((item, idx) => {
             const {key, value} = item
+
+            let valueInput
+            valueInput = (<input type="text" value={value} onChange={this.update("value", idx)}/>)
 
             return (
                 <div>
                     <button class="remove-button" onClick={this.remove(idx)}>X</button>
                     {keyType ? <input type="text" value={key} onChange={this.update("key", idx)}/> : null}
-                    <input type="text" value={value} onChange={this.update("value", idx)}/>
+                    {valueInput}
                 </div>
             )
         })
@@ -245,6 +303,12 @@ class DictOrList extends React.Component {
         )
     }
 
+}
+
+class ConfigurableItem extends React.Component {
+    constructor(props) {
+        super(props)
+    }
 }
 
 class ConfigItem extends React.Component {
@@ -270,6 +334,7 @@ class ConfigItem extends React.Component {
         this.valueChange = this.valueChange.bind(this)
         this.select = this.select.bind(this)
         this.updateJson = this.updateJson.bind(this)
+        this.setValue = this.setValue.bind(this)
     }
 
     updateJson(childConfig) {
@@ -279,6 +344,10 @@ class ConfigItem extends React.Component {
     remove() {
         this.updateJson(undefined)
         this.setState({childConfig: null, subclasses: null, value: null, choice: ''})
+    }
+
+    setValue(value) {
+        this.setState({value: value})
     }
 
     valueChange(e) {
@@ -306,8 +375,6 @@ class ConfigItem extends React.Component {
     }
 
     subconfigure(e) {
-        e.preventDefault()
-
         const [subname] = this.props.item.annotation;
 
         fetch("/api/?class=" + subname)
@@ -365,10 +432,9 @@ class ConfigItem extends React.Component {
             child = (<Configuration path={path} config={childConfig} setJson={setJson}/>)
         } else if (annotation[0] === "Dict" || annotation[0] === "List" || annotation[0] === "Sequence") {
             // TODO(joelgrus): a dict needs to know how many valid items it has so that its parent can know if it's complete
-            child = (<DictOrList path={path} setJson={setJson} annotation={annotation}/>)
+            child = (<DictOrList path={path} setJson={setJson} setValue={this.setValue} annotation={annotation}/>)
             input = null
         }
-
 
         let className = "config-item"
         if (optional) {
@@ -380,15 +446,18 @@ class ConfigItem extends React.Component {
             className += " no-value"
         }
 
+        let renderedAnnotation = renderAnnotation(annotation) || "?"
+
+        if (optional) {
+            renderedAnnotation = "(optional, default=" + defaultValue + ") " + renderedAnnotation
+        }
+
         return (
             <div marginLeft={marginLeft} className={className}>
-                <span>{optional ? "(optional) " : ""}{name}:</span>
+                <span class="name">{name}:</span>
                 {input}
                 {remove}
-                <span>{renderAnnotation(annotation)} / </span>
-                <span>{configurable} /</span>
-                <span>{defaultValue} /</span>
-                <span>{comment} /</span>
+                <span class="annotation">{renderedAnnotation}</span>
                 {child}
             </div>
         )
