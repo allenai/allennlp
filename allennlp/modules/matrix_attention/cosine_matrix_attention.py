@@ -1,4 +1,3 @@
-
 import torch
 from overrides import overrides
 
@@ -9,7 +8,8 @@ from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 @MatrixAttention.register("cosine")
 class CosineMatrixAttention(MatrixAttention):
     """
-    Computes attention between every entry in matrix_1 with every entry in matrix_2 using cosine similarity.
+    Computes attention between every entry in matrix_1 with every entry in matrix_2 using cosine
+    similarity.
     """
 
     @overrides

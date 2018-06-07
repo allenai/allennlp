@@ -8,8 +8,7 @@ import torch
 from allennlp.common import Params
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
-from allennlp.modules.similarity_functions import SimilarityFunction
+from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.nn.decoding import BeamSearch
 from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
 from allennlp.models.model import Model
@@ -40,10 +39,9 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         Passed to super-class.
     encoder : ``Seq2SeqEncoder``
         Passed to super-class.
-    attention_function : ``SimilarityFunction``
+    input_attention : ``Attention``
         We compute an attention over the input question at each step of the decoder, using the
-        decoder hidden state as the query.  This is the similarity function we use for that
-        attention.
+        decoder hidden state as the query.  Passed to the DecoderStep.
     decoder_beam_search : ``BeamSearch``
         Beam search used to retrieve best sequences after training.
     max_decoding_steps : ``int``
@@ -56,7 +54,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                  sentence_embedder: TextFieldEmbedder,
                  action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
-                 attention_function: SimilarityFunction,
+                 input_attention: Attention,
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  dropout: float = 0.0) -> None:
@@ -68,7 +66,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         self._decoder_trainer = MaximumMarginalLikelihood()
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
-                                             attention_function=attention_function,
+                                             input_attention=input_attention,
                                              dropout=dropout)
         self._decoder_beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
@@ -182,11 +180,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         action_embedding_dim = params.pop_int('action_embedding_dim')
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
         dropout = params.pop_float('dropout', 0.0)
-        attention_function_type = params.pop("attention_function", None)
-        if attention_function_type is not None:
-            attention_function = SimilarityFunction.from_params(attention_function_type)
-        else:
-            attention_function = None
+        input_attention = Attention.from_params(params.pop("attention"))
         decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
         max_decoding_steps = params.pop_int("max_decoding_steps")
         params.assert_empty(cls.__name__)
@@ -194,7 +188,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                    sentence_embedder=sentence_embedder,
                    action_embedding_dim=action_embedding_dim,
                    encoder=encoder,
-                   attention_function=attention_function,
+                   input_attention=input_attention,
                    decoder_beam_search=decoder_beam_search,
                    max_decoding_steps=max_decoding_steps,
                    dropout=dropout)
