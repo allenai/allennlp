@@ -27,7 +27,7 @@
     "beam_size": 20,
     "max_num_finished_states": 20,
     "max_decoding_steps": 20,
-    "attention_function": {"type": "dot_product"},
+    "attention": {"type": "dot_product"},
     "checklist_cost_weight": 0.8,
     "dynamic_cost_weight": {
       "wait_num_epochs": 0,

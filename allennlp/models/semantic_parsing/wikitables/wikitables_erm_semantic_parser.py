@@ -13,9 +13,7 @@ from allennlp.models.archival import load_archive, Archive
 from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
 from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
 from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
-from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, FeedForward
-from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
-from allennlp.modules.similarity_functions import SimilarityFunction
+from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
 from allennlp.nn.decoding import ChecklistState
 from allennlp.nn.decoding.decoder_trainers import ExpectedRiskMinimization
 from allennlp.semparse import ParsingError
@@ -43,10 +41,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         The encoder to use for the input question. Passed to super class.
     entity_encoder : ``Seq2VecEncoder``
         The encoder to used for averaging the words of an entity. Passed to super class.
-    attention_function : ``SimilarityFunction``
+    input_attention : ``Attention``
         We compute an attention over the input question at each step of the decoder, using the
-        decoder hidden state as the query.  This is the similarity function we use for that
-        attention. Passed to super class.
+        decoder hidden state as the query.  Passed to WikiTablesDecoderStep.
     decoder_beam_size : ``int``
         Beam size to be used by the ExpectedRiskMinimization algorithm.
     decoder_num_finished_states : ``int``
@@ -95,7 +92,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                  encoder: Seq2SeqEncoder,
                  entity_encoder: Seq2VecEncoder,
                  mixture_feedforward: FeedForward,
-                 attention_function: SimilarityFunction,
+                 input_attention: Attention,
                  decoder_beam_size: int,
                  decoder_num_finished_states: int,
                  max_decoding_steps: int,
@@ -135,7 +132,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         self._num_unlinked_terminals = len(unlinked_terminals_global_indices)
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
-                                                   attention_function=attention_function,
+                                                   input_attention=input_attention,
                                                    num_start_types=self._num_start_types,
                                                    num_entity_types=self._num_entity_types,
                                                    mixture_feedforward=mixture_feedforward,
@@ -428,13 +425,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
             mixture_feedforward = FeedForward.from_params(mixture_feedforward_type)
         else:
             mixture_feedforward = None
-        # If no attention function is specified, we should not use attention, not attention with
-        # default similarity function.
-        attention_function_type = params.pop("attention_function", None)
-        if attention_function_type is not None:
-            attention_function = SimilarityFunction.from_params(attention_function_type)
-        else:
-            attention_function = None
+        input_attention = Attention.from_params(params.pop("attention"))
         decoder_beam_size = params.pop_int("decoder_beam_size")
         decoder_num_finished_states = params.pop_int("decoder_num_finished_states", None)
         max_decoding_steps = params.pop_int("max_decoding_steps")
@@ -453,7 +444,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                    encoder=encoder,
                    entity_encoder=entity_encoder,
                    mixture_feedforward=mixture_feedforward,
-                   attention_function=attention_function,
+                   input_attention=input_attention,
                    decoder_beam_size=decoder_beam_size,
                    decoder_num_finished_states=decoder_num_finished_states,
                    max_decoding_steps=max_decoding_steps,
