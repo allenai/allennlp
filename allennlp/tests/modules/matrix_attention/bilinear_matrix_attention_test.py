@@ -1,6 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
-
-import numpy
+# pylint: disable=no-self-use,invalid-name,protected-access
 from numpy.testing import assert_almost_equal
 import torch
 from torch.nn.parameter import Parameter
