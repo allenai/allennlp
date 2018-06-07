@@ -9,8 +9,7 @@ import torch
 from allennlp.common import Params
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
-from allennlp.modules.similarity_functions import SimilarityFunction
+from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.nn.decoding import DecoderTrainer, ChecklistState
 from allennlp.nn.decoding.decoder_trainers import ExpectedRiskMinimization
 from allennlp.models.archival import load_archive, Archive
@@ -44,10 +43,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         Passed to super-class.
     encoder : ``Seq2SeqEncoder``
         Passed to super-class.
-    attention_function : ``SimilarityFunction``
+    input_attention : ``Attention``
         We compute an attention over the input question at each step of the decoder, using the
-        decoder hidden state as the query.  This is the similarity function we use for that
-        attention.
+        decoder hidden state as the query.  Passed to the DecoderStep.
     beam_size : ``int``
         Beam size for the beam search used during training.
     max_num_finished_states : ``int``
@@ -82,7 +80,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                  sentence_embedder: TextFieldEmbedder,
                  action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
-                 attention_function: SimilarityFunction,
+                 input_attention: Attention,
                  beam_size: int,
                  max_num_finished_states: int,
                  max_decoding_steps: int,
@@ -108,7 +106,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         self._terminal_productions = set(NlvrWorld([]).terminal_productions.values())
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
-                                             attention_function=attention_function,
+                                             input_attention=input_attention,
                                              dropout=dropout,
                                              use_coverage=True)
         self._checklist_cost_weight = checklist_cost_weight
@@ -417,11 +415,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         action_embedding_dim = params.pop_int('action_embedding_dim')
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
         dropout = params.pop_float('dropout', 0.0)
-        attention_function_type = params.pop("attention_function", None)
-        if attention_function_type is not None:
-            attention_function = SimilarityFunction.from_params(attention_function_type)
-        else:
-            attention_function = None
+        input_attention = Attention.from_params(params.pop("attention"))
         beam_size = params.pop_int('beam_size')
         max_num_finished_states = params.pop_int('max_num_finished_states', None)
         normalize_beam_score_by_length = params.pop_bool('normalize_beam_score_by_length', False)
@@ -435,7 +429,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                    sentence_embedder=sentence_embedder,
                    action_embedding_dim=action_embedding_dim,
                    encoder=encoder,
-                   attention_function=attention_function,
+                   input_attention=input_attention,
                    beam_size=beam_size,
                    max_num_finished_states=max_num_finished_states,
                    dropout=dropout,
