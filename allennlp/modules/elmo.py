@@ -589,7 +589,6 @@ class _ElmoBiLm(torch.nn.Module):
             A list of tokens to precompute character convolutions for.
         """
         tokens = [ELMoCharacterMapper.bos_token, ELMoCharacterMapper.eos_token] + tokens
-        print(tokens)
         timesteps = 32
         batch_size = 32
         chunked_tokens = lazy_groups_of(iter(tokens), timesteps)

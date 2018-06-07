@@ -1,3 +1,4 @@
+from typing import List
 import torch
 
 from allennlp.common import Params
@@ -39,7 +40,8 @@ class ElmoTokenEmbedder(TokenEmbedder):
                  do_layer_norm: bool = False,
                  dropout: float = 0.5,
                  requires_grad: bool = False,
-                 projection_dim: int = None) -> None:
+                 projection_dim: int = None,
+                 vocab_to_cache: List[str] = None) -> None:
         super(ElmoTokenEmbedder, self).__init__()
 
         self._elmo = Elmo(options_file,
@@ -47,7 +49,8 @@ class ElmoTokenEmbedder(TokenEmbedder):
                           1,
                           do_layer_norm=do_layer_norm,
                           dropout=dropout,
-                          requires_grad=requires_grad)
+                          requires_grad=requires_grad,
+                          vocab_to_cache=vocab_to_cache)
         if projection_dim:
             self._projection = torch.nn.Linear(self._elmo.get_output_dim(), projection_dim)
         else:
@@ -86,6 +89,11 @@ class ElmoTokenEmbedder(TokenEmbedder):
         requires_grad = params.pop('requires_grad', False)
         do_layer_norm = params.pop_bool('do_layer_norm', False)
         dropout = params.pop_float("dropout", 0.5)
+        namespace_to_cache = params.pop("namespace_to_cache", None)
+        if namespace_to_cache is not None:
+            vocab_to_cache = list(vocab.get_token_to_index_vocabulary(namespace_to_cache).keys())
+        else:
+            vocab_to_cache = None
         projection_dim = params.pop_int("projection_dim", None)
         params.assert_empty(cls.__name__)
         return cls(options_file=options_file,
@@ -93,4 +101,5 @@ class ElmoTokenEmbedder(TokenEmbedder):
                    do_layer_norm=do_layer_norm,
                    dropout=dropout,
                    requires_grad=requires_grad,
-                   projection_dim=projection_dim)
+                   projection_dim=projection_dim,
+                   vocab_to_cache=vocab_to_cache)
