@@ -151,7 +151,7 @@ class TestElmoBiLm(ElmoTestCase):
         sentences = [["This", "is", "a", "sentence"],
                      ["Here", "'s", "one"],
                      ["Another", "one"]]
-        vocab, tensor = self.batch_to_ids(sentences)
+        vocab, tensor = self.get_vocab_and_both_elmo_indexed_ids(sentences)
         words_to_cache = list(vocab.get_token_to_index_vocabulary("tokens").keys())
         elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file)
         elmo_bilm.eval()

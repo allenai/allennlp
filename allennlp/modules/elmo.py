@@ -481,8 +481,7 @@ class _ElmoBiLm(torch.nn.Module):
                             "This behaviour is not guaranteed to be well defined, particularly. "
                             "if not all of your inputs will occur in the vocabulary cache.")
 
-        from allennlp.modules.token_embedders import Embedding # type: ignore
-        self._word_embedding: Embedding = None
+        self._word_embedding = None
         if vocab_to_cache:
             logging.info("Caching character cnn layers for words in vocabulary.")
             # This sets 3 attributes, _word_embedding, _bos_embedding and _eos_embedding.
@@ -536,7 +535,7 @@ class _ElmoBiLm(torch.nn.Module):
         if self._word_embedding is not None:
             mask_without_bos_eos = (inputs > 0).long()
             # The character cnn part is cached - just look it up.
-            embedded_inputs = self._word_embedding(inputs)
+            embedded_inputs = self._word_embedding(inputs) # type: ignore
             # shape (batch_size, timesteps + 2, embedding_dim)
             type_representation, mask = add_sentence_boundary_token_ids(
                     embedded_inputs,
