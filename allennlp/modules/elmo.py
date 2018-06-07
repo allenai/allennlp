@@ -76,6 +76,7 @@ class Elmo(torch.nn.Module):
                  requires_grad: bool = False,
                  do_layer_norm: bool = False,
                  dropout: float = 0.5,
+                 vocab_to_cache: List[str] = None,
                  module: torch.nn.Module = None) -> None:
         super(Elmo, self).__init__()
 
@@ -86,7 +87,11 @@ class Elmo(torch.nn.Module):
                         "Don't provide options_file or weight_file with module")
             self._elmo_lstm = module
         else:
-            self._elmo_lstm = _ElmoBiLm(options_file, weight_file, requires_grad=requires_grad)
+            self._elmo_lstm = _ElmoBiLm(options_file,
+                                        weight_file,
+                                        requires_grad=requires_grad,
+                                        vocab_to_cache=vocab_to_cache)
+        self._has_cached_vocab = vocab_to_cache is not None
         self._dropout = Dropout(p=dropout)
         self._scalar_mixes: Any = []
         for k in range(num_output_representations):
@@ -118,8 +123,12 @@ class Elmo(torch.nn.Module):
         """
         # reshape the input if needed
         original_shape = inputs.size()
-        timesteps, num_characters = original_shape[-2:]
-        if len(original_shape) > 3:
+
+        if self._has_cached_vocab and len(original_shape) > 2:
+            timesteps = original_shape[-1]
+            reshaped_inputs = inputs.view(-1, timesteps)
+        elif len(original_shape) > 3:
+            timesteps, num_characters = original_shape[-2:]
             reshaped_inputs = inputs.view(-1, timesteps, num_characters)
         else:
             reshaped_inputs = inputs
@@ -140,7 +149,11 @@ class Elmo(torch.nn.Module):
             representations.append(self._dropout(representation_without_bos_eos))
 
         # reshape if necessary
-        if len(original_shape) > 3:
+        if self._has_cached_vocab and len(original_shape) > 2:
+            mask = mask_without_bos_eos.view(original_shape)
+            elmo_representations = [representation.view(original_shape + (-1, ))
+                                    for representation in representations]
+        elif len(original_shape) > 3:
             mask = mask_without_bos_eos.view(original_shape[:-1])
             elmo_representations = [representation.view(original_shape[:-1] + (-1, ))
                                     for representation in representations]
@@ -472,7 +485,7 @@ class _ElmoBiLm(torch.nn.Module):
         self._word_embedding: Embedding = None
         if vocab_to_cache:
             logging.info("Caching character cnn layers for words in vocabulary.")
-            # This sets the two above attributes, _word_embedidng and _id_lookup.
+            # This sets 3 attributes, _word_embedding, _bos_embedding and _eos_embedding.
             # They are set in the method so it can be accessed from outside the
             # constructor.
             self.create_cached_cnn_embeddings(vocab_to_cache)
@@ -562,13 +575,15 @@ class _ElmoBiLm(torch.nn.Module):
         if all of the words in the batch have cached, the word ids are looked up from
         an embedding, rather than being computed on the fly via the CNN encoder.
 
-        This function sets 2 attributes:
+        This function sets 3 attributes:
 
         _word_embedding : ``torch.Tensor``
             The word embedding for each word in the tokens passed to this method.
-        _id_lookup : ``torch.Tensor``
-            This is the dictionary lookup containing the 50 dimensional character ids
-            mapped to their word embedding ids.
+        _bos_embedding : ``torch.Tensor``
+            The embedding for the BOS token.
+        _eos_embedding : ``torch.Tensor``
+            The embedding for the EOS token.
+
         Parameters
         ----------
         tokens : ``List[str]``, required.

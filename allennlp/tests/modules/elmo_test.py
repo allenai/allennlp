@@ -65,6 +65,24 @@ class ElmoTestCase(AllenNlpTestCase):
 
         return sentences, expected_lm_embeddings
 
+    @staticmethod
+    def get_vocab_and_both_elmo_indexed_ids(batch: List[List[str]]):
+        instances = []
+        indexer = ELMoTokenCharactersIndexer()
+        indexer2 = SingleIdTokenIndexer()
+        for sentence in batch:
+            tokens = [Token(token) for token in sentence]
+            field = TextField(tokens,
+                              {'character_ids': indexer,
+                               'tokens': indexer2})
+            instance = Instance({"elmo": field})
+            instances.append(instance)
+
+        dataset = Batch(instances)
+        vocab = Vocabulary.from_instances(instances)
+        dataset.index_instances(vocab)
+        return vocab, dataset.as_tensor_dict()["elmo"]
+
 
 class TestElmoBiLm(ElmoTestCase):
     def test_elmo_bilm(self):
@@ -120,8 +138,8 @@ class TestElmoBiLm(ElmoTestCase):
     def test_elmo_char_cnn_cache_raises_error_for_uncached_words(self):
         sentences = [["This", "is", "OOV"], ["so", "is", "this"]]
         in_vocab_sentences = [["here", "is"], ["a", "vocab"]]
-        oov_tensor = self.batch_to_ids(sentences)[1]
-        vocab, in_vocab_tensor = self.batch_to_ids(in_vocab_sentences)
+        oov_tensor = self.get_vocab_and_both_elmo_indexed_ids(sentences)[1]
+        vocab, in_vocab_tensor = self.get_vocab_and_both_elmo_indexed_ids(in_vocab_sentences)
         words_to_cache = list(vocab.get_token_to_index_vocabulary("tokens").keys())
         elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file, vocab_to_cache=words_to_cache)
 
@@ -149,25 +167,6 @@ class TestElmoBiLm(ElmoTestCase):
         for activation_cached, activation in zip(cached["activations"], no_cache["activations"]):
             numpy.testing.assert_array_almost_equal(activation_cached.data.cpu().numpy(),
                                                     activation.data.cpu().numpy(), decimal=6)
-
-    @staticmethod
-    def batch_to_ids(batch: List[List[str]]):
-        instances = []
-        indexer = ELMoTokenCharactersIndexer()
-        indexer2 = SingleIdTokenIndexer()
-        for sentence in batch:
-            tokens = [Token(token) for token in sentence]
-            field = TextField(tokens,
-                              {'character_ids': indexer,
-                               'tokens': indexer2})
-            instance = Instance({"elmo": field})
-            instances.append(instance)
-
-        dataset = Batch(instances)
-        vocab = Vocabulary.from_instances(instances)
-        dataset.index_instances(vocab)
-        return vocab, dataset.as_tensor_dict()["elmo"]
-
 
 class TestElmo(ElmoTestCase):
     def setUp(self):
@@ -247,6 +246,26 @@ class TestElmo(ElmoTestCase):
         assert len(elmo_representations) == 2
         for k in range(2):
             assert list(elmo_representations[k].size()) == [2, 7, 32]
+
+    def test_elmo_bilm_can_handle_higher_dimensional_input_with_cache(self):
+        sentences = [["This", "is", "a", "sentence"],
+                     ["Here", "'s", "one"],
+                     ["Another", "one"]]
+        vocab, tensor = self.get_vocab_and_both_elmo_indexed_ids(sentences)
+        words_to_cache = list(vocab.get_token_to_index_vocabulary("tokens").keys())
+        elmo_bilm = Elmo(self.options_file, self.weight_file, 1, vocab_to_cache=words_to_cache)
+        elmo_bilm.eval()
+
+        individual_dim = elmo_bilm(tensor["tokens"])
+        elmo_bilm = Elmo(self.options_file, self.weight_file, 1, vocab_to_cache=words_to_cache)
+        elmo_bilm.eval()
+
+        expanded_tensor = torch.stack([tensor["tokens"] for _ in range(4)], dim=1)
+        expanded_result = elmo_bilm(expanded_tensor)
+        split_result = [x.squeeze(1) for x in torch.split(expanded_result["elmo_representations"][0], 1, dim=1)]
+        for expanded in split_result:
+            numpy.testing.assert_array_almost_equal(expanded.data.cpu().numpy(),
+                                                    individual_dim["elmo_representations"][0].data.cpu().numpy())
 
 
 class TestElmoRequiresGrad(ElmoTestCase):
