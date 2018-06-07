@@ -468,7 +468,8 @@ class _ElmoBiLm(torch.nn.Module):
                             "This behaviour is not guaranteed to be well defined, particularly. "
                             "if not all of your inputs will occur in the vocabulary cache.")
 
-        self._word_embedding = None
+        from allennlp.modules.token_embedders import Embedding # type: ignore
+        self._word_embedding: Embedding = None
         if vocab_to_cache:
             logging.info("Caching character cnn layers for words in vocabulary.")
             # This sets the two above attributes, _word_embedidng and _id_lookup.
@@ -520,27 +521,30 @@ class _ElmoBiLm(torch.nn.Module):
         markers.
         """
         if self._word_embedding is not None:
-            print(inputs)
             mask_without_bos_eos = (inputs > 0).long()
             # The character cnn part is cached - just look it up.
-            type_representation = self._word_embedding(inputs)
+            embedded_inputs = self._word_embedding(inputs)
             # shape (batch_size, timesteps + 2, embedding_dim)
             type_representation, mask = add_sentence_boundary_token_ids(
-                    type_representation,
+                    embedded_inputs,
                     mask_without_bos_eos,
                     self._bos_embedding,
                     self._eos_embedding
             )
-
         else:
             token_embedding = self._token_embedder(inputs)
-            type_representation = token_embedding['token_embedding']
             mask = token_embedding['mask']
+            type_representation = token_embedding['token_embedding']
         lstm_outputs = self._elmo_lstm(type_representation, mask)
 
         # Prepare the output.  The first layer is duplicated.
+        # Because of minor differences in how masking is applied depending
+        # on whether the char cnn layers are cached, we'll be defensive and
+        # multiply by the mask here. It's not strictly necessary, as the
+        # mask passed on is correct, but the values in the padded areas
+        # of the char cnn representations can change.
         output_tensors = [
-                torch.cat([type_representation, type_representation], dim=-1)
+                torch.cat([type_representation, type_representation], dim=-1) * mask.float().unsqueeze(-1)
         ]
         for layer_activations in torch.chunk(lstm_outputs, lstm_outputs.size(0), dim=0):
             output_tensors.append(layer_activations.squeeze(0))
@@ -570,7 +574,8 @@ class _ElmoBiLm(torch.nn.Module):
         tokens : ``List[str]``, required.
             A list of tokens to precompute character convolutions for.
         """
-        tokens = [ELMoCharacterMapper.bos_token, ELMoCharacterMapper.eos_token] + list(set(tokens))
+        tokens = [ELMoCharacterMapper.bos_token, ELMoCharacterMapper.eos_token] + tokens
+        print(tokens)
         timesteps = 32
         batch_size = 32
         chunked_tokens = lazy_groups_of(iter(tokens), timesteps)
@@ -580,26 +585,30 @@ class _ElmoBiLm(torch.nn.Module):
         for batch in lazy_groups_of(chunked_tokens, batch_size):
             # Shape (batch_size, 32, 32, 50)
             batched_tensor = batch_to_ids(batch)
-
             # NOTE: This device check is for when a user calls this method having
             # already placed the model on a device. If this is called in the
             # constructor, it will probably happen on the CPU. This isn't too bad,
             # because it's only a few convolutions and will likely be very fast.
             if device >= 0:
                 batched_tensor = batched_tensor.cuda(device)
-            token_embedding = self._token_embedder(batched_tensor)["token_embedding"]
+            output = self._token_embedder(batched_tensor)
+            token_embedding = output["token_embedding"]
+            mask = output["mask"]
+            token_embedding, _ = remove_sentence_boundaries(token_embedding, mask)
             all_embeddings.append(token_embedding.view(-1, token_embedding.size(-1)))
         full_embedding = torch.cat(all_embeddings, 0)
 
         # We might have some trailing embeddings from padding in the batch, so
         # we clip the embedding and lookup to the right size.
+        full_embedding = full_embedding[:len(tokens), :]
         embedding = full_embedding[2:len(tokens), :]
         vocab_size, embedding_dim = list(embedding.size())
 
         from allennlp.modules.token_embedders import Embedding # type: ignore
         self._bos_embedding = full_embedding[0, :]
         self._eos_embedding = full_embedding[1, :]
-        self._word_embedding = Embedding(vocab_size,
+        self._word_embedding = Embedding(vocab_size, # type: ignore
                                          embedding_dim,
                                          weight=embedding.data,
-                                         trainable=self._requires_grad)
+                                         trainable=self._requires_grad,
+                                         padding_index=0)

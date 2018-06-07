@@ -122,7 +122,7 @@ class TestElmoBiLm(ElmoTestCase):
         in_vocab_sentences = [["here", "is"], ["a", "vocab"]]
         oov_tensor = self.batch_to_ids(sentences)[1]
         vocab, in_vocab_tensor = self.batch_to_ids(in_vocab_sentences)
-        words_to_cache = vocab.get_token_to_index_vocabulary("tokens").keys()
+        words_to_cache = list(vocab.get_token_to_index_vocabulary("tokens").keys())
         elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file, vocab_to_cache=words_to_cache)
 
         elmo_bilm(in_vocab_tensor["tokens"])
@@ -134,24 +134,22 @@ class TestElmoBiLm(ElmoTestCase):
                      ["Here", "'s", "one"],
                      ["Another", "one"]]
         vocab, tensor = self.batch_to_ids(sentences)
-        words_to_cache = vocab.get_token_to_index_vocabulary("tokens").keys()
-        print(list(words_to_cache))
+        words_to_cache = list(vocab.get_token_to_index_vocabulary("tokens").keys())
         elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file)
         elmo_bilm.eval()
         no_cache = elmo_bilm(tensor["character_ids"])
- 
+
         # ELMo is stateful, so we need to actually re-initialise it for this comparison to work.
-        elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file)
+        elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file, vocab_to_cache=words_to_cache)
         elmo_bilm.eval()
-        elmo_bilm.create_cached_cnn_embeddings(words_to_cache)
         cached = elmo_bilm(tensor["tokens"])
- 
+
         numpy.testing.assert_array_almost_equal(no_cache["mask"].data.cpu().numpy(),
                                                 cached["mask"].data.cpu().numpy())
         for activation_cached, activation in zip(cached["activations"], no_cache["activations"]):
             numpy.testing.assert_array_almost_equal(activation_cached.data.cpu().numpy(),
-                                                    activation.data.cpu().numpy())
-    
+                                                    activation.data.cpu().numpy(), decimal=6)
+
     @staticmethod
     def batch_to_ids(batch: List[List[str]]):
         instances = []
@@ -160,8 +158,8 @@ class TestElmoBiLm(ElmoTestCase):
         for sentence in batch:
             tokens = [Token(token) for token in sentence]
             field = TextField(tokens,
-                            {'character_ids': indexer,
-                             'tokens': indexer2})
+                              {'character_ids': indexer,
+                               'tokens': indexer2})
             instance = Instance({"elmo": field})
             instances.append(instance)
 
