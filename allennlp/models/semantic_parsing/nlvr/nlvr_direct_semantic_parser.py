@@ -8,6 +8,7 @@ import torch
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.nn import Activation
 from allennlp.nn.decoding import BeamSearch
 from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
 from allennlp.models.model import Model
@@ -66,9 +67,10 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
                                                    input_attention=attention,
+                                                   num_start_types=1,
+                                                   activation=Activation.by_name('tanh')(),
                                                    predict_start_type_separately=False,
                                                    add_action_bias=False,
-                                                   num_start_types=1,
                                                    dropout=dropout)
         self._decoder_beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps

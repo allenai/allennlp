@@ -13,7 +13,7 @@ from allennlp.common.checks import check_dimensions_match
 from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
 from allennlp.modules import Attention, FeedForward
 from allennlp.modules.token_embedders import Embedding
-from allennlp.nn import util
+from allennlp.nn import util, Activation
 from allennlp.nn.decoding import DecoderStep, RnnState
 
 
@@ -25,6 +25,8 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
     action_embedding_dim : ``int``
     input_attention : ``Attention``
     num_start_types : ``int``
+    activation : ``Activation``, optional (default=relu)
+        The activation that gets applied to the decoder LSTM input and to the action query.
     predict_start_type_separately : ``bool``, optional (default=True)
         If ``True``, we will predict the initial action (which is typically the base type of the
         logical form) using a different mechanism than our typical action decoder.  We basically
@@ -47,6 +49,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                  action_embedding_dim: int,
                  input_attention: Attention,
                  num_start_types: int,
+                 activation: Activation = Activation.by_name('relu')(),
                  predict_start_type_separately: bool = True,
                  add_action_bias: bool = True,
                  mixture_feedforward: FeedForward = None,
@@ -56,6 +59,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         self._mixture_feedforward = mixture_feedforward
         self._input_attention = input_attention
         self._add_action_bias = add_action_bias
+        self._activation = activation
 
         self._num_start_types = num_start_types
         self._predict_start_type_separately = predict_start_type_separately
@@ -138,7 +142,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # (group_size, decoder_input_dim)
         projected_input = self._input_projection_layer(torch.cat([attended_question,
                                                                   previous_action_embedding], -1))
-        decoder_input = torch.nn.functional.relu(projected_input)
+        decoder_input = self._activation(projected_input)
 
         hidden_state, memory_cell = self._decoder_cell(decoder_input, (hidden_state, memory_cell))
         hidden_state = self._dropout(hidden_state)
@@ -152,7 +156,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         action_query = torch.cat([hidden_state, attended_question], dim=-1)
 
         # (group_size, action_embedding_dim)
-        projected_query = torch.nn.functional.relu(self._output_projection_layer(action_query))
+        projected_query = self._activation(self._output_projection_layer(action_query))
         predicted_action_embeddings = self._dropout(projected_query)
         if self._add_action_bias:
             # NOTE: It's important that this happens right before the dot product with the action
