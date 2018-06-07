@@ -60,6 +60,12 @@ class Elmo(torch.nn.Module):
         Should we apply layer normalization (passed to ``ScalarMix``)?
     dropout : ``float``, optional, (default = 0.5).
         The dropout to be applied to the ELMo representations.
+    vocab_to_cache : ``List[str]``, optional, (default = 0.5).
+        A list of words to pre-compute and cache character convolutions
+        for. If you use this option, Elmo expects that you pass word
+        indices of shape (batch_size, timesteps) to forward, instead
+        of character indices. If you use this option and pass a word which
+        wasn't pre-cached, this will break.
     module : ``torch.nn.Module``, optional, (default = None).
         If provided, then use this module instead of the pre-trained ELMo biLM.
         If using this option, then pass ``None`` for both ``options_file``
@@ -107,10 +113,10 @@ class Elmo(torch.nn.Module):
         """
         Parameters
         ----------
-        inputs : ``torch.Tensor``
-            Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
-            We also accept tensors with additional optional dimensions:
-            ``(batch_size, dim0, dim1, ..., dimn, timesteps, 50)``
+        inputs: ``torch.Tensor``, required.
+        Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
+        If you passed a cached vocab, you can instead pass a tensor of shape ``(batch_size, timesteps)``,
+        which represent word ids which have been pre-cached.
 
         Returns
         -------
@@ -465,6 +471,12 @@ class _ElmoBiLm(torch.nn.Module):
         ELMo hdf5 weight file
     requires_grad: ``bool``, optional
         If True, compute gradient of ELMo parameters for fine tuning.
+    vocab_to_cache : ``List[str]``, optional, (default = 0.5).
+        A list of words to pre-compute and cache character convolutions
+        for. If you use this option, _ElmoBiLm expects that you pass word
+        indices of shape (batch_size, timesteps) to forward, instead
+        of character indices. If you use this option and pass a word which
+        wasn't pre-cached, this will break.
     """
     def __init__(self,
                  options_file: str,
@@ -513,11 +525,9 @@ class _ElmoBiLm(torch.nn.Module):
         Parameters
         ----------
         inputs: ``torch.Tensor``, required.
-            The shape depends on whether you have cached character convolutions.
-            If so, we have a tensor of shape ``(batch_size, timesteps)`` of
-            word ids representing the current batch. Otherwise, we have shape
-            ``(batch_size, timesteps, 50)`` of character ids representing the
-            current batch.
+            Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
+            If you passed a cached vocab, you can instead pass a tensor of shape ``(batch_size, timesteps)``,
+            which represent word ids which have been pre-cached.
 
         Returns
         -------
@@ -571,8 +581,8 @@ class _ElmoBiLm(torch.nn.Module):
         Given a list of tokens, this method precomputes word representations
         by running just the character convolutions and highway layers of elmo,
         essentially creating uncontextual word vectors. On subsequent forward passes,
-        if all of the words in the batch have cached, the word ids are looked up from
-        an embedding, rather than being computed on the fly via the CNN encoder.
+        the word ids are looked up from an embedding, rather than being computed on
+        the fly via the CNN encoder.
 
         This function sets 3 attributes:
 
@@ -596,7 +606,7 @@ class _ElmoBiLm(torch.nn.Module):
         all_embeddings = []
         device = get_device_of(next(self.parameters()))
         for batch in lazy_groups_of(chunked_tokens, batch_size):
-            # Shape (batch_size, 32, 32, 50)
+            # Shape (batch_size, timesteps, 50)
             batched_tensor = batch_to_ids(batch)
             # NOTE: This device check is for when a user calls this method having
             # already placed the model on a device. If this is called in the
@@ -608,7 +618,8 @@ class _ElmoBiLm(torch.nn.Module):
             token_embedding = output["token_embedding"]
             mask = output["mask"]
             token_embedding, _ = remove_sentence_boundaries(token_embedding, mask)
-            all_embeddings.append(token_embedding.view(-1, token_embedding.size(-1)))
+            all_embeddings.append(token_embedding.view(timesteps * batch_size,
+                                                       token_embedding.size(-1)))
         full_embedding = torch.cat(all_embeddings, 0)
 
         # We might have some trailing embeddings from padding in the batch, so

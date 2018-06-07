@@ -33,6 +33,12 @@ class ElmoTokenEmbedder(TokenEmbedder):
         If given, we will project the ELMo embedding down to this dimension.  We recommend that you
         try using ELMo with a lot of dropout and no projection first, but we have found a few cases
         where projection helps (particulary where there is very limited training data).
+    vocab_to_cache : ``List[str]``, optional, (default = 0.5).
+        A list of words to pre-compute and cache character convolutions
+        for. If you use this option, the ElmoTokenEmbedder expects that you pass word
+        indices of shape (batch_size, timesteps) to forward, instead
+        of character indices. If you use this option and pass a word which
+        wasn't pre-cached, this will break.
     """
     def __init__(self,
                  options_file: str,
@@ -65,6 +71,8 @@ class ElmoTokenEmbedder(TokenEmbedder):
         ----------
         inputs: ``torch.Tensor``
             Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
+            If you passed a cached vocab, you can instead pass a tensor of shape ``(batch_size, timesteps)``,
+            which represent word ids which have been pre-cached.
 
         Returns
         -------
