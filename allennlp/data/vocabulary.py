@@ -155,13 +155,17 @@ class Vocabulary:
         regardless of their count, depending on the value of ``only_include_pretrained_words``.
         Words which appear in the pretrained embedding file but not in the data are NOT included
         in the Vocabulary.
-    only_include_pretrained_words : bool, optional (default = False)
+    only_include_pretrained_words : ``bool``, optional (default=False)
         This defines the stategy for using any pretrained embedding files which may have been
         specified in ``pretrained_files``. If False, an inclusive stategy is used: and words
         which are in the ``counter`` and in the pretrained file are added to the ``Vocabulary``,
         regardless of whether their count exceeds ``min_count`` or not. If True, we use an
         exclusive strategy: words are only included in the Vocabulary if they are in the pretrained
         embedding file (their count must still be at least ``min_count``).
+    tokens_to_add : ``Dict[str, List[str]]``, optional (default=None)
+        If given, this is a list of tokens to add to the vocabulary, keyed by the namespace to add
+        the tokens to.  This is a way to be sure that certain items appear in your vocabulary,
+        regardless of any other vocabulary computation.
     """
     def __init__(self,
                  counter: Dict[str, Dict[str, int]] = None,
