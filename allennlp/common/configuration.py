@@ -10,6 +10,7 @@ import json
 import re
 
 import torch
+from numpydoc.docscrape import NumpyDocString
 
 from allennlp.common import Registrable, JsonDict
 from allennlp.data.dataset_readers import DatasetReader
@@ -183,6 +184,33 @@ def _get_config_type(cla55: type) -> Optional[str]:
 
     return None
 
+def _docspec_comments(obj) -> Dict[str, str]:
+    """
+    Inspect the docstring and get the comments for each parameter.
+    """
+    # Sometimes our docstring is on the class, and sometimes it's on the initializer,
+    # so we've got to check both.
+    class_docstring = getattr(obj, '__doc__', None)
+    init_docstring = getattr(obj.__init__, '__doc__', None) if hasattr(obj, '__init__') else None
+
+    docstring = class_docstring or init_docstring or ''
+
+    doc = NumpyDocString(docstring)
+    params = doc["Parameters"]
+    comments: Dict[str, str] = {}
+
+    for line in params:
+        # It looks like when there's not a space after the parameter name,
+        # numpydocstring parses it incorrectly.
+        name_bad = line[0]
+        name = name_bad.split(":")[0]
+
+        # Sometimes the line has 3 fields, sometimes it has 4 fields.
+        comment = "\n".join(line[-1])
+
+        comments[name] = comment
+
+    return comments
 
 def _auto_config(cla55: Type[T]) -> Config[T]:
     """
@@ -208,6 +236,7 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
         names_to_ignore.add("tensor")
 
     argspec = inspect.getfullargspec(function_to_inspect)
+    comments = _docspec_comments(cla55)
 
     items: List[ConfigItem] = []
 
@@ -223,6 +252,7 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
         if name in names_to_ignore:
             continue
         annotation = argspec.annotations.get(name)
+        comment = comments.get(name)
 
         # Don't include Model, the only place you'd specify that is top-level.
         if annotation == Model:
@@ -244,7 +274,11 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
         if cla55 == Trainer and annotation == torch.optim.Optimizer:
             annotation = AllenNLPOptimizer
 
-        items.append(ConfigItem(name, annotation, default))
+        # Hack in embedding num_embeddings as optional (it can be inferred from the pretrained file)
+        if cla55 == Embedding and name == "num_embeddings":
+            default = None
+
+        items.append(ConfigItem(name, annotation, default, comment))
 
     # More hacks, Embedding
     if cla55 == Embedding:

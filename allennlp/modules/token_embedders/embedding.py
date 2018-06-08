@@ -38,7 +38,7 @@ class Embedding(TokenEmbedder):
 
     Parameters
     ----------
-    num_embeddings :, int:
+    num_embeddings : int:
         Size of the dictionary of embeddings (vocabulary size).
     embedding_dim : int
         The size of each embedding vector.
