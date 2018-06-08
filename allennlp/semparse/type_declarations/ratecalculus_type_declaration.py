@@ -44,25 +44,44 @@ def add_common_name_with_type(name, mapping, type_signature):
     COMMON_NAME_MAPPING[name] = mapping
     COMMON_TYPE_SIGNATURE[mapping] = type_signature
 
-# Rate Calculus
-add_common_name_with_type("Value", "V1", VALUE_TYPE)
-add_common_name_with_type("Rate", "R1", RATE_TYPE)
-add_common_name_with_type("Join", "J1", UNION_TYPE)
+# Rate Calculus Operators
+add_common_name_with_type("Value", "V", VALUE_TYPE)
+add_common_name_with_type("Rate", "R", RATE_TYPE)
+add_common_name_with_type("Join", "J", UNION_TYPE)
 
-# Linear Algebra
+# Linear Algebra Operators
 add_common_name_with_type("And", "A", CONJUNCTION_TYPE)
 add_common_name_with_type("Equals", "E", BINARY_NUM_TO_BOOL_OP_TYPE)
-add_common_name_with_type("Plus", "P1", BINARY_NUM_OP_TYPE)
-add_common_name_with_type("Minus", "M1", BINARY_NUM_OP_TYPE)
-add_common_name_with_type("Times", "T1", BINARY_NUM_OP_TYPE)
-add_common_name_with_type("Div", "D1", BINARY_NUM_OP_TYPE)
+add_common_name_with_type("Plus", "P", BINARY_NUM_OP_TYPE)
+add_common_name_with_type("Minus", "M", BINARY_NUM_OP_TYPE)
+add_common_name_with_type("Times", "T", BINARY_NUM_OP_TYPE)
+add_common_name_with_type("Div", "D", BINARY_NUM_OP_TYPE)
 
-# Dimensions
-add_common_name_with_type("Dollar", "D", DIMENSION_TYPE)
-add_common_name_with_type("Unit", "U", DIMENSION_TYPE)
+# Object Dimensions
+add_common_name_with_type("Unit0", "U0", DIMENSION_TYPE)
+add_common_name_with_type("Unit1", "U1", DIMENSION_TYPE)
+add_common_name_with_type("Unit2", "U2", DIMENSION_TYPE)
+add_common_name_with_type("Unit3", "U3", DIMENSION_TYPE)
+add_common_name_with_type("Unit4", "U4", DIMENSION_TYPE)
+add_common_name_with_type("Dollar", "U5", DIMENSION_TYPE)
+add_common_name_with_type("Unit", "U6", DIMENSION_TYPE)
 
-# Variables
-add_common_name_with_type("fb:s", "S", OBJECT_TYPE)
-add_common_name_with_type("fb:t", "T", OBJECT_TYPE)
-add_common_name_with_type("fb:p", "P", NUMBER_TYPE)
-add_common_name_with_type("fb:q", "Q", NUMBER_TYPE)
+# Object Variables
+add_common_name_with_type("o0", "O0", OBJECT_TYPE)
+add_common_name_with_type("o1", "O1", OBJECT_TYPE)
+add_common_name_with_type("o2", "O2", OBJECT_TYPE)
+add_common_name_with_type("o3", "O3", OBJECT_TYPE)
+add_common_name_with_type("o4", "O4", OBJECT_TYPE)
+add_common_name_with_type("o5", "O5", OBJECT_TYPE)
+
+# Numerical Variables
+add_common_name_with_type("x0", "X0", NUMBER_TYPE)
+add_common_name_with_type("x1", "X1", NUMBER_TYPE)
+add_common_name_with_type("x2", "X2", NUMBER_TYPE)
+add_common_name_with_type("x3", "X3", NUMBER_TYPE)
+add_common_name_with_type("x4", "X4", NUMBER_TYPE)
+add_common_name_with_type("x5", "X5", NUMBER_TYPE)
+
+# Numerical Query Variables
+add_common_name_with_type("q0", "Q0", NUMBER_TYPE)
+add_common_name_with_type("q1", "Q1", NUMBER_TYPE)

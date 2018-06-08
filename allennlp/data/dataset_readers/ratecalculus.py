@@ -59,8 +59,8 @@ class RateCalculusDatasetReader(DatasetReader):
 
             for question in list(questions):
                 sem = question["lSemantics"]
-                if sem == "":
-                    sem = "(Equals fb:p fb:q)"
+                #if sem == "":
+                #    sem = "(Equals fb:p fb:q)"
                 instance = self.text_to_instance(question["sQuestion"], [sem])
                 if instance is not None:
                     yield instance

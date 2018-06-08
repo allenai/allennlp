@@ -32,6 +32,7 @@ MONTH_NUMBERS = {
         'dec': 12,
         }
 ORDER_OF_MAGNITUDE_WORDS = {'hundred': 100, 'thousand': 1000, 'million': 1000000}
+
 NUMBER_WORDS = {
         'zero': 0,
         'one': 1,
@@ -56,6 +57,68 @@ NUMBER_WORDS = {
         'tenth': 10,
         **MONTH_NUMBERS,
         }
+
+MULTIPLICATIVE_NUMBER_WORDS = {
+        'half': 0.5,
+        'once': 1,
+        'twice': 2,
+        'thrice': 3
+}
+
+MULTIPLIERS = {
+        'single': 1,
+        'double': 2,
+        'triple': 3
+}
+
+COIN_VALUES = {
+        'dime': 0.1,
+        'dimes': 0.1,
+        'nickel': 0.05,
+        'nickels': 0.05
+}
+
+LEG_COUNT = {
+        'chicken': 2,
+        'chickens': 2,
+        'calf': 4,
+        'calves': 4,
+        'cow': 4,
+        'cows': 4,
+        'duck': 2,
+        'ducks': 2,
+        'duckling': 2,
+        'ducklings': 2,
+        'goat': 4,
+        'goats': 4,
+        'goose': 2,
+        'geese': 2,
+        'hen': 2,
+        'hens': 2,
+        'horse': 4,
+        'horses': 4,
+        'lamb': 4,
+        'lambs': 4,
+        'sheep': 4,
+        'rabbit': 4,
+        'rabbits': 4,
+        'rooster': 2,
+        'roosters': 2,
+        'turkey': 2,
+        'turkeys': 2,
+        'bunny': 4,
+        'bunnies': 4,
+        'pig': 4,
+        'pigs': 4,
+        'sow': 4,
+        'sows': 4,
+        'piglet': 4,
+        'piglets': 4,
+        'dog': 4,
+        'dogs': 4,
+        'cat': 4,
+        'cats': 4
+}
 
 class QuestionKnowledgeGraph(KnowledgeGraph):
     """
@@ -99,18 +162,40 @@ class QuestionKnowledgeGraph(KnowledgeGraph):
         number found in the input tokens.
         """
         numbers = []
+        #print("Tokens: ", tokens)
         for i, token in enumerate(tokens):
             number: Union[int, float] = None
             token_text = token.text
             text = token.text.replace(',', '').lower()
+            if len(text) > 0 and text[0] != "-":
+                text = text.split("-")[0]
             if text in NUMBER_WORDS:
                 number = NUMBER_WORDS[text]
+
+            if text in MULTIPLICATIVE_NUMBER_WORDS:
+                number = MULTIPLICATIVE_NUMBER_WORDS[text]
+
+            if text in MULTIPLIERS:
+                number = MULTIPLIERS[text]
+
+            if text in COIN_VALUES:
+                number = COIN_VALUES[text]
+
+            if text in LEG_COUNT:
+                number = LEG_COUNT[text]
 
             magnitude = 1
             if i < len(tokens) - 1:
                 next_token = tokens[i + 1].text.lower()
                 if next_token in ORDER_OF_MAGNITUDE_WORDS:
                     magnitude = ORDER_OF_MAGNITUDE_WORDS[next_token]
+                    token_text += ' ' + tokens[i + 1].text
+
+            multiplier = 1
+            if i < len(tokens) - 1:
+                next_token = tokens[i + 1].text.lower()
+                if next_token in ["%", "percent", "cents", "cent", "pennies", "penny"]:
+                    multiplier = 0.01
                     token_text += ' ' + tokens[i + 1].text
 
             is_range = False
@@ -131,11 +216,13 @@ class QuestionKnowledgeGraph(KnowledgeGraph):
                 pass
 
             if number is not None:
-                number = number * magnitude
-                if '.' in text:
-                    number_string = '%.3f' % number
-                else:
+                #print("Number: ", number, " , multiplier: ", multiplier)
+                number = number * magnitude * multiplier
+                if float(number).is_integer():
                     number_string = '%d' % number
+                else:
+                    number_string = str(float(number))
+                #print("Adding ", number_string)
                 numbers.append((number_string, token_text))
                 if is_range:
                     # TODO(mattg): both numbers in the range will have the same text, and so the

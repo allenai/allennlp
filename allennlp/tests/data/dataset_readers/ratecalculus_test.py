@@ -9,7 +9,7 @@ expected_sample_actions = {
             '<n,<n,b>> -> Equals',
             'n -> [<o,<d,n>>, o, d]',
             '<o,<d,n>> -> Value',
-            'o -> fb:s',
+            'o -> o1',
             'd -> Dollar',
             'n -> 20'],
         1: ['@start@ -> b',
@@ -19,7 +19,7 @@ expected_sample_actions = {
             '<n,<n,b>> -> Equals',
             'n -> [<o,<d,n>>, o, d]',
             '<o,<d,n>> -> Value',
-            'o -> fb:s',
+            'o -> o1',
             'd -> Unit',
             'n -> 5',
             'b -> [<b,<b,b>>, b, b]',
@@ -28,7 +28,7 @@ expected_sample_actions = {
             '<n,<n,b>> -> Equals',
             'n -> [<o,<d,<d,n>>>, o, d, d]',
             '<o,<d,<d,n>>> -> Rate',
-            'o -> fb:t',
+            'o -> o2',
             'd -> Dollar',
             'd -> Unit',
             'n -> 10',
@@ -38,7 +38,7 @@ expected_sample_actions = {
             '<n,<n,b>> -> Equals',
             'n -> [<o,<d,n>>, o, d]',
             '<o,<d,n>> -> Value',
-            'o -> fb:t',
+            'o -> o2',
             'd -> Unit',
             'n -> 3',
             'b -> [<n,<n,b>>, n, n]',
@@ -47,22 +47,12 @@ expected_sample_actions = {
             '<o,<d,n>> -> Value',
             'o -> [<o,<o,o>>, o, o]',
             '<o,<o,o>> -> Join',
-            'o -> fb:s',
-            'o -> fb:t',
+            'o -> o1',
+            'o -> o2',
             'd -> Dollar',
-            'n -> fb:p']
+            'n -> q1']
 }
 
-expected_alg514_actions = {
-        0: ['@start@ -> b',
-            'b -> [<n,<n,b>>, n, n]',
-            '<n,<n,b>> -> Equals',
-            'n -> [<o,<d,n>>, o, d]',
-            '<o,<d,n>> -> Value',
-            'o -> fb:s',
-            'd -> Dollar',
-            'n -> 20']
-}
 
 def assert_sample_instances_correct(instance, correct_actions):
     # The content of this will be tested indirectly by checking the actions; we'll just make
@@ -124,7 +114,7 @@ def assert_sample_dataset_correct(dataset):
 
 def assert_sample_alg514_dataset_correct(dataset):
     instances = list(dataset)
-    assert len(instances) == 10
+    assert len(instances) == 9
 
     #for i, instance in enumerate(instances):
     #    assert_alg514_instances_correct(instance, expected_alg514_actions[i])
@@ -142,3 +132,12 @@ class RateCalculusDatasetReaderTest(AllenNlpTestCase):
         filepath = str(self.FIXTURES_ROOT / "data" / "ratecalculus" / filename)
         dataset = reader.read(filepath)
         assert_sample_alg514_dataset_correct(dataset)
+
+    def test_reader_reads_all_alg514(self):
+        print("Running test")
+        reader = RateCalculusDatasetReader(lazy=False)
+        filename = "alg514_canonical.json"
+        filepath = str(self.FIXTURES_ROOT / "data" / "ratecalculus" / filename)
+        dataset = reader.read(filepath)
+        print("Number of parsed questions: ", len(list(dataset)))
+        assert(len(list(dataset)))
