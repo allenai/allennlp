@@ -1,0 +1,115 @@
+[
+    {
+        "iIndex": "2598",
+        "sQuestion": "A writing workshop enrolls novelists and poets in a ratio of 5 to 3. There are 24 people at the workshop. How many novelists are there? How many poets are there?",
+        "lEquations": [
+            "3.0*novelists=5.0*poets",
+            "novelists+poets=24.0"
+        ],
+        "lSolutions": [
+            "15.0",
+            "9.0"
+        ],
+        "lSemantics": "(And (Equals (Div (Value o1 Unit) (Value o1 Unit)) (Div 1 1)) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value o1 Unit) q1) (Equals (Value o1 Unit) q1))))"
+    },
+    {
+        "iIndex": "1695",
+        "sQuestion": "You are selling tickets for a high school play. Student tickets cost 4 dollars and general admission tickets cost 6 dollars. You sell 525 tickets and collect 2876 dollars. How many student tickets and general admission tickets did you sell?",
+        "lEquations": [
+            "(4.0*student_ticket)+(6.0*admission_ticket)=2876.0",
+            "student_ticket+admission_ticket=525.0"
+        ],
+        "lSolutions": [
+            "137.0",
+            "388.0"
+        ],
+        "lSemantics": "(And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value o1 Unit) q1) (Equals (Value o1 Unit) q1))))))"
+    },
+    {
+        "iIndex": "2575",
+        "sQuestion": "A store is selling compact discs for 10.50 dollars and 8.50 dollars. You buy 10 discs and spend a total of 93 dollars. How many compact discs did you buy that cost 10.50 dollars? How many did you buy that cost 8.50 dollars? ",
+        "lEquations": [
+            "(10.5*ten_fifty)+(8.5*eight_fifty)=93.0",
+            "ten_fifty+eight_fifty=10.0"
+        ],
+        "lSolutions": [
+            "4.0",
+            "6.0"
+        ],
+        "lSemantics": "(And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value o1 Unit) q1) (Equals (Value o1 Unit) q1))))))"
+    },
+    {
+        "iIndex": "1075",
+        "sQuestion": "Bob invested 6100 dollars in 2 funds , which pay 7 % and 6 % simple interest respectively. The combined interest he earned for both funds was 405 dollars for one year. How many dollars was invested at 7 %? How much was invested at 6 %? ",
+        "lEquations": [
+            "(7*0.01*fundone)+(6*0.01*fundtwo)=405.0",
+            "fundone+fundtwo=6100.0"
+        ],
+        "lSolutions": [
+            "3900.0",
+            "2200.0"
+        ],
+        "lSemantics": "(And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value o1 Unit) q1) (Equals (Value o1 Unit) q1))))))"
+    },
+    {
+        "iIndex": "267",
+        "sQuestion": "Your teacher is giving you a test worth 100 points and containing 40 questions. There are 2 point and 4 point questions on the test. How many two point questions are there? How many 4 point questions? ",
+        "lEquations": [
+            "(2.0*two_point)+(4.0*four_point)=100.0",
+            "two_point+four_point=40.0"
+        ],
+        "lSolutions": [
+            "30.0",
+            "10.0"
+        ],
+        "lSemantics": "(And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value o1 Unit) q1) (Equals (Value o1 Unit) q1))))))"
+    },
+    {
+        "iIndex": "2089",
+        "sQuestion": "You have 160 dollars and save 7 dollars per week. Your friend has 210 dollars and saves 5 dollars per week. After how many weeks will each of you have saved the same amount of money?",
+        "lEquations": [
+            "160.0+(7.0*week)=210.0+(5.0*week)"
+        ],
+        "lSolutions": [
+            "25.0"
+        ],
+        "lSemantics": "(And (Equals (Value o1 Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value o1 Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value (Join o1 o1) Unit) (Value (Join o1 o1) Unit)) (And (Equals (Value o1 Unit) (Value o1 Unit)) (Equals (Value o1 Unit) q1)))))))"
+    },
+    {
+        "iIndex": "5154",
+        "sQuestion": "A theater has 80 seats. On opening night , they sold out , selling adult tickets for 12 dollars each and child tickets for 5 dollars each. If they made a total of 519 dollars , how many child tickets were sold? ",
+        "lEquations": [
+            "(12.0*adult_tickets)+(5.0*children_tickets)=519.0",
+            "adult_tickets+children_tickets=80.0"
+        ],
+        "lSolutions": [
+            "63.0"
+        ],
+        "lSemantics": "(And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (Equals (Value o1 Unit) q1)))))"
+    },
+    {
+        "iIndex": "6952",
+        "sQuestion": "A 20-foot board is cut into 2 pieces. Twice the length of the shorter piece is 4 feet more than the length of the longer piece. Find the length of the shorter piece.",
+        "lEquations": [
+            "2.0*shorter=4.0+longer",
+            "shorter+longer=20.0"
+        ],
+        "lSolutions": [
+            "8.0"
+        ],
+        "lSemantics": "(And (Equals (Value o1 Unit) 1) (And (Equals (Value o1 Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Times 1 (Value o1 Unit)) (Plus 1 (Value o1 Unit))) (Equals (Value o1 Unit) q1)))))"
+    },
+    {
+        "iIndex": "5874",
+        "sQuestion": "Colombian coffee beans cost 5.50 dollars per pound, while Peruvian coffee beans cost 4.25 dollars per pound. We want to mix the beans together so as to produce a 40-pound bag , costing 4.60 dollars per pound. How many pounds of Columbian beans and how many pounds of Peruvian beans should be used? ",
+        "lEquations": [
+            "(5.5*columbian_pounds)+(4.25*peruvian_pounds)=40.0*4.6",
+            "columbian_pounds+peruvian_pounds=40.0"
+        ],
+        "lSolutions": [
+            "11.2",
+            "28.8"
+        ],
+        "lSemantics": "(And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Rate (Join o1 o1) Unit Unit) 1) (And (Equals (Value o1 Unit) q1) (Equals (Value o1 Unit) q1))))))"
+    }
+]
