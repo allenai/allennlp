@@ -29,10 +29,10 @@
       "averaged": true
     },
     "checklist_cost_weight": 0.6,
-    "max_decoding_steps": 7,
-    "decoder_beam_size": 10,
+    "max_decoding_steps": 4,
+    "decoder_beam_size": 20,
     "decoder_num_finished_states": 200,
-    "attention_function": {"type": "dot_product"},
+    "attention": {"type": "dot_product"},
     "mml_model_file": "tests/fixtures/semantic_parsing/wikitables/serialization/model.tar.gz"
   },
   "iterator": {

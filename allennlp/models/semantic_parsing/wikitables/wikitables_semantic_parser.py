@@ -9,9 +9,8 @@ from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
-from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
-from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
-from allennlp.modules.time_distributed import TimeDistributed
+from allennlp.modules import Embedding, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, TimeDistributed
+from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
 from allennlp.nn import util
 from allennlp.nn.decoding import GrammarState, RnnState, ChecklistState
 from allennlp.semparse.type_declarations import type_declaration
@@ -45,10 +44,6 @@ class WikiTablesSemanticParser(Model):
     max_decoding_steps : ``int``
         When we're decoding with a beam search, what's the maximum number of steps we should take?
         This only applies at evaluation time, not during training.
-    attention_function : ``SimilarityFunction``
-        We compute an attention over the input question at each step of the decoder, using the
-        decoder hidden state as the query.  This is the similarity function we use for that
-        attention.
     use_neighbor_similarity_for_linking : ``bool``, optional (default=False)
         If ``True``, we will compute a max similarity between a question token and the `neighbors`
         of an entity as a component of the linking scores.  This is meant to capture the same kind
@@ -187,10 +182,10 @@ class WikiTablesSemanticParser(Model):
         entity_embeddings = torch.nn.functional.tanh(entity_type_embeddings + projected_neighbor_embeddings)
 
 
-        # Compute entity and question word cosine similarity. Need to add a small value to
-        # to the table norm since there are padding values which cause a divide by 0.
-        embedded_table = embedded_table / (embedded_table.norm(dim=-1, keepdim=True) + 1e-13)
-        embedded_question = embedded_question / (embedded_question.norm(dim=-1, keepdim=True) + 1e-13)
+        # Compute entity and question word similarity.  We tried using cosine distance here, but
+        # because this similarity is the main mechanism that the model can use to push apart logit
+        # scores for certain actions (like "n -> 1" and "n -> -1"), this needs to have a larger
+        # output range than [-1, 1].
         question_entity_similarity = torch.bmm(embedded_table.view(batch_size,
                                                                    num_entities * num_entity_tokens,
                                                                    self._embedding_dim),
