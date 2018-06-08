@@ -20,8 +20,20 @@
             color: black;
         }
 
-        .required.no-value {
+        .required.incomplete {
             background-color: lightcoral;
+        }
+
+        .annotation {
+            font-size: 90%;
+            margin-left: 10px;
+            margin-right: 10px;
+            color: blue;
+        }
+
+        .default-value {
+            color: green;
+            font-size: 90%;
         }
 
         div#rendered-json {
@@ -64,6 +76,14 @@ function renderAnnotation(annotation) {
     } else {
 
         return origin + "[" + args.map(renderAnnotation).join(",") + "]"
+    }
+}
+
+function renderDefaultValue(defaultValue) {
+    if (defaultValue === undefined) {
+        return null
+    } else {
+        return "(default: " + defaultValue + ")"
     }
 }
 
@@ -159,6 +179,7 @@ class App extends React.Component {
 
         path.forEach((name, idx) => {
             // walk the first n-1 steps of the path
+
             if (idx < path.length - 1) {
                 json = json[name]
             } else {
@@ -188,7 +209,7 @@ class App extends React.Component {
     render() {
         return (
             <div class="wizard">
-                <Configuration path={[]} config={this.state.config} setJson={this.setJson}/>
+                <Configuration path={[]} config={this.state.config} setJson={this.setJson} optional={false} setCompleted={() => {}}/>
                 <div>
                     <button id="generate" onClick={this.generate}>GENERATE</button>
                 </div>
@@ -202,18 +223,66 @@ class App extends React.Component {
 
 class Configuration extends React.Component {
     // Component representing a Config as returned by an API call
+    constructor(props) {
+        super(props)
+
+        let completed = []
+
+        const items = (props.config && props.config.configItems) || []
+        items.forEach((item) => {
+            if (item.defaultValue === undefined && !item.type) {
+                // Required, so use false
+                completed.push(false)
+            } else {
+                // Optional, so use null
+                completed.push(null)
+            }
+        })
+
+        this.setCompleted = (idx) => ((c) => {
+            completed = this.state.completed.slice()
+            if (completed[idx] !== null) {
+                completed[idx] = c
+                const allComplete = completed.filter((x) => x !== false).length > 0
+
+                props.setCompleted(allComplete)
+                this.setState({completed, allComplete})
+            }
+        })
+
+        const allComplete = completed.filter((x) => x !== false).length > 0
+        if (allComplete) {
+            props.setCompleted(allComplete)
+        }
+
+        this.state = {
+            completed: completed,
+            allComplete: allComplete
+        }
+    }
 
     render() {
         // "config" contains the items making up JSON blob as returned by the API
 
         const {config, path, setJson} = this.props
-        const {className, configItems} = config
+        const {configItems} = config
+
+        let className = "configuration"
+        if (this.props.optional) {
+            className += " optional"
+        } else {
+            className += " required"
+        }
+
+        if (!this.state.allComplete) {
+            className += " incomplete"
+        }
 
         if (configItems !== undefined) {
             return (
                 <div class="configuration">
                     <ul>
-                        {configItems.map((configItem) => <ConfigItem path={path} item={configItem} setJson={setJson}/>)}
+                        {configItems.map((configItem) => <ConfigItem setCompleted={this.setCompleted} path={path} item={configItem} setJson={setJson}/>)}
                     </ul>
                 </div>
             )
@@ -239,7 +308,7 @@ class DictOrList extends React.Component {
             return item.key || item.value
         }).length
 
-        this.props.setValue(itemCount)
+        this.props.setCompleted(itemCount)
     }
 
     remove(idx) {
@@ -279,12 +348,20 @@ class DictOrList extends React.Component {
 
         // This is probably a bad assumption
         const configurable = valueType[0].startsWith('allennlp.') || valueType[0].startsWith('torch.')
+        const optional = false
 
         const renderedItems = this.state.items.map((item, idx) => {
             const {key, value} = item
 
-            let valueInput
-            valueInput = (<input type="text" value={value} onChange={this.update("value", idx)}/>)
+            const path = this.props.path.concat([key || idx])
+            const optional = false
+
+            const valueInput = renderValue(configurable,
+                                           optional,
+                                           path,
+                                           valueType, // annotation,
+                                           this.props.setJson,
+                                           this.reportItemCount) //
 
             return (
                 <div>
@@ -305,29 +382,112 @@ class DictOrList extends React.Component {
 
 }
 
-class ConfigurableItem extends React.Component {
-    constructor(props) {
-        super(props)
+function renderValue(configurable, optional, path, annotation, setJson, setCompleted, defaultValue) {
+    if (configurable) {
+        return <Configurator optional={optional} path={path} annotation={annotation} setJson={setJson} setCompleted={setCompleted} defaultValue={defaultValue}/>
+    } else if (annotation[0] === "Dict" || annotation[0] === "List" || annotation[0] === "Sequence") {
+        return <DictOrList path={path} setJson={setJson} annotation={annotation} setCompleted={setCompleted}/>
+    } else {
+        return (
+            <span>
+                <TextInput path={path} setJson={setJson} annotation={annotation} setCompleted={setCompleted}/>
+                <span class="annotation">{renderAnnotation(annotation)}</span>
+                <span class="default-value">{renderDefaultValue(defaultValue)}</span>
+            </span>
+        )
     }
 }
 
 class ConfigItem extends React.Component {
-
     constructor(props) {
         super(props)
-        const {path, item, setComplete} = props
-        const {name, annotation, defaultValue} = item
-        const optional = defaultValue !== undefined
+        const {path, item, setJson} = props
+        const {name, annotation, configurable, defaultValue} = item
+        this.optional = defaultValue !== undefined
+
+        this.state = {completed: false, configurable: configurable, configured: false}
+        this.setCompleted = this.setCompleted.bind(this)
+    }
+
+    setCompleted(completed) {
+        this.props.setCompleted(completed)
+        this.setState({completed})
+    }
+
+    render() {
+        const {props, state, optional} = this
+        const {item, setJson, path} = props
+        const {name, annotation, configurable, defaultValue, comment, subconfig} = item
+        const {completed} = state
+
+        const newPath = path.concat(name)
+
+        const indent = newPath.length
+        const marginLeft = 30 * newPath.length
+
+        // Short circuit for type
+        if (item.type) {
+            setJson(newPath, item.type, ["str"])
+            return <div marginLeft={marginLeft} class="config-item">type: {item.type}</div>
+        }
+
+        const renderedValue = renderValue(configurable, optional, newPath, annotation, setJson, this.setCompleted, defaultValue)
+
+        let className = "config-item"
+        if (optional) {
+            className += " optional"
+        } else {
+            className += " required"
+        }
+        if (!completed) {
+            className += " incomplete"
+        }
+
+        return (
+            <div marginLeft={marginLeft} className={className}>
+                <span class="name">{name}:</span>
+                {renderedValue}
+            </div>
+        )
+    }
+}
+
+class TextInput extends React.Component {
+    constructor(props) {
+        super(props)
+
+        this.state = {value: ''}
+
+        this.valueChange = this.valueChange.bind(this)
+    }
+
+    valueChange(e) {
+        const {path, annotation, setCompleted} = this.props
+        const value = e.target.value
+
+        this.props.setCompleted(value)
+        this.props.setJson(path, value, annotation)
+        this.setState({value})
+    }
+
+    render() {
+        return (<input type="text" value={this.state.value} onChange={this.valueChange}/>)
+    }
+}
+
+class Configurator extends React.Component {
+    constructor(props) {
+        super(props)
+
+        const {path, annotation, optional, setJson, setCompleted} = props
 
         this.state = {
             childConfig: null,
             subclasses: null,
             value: null,
-            choice: ''
+            choice: null,
+            completed: false
         }
-
-        this.path = path.concat(name),
-        this.optional = optional
 
         this.subconfigure = this.subconfigure.bind(this)
         this.remove = this.remove.bind(this)
@@ -335,15 +495,22 @@ class ConfigItem extends React.Component {
         this.select = this.select.bind(this)
         this.updateJson = this.updateJson.bind(this)
         this.setValue = this.setValue.bind(this)
+        this.setCompleted = this.setCompleted.bind(this)
     }
 
     updateJson(childConfig) {
-        this.props.setJson(this.path, childConfig, this.props.item.annotation)
+        this.props.setJson(this.props.path, childConfig, this.props.annotation)
     }
 
     remove() {
         this.updateJson(undefined)
+        this.props.setCompleted(false)
         this.setState({childConfig: null, subclasses: null, value: null, choice: ''})
+    }
+
+    setCompleted(completed) {
+        this.props.setCompleted(completed)
+        this.setState({completed: completed})
     }
 
     setValue(value) {
@@ -375,7 +542,7 @@ class ConfigItem extends React.Component {
     }
 
     subconfigure(e) {
-        const [subname] = this.props.item.annotation;
+        const [subname] = this.props.annotation;
 
         fetch("/api/?class=" + subname)
             .then(res => res.json())
@@ -390,24 +557,10 @@ class ConfigItem extends React.Component {
     }
 
     render() {
-        const {path, props, state, optional} = this
-        const {item, setJson} = props
-        const {name, annotation, configurable, defaultValue, comment, subconfig} = item
-        const {childConfig, subclasses, value, choice} = state
-
-        const indent = path.length
-        const marginLeft = 30 * path.length
-
-        // Short circuit for type
-        if (item.type) {
-            setJson(path, item.type, ["str"])
-            return <div marginLeft={marginLeft} class="config-item">type: {item.type}</div>
-        }
-
-        const pathStr = path.join('-')
+        const {subclasses, childConfig, value, choice} = this.state
         const hasData = childConfig || subclasses || value
 
-        let input
+        let input = null
         if (subclasses) {
             input = (
                 <select value={choice} onChange={this.select}>
@@ -415,51 +568,33 @@ class ConfigItem extends React.Component {
                     {subclasses.map((subclass) => <option value={subclass}>{subclass}</option>)}
                 </select>
             )
-        } else if (configurable && !hasData) {
-            input = (<button id={pathStr} onClick={this.subconfigure}>CONFIGURE</button>)
-        } else if (configurable) {
-            input = null
-        } else if (annotation[0] == "Dict") {
-            input = null
-        } else {
-            input = (<input type="text" value={value || ''} onChange={this.valueChange}/>)
+        } else if (!hasData) {
+            input = (<button onClick={this.subconfigure}>CONFIGURE</button>)
         }
 
         const remove = hasData ? (<button class="remove-button" onClick={this.remove}>X</button>) : null
 
         let child = null
         if (childConfig) {
-            child = (<Configuration path={path} config={childConfig} setJson={setJson}/>)
-        } else if (annotation[0] === "Dict" || annotation[0] === "List" || annotation[0] === "Sequence") {
-            // TODO(joelgrus): a dict needs to know how many valid items it has so that its parent can know if it's complete
-            child = (<DictOrList path={path} setJson={setJson} setValue={this.setValue} annotation={annotation}/>)
-            input = null
+            child = (<Configuration path={this.props.path} config={childConfig} setJson={this.props.setJson} setCompleted={this.setCompleted}/>)
         }
 
-        let className = "config-item"
-        if (optional) {
-            className += " optional"
-        } else {
-            className += " required"
-        }
-        if (!value && !childConfig) {
-            className += " no-value"
-        }
-
-        let renderedAnnotation = renderAnnotation(annotation) || "?"
-
-        if (optional) {
-            renderedAnnotation = "(optional, default=" + defaultValue + ") " + renderedAnnotation
+        let renderedAnnotation = null
+        let renderedDefaultValue = null
+        if (!hasData) {
+            renderedAnnotation = (<span class="annotation">{renderAnnotation(this.props.annotation)}</span>)
+            renderedDefaultValue = (<span class="default-value">{renderDefaultValue(this.props.defaultValue)}</span>)
         }
 
         return (
-            <div marginLeft={marginLeft} className={className}>
-                <span class="name">{name}:</span>
+            <span>
                 {input}
                 {remove}
-                <span class="annotation">{renderedAnnotation}</span>
+                {renderedAnnotation}
+                {renderedDefaultValue}
                 {child}
-            </div>
+
+            </span>
         )
     }
 }

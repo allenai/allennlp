@@ -18,6 +18,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.seq2seq_encoders import _Seq2SeqWrapper
 from allennlp.modules.seq2vec_encoders import _Seq2VecWrapper
+from allennlp.modules.token_embedders import Embedding
 from allennlp.nn.initializers import Initializer
 from allennlp.nn.regularizers import Regularizer
 from allennlp.training.optimizers import Optimizer as AllenNLPOptimizer
@@ -80,9 +81,11 @@ def json_annotation(cla55: Optional[type]):
     elif origin == Union:
         # Special special case to handle optional types:
         if len(args) == 2 and args[-1] == type(None):
-            return [json_annotation(args[0])]
+            return json_annotation(args[0])
         else:
             return ["Union"] + [json_annotation(arg) for arg in args]
+    elif cla55 == Ellipsis:
+        return ["..."]
     else:
         return [_remove_prefix(f"{cla55.__module__}.{cla55.__name__}")]
 
@@ -225,6 +228,10 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
         if annotation == Model:
             continue
 
+        # Don't include DataIterator, the only place you'd specify that is top-level.
+        if annotation == DataIterator:
+            continue
+
         # Don't include params for an Optimizer
         if torch.optim.Optimizer in getattr(cla55, '__bases__', ()) and name == "params":
             continue
@@ -238,6 +245,10 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
             annotation = AllenNLPOptimizer
 
         items.append(ConfigItem(name, annotation, default))
+
+    # More hacks, Embedding
+    if cla55 == Embedding:
+        items.insert(1, ConfigItem("pretrained_file", str, None))
 
     return Config(items, typ3=typ3)
 
