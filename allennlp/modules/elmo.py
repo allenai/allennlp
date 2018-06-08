@@ -502,7 +502,8 @@ class _ElmoBiLm(torch.nn.Module):
             logging.warning("You are fine tuning ELMo and caching char CNN word vectors. "
                             "This behaviour is not guaranteed to be well defined, particularly. "
                             "if not all of your inputs will occur in the vocabulary cache.")
-
+        # This is an embedding, used to look up cached
+        # word vectors built from character level cnn embeddings.
         self._word_embedding = None
         self._bos_embedding: torch.Tensor = None
         self._eos_embedding: torch.Tensor = None
