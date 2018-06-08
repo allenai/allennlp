@@ -504,10 +504,12 @@ class _ElmoBiLm(torch.nn.Module):
                             "if not all of your inputs will occur in the vocabulary cache.")
 
         self._word_embedding = None
+        self._bos_embedding: torch.Tensor = None
+        self._eos_embedding: torch.Tensor = None
         if vocab_to_cache:
             logging.info("Caching character cnn layers for words in vocabulary.")
             # This sets 3 attributes, _word_embedding, _bos_embedding and _eos_embedding.
-            # They are set in the method so it can be accessed from outside the
+            # They are set in the method so they can be accessed from outside the
             # constructor.
             self.create_cached_cnn_embeddings(vocab_to_cache)
 
