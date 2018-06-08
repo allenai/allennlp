@@ -182,10 +182,10 @@ class WikiTablesSemanticParser(Model):
         entity_embeddings = torch.nn.functional.tanh(entity_type_embeddings + projected_neighbor_embeddings)
 
 
-        # Compute entity and question word cosine similarity. Need to add a small value to
-        # to the table norm since there are padding values which cause a divide by 0.
-        embedded_table = embedded_table / (embedded_table.norm(dim=-1, keepdim=True) + 1e-13)
-        embedded_question = embedded_question / (embedded_question.norm(dim=-1, keepdim=True) + 1e-13)
+        # Compute entity and question word similarity.  We tried using cosine distance here, but
+        # because this similarity is the main mechanism that the model can use to push apart logit
+        # scores for certain actions (like "n -> 1" and "n -> -1"), this needs to have a larger
+        # output range than [-1, 1].
         question_entity_similarity = torch.bmm(embedded_table.view(batch_size,
                                                                    num_entities * num_entity_tokens,
                                                                    self._embedding_dim),
