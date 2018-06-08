@@ -49,6 +49,7 @@
     "decoder_beam_search": {
       "beam_size": 10
     },
+    "training_beam_size": 5,
     "max_decoding_steps": 40,
     "attention": {
       "type": "bilinear",
