@@ -9,7 +9,6 @@ with warnings.catch_warnings():
     import h5py
 import numpy
 import torch
-import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
@@ -135,7 +134,7 @@ class TestElmoBiLm(ElmoTestCase):
                         )
                 )
 
-    def test_elmo_char_cnn_cache_raises_error_for_uncached_words(self):
+    def test_elmo_char_cnn_cache_does_not_raise_error_for_uncached_words(self):
         sentences = [["This", "is", "OOV"], ["so", "is", "this"]]
         in_vocab_sentences = [["here", "is"], ["a", "vocab"]]
         oov_tensor = self.get_vocab_and_both_elmo_indexed_ids(sentences)[1]
@@ -143,9 +142,8 @@ class TestElmoBiLm(ElmoTestCase):
         words_to_cache = list(vocab.get_token_to_index_vocabulary("tokens").keys())
         elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file, vocab_to_cache=words_to_cache)
 
-        elmo_bilm(in_vocab_tensor["tokens"])
-        with pytest.raises(RuntimeError):
-            elmo_bilm(oov_tensor["tokens"])
+        elmo_bilm(in_vocab_tensor["character_ids"], in_vocab_tensor["tokens"])
+        elmo_bilm(oov_tensor["character_ids"], oov_tensor["tokens"])
 
     def test_elmo_bilm_can_cache_char_cnn_embeddings(self):
         sentences = [["This", "is", "a", "sentence"],
@@ -155,12 +153,12 @@ class TestElmoBiLm(ElmoTestCase):
         words_to_cache = list(vocab.get_token_to_index_vocabulary("tokens").keys())
         elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file)
         elmo_bilm.eval()
-        no_cache = elmo_bilm(tensor["character_ids"])
+        no_cache = elmo_bilm(tensor["character_ids"], tensor["character_ids"])
 
         # ELMo is stateful, so we need to actually re-initialise it for this comparison to work.
         elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file, vocab_to_cache=words_to_cache)
         elmo_bilm.eval()
-        cached = elmo_bilm(tensor["tokens"])
+        cached = elmo_bilm(tensor["character_ids"], tensor["tokens"])
 
         numpy.testing.assert_array_almost_equal(no_cache["mask"].data.cpu().numpy(),
                                                 cached["mask"].data.cpu().numpy())
@@ -256,12 +254,13 @@ class TestElmo(ElmoTestCase):
         elmo_bilm = Elmo(self.options_file, self.weight_file, 1, vocab_to_cache=words_to_cache)
         elmo_bilm.eval()
 
-        individual_dim = elmo_bilm(tensor["tokens"])
+        individual_dim = elmo_bilm(tensor["character_ids"], tensor["tokens"])
         elmo_bilm = Elmo(self.options_file, self.weight_file, 1, vocab_to_cache=words_to_cache)
         elmo_bilm.eval()
 
-        expanded_tensor = torch.stack([tensor["tokens"] for _ in range(4)], dim=1)
-        expanded_result = elmo_bilm(expanded_tensor)
+        expanded_word_ids = torch.stack([tensor["tokens"] for _ in range(4)], dim=1)
+        expanded_char_ids = torch.stack([tensor["character_ids"] for _ in range(4)], dim=1)
+        expanded_result = elmo_bilm(expanded_char_ids, expanded_word_ids)
         split_result = [x.squeeze(1) for x in torch.split(expanded_result["elmo_representations"][0], 1, dim=1)]
         for expanded in split_result:
             numpy.testing.assert_array_almost_equal(expanded.data.cpu().numpy(),

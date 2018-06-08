@@ -109,14 +109,16 @@ class Elmo(torch.nn.Module):
         return self._elmo_lstm.get_output_dim()
 
     def forward(self,    # pylint: disable=arguments-differ
-                inputs: torch.Tensor) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
+                inputs: torch.Tensor,
+                word_inputs: torch.Tensor = None) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
         """
         Parameters
         ----------
         inputs: ``torch.Tensor``, required.
         Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
-        If you passed a cached vocab, you can instead pass a tensor of shape ``(batch_size, timesteps)``,
-        which represent word ids which have been pre-cached.
+        word_inputs : ``torch.Tensor``, required.
+            If you passed a cached vocab, you can in addition pass a tensor of shape
+            ``(batch_size, timesteps)``, which represent word ids which have been pre-cached.
 
         Returns
         -------
@@ -129,18 +131,26 @@ class Elmo(torch.nn.Module):
         """
         # reshape the input if needed
         original_shape = inputs.size()
-
-        if self._has_cached_vocab and len(original_shape) > 2:
-            timesteps = original_shape[-1]
-            reshaped_inputs = inputs.view(-1, timesteps)
-        elif len(original_shape) > 3:
+        if len(original_shape) > 3:
             timesteps, num_characters = original_shape[-2:]
             reshaped_inputs = inputs.view(-1, timesteps, num_characters)
         else:
             reshaped_inputs = inputs
 
+        if word_inputs is not None:
+            original_word_size = word_inputs.size()
+            if self._has_cached_vocab and len(original_word_size) > 2:
+                reshaped_word_inputs = word_inputs.view(-1, original_word_size[-1])
+            elif self._has_cached_vocab is not None:
+                logger.warning("Word inputs were passed to ELMo but it does not have a cached vocab.")
+                reshaped_word_inputs = word_inputs
+            else:
+                reshaped_word_inputs = word_inputs
+        else:
+            reshaped_word_inputs = word_inputs
+
         # run the biLM
-        bilm_output = self._elmo_lstm(reshaped_inputs)
+        bilm_output = self._elmo_lstm(reshaped_inputs, reshaped_word_inputs)
         layer_activations = bilm_output['activations']
         mask_with_bos_eos = bilm_output['mask']
 
@@ -155,9 +165,9 @@ class Elmo(torch.nn.Module):
             representations.append(self._dropout(representation_without_bos_eos))
 
         # reshape if necessary
-        if self._has_cached_vocab and len(original_shape) > 2:
-            mask = mask_without_bos_eos.view(original_shape)
-            elmo_representations = [representation.view(original_shape + (-1, ))
+        if word_inputs is not None and len(original_word_size) > 2:
+            mask = mask_without_bos_eos.view(original_word_size)
+            elmo_representations = [representation.view(original_word_size + (-1, ))
                                     for representation in representations]
         elif len(original_shape) > 3:
             mask = mask_without_bos_eos.view(original_shape[:-1])
@@ -520,13 +530,15 @@ class _ElmoBiLm(torch.nn.Module):
         return 2 * self._token_embedder.get_output_dim()
 
     def forward(self,  # pylint: disable=arguments-differ
-                inputs: torch.Tensor) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
+                inputs: torch.Tensor,
+                word_inputs: torch.Tensor = None) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
         """
         Parameters
         ----------
         inputs: ``torch.Tensor``, required.
             Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
-            If you passed a cached vocab, you can instead pass a tensor of shape ``(batch_size, timesteps)``,
+        word_inputs : ``torch.Tensor``, required.
+            If you passed a cached vocab, you can in addition pass a tensor of shape ``(batch_size, timesteps)``,
             which represent word ids which have been pre-cached.
 
         Returns
@@ -542,17 +554,24 @@ class _ElmoBiLm(torch.nn.Module):
         Note that the output tensors all include additional special begin and end of sequence
         markers.
         """
-        if self._word_embedding is not None:
-            mask_without_bos_eos = (inputs > 0).long()
-            # The character cnn part is cached - just look it up.
-            embedded_inputs = self._word_embedding(inputs) # type: ignore
-            # shape (batch_size, timesteps + 2, embedding_dim)
-            type_representation, mask = add_sentence_boundary_token_ids(
-                    embedded_inputs,
-                    mask_without_bos_eos,
-                    self._bos_embedding,
-                    self._eos_embedding
-            )
+        if self._word_embedding is not None and word_inputs is not None:
+            try:
+                mask_without_bos_eos = (word_inputs > 0).long()
+                # The character cnn part is cached - just look it up.
+                embedded_inputs = self._word_embedding(word_inputs) # type: ignore
+                # shape (batch_size, timesteps + 2, embedding_dim)
+                type_representation, mask = add_sentence_boundary_token_ids(
+                        embedded_inputs,
+                        mask_without_bos_eos,
+                        self._bos_embedding,
+                        self._eos_embedding
+                )
+            except RuntimeError:
+                # Back off to running the character convolutions,
+                # as we might not have the words in the cache.
+                token_embedding = self._token_embedder(inputs)
+                mask = token_embedding['mask']
+                type_representation = token_embedding['token_embedding']
         else:
             token_embedding = self._token_embedder(inputs)
             mask = token_embedding['mask']
@@ -618,8 +637,7 @@ class _ElmoBiLm(torch.nn.Module):
             token_embedding = output["token_embedding"]
             mask = output["mask"]
             token_embedding, _ = remove_sentence_boundaries(token_embedding, mask)
-            all_embeddings.append(token_embedding.view(timesteps * batch_size,
-                                                       token_embedding.size(-1)))
+            all_embeddings.append(token_embedding.view(-1, token_embedding.size(-1)))
         full_embedding = torch.cat(all_embeddings, 0)
 
         # We might have some trailing embeddings from padding in the batch, so
