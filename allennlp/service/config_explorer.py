@@ -131,6 +131,10 @@ _HTML = """
             margin: 5px;
         }
 
+        div.dict-or-list-item {
+            margin: 5px;
+        }
+
         .required.incomplete > span.name {
             background-color: lightcoral;
         }
@@ -162,6 +166,10 @@ _HTML = """
 
         .config-item {
             margin-top: 2px;
+        }
+
+        button.subconfigure {
+            margin: 2px;
         }
 
         .tippy-content {
@@ -511,7 +519,7 @@ class DictOrList extends React.Component {
 
             return (
                 <span>
-                    <div>
+                    <div class="dict-or-list-item">
                         <button tabIndex="-1" class="remove-button" onClick={this.remove(idx)}>X</button>
                         {keyType ? <input type="text" value={key} onChange={this.update("key", idx)}/> : null}
                         {valueInput}
@@ -530,10 +538,14 @@ class DictOrList extends React.Component {
 
 }
 
+function isDictOrList(annotation) {
+    return (annotation[0] === "Dict" || annotation[0] === "List" || annotation[0] === "Sequence" || (annotation[0] == "Tuple" && annotation[2] == "..."))
+}
+
 function renderValue(configurable, optional, path, annotation, setJson, setCompleted, defaultValue, buttonDisabled) {
     if (configurable) {
         return <Configurator optional={optional} path={path} annotation={annotation} setJson={setJson} setCompleted={setCompleted} defaultValue={defaultValue} buttonDisabled={buttonDisabled}/>
-    } else if (annotation[0] === "Dict" || annotation[0] === "List" || annotation[0] === "Sequence" || (annotation[0] == "Tuple" && annotation[2] == "...")) {
+    } else if (isDictOrList(annotation)) {
         return <DictOrList path={path} setJson={setJson} annotation={annotation} setCompleted={setCompleted}/>
     } else {
         return (
@@ -599,11 +611,17 @@ class ConfigItem extends React.Component {
 
         const tooltip = comment ? <button tabIndex="-1" id={newPathStr + '-tooltip'} key={newPathStr + '-tooltip'} class="tooltip" title={comment}>?</button> : null
 
+        let maybeAnnotation = null
+        if (isDictOrList(annotation)) {
+            maybeAnnotation = (<span class="annotation">{renderAnnotation(annotation)}</span>)
+        }
+
         return (
             <div key={newPathStr} marginLeft={marginLeft} className={className}>
                 <span class="name">{name}</span>
                 {tooltip}
                 <span>:</span>
+                {maybeAnnotation}
                 {renderedValue}
             </div>
         )
