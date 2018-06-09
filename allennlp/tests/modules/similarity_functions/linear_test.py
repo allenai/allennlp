@@ -4,7 +4,6 @@ import numpy
 from numpy.testing import assert_almost_equal
 import torch
 from torch.nn.parameter import Parameter
-from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.modules.similarity_functions import LinearSimilarity
@@ -23,7 +22,7 @@ class TestLinearSimilarityFunction(AllenNlpTestCase):
         linear._bias = Parameter(torch.FloatTensor([.1]))
         a_vectors = torch.FloatTensor([[[1, 1, 1], [-1, -1, 0]]])
         b_vectors = torch.FloatTensor([[[0], [1]]])
-        result = linear(Variable(a_vectors), Variable(b_vectors)).data.numpy()
+        result = linear(a_vectors, b_vectors).data.numpy()
         assert result.shape == (1, 2,)
         assert_almost_equal(result, [[2.3, -1.1]])
 
@@ -34,8 +33,8 @@ class TestLinearSimilarityFunction(AllenNlpTestCase):
         linear._bias = Parameter(torch.FloatTensor([0.]))
         a_vectors = numpy.random.rand(5, 4, 3, 6, 7)
         b_vectors = numpy.random.rand(5, 4, 3, 6, 7)
-        result = linear(Variable(torch.from_numpy(a_vectors).float()),
-                        Variable(torch.from_numpy(b_vectors).float()))
+        result = linear(torch.from_numpy(a_vectors).float(),
+                        torch.from_numpy(b_vectors).float())
         result = result.data.numpy()
         assert result.shape == (5, 4, 3, 6)
         combined_vectors = numpy.concatenate([a_vectors[3, 2, 1, 3, :], b_vectors[3, 2, 1, 3, :]])
@@ -46,8 +45,8 @@ class TestLinearSimilarityFunction(AllenNlpTestCase):
         linear = LinearSimilarity(2, 2, combination='x*y')
         linear._weight_vector = Parameter(torch.FloatTensor([-.3, .5]))
         linear._bias = Parameter(torch.FloatTensor([0]))
-        a_vectors = Variable(torch.FloatTensor([[1, 1], [-1, -1]]))
-        b_vectors = Variable(torch.FloatTensor([[1, 0], [0, 1]]))
+        a_vectors = torch.FloatTensor([[1, 1], [-1, -1]])
+        b_vectors = torch.FloatTensor([[1, 0], [0, 1]])
         result = linear(a_vectors, b_vectors).data.numpy()
         assert result.shape == (2,)
         assert_almost_equal(result, [-.3, -.5])
@@ -56,8 +55,8 @@ class TestLinearSimilarityFunction(AllenNlpTestCase):
         linear = LinearSimilarity(2, 2, combination='x/y')
         linear._weight_vector = Parameter(torch.FloatTensor([-.3, .5]))
         linear._bias = Parameter(torch.FloatTensor([0]))
-        a_vectors = Variable(torch.FloatTensor([[1, 1], [-1, -1]]))
-        b_vectors = Variable(torch.FloatTensor([[1, 2], [2, 1]]))
+        a_vectors = torch.FloatTensor([[1, 1], [-1, -1]])
+        b_vectors = torch.FloatTensor([[1, 2], [2, 1]])
         result = linear(a_vectors, b_vectors).data.numpy()
         assert result.shape == (2,)
         assert_almost_equal(result, [-.05, -.35])
@@ -66,8 +65,8 @@ class TestLinearSimilarityFunction(AllenNlpTestCase):
         linear = LinearSimilarity(2, 2, combination='x+y')
         linear._weight_vector = Parameter(torch.FloatTensor([-.3, .5]))
         linear._bias = Parameter(torch.FloatTensor([0]))
-        a_vectors = Variable(torch.FloatTensor([[1, 1], [-1, -1]]))
-        b_vectors = Variable(torch.FloatTensor([[1, 0], [0, 1]]))
+        a_vectors = torch.FloatTensor([[1, 1], [-1, -1]])
+        b_vectors = torch.FloatTensor([[1, 0], [0, 1]])
         result = linear(a_vectors, b_vectors).data.numpy()
         assert result.shape == (2,)
         assert_almost_equal(result, [-.1, .3])
@@ -76,8 +75,8 @@ class TestLinearSimilarityFunction(AllenNlpTestCase):
         linear = LinearSimilarity(2, 2, combination='x-y')
         linear._weight_vector = Parameter(torch.FloatTensor([-.3, .5]))
         linear._bias = Parameter(torch.FloatTensor([0]))
-        a_vectors = Variable(torch.FloatTensor([[1, 1], [-1, -1]]))
-        b_vectors = Variable(torch.FloatTensor([[1, 0], [0, 1]]))
+        a_vectors = torch.FloatTensor([[1, 1], [-1, -1]])
+        b_vectors = torch.FloatTensor([[1, 0], [0, 1]])
         result = linear(a_vectors, b_vectors).data.numpy()
         assert result.shape == (2,)
         assert_almost_equal(result, [.5, -.7])

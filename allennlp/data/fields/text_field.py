@@ -8,7 +8,6 @@ import textwrap
 from overrides import overrides
 from spacy.tokens import Token as SpacyToken
 import torch
-from torch.autograd import Variable
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields.sequence_field import SequenceField
@@ -103,8 +102,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
     @overrides
     def as_tensor(self,
                   padding_lengths: Dict[str, int],
-                  cuda_device: int = -1,
-                  for_training: bool = True) -> Dict[str, torch.Tensor]:
+                  cuda_device: int = -1) -> Dict[str, torch.Tensor]:
         tensors = {}
         desired_num_tokens = padding_lengths['num_tokens']
         for indexer_name, indexer in self._token_indexers.items():
@@ -117,7 +115,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
             # than a LongTensor here, and it's not clear how to signal that.  Maybe we'll need to
             # add a class method to TokenIndexer to tell us the type?  But we can worry about that
             # when there's a compelling use case for it.
-            tensor = Variable(torch.LongTensor(padded_array), volatile=not for_training)
+            tensor = torch.LongTensor(padded_array)
             tensors[indexer_name] = tensor if cuda_device == -1 else tensor.cuda(cuda_device)
         return tensors
 

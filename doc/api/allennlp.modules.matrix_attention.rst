@@ -11,6 +11,11 @@ allennlp.modules.matrix_attention
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.modules.matrix_attention.bilinear_matrix_attention
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.modules.matrix_attention.cosine_matrix_attention
    :members:
    :undoc-members:

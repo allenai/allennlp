@@ -3,7 +3,6 @@ import math
 
 from numpy.testing import assert_almost_equal
 import torch
-from torch.autograd import Variable
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
@@ -15,13 +14,13 @@ class TestMaximumMarginalLikelihood(AllenNlpTestCase):
         super().setUp()
         self.initial_state = SimpleDecoderState([0, 1],
                                                 [[], []],
-                                                [Variable(torch.Tensor([0.0])), Variable(torch.Tensor([0.0]))],
+                                                [torch.Tensor([0.0]), torch.Tensor([0.0])],
                                                 [0, 1])
         self.decoder_step = SimpleDecoderStep()
-        self.targets = torch.autograd.Variable(torch.Tensor([[[2, 3, 4], [1, 3, 4], [1, 2, 4]],
-                                                             [[3, 4, 0], [2, 3, 4], [0, 0, 0]]]))
-        self.target_mask = torch.autograd.Variable(torch.Tensor([[[1, 1, 1], [1, 1, 1], [1, 1, 1]],
-                                                                 [[1, 1, 0], [1, 1, 1], [0, 0, 0]]]))
+        self.targets = torch.Tensor([[[2, 3, 4], [1, 3, 4], [1, 2, 4]],
+                                     [[3, 4, 0], [2, 3, 4], [0, 0, 0]]])
+        self.target_mask = torch.Tensor([[[1, 1, 1], [1, 1, 1], [1, 1, 1]],
+                                         [[1, 1, 0], [1, 1, 1], [0, 0, 0]]])
 
         self.supervision = (self.targets, self.target_mask)
         # High beam size ensures exhaustive search.

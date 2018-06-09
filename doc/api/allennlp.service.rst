@@ -9,9 +9,9 @@ via a REST API or similar.
 
    allennlp.service.db
    allennlp.service.permalinks
-   allennlp.service.predictors
    allennlp.service.server_flask
    allennlp.service.server_simple
+   allennlp.service.config_explorer
 
 .. automodule:: allennlp.service
    :members:

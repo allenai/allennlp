@@ -70,8 +70,8 @@ class MultiHeadedSimilarity(SimilarityFunction):
         self.reset_parameters()
 
     def reset_parameters(self):
-        torch.nn.init.xavier_uniform(self._tensor_1_projection)
-        torch.nn.init.xavier_uniform(self._tensor_2_projection)
+        torch.nn.init.xavier_uniform_(self._tensor_1_projection)
+        torch.nn.init.xavier_uniform_(self._tensor_2_projection)
 
     @overrides
     def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:

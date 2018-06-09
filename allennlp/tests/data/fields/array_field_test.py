@@ -20,7 +20,7 @@ class TestArrayField(AllenNlpTestCase):
         array = numpy.ones(shape)
         array_field = ArrayField(array)
 
-        padded_tensor = array_field.as_tensor({"dimension_0": 5, "dimension_1": 6}).data.cpu().numpy()
+        padded_tensor = array_field.as_tensor({"dimension_0": 5, "dimension_1": 6}).detach().cpu().numpy()
         numpy.testing.assert_array_equal(padded_tensor[:3, :4], array)
         numpy.testing.assert_array_equal(padded_tensor[3:, 4:], 0.)
 
@@ -30,7 +30,7 @@ class TestArrayField(AllenNlpTestCase):
         empty_array = array1.empty_field()
         list_field = ListField([array1, array2, empty_array])
 
-        returned_tensor = list_field.as_tensor(list_field.get_padding_lengths()).data.cpu().numpy()
+        returned_tensor = list_field.as_tensor(list_field.get_padding_lengths()).detach().cpu().numpy()
         correct_tensor = numpy.array([[[1., 1., 1., 0., 0.],
                                        [1., 1., 1., 0., 0.]],
                                       [[1., 1., 1., 1., 1.],
@@ -45,7 +45,7 @@ class TestArrayField(AllenNlpTestCase):
         empty_array = array1.empty_field()
         list_field = ListField([array1, array2, empty_array])
 
-        returned_tensor = list_field.as_tensor(list_field.get_padding_lengths()).data.cpu().numpy()
+        returned_tensor = list_field.as_tensor(list_field.get_padding_lengths()).detach().cpu().numpy()
         correct_tensor = numpy.array([[[1., 1., 1., -1., -1.],
                                        [1., 1., 1., -1., -1.]],
                                       [[1., 1., 1., 1., 1.],

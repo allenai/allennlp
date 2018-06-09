@@ -42,7 +42,7 @@
       "beam_size": 3
     },
     "max_decoding_steps": 200,
-    "attention_function": {"type": "dot_product"},
+    "attention": {"type": "dot_product"},
     "num_linking_features": 0,
     "use_neighbor_similarity_for_linking": true,
     "tables_directory": "tests/fixtures/data/wikitables/"

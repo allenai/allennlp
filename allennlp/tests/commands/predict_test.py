@@ -16,7 +16,7 @@ from allennlp.common.util import JsonDict
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands import main
 from allennlp.commands.predict import Predict
-from allennlp.service.predictors import Predictor, BidafPredictor
+from allennlp.predictors import Predictor, BidafPredictor
 
 
 class TestPredict(AllenNlpTestCase):
@@ -171,7 +171,7 @@ class TestPredict(AllenNlpTestCase):
         sys.path.insert(0, str(self.TEST_DIR))
 
         # Write out a duplicate predictor there, but registered under a different name.
-        from allennlp.service.predictors import bidaf
+        from allennlp.predictors import bidaf
         with open(bidaf.__file__) as f:
             code = f.read().replace("""@Predictor.register('machine-comprehension')""",
                                     """@Predictor.register('duplicate-test-predictor')""")
