@@ -201,7 +201,7 @@ class TestFileUtils(AllenNlpTestCase):
         with open_maybe_compressed_file(archive_path, path_inside_archive='folder/utf8_sample.txt',
                                         mode='rt', encoding='utf-8') as f:
             text = f.read()
-        assert text == correct_text, "Test failed for file: " + path
+        assert text == correct_text, "Test failed for file: " + archive_path
 
         # Passing path_inside_archive when not reading an archive
         with pytest.raises(ValueError):
