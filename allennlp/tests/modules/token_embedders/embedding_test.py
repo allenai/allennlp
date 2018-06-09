@@ -118,3 +118,42 @@ class TestEmbedding(AllenNlpTestCase):
                 })
         with pytest.raises(ConfigurationError):
             _ = Embedding.from_params(vocab, params)
+
+    def test_read_zip_file_inside_archive(self):
+        token2vec = {
+            "think": torch.Tensor([0.143, 0.189, 0.555, 0.361, 0.472]),
+            "make": torch.Tensor([0.878, 0.651, 0.044, 0.264, 0.872]),
+            "difference": torch.Tensor([0.053, 0.162, 0.671, 0.110, 0.259]),
+            "àèìòù": torch.Tensor([1.0, 2.0, 3.0, 4.0, 5.0])
+        }
+        vocab = Vocabulary()
+        for token in token2vec:
+            vocab.add_token_to_namespace(token)
+
+        def check_vectors(weight):
+            for token, vec in token2vec.items():
+                i = vocab.get_token_index(token)
+                assert torch.equal(weight[i], token2vec[token])
+
+
+        params = Params({
+            'pretrained_file': str(self.FIXTURES_ROOT / 'fake_embeddings.zip'),
+            'embedding_dim': 5
+        })
+        with pytest.raises(ValueError, message="No ValueError when not passing path_inside_archive"):
+            _ = Embedding.from_params(vocab, params)
+
+        params = Params({
+            'pretrained_file': str(self.FIXTURES_ROOT / 'fake_embeddings.zip'),
+            'path_inside_archive': 'fake_embeddings.5d.txt',
+            'embedding_dim': 5
+        })
+        check_vectors(Embedding.from_params(vocab, params).weight.data)
+
+        # Open a file inside a
+        params = Params({
+            'pretrained_file': str(self.FIXTURES_ROOT / 'fake_embeddings.zip'),
+            'path_inside_archive': 'folder/fake_embeddings.5d.txt',
+            'embedding_dim': 5
+        })
+        check_vectors(Embedding.from_params(vocab, params).weight.data)

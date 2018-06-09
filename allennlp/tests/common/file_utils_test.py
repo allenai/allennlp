@@ -169,7 +169,7 @@ class TestFileUtils(AllenNlpTestCase):
             assert cached_file.read() == self.glove_bytes
 
     def test_CompressedFileUtils_open_with_invalid_params(self):
-        sample_file = 'tests/fixtures/data/utf8_sample.txt.gz'
+        sample_file = self.FIXTURES_ROOT / 'utf8_sample.txt.gz'
         # Unsupported file format
         with pytest.raises(ValueError):
             CompressedFileUtils.open('tests/fixtures/')
@@ -183,7 +183,7 @@ class TestFileUtils(AllenNlpTestCase):
             CompressedFileUtils.open(sample_file, mode='rb', encoding='utf-8')
 
     def test_open_maybe_compressed_file_on_utf8_text(self):
-        txt_path = 'tests/fixtures/data/utf8_sample.txt'
+        txt_path = str(self.FIXTURES_ROOT / 'utf8_sample.txt')
 
         # This is for sure a correct way to read an utf-8 encoded text file
         with open(txt_path, 'rt', encoding='utf-8') as f:
@@ -192,12 +192,24 @@ class TestFileUtils(AllenNlpTestCase):
         # Check if we get the correct text on plain and compressed versions of the file
         paths = [txt_path] + [txt_path + ext for ext in CompressedFileUtils.SUPPORTED_FORMATS]
         for path in paths:
-            with open_maybe_compressed_file(path, 'rt', encoding='utf-8') as f:
+            with open_maybe_compressed_file(path, mode='rt', encoding='utf-8') as f:
                 text = f.read()
             assert text == correct_text, "Test failed for file: " + path
 
+        # Check for a file contained inside an archive with multiple files
+        archive_path = str(self.FIXTURES_ROOT / 'utf8_sample_multi.zip')
+        with open_maybe_compressed_file(archive_path, path_inside_archive='folder/utf8_sample.txt',
+                                        mode='rt', encoding='utf-8') as f:
+            text = f.read()
+        assert text == correct_text, "Test failed for file: " + path
+
+        # Passing path_inside_archive when not reading an archive
+        with pytest.raises(ValueError):
+            with open_maybe_compressed_file(txt_path, path_inside_archive='a/fake/path'):
+                pass
+
     def test_open_maybe_compressed_file_binary_mode(self):
-        file_path = 'tests/fixtures/data/utf8_sample.txt'  # we have compressed versions of this
+        file_path = str(self.FIXTURES_ROOT / 'utf8_sample.txt')  # we have compressed versions of this
 
         with pytest.raises(ValueError):  # passing encoder argument in binary mode
             open_maybe_compressed_file(file_path, mode='rb', encoding='utf-8')
@@ -209,6 +221,6 @@ class TestFileUtils(AllenNlpTestCase):
         # Check if we get the correct data on plain and compressed versions of the file
         paths = [file_path] + [file_path + ext for ext in CompressedFileUtils.SUPPORTED_FORMATS]
         for path in paths:
-            with open_maybe_compressed_file(path, 'rb') as f:
+            with open_maybe_compressed_file(path, mode='rb') as f:
                 data = f.read()
             assert data == correct_data, "Test failed for file: " + path

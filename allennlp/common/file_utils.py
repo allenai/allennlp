@@ -169,31 +169,40 @@ class CompressedFileUtils:
     DEFAULT_ENCODING = 'utf-8'
 
     @staticmethod
-    def open(path: str, mode: str = 'rt', encoding: Optional[str] = None,
+    def open(path: str, path_inside_archive: Optional[str] = None,
+             mode: str = 'rt', encoding: Optional[str] = None,
              file_format: Optional[str] = None):
         """
-        Open an eventually compressed file in binary or text mode (default: text mode
-        with utf-8 encoding). The currently supported compressed file formats are: gzip, zip.
+        Open a compressed file, eventually inside an archive with multiple other files.
+        If the file is inside an archive with multiple files, the argument ``path_inside_archive``
+        must be provided.
+
+        By default, the file is opened in text mode with utf-8 encoding.
+
+        Currently supported compressed file formats are: gzip, zip.
 
         Parameters
         ----------
         path: str
-            Path to the file to read
+            Path to the file to read or to the archive containing the file to read. If this is
+            a path to an archive with multiple files, ``path_inside_archive`` must be provided.
+        path_inside_archive: Optional[str]
+            When the file to open resides in an archive containing multiple files,
+            this argument must be provided to select the file.
         mode: str
             Reading mode; it can be 'r' or 'rt' for text mode, 'rb' for binary mode.
-        encoding: str
+        encoding: Optional[str]
             Text encoding of the text file. This must be left to None when reading in binary mode
             or an exception will be raised.
-        file_format: str
+        file_format: Optional[str]
             If ``file_format == None``, the format is inferred from the extension.
             If the file format (specified or inferred) is not supported, an exception is raised.
 
         Returns
         -------
-        file_handle:
-            a context manager (to be used with ``with``) that returns a file handle. The specific type
-            of a file handle is a ``io.TextIOWrapper`` when reading in text mode. When reading in binary
-            mode, the specific type depends on the file format.
+        a context manager (to be used with ``with``) that returns a file handle. The specific type
+        of a file handle is a ``io.TextIOWrapper`` when reading in text mode. When reading in binary
+        mode, the specific type depends on the file format.
         """
         if mode not in CompressedFileUtils.MODE_CHOICES:
             raise ValueError("Invalid mode: {}. Supported modes are: {}"
@@ -202,25 +211,32 @@ class CompressedFileUtils:
         file_format = file_format or get_file_extension(path)
 
         if file_format == ".gz":
-            logger.info("Opening gzipped file: %s", path)
+            logger.debug("Opening gzipped file: %s", path)
             return gzip.open(path, mode, encoding=encoding)
 
         elif file_format == ".zip":
-            logger.info("Opening zipped file: %s", path)
-            return CompressedFileUtils._open_zipped_file(path, mode, encoding)
+            return CompressedFileUtils.open_zipped_file(path, path_inside_archive,
+                                                        mode=mode, encoding=encoding)
         else:
             raise ValueError('Unsupported file format: {}. Supported formats are: {}'
                              .format(file_format, CompressedFileUtils.SUPPORTED_FORMATS))
 
     @staticmethod
     @contextmanager
-    def _open_zipped_file(path: str, mode: str = 'rt',
-                          encoding: Optional[str] = None):
-        zip_archive = zipfile.ZipFile(path, "r")
+    def open_zipped_file(archive_path: str, path_inside_archive: Optional[str] = None,
+                         mode: str = 'rt', encoding: Optional[str] = None):
+        """
+        Open a single file inside a zip archive. If the file contains multiple files, the
+        ``path_inside_archive`` of the file to open must be provided.
+        """
+        zip_archive = zipfile.ZipFile(archive_path, "r")
+
         namelist = zip_archive.namelist()
-        if len(namelist) > 1:
-            raise ValueError("Multiple files are contained in the zip archive " + path)
-        binary_reader = zip_archive.open(namelist[0], "r")
+        if not path_inside_archive and len(namelist) > 1:
+            raise ValueError("Multiple files are contained in the zip archive " + archive_path)
+        path_inside_archive = path_inside_archive or namelist[0]
+        logger.debug("Opening file %s inside zip archive: %s", path_inside_archive, archive_path)
+        binary_reader = zip_archive.open(path_inside_archive, "r")
 
         if mode == 'rb':
             # Binary mode
@@ -238,25 +254,50 @@ class CompressedFileUtils:
         zip_archive.close()
 
 
-def open_maybe_compressed_file(url_or_path: str, mode: str = 'rt', encoding: str = None,
-                               file_format: str = None, cache_dir: Optional[str] = None):
+def open_maybe_compressed_file(file_path_or_url: str,
+                               path_inside_archive: Optional[str] = None,
+                               mode: str = 'rt',
+                               encoding: str = None,
+                               file_format: str = None,
+                               cache_dir: Optional[str] = None):
     """
-    Open an eventually compressed local file or a locally cached remote file.
+    Open a an eventually compressed file, eventually inside an archive with other files.
+    If the archive contains multiple files, the ``path_inside_archive`` argument must be provided
+    to select the specific file to open.
 
     If the file format is in :const:`CompressedFileUtils.SUPPORTED_FORMATS`, the file is
-    opened using :func:`CompressedFileUtils.read`, otherwise it's assumed to be
+    opened using :func:`CompressedFileUtils.open`, otherwise it's assumed to be
     uncompressed and it's opened using the built-in :func:`open` function.
 
-    The default encoding for text files is :const:`CompressedFileUtils.DEFAULT_ENCODING`.
+    The default encoding for text files is utf-8.
+
+    Parameters
+    ----------
+    file_path_or_url:
+         Path or URL to the file or to the archive containing the file to open.
+    path_inside_archive:
+        When the file to open resides in an archive containing multiple files,
+        this argument must be provided to select the file.
+    mode
+    encoding:
+        text encoding, by default equal to utf-8.
+    file_format:
+        If not specified, it is inferred from the file name.
+    cache_dir
     """
-    file_format = file_format or get_file_extension(url_or_path)
-    local_path = cached_path(url_or_path, cache_dir)
+    file_format = file_format or get_file_extension(file_path_or_url)
+    local_path = cached_path(file_path_or_url, cache_dir)
 
     if file_format in CompressedFileUtils.SUPPORTED_FORMATS:
-        return CompressedFileUtils.open(local_path, mode, encoding, file_format)
+        return CompressedFileUtils.open(local_path, path_inside_archive=path_inside_archive,
+                                        mode=mode, encoding=encoding, file_format=file_format)
     else:
+        logger.info("Reading the file assuming it's not compressed: %s", file_path_or_url)
+        if path_inside_archive is not None:
+            raise ValueError('The file was assumed not to be an archive but path_inside_archive '
+                             'was provided. Either you did this by mistake or you are trying to '
+                             'read from an unsupported/unrecognized archive format.')
         if mode not in CompressedFileUtils.MODE_CHOICES:
             raise ValueError("Invalid mode: {}. Supported modes are: {}"
                              .format(mode, CompressedFileUtils.MODE_CHOICES))
-        logger.info("Reading the file assuming it's not compressed: %s", url_or_path)
         return open(local_path, mode, encoding=encoding)
