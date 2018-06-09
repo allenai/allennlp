@@ -1,5 +1,5 @@
-import gzip
 import logging
+from typing import Optional
 import warnings
 
 from overrides import overrides
@@ -12,12 +12,14 @@ with warnings.catch_warnings():
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.file_utils import cached_path
+from allennlp.common.file_utils import open_maybe_compressed_file, get_file_extension
 from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+_WORD2VEC_ENCODING = 'utf-8'
 
 
 @TokenEmbedder.register("embedding")
@@ -144,6 +146,7 @@ class Embedding(TokenEmbedder):
             num_embeddings = vocab.get_vocab_size(vocab_namespace)
         embedding_dim = params.pop_int('embedding_dim')
         pretrained_file = params.pop("pretrained_file", None)
+        path_inside_archive = params.pop("path_inside_archive", None)
         projection_dim = params.pop_int("projection_dim", None)
         trainable = params.pop_bool("trainable", True)
         padding_index = params.pop_int('padding_index', None)
@@ -160,7 +163,8 @@ class Embedding(TokenEmbedder):
             weight = _read_pretrained_embedding_file(pretrained_file,
                                                      embedding_dim,
                                                      vocab,
-                                                     vocab_namespace)
+                                                     vocab_namespace,
+                                                     path_inside_archive)
         else:
             weight = None
 
@@ -176,13 +180,14 @@ class Embedding(TokenEmbedder):
                    sparse=sparse)
 
 
-def _read_pretrained_embedding_file(embeddings_filename: str,
+def _read_pretrained_embedding_file(embeddings_file_path: str,
                                     embedding_dim: int,
                                     vocab: Vocabulary,
-                                    namespace: str = "tokens") -> torch.FloatTensor:
+                                    namespace: str = "tokens",
+                                    path_inside_archive: Optional[str] = None) -> torch.FloatTensor:
     """
     Reads a pre-trained embedding file and generates an Embedding layer that has weights
-    initialized to the pre-trained embeddings.  The Embedding layer can either be trainable or
+    initialized to the pre-trained embeddings. The Embedding layer can either be trainable or
     not.
 
     We use the ``Vocabulary`` to map from the word strings in the embeddings file to the indices
@@ -190,16 +195,22 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
 
     Parameters
     ----------
-    embeddings_filename : str, required.
+    embeddings_file_path : str, required.
         The path to a file containing pretrained embeddings. We support two file formats,
-        gzipped-word2vec and hdf5.  If the filename ends with '.hdf5' or '.h5' then we load from
-        hdf5, otherwise assume gzipped-word2vec format.
+        text format and hdf5. The text file can eventually be compressed and contained in
+        an archive with multiple files (in that case, ``path_inside_archive`` must be provided).
+        The file is assumed to be utf-8 encoded and space separated: [word] [dim 1] [dim 2] ...
+        If the filename ends with '.hdf5' or '.h5' then we load from hdf5, otherwise we assume
+        word2vec text format.
     vocab : Vocabulary, required.
         A Vocabulary object.
     namespace : str, (optional, default=tokens)
         The namespace of the vocabulary to find pretrained embeddings for.
     trainable : bool, (optional, default=True)
         Whether or not the embedding parameters should be optimized.
+    path_inside_archive: Optional[str]
+        if ``embeddings_filename`` points to an archive containing multiple files, this argument
+        must be provided to select a single file inside the archive.
 
     Returns
     -------
@@ -207,22 +218,38 @@ def _read_pretrained_embedding_file(embeddings_filename: str,
     ``(vocab.get_vocab_size(namespace), embedding_dim)``, where the indices of words appearing in
     the pretrained embedding file are initialized to the pretrained embedding value.
     """
-    if embeddings_filename[-3:] == '.h5' or embeddings_filename[-5:] == '.hdf5':
-        return _read_pretrained_hdf5_format_embedding_file(embeddings_filename, embedding_dim,
+    file_ext = get_file_extension(embeddings_file_path)
+    if file_ext in {'.h5', '.hdf5'}:
+        return _read_pretrained_hdf5_format_embedding_file(embeddings_file_path, embedding_dim,
                                                            vocab, namespace)
     else:
         # default to word2vec
-        return _read_pretrained_word2vec_format_embedding_file(embeddings_filename, embedding_dim,
-                                                               vocab, namespace)
+        return _read_pretrained_word2vec_format_embedding_file(embeddings_file_path,
+                                                               embedding_dim,
+                                                               vocab, namespace,
+                                                               path_inside_archive)
 
 
-def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str, # pylint: disable=invalid-name
+def _read_pretrained_word2vec_format_embedding_file(embeddings_file_path: str,  # pylint: disable=invalid-name
                                                     embedding_dim: int,
                                                     vocab: Vocabulary,
-                                                    namespace: str = "tokens") -> torch.FloatTensor:
+                                                    namespace: str = "tokens",
+                                                    path_inside_archive: Optional[str] = None) \
+                                                    -> torch.FloatTensor:
     """
-    Read from a gzipped-word2vec format file.  The embeddings file is assumed to be gzipped and
-    space delimited, e.g. [word] [dim 1] [dim 2] ...
+    Read pre-trained word vectors from an eventually compressed text file, possibly contained
+    inside an archive with multiple files. The text file is assumed to be utf-8 encoded with
+    space-separated fields:
+
+        [word] [dim 1] [dim 2] ...
+
+    If the file resides in an archive containing multiple files, one has to provide
+    ``path_inside_archive`` to select the desired file inside the archive.
+
+    The supported compression formats are those contained in
+    :const:`allennlp.common.file_util.CompressedFileUtils.SUPPORTED_FORMATS`.
+
+    Lines that contain more numerical tokens than ``embedding_dim`` raise a warning and are skipped.
 
     The remainder of the docstring is identical to ``_read_pretrained_embedding_file``.
     """
@@ -232,9 +259,12 @@ def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str, # 
 
     # First we read the embeddings from the file, only keeping vectors for the words we need.
     logger.info("Reading embeddings from file")
-    with gzip.open(cached_path(embeddings_filename), 'rb') as embeddings_file:
+
+    with open_maybe_compressed_file(embeddings_file_path,
+                                    path_inside_archive=path_inside_archive,
+                                    mode='rt', encoding=_WORD2VEC_ENCODING) as embeddings_file:
         for line in embeddings_file:
-            fields = line.decode('utf-8').rstrip().split(' ')
+            fields = line.rstrip().split(' ')
             if len(fields) - 1 != embedding_dim:
                 # Sometimes there are funny unicode parsing problems that lead to different
                 # fields lengths (e.g., a word with a unicode space character that splits
@@ -264,9 +294,9 @@ def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str, # 
     logger.info("Initializing pre-trained embedding layer")
     embedding_matrix = torch.FloatTensor(vocab_size, embedding_dim).normal_(embeddings_mean,
                                                                             embeddings_std)
-
-    for i in range(0, vocab_size):
-        word = vocab.get_token_from_index(i, namespace)
+    index_to_token = vocab.get_index_to_token_vocabulary(namespace)
+    for i in range(vocab_size):
+        word = index_to_token[i]
 
         # If we don't have a pre-trained vector for this word, we'll just leave this row alone,
         # so the word has a random initialization.
@@ -279,7 +309,7 @@ def _read_pretrained_word2vec_format_embedding_file(embeddings_filename: str, # 
     return embedding_matrix
 
 
-def _read_pretrained_hdf5_format_embedding_file(embeddings_filename: str, # pylint: disable=invalid-name
+def _read_pretrained_hdf5_format_embedding_file(embeddings_file_path: str,  # pylint: disable=invalid-name
                                                 embedding_dim: int,
                                                 vocab: Vocabulary,
                                                 namespace: str = "tokens") -> torch.FloatTensor:
@@ -287,7 +317,7 @@ def _read_pretrained_hdf5_format_embedding_file(embeddings_filename: str, # pyli
     Reads from a hdf5 formatted file.  The embedding matrix is assumed to
     be keyed by 'embedding' and of size ``(num_tokens, embedding_dim)``.
     """
-    with h5py.File(embeddings_filename, 'r') as fin:
+    with h5py.File(embeddings_file_path, 'r') as fin:
         embeddings = fin['embedding'][...]
 
     if list(embeddings.shape) != [vocab.get_vocab_size(namespace), embedding_dim]:

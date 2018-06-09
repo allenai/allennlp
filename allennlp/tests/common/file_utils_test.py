@@ -7,8 +7,10 @@ import json
 import pytest
 import responses
 
-from allennlp.common.file_utils import url_to_filename, filename_to_url, get_from_cache, cached_path
+from allennlp.common.file_utils import url_to_filename, filename_to_url, get_from_cache, cached_path, \
+    CompressedFileUtils, open_maybe_compressed_file
 from allennlp.common.testing import AllenNlpTestCase
+
 
 def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
     # Mock response for the datastore url that returns glove vectors
@@ -165,3 +167,60 @@ class TestFileUtils(AllenNlpTestCase):
 
         with open(filename, 'rb') as cached_file:
             assert cached_file.read() == self.glove_bytes
+
+    def test_CompressedFileUtils_open_with_invalid_params(self):
+        sample_file = self.FIXTURES_ROOT / 'utf8_sample.txt.gz'
+        # Unsupported file format
+        with pytest.raises(ValueError):
+            CompressedFileUtils.open('tests/fixtures/')
+        with pytest.raises(ValueError):  # with forced file_format
+            CompressedFileUtils.open(sample_file, file_format='.rar')
+        # Unsupported mode
+        with pytest.raises(ValueError):
+            CompressedFileUtils.open(sample_file, mode='w')
+        # Passing encoding arg while reading in binary mode
+        with pytest.raises(ValueError):
+            CompressedFileUtils.open(sample_file, mode='rb', encoding='utf-8')
+
+    def test_open_maybe_compressed_file_on_utf8_text(self):
+        txt_path = str(self.FIXTURES_ROOT / 'utf8_sample.txt')
+
+        # This is for sure a correct way to read an utf-8 encoded text file
+        with open(txt_path, 'rt', encoding='utf-8') as f:
+            correct_text = f.read()
+
+        # Check if we get the correct text on plain and compressed versions of the file
+        paths = [txt_path] + [txt_path + ext for ext in CompressedFileUtils.SUPPORTED_FORMATS]
+        for path in paths:
+            with open_maybe_compressed_file(path, mode='rt', encoding='utf-8') as f:
+                text = f.read()
+            assert text == correct_text, "Test failed for file: " + path
+
+        # Check for a file contained inside an archive with multiple files
+        archive_path = str(self.FIXTURES_ROOT / 'utf8_sample_multi.zip')
+        with open_maybe_compressed_file(archive_path, path_inside_archive='folder/utf8_sample.txt',
+                                        mode='rt', encoding='utf-8') as f:
+            text = f.read()
+        assert text == correct_text, "Test failed for file: " + archive_path
+
+        # Passing path_inside_archive when not reading an archive
+        with pytest.raises(ValueError):
+            with open_maybe_compressed_file(txt_path, path_inside_archive='a/fake/path'):
+                pass
+
+    def test_open_maybe_compressed_file_binary_mode(self):
+        file_path = str(self.FIXTURES_ROOT / 'utf8_sample.txt')  # we have compressed versions of this
+
+        with pytest.raises(ValueError):  # passing encoder argument in binary mode
+            open_maybe_compressed_file(file_path, mode='rb', encoding='utf-8')
+
+        # This is for sure a correct way to read a file in binary mode
+        with open(file_path, 'rb') as f:
+            correct_data = f.read()
+
+        # Check if we get the correct data on plain and compressed versions of the file
+        paths = [file_path] + [file_path + ext for ext in CompressedFileUtils.SUPPORTED_FORMATS]
+        for path in paths:
+            with open_maybe_compressed_file(path, mode='rb') as f:
+                data = f.read()
+            assert data == correct_data, "Test failed for file: " + path
