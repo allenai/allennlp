@@ -143,13 +143,13 @@ class Config(Generic[T]):
         return f"Config({self.items})"
 
     def to_json(self) -> List[JsonDict]:
-        items = [item.to_json() for item in self.items]
+        blob = {'items': [item.to_json() for item in self.items]}
 
         if self.typ3:
-            items.insert(0, {"name": "type", "type": self.typ3})
+             #items.insert(0, {"name": "type", "type": self.typ3})
+             blob["type"] = self.typ3
 
-
-        return items
+        return blob
 
 
 # ``None`` is sometimes the default value for a function parameter,
