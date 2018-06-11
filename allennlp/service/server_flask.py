@@ -1,10 +1,23 @@
 """
-A `Flask <http://flask.pocoo.org/>`_ server that serves up
-AllenNLP models as well as our demo.
+The ``server_flask`` application launches a server
+that exposes trained models via a REST API,
+and that includes a web interface for exploring
+their predictions.
 
-Usually you would use :mod:`~allennlp.commands.serve`
-rather than instantiating an ``app`` yourself.
+You can run this on the command line with
+
+.. code-block:: bash
+
+    $ python -m allennlp.service.server_flask -h
+    usage: server_flask.py [-h] [--port PORT]
+
+    Run the web service, which provides an HTTP API as well as a web demo.
+
+    optional arguments:
+      -h, --help   show this help message and exit
+      --port PORT  the port to run the server on
 """
+import argparse
 from datetime import datetime
 from typing import Dict, Optional
 import json
@@ -23,9 +36,10 @@ import psycopg2
 import pytz
 
 from allennlp.common.util import JsonDict, peak_memory_mb
+from allennlp.models.archival import load_archive
 from allennlp.service.db import DemoDatabase, PostgresDemoDatabase
 from allennlp.service.permalinks import int_to_slug, slug_to_int
-from allennlp.predictors import Predictor, DemoModel
+from allennlp.predictors import Predictor
 
 # Can override cache size with an environment variable. If it's 0 then disable caching altogether.
 CACHE_SIZE = os.environ.get("FLASK_CACHE_SIZE") or 128
@@ -46,6 +60,20 @@ class ServerError(Exception):
         error_dict = dict(self.payload or ())
         error_dict['message'] = self.message
         return error_dict
+
+class DemoModel:
+    """
+    A demo model is determined by both an archive file
+    (representing the trained model)
+    and a choice of predictor
+    """
+    def __init__(self, archive_file: str, predictor_name: str) -> None:
+        self.archive_file = archive_file
+        self.predictor_name = predictor_name
+
+    def predictor(self) -> Predictor:
+        archive = load_archive(self.archive_file)
+        return Predictor.from_archive(archive, self.predictor_name)
 
 def run(port: int,
         trained_models: Dict[str, DemoModel],
@@ -276,3 +304,51 @@ def make_app(build_dir: str = None, demo_db: Optional[DemoDatabase] = None) -> F
         return send_from_directory(os.path.join(build_dir, 'static/js'), path)
 
     return app
+
+# This maps from the name of the task
+# to the ``DemoModel`` indicating the location of the trained model
+# and the type of the ``Predictor``.  This is necessary, as you might
+# have multiple models (for example, a NER tagger and a POS tagger)
+# that have the same ``Predictor`` wrapper. The corresponding model
+# will be served at the `/predict/<name-of-task>` API endpoint.
+DEFAULT_MODELS = {
+        'machine-comprehension': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz',  # pylint: disable=line-too-long
+                'machine-comprehension'
+        ),
+        'semantic-role-labeling': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2018.05.25.tar.gz', # pylint: disable=line-too-long
+                'semantic-role-labeling'
+        ),
+        'textual-entailment': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-elmo-2018.02.19.tar.gz',  # pylint: disable=line-too-long
+                'textual-entailment'
+        ),
+        'coreference-resolution': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2018.02.05.tar.gz',  # pylint: disable=line-too-long
+                'coreference-resolution'
+        ),
+        'named-entity-recognition': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.30.tar.gz',  # pylint: disable=line-too-long
+                'sentence-tagger'
+        ),
+        'constituency-parsing': DemoModel(
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/elmo-constituency-parser-2018.03.14.tar.gz',  # pylint: disable=line-too-long
+                'constituency-parser'
+        )
+}
+
+def main(args):
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+                        level=logging.INFO)
+
+    # pylint: disable=protected-access
+    description = '''Run the web service, which provides an HTTP API as well as a web demo.'''
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('--port', type=int, default=8000, help="the port to run the server on")
+
+    args = parser.parse_args()
+    run(args.port, DEFAULT_MODELS)
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

@@ -9,7 +9,6 @@ from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.fine_tune import FineTune
 from allennlp.commands.make_vocab import MakeVocab
 from allennlp.commands.predict import Predict
-from allennlp.commands.serve import Serve
 from allennlp.commands.dry_run import DryRun
 from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.test_install import TestInstall
@@ -38,7 +37,6 @@ def main(prog: str = None,
             "train": Train(),
             "evaluate": Evaluate(),
             "predict": Predict(),
-            "serve": Serve(),
             "make-vocab": MakeVocab(),
             "elmo": Elmo(),
             "fine-tune": FineTune(),
