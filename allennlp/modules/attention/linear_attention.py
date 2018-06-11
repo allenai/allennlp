@@ -64,10 +64,7 @@ class LinearAttention(Attention):
         self._bias.data.fill_(0)
 
     @overrides
-    def _forward_internal(self,
-                          vector: torch.Tensor,
-                          matrix: torch.Tensor,
-                          matrix_mask: torch.Tensor = None) -> torch.Tensor:
+    def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
         # TODO(mattg): Remove the need for this tiling.
         # https://github.com/allenai/allennlp/pull/1235#issuecomment-391540133
         tiled_vector = vector.unsqueeze(1).expand(vector.size()[0],

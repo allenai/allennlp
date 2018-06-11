@@ -35,7 +35,7 @@ Now to run the demo, you can `cd` to the root AllenNLP directory and run the
 following.
 
 ```
-./bin/allennlp serve
+python -m allennlp.service.server_flask
 ```
 
 You may need to force refresh your web browser.

@@ -1,32 +1,37 @@
 # pylint: disable=no-self-use,line-too-long
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.predictors import DemoModel
+from allennlp.models.archival import load_archive
+from allennlp.predictors import Predictor
+
+def demo_model(archive_file: str, predictor_name: str) -> Predictor:
+    archive = load_archive(archive_file)
+    return Predictor.from_archive(archive, predictor_name)
 
 # TODO(joelgrus): this is duplicated in the demo repo
 # figure out where it really belongs
 DEFAULT_MODELS = {
-        'machine-comprehension': DemoModel(
+        'machine-comprehension': demo_model(
                 'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz',  # pylint: disable=line-too-long
                 'machine-comprehension'
         ),
-        'semantic-role-labeling': DemoModel(
+        'semantic-role-labeling': demo_model(
                 'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2018.05.25.tar.gz', # pylint: disable=line-too-long
                 'semantic-role-labeling'
         ),
-        'textual-entailment': DemoModel(
+        'textual-entailment': demo_model(
                 'https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-elmo-2018.02.19.tar.gz',  # pylint: disable=line-too-long
                 'textual-entailment'
         ),
-        'coreference-resolution': DemoModel(
+        'coreference-resolution': demo_model(
                 'https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2018.02.05.tar.gz',  # pylint: disable=line-too-long
                 'coreference-resolution'
         ),
-        'named-entity-recognition': DemoModel(
+        'named-entity-recognition': demo_model(
                 'https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.30.tar.gz',  # pylint: disable=line-too-long
                 'sentence-tagger'
         ),
-        'constituency-parsing': DemoModel(
+        'constituency-parsing': demo_model(
                 'https://s3-us-west-2.amazonaws.com/allennlp/models/elmo-constituency-parser-2018.03.14.tar.gz',  # pylint: disable=line-too-long
                 'constituency-parser'
         )
