@@ -1,15 +1,20 @@
 #!/usr/bin/env python
 
-import re
-import os
 import glob
+import logging
+import os
+import re
 import shutil
 import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
+from allennlp.commands.test_install import _get_module_root
 from allennlp.commands.train import train_model_from_file, train_model
 from allennlp.common import Params
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
 
 def train_fixture(config_prefix: str) -> None:
     config_file = config_prefix + 'experiment.json'
@@ -46,6 +51,10 @@ def train_fixture_gpu(config_prefix: str) -> None:
 
 
 if __name__ == "__main__":
+    initial_working_dir = os.getcwd()
+    module_root = _get_module_root()
+    logger.info("Changing directory to %s", module_root)
+    os.chdir(module_root)
     if len(sys.argv) >= 2 and sys.argv[1].lower() == "gpu":
         train_fixture_gpu("tests/fixtures/srl/")
     else:
@@ -62,3 +71,5 @@ if __name__ == "__main__":
                 ]
         for model in models:
             train_fixture(f"tests/fixtures/{model}/")
+    logger.info("Changing directory back to %s", initial_working_dir)
+    os.chdir(initial_working_dir)

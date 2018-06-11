@@ -300,6 +300,13 @@ class TestVocabulary(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             _ = Vocabulary.from_params(Params({"directory_path": vocab_dir, "min_count": {'tokens': 2}}))
 
+    def test_from_params_adds_tokens_to_vocab(self):
+        vocab = Vocabulary.from_params(Params({'tokens_to_add': {'tokens': ['q', 'x', 'z']}}), self.dataset)
+        assert vocab.get_index_to_token_vocabulary("tokens") == {0: '@@PADDING@@',
+                                                                 1: '@@UNKNOWN@@',
+                                                                 2: 'a', 3: 'c', 4: 'b',
+                                                                 5: 'q', 6: 'x', 7: 'z'}
+
     def test_vocab_can_print(self):
         vocab = Vocabulary(non_padded_namespaces=["a", "c"])
         vocab.add_token_to_namespace("a0", namespace="a")

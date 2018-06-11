@@ -79,3 +79,27 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 'characters': (torch.rand(3, 4, 5, 6, 7) * 15).long(),
                 }
         assert token_embedder(inputs, num_wrapping_dims=2).size() == (3, 4, 5, 6, 12)
+
+    def test_forward_runs_with_non_bijective_mapping(self):
+        elmo_fixtures_path = self.FIXTURES_ROOT / 'elmo'
+        options_file = str(elmo_fixtures_path / 'options.json')
+        weight_file = str(elmo_fixtures_path / 'lm_weights.hdf5')
+        params = Params({
+                "words": {
+                        "type": "embedding",
+                        "num_embeddings": 20,
+                        "embedding_dim": 2,
+                        },
+                "elmo": {
+                        "type": "elmo_token_embedder",
+                        "options_file": options_file,
+                        "weight_file": weight_file
+                        },
+                "embedder_to_indexer_map": {"words": ["words"], "elmo": ["elmo", "words"]}
+                })
+        token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        inputs = {
+                'words': (torch.rand(3, 6) * 20).long(),
+                'elmo': (torch.rand(3, 6, 50) * 15).long(),
+                }
+        token_embedder(inputs)
