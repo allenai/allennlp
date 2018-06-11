@@ -126,7 +126,7 @@ if __name__ == "__main__":
     parser.add_argument('--env', action='append', default=[], help='Set environment variables (e.g. NAME=value or NAME)')
     parser.add_argument('--source', action='append', default=[], help='Bind a remote data source (e.g. source-id:/target/path)')
     parser.add_argument('--cpu', help='CPUs to reserve for this experiment (e.g., 0.5)')
-    parser.add_argument('--gpu-count', help='GPUs to use for this experiment (e.g., 1 (default))')
+    parser.add_argument('--gpu-count', default=1, help='GPUs to use for this experiment (e.g., 1 (default))')
     parser.add_argument('--memory', help='Memory to reserve for this experiment (e.g., 1GB)')
 
     args = parser.parse_args()
