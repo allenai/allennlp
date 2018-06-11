@@ -63,12 +63,12 @@ def full_name(cla55: Optional[type]) -> str:
 def json_annotation(cla55: Optional[type]):
     # Special case to handle None:
     if cla55 is None:
-        return ["?"]
+        return {'origin': '?'}
 
     # Hack because e.g. typing.Union isn't a type.
     if isinstance(cla55, type) and issubclass(cla55, Initializer) and cla55 != Initializer:
         init_fn = cla55()._init_function
-        return [f"{init_fn.__module__}.{init_fn.__name__}"]
+        return {'origin': f"{init_fn.__module__}.{init_fn.__name__}"}
 
     origin = getattr(cla55, '__origin__', None)
     args = getattr(cla55, '__args__', ())
@@ -76,19 +76,19 @@ def json_annotation(cla55: Optional[type]):
     # Special handling for compound types
     if origin == Dict:
         key_type, value_type = args
-        return ["Dict", json_annotation(key_type), json_annotation(value_type)]
+        return {'origin': "Dict", 'args': [json_annotation(key_type), json_annotation(value_type)]}
     elif origin in (Tuple, List, Sequence):
-        return [_remove_prefix(str(origin))] + [json_annotation(arg) for arg in args]
+        return {'origin': _remove_prefix(str(origin)), 'args': [json_annotation(arg) for arg in args]}
     elif origin == Union:
         # Special special case to handle optional types:
         if len(args) == 2 and args[-1] == type(None):
-            return json_annotation(args[0])
+            return {'origin': json_annotation(args[0])}
         else:
-            return ["Union"] + [json_annotation(arg) for arg in args]
+            return {'origin': "Union", 'args': [json_annotation(arg) for arg in args]}
     elif cla55 == Ellipsis:
-        return ["..."]
+        return {'origin': "..."}
     else:
-        return [_remove_prefix(f"{cla55.__module__}.{cla55.__name__}")]
+        return {'origin': _remove_prefix(f"{cla55.__module__}.{cla55.__name__}")}
 
 
 class ConfigItem(NamedTuple):
