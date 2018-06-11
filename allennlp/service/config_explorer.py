@@ -346,24 +346,25 @@ const configToJson = (config) => {
 // This means it's a bottom up concept. This is the one place
 // where immutability makes our lives a little trickier.
 const markComplete = (node) => {
+    const optional = node.get('defaultValue') !== undefined
+    const origin = node.getIn(['annotation', 'origin'])
     const value = node.get('value')
-    const items = node.get('items')
-    const defaultValue = node.get('defaultValue')
 
-    if (defaultValue !== undefined) {
-        // node is optional, so complete
-        return node.set('completed', true)
-    } else if (items) {
-        // not a leaf, so check all children are complete
-        const newItems = items.map(markComplete)
-        const completed = newItems.every(item => item.get('completed'))
-        return node.set('completed', completed).set('items', newItems)
-    } else if (value) {
-        // has a value, so complete
-        return node.set('completed', true)
+    if (node.get('configurable')) {
+        if (value) {
+            const items = node.getIn(['value', 'items']).map(markComplete)
+            return node.set('completed', optional || items.every(item => item.get('completed')))
+                    .setIn(['value', 'items'], items)
+        } else {
+            return node.set('completed', optional)
+        }
+    } else if (Immutable.List.isList(value)) {
+        const items = value.map(markComplete)
+        return node.set('completed', optional || items.every(item => item.get('completed')))
+                   .set('value', items)
     } else {
-        // has no value, so not complete
-        return node.set('completed', false)
+        const completed = optional || value
+        return node.set('completed', completed)
     }
 }
 
@@ -381,8 +382,7 @@ class App extends React.Component {
 
     setData(fn) {
         const {data} = this.state
-        const newData = fn(data).update('config', markComplete)
-
+        const newData = markComplete(fn(data))
         return this.setState({data: newData})
     }
 
@@ -390,14 +390,17 @@ class App extends React.Component {
         // Fetch the top level configuration
         fetch('/api/')
             .then(res => res.json())
-            .then(config => this.setState({data: Immutable.fromJS(config)}))
+            .then(({config}) => {
+                const data = Immutable.Map({configurable: true, value: Immutable.fromJS(config)})
+                this.setState({data: data})
+            })
     }
 
     render() {
-        const config = this.state.data.get('config')
+        const config = this.state.data.get('value')
         return (
             <div class="wizard">
-                <Config path={Immutable.List(['config'])} setData={this.setData} config={config}/>
+                <Config path={Immutable.List(['value'])} setData={this.setData} config={config}/>
                 <JsonBox config={config}/>
             </div>
         )
