@@ -73,17 +73,20 @@ def main(param_file: str, args: argparse.Namespace):
         key, value = var.split("=")
         env[key] = value
 
+    requirements = {}
+    if args.cpu:
+        requirements["cpu"] = float(args.cpu)
+    if args.memory:
+        requirements["memory"] = args.memory
+    if args.gpu_count:
+        requirements["gpuCount"] = int(args.gpu_count)
     config_spec = {
         "description": args.desc,
         "blueprint": blueprint,
         "resultPath": "/output",
         "args": allennlp_command,
         "datasetMounts": dataset_mounts,
-        "requirements": {
-            "cpu": float(args.cpu),
-            "memory": args.memory,
-            "gpuCount": args.gpu_count if args.gpu_count else 1,
-        },
+        "requirements": requirements,
         "env": env
     }
     config_task = {"spec": config_spec, "name": "training"}
@@ -123,7 +126,7 @@ if __name__ == "__main__":
     parser.add_argument('--env', action='append', default=[], help='Set environment variables (e.g. NAME=value or NAME)')
     parser.add_argument('--source', action='append', default=[], help='Bind a remote data source (e.g. source-id:/target/path)')
     parser.add_argument('--cpu', help='CPUs to reserve for this experiment (e.g., 0.5)')
-    parser.add_argument('--gpu_count', help='GPUs to use for this experiment (e.g., 1 (default))')
+    parser.add_argument('--gpu-count', default=1, help='GPUs to use for this experiment (e.g., 1 (default))')
     parser.add_argument('--memory', help='Memory to reserve for this experiment (e.g., 1GB)')
 
     args = parser.parse_args()
