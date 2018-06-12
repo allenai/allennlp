@@ -6,9 +6,11 @@ Tools for programmatically generating config files for AllenNLP models.
 from typing import NamedTuple, Optional, Any, List, TypeVar, Generic, Type, Dict, Union, Sequence, Tuple
 import inspect
 import importlib
+import json
 import re
 
 import torch
+from numpydoc.docscrape import NumpyDocString
 
 from allennlp.common import Registrable, JsonDict
 from allennlp.data.dataset_readers import DatasetReader
@@ -17,6 +19,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.seq2seq_encoders import _Seq2SeqWrapper
 from allennlp.modules.seq2vec_encoders import _Seq2VecWrapper
+from allennlp.modules.token_embedders import Embedding
 from allennlp.nn.initializers import Initializer
 from allennlp.nn.regularizers import Regularizer
 from allennlp.training.optimizers import Optimizer as AllenNLPOptimizer
@@ -57,6 +60,37 @@ def full_name(cla55: Optional[type]) -> str:
         return _remove_prefix(f"{cla55.__module__}.{cla55.__name__}")
 
 
+def json_annotation(cla55: Optional[type]):
+    # Special case to handle None:
+    if cla55 is None:
+        return {'origin': '?'}
+
+    # Hack because e.g. typing.Union isn't a type.
+    if isinstance(cla55, type) and issubclass(cla55, Initializer) and cla55 != Initializer:
+        init_fn = cla55()._init_function
+        return {'origin': f"{init_fn.__module__}.{init_fn.__name__}"}
+
+    origin = getattr(cla55, '__origin__', None)
+    args = getattr(cla55, '__args__', ())
+
+    # Special handling for compound types
+    if origin == Dict:
+        key_type, value_type = args
+        return {'origin': "Dict", 'args': [json_annotation(key_type), json_annotation(value_type)]}
+    elif origin in (Tuple, List, Sequence):
+        return {'origin': _remove_prefix(str(origin)), 'args': [json_annotation(arg) for arg in args]}
+    elif origin == Union:
+        # Special special case to handle optional types:
+        if len(args) == 2 and args[-1] == type(None):
+            return {'origin': json_annotation(args[0])}
+        else:
+            return {'origin': "Union", 'args': [json_annotation(arg) for arg in args]}
+    elif cla55 == Ellipsis:
+        return {'origin': "..."}
+    else:
+        return {'origin': _remove_prefix(f"{cla55.__module__}.{cla55.__name__}")}
+
+
 class ConfigItem(NamedTuple):
     """
     Each ``ConfigItem`` represents a single entry in a configuration JsonDict.
@@ -67,11 +101,28 @@ class ConfigItem(NamedTuple):
     comment: str = ''
 
     def to_json(self) -> JsonDict:
-        return {
-                "annotation": full_name(self.annotation),
-                "default_value": str(self.default_value),
-                "comment": self.comment
+        json_dict = {
+                "name": self.name,
+                "annotation": json_annotation(self.annotation),
         }
+
+        if is_configurable(self.annotation):
+            json_dict["configurable"] = True
+
+        if self.default_value != _NO_DEFAULT:
+            try:
+                # Ugly check that default value is actually serializable
+                json.dumps(self.default_value)
+                json_dict["defaultValue"] = self.default_value
+            except TypeError:
+                print(f"unable to json serialize {self.default_value}, using None instead")
+                json_dict["defaultValue"] = None
+
+
+        if self.comment:
+            json_dict["comment"] = self.comment
+
+        return json_dict
 
 
 T = TypeVar("T")
@@ -92,15 +143,13 @@ class Config(Generic[T]):
         return f"Config({self.items})"
 
     def to_json(self) -> JsonDict:
-        item_dict: JsonDict = {
-                item.name: item.to_json()
-                for item in self.items
-        }
+        blob: JsonDict = {'items': [item.to_json() for item in self.items]}
 
         if self.typ3:
-            item_dict["type"] = self.typ3
+            #items.insert(0, {"name": "type", "type": self.typ3})
+            blob["type"] = self.typ3
 
-        return item_dict
+        return blob
 
 
 # ``None`` is sometimes the default value for a function parameter,
@@ -135,6 +184,33 @@ def _get_config_type(cla55: type) -> Optional[str]:
 
     return None
 
+def _docspec_comments(obj) -> Dict[str, str]:
+    """
+    Inspect the docstring and get the comments for each parameter.
+    """
+    # Sometimes our docstring is on the class, and sometimes it's on the initializer,
+    # so we've got to check both.
+    class_docstring = getattr(obj, '__doc__', None)
+    init_docstring = getattr(obj.__init__, '__doc__', None) if hasattr(obj, '__init__') else None
+
+    docstring = class_docstring or init_docstring or ''
+
+    doc = NumpyDocString(docstring)
+    params = doc["Parameters"]
+    comments: Dict[str, str] = {}
+
+    for line in params:
+        # It looks like when there's not a space after the parameter name,
+        # numpydocstring parses it incorrectly.
+        name_bad = line[0]
+        name = name_bad.split(":")[0]
+
+        # Sometimes the line has 3 fields, sometimes it has 4 fields.
+        comment = "\n".join(line[-1])
+
+        comments[name] = comment
+
+    return comments
 
 def _auto_config(cla55: Type[T]) -> Config[T]:
     """
@@ -143,8 +219,8 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
     """
     typ3 = _get_config_type(cla55)
 
-    # Don't include self
-    names_to_ignore = {"self"}
+    # Don't include self, or vocab
+    names_to_ignore = {"self", "vocab"}
 
     # Hack for RNNs
     if cla55 in [torch.nn.RNN, torch.nn.LSTM, torch.nn.GRU]:
@@ -160,6 +236,7 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
         names_to_ignore.add("tensor")
 
     argspec = inspect.getfullargspec(function_to_inspect)
+    comments = _docspec_comments(cla55)
 
     items: List[ConfigItem] = []
 
@@ -175,9 +252,14 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
         if name in names_to_ignore:
             continue
         annotation = argspec.annotations.get(name)
+        comment = comments.get(name)
 
         # Don't include Model, the only place you'd specify that is top-level.
         if annotation == Model:
+            continue
+
+        # Don't include DataIterator, the only place you'd specify that is top-level.
+        if annotation == DataIterator:
             continue
 
         # Don't include params for an Optimizer
@@ -192,7 +274,15 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
         if cla55 == Trainer and annotation == torch.optim.Optimizer:
             annotation = AllenNLPOptimizer
 
-        items.append(ConfigItem(name, annotation, default))
+        # Hack in embedding num_embeddings as optional (it can be inferred from the pretrained file)
+        if cla55 == Embedding and name == "num_embeddings":
+            default = None
+
+        items.append(ConfigItem(name, annotation, default, comment))
+
+    # More hacks, Embedding
+    if cla55 == Embedding:
+        items.insert(1, ConfigItem("pretrained_file", str, None))
 
     return Config(items, typ3=typ3)
 
@@ -216,10 +306,26 @@ def render_config(config: Config, indent: str = "") -> str:
             "}\n"
     ])
 
-def is_configurable(obj) -> bool:
+
+def _remove_optional(typ3: type) -> type:
+    origin = getattr(typ3, '__origin__', None)
+    args = getattr(typ3, '__args__', None)
+
+    if origin == Union and len(args) == 2 and args[-1] == type(None):
+        return _remove_optional(args[0])
+    else:
+        return typ3
+
+def is_configurable(typ3: type) -> bool:
+    # Throw out optional:
+    typ3 = _remove_optional(typ3)
+
     # Anything with a from_params method is itself configurable.
     # So are regularizers even though they don't.
-    return hasattr(obj, 'from_params') or obj == Regularizer
+    return any([
+            hasattr(typ3, 'from_params'),
+            typ3 == Regularizer,
+    ])
 
 def _render(item: ConfigItem, indent: str = "") -> str:
     """

@@ -1,9 +1,13 @@
-# pylint: disable=no-self-use,invalid-name,line-too-long
+# pylint: disable=no-self-use,invalid-name,line-too-long,no-member
+
+import json
 import os
+import pathlib
 import sys
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.service.config_explorer import make_app
+from allennlp.service import config_explorer
+from allennlp.service.config_explorer import make_app, _HTML
 
 
 class TestConfigExplorer(AllenNlpTestCase):
@@ -14,66 +18,111 @@ class TestConfigExplorer(AllenNlpTestCase):
         app.testing = True
         self.client = app.test_client()
 
-    def test_root_config(self):
+    def test_html(self):
+        """
+        The pip-installed version of allennlp (currently) requires the config explorer HTML
+        to be hardcoded into the server file. But when iterating on it, it's easier to use the
+        /debug/ endpoint, which points at `config_explorer.html`, so that you don't have to
+        restart the server every time you make a change.
+
+        This test just ensures that the two HTML versions are identical, to prevent you from
+        making a change to the standalone HTML but forgetting to change the corresponding
+        server HTML. There is certainly a better way to handle this.
+        """
+        config_explorer_dir = pathlib.Path(config_explorer.__file__).parent
+        config_explorer_file = config_explorer_dir / 'config_explorer.html'
+
+        if not config_explorer_file.exists():
+            print("standalone config_explorer.html does not exist, skipping test")
+        else:
+            with open(config_explorer_file) as f:
+                html = f.read()
+
+            assert html.strip() == _HTML.strip()
+
+    def test_app(self):
         response = self.client.get('/')
         html = response.get_data().decode('utf-8')
 
-        assert "allennlp.data.vocabulary.Vocabulary" in html
-        assert "/?class=allennlp.data.vocabulary.Vocabulary" in html
+        assert "AllenNLP Configuration Wizard" in html
+
+    def test_api(self):
+        response = self.client.get('/api/')
+        data = json.loads(response.get_data())
+
+        assert data["className"] == ""
+
+        items = data["config"]['items']
+
+        assert items[0] == {
+                "name": "dataset_reader",
+                "configurable": True,
+                "comment": "specify your dataset reader here",
+                "annotation": {'origin': "allennlp.data.dataset_readers.dataset_reader.DatasetReader"}
+        }
+
 
     def test_choices(self):
-        response = self.client.get('/?class=allennlp.data.dataset_readers.dataset_reader.DatasetReader')
-        html = response.get_data().decode('utf-8')
+        response = self.client.get('/api/?class=allennlp.data.dataset_readers.dataset_reader.DatasetReader')
+        data = json.loads(response.get_data())
 
-        assert "allennlp.data.dataset_readers.semantic_role_labeling.SrlReader" in html
-        assert "/?class=allennlp.data.dataset_readers.semantic_role_labeling.SrlReader" in html
+        assert "allennlp.data.dataset_readers.reading_comprehension.squad.SquadReader" in data["choices"]
 
     def test_subclass(self):
-        response = self.client.get('/?class=allennlp.data.dataset_readers.semantic_role_labeling.SrlReader')
-        html = response.get_data().decode('utf-8')
+        response = self.client.get('/api/?class=allennlp.data.dataset_readers.semantic_role_labeling.SrlReader')
+        data = json.loads(response.get_data())
 
-        assert '"type": "srl"' in html
-        assert '// "token_indexers"' in html
+        config = data['config']
+        items = config['items']
+        assert config['type'] == 'srl'
+        assert items[0]["name"] == "token_indexers"
 
     def test_torch_class(self):
-        response = self.client.get('/?class=torch.optim.rmsprop.RMSprop')
-        html = response.get_data().decode('utf-8')
+        response = self.client.get('/api/?class=torch.optim.rmsprop.RMSprop')
+        data = json.loads(response.get_data())
+        config = data['config']
+        items = config['items']
 
-        assert '"type": "rmsprop"' in html
-        assert '// "weight_decay"' in html
+        assert config["type"] == "rmsprop"
+        assert any(item["name"] == "lr" for item in items)
 
     def test_rnn_hack(self):
-        response = self.client.get('/?class=torch.nn.modules.rnn.LSTM')
-        html = response.get_data().decode('utf-8')
+        response = self.client.get('/api/?class=torch.nn.modules.rnn.LSTM')
+        data = json.loads(response.get_data())
+        config = data['config']
+        items = config['items']
 
-        assert '"type": "lstm"' in html
-        assert '// "batch_first"' in html
+        assert config["type"] == "lstm"
+        assert any(item["name"] == "batch_first" for item in items)
 
     def test_initializers(self):
-        response = self.client.get('/?class=allennlp.nn.initializers.Initializer')
-        html = response.get_data().decode('utf-8')
+        response = self.client.get('/api/?class=allennlp.nn.initializers.Initializer')
+        data = json.loads(response.get_data())
 
-        assert 'torch.nn.init.constant_' in html
-        assert '/?class=torch.nn.init.constant_' in html
-        assert 'allennlp.nn.initializers.block_orthogonal' in html
-        assert '/?class=allennlp.nn.initializers.block_orthogonal' in html
+        assert 'torch.nn.init.constant_' in data["choices"]
+        assert 'allennlp.nn.initializers.block_orthogonal' in data["choices"]
 
-        response = self.client.get('/?class=torch.nn.init.uniform_')
-        html = response.get_data().decode('utf-8')
-        assert '"type": "uniform"' in html
-        assert '// "a":' in html
+        response = self.client.get('/api/?class=torch.nn.init.uniform_')
+        data = json.loads(response.get_data())
+        config = data['config']
+        items = config['items']
+
+        assert config["type"] == "uniform"
+        assert any(item["name"] == "a" for item in items)
 
     def test_regularizers(self):
-        response = self.client.get('/?class=allennlp.nn.regularizers.regularizer.Regularizer')
-        html = response.get_data().decode('utf-8')
+        response = self.client.get('/api/?class=allennlp.nn.regularizers.regularizer.Regularizer')
+        data = json.loads(response.get_data())
 
-        assert 'allennlp.nn.regularizers.regularizers.L1Regularizer' in html
-        assert '/?class=allennlp.nn.regularizers.regularizers.L1Regularizer' in html
+        assert 'allennlp.nn.regularizers.regularizers.L1Regularizer' in data["choices"]
 
-        response = self.client.get('/?class=allennlp.nn.regularizers.regularizers.L1Regularizer')
-        html = response.get_data().decode('utf-8')
-        assert '"type": "l1"' in html
-        assert '// "alpha":' in html
+        response = self.client.get('/api/?class=allennlp.nn.regularizers.regularizers.L1Regularizer')
+        data = json.loads(response.get_data())
+        config = data['config']
+        items = config['items']
+
+        assert config["type"] == "l1"
+        assert any(item["name"] == "alpha" for item in items)
 
     def test_other_modules(self):
         # Create a new package in a temporary dir
@@ -97,18 +146,18 @@ class TestConfigExplorer(AllenNlpTestCase):
         app = make_app()
         app.testing = True
         client = app.test_client()
-        response = client.get('/?class=allennlp.predictors.predictor.Predictor')
-        html = response.get_data().decode('utf-8')
-        assert "allennlp.predictors.bidaf.BidafPredictor" in html
-        assert "configexplorer.predictor.BidafPredictor" not in html
+        response = client.get('/api/?class=allennlp.predictors.predictor.Predictor')
+        data = json.loads(response.get_data())
+        assert "allennlp.predictors.bidaf.BidafPredictor" in data["choices"]
+        assert "configexplorer.predictor.BidafPredictor" not in data["choices"]
 
         # With specifying extra modules, it should be there.
         app = make_app(['configexplorer'])
         app.testing = True
         client = app.test_client()
-        response = client.get('/?class=allennlp.predictors.predictor.Predictor')
-        html = response.get_data().decode('utf-8')
-        assert "allennlp.predictors.bidaf.BidafPredictor" in html
-        assert "configexplorer.predictor.BidafPredictor" in html
+        response = client.get('/api/?class=allennlp.predictors.predictor.Predictor')
+        data = json.loads(response.get_data())
+        assert "allennlp.predictors.bidaf.BidafPredictor" in data["choices"]
+        assert "configexplorer.predictor.BidafPredictor" in data["choices"]
 
         sys.path.remove(str(self.TEST_DIR))
