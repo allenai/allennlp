@@ -121,7 +121,7 @@ Notice there is also a "X" button to remove the dataset reader configuration if 
 As you fill in the configuration options, at the bottom of a page an actual JSON configuration
 will update in real time:
 
-![configuration wizard](configurator_images/configurator.4.png)
+![configuration wizard](configurator_images/configurator.5.png)
 
 You could, if you like, fill out the entire configuration using this wizard,
 copy the generated JSON into a file, and then launch an experiment.
