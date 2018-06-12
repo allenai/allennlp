@@ -15,10 +15,11 @@ from overrides import overrides
 from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
 from allennlp.common import Params
+from allennlp.common.util import lazy_groups_of
 from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules.highway import Highway
 from allennlp.modules.scalar_mix import ScalarMix
-from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids
+from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids, get_device_of
 from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper, ELMoTokenCharactersIndexer
 from allennlp.data.dataset import Batch
 from allennlp.data import Token, Vocabulary, Instance
@@ -59,6 +60,12 @@ class Elmo(torch.nn.Module):
         Should we apply layer normalization (passed to ``ScalarMix``)?
     dropout : ``float``, optional, (default = 0.5).
         The dropout to be applied to the ELMo representations.
+    vocab_to_cache : ``List[str]``, optional, (default = 0.5).
+        A list of words to pre-compute and cache character convolutions
+        for. If you use this option, Elmo expects that you pass word
+        indices of shape (batch_size, timesteps) to forward, instead
+        of character indices. If you use this option and pass a word which
+        wasn't pre-cached, this will break.
     module : ``torch.nn.Module``, optional, (default = None).
         If provided, then use this module instead of the pre-trained ELMo biLM.
         If using this option, then pass ``None`` for both ``options_file``
@@ -75,6 +82,7 @@ class Elmo(torch.nn.Module):
                  requires_grad: bool = False,
                  do_layer_norm: bool = False,
                  dropout: float = 0.5,
+                 vocab_to_cache: List[str] = None,
                  module: torch.nn.Module = None) -> None:
         super(Elmo, self).__init__()
 
@@ -85,7 +93,11 @@ class Elmo(torch.nn.Module):
                         "Don't provide options_file or weight_file with module")
             self._elmo_lstm = module
         else:
-            self._elmo_lstm = _ElmoBiLm(options_file, weight_file, requires_grad=requires_grad)
+            self._elmo_lstm = _ElmoBiLm(options_file,
+                                        weight_file,
+                                        requires_grad=requires_grad,
+                                        vocab_to_cache=vocab_to_cache)
+        self._has_cached_vocab = vocab_to_cache is not None
         self._dropout = Dropout(p=dropout)
         self._scalar_mixes: Any = []
         for k in range(num_output_representations):
@@ -97,14 +109,16 @@ class Elmo(torch.nn.Module):
         return self._elmo_lstm.get_output_dim()
 
     def forward(self,    # pylint: disable=arguments-differ
-                inputs: torch.Tensor) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
+                inputs: torch.Tensor,
+                word_inputs: torch.Tensor = None) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
         """
         Parameters
         ----------
-        inputs : ``torch.Tensor``
-            Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
-            We also accept tensors with additional optional dimensions:
-            ``(batch_size, dim0, dim1, ..., dimn, timesteps, 50)``
+        inputs: ``torch.Tensor``, required.
+        Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
+        word_inputs : ``torch.Tensor``, required.
+            If you passed a cached vocab, you can in addition pass a tensor of shape
+            ``(batch_size, timesteps)``, which represent word ids which have been pre-cached.
 
         Returns
         -------
@@ -117,14 +131,26 @@ class Elmo(torch.nn.Module):
         """
         # reshape the input if needed
         original_shape = inputs.size()
-        timesteps, num_characters = original_shape[-2:]
         if len(original_shape) > 3:
+            timesteps, num_characters = original_shape[-2:]
             reshaped_inputs = inputs.view(-1, timesteps, num_characters)
         else:
             reshaped_inputs = inputs
 
+        if word_inputs is not None:
+            original_word_size = word_inputs.size()
+            if self._has_cached_vocab and len(original_word_size) > 2:
+                reshaped_word_inputs = word_inputs.view(-1, original_word_size[-1])
+            elif self._has_cached_vocab is not None:
+                logger.warning("Word inputs were passed to ELMo but it does not have a cached vocab.")
+                reshaped_word_inputs = word_inputs
+            else:
+                reshaped_word_inputs = word_inputs
+        else:
+            reshaped_word_inputs = word_inputs
+
         # run the biLM
-        bilm_output = self._elmo_lstm(reshaped_inputs)
+        bilm_output = self._elmo_lstm(reshaped_inputs, reshaped_word_inputs)
         layer_activations = bilm_output['activations']
         mask_with_bos_eos = bilm_output['mask']
 
@@ -139,7 +165,11 @@ class Elmo(torch.nn.Module):
             representations.append(self._dropout(representation_without_bos_eos))
 
         # reshape if necessary
-        if len(original_shape) > 3:
+        if word_inputs is not None and len(original_word_size) > 2:
+            mask = mask_without_bos_eos.view(original_word_size)
+            elmo_representations = [representation.view(original_word_size + (-1, ))
+                                    for representation in representations]
+        elif len(original_shape) > 3:
             mask = mask_without_bos_eos.view(original_shape[:-1])
             elmo_representations = [representation.view(original_shape[:-1] + (-1, ))
                                     for representation in representations]
@@ -451,14 +481,38 @@ class _ElmoBiLm(torch.nn.Module):
         ELMo hdf5 weight file
     requires_grad: ``bool``, optional
         If True, compute gradient of ELMo parameters for fine tuning.
+    vocab_to_cache : ``List[str]``, optional, (default = 0.5).
+        A list of words to pre-compute and cache character convolutions
+        for. If you use this option, _ElmoBiLm expects that you pass word
+        indices of shape (batch_size, timesteps) to forward, instead
+        of character indices. If you use this option and pass a word which
+        wasn't pre-cached, this will break.
     """
     def __init__(self,
                  options_file: str,
                  weight_file: str,
-                 requires_grad: bool = False) -> None:
+                 requires_grad: bool = False,
+                 vocab_to_cache: List[str] = None) -> None:
         super(_ElmoBiLm, self).__init__()
 
         self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=requires_grad)
+
+        self._requires_grad = requires_grad
+        if requires_grad and vocab_to_cache:
+            logging.warning("You are fine tuning ELMo and caching char CNN word vectors. "
+                            "This behaviour is not guaranteed to be well defined, particularly. "
+                            "if not all of your inputs will occur in the vocabulary cache.")
+        # This is an embedding, used to look up cached
+        # word vectors built from character level cnn embeddings.
+        self._word_embedding = None
+        self._bos_embedding: torch.Tensor = None
+        self._eos_embedding: torch.Tensor = None
+        if vocab_to_cache:
+            logging.info("Caching character cnn layers for words in vocabulary.")
+            # This sets 3 attributes, _word_embedding, _bos_embedding and _eos_embedding.
+            # They are set in the method so they can be accessed from outside the
+            # constructor.
+            self.create_cached_cnn_embeddings(vocab_to_cache)
 
         with open(cached_path(options_file), 'r') as fin:
             options = json.load(fin)
@@ -479,12 +533,16 @@ class _ElmoBiLm(torch.nn.Module):
         return 2 * self._token_embedder.get_output_dim()
 
     def forward(self,  # pylint: disable=arguments-differ
-                inputs: torch.Tensor) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
+                inputs: torch.Tensor,
+                word_inputs: torch.Tensor = None) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
         """
         Parameters
         ----------
-        inputs: ``torch.Tensor``
+        inputs: ``torch.Tensor``, required.
             Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
+        word_inputs : ``torch.Tensor``, required.
+            If you passed a cached vocab, you can in addition pass a tensor of shape ``(batch_size, timesteps)``,
+            which represent word ids which have been pre-cached.
 
         Returns
         -------
@@ -499,14 +557,38 @@ class _ElmoBiLm(torch.nn.Module):
         Note that the output tensors all include additional special begin and end of sequence
         markers.
         """
-        token_embedding = self._token_embedder(inputs)
-        type_representation = token_embedding['token_embedding']
-        mask = token_embedding['mask']
+        if self._word_embedding is not None and word_inputs is not None:
+            try:
+                mask_without_bos_eos = (word_inputs > 0).long()
+                # The character cnn part is cached - just look it up.
+                embedded_inputs = self._word_embedding(word_inputs) # type: ignore
+                # shape (batch_size, timesteps + 2, embedding_dim)
+                type_representation, mask = add_sentence_boundary_token_ids(
+                        embedded_inputs,
+                        mask_without_bos_eos,
+                        self._bos_embedding,
+                        self._eos_embedding
+                )
+            except RuntimeError:
+                # Back off to running the character convolutions,
+                # as we might not have the words in the cache.
+                token_embedding = self._token_embedder(inputs)
+                mask = token_embedding['mask']
+                type_representation = token_embedding['token_embedding']
+        else:
+            token_embedding = self._token_embedder(inputs)
+            mask = token_embedding['mask']
+            type_representation = token_embedding['token_embedding']
         lstm_outputs = self._elmo_lstm(type_representation, mask)
 
         # Prepare the output.  The first layer is duplicated.
+        # Because of minor differences in how masking is applied depending
+        # on whether the char cnn layers are cached, we'll be defensive and
+        # multiply by the mask here. It's not strictly necessary, as the
+        # mask passed on is correct, but the values in the padded areas
+        # of the char cnn representations can change.
         output_tensors = [
-                torch.cat([type_representation, type_representation], dim=-1)
+                torch.cat([type_representation, type_representation], dim=-1) * mask.float().unsqueeze(-1)
         ]
         for layer_activations in torch.chunk(lstm_outputs, lstm_outputs.size(0), dim=0):
             output_tensors.append(layer_activations.squeeze(0))
@@ -515,3 +597,63 @@ class _ElmoBiLm(torch.nn.Module):
                 'activations': output_tensors,
                 'mask': mask,
         }
+
+    def create_cached_cnn_embeddings(self, tokens: List[str]) -> None:
+        """
+        Given a list of tokens, this method precomputes word representations
+        by running just the character convolutions and highway layers of elmo,
+        essentially creating uncontextual word vectors. On subsequent forward passes,
+        the word ids are looked up from an embedding, rather than being computed on
+        the fly via the CNN encoder.
+
+        This function sets 3 attributes:
+
+        _word_embedding : ``torch.Tensor``
+            The word embedding for each word in the tokens passed to this method.
+        _bos_embedding : ``torch.Tensor``
+            The embedding for the BOS token.
+        _eos_embedding : ``torch.Tensor``
+            The embedding for the EOS token.
+
+        Parameters
+        ----------
+        tokens : ``List[str]``, required.
+            A list of tokens to precompute character convolutions for.
+        """
+        tokens = [ELMoCharacterMapper.bos_token, ELMoCharacterMapper.eos_token] + tokens
+        timesteps = 32
+        batch_size = 32
+        chunked_tokens = lazy_groups_of(iter(tokens), timesteps)
+
+        all_embeddings = []
+        device = get_device_of(next(self.parameters()))
+        for batch in lazy_groups_of(chunked_tokens, batch_size):
+            # Shape (batch_size, timesteps, 50)
+            batched_tensor = batch_to_ids(batch)
+            # NOTE: This device check is for when a user calls this method having
+            # already placed the model on a device. If this is called in the
+            # constructor, it will probably happen on the CPU. This isn't too bad,
+            # because it's only a few convolutions and will likely be very fast.
+            if device >= 0:
+                batched_tensor = batched_tensor.cuda(device)
+            output = self._token_embedder(batched_tensor)
+            token_embedding = output["token_embedding"]
+            mask = output["mask"]
+            token_embedding, _ = remove_sentence_boundaries(token_embedding, mask)
+            all_embeddings.append(token_embedding.view(-1, token_embedding.size(-1)))
+        full_embedding = torch.cat(all_embeddings, 0)
+
+        # We might have some trailing embeddings from padding in the batch, so
+        # we clip the embedding and lookup to the right size.
+        full_embedding = full_embedding[:len(tokens), :]
+        embedding = full_embedding[2:len(tokens), :]
+        vocab_size, embedding_dim = list(embedding.size())
+
+        from allennlp.modules.token_embedders import Embedding # type: ignore
+        self._bos_embedding = full_embedding[0, :]
+        self._eos_embedding = full_embedding[1, :]
+        self._word_embedding = Embedding(vocab_size, # type: ignore
+                                         embedding_dim,
+                                         weight=embedding.data,
+                                         trainable=self._requires_grad,
+                                         padding_index=0)

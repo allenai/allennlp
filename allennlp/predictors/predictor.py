@@ -119,18 +119,3 @@ class Predictor(Registrable):
         model.eval()
 
         return Predictor.by_name(predictor_name)(model, dataset_reader)
-
-
-class DemoModel:
-    """
-    A demo model is determined by both an archive file
-    (representing the trained model)
-    and a choice of predictor
-    """
-    def __init__(self, archive_file: str, predictor_name: str) -> None:
-        self.archive_file = archive_file
-        self.predictor_name = predictor_name
-
-    def predictor(self) -> Predictor:
-        archive = load_archive(self.archive_file)
-        return Predictor.from_archive(archive, self.predictor_name)
