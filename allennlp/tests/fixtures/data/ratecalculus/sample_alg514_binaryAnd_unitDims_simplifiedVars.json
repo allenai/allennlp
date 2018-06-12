@@ -10,7 +10,10 @@
             "15.0",
             "9.0"
         ],
-        "lSemantics": "(And (Equals (Div (Value o1 Unit) (Value o1 Unit)) (Div 1 1)) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value o1 Unit) q1) (Equals (Value o1 Unit) q1))))"
+        "lSemantics": "(And (Equals (Div (Value o0 Unit0) (Value o1 Unit0)) (Div 5 3)) (And (Equals (Value o2 Unit0) 24) (And (IsPart o0 o2) (And (IsPart o1 o2) (And (Equals (Value o0 Unit0) q0) (Equals (Value o1 Unit0) q1))))))",
+        "lTags": [
+            "fold-1"
+        ]
     },
     {
         "iIndex": "1695",
@@ -23,7 +26,10 @@
             "137.0",
             "388.0"
         ],
-        "lSemantics": "(And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value o1 Unit) q1) (Equals (Value o1 Unit) q1))))))"
+        "lSemantics": "(And (Equals (Rate o0 Dollar Unit0) 4) (And (Equals (Rate o1 Dollar Unit0) 6) (And (Equals (Value o2 Unit0) 525) (And (IsPart o0 o2) (And (IsPart o1 o2) (And (Equals (Value o2 Dollar) 2876) (And (Equals (Value o0 Unit0) q0) (Equals (Value o1 Unit0) q1))))))))",
+        "lTags": [
+            "fold-1"
+        ]
     },
     {
         "iIndex": "2575",
@@ -36,7 +42,10 @@
             "4.0",
             "6.0"
         ],
-        "lSemantics": "(And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value o1 Unit) q1) (Equals (Value o1 Unit) q1))))))"
+        "lSemantics": "(And (Equals (Rate o0 Dollar Unit0) 10.5) (And (Equals (Rate o1 Dollar Unit0) 8.5) (And (Equals (Value o2 Unit0) 10) (And (IsPart o0 o2) (And (IsPart o1 o2) (And (Equals (Value o2 Dollar) 93) (And (Equals (Value o0 Unit0) q0) (Equals (Value o1 Unit0) q1))))))))",
+        "lTags": [
+            "fold-1"
+        ]
     },
     {
         "iIndex": "1075",
@@ -49,7 +58,10 @@
             "3900.0",
             "2200.0"
         ],
-        "lSemantics": "(And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value o1 Unit) q1) (Equals (Value o1 Unit) q1))))))"
+        "lSemantics": "(And (Equals (Value o0 Unit0) 6100) (And (Equals (Rate o1 Dollar Unit0) 0.07) (And (IsPart o1 o0) (And (Equals (Rate o2 Dollar Unit0) 0.06) (And (IsPart o2 o0) (And (Equals (Value o0 Dollar) 405) (And (Equals (Value o1 Unit0) q0) (Equals (Value o2 Unit0) q1))))))))",
+        "lTags": [
+            "fold-1"
+        ]
     },
     {
         "iIndex": "267",
@@ -62,7 +74,10 @@
             "30.0",
             "10.0"
         ],
-        "lSemantics": "(And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value o1 Unit) q1) (Equals (Value o1 Unit) q1))))))"
+        "lSemantics": "(And (Equals (Value o0 Unit0) 100) (And (Equals (Value o0 Unit1) 40) (And (Equals (Rate o1 Unit0 Unit1) 2) (And (IsPart o1 o0) (And (Equals (Rate o2 Unit0 Unit1) 4) (And (IsPart o2 o0) (And (Equals (Value o1 Unit1) q0) (Equals (Value o2 Unit1) q1))))))))",
+        "lTags": [
+            "fold-1"
+        ]
     },
     {
         "iIndex": "2089",
@@ -73,7 +88,10 @@
         "lSolutions": [
             "25.0"
         ],
-        "lSemantics": "(And (Equals (Value o1 Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value o1 Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value (Join o1 o1) Unit) (Value (Join o1 o1) Unit)) (And (Equals (Value o1 Unit) (Value o1 Unit)) (Equals (Value o1 Unit) q1)))))))"
+        "lSemantics": "(And (Equals (Value o5 Dollar) 160) (And (Equals (Rate o2 Dollar Unit0) 7) (And (Equals (Value o0 Dollar) 210) (And (Equals (Rate o3 Dollar Unit0) 5) (And (Equals (Value o2 Unit0) q0) (And (Equals (Value o4 Dollar) (Value o1 Dollar)) (And (Equals (Value o2 Unit0) (Value o3 Unit0)) (And (IsPart o5 o4) (And (IsPart o2 o4) (And (IsPart o0 o1) (IsPart o3 o1)))))))))))",
+        "lTags": [
+            "fold-1"
+        ]
     },
     {
         "iIndex": "5154",
@@ -85,7 +103,10 @@
         "lSolutions": [
             "63.0"
         ],
-        "lSemantics": "(And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (Equals (Value o1 Unit) q1)))))"
+        "lSemantics": "(And (Equals (Value o0 Unit0) 80) (And (Equals (Rate o1 Dollar Unit0) 12) (And (IsPart o1 o0) (And (Equals (Rate o2 Dollar Unit0) 5) (And (IsPart o2 o0) (And (Equals (Value o0 Dollar) 519) (Equals (Value o2 Unit0) q0)))))))",
+        "lTags": [
+            "fold-1"
+        ]
     },
     {
         "iIndex": "6952",
@@ -97,19 +118,24 @@
         "lSolutions": [
             "8.0"
         ],
-        "lSemantics": "(And (Equals (Value o1 Unit) 1) (And (Equals (Value o1 Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Times 1 (Value o1 Unit)) (Plus 1 (Value o1 Unit))) (Equals (Value o1 Unit) q1)))))"
+        "lSemantics": "(And (Equals (Value o0 Unit0) 20) (And (Equals (Times 2 (Value o1 Unit0)) (Plus 4 (Value o2 Unit0))) (And (IsPart o1 o0) (And (IsPart o2 o0) (Equals (Value o1 Unit0) q0)))))",
+        "lTags": [
+            "fold-1"
+        ]
     },
     {
-        "iIndex": "5874",
-        "sQuestion": "Colombian coffee beans cost 5.50 dollars per pound, while Peruvian coffee beans cost 4.25 dollars per pound. We want to mix the beans together so as to produce a 40-pound bag , costing 4.60 dollars per pound. How many pounds of Columbian beans and how many pounds of Peruvian beans should be used? ",
+        "iIndex": "5131",
+        "sQuestion": "You are traveling to your mothers house that is 234 miles away. If you are currently twice as far from your house as you are from your mothers house how far have you traveled? Round to the nearest tenth mile.",
         "lEquations": [
-            "(5.5*columbian_pounds)+(4.25*peruvian_pounds)=40.0*4.6",
-            "columbian_pounds+peruvian_pounds=40.0"
+            "distance_traveled+distance_mothers=234.0",
+            "distance_traveled=2.0*distance_mothers"
         ],
         "lSolutions": [
-            "11.2",
-            "28.8"
+            "156.0"
         ],
-        "lSemantics": "(And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Rate o1 Unit Unit) 1) (And (Equals (Value (Join o1 o1) Unit) 1) (And (Equals (Rate (Join o1 o1) Unit Unit) 1) (And (Equals (Value o1 Unit) q1) (Equals (Value o1 Unit) q1))))))"
+        "lSemantics": "(And (Equals (Value o0 Unit0) 234) (And (Equals (Value o1 Unit0) (Times 2 (Value o2 Unit0))) (And (IsPart o1 o0) (And (IsPart o2 o0) (Equals (Value o1 Unit0) q0)))))",
+        "lTags": [
+            "fold-1"
+        ]
     }
 ]

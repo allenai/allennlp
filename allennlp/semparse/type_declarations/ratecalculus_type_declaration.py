@@ -17,8 +17,8 @@ VALUE_TYPE = ComplexType(OBJECT_TYPE,
 RATE_TYPE = ComplexType(OBJECT_TYPE,
                         ComplexType(DIMENSION_TYPE,
                                     ComplexType(DIMENSION_TYPE, NUMBER_TYPE)))
-UNION_TYPE = ComplexType(OBJECT_TYPE,
-                         ComplexType(OBJECT_TYPE, OBJECT_TYPE))
+ISPART_TYPE = ComplexType(OBJECT_TYPE,
+                          ComplexType(OBJECT_TYPE, BOOLEAN_TYPE))
 
 IDENTITY_TYPE = UnaryOpType()
 
@@ -47,7 +47,7 @@ def add_common_name_with_type(name, mapping, type_signature):
 # Rate Calculus Operators
 add_common_name_with_type("Value", "V", VALUE_TYPE)
 add_common_name_with_type("Rate", "R", RATE_TYPE)
-add_common_name_with_type("Join", "J", UNION_TYPE)
+add_common_name_with_type("IsPart", "J", ISPART_TYPE)
 
 # Linear Algebra Operators
 add_common_name_with_type("And", "A", CONJUNCTION_TYPE)

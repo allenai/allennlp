@@ -47,9 +47,9 @@ class TestRateCalculusWorld(AllenNlpTestCase):
         assert str(expression) == "E(R(O1,U5,U6),num:20)"
 
     def test_world_parses_union_constraint(self):
-        sempre_form = "(Equals (Value (Join o1 o2) Dollar) 20)"
+        sempre_form = "(IsPart o1 o0)"
         expression = self.world.parse_logical_form(sempre_form)
-        assert str(expression) == "E(V(J(O1,O2),U5),num:20)"
+        assert str(expression) == "J(O1,O0)"
 
     def test_world_parses_conjunction(self):
         sempre_form = "(And (Equals 20 20) (Equals 50 50))"
@@ -71,7 +71,7 @@ class TestRateCalculusWorld(AllenNlpTestCase):
                 'd',
                 'n',
                 'o',
-                '<o,<o,o>>',
+                '<o,<o,b>>',
                 '<o,<d,<d,n>>>',
                 '<o,<d,n>>',
                 '<b,<b,b>>',
@@ -83,7 +83,7 @@ class TestRateCalculusWorld(AllenNlpTestCase):
                                 ['b'])
 
         check_productions_match(valid_actions['b'],
-                                ['[<b,<b,b>>, b, b]', '[<n,<n,b>>, n, n]'])
+                                ['[<b,<b,b>>, b, b]', '[<n,<n,b>>, n, n]', '[<o,<o,b>>, o, o]'])
 
         check_productions_match(valid_actions['d'],
                                 ['Dollar', 'Unit', 'Unit0', 'Unit1', 'Unit2', 'Unit3', 'Unit4'])
@@ -105,7 +105,7 @@ class TestRateCalculusWorld(AllenNlpTestCase):
         check_productions_match(valid_actions['n'], number_productions)
 
         check_productions_match(valid_actions['o'],
-                                ['[<o,<o,o>>, o, o]', 'o0', 'o1', 'o2', 'o3', 'o4', 'o5'])
+                                ['o0', 'o1', 'o2', 'o3', 'o4', 'o5'])
 
         check_productions_match(valid_actions['<o,<d,n>>'],
                                 ['Value'])
@@ -113,8 +113,8 @@ class TestRateCalculusWorld(AllenNlpTestCase):
         check_productions_match(valid_actions['<o,<d,<d,n>>>'],
                                 ['Rate'])
 
-        check_productions_match(valid_actions['<o,<o,o>>'],
-                                ['Join'])
+        check_productions_match(valid_actions['<o,<o,b>>'],
+                                ['IsPart'])
 
         check_productions_match(valid_actions['<n,<n,b>>'],
                                 ['Equals'])

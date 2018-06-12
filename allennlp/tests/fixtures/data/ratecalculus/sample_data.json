@@ -19,6 +19,6 @@
         "lSolutions": [
             "130.0"
         ],
-        "lSemantics": "(And (Equals (Rate o1 Dollar Unit) 20) (And (Equals (Value o1 Unit) 5) (And (Equals (Rate o2 Dollar Unit) 10) (And (Equals (Value o2 Unit) 3) (Equals (Value (Join o1 o2) Dollar) q1)))"
+        "lSemantics": "(And (Equals (Rate o1 Dollar Unit) 20) (And (Equals (Value o1 Unit) 5) (And (Equals (Rate o2 Dollar Unit) 10) (And (Equals (Value o2 Unit) 3) (And (IsPart o1 o0) (And (IsPart o2 o0) (Equals (Value o0 Dollar) q1)))))"
   }
 ]
