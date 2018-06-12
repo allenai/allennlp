@@ -1,11 +1,13 @@
-# pylint: disable=no-self-use,invalid-name,line-too-long
+# pylint: disable=no-self-use,invalid-name,line-too-long,no-member
 
 import json
 import os
+import pathlib
 import sys
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.service.config_explorer import make_app
+from allennlp.service import config_explorer
+from allennlp.service.config_explorer import make_app, _HTML
 
 
 class TestConfigExplorer(AllenNlpTestCase):
@@ -15,6 +17,28 @@ class TestConfigExplorer(AllenNlpTestCase):
         app = make_app()
         app.testing = True
         self.client = app.test_client()
+
+    def test_html(self):
+        """
+        The pip-installed version of allennlp (currently) requires the config explorer HTML
+        to be hardcoded into the server file. But when iterating on it, it's easier to use the
+        /debug/ endpoint, which points at `config_explorer.html`, so that you don't have to
+        restart the server every time you make a change.
+
+        This test just ensures that the two HTML versions are identical, to prevent you from
+        making a change to the standalone HTML but forgetting to change the corresponding
+        server HTML. There is certainly a better way to handle this.
+        """
+        config_explorer_dir = pathlib.Path(config_explorer.__file__).parent
+        config_explorer_file = config_explorer_dir / 'config_explorer.html'
+
+        if not config_explorer_file.exists():
+            print("standalone config_explorer.html does not exist, skipping test")
+        else:
+            with open(config_explorer_file) as f:
+                html = f.read()
+
+            assert html.strip() == _HTML.strip()
 
     def test_app(self):
         response = self.client.get('/')
@@ -28,14 +52,13 @@ class TestConfigExplorer(AllenNlpTestCase):
 
         assert data["className"] == ""
 
-        items = data["configItems"]
-        assert items
+        items = data["config"]['items']
 
         assert items[0] == {
                 "name": "dataset_reader",
                 "configurable": True,
                 "comment": "specify your dataset reader here",
-                "annotation": ["allennlp.data.dataset_readers.dataset_reader.DatasetReader"]
+                "annotation": {'origin': "allennlp.data.dataset_readers.dataset_reader.DatasetReader"}
         }
 
 
@@ -49,24 +72,27 @@ class TestConfigExplorer(AllenNlpTestCase):
         response = self.client.get('/api/?class=allennlp.data.dataset_readers.semantic_role_labeling.SrlReader')
         data = json.loads(response.get_data())
 
-        items = data['configItems']
-        assert items[0] == {"name": "type", "type": "srl"}
-        assert items[1]["name"] == "token_indexers"
+        config = data['config']
+        items = config['items']
+        assert config['type'] == 'srl'
+        assert items[0]["name"] == "token_indexers"
 
     def test_torch_class(self):
         response = self.client.get('/api/?class=torch.optim.rmsprop.RMSprop')
         data = json.loads(response.get_data())
-        items = data['configItems']
+        config = data['config']
+        items = config['items']
 
-        assert items[0]["type"] == "rmsprop"
+        assert config["type"] == "rmsprop"
         assert any(item["name"] == "lr" for item in items)
 
     def test_rnn_hack(self):
         response = self.client.get('/api/?class=torch.nn.modules.rnn.LSTM')
         data = json.loads(response.get_data())
-        items = data['configItems']
+        config = data['config']
+        items = config['items']
 
-        assert items[0]["type"] == "lstm"
+        assert config["type"] == "lstm"
         assert any(item["name"] == "batch_first" for item in items)
 
     def test_initializers(self):
@@ -78,9 +104,10 @@ class TestConfigExplorer(AllenNlpTestCase):
 
         response = self.client.get('/api/?class=torch.nn.init.uniform_')
         data = json.loads(response.get_data())
-        items = data['configItems']
+        config = data['config']
+        items = config['items']
 
-        assert items[0]["type"] == "uniform"
+        assert config["type"] == "uniform"
         assert any(item["name"] == "a" for item in items)
 
     def test_regularizers(self):
@@ -91,9 +118,10 @@ class TestConfigExplorer(AllenNlpTestCase):
 
         response = self.client.get('/api/?class=allennlp.nn.regularizers.regularizers.L1Regularizer')
         data = json.loads(response.get_data())
-        items = data['configItems']
+        config = data['config']
+        items = config['items']
 
-        assert items[0]["type"] == "l1"
+        assert config["type"] == "l1"
         assert any(item["name"] == "alpha" for item in items)
 
     def test_other_modules(self):
