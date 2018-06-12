@@ -59,7 +59,7 @@ def make_app(include_packages: Sequence[str] = ()) -> Flask:
         """
         return send_file('config_explorer.html')
 
-    @app.route('/api/')
+    @app.route('/api/config/')
     def api() -> Response:  # pylint: disable=unused-variable
         class_name = request.args.get('class', '')
 
@@ -185,7 +185,8 @@ _HTML = """
         }
 
         button.subconfigure {
-            margin: 2px;
+            margin-left: 5px;
+            margin-right: 5px;
         }
 
         .tippy-content {
@@ -205,6 +206,8 @@ _HTML = """
     <script src="https://unpkg.com/tippy.js@2.5.2/dist/tippy.all.min.js"></script>
     <script type="text/babel">
 /*
+The API returns objects that look like the following:
+
 ConfigItem = {
    name : str
    annotation : List[str]
@@ -226,7 +229,7 @@ ApiResponse = {
 }
 */
 
-// A configItem is optional if it has no default value
+// A configItem is optional if it has a default value
 const isOptional = (configItem) => configItem.get('defaultValue') !== undefined
 
 // Assumption is that "allennlp.*" and "torch.*" are configurable
@@ -255,8 +258,8 @@ const bestGuess = x => {
 }
 
 // Recursively convert the provided value to JSON
-const jsonify = (value, annotation, configurable) => {
-    if (!value) {
+const jsonify = (value, annotation, configurable, optional) => {
+    if (!value && optional) {
         return undefined
     } else if (configurable) {
         return configToJson(value)
@@ -272,14 +275,14 @@ const jsonify = (value, annotation, configurable) => {
             const configurable = isConfigurable(valueAnnotation)
 
             const dict = {}
-            let nonEmpty = false
+            let nonEmpty = false;
 
-            value.forEach((entry) => {
+            (value || Immutable.List()).forEach((entry) => {
                 const entryKey = entry.get("key")
                 const entryValue = entry.get("value")
 
                 if (entryKey && entryKey.length && entryValue) {
-                    const valueJson = jsonify(entryValue, valueAnnotation, configurable)
+                    const valueJson = jsonify(entryValue, valueAnnotation, configurable, true)
                     if (valueJson) {
                         nonEmpty = true
                         dict[entryKey] = valueJson
@@ -287,23 +290,24 @@ const jsonify = (value, annotation, configurable) => {
                 }
             })
 
-            return nonEmpty ? dict : undefined
+            return (nonEmpty || !optional) ? dict : undefined
         } else if (origin === 'List' || origin === 'Sequence') {
             const [valueAnnotation] = args
             const configurable = isConfigurable(valueAnnotation)
 
-            const list = value.map(item => jsonify(item.get('value'), valueAnnotation, configurable))
+            const list = (value || Immutable.List()).map(item => jsonify(item.get('value'), valueAnnotation, configurable, true))
                               .filter(x => x !== undefined)
                               .toArray()
 
-            return list.length ? list : undefined
+            return (list.length || !optional) ? list : undefined
         } else if (origin === 'int' || origin === 'float') {
             const numeric = +value
-            return value.length && !isNaN(numeric) ? numeric : undefined
+            return value && value.length && !isNaN(numeric) ? numeric : undefined
         } else if (origin === 'bool') {
             return {'true': true, 'false': false}[value]
         } else if (origin === 'str') {
-            return value.length ? value : undefined
+            const keep = (value && value.length) || !optional
+            return keep ? (value || '') : undefined
         } else {
             console.log("unknown type " + annotation.toJS())
             return undefined
@@ -325,8 +329,9 @@ const configToJson = (config) => {
             const value = item.get('value')
             const annotation = item.get('annotation')
             const configurable = item.get('configurable')
+            const optional = item.get('defaultValue') !== undefined
 
-            const json = jsonify(value, annotation, configurable)
+            const json = jsonify(value, annotation, configurable, optional)
 
             if (json !== undefined) {
                 const name = item.get('name')
@@ -383,12 +388,13 @@ class App extends React.Component {
     setData(fn) {
         const {data} = this.state
         const newData = markComplete(fn(data))
+        console.log(newData)
         return this.setState({data: newData})
     }
 
     componentDidMount() {
         // Fetch the top level configuration
-        fetch('/api/')
+        fetch('/api/config/')
             .then(res => res.json())
             .then(({config}) => {
                 const data = Immutable.Map({configurable: true, value: Immutable.fromJS(config)})
@@ -564,7 +570,7 @@ const Configurator = ({path, item, setData}) => {
     const prefix = choices ? commonPrefix(choices) : null
 
     const getChoices = () => {
-        fetch('/api/?class=' + className)
+        fetch('/api/config/?class=' + className)
             .then(res => res.json())
             .then(({config, choices}) => {
                 if (choices) {
@@ -578,7 +584,7 @@ const Configurator = ({path, item, setData}) => {
     const select = (evt) => {
         const choice = evt.target.value
 
-        fetch('/api/?class=' + choice)
+        fetch('/api/config/?class=' + choice)
             .then(res => res.json())
             .then(({config}) => {
                 setData(rootConfig => rootConfig.setIn(path.push('choice'), choice)
@@ -592,7 +598,7 @@ const Configurator = ({path, item, setData}) => {
                                 .deleteIn(path.push('choice')))
     }
 
-    const configureButton = (choices || config) ? null : <button onClick={getChoices}>CONFIGURE</button>
+    const configureButton = (choices || config) ? null : <button class="subconfigure" onClick={getChoices}>CONFIGURE</button>
     const choicesDropdown = choices ? (
         <span>
             <span class="prefix">{prefix}</span>
