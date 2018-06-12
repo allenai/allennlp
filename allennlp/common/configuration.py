@@ -142,8 +142,8 @@ class Config(Generic[T]):
     def __repr__(self) -> str:
         return f"Config({self.items})"
 
-    def to_json(self) -> List[JsonDict]:
-        blob = {'items': [item.to_json() for item in self.items]}
+    def to_json(self) -> JsonDict:
+        blob: JsonDict = {'items': [item.to_json() for item in self.items]}
 
         if self.typ3:
             #items.insert(0, {"name": "type", "type": self.typ3})
