@@ -118,7 +118,7 @@ and if you select SquadReader again, a configurator for the dataset reader piece
 
 Notice there is also a "X" button to remove the dataset reader configuration if you decide you don't want it.
 
-As you fill in the configuration options, at the bottom of a page an actual JSON configuration
+As you fill in the configuration options, at the bottom of the page an actual JSON configuration
 will update in real time:
 
 ![configuration wizard](configurator_images/configurator.5.png)
