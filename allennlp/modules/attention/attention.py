@@ -36,7 +36,7 @@ class Attention(torch.nn.Module, Registrable):
     """
     def __init__(self,
                  normalize: bool = True) -> None:
-        super(Attention, self).__init__()
+        super().__init__()
         self._normalize = normalize
 
     @overrides
@@ -44,14 +44,13 @@ class Attention(torch.nn.Module, Registrable):
                 vector: torch.Tensor,
                 matrix: torch.Tensor,
                 matrix_mask: torch.Tensor = None) -> torch.Tensor:
-        similarities = self._forward_internal(vector, matrix, matrix_mask)
+        similarities = self._forward_internal(vector, matrix)
         if self._normalize:
             return masked_softmax(similarities, matrix_mask)
         else:
             return similarities
 
-    def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor,
-                          matrix_mask: torch.Tensor = None) -> torch.Tensor:
+    def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError
 
     @classmethod

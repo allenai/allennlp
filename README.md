@@ -103,7 +103,6 @@ Commands:
     train       Train a model
     evaluate    Evaluate the specified model + dataset
     predict     Use a trained model to make predictions.
-    serve       Run the web service and demo.
     make-vocab  Create a vocabulary
     elmo        Use a trained model to make predictions.
     fine-tune   Continue training a model on a new dataset

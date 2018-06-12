@@ -21,7 +21,6 @@ The included module ``allennlp.run`` is such a script:
         configure   Generate a stub configuration
         evaluate    Evaluate the specified model + dataset
         predict     Use a trained model to make predictions.
-        serve       Run the web service and demo.
         make-vocab  Create a vocabulary
         elmo        Use a trained model to make predictions.
         fine-tune   Continue training a model on a new dataset
@@ -41,7 +40,6 @@ calls ``main()``.
     allennlp.commands.evaluate
     allennlp.commands.make_vocab
     allennlp.commands.predict
-    allennlp.commands.serve
     allennlp.commands.train
     allennlp.commands.fine_tune
     allennlp.commands.elmo

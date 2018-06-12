@@ -28,6 +28,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
         logging.getLogger('allennlp.common.params').disabled = True
         logging.getLogger('allennlp.nn.initializers').disabled = True
         logging.getLogger('allennlp.modules.token_embedders.embedding').setLevel(logging.INFO)
+        logging.getLogger('urllib3.connectionpool').disabled = True
         log_pytorch_version_info()
 
         self.TEST_DIR = pathlib.Path("/tmp/allennlp_tests/")

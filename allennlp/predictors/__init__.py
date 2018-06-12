@@ -6,7 +6,7 @@ want to serve up a model through the web service
 (or using ``allennlp.commands.predict``), you'll need
 a ``Predictor`` that wraps it.
 """
-from allennlp.predictors.predictor import Predictor, DemoModel
+from allennlp.predictors.predictor import Predictor
 from allennlp.predictors.bidaf import BidafPredictor
 from allennlp.predictors.constituency_parser import ConstituencyParserPredictor
 from allennlp.predictors.coref import CorefPredictor
