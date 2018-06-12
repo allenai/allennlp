@@ -143,10 +143,8 @@ class RateCalculusDatasetReaderTest(AllenNlpTestCase):
         assert_sample_alg514_dataset_correct(dataset)
 
     def test_reader_reads_all_alg514(self):
-        print("Running test")
         reader = RateCalculusDatasetReader(lazy=False)
         filename = "alg514_canonical.json"
         filepath = str(self.FIXTURES_ROOT / "data" / "ratecalculus" / filename)
         dataset = reader.read(filepath)
-        print("Number of parsed questions: ", len(list(dataset)))
-        assert(len(list(dataset)))
+        assert(len(list(dataset)) >= 504)
