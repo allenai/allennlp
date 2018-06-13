@@ -77,3 +77,6 @@ flaky
 
 # Required to mock out `requests` calls
 responses>=0.7
+
+# Reads Universal Dependencies files.
+conllu
