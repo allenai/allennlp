@@ -286,7 +286,6 @@ class App extends React.Component {
     setData(fn) {
         const {data} = this.state
         const newData = markComplete(fn(data))
-        console.log(newData)
         return this.setState({data: newData})
     }
 
