@@ -82,7 +82,7 @@ def json_annotation(cla55: Optional[type]):
     elif origin == Union:
         # Special special case to handle optional types:
         if len(args) == 2 and args[-1] == type(None):
-            return {'origin': json_annotation(args[0])}
+            return json_annotation(args[0])
         else:
             return {'origin': "Union", 'args': [json_annotation(arg) for arg in args]}
     elif cla55 == Ellipsis:
