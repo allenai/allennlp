@@ -31,18 +31,13 @@ class UniversalDependenciesDatasetReader(DatasetReader):
 
     Parameters
     ----------
-    tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
-        We use this ``Tokenizer`` for both the premise and the hypothesis.  See :class:`Tokenizer`.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
-        We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
+        The token indexers to be applied to the words TextField.
     """
-
     def __init__(self,
-                 tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False) -> None:
         super().__init__(lazy)
-        self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
     @overrides
@@ -67,24 +62,41 @@ class UniversalDependenciesDatasetReader(DatasetReader):
                          upos_tags: List[str],
                          dependencies: List[Tuple[str, int]] = None) -> Instance:
         # pylint: disable=arguments-differ
+        """
+        Parameters
+        ----------
+        words : ``List[str]``, required.
+            The words in the sentence to be encoded.
+        upos_tags : ``List[str]``, required.
+            The universal dependencies POS tags for each word.
+        dependencies ``List[Tuple[str, int]]``, optional (default = None)
+            A list of  (head tag, head index) tuples. Indices are 1 indexed,
+            meaning an index of 0 corresponds to that word being the root of
+            the dependency tree.
+
+        Returns
+        -------
+        An instance containing words, upos tags, dependency head tags and head
+        indices as fields.
+        """
+
         fields: Dict[str, Field] = {}
-        fields["words"] = TextField([Token(w) for w in words], self._token_indexers)
-        fields["pos_tags"] = SequenceLabelField(upos_tags, fields["words"], label_namespace="pos")
+        tokens = TextField([Token(w) for w in words], self._token_indexers)
+        fields["words"] = tokens
+        fields["pos_tags"] = SequenceLabelField(upos_tags, tokens, label_namespace="pos")
         fields["head_tags"] = SequenceLabelField([x[0] for x in dependencies],
-                                                 fields["words"],
+                                                 tokens,
                                                  label_namespace="head_tags")
         if dependencies is not None:
             fields["head_indices"] = SequenceLabelField([int(x[1]) for x in dependencies],
-                                                        fields["words"],
+                                                        tokens,
                                                         label_namespace="head_index_tags")
         return Instance(fields)
 
     @classmethod
     def from_params(cls, params: Params) -> 'UniversalDependenciesDatasetReader':
-        tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
-        return UniversalDependenciesDatasetReader(tokenizer=tokenizer,
-                                                  token_indexers=token_indexers,
+        return UniversalDependenciesDatasetReader(token_indexers=token_indexers,
                                                   lazy=lazy)
