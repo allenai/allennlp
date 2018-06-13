@@ -1,9 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
-import pytest
 
 from allennlp.data.dataset_readers import UniversalDependenciesDatasetReader
 from allennlp.common import Params
-from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
 
 class TestUniversalDependenciesDatasetReader(AllenNlpTestCase):
@@ -13,4 +11,7 @@ class TestUniversalDependenciesDatasetReader(AllenNlpTestCase):
 
         reader = UniversalDependenciesDatasetReader()
 
-        instances = reader.read(str(self.data_path))
+        instances = list(reader.read(str(self.data_path)))
+
+        for instance in instances:
+            print(instance)

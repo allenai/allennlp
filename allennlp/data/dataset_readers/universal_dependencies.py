@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 import logging
 
 from overrides import overrides
@@ -7,10 +7,10 @@ from conllu.parser import parse_line, DEFAULT_FIELDS
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, TextField, LabelField
+from allennlp.data.fields import Field, TextField, SequenceLabelField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.tokenizers import Tokenizer, WordTokenizer, Token
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -53,18 +53,30 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         with open(file_path, 'r') as conllu_file:
             logger.info("Reading UD instances from conllu dataset at: %s", file_path)
 
-            annotations = lazy_parse(conllu_file.read())
+            for annotation in  lazy_parse(conllu_file.read()):
 
-            for annotation in annotations:
-                print(annotation)
+                yield self.text_to_instance(
+                        [x["form"] for x in annotation],
+                        [x["upostag"] for x in annotation],
+                        [x["deps"][0] for x in annotation]
+                        )
 
     @overrides
     def text_to_instance(self,  # type: ignore
-                         premise: str,
-                         hypothesis: str,
-                         label: str = None) -> Instance:
+                         words: List[str],
+                         upos_tags: List[str],
+                         dependencies: List[Tuple[str, int]] = None) -> Instance:
         # pylint: disable=arguments-differ
-        pass
+        fields: Dict[str, Field] = {}
+        fields["words"] = TextField([Token(w) for w in words], self._token_indexers)
+        fields["pos_tags"] = SequenceLabelField(upos_tags, fields["words"], label_namespace="pos")
+        fields["head_tags"] = SequenceLabelField([x[0] for x in dependencies],
+                                                 fields["words"],
+                                                 label_namespace="head_tags")
+        fields["head_indices"] = SequenceLabelField([x[1] for x in dependencies],
+                                                    fields["words"],
+                                                    label_namespace="head_index_tags")
+        return Instance(fields)
 
     @classmethod
     def from_params(cls, params: Params) -> 'UniversalDependenciesDatasetReader':
