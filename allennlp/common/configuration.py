@@ -146,7 +146,6 @@ class Config(Generic[T]):
         blob: JsonDict = {'items': [item.to_json() for item in self.items]}
 
         if self.typ3:
-            #items.insert(0, {"name": "type", "type": self.typ3})
             blob["type"] = self.typ3
 
         return blob

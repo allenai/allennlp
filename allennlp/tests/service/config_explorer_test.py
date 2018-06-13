@@ -47,7 +47,7 @@ class TestConfigExplorer(AllenNlpTestCase):
         assert "AllenNLP Configuration Wizard" in html
 
     def test_api(self):
-        response = self.client.get('/api/')
+        response = self.client.get('/api/config/')
         data = json.loads(response.get_data())
 
         assert data["className"] == ""
@@ -63,13 +63,13 @@ class TestConfigExplorer(AllenNlpTestCase):
 
 
     def test_choices(self):
-        response = self.client.get('/api/?class=allennlp.data.dataset_readers.dataset_reader.DatasetReader')
+        response = self.client.get('/api/config/?class=allennlp.data.dataset_readers.dataset_reader.DatasetReader')
         data = json.loads(response.get_data())
 
         assert "allennlp.data.dataset_readers.reading_comprehension.squad.SquadReader" in data["choices"]
 
     def test_subclass(self):
-        response = self.client.get('/api/?class=allennlp.data.dataset_readers.semantic_role_labeling.SrlReader')
+        response = self.client.get('/api/config/?class=allennlp.data.dataset_readers.semantic_role_labeling.SrlReader')
         data = json.loads(response.get_data())
 
         config = data['config']
@@ -78,7 +78,7 @@ class TestConfigExplorer(AllenNlpTestCase):
         assert items[0]["name"] == "token_indexers"
 
     def test_torch_class(self):
-        response = self.client.get('/api/?class=torch.optim.rmsprop.RMSprop')
+        response = self.client.get('/api/config/?class=torch.optim.rmsprop.RMSprop')
         data = json.loads(response.get_data())
         config = data['config']
         items = config['items']
@@ -87,7 +87,12 @@ class TestConfigExplorer(AllenNlpTestCase):
         assert any(item["name"] == "lr" for item in items)
 
     def test_rnn_hack(self):
-        response = self.client.get('/api/?class=torch.nn.modules.rnn.LSTM')
+        """
+        Behind the scenes, when you try to create a torch RNN,
+        it just calls torch.RNNBase with an extra parameter.
+        This test is to make sure that works correctly.
+        """
+        response = self.client.get('/api/config/?class=torch.nn.modules.rnn.LSTM')
         data = json.loads(response.get_data())
         config = data['config']
         items = config['items']
@@ -96,13 +101,13 @@ class TestConfigExplorer(AllenNlpTestCase):
         assert any(item["name"] == "batch_first" for item in items)
 
     def test_initializers(self):
-        response = self.client.get('/api/?class=allennlp.nn.initializers.Initializer')
+        response = self.client.get('/api/config/?class=allennlp.nn.initializers.Initializer')
         data = json.loads(response.get_data())
 
         assert 'torch.nn.init.constant_' in data["choices"]
         assert 'allennlp.nn.initializers.block_orthogonal' in data["choices"]
 
-        response = self.client.get('/api/?class=torch.nn.init.uniform_')
+        response = self.client.get('/api/config/?class=torch.nn.init.uniform_')
         data = json.loads(response.get_data())
         config = data['config']
         items = config['items']
@@ -111,12 +116,12 @@ class TestConfigExplorer(AllenNlpTestCase):
         assert any(item["name"] == "a" for item in items)
 
     def test_regularizers(self):
-        response = self.client.get('/api/?class=allennlp.nn.regularizers.regularizer.Regularizer')
+        response = self.client.get('/api/config/?class=allennlp.nn.regularizers.regularizer.Regularizer')
         data = json.loads(response.get_data())
 
         assert 'allennlp.nn.regularizers.regularizers.L1Regularizer' in data["choices"]
 
-        response = self.client.get('/api/?class=allennlp.nn.regularizers.regularizers.L1Regularizer')
+        response = self.client.get('/api/config/?class=allennlp.nn.regularizers.regularizers.L1Regularizer')
         data = json.loads(response.get_data())
         config = data['config']
         items = config['items']
@@ -146,7 +151,7 @@ class TestConfigExplorer(AllenNlpTestCase):
         app = make_app()
         app.testing = True
         client = app.test_client()
-        response = client.get('/api/?class=allennlp.predictors.predictor.Predictor')
+        response = client.get('/api/config/?class=allennlp.predictors.predictor.Predictor')
         data = json.loads(response.get_data())
         assert "allennlp.predictors.bidaf.BidafPredictor" in data["choices"]
         assert "configexplorer.predictor.BidafPredictor" not in data["choices"]
@@ -155,7 +160,7 @@ class TestConfigExplorer(AllenNlpTestCase):
         app = make_app(['configexplorer'])
         app.testing = True
         client = app.test_client()
-        response = client.get('/api/?class=allennlp.predictors.predictor.Predictor')
+        response = client.get('/api/config/?class=allennlp.predictors.predictor.Predictor')
         data = json.loads(response.get_data())
         assert "allennlp.predictors.bidaf.BidafPredictor" in data["choices"]
         assert "configexplorer.predictor.BidafPredictor" in data["choices"]
