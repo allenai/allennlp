@@ -11,8 +11,8 @@ from allennlp.data.dataset import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import CharacterTokenizer
-from allennlp.data.vocabulary import Vocabulary, _NamespaceDependentDefaultDict, DEFAULT_OOV_TOKEN, \
-    _read_pretrained_tokens
+from allennlp.data.vocabulary import (Vocabulary, _NamespaceDependentDefaultDict,
+                                      DEFAULT_OOV_TOKEN, _read_pretrained_tokens)
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
 
@@ -51,7 +51,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'c' in words
 
     def test_from_dataset_respects_exclusive_embedding_file(self):
-        embeddings_filename = self.TEST_DIR / "embeddings.gz"
+        embeddings_filename = str(self.TEST_DIR / "embeddings.gz")
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("a 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("b 0.1 0.4 -4.0\n".encode('utf-8'))
@@ -74,7 +74,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'c' not in words
 
     def test_from_dataset_respects_inclusive_embedding_file(self):
-        embeddings_filename = self.TEST_DIR / "embeddings.gz"
+        embeddings_filename = str(self.TEST_DIR / "embeddings.gz")
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("a 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("b 0.1 0.4 -4.0\n".encode('utf-8'))

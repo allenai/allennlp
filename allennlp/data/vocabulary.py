@@ -3,11 +3,11 @@ A Vocabulary maps strings to integers, allowing for strings to be mapped to an
 out-of-vocabulary token.
 """
 
-from collections import defaultdict
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Union
 import codecs
 import logging
 import os
+from collections import defaultdict
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Union
 
 from tqdm import tqdm
 
@@ -101,7 +101,7 @@ def _read_pretrained_tokens(embeddings_filename: Union[str, Sequence[str]]) -> S
     tokens = set()
     num_pretrained_tokens = read_num_pretrained_tokens_if_present(embeddings_filename)
 
-    with open_embeddings_text_file(embeddings_filename) as embeddings_file:
+    with open_embeddings_text_file(embeddings_filename) as embeddings_file:  # type: TextIO
         if num_pretrained_tokens:
             embeddings_file.readline()  # skip header
 
@@ -346,7 +346,7 @@ class Vocabulary:
                        min_count: Dict[str, int] = None,
                        max_vocab_size: Union[int, Dict[str, int]] = None,
                        non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
-                       pretrained_files: Optional[Dict[str, str]] = None,
+                       pretrained_files: Optional[Dict[str, Union[str, Sequence[str]]]] = None,
                        only_include_pretrained_words: bool = False,
                        tokens_to_add: Dict[str, List[str]] = None) -> 'Vocabulary':
         """

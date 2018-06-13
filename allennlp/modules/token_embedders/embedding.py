@@ -7,13 +7,14 @@ import gzip
 import logging
 import warnings
 from contextlib import contextmanager
-from typing import Optional, ContextManager, Tuple, Union, Sequence
+from typing import Optional, ContextManager, Tuple, Union, Sequence, cast, IO, TextIO
 
 from tqdm import tqdm
 from overrides import overrides
 import numpy
 import torch
 from torch.nn.functional import embedding
+
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
@@ -199,12 +200,10 @@ def _read_pretrained_embeddings_file(embeddings_filename: Union[str, Sequence[st
                                      vocab: Vocabulary,
                                      namespace: str = "tokens") -> torch.FloatTensor:
     """
-    Reads a pre-trained embedding file and generates an Embedding layer that has weights
-    initialized to the pre-trained embeddings. The Embedding layer can either be trainable or
-    not.
-
-    We use the ``Vocabulary`` to map from the word strings in the embeddings file to the indices
-    that we need, and to know which words from the embeddings file we can safely ignore.
+    Returns and embedding matrix for the given vocabulary using the pretrained embeddings
+    contained in the given file. Embeddings for tokens not found in the pretrained embedding file
+    are randomly initialized using a normal distribution with mean and standard deviation equal to
+    those of the pretrained embeddings.
 
     We support two file formats:
 
@@ -220,7 +219,7 @@ def _read_pretrained_embeddings_file(embeddings_filename: Union[str, Sequence[st
 
     Parameters
     ----------
-    embeddings_filename : Union[str, Sequence[str], required.
+    embeddings_filename : Union[str, Sequence[str]], required.
         Path to the file containing the embeddings. It can be a string or a pair of strings.
         If the file is an (eventually compressed) text file or a file contained in a zip/tar
         archive containing only a single file, a string is enough. If otherwise the file resides
@@ -255,25 +254,30 @@ def _get_the_only_file_in_the_archive(members_list: Sequence[str],
                                       archive_path: str):
     if len(members_list) > 1:
         raise ValueError('The archive %s contains multiple files, so you must select '
-                         'on the file inside it providing a pair '
+                         'one of the files inside it providing a pair '
                          '[archive_path, path_of_the_file_inside_archive]' % archive_path)
     return members_list[0]
 
 
 def normalize_embeddings_filename(embeddings_filename: Union[str, Sequence[str]]) -> Tuple[str, Optional[str]]:
-    if isinstance(embeddings_filename, (tuple, list)):
-        if len(embeddings_filename) != 2:
-            raise ValueError('Invalid embeddings file path: %s\n'
-                             'It should be a string or a pair of strings' % embeddings_filename)
-        return embeddings_filename
+    """
+    If embedding_filename is a string, returns (embedding_filename, '').
+    If it's a pair of string, it returns them in a tuple
+    """
+    if isinstance(embeddings_filename, Sequence) and len(embeddings_filename) == 2:
+        return str(embeddings_filename[0]), str(embeddings_filename[1])
+    elif isinstance(embeddings_filename, str):
+        return str(embeddings_filename), None
     else:
-        return embeddings_filename, None
+        raise ValueError('Invalid path to pretrained embeddings: %r\n'
+                         'It must be a string or a pair or strings [archive_path, member_path]'
+                         % embeddings_filename)
 
 
-@contextmanager
+@contextmanager  # type: ignore
 def open_embeddings_text_file(embeddings_filename: Union[str, Sequence[str]],
                               encoding: str = EMBEDDINGS_FILE_ENCODING,
-                              cache_dir: str = None) -> ContextManager[io.TextIOWrapper]:
+                              cache_dir: str = None) -> ContextManager[TextIO]:
     """
     Utility function for opening embeddings text files. The file can be
         * a plain uncompressed text file
@@ -287,10 +291,10 @@ def open_embeddings_text_file(embeddings_filename: Union[str, Sequence[str]],
     if zipfile.is_zipfile(cached_first_level_path):  # ZIP archive
         logger.debug('Reading pretrained embeddings file contained in a zip archive')
         with zipfile.ZipFile(cached_first_level_path, 'r') as zip_archive:
-            if not second_level_path:
+            if second_level_path is None:
                 members_list = zip_archive.namelist()
                 second_level_path = _get_the_only_file_in_the_archive(members_list, first_level_path)
-
+            second_level_path = cast(str, second_level_path)   # mypy is not smart enough
             with io.TextIOWrapper(zip_archive.open(second_level_path, 'r'),
                                   encoding=encoding) as embeddings_file:
                 yield embeddings_file
@@ -298,13 +302,18 @@ def open_embeddings_text_file(embeddings_filename: Union[str, Sequence[str]],
     elif tarfile.is_tarfile(first_level_path):  # TAR archive
         logger.debug('Reading pretrained embeddings file contained in a tar archive')
         with tarfile.open(cached_first_level_path, 'r') as tar_archive:
-            if not second_level_path:
+            if second_level_path is None:
                 members_list = tar_archive.getnames()
                 second_level_path = _get_the_only_file_in_the_archive(members_list, first_level_path)
+            second_level_path = cast(str, second_level_path)  # mypy is not smart enough
+            tar_member = tar_archive.getmember(second_level_path)
+            tar_member_file = tar_archive.extractfile(tar_member)
+            if not tar_member_file:
+                raise ValueError('File %s not found in the archive %s' %
+                                 (second_level_path, first_level_path))
+            tar_member_file = cast(IO[bytes], tar_member_file)
 
-            embeddings_member = tar_archive.getmember(second_level_path)
-            with io.TextIOWrapper(tar_archive.extractfile(embeddings_member),
-                                  encoding=encoding) as embeddings_file:
+            with io.TextIOWrapper(tar_member_file, encoding=encoding) as embeddings_file:
                 yield embeddings_file
 
     else:  # (eventually compressed) text file
@@ -326,18 +335,18 @@ def open_embeddings_text_file(embeddings_filename: Union[str, Sequence[str]],
                            'We will assume the file is an (uncompressed) text file', extension)
             package = io
 
-        with package.open(cached_first_level_path, 'rt', encoding=encoding) as embeddings_file:
+        with package.open(cached_first_level_path, 'rt', encoding=encoding) as embeddings_file:  # type: ignore
             yield embeddings_file
 
 
-def read_num_pretrained_tokens_if_present(embeddings_filename):
+def read_num_pretrained_tokens_if_present(embeddings_filename: Union[str, Sequence[str]]) -> Optional[int]:
     """ Some pretrained embedding files (e.g. FastText) start declaring the number of tokens
     and the embedding size. The former is useful for showing progress. This function read
     the first row and if it contains 1 or 2 integers, it assumes that the biggest one is
     the number of tokens """
     num_tokens = None
-    with open_embeddings_text_file(embeddings_filename) as embedding_file:
-        first_line = embedding_file.readline()
+    with open_embeddings_text_file(embeddings_filename) as embeddings_file:  # type: TextIO
+        first_line = embeddings_file.readline()
         fields = first_line.split(' ')
         if 1 <= len(fields) <= 2:
             try:
@@ -376,7 +385,7 @@ def _read_embeddings_from_text_file(embeddings_filename: Union[str, Sequence[str
 
     num_pretrained_tokens = read_num_pretrained_tokens_if_present(embeddings_filename)
 
-    with open_embeddings_text_file(embeddings_filename) as embeddings_file:
+    with open_embeddings_text_file(embeddings_filename) as embeddings_file:  # type: TextIO
         if num_pretrained_tokens:
             embeddings_file.readline()  # skip header
 
