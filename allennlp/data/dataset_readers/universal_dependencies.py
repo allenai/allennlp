@@ -73,9 +73,10 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         fields["head_tags"] = SequenceLabelField([x[0] for x in dependencies],
                                                  fields["words"],
                                                  label_namespace="head_tags")
-        fields["head_indices"] = SequenceLabelField([x[1] for x in dependencies],
-                                                    fields["words"],
-                                                    label_namespace="head_index_tags")
+        if dependencies is not None:
+            fields["head_indices"] = SequenceLabelField([int(x[1]) for x in dependencies],
+                                                        fields["words"],
+                                                        label_namespace="head_index_tags")
         return Instance(fields)
 
     @classmethod
