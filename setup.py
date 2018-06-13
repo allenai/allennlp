@@ -126,6 +126,7 @@ setup(name='allennlp',
           'pytest',
           'flaky',
           'responses>=0.7',
+          'numpydoc==0.8.0',
           'conllu'
       ],
       scripts=["bin/allennlp"],
