@@ -10,7 +10,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, SequenceLabelField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.tokenizers import Tokenizer, WordTokenizer, Token
+from allennlp.data.tokenizers import Token
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
