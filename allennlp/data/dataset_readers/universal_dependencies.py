@@ -20,8 +20,7 @@ def lazy_parse(text: str, fields: Tuple = DEFAULT_FIELDS):
         if sentence:
             yield [parse_line(line, fields)
                    for line in sentence.split("\n")
-                   if line and not line.strip().startswith("#")
-                  ]
+                   if line and not line.strip().startswith("#")]
 
 
 @DatasetReader.register("universal_dependencies")
@@ -53,8 +52,7 @@ class UniversalDependenciesDatasetReader(DatasetReader):
                 yield self.text_to_instance(
                         [x["form"] for x in annotation],
                         [x["upostag"] for x in annotation],
-                        [x["deps"][0] for x in annotation]
-                        )
+                        [x["deps"][0] for x in annotation])
 
     @overrides
     def text_to_instance(self,  # type: ignore
@@ -79,7 +77,6 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         An instance containing words, upos tags, dependency head tags and head
         indices as fields.
         """
-
         fields: Dict[str, Field] = {}
         tokens = TextField([Token(w) for w in words], self._token_indexers)
         fields["words"] = tokens
