@@ -8,12 +8,12 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set,
 import codecs
 import logging
 import os
-import gzip
+
+from tqdm import tqdm
 
 from allennlp.common.util import namespace_match
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.file_utils import cached_path
 from allennlp.common.tqdm import Tqdm
 from allennlp.data import instance as adi  # pylint: disable=unused-import
 
@@ -91,14 +91,29 @@ class _IndexToTokenDefaultDict(_NamespaceDependentDefaultDict):
                                                        lambda: {0: padding_token, 1: oov_token},
                                                        lambda: {})
 
-def _read_pretrained_words(embeddings_filename: str)-> Set[str]:
-    words = set()
-    with gzip.open(cached_path(embeddings_filename), 'rb') as embeddings_file:
-        for line in embeddings_file:
-            fields = line.decode('utf-8').strip().split(' ')
-            word = fields[0]
-            words.add(word)
-    return words
+
+def _read_pretrained_tokens(embeddings_filename: Union[str, Sequence[str]]) -> Set[str]:
+    # Moving this import to the top breaks everything
+    from allennlp.modules.token_embedders.embedding import (open_embeddings_text_file,
+                                                            read_num_pretrained_tokens_if_present)
+
+    logger.info('Reading pretrained tokens from: %s', embeddings_filename)
+    tokens = set()
+    num_pretrained_tokens = read_num_pretrained_tokens_if_present(embeddings_filename)
+
+    with open_embeddings_text_file(embeddings_filename) as embeddings_file:
+        if num_pretrained_tokens:
+            embeddings_file.readline()  # skip header
+
+        for line_number, line in tqdm(enumerate(embeddings_file, start=1), total=num_pretrained_tokens):
+            token_end = line.find(' ')
+            if token_end >= 0:
+                token = line[:token_end]
+                tokens.add(token)
+            else:
+                line_begin = line[:20] + '...' if len(line) > 20 else line
+                logger.warning(f'Skipping line number %d: %s', line_number, line_begin)
+    return tokens
 
 
 class Vocabulary:
@@ -148,13 +163,15 @@ class Vocabulary:
         The default is ``("*tags", "*labels")``, so as long as your namespace ends in "tags" or
         "labels" (which is true by default for all tag and label fields in this code), you don't
         have to specify anything here.
-    pretrained_files : ``Dict[str, str]``, optional
+    pretrained_files : ``Dict[str, Union[str, Sequence[str]]``, optional
         If provided, this map specifies the path to optional pretrained embedding files for each
         namespace. This can be used to either restrict the vocabulary to only words which appear
         in this file, or to ensure that any words in this file are included in the vocabulary
         regardless of their count, depending on the value of ``only_include_pretrained_words``.
         Words which appear in the pretrained embedding file but not in the data are NOT included
         in the Vocabulary.
+        If the embedding file for a given namespace is contained inside an archive, then you can
+        provide a pair ``namespace: [archive_path, file_path_inside_archive]``.
     only_include_pretrained_words : ``bool``, optional (default=False)
         This defines the stategy for using any pretrained embedding files which may have been
         specified in ``pretrained_files``. If False, an inclusive stategy is used: and words
@@ -172,7 +189,7 @@ class Vocabulary:
                  min_count: Dict[str, int] = None,
                  max_vocab_size: Union[int, Dict[str, int]] = None,
                  non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
-                 pretrained_files: Optional[Dict[str, str]] = None,
+                 pretrained_files: Optional[Dict[str, Union[str, Sequence[str]]]] = None,
                  only_include_pretrained_words: bool = False,
                  tokens_to_add: Dict[str, List[str]] = None) -> None:
         self._padding_token = DEFAULT_PADDING_TOKEN
@@ -192,7 +209,7 @@ class Vocabulary:
         if counter is not None:
             for namespace in counter:
                 if namespace in pretrained_files:
-                    pretrained_list = _read_pretrained_words(pretrained_files[namespace])
+                    pretrained_list = _read_pretrained_tokens(pretrained_files[namespace])
                 else:
                     pretrained_list = None
                 token_counts = list(counter[namespace].items())

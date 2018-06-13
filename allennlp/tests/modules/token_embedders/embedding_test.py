@@ -13,7 +13,11 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
-from allennlp.modules.token_embedders.embedding import Embedding, _read_pretrained_embedding_file
+from allennlp.modules.token_embedders.embedding import (Embedding,
+                                                        _read_pretrained_embeddings_file,
+                                                        open_embeddings_text_file,
+                                                        read_num_pretrained_tokens_if_present,
+                                                        EMBEDDINGS_FILE_ENCODING)
 
 
 class TestEmbedding(AllenNlpTestCase):
@@ -26,17 +30,17 @@ class TestEmbedding(AllenNlpTestCase):
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("word1 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("word2 0.1 0.4 -4.0\n".encode('utf-8'))
-        embedding_weights = _read_pretrained_embedding_file(embeddings_filename, 3, vocab)
+        embedding_weights = _read_pretrained_embeddings_file(embeddings_filename, 3, vocab)
         assert tuple(embedding_weights.size()) == (4, 3)  # 4 because of padding and OOV
         with pytest.raises(ConfigurationError):
-            _read_pretrained_embedding_file(embeddings_filename, 4, vocab)
+            _read_pretrained_embeddings_file(embeddings_filename, 4, vocab)
 
     def test_forward_works_with_projection_layer(self):
         vocab = Vocabulary()
         vocab.add_token_to_namespace('the')
         vocab.add_token_to_namespace('a')
         params = Params({
-                'pretrained_file': str(self.FIXTURES_ROOT / 'glove.6B.300d.sample.txt.gz'),
+                'pretrained_file': str(self.FIXTURES_ROOT / 'embeddings/glove.6B.300d.sample.txt.gz'),
                 'embedding_dim': 300,
                 'projection_dim': 20
                 })
@@ -120,3 +124,78 @@ class TestEmbedding(AllenNlpTestCase):
                 })
         with pytest.raises(ConfigurationError):
             _ = Embedding.from_params(vocab, params)
+
+    def test_read_embedding_file_inside_archive(self):
+        token2vec = {
+                "think": torch.Tensor([0.143, 0.189, 0.555, 0.361, 0.472]),
+                "make": torch.Tensor([0.878, 0.651, 0.044, 0.264, 0.872]),
+                "difference": torch.Tensor([0.053, 0.162, 0.671, 0.110, 0.259]),
+                "àèìòù": torch.Tensor([1.0, 2.0, 3.0, 4.0, 5.0])
+                }
+        vocab = Vocabulary()
+        for token in token2vec:
+            vocab.add_token_to_namespace(token)
+
+        params = Params({
+                'pretrained_file': str(self.FIXTURES_ROOT / 'embeddings/multi-file-archive.zip'),
+                'embedding_dim': 5
+                })
+        with pytest.raises(ValueError, message="No ValueError when pretrained_file is a multi-file archive"):
+            Embedding.from_params(vocab, params)
+
+        for ext in ['.zip', '.tar.gz']:
+            archive_path = str(self.FIXTURES_ROOT / 'embeddings/multi-file-archive') + ext
+            params = Params({
+                    'pretrained_file': (archive_path, 'folder/fake_embeddings.5d.txt'),
+                    'embedding_dim': 5
+                    })
+            embeddings = Embedding.from_params(vocab, params).weight.data
+            for tok, vec in token2vec.items():
+                i = vocab.get_token_index(tok)
+                assert torch.equal(embeddings[i], vec), 'Problem with format ' + archive_path
+
+    def test_open_embeddings_text_file(self):
+        txt_path = str(self.FIXTURES_ROOT / 'utf-8_sample/utf-8_sample.txt')
+
+        # This is for sure a correct way to read an utf-8 encoded text file
+        with open(txt_path, 'rt', encoding='utf-8') as f:
+            correct_text = f.read()
+
+        # Check if we get the correct text on plain and compressed versions of the file
+        paths = [txt_path] + [txt_path + ext for ext in ['.gz', '.zip']]
+        for path in paths:
+            with open_embeddings_text_file(path) as f:
+                text = f.read()
+            assert text == correct_text, "Test failed for file: " + path
+
+        # Check for a file contained inside an archive with multiple files
+        for ext in ['.zip', '.tar.gz', '.tar.bz2', '.tar.lzma']:
+            archive_path = str(self.FIXTURES_ROOT / 'utf-8_sample/archives/utf-8') + ext
+            with open_embeddings_text_file((archive_path, 'folder/utf-8_sample.txt')) as f:
+                text = f.read()
+            assert text == correct_text, "Test failed for file: " + archive_path
+
+        # Passing a second level path when not reading an archive
+        with pytest.raises(ValueError):
+            with open_embeddings_text_file([txt_path, 'a/fake/path']):
+                pass
+
+    def test_read_num_pretrained_tokens_if_present(self):
+        # Valid header
+        valid_headers = ['1000000 300\n', '300 1000000\n', '1000000\n']
+        embeddings_filename = str(self.TEST_DIR / 'embeddings.vec')
+        for header in valid_headers:
+            with open(embeddings_filename, 'wt', encoding=EMBEDDINGS_FILE_ENCODING) as fout:
+                fout.write(header)
+            assert read_num_pretrained_tokens_if_present(embeddings_filename) == 1_000_000, \
+                "Failed with header: " + header
+
+        # No header
+        embeddings_filename = str(self.TEST_DIR / 'embeddings.vec')
+        not_headers = ['hello 1 2\n', '111 222 333\n', '111 222 hello\n']
+        for header in not_headers:
+            with open(embeddings_filename, 'wt', encoding=EMBEDDINGS_FILE_ENCODING) as fout:
+                fout.write(header)
+            num_tokens = read_num_pretrained_tokens_if_present(embeddings_filename)
+            assert num_tokens is None, \
+                f"Failed with header: {header}. Num tokens: {num_tokens}"
