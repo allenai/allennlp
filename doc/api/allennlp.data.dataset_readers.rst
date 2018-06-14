@@ -10,6 +10,7 @@ allennlp.data.dataset_readers
 
   allennlp.data.dataset_readers.dataset_reader
   allennlp.data.dataset_readers.dataset_utils
+  allennlp.data.dataset_readers.ccgbank
   allennlp.data.dataset_readers.conll2003
   allennlp.data.dataset_readers.coreference_resolution
   allennlp.data.dataset_readers.language_modeling
