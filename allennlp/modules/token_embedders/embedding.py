@@ -271,7 +271,7 @@ def get_embeddings_file_uri(path1: str, path2: Optional[str] = None):
     return path1
 
 
-def decode_embedding_file_uri(uri: str) -> Tuple[str, Optional[str]]:
+def decode_embeddings_file_uri(uri: str) -> Tuple[str, Optional[str]]:
     match = re.fullmatch('\((.*)\)#(.*)', uri)      # pylint: disable=anomalous-backslash-in-string
     if match:
         return cast(Tuple[str, str], match.groups())
@@ -285,7 +285,7 @@ def open_embeddings_text_file(embeddings_file_uri: str,
     """
     Utility function for opening embeddings text files.
     """
-    first_level_path, second_level_path = decode_embedding_file_uri(embeddings_file_uri)
+    first_level_path, second_level_path = decode_embeddings_file_uri(embeddings_file_uri)
     cached_first_level_path = cached_path(first_level_path, cache_dir=cache_dir)
 
     if zipfile.is_zipfile(cached_first_level_path):  # ZIP archive
@@ -376,7 +376,7 @@ def _read_embeddings_from_text_file(embeddings_file_uri: str,  # pylint: disable
 
     The remainder of the docstring is identical to ``_read_pretrained_embeddings_file``.
     """
-    words_to_keep = set(vocab.get_index_to_token_vocabulary(namespace).values())
+    tokens_to_keep = set(vocab.get_index_to_token_vocabulary(namespace).values())
     vocab_size = vocab.get_vocab_size(namespace)
     embeddings = {}
 
@@ -390,22 +390,23 @@ def _read_embeddings_from_text_file(embeddings_file_uri: str,  # pylint: disable
             embeddings_file.readline()  # skip header
 
         for line in Tqdm.tqdm(embeddings_file, total=num_pretrained_tokens):
-            fields = line.rstrip().split(' ')
-            if len(fields) - 1 != embedding_dim:
-                # Sometimes there are funny unicode parsing problems that lead to different
-                # fields lengths (e.g., a word with a unicode space character that splits
-                # into more than one column).  We skip those lines.  Note that if you have
-                # some kind of long header, this could result in all of your lines getting
-                # skipped.  It's hard to check for that here; you just have to look in the
-                # embedding_misses_file and at the model summary to make sure things look
-                # like they are supposed to.
-                logger.warning("Found line with wrong number of dimensions (expected: %d; actual: %d): %s",
-                               embedding_dim, len(fields) - 1, line)
-                continue
-            word = fields[0]
-            if word in words_to_keep:
+            token = line.split(' ', 1)[0]
+            if token in tokens_to_keep:
+                fields = line.rstrip().split(' ')
+                if len(fields) - 1 != embedding_dim:
+                    # Sometimes there are funny unicode parsing problems that lead to different
+                    # fields lengths (e.g., a word with a unicode space character that splits
+                    # into more than one column).  We skip those lines.  Note that if you have
+                    # some kind of long header, this could result in all of your lines getting
+                    # skipped.  It's hard to check for that here; you just have to look in the
+                    # embedding_misses_file and at the model summary to make sure things look
+                    # like they are supposed to.
+                    logger.warning("Found line with wrong number of dimensions (expected: %d; actual: %d): %s",
+                                   embedding_dim, len(fields) - 1, line)
+                    continue
+
                 vector = numpy.asarray(fields[1:], dtype='float32')
-                embeddings[word] = vector
+                embeddings[token] = vector
 
     if not embeddings:
         raise ConfigurationError("No embeddings of correct dimension found; you probably "
@@ -420,21 +421,22 @@ def _read_embeddings_from_text_file(embeddings_file_uri: str,  # pylint: disable
     logger.info("Initializing pre-trained embedding layer")
     embedding_matrix = torch.FloatTensor(vocab_size, embedding_dim).normal_(embeddings_mean,
                                                                             embeddings_std)
-    num_found_tokens = 0
+    num_tokens_found = 0
     index_to_token = vocab.get_index_to_token_vocabulary(namespace)
     for i in range(vocab_size):
-        word = index_to_token[i]
+        token = index_to_token[i]
 
         # If we don't have a pre-trained vector for this word, we'll just leave this row alone,
         # so the word has a random initialization.
-        if word in embeddings:
-            embedding_matrix[i] = torch.FloatTensor(embeddings[word])
-            num_found_tokens += 1
+        if token in embeddings:
+            embedding_matrix[i] = torch.FloatTensor(embeddings[token])
+            num_tokens_found += 1
         else:
-            logger.debug("Word %s was not found in the embedding file. Initialising randomly.", word)
+            logger.debug("Token %s was not found in the embedding file. Initialising randomly.", token)
 
-    logger.info("%d out of %d tokens were found in the embedding file", num_found_tokens, vocab_size)
-    # The weight matrix is initialized, so we construct and return the actual Embedding.
+    logger.info("Pretrained embeddings were found for %d out of %d tokens",
+                num_tokens_found, vocab_size)
+
     return embedding_matrix
 
 

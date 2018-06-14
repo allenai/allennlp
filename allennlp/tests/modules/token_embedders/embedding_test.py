@@ -18,7 +18,7 @@ from allennlp.modules.token_embedders.embedding import (Embedding,
                                                         open_embeddings_text_file,
                                                         read_num_pretrained_tokens_if_present,
                                                         EMBEDDINGS_FILE_ENCODING, get_embeddings_file_uri,
-                                                        decode_embedding_file_uri)
+                                                        decode_embeddings_file_uri)
 
 
 class TestEmbedding(AllenNlpTestCase):
@@ -217,9 +217,9 @@ class TestEmbedding(AllenNlpTestCase):
         ]
 
         for simple_path in first_level_paths:
-            assert decode_embedding_file_uri(simple_path), (simple_path, None)
+            assert decode_embeddings_file_uri(simple_path), (simple_path, None)
 
         for path1, path2 in zip(first_level_paths, second_level_paths):
             member_path = get_embeddings_file_uri(path1, path2)
-            decoded = decode_embedding_file_uri(member_path)
+            decoded = decode_embeddings_file_uri(member_path)
             assert decoded == (path1, path2)
