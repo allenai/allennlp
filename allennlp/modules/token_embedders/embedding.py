@@ -151,9 +151,12 @@ class Embedding(TokenEmbedder):
         key directly, and the vocabulary will be ignored.
 
         A file containing pretrained embeddings can be specified using the parameter ``pretrained_file``.
+        It can be the path to a local file or an URL to a (cached) remote file.
         Two formats are supported:
-            * hdf5 - containing an embedding matrix in the form of a torch.Tensor;
-            * text format - an utf-8 encoded text file with space separated fields::
+
+            * hdf5 file - containing an embedding matrix in the form of a torch.Tensor;
+
+            * text file - an utf-8 encoded text file with space separated fields::
 
                     [word] [dim 1] [dim 2] ...
 
@@ -161,7 +164,7 @@ class Embedding(TokenEmbedder):
               You can even select a single file inside an archive containing multiple files
               using the URI::
 
-                    (archive_uri)#file_path_inside_the_archive)
+                    "(archive_uri)#file_path_inside_the_archive"
 
               where ``archive_uri`` can be a file system path or a URL. For example:
 
@@ -220,7 +223,7 @@ def _read_pretrained_embeddings_file(embeddings_file_uri: str,
         * text format - utf-8 encoded text file with space separated fields: [word] [dim 1] [dim 2] ...
           The text file can eventually be compressed, and even resides in an archive with multiple files.
           If the file resides in an archive with other files, then ``embeddings_filename`` must
-          be a pair of strings ``[archive_path, path_inside_archive]``
+          be a URI "(archive_uri)#file_path_inside_the_archive"
 
         * hdf5 format - hdf5 file containing an embedding matrix in the form of a torch.Tensor.
 
@@ -230,8 +233,10 @@ def _read_pretrained_embeddings_file(embeddings_file_uri: str,
     Parameters
     ----------
     embeddings_file_uri : str, required.
-        Path to the file containing the embeddings. A file inside a multi-file archive can be
-        selected using the format: (archive_uri)#file_path_inside_archive
+        It can be:
+            * file_path_or_url - if the text file is an eventually compressed text file or a file
+              residing inside an archive containing only a single file
+            * (archive_path_or_url)#path_to - if the text file is contained in a multi-file archive.
     vocab : Vocabulary, required.
         A Vocabulary object.
     namespace : str, (optional, default=tokens)
@@ -256,8 +261,7 @@ def _read_pretrained_embeddings_file(embeddings_file_uri: str,
                                            vocab, namespace)
 
 
-def _get_the_only_file_in_the_archive(members_list: Sequence[str],
-                                      archive_path: str):
+def _get_the_only_file_in_the_archive(members_list: Sequence[str], archive_path: str) -> str:
     if len(members_list) > 1:
         raise ValueError('The archive %s contains multiple files, so you must select '
                          'one of the files inside it providing a pair '
@@ -265,10 +269,10 @@ def _get_the_only_file_in_the_archive(members_list: Sequence[str],
     return members_list[0]
 
 
-def get_embeddings_file_uri(path1: str, path2: Optional[str] = None):
-    if path2:
-        return "({})#{}".format(path1, path2)
-    return path1
+def get_embeddings_file_uri(path_or_url: str, path_inside_archive: Optional[str] = None) -> str:
+    if path_inside_archive:
+        return "({})#{}".format(path_or_url, path_inside_archive)
+    return path_or_url
 
 
 def decode_embeddings_file_uri(uri: str) -> Tuple[str, Optional[str]]:
@@ -284,6 +288,15 @@ def open_embeddings_text_file(embeddings_file_uri: str,
                               cache_dir: str = None) -> ContextManager[TextIO]:
     """
     Utility function for opening embeddings text files.
+    Parameters
+    ----------
+    embeddings_file_uri: str
+        It can be:
+            * file_path_or_url - if the text file is an eventually compressed text file or a file
+              residing inside an archive containing only a single file
+            * (archive_path_or_url)#path_to - if the text file is contained in a multi-file archive.
+    encoding: str
+    cache_dir: str
     """
     first_level_path, second_level_path = decode_embeddings_file_uri(embeddings_file_uri)
     cached_first_level_path = cached_path(first_level_path, cache_dir=cache_dir)
@@ -368,9 +381,6 @@ def _read_embeddings_from_text_file(embeddings_file_uri: str,  # pylint: disable
     Read pre-trained word vectors from an eventually compressed text file, possibly contained
     inside an archive with multiple files. The text file is assumed to be utf-8 encoded with
     space-separated fields: [word] [dim 1] [dim 2] ...
-
-    If the file is contained in an archive with other files, then ``embeddings_file_uri`` must
-    be a pair ``[archive_path, path_of_the_file_inside_archive]``.
 
     Lines that contain more numerical tokens than ``embedding_dim`` raise a warning and are skipped.
 

@@ -92,7 +92,7 @@ class _IndexToTokenDefaultDict(_NamespaceDependentDefaultDict):
 
 
 def _read_pretrained_tokens(embeddings_file_uri: str) -> Set[str]:
-    # Moving this import to the top breaks everything
+    # Moving this import to the top breaks everything (cycling import, I guess)
     from allennlp.modules.token_embedders.embedding import (open_embeddings_text_file,
                                                             read_num_pretrained_tokens_if_present)
 
@@ -186,7 +186,7 @@ class Vocabulary:
                  min_count: Dict[str, int] = None,
                  max_vocab_size: Union[int, Dict[str, int]] = None,
                  non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
-                 pretrained_files: Optional[Dict[str, Union[str, Sequence[str]]]] = None,
+                 pretrained_files: Optional[Dict[str, str]] = None,
                  only_include_pretrained_words: bool = False,
                  tokens_to_add: Dict[str, List[str]] = None) -> None:
         self._padding_token = DEFAULT_PADDING_TOKEN
@@ -343,7 +343,7 @@ class Vocabulary:
                        min_count: Dict[str, int] = None,
                        max_vocab_size: Union[int, Dict[str, int]] = None,
                        non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
-                       pretrained_files: Optional[Dict[str, Union[str, Sequence[str]]]] = None,
+                       pretrained_files: Optional[Dict[str, str]] = None,
                        only_include_pretrained_words: bool = False,
                        tokens_to_add: Dict[str, List[str]] = None) -> 'Vocabulary':
         """
