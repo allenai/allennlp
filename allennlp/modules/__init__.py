@@ -21,3 +21,5 @@ from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders import TokenEmbedder, Embedding
 from allennlp.modules.matrix_attention import MatrixAttention
 from allennlp.modules.attention import Attention
+from allennlp.modules.adaptive import AdaptiveSoftmax
+from allennlp.modules.lm_rnn import LMRNN
