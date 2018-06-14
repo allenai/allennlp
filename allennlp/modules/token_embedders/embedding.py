@@ -234,9 +234,13 @@ def _read_pretrained_embeddings_file(embeddings_file_uri: str,
     ----------
     embeddings_file_uri : str, required.
         It can be:
-            * file_path_or_url - if the text file is an eventually compressed text file or a file
-              residing inside an archive containing only a single file
-            * (archive_path_or_url)#path_to - if the text file is contained in a multi-file archive.
+
+        * a file system path or a URL to an eventually compressed text file or a zip/tar archive
+          containing a single file.
+
+        * URI of the type ``(archive_path_or_url)#file_path_inside_archive`` if the text file
+          is contained in a multi-file archive.
+
     vocab : Vocabulary, required.
         A Vocabulary object.
     namespace : str, (optional, default=tokens)
@@ -288,13 +292,18 @@ def open_embeddings_text_file(embeddings_file_uri: str,
                               cache_dir: str = None) -> ContextManager[TextIO]:
     """
     Utility function for opening embeddings text files.
+
     Parameters
     ----------
     embeddings_file_uri: str
         It can be:
-            * file_path_or_url - if the text file is an eventually compressed text file or a file
-              residing inside an archive containing only a single file
-            * (archive_path_or_url)#path_to - if the text file is contained in a multi-file archive.
+
+        * a file system path or a URL to an eventually compressed text file or a zip/tar archive
+          containing a single file.
+
+        * URI of the type ``(archive_path_or_url)#file_path_inside_archive`` if the text file
+          is contained in a multi-file archive.
+
     encoding: str
     cache_dir: str
     """

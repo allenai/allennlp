@@ -205,16 +205,16 @@ class TestEmbedding(AllenNlpTestCase):
 
     def test_decode_embeddings_file_path(self):
         first_level_paths = [
-            'path/to/embeddings.gz',
-            'unicode/path/òàè+ù.vec',
-            'http://www.embeddings.com/path/to/embeddings.gz',
-            'http://www.embeddings.com/àèìòù?query=blabla.zip',
-        ]
+                'path/to/embeddings.gz',
+                'unicode/path/òàè+ù.vec',
+                'http://www.embeddings.com/path/to/embeddings.gz',
+                'http://www.embeddings.com/àèìòù?query=blabla.zip',
+                ]
         second_level_paths = [
-            'path/to/glove.27B.300d.vec',
-            'òàè+ù.vec',
-            'crawl-300d-2M.vec'
-        ]
+                'path/to/glove.27B.300d.vec',
+                'òàè+ù.vec',
+                'crawl-300d-2M.vec'
+                ]
 
         for simple_path in first_level_paths:
             assert decode_embeddings_file_uri(simple_path), (simple_path, None)
