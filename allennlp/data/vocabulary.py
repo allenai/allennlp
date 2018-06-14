@@ -8,8 +8,7 @@ import logging
 import os
 from collections import defaultdict
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Union
-
-from tqdm import tqdm
+from typing import TextIO  # pylint: disable=unused-import
 
 from allennlp.common.util import namespace_match
 from allennlp.common.params import Params
@@ -105,7 +104,7 @@ def _read_pretrained_tokens(embeddings_filename: Union[str, Sequence[str]]) -> S
         if num_pretrained_tokens:
             embeddings_file.readline()  # skip header
 
-        for line_number, line in tqdm(enumerate(embeddings_file, start=1), total=num_pretrained_tokens):
+        for line_number, line in Tqdm.tqdm(enumerate(embeddings_file, start=1), total=num_pretrained_tokens):
             token_end = line.find(' ')
             if token_end >= 0:
                 token = line[:token_end]

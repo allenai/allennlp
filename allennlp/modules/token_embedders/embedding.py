@@ -9,7 +9,6 @@ import warnings
 from contextlib import contextmanager
 from typing import Optional, ContextManager, Tuple, Union, Sequence, cast, IO, TextIO
 
-from tqdm import tqdm
 from overrides import overrides
 import numpy
 import torch
@@ -19,7 +18,7 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
 
-from allennlp.common import Params
+from allennlp.common import Params, Tqdm
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import get_file_extension, cached_path
 from allennlp.data import Vocabulary
@@ -389,7 +388,7 @@ def _read_embeddings_from_text_file(embeddings_filename: Union[str, Sequence[str
         if num_pretrained_tokens:
             embeddings_file.readline()  # skip header
 
-        for line in tqdm(embeddings_file, total=num_pretrained_tokens):
+        for line in Tqdm.tqdm(embeddings_file, total=num_pretrained_tokens):
             fields = line.rstrip().split(' ')
             if len(fields) - 1 != embedding_dim:
                 # Sometimes there are funny unicode parsing problems that lead to different
