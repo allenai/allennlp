@@ -8,7 +8,7 @@ about: Create a report to help us improve
 A clear and concise description of what the bug is.
 
 **To Reproduce**
-Steps to reproduce the behavior:
+Steps to reproduce the behavior
 1. Go to '...'
 2. Click on '....'
 3. Scroll down to '....'
@@ -17,7 +17,7 @@ Steps to reproduce the behavior:
 **Expected behavior**
 A clear and concise description of what you expected to happen.
 
-**Desktop (please complete the following information):**
+**System (please complete the following information):**
  - OS: [e.g. OSX, Linux]
  - Python version: [if it's not 3.6, that's probably your problem]
  - AllenNLP version: [e.g. v0.5.1, or "I installed from master"]
