@@ -16,8 +16,8 @@ from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.embedding import (Embedding,
                                                         _read_pretrained_embeddings_file,
                                                         open_embeddings_text_file,
-                                                        read_num_pretrained_tokens_if_present,
-                                                        EMBEDDINGS_FILE_ENCODING, get_embeddings_file_uri,
+                                                        _get_num_tokens_in_file_from_1st_line,
+                                                        get_embeddings_file_uri,
                                                         decode_embeddings_file_uri)
 
 
@@ -183,23 +183,17 @@ class TestEmbedding(AllenNlpTestCase):
             with open_embeddings_text_file(get_embeddings_file_uri(txt_path, 'a/fake/path')):
                 pass
 
-    def test_read_num_pretrained_tokens_if_present(self):
+    def test_get_num_tokens_in_file_from_1st_line(self):
         # Valid header
         valid_headers = ['1000000 300\n', '300 1000000\n', '1000000\n']
-        embeddings_filename = str(self.TEST_DIR / 'embeddings.vec')
         for header in valid_headers:
-            with open(embeddings_filename, 'wt', encoding=EMBEDDINGS_FILE_ENCODING) as fout:
-                fout.write(header)
-            assert read_num_pretrained_tokens_if_present(embeddings_filename) == 1_000_000, \
+            assert _get_num_tokens_in_file_from_1st_line(header) == 1_000_000, \
                 "Failed with header: " + header
 
         # No header
-        embeddings_filename = str(self.TEST_DIR / 'embeddings.vec')
         not_headers = ['hello 1\n', 'hello 1 2\n', '111 222 333\n', '111 222 hello\n']
         for header in not_headers:
-            with open(embeddings_filename, 'wt', encoding=EMBEDDINGS_FILE_ENCODING) as fout:
-                fout.write(header)
-            num_tokens = read_num_pretrained_tokens_if_present(embeddings_filename)
+            num_tokens = _get_num_tokens_in_file_from_1st_line(header)
             assert num_tokens is None, \
                 f"Failed with header: {header}. Num tokens: {num_tokens}"
 

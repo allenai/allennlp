@@ -94,17 +94,14 @@ class _IndexToTokenDefaultDict(_NamespaceDependentDefaultDict):
 def _read_pretrained_tokens(embeddings_file_uri: str) -> Set[str]:
     # Moving this import to the top breaks everything (cycling import, I guess)
     from allennlp.modules.token_embedders.embedding import (open_embeddings_text_file,
-                                                            read_num_pretrained_tokens_if_present)
+                                                            get_embeddings_file_iterator_with_progbar)
 
     logger.info('Reading pretrained tokens from: %s', embeddings_file_uri)
     tokens = set()
-    num_pretrained_tokens = read_num_pretrained_tokens_if_present(embeddings_file_uri)
-
     with open_embeddings_text_file(embeddings_file_uri) as embeddings_file:  # type: TextIO
-        if num_pretrained_tokens:
-            embeddings_file.readline()  # skip header
+        file_iterator_with_progbar = get_embeddings_file_iterator_with_progbar(embeddings_file)
 
-        for line_number, line in Tqdm.tqdm(enumerate(embeddings_file, start=1), total=num_pretrained_tokens):
+        for line_number, line in enumerate(file_iterator_with_progbar, start=1):
             token_end = line.find(' ')
             if token_end >= 0:
                 token = line[:token_end]

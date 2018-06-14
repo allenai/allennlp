@@ -10,6 +10,7 @@ import warnings
 from contextlib import contextmanager
 from typing import Optional, ContextManager, Tuple, Sequence, cast, IO, TextIO
 
+import itertools
 from overrides import overrides
 import numpy
 import torch
@@ -361,27 +362,56 @@ def open_embeddings_text_file(embeddings_file_uri: str,
             yield embeddings_file
 
 
-def read_num_pretrained_tokens_if_present(embeddings_file_uri: str) -> Optional[int]:
-    """ Some pretrained embedding files (e.g. FastText) start declaring the number of tokens
-    and the embedding size. The former is useful for showing progress. This function read
-    the first row and if it contains 1 or 2 integers, it assumes that the biggest one is
-    the number of tokens """
-    with open_embeddings_text_file(embeddings_file_uri) as embeddings_file:  # type: TextIO
-        first_line = embeddings_file.readline()
-        fields = first_line.split(' ')
-        if 1 <= len(fields) <= 2:
-            try:
-                int_fields = [int(x) for x in fields]
-            except ValueError:
-                return None
-            else:
-                num_tokens = max(int_fields)
-                logger.info('Number of pretrained tokens heuristically inferred from the first row: %d', num_tokens)
-                return num_tokens
+def _get_num_tokens_in_file_from_1st_line(first_line: str) -> Optional[int]:
+    """
+    Some pretrained embedding files (e.g. FastText) start declaring the number of tokens
+    and the embedding size. The former is useful for showing progress.
+
+    This function takes in input the first line and if it's a "valid" header, it returns
+    the number of tokens in the embedding file. It assumes a header is composed of 1 or 2 integers
+    and that the maximum one (or the only one) is the number of pretrained tokens.
+
+    It returns None if the string doesn't match this pattern.
+    """
+    fields = first_line.split(' ')
+    if 1 <= len(fields) <= 2:
+        try:
+            int_fields = [int(x) for x in fields]
+        except ValueError:
+            return None
+        else:
+            num_tokens = max(int_fields)
+            logger.info('Number of pretrained tokens heuristically inferred from the first row: %d',
+                        num_tokens)
+            return num_tokens
     return None
 
 
-def _read_embeddings_from_text_file(embeddings_file_uri: str,  # pylint: disable=invalid-name
+def get_embeddings_file_iterator_with_progbar(embeddings_file: TextIO):
+    """
+    Some pretrained embedding files (e.g. FastText) start with a header containing the number
+    of tokens and the size of the vectors. The former is useful for showing progress when reading
+    the file.
+
+    This function read the first line of the file to see if it's a header containing the number
+    of pretrained tokens in the file; then it returns a file iterator decorated with a progress bar.
+    If the first line is a "valid header" (see :func:`_get_num_tokens_in_file_from_1st_line`),
+    then the returned iterator starts from the 2nd line of the file and the progress bar is set
+    with an expected number of iterations. Otherwise, the returned iterator will start from the 1st
+    line and the progress bar will run without an expected number of iterations (better than nothing).
+    """
+    first_line = next(embeddings_file)
+    num_pretrained_tokens = _get_num_tokens_in_file_from_1st_line(first_line)
+
+    if num_pretrained_tokens:
+        return Tqdm.tqdm(embeddings_file)  # skip the first line (header)
+    else:
+        # don't skip the first line
+        return Tqdm.tqdm(itertools.chain([first_line], embeddings_file),
+                         total=num_pretrained_tokens)
+
+
+def _read_embeddings_from_text_file(embeddings_file_uri: str,
                                     embedding_dim: int,
                                     vocab: Vocabulary,
                                     namespace: str = "tokens") -> torch.FloatTensor:
@@ -401,13 +431,9 @@ def _read_embeddings_from_text_file(embeddings_file_uri: str,  # pylint: disable
     # First we read the embeddings from the file, only keeping vectors for the words we need.
     logger.info("Reading pretrained embeddings from file")
 
-    num_pretrained_tokens = read_num_pretrained_tokens_if_present(embeddings_file_uri)
-
     with open_embeddings_text_file(embeddings_file_uri) as embeddings_file:  # type: TextIO
-        if num_pretrained_tokens:
-            embeddings_file.readline()  # skip header
 
-        for line in Tqdm.tqdm(embeddings_file, total=num_pretrained_tokens):
+        for line in get_embeddings_file_iterator_with_progbar(embeddings_file):
             token = line.split(' ', 1)[0]
             if token in tokens_to_keep:
                 fields = line.rstrip().split(' ')
@@ -458,7 +484,7 @@ def _read_embeddings_from_text_file(embeddings_file_uri: str,  # pylint: disable
     return embedding_matrix
 
 
-def _read_embeddings_from_hdf5(embeddings_filename: str,  # pylint: disable=invalid-name
+def _read_embeddings_from_hdf5(embeddings_filename: str,
                                embedding_dim: int,
                                vocab: Vocabulary,
                                namespace: str = "tokens") -> torch.FloatTensor:
