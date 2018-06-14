@@ -366,20 +366,19 @@ def read_num_pretrained_tokens_if_present(embeddings_file_uri: str) -> Optional[
     and the embedding size. The former is useful for showing progress. This function read
     the first row and if it contains 1 or 2 integers, it assumes that the biggest one is
     the number of tokens """
-    num_tokens = None
     with open_embeddings_text_file(embeddings_file_uri) as embeddings_file:  # type: TextIO
         first_line = embeddings_file.readline()
         fields = first_line.split(' ')
         if 1 <= len(fields) <= 2:
             try:
                 int_fields = [int(x) for x in fields]
-            except TypeError:
-                pass
+            except ValueError:
+                return None
             else:
                 num_tokens = max(int_fields)
-    if num_tokens:
-        logger.info('Number of pretrained tokens heuristically inferred from the first row: %d', num_tokens)
-    return num_tokens
+                logger.info('Number of pretrained tokens heuristically inferred from the first row: %d', num_tokens)
+                return num_tokens
+    return None
 
 
 def _read_embeddings_from_text_file(embeddings_file_uri: str,  # pylint: disable=invalid-name

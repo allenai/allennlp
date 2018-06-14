@@ -195,7 +195,7 @@ class TestEmbedding(AllenNlpTestCase):
 
         # No header
         embeddings_filename = str(self.TEST_DIR / 'embeddings.vec')
-        not_headers = ['hello 1 2\n', '111 222 333\n', '111 222 hello\n']
+        not_headers = ['hello 1\n', 'hello 1 2\n', '111 222 333\n', '111 222 hello\n']
         for header in not_headers:
             with open(embeddings_filename, 'wt', encoding=EMBEDDINGS_FILE_ENCODING) as fout:
                 fout.write(header)
