@@ -18,10 +18,19 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @DatasetReader.register("ccgbank")
 class CcgBankDatasetReader(DatasetReader):
     """
-    Reads data from the CCGbank dataset. In particular, reads the flattened "leaves"
-    in the /auto/* files, each of which looks like
+    Reads data in the "machine-readable derivation" format of the CCGbank dataset.
+    (see https://catalog.ldc.upenn.edu/docs/LDC2005T13/CCGbankManual.pdf, section D.2)
+
+    In particular, it pulls out the leaf nodes, which are represented as
 
         (<L ccg_category modified_pos original_pos token predicate_arg_category>)
+
+    The tarballed version of the dataset contains many files worth of this data,
+    in files /data/AUTO/xx/wsj_xxxx.auto
+
+    This dataset reader expects a single text file. Accordingly, if you're using that dataset,
+    you'll need to first concatenate some of those files into a training set, a validation set,
+    and a test set.
 
     Parameters
     ----------
