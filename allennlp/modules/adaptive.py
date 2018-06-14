@@ -20,8 +20,9 @@ class AdaptiveSoftmax(nn.Module):
     """
     The implementation of the adaptive softmax, which is a two layer hierarchical
     softmax, while the hierarchical is constructed based on the word frequency.
-    This implementation is based 
-    <https://github.com/facebookresearch/adaptive-softmax>.
+    This implementation is based on
+    <https://github.com/facebookresearch/adaptive-softmax> and
+    <https://github.com/rosinality/adaptive-softmax-pytorch>.
 
     Parameters
     ----------
