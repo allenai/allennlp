@@ -4,10 +4,11 @@ import zipfile
 import bz2
 import lzma
 import gzip
+import re
 import logging
 import warnings
 from contextlib import contextmanager
-from typing import Optional, ContextManager, Tuple, Union, Sequence, cast, IO, TextIO
+from typing import Optional, ContextManager, Tuple, Sequence, cast, IO, TextIO
 
 from overrides import overrides
 import numpy
@@ -150,11 +151,21 @@ class Embedding(TokenEmbedder):
         key directly, and the vocabulary will be ignored.
 
         A file containing pretrained embeddings can be specified using the parameter ``pretrained_file``.
-        Two formats are supported: hdf5 and text file.
-        The text file is assumed to be utf-8 encoded and space separated: [word] [dim 1] [dim 2] ...
-        The text file can eventually be compressed with gzip, bz2, lzma or zip. Furthermore,
-        it can also resides inside a zip or tar archive with multiple files. In this last case,
-        the parameter ``pretrained_file`` must be a pair ``[archive_path, path_inside_archive]``.
+        Two formats are supported:
+            * hdf5 - containing an embedding matrix in the form of a torch.Tensor;
+            * text format - an utf-8 encoded text file with space separated fields::
+
+                    [word] [dim 1] [dim 2] ...
+
+              The text file can eventually be compressed with gzip, bz2, lzma or zip.
+              You can even select a single file inside an archive containing multiple files
+              using the URI::
+
+                    (archive_uri)#file_path_inside_the_archive)
+
+              where ``archive_uri`` can be a file system path or a URL. For example:
+
+                    "(http://nlp.stanford.edu/data/glove.twitter.27B.zip)#glove.twitter.27B.200d.txt"
         """
         num_embeddings = params.pop_int('num_embeddings', None)
         vocab_namespace = params.pop("vocab_namespace", "tokens")
@@ -194,7 +205,7 @@ class Embedding(TokenEmbedder):
                    sparse=sparse)
 
 
-def _read_pretrained_embeddings_file(embeddings_filename: Union[str, Sequence[str]],
+def _read_pretrained_embeddings_file(embeddings_file_uri: str,
                                      embedding_dim: int,
                                      vocab: Vocabulary,
                                      namespace: str = "tokens") -> torch.FloatTensor:
@@ -218,12 +229,9 @@ def _read_pretrained_embeddings_file(embeddings_filename: Union[str, Sequence[st
 
     Parameters
     ----------
-    embeddings_filename : Union[str, Sequence[str]], required.
-        Path to the file containing the embeddings. It can be a string or a pair of strings.
-        If the file is an (eventually compressed) text file or a file contained in a zip/tar
-        archive containing only a single file, a string is enough. If otherwise the file resides
-        in an archive with multiple other files, a pair [archive_path, path_inside_archive] is
-        needed.
+    embeddings_file_uri : str, required.
+        Path to the file containing the embeddings. A file inside a multi-file archive can be
+        selected using the format: (archive_uri)#file_path_inside_archive
     vocab : Vocabulary, required.
         A Vocabulary object.
     namespace : str, (optional, default=tokens)
@@ -237,14 +245,13 @@ def _read_pretrained_embeddings_file(embeddings_filename: Union[str, Sequence[st
     ``(vocab.get_vocab_size(namespace), embedding_dim)``, where the indices of words appearing in
     the pretrained embedding file are initialized to the pretrained embedding value.
     """
-    if isinstance(embeddings_filename, str):
-        file_ext = get_file_extension(embeddings_filename)
-        if file_ext in ['.h5', '.hdf5']:
-            return _read_embeddings_from_hdf5(embeddings_filename,
-                                              embedding_dim,
-                                              vocab, namespace)
+    file_ext = get_file_extension(embeddings_file_uri)
+    if file_ext in ['.h5', '.hdf5']:
+        return _read_embeddings_from_hdf5(embeddings_file_uri,
+                                          embedding_dim,
+                                          vocab, namespace)
 
-    return _read_embeddings_from_text_file(embeddings_filename,
+    return _read_embeddings_from_text_file(embeddings_file_uri,
                                            embedding_dim,
                                            vocab, namespace)
 
@@ -258,33 +265,27 @@ def _get_the_only_file_in_the_archive(members_list: Sequence[str],
     return members_list[0]
 
 
-def normalize_embeddings_filename(embeddings_filename: Union[str, Sequence[str]]) -> Tuple[str, Optional[str]]:
-    """
-    If embedding_filename is a string, returns (embedding_filename, '').
-    If it's a pair of string, it returns them in a tuple
-    """
-    if isinstance(embeddings_filename, Sequence) and len(embeddings_filename) == 2:
-        return str(embeddings_filename[0]), str(embeddings_filename[1])
-    elif isinstance(embeddings_filename, str):
-        return str(embeddings_filename), None
-    else:
-        raise ValueError('Invalid path to pretrained embeddings: %r\n'
-                         'It must be a string or a pair or strings [archive_path, member_path]'
-                         % embeddings_filename)
+def get_embeddings_file_uri(path1: str, path2: Optional[str] = None):
+    if path2:
+        return "({})#{}".format(path1, path2)
+    return path1
+
+
+def decode_embedding_file_uri(uri: str) -> Tuple[str, Optional[str]]:
+    match = re.fullmatch('\((.*)\)#(.*)', uri)      # pylint: disable=anomalous-backslash-in-string
+    if match:
+        return cast(Tuple[str, str], match.groups())
+    return uri, None
 
 
 @contextmanager  # type: ignore
-def open_embeddings_text_file(embeddings_filename: Union[str, Sequence[str]],
+def open_embeddings_text_file(embeddings_file_uri: str,
                               encoding: str = EMBEDDINGS_FILE_ENCODING,
                               cache_dir: str = None) -> ContextManager[TextIO]:
     """
-    Utility function for opening embeddings text files. The file can be
-        * a plain uncompressed text file
-        * a text file compressed with zip, gzip, bz2 or lzma
-        * a text file in a zip or tar archive containing multiple files; in this case,
-          the argument ``embeddings_filename`` must be a pair [archive_path, path_inside_archive]
+    Utility function for opening embeddings text files.
     """
-    first_level_path, second_level_path = normalize_embeddings_filename(embeddings_filename)
+    first_level_path, second_level_path = decode_embedding_file_uri(embeddings_file_uri)
     cached_first_level_path = cached_path(first_level_path, cache_dir=cache_dir)
 
     if zipfile.is_zipfile(cached_first_level_path):  # ZIP archive
@@ -338,13 +339,13 @@ def open_embeddings_text_file(embeddings_filename: Union[str, Sequence[str]],
             yield embeddings_file
 
 
-def read_num_pretrained_tokens_if_present(embeddings_filename: Union[str, Sequence[str]]) -> Optional[int]:
+def read_num_pretrained_tokens_if_present(embeddings_file_uri: str) -> Optional[int]:
     """ Some pretrained embedding files (e.g. FastText) start declaring the number of tokens
     and the embedding size. The former is useful for showing progress. This function read
     the first row and if it contains 1 or 2 integers, it assumes that the biggest one is
     the number of tokens """
     num_tokens = None
-    with open_embeddings_text_file(embeddings_filename) as embeddings_file:  # type: TextIO
+    with open_embeddings_text_file(embeddings_file_uri) as embeddings_file:  # type: TextIO
         first_line = embeddings_file.readline()
         fields = first_line.split(' ')
         if 1 <= len(fields) <= 2:
@@ -359,7 +360,7 @@ def read_num_pretrained_tokens_if_present(embeddings_filename: Union[str, Sequen
     return num_tokens
 
 
-def _read_embeddings_from_text_file(embeddings_filename: Union[str, Sequence[str]],  # pylint: disable=invalid-name
+def _read_embeddings_from_text_file(embeddings_file_uri: str,  # pylint: disable=invalid-name
                                     embedding_dim: int,
                                     vocab: Vocabulary,
                                     namespace: str = "tokens") -> torch.FloatTensor:
@@ -368,7 +369,7 @@ def _read_embeddings_from_text_file(embeddings_filename: Union[str, Sequence[str
     inside an archive with multiple files. The text file is assumed to be utf-8 encoded with
     space-separated fields: [word] [dim 1] [dim 2] ...
 
-    If the file is contained in an archive with other files, then ``embeddings_filename`` must
+    If the file is contained in an archive with other files, then ``embeddings_file_uri`` must
     be a pair ``[archive_path, path_of_the_file_inside_archive]``.
 
     Lines that contain more numerical tokens than ``embedding_dim`` raise a warning and are skipped.
@@ -382,9 +383,9 @@ def _read_embeddings_from_text_file(embeddings_filename: Union[str, Sequence[str
     # First we read the embeddings from the file, only keeping vectors for the words we need.
     logger.info("Reading pretrained embeddings from file")
 
-    num_pretrained_tokens = read_num_pretrained_tokens_if_present(embeddings_filename)
+    num_pretrained_tokens = read_num_pretrained_tokens_if_present(embeddings_file_uri)
 
-    with open_embeddings_text_file(embeddings_filename) as embeddings_file:  # type: TextIO
+    with open_embeddings_text_file(embeddings_file_uri) as embeddings_file:  # type: TextIO
         if num_pretrained_tokens:
             embeddings_file.readline()  # skip header
 

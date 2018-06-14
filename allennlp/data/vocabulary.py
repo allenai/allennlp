@@ -91,16 +91,16 @@ class _IndexToTokenDefaultDict(_NamespaceDependentDefaultDict):
                                                        lambda: {})
 
 
-def _read_pretrained_tokens(embeddings_filename: Union[str, Sequence[str]]) -> Set[str]:
+def _read_pretrained_tokens(embeddings_file_uri: str) -> Set[str]:
     # Moving this import to the top breaks everything
     from allennlp.modules.token_embedders.embedding import (open_embeddings_text_file,
                                                             read_num_pretrained_tokens_if_present)
 
-    logger.info('Reading pretrained tokens from: %s', embeddings_filename)
+    logger.info('Reading pretrained tokens from: %s', embeddings_file_uri)
     tokens = set()
-    num_pretrained_tokens = read_num_pretrained_tokens_if_present(embeddings_filename)
+    num_pretrained_tokens = read_num_pretrained_tokens_if_present(embeddings_file_uri)
 
-    with open_embeddings_text_file(embeddings_filename) as embeddings_file:  # type: TextIO
+    with open_embeddings_text_file(embeddings_file_uri) as embeddings_file:  # type: TextIO
         if num_pretrained_tokens:
             embeddings_file.readline()  # skip header
 
@@ -162,15 +162,13 @@ class Vocabulary:
         The default is ``("*tags", "*labels")``, so as long as your namespace ends in "tags" or
         "labels" (which is true by default for all tag and label fields in this code), you don't
         have to specify anything here.
-    pretrained_files : ``Dict[str, Union[str, Sequence[str]]``, optional
+    pretrained_files : ``Dict[str, str]]``, optional
         If provided, this map specifies the path to optional pretrained embedding files for each
         namespace. This can be used to either restrict the vocabulary to only words which appear
         in this file, or to ensure that any words in this file are included in the vocabulary
         regardless of their count, depending on the value of ``only_include_pretrained_words``.
         Words which appear in the pretrained embedding file but not in the data are NOT included
-        in the Vocabulary.
-        If the embedding file for a given namespace is contained inside an archive, then you can
-        provide a pair ``namespace: [archive_path, file_path_inside_archive]``.
+        in the Vocabulary..
     only_include_pretrained_words : ``bool``, optional (default=False)
         This defines the stategy for using any pretrained embedding files which may have been
         specified in ``pretrained_files``. If False, an inclusive stategy is used: and words

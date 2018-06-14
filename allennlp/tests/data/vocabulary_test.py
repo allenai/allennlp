@@ -15,6 +15,7 @@ from allennlp.data.vocabulary import (Vocabulary, _NamespaceDependentDefaultDict
                                       DEFAULT_OOV_TOKEN, _read_pretrained_tokens)
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.modules.token_embedders.embedding import get_embeddings_file_uri
 
 
 class TestVocabulary(AllenNlpTestCase):
@@ -337,7 +338,8 @@ class TestVocabulary(AllenNlpTestCase):
         file_path = 'folder/fake_embeddings.5d.txt'
         for ext in ['.zip', '.tar.gz']:
             archive_path = base_path + ext
-            words_read = _read_pretrained_tokens([archive_path, file_path])
+            embeddings_file_uri = get_embeddings_file_uri(archive_path, file_path)
+            words_read = _read_pretrained_tokens(embeddings_file_uri)
             assert words_read == words, f"Wrong words for file {archive_path}\n" \
                                         f"   Read: {sorted(words_read)}\n" \
                                         f"Correct: {sorted(words)}"
@@ -356,9 +358,10 @@ class TestVocabulary(AllenNlpTestCase):
             with archive.open('dummy.vec', 'w') as dummy_file:
                 dummy_file.write("c 1.0 2.3 -1.0 3.0\n".encode('utf-8'))
 
+        embeddings_file_uri = get_embeddings_file_uri(archive_path, file_path)
         vocab = Vocabulary.from_instances(self.dataset,
                                           min_count={'tokens': 4},
-                                          pretrained_files={'tokens': [archive_path, file_path]},
+                                          pretrained_files={'tokens': embeddings_file_uri},
                                           only_include_pretrained_words=True)
 
         words = set(vocab.get_index_to_token_vocabulary().values())
@@ -367,7 +370,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'c' not in words
 
         vocab = Vocabulary.from_instances(self.dataset,
-                                          pretrained_files={'tokens': [archive_path, file_path]},
+                                          pretrained_files={'tokens': embeddings_file_uri},
                                           only_include_pretrained_words=True)
         words = set(vocab.get_index_to_token_vocabulary().values())
         assert 'a' in words
