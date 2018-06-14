@@ -4,7 +4,7 @@ from allennlp.training.metrics.metric import Metric
 
 import math
 
-@Metric.register("ppl")
+@Metric.register("perplexity")
 class Perplexity(Metric):
     """
     This :class:`Metric` breaks with the typical ``Metric`` API and just stores values that were

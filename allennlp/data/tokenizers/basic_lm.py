@@ -7,9 +7,13 @@ from allennlp.data.tokenizers.token import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 
 @Tokenizer.register("basic_lm")
-class BasicTokenizer(Tokenizer):
-    def __init__(self) -> None:
-        return
+class BasicLMTokenizer(Tokenizer):
+    """
+    A ``BasicLMTokenizer`` splits strings of text into tokens by treating space characters as 
+    separator, and pad a special EOF token to the end of each sentence. This tokenizer is 
+    relative fast and only provides the very basic function as a tokenizer (suitable for
+    large, already tokenized corpora, e.g., the wiki103 dataset).
+    """
 
     @overrides
     def tokenize(self, text: str) -> List[Token]:
@@ -24,6 +28,6 @@ class BasicTokenizer(Tokenizer):
          if words and not words.isspace() else [] for words in texts]
 
     @classmethod
-    def from_params(cls, params: Params) -> 'BasicTokenizer':
+    def from_params(cls, params: Params) -> 'BasicLMTokenizer':
         params.assert_empty(cls.__name__)
         return cls()

@@ -12,8 +12,6 @@ from overrides import overrides
 
 from math import sqrt
 
-# from ipdb import set_trace
-
 logger = logging.getLogger(__name__)
 
 class AdaptiveSoftmax(nn.Module):
@@ -48,7 +46,6 @@ class AdaptiveSoftmax(nn.Module):
         self.cross_entropy = nn.CrossEntropyLoss(size_average=False)
 
         self.adaptive = len(cutoff) > 1
-        # if self.adaptive:
         self.tail = nn.ModuleList()
         for i in range(len(self.cutoff) - 1):
 
@@ -152,13 +149,11 @@ class AdaptiveSoftmax(nn.Module):
             if mask.data.sum() > 0:
 
                 first_target[mask] = self.cutoff[0] + i
-
                 second_target = target[mask].add(-self.cutoff[i])
 
                 second_input = w_in.index_select(0, mask.nonzero().squeeze())
 
                 second_output = self.tail[i](second_input)
-
                 output += self.cross_entropy(second_output, second_target)
 
         output += self.cross_entropy(self.head(w_in), first_target)

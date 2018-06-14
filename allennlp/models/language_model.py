@@ -15,7 +15,7 @@ from allennlp.modules.lm_rnn import LMRNN
 from allennlp.modules.adaptive import AdaptiveSoftmax
 from allennlp.training.metrics.perplexity import Perplexity
 
-@Model.register("WordLM")
+@Model.register("word-lm")
 class WordLM(Model):
     """
     This ``WordLM`` is a word level language model.
