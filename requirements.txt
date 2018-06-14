@@ -26,6 +26,9 @@ spacy>=2.0,<2.1
 # Used by span prediction models.
 numpy
 
+# Used for reading configuration info out of numpy-style docstrings.
+numpydoc==0.8.0
+
 # Used in coreference resolution evaluation metrics.
 scipy
 scikit-learn
@@ -77,3 +80,6 @@ flaky
 
 # Required to mock out `requests` calls
 responses>=0.7
+
+# Reads Universal Dependencies files.
+conllu
