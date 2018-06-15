@@ -6,16 +6,15 @@ import lzma
 import gzip
 import re
 import logging
+import itertools
 import warnings
 from contextlib import contextmanager
 from typing import Optional, ContextManager, Tuple, Sequence, cast, IO, TextIO
 
-import itertools
 from overrides import overrides
 import numpy
 import torch
 from torch.nn.functional import embedding
-
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
