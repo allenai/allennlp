@@ -159,13 +159,13 @@ class Vocabulary:
         The default is ``("*tags", "*labels")``, so as long as your namespace ends in "tags" or
         "labels" (which is true by default for all tag and label fields in this code), you don't
         have to specify anything here.
-    pretrained_files : ``Dict[str, str]]``, optional
+    pretrained_files : ``Dict[str, str]``, optional
         If provided, this map specifies the path to optional pretrained embedding files for each
         namespace. This can be used to either restrict the vocabulary to only words which appear
         in this file, or to ensure that any words in this file are included in the vocabulary
         regardless of their count, depending on the value of ``only_include_pretrained_words``.
         Words which appear in the pretrained embedding file but not in the data are NOT included
-        in the Vocabulary..
+        in the Vocabulary.
     only_include_pretrained_words : ``bool``, optional (default=False)
         This defines the stategy for using any pretrained embedding files which may have been
         specified in ``pretrained_files``. If False, an inclusive stategy is used: and words
