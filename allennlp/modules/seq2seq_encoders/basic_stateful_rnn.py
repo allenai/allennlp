@@ -151,4 +151,5 @@ class BasicStatefulRNN(Seq2SeqEncoder):
 
     def forward(self, x, mask = None) -> Tensor:
         x = x.transpose_(0, 1)
-        return self.layer(x)
+        x = self.layer(x)
+        return x.transpose_(0, 1)
