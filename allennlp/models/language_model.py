@@ -11,8 +11,7 @@ from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, SoftmaxWithNLL
 from allennlp.common.checks import check_dimensions_match
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 
-# from allennlp.modules.lm_encoder import LMRNN
-# from allennlp.modules.softmax import AdaptiveSoftmax
+from ipdb import set_trace
 
 from allennlp.training.metrics.perplexity import Perplexity
 
@@ -69,13 +68,16 @@ class WordLM(Model):
             proj_list = [self.proj] 
             if relu:
                 proj_list += [nn.ReLU()]
-            proj_list += dropout_list
+            proj_list = proj_list + dropout_list
         else:
             self.proj = None
             proj_list = []
 
-        encoder_list = dropout_list + [self.encoder] + dropout_list + proj_list
-        self.lm_encoder = nn.Sequential(*encoder_list)
+        after_encoder_list = dropout_list + proj_list
+        if len(after_encoder_list) > 0:
+            self.after_encoder = nn.Sequential(*after_encoder_list)
+        else:
+            self.after_encoder = None
 
         self.softmax = softmax
         if not self.softmax.adaptive and self.softmax.head.weight.size() == self.text_field_embedder.token_embedder_tokens.weight.size():
@@ -146,30 +148,27 @@ class WordLM(Model):
 
         """
 
-        if self.batch_first:
-            n_input_tokens, n_output_tokens = dict(), dict()
-            for k in input_tokens.keys():
-                n_input_tokens[k] = input_tokens[k].transpose(0, 1)
-            for k in output_tokens.keys():
-                n_output_tokens[k] = output_tokens[k].transpose(0, 1).contiguous()
-        else:
-            n_input_tokens = input_tokens
-            n_output_tokens = output_tokens
+        embedded_text_input = self.text_field_embedder(input_tokens)
 
-        embedded_text_input = self.text_field_embedder(n_input_tokens)
+        if self.dropout:
+            embedded_text_input = self.dropout(embedded_text_input)
 
-        emb_encoder_out = self.lm_encoder(embedded_text_input)
+        # set_trace()
+        emb_encoder_out = self.encoder(embedded_text_input, 
+            embedded_text_input.new_ones((embedded_text_input.size(0), embedded_text_input.size(1))))
 
-        if n_output_tokens is None:
-        
+        # set_trace()
+        if self.after_encoder:
+            emb_encoder_out = self.after_encoder(emb_encoder_out)
+
+        if output_tokens is None:
             output_dict = {"emb_encoder_out": emb_encoder_out}
         
         else:
-            
-            nll = self.softmax(emb_encoder_out, n_output_tokens["tokens"])
+            nll = self.softmax(emb_encoder_out, output_tokens["tokens"])
 
             for metric in self.metrics.values():
-                metric(nll.data[0])
+                metric(nll.data.item())
 
             output_dict = {"loss" : nll}
 

@@ -65,8 +65,9 @@ class _Seq2SeqWrapper:
     """
     PYTORCH_MODELS = [torch.nn.GRU, torch.nn.LSTM, torch.nn.RNN]
 
-    def __init__(self, module_class: Type[torch.nn.modules.RNNBase]) -> None:
+    def __init__(self, module_class: Type[torch.nn.modules.RNNBase], stateful: bool = False) -> None:
         self._module_class = module_class
+        self._stateful = stateful
 
     def __call__(self, **kwargs) -> PytorchSeq2SeqWrapper:
         return self.from_params(Params(kwargs))
@@ -77,12 +78,15 @@ class _Seq2SeqWrapper:
         if self._module_class in self.PYTORCH_MODELS:
             params['batch_first'] = True
         module = self._module_class(**params.as_dict())
-        return PytorchSeq2SeqWrapper(module)
+        return PytorchSeq2SeqWrapper(module, self._stateful)
 
 # pylint: disable=protected-access
 Seq2SeqEncoder.register("gru")(_Seq2SeqWrapper(torch.nn.GRU))
 Seq2SeqEncoder.register("lstm")(_Seq2SeqWrapper(torch.nn.LSTM))
 Seq2SeqEncoder.register("rnn")(_Seq2SeqWrapper(torch.nn.RNN))
+Seq2SeqEncoder.register("stateful_gru")(_Seq2SeqWrapper(torch.nn.GRU, True))
+Seq2SeqEncoder.register("stateful_lstm")(_Seq2SeqWrapper(torch.nn.LSTM, True))
+Seq2SeqEncoder.register("stateful_rnn")(_Seq2SeqWrapper(torch.nn.RNN, True))
 Seq2SeqEncoder.register("augmented_lstm")(_Seq2SeqWrapper(AugmentedLstm))
 Seq2SeqEncoder.register("alternating_lstm")(_Seq2SeqWrapper(StackedAlternatingLstm))
 Seq2SeqEncoder.register("stacked_bidirectional_lstm")(_Seq2SeqWrapper(StackedBidirectionalLstm))

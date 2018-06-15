@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 from allennlp.common.checks import check_dimensions_match
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
 from allennlp.common.params import Params
 
@@ -27,7 +28,7 @@ class VRNN_Basic(nn.Module):
     ----------
     unit : ``str``, required
         Type of unit type
-    input_dim : ``int``, required
+    input_size : ``int``, required
         Size of hidden states
     dropout : ``float``, required
         The dropout ratio
@@ -35,8 +36,8 @@ class VRNN_Basic(nn.Module):
         Whether to include the batch norm in the feed forward direction
     """
     def __init__(self, unit: str, 
-            input_dim: int, 
-            hid_dim: int, 
+            input_size: int, 
+            hidden_size: int, 
             dropout: float, 
             batch_norm: bool = False) -> None:
 
@@ -44,21 +45,21 @@ class VRNN_Basic(nn.Module):
 
         rnnunit_map = {'rnn': nn.RNN, 'lstm': nn.LSTM, 'gru': nn.GRU}
 
-        self.layer = rnnunit_map[unit](input_dim, hid_dim, 1)
+        self.layer = rnnunit_map[unit](input_size, hidden_size, 1)
         self.dropout = dropout
         self.batch_norm = batch_norm
         if self.batch_norm:
-            self.bn = nn.BatchNorm1d(hid_dim)
-        self.input_dim = input_dim
-        self.output_dim = hid_dim
+            self.bn = nn.BatchNorm1d(hidden_size)
+        self.input_size = input_size
+        self.output_size = hidden_size
 
         self.reset_states()
 
     def get_input_dim(self) -> int:
-        return self.input_dim
+        return self.input_size
 
     def get_output_dim(self) -> int:
-        return self.output_dim
+        return self.output_size
 
     def get_last_hidden(self) -> tuple:
         return self.hidden_state
@@ -90,11 +91,11 @@ class BasicStatefulRNN(Seq2SeqEncoder):
 
     Parameters
     ----------
-    layer_num : ``int``, required
+    num_layers : ``int``, required
         number of RNN layers
     unit : ``str``, required
         Type of unit type
-    input_dim : ``int``, required
+    input_size : ``int``, required
         Size of hidden states
     dropout : ``float``, required
         The dropout ratio
@@ -102,18 +103,18 @@ class BasicStatefulRNN(Seq2SeqEncoder):
         Whether to include the batch norm in the feed forward direction
     """
 
-    def __init__(self, layer_num:int, 
+    def __init__(self, num_layers:int, 
             unit:str, 
-            input_dim:int, 
-            hid_dim:int, 
+            input_size:int, 
+            hidden_size:int, 
             dropout:float, 
             batch_norm: bool = False) -> None:
 
         super(BasicStatefulRNN, self).__init__()
 
-        layer_list = [VRNN_Basic(unit, input_dim, hid_dim, 0, batch_norm)] + [VRNN_Basic(unit, hid_dim, hid_dim, dropout, batch_norm) for i in range(layer_num - 1)]
+        layer_list = [VRNN_Basic(unit, input_size, hidden_size, 0, batch_norm)] + [VRNN_Basic(unit, hidden_size, hidden_size, dropout, batch_norm) for i in range(num_layers - 1)]
         self.layer = nn.Sequential(*layer_list)
-        self.input_dim = layer_list[0].get_input_dim()
+        self.input_size = layer_list[0].get_input_dim()
         self.output_dim = layer_list[-1].get_output_dim()
 
         self.reset_states()
@@ -121,22 +122,22 @@ class BasicStatefulRNN(Seq2SeqEncoder):
     @classmethod
     def from_params(cls, params: Params) -> 'LMRNN':
 
-        layer_num = params.pop("layer_num")
+        num_layers = params.pop("num_layers")
         unit = params.pop("unit")
-        input_dim = params.pop("input_dim")
-        hid_dim = params.pop("hid_dim")
+        input_size = params.pop("input_size")
+        hidden_size = params.pop("hidden_size")
         dropout = params.pop("dropout")
         batch_norm = params.pop("batch_norm", False)
 
-        return cls(layer_num=layer_num, 
+        return cls(num_layers=num_layers, 
             unit=unit, 
-            input_dim=input_dim, 
-            hid_dim=hid_dim, 
+            input_size=input_size, 
+            hidden_size=hidden_size, 
             dropout=dropout, 
             batch_norm=batch_norm)
 
     def get_input_dim(self) -> int:
-        return self.input_dim
+        return self.input_size
 
     def get_output_dim(self) -> int:
         return self.output_dim
@@ -148,5 +149,6 @@ class BasicStatefulRNN(Seq2SeqEncoder):
     def get_last_hidden(self) -> tuple:
         return [tup.get_last_hidden() for tup in self.layer.children()]
 
-    def forward(self, x) -> Tensor:
+    def forward(self, x, mask = None) -> Tensor:
+        x = x.transpose_(0, 1)
         return self.layer(x)
