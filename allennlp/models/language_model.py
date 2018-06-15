@@ -74,7 +74,7 @@ class WordLM(Model):
             self.proj = None
             proj_list = []
 
-        encoder_list = [self.encoder] + dropout_list + proj_list
+        encoder_list = dropout_list + [self.encoder] + dropout_list + proj_list
         self.lm_encoder = nn.Sequential(*encoder_list)
 
         self.softmax = softmax

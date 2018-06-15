@@ -111,7 +111,7 @@ class BasicStatefulRNN(Seq2SeqEncoder):
 
         super(BasicStatefulRNN, self).__init__()
 
-        layer_list = [VRNN_Basic(unit, input_dim, hid_dim, dropout, batch_norm)] + [VRNN_Basic(unit, hid_dim, hid_dim, dropout, batch_norm) for i in range(layer_num - 1)]
+        layer_list = [VRNN_Basic(unit, input_dim, hid_dim, 0, batch_norm)] + [VRNN_Basic(unit, hid_dim, hid_dim, dropout, batch_norm) for i in range(layer_num - 1)]
         self.layer = nn.Sequential(*layer_list)
         self.input_dim = layer_list[0].get_input_dim()
         self.output_dim = layer_list[-1].get_output_dim()
