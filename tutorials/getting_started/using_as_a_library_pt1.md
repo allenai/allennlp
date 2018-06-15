@@ -20,7 +20,7 @@ lines of code to get a very flexible classifier for academic papers.
 The first thing we need to do is specify AllenNLP as a dependency in our project.  We'll do this by
 creating a
 [`requirements.txt`](https://github.com/allenai/allennlp-as-a-library-example/blob/master/requirements.txt)
-file.  It contains a single line: `allennlp==0.4.3`.  Then, after creating a python 3.6 environment,
+file.  It contains a single line: `allennlp==0.5.1`.  Then, after creating a python 3.6 environment,
 you install AllenNLP by running `pip install -r requirements.txt`.
 
 ```bash
@@ -601,6 +601,6 @@ allennlp train \
 
 When we do this, we get to around 80% validation accuracy after a few epochs of training.
 
-To see how to make predictions and build a demo for our new model, see the 
+To see how to make predictions and build a demo for our new model, see the
 [Making Predictions and Creating a Demo](making_predictions_and_creating_a_demo.md) tutorial, which continues
 where this tutorial leaves off.

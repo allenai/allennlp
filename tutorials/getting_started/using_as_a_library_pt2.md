@@ -8,11 +8,11 @@ for something. In this tutorial we'll cover both
 
 Here we'll be working with the paper classification model
 we developed in the ["Using AllenNLP in your Project"](using_in_your_repo.md)
-tutorial. All the code for that model is [on GitHub](https://github.com/allenai/allennlp-as-a-library-example/tree/0.4.2).
+tutorial. All the code for that model is [on GitHub](https://github.com/allenai/allennlp-as-a-library-example/tree/0.5.1).
 You can either train it yourself or download a
 [trained model](https://s3-us-west-2.amazonaws.com/allennlp/models/tutorial-s2-classification-model-2018-02-01.tar.gz),
 although in this tutorial we'll just use the tiny model that's included
-[as a test fixture](https://github.com/allenai/allennlp-as-a-library-example/tree/0.4.2/tests/fixtures).
+[as a test fixture](https://github.com/allenai/allennlp-as-a-library-example/tree/0.5.1/tests/fixtures).
 
 ## Creating a Predictor
 
@@ -39,10 +39,10 @@ Usually you only need to implement the `_json_to_instance` function,
 which specifies how to turn a JSON dict of inputs into an AllenNLP
 [`Instance`](https://allenai.github.io/allennlp-docs/api/allennlp.data.instance.html).
 And our `DatasetReader` already has a
-[`text_to_instance`](https://github.com/allenai/allennlp-as-a-library-example/blob/0.4.2/my_library/dataset_readers/semantic_scholar_papers.py#L68)
+[`text_to_instance`](https://github.com/allenai/allennlp-as-a-library-example/blob/0.5.1/my_library/dataset_readers/semantic_scholar_papers.py#L68)
 method, which means all we have to do is extract what that method needs from the JSON.
 
-This means our predictor [can be very simple](https://github.com/allenai/allennlp-as-a-library-example/blob/0.4.2/my_library/predictors/paper_classifier_predictor.py):
+This means our predictor [can be very simple](https://github.com/allenai/allennlp-as-a-library-example/blob/0.5.1/my_library/predictors/paper_classifier_predictor.py):
 
 ```python
 @Predictor.register('paper-classifier')
@@ -87,7 +87,7 @@ The main gotcha here is that our test will (implicitly)
 need to instantiate our model, dataset reader, and predictor
 by name, which means that they need to be registered before
 our test runs. I added them all as imports in
-[`my_library/__init__.py`](https://github.com/allenai/allennlp-as-a-library-example/blob/0.4.2/my_library/__init__.py),
+[`my_library/__init__.py`](https://github.com/allenai/allennlp-as-a-library-example/blob/0.5.1/my_library/__init__.py),
 so we just have to import that package:
 
 ```python
@@ -248,16 +248,16 @@ as those will be implicitly provided by the HTML code.
 
 The simplest way to get started is to just "view source" on the demo
 and save the resulting file in some directory. I called my directory
-[`static_html`](https://github.com/allenai/allennlp-as-a-library-example/tree/0.4.2/static_html)
+[`static_html`](https://github.com/allenai/allennlp-as-a-library-example/tree/0.5.1/static_html)
 and saved `index.html` there. The original page had a lot of embedded CSS, which I split out into
-[its own file](https://github.com/allenai/allennlp-as-a-library-example/blob/0.4.2/static_html/demo.css).
+[its own file](https://github.com/allenai/allennlp-as-a-library-example/blob/0.5.1/static_html/demo.css).
 
 For our customization, we'll replace the ugly JSON output
 with a beautiful pie chart of the predicted class probabilities,
 using a library called
 [chart.js](http://www.chartjs.org/docs/latest/getting-started/usage.html).
 
-To start with, we need to [add a `script` tag to load chart.js](https://github.com/allenai/allennlp-as-a-library-example/blob/0.4.2/static_html/index.html#L47).
+To start with, we need to [add a `script` tag to load chart.js](https://github.com/allenai/allennlp-as-a-library-example/blob/0.5.1/static_html/index.html#L47).
 
 ```html
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.3.0/Chart.bundle.js"></script>
@@ -287,7 +287,7 @@ document.getElementById("output").innerHTML = htmlResults;
 Which means we just need to make a few changes to those parts of our code.
 If you look at the `chart.js` documentation, we'll need to have a `canvas` element
 for our chart, so we'll start by
-[placing that inside our `output` div](https://github.com/allenai/allennlp-as-a-library-example/blob/0.4.2/static_html/index.html#L61):
+[placing that inside our `output` div](https://github.com/allenai/allennlp-as-a-library-example/blob/0.5.1/static_html/index.html#L61):
 
 ```javascript
 var canvas = '<canvas id="myChart" width="400" height="400"></canvas>';
