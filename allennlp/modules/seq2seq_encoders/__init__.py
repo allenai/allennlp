@@ -33,7 +33,6 @@ from allennlp.modules.stacked_bidirectional_lstm import StackedBidirectionalLstm
 from allennlp.modules.seq2seq_encoders.stacked_self_attention import StackedSelfAttentionEncoder
 from allennlp.modules.seq2seq_encoders.multi_head_self_attention import MultiHeadSelfAttention
 from allennlp.modules.seq2seq_encoders.pass_through_encoder import PassThroughEncoder
-from allennlp.modules.seq2seq_encoders.basic_stateful_rnn import BasicStatefulRNN
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
