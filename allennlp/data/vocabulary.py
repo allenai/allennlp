@@ -98,7 +98,7 @@ def _read_pretrained_tokens(embeddings_file_uri: str) -> Set[str]:
 
     logger.info('Reading pretrained tokens from: %s', embeddings_file_uri)
     tokens = set()
-    with open_embeddings_text_file(embeddings_file_uri) as embeddings_file:  # type: TextIO
+    with open_embeddings_text_file(embeddings_file_uri) as embeddings_file:
         file_iterator_with_progbar = get_embeddings_file_iterator_with_progbar(embeddings_file)
 
         for line_number, line in enumerate(file_iterator_with_progbar, start=1):

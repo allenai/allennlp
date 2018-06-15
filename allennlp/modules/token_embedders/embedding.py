@@ -9,7 +9,7 @@ import logging
 import itertools
 import warnings
 from contextlib import contextmanager
-from typing import Optional, ContextManager, Tuple, Sequence, cast, IO, TextIO
+from typing import Optional, Tuple, Sequence, cast, IO, TextIO, Iterator
 
 from overrides import overrides
 import numpy
@@ -286,10 +286,10 @@ def decode_embeddings_file_uri(uri: str) -> Tuple[str, Optional[str]]:
     return uri, None
 
 
-@contextmanager  # type: ignore
+@contextmanager
 def open_embeddings_text_file(embeddings_file_uri: str,
                               encoding: str = EMBEDDINGS_FILE_ENCODING,
-                              cache_dir: str = None) -> ContextManager[TextIO]:
+                              cache_dir: str = None) -> Iterator[TextIO]:
     """
     Utility function for opening embeddings text files.
 
@@ -430,7 +430,7 @@ def _read_embeddings_from_text_file(embeddings_file_uri: str,
     # First we read the embeddings from the file, only keeping vectors for the words we need.
     logger.info("Reading pretrained embeddings from file")
 
-    with open_embeddings_text_file(embeddings_file_uri) as embeddings_file:  # type: TextIO
+    with open_embeddings_text_file(embeddings_file_uri) as embeddings_file:
 
         for line in get_embeddings_file_iterator_with_progbar(embeddings_file):
             token = line.split(' ', 1)[0]
