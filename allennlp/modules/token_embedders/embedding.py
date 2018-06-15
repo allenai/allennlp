@@ -6,10 +6,8 @@ import lzma
 import gzip
 import re
 import logging
-import itertools
 import warnings
-from contextlib import contextmanager
-from typing import Optional, Tuple, Sequence, cast, IO, TextIO, Iterator
+from typing import Optional, Tuple, Sequence, cast, IO, Iterator
 
 from overrides import overrides
 import numpy
@@ -286,12 +284,10 @@ def decode_embeddings_file_uri(uri: str) -> Tuple[str, Optional[str]]:
     return uri, None
 
 
-@contextmanager
-def open_embeddings_text_file(embeddings_file_uri: str,
-                              encoding: str = EMBEDDINGS_FILE_ENCODING,
-                              cache_dir: str = None) -> Iterator[TextIO]:
+class EmbeddingsTextFile:
     """
-    Utility function for opening embeddings text files.
+    Utility class for opening embeddings text files. Handles various compression formats,
+    as well as context management.
 
     Parameters
     ----------
@@ -307,23 +303,38 @@ def open_embeddings_text_file(embeddings_file_uri: str,
     encoding: str
     cache_dir: str
     """
-    first_level_path, second_level_path = decode_embeddings_file_uri(embeddings_file_uri)
-    cached_first_level_path = cached_path(first_level_path, cache_dir=cache_dir)
+    def __init__(self,
+                 embeddings_file_uri: str,
+                 encoding: str = EMBEDDINGS_FILE_ENCODING,
+                 cache_dir: str = None) -> None:
+        self.embeddings_file_uri = embeddings_file_uri
+        self.encoding = encoding
+        self.cache_dir = cache_dir
+        self._handle = None
 
-    if zipfile.is_zipfile(cached_first_level_path):  # ZIP archive
-        logger.debug('Reading pretrained embeddings file contained in a zip archive')
-        with zipfile.ZipFile(cached_first_level_path, 'r') as zip_archive:
+        # To use this with tqdm we'd like to know the number of tokens.
+        # It's possible that the first line of the embeddings file contains this;
+        # however, if we check, and it doesn't, we need to store it in a buffer
+        # so that we can include it with the contents of the file.
+        self.num_tokens = None
+        self.buffer = None
+
+    def __enter__(self) -> None:
+        first_level_path, second_level_path = decode_embeddings_file_uri(self.embeddings_file_uri)
+        cached_first_level_path = cached_path(first_level_path, cache_dir=self.cache_dir)
+
+        if zipfile.is_zipfile(cached_first_level_path):  # ZIP archive
+            logger.debug('Reading pretrained embeddings file contained in a zip archive')
+            zip_archive = zipfile.ZipFile(cached_first_level_path, 'r')
             if second_level_path is None:
                 members_list = zip_archive.namelist()
                 second_level_path = _get_the_only_file_in_the_archive(members_list, first_level_path)
             second_level_path = cast(str, second_level_path)   # mypy is not smart enough
-            with io.TextIOWrapper(zip_archive.open(second_level_path, 'r'),
-                                  encoding=encoding) as embeddings_file:
-                yield embeddings_file
+            self._handle = io.TextIOWrapper(zip_archive.open(second_level_path, 'r'), encoding=self.encoding)
 
-    elif tarfile.is_tarfile(first_level_path):  # TAR archive
-        logger.debug('Reading pretrained embeddings file contained in a tar archive')
-        with tarfile.open(cached_first_level_path, 'r') as tar_archive:
+        elif tarfile.is_tarfile(first_level_path):  # TAR archive
+            logger.debug('Reading pretrained embeddings file contained in a tar archive')
+            tar_archive = tarfile.open(cached_first_level_path, 'r')
             if second_level_path is None:
                 members_list = tar_archive.getnames()
                 second_level_path = _get_the_only_file_in_the_archive(members_list, first_level_path)
@@ -331,34 +342,59 @@ def open_embeddings_text_file(embeddings_file_uri: str,
             tar_member = tar_archive.getmember(second_level_path)
             tar_member_file = tar_archive.extractfile(tar_member)
             if not tar_member_file:
-                raise ValueError('File %s not found in the archive %s' %
-                                 (second_level_path, first_level_path))
+                raise ValueError(f'File {second_level_path} not found in the archive {first_level_path}')
             tar_member_file = cast(IO[bytes], tar_member_file)
 
-            with io.TextIOWrapper(tar_member_file, encoding=encoding) as embeddings_file:
-                yield embeddings_file
+            self._handle = io.TextIOWrapper(tar_member_file, encoding=self.encoding)
 
-    else:  # (eventually compressed) text file
-        if second_level_path:
-            raise ValueError('Unsupported archive format: %s' + first_level_path)
+        else:  # (eventually compressed) text file
+            if second_level_path:
+                raise ValueError(f'Unsupported archive format: {first_level_path}')
 
-        # All the python packages for compressed files share the same interface of io.open
-        extension = get_file_extension(first_level_path)
-        package = {
-                '.txt': io,
-                '.vec': io,
-                '.gz': gzip,
-                '.bz2': bz2,
-                '.lzma': lzma,
-                }.get(extension, None)
+            # All the python packages for compressed files share the same interface of io.open
+            extension = get_file_extension(first_level_path)
+            package = {
+                    '.txt': io,
+                    '.vec': io,
+                    '.gz': gzip,
+                    '.bz2': bz2,
+                    '.lzma': lzma,
+                    }.get(extension, None)
 
-        if package is None:
-            logger.warning('The embedding file has an unknown file extension "%s". '
-                           'We will assume the file is an (uncompressed) text file', extension)
-            package = io
+            if package is None:
+                logger.warning('The embedding file has an unknown file extension "%s". '
+                               'We will assume the file is an (uncompressed) text file', extension)
+                package = io
 
-        with package.open(cached_first_level_path, 'rt', encoding=encoding) as embeddings_file:  # type: ignore
-            yield embeddings_file
+            self._handle = package.open(cached_first_level_path, 'rt', encoding=self.encoding)
+
+        # Populate buffer
+        first_line = next(self._handle)
+        num_tokens = _get_num_tokens_in_file_from_1st_line(first_line)
+        if num_tokens is None:
+            self.buffer = first_line
+        else:
+            self.num_tokens = num_tokens
+
+        return self
+
+    def read(self) -> bytes:
+        if self.buffer is not None:
+            return self.buffer + self._handle.read()
+        else:
+            return self._handle.read()
+
+    def __iter__(self) -> Iterator[str]:
+        if self.buffer is not None:
+            yield self.buffer
+            self.buffer = None
+
+        yield from self._handle
+
+    def __exit__(self, typ, value, traceback) -> None:
+        self._handle.close()
+        self._handle = None
+
 
 
 def _get_num_tokens_in_file_from_1st_line(first_line: str) -> Optional[int]:
@@ -386,30 +422,6 @@ def _get_num_tokens_in_file_from_1st_line(first_line: str) -> Optional[int]:
     return None
 
 
-def get_embeddings_file_iterator_with_progbar(embeddings_file: TextIO):
-    """
-    Some pretrained embedding files (e.g. FastText) start with a header containing the number
-    of tokens and the size of the vectors. The former is useful for showing progress when reading
-    the file.
-
-    This function read the first line of the file to see if it's a header containing the number
-    of pretrained tokens in the file; then it returns a file iterator decorated with a progress bar.
-    If the first line is a "valid header" (see :func:`_get_num_tokens_in_file_from_1st_line`),
-    then the returned iterator starts from the 2nd line of the file and the progress bar is set
-    with an expected number of iterations. Otherwise, the returned iterator will start from the 1st
-    line and the progress bar will run without an expected number of iterations (better than nothing).
-    """
-    first_line = next(embeddings_file)
-    num_pretrained_tokens = _get_num_tokens_in_file_from_1st_line(first_line)
-
-    if num_pretrained_tokens:
-        return Tqdm.tqdm(embeddings_file)  # skip the first line (header)
-    else:
-        # don't skip the first line
-        return Tqdm.tqdm(itertools.chain([first_line], embeddings_file),
-                         total=num_pretrained_tokens)
-
-
 def _read_embeddings_from_text_file(embeddings_file_uri: str,
                                     embedding_dim: int,
                                     vocab: Vocabulary,
@@ -430,9 +442,9 @@ def _read_embeddings_from_text_file(embeddings_file_uri: str,
     # First we read the embeddings from the file, only keeping vectors for the words we need.
     logger.info("Reading pretrained embeddings from file")
 
-    with open_embeddings_text_file(embeddings_file_uri) as embeddings_file:
-
-        for line in get_embeddings_file_iterator_with_progbar(embeddings_file):
+    with EmbeddingsTextFile(embeddings_file_uri) as embeddings_file:
+        num_tokens = embeddings_file.num_tokens
+        for line in Tqdm.tqdm(embeddings_file, total=num_tokens):
             token = line.split(' ', 1)[0]
             if token in tokens_to_keep:
                 fields = line.rstrip().split(' ')

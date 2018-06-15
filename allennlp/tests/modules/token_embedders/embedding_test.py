@@ -15,7 +15,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.embedding import (Embedding,
                                                         _read_pretrained_embeddings_file,
-                                                        open_embeddings_text_file,
+                                                        EmbeddingsTextFile,
                                                         _get_num_tokens_in_file_from_1st_line,
                                                         get_embeddings_file_uri,
                                                         decode_embeddings_file_uri)
@@ -156,7 +156,7 @@ class TestEmbedding(AllenNlpTestCase):
                 i = vocab.get_token_index(tok)
                 assert torch.equal(embeddings[i], vec), 'Problem with format ' + archive_path
 
-    def test_open_embeddings_text_file(self):
+    def test_oembeddings_text_file(self):
         txt_path = str(self.FIXTURES_ROOT / 'utf-8_sample/utf-8_sample.txt')
 
         # This is for sure a correct way to read an utf-8 encoded text file
@@ -166,7 +166,7 @@ class TestEmbedding(AllenNlpTestCase):
         # Check if we get the correct text on plain and compressed versions of the file
         paths = [txt_path] + [txt_path + ext for ext in ['.gz', '.zip']]
         for path in paths:
-            with open_embeddings_text_file(path) as f:
+            with EmbeddingsTextFile(path) as f:
                 text = f.read()
             assert text == correct_text, "Test failed for file: " + path
 
@@ -174,13 +174,13 @@ class TestEmbedding(AllenNlpTestCase):
         for ext in ['.zip', '.tar.gz', '.tar.bz2', '.tar.lzma']:
             archive_path = str(self.FIXTURES_ROOT / 'utf-8_sample/archives/utf-8') + ext
             embeddings_file_uri = get_embeddings_file_uri(archive_path, 'folder/utf-8_sample.txt')
-            with open_embeddings_text_file(embeddings_file_uri) as f:
+            with EmbeddingsTextFile(embeddings_file_uri) as f:
                 text = f.read()
             assert text == correct_text, "Test failed for file: " + archive_path
 
         # Passing a second level path when not reading an archive
         with pytest.raises(ValueError):
-            with open_embeddings_text_file(get_embeddings_file_uri(txt_path, 'a/fake/path')):
+            with EmbeddingsTextFile(get_embeddings_file_uri(txt_path, 'a/fake/path')):
                 pass
 
     def test_get_num_tokens_in_file_from_1st_line(self):
