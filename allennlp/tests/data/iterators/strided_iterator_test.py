@@ -3,19 +3,19 @@ from pytest import raises
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.iterators import LMIterator
+from allennlp.data.iterators import StridedIterator
 from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
 
-class TestLMIterator(IteratorTest):
+class TestStridedIterator(IteratorTest):
     # pylint: disable=protected-access
 
     def test_get_num_batches(self):
-        assert LMIterator(batch_size=2).get_num_batches(self.instances) == 2
+        assert StridedIterator(batch_size=2).get_num_batches(self.instances) == 2
 
     def test_create_batches(self):
 
-        iterator = LMIterator(batch_size=2)
+        iterator = StridedIterator(batch_size=2)
         batches = list(iterator._create_batches(self.instances, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
 
@@ -30,6 +30,6 @@ class TestLMIterator(IteratorTest):
                 "lazy": False
         }
 
-        iterator = LMIterator.from_params(Params(param_dict))
+        iterator = StridedIterator.from_params(Params(param_dict))
         assert iterator._batch_size == 100
         assert iterator._lazy == False

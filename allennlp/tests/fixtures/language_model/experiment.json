@@ -2,7 +2,7 @@
   "dataset_reader": {
     "type": "language_modeling",
     "tokenizer": {
-      "type": "basic_lm"
+      "type": "basic"
     },
     "tokens_per_instance": 4
   },
@@ -13,7 +13,7 @@
   "validation_data_path": "tests/fixtures/data/ptb.txt",
   "evaluate_on_test": true,
   "model": {
-    "type": "WordLM",
+    "type": "word-lm",
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
@@ -21,8 +21,8 @@
         "trainable": true
       }
     },
-    "rnn": {
-      "type": "vanilla_RNN",
+    "encoder": {
+      "type": "basic_stateful_rnn",
       "layer_num": 2,
       "unit": "lstm", 
       "input_dim": 30,
@@ -34,13 +34,14 @@
     "relu": true,
     "dropout": 0.5,
     "softmax": {
+      "type": "adaptive",
       "input_dim": 30,
       "cutoff": [],
       "label_namespace": "tokens"
     }
   },
   "iterator": {
-    "type": "lm",
+    "type": "strided",
     "batch_size": 2
   },
   "trainer": {

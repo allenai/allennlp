@@ -10,35 +10,18 @@ from allennlp.common.checks import check_dimensions_match
 from allennlp.common.registrable import Registrable
 from allennlp.common.params import Params
 
+from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
+
 def repackage_hidden(h):
     """Wraps hidden states in new Variables, to detach them from their history."""
     if type(h) == torch.Tensor:
         return h.detach()
     else:
         return tuple(repackage_hidden(v) for v in h)
-
-class LMRNN(torch.nn.Module, Registrable):
-    """
-    Wrapper of RNN used in LMs
-    """
-    @overrides
-    def forward(self, x) -> Tensor:
-        raise NotImplementedError
-
-    def get_input_dim(self) -> int:
-        raise NotImplementedError
-
-    def get_output_dim(self) -> int:
-        raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'LMRNN':
-        choice = params.pop_choice('type', cls.list_available())
-        return cls.by_name(choice).from_params(params)
         
 class VRNN_Basic(nn.Module):
     """
-    One layer of the vanilla RNNs, used in vanilla stacked-RNNs
+    One layer of the stateful vanilla RNNs, used in vanilla stacked-RNNs
 
     Parameters
     ----------
@@ -69,7 +52,7 @@ class VRNN_Basic(nn.Module):
         self.input_dim = input_dim
         self.output_dim = hid_dim
 
-        self.init_hidden()
+        self.reset_states()
 
     def get_input_dim(self) -> int:
         return self.input_dim
@@ -80,7 +63,7 @@ class VRNN_Basic(nn.Module):
     def get_last_hidden(self) -> tuple:
         return self.hidden_state
 
-    def init_hidden(self) -> None:
+    def reset_states(self) -> None:
 
         self.hidden_state = None
 
@@ -100,10 +83,10 @@ class VRNN_Basic(nn.Module):
         return out
 
 
-@LMRNN.register("vanilla_RNN")
-class vanilla_RNN(LMRNN):
+@Seq2SeqEncoder.register("basic_stateful_rnn")
+class BasicStatefulRNN(Seq2SeqEncoder):
     """
-    vanilla stacked-RNNs
+    vanilla stateful stacked-RNNs
 
     Parameters
     ----------
@@ -126,14 +109,14 @@ class vanilla_RNN(LMRNN):
             dropout:float, 
             batch_norm: bool = False) -> None:
 
-        super(vanilla_RNN, self).__init__()
+        super(BasicStatefulRNN, self).__init__()
 
         layer_list = [VRNN_Basic(unit, input_dim, hid_dim, dropout, batch_norm)] + [VRNN_Basic(unit, hid_dim, hid_dim, dropout, batch_norm) for i in range(layer_num - 1)]
         self.layer = nn.Sequential(*layer_list)
         self.input_dim = layer_list[0].get_input_dim()
         self.output_dim = layer_list[-1].get_output_dim()
 
-        self.init_hidden()
+        self.reset_states()
 
     @classmethod
     def from_params(cls, params: Params) -> 'LMRNN':
@@ -158,9 +141,9 @@ class vanilla_RNN(LMRNN):
     def get_output_dim(self) -> int:
         return self.output_dim
 
-    def init_hidden(self) -> None:
+    def reset_states(self) -> None:
         for tup in self.layer.children():
-            tup.init_hidden()
+            tup.reset_states()
 
     def get_last_hidden(self) -> tuple:
         return [tup.get_last_hidden() for tup in self.layer.children()]

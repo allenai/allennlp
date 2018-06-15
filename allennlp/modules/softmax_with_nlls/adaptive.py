@@ -7,6 +7,7 @@ from allennlp.models.model import Model
 from allennlp.data import Vocabulary
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.modules.softmax_with_nlls.softmax_with_nll import SoftmaxWithNLL
 
 from overrides import overrides
 
@@ -14,7 +15,8 @@ from math import sqrt
 
 logger = logging.getLogger(__name__)
 
-class AdaptiveSoftmax(torch.nn.Module):
+@SoftmaxWithNLL.register("adaptive")
+class AdaptiveSoftmax(SoftmaxWithNLL):
     """
     The implementation of the adaptive softmax, which is a two layer hierarchical
     softmax, while the hierarchical is constructed based on the word frequency.
@@ -85,20 +87,20 @@ class AdaptiveSoftmax(torch.nn.Module):
     def get_output_dim(self) -> int:
         return 1
 
-    def log_prob(self, w_in, device):
+    @overrides
+    def log_prob(self, w_in):
         """
         Parameters
         ----------
         w_in : ``Tensor``, required.
             The input of the softmax.
-        device : ``required``
-            The device where the calculation is conducted on.
 
         Returns
         -------
         prob : ``Tensor``
             The predicted future words distribution
         """
+        device = w_in.device
         lsm = nn.LogSoftmax(dim=1).to(device)
 
         head_out = self.head(w_in)

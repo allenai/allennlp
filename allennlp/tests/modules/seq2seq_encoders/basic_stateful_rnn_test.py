@@ -2,18 +2,18 @@
 from numpy.testing import assert_almost_equal
 import torch
 
-from allennlp.modules import LMRNN
+from allennlp.modules.seq2seq_encoders import BasicStatefulRNN
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common import Params
 from allennlp.data import Vocabulary
 
 
-class TestLMRNN(AllenNlpTestCase):
+class TestBasicStatefulRNN(AllenNlpTestCase):
 
-    def test_from_params_builders_LMRNN_correctly(self):
+    def test_from_params_builders_BasicStatefulRNN_correctly(self):
 
         params = Params({
-                "type": "vanilla_RNN",
+                "type": "basic_stateful_rnn",
                 "layer_num": 3,
                 "unit": 'gru',
                 "input_dim": 3,
@@ -22,8 +22,8 @@ class TestLMRNN(AllenNlpTestCase):
                 "batch_norm": False
                 })
 
-        rnn = LMRNN.from_params(params)
-        assert rnn.__class__.__name__ == 'vanilla_RNN'
+        rnn = BasicStatefulRNN.from_params(params)
+        assert rnn.__class__.__name__ == 'BasicStatefulRNN'
         assert rnn.input_dim == 3
         assert rnn.output_dim == 5
         for ind, tup in enumerate(rnn.layer.children()):

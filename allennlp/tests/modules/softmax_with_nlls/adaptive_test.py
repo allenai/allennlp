@@ -5,7 +5,7 @@ import torch
 import pytest
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules import AdaptiveSoftmax
+from allennlp.modules.softmax_with_nlls import AdaptiveSoftmax
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common import Params
 from allennlp.data import Vocabulary

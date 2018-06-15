@@ -6,10 +6,10 @@ from allennlp.common import Params
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 
-@Tokenizer.register("basic_lm")
-class BasicLMTokenizer(Tokenizer):
+@Tokenizer.register("basic")
+class BasicTokenizer(Tokenizer):
     """
-    A ``BasicLMTokenizer`` splits strings of text into tokens by treating space characters as 
+    A ``BasicTokenizer`` splits strings of text into tokens by treating space characters as 
     separator, and pad a special EOF token to the end of each sentence. This tokenizer is 
     relative fast and only provides the very basic function as a tokenizer (suitable for
     large, already tokenized corpora, e.g., the wiki103 dataset).

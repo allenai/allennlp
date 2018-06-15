@@ -7,12 +7,13 @@ import torch.nn as nn
 from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import TextFieldEmbedder
+from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, SoftmaxWithNLL
 from allennlp.common.checks import check_dimensions_match
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 
-from allennlp.modules.lm_rnn import LMRNN
-from allennlp.modules.adaptive import AdaptiveSoftmax
+# from allennlp.modules.lm_encoder import LMRNN
+# from allennlp.modules.softmax import AdaptiveSoftmax
+
 from allennlp.training.metrics.perplexity import Perplexity
 
 @Model.register("word-lm")
@@ -26,7 +27,7 @@ class WordLM(Model):
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
         Used to embed the ``tokens`` ``TextField`` we get as input to the model.
-    rnn : ``LMRNN``, required
+    encoder : ``LMRNN``, required
         The Recurrent Neural Networks for language modeling.
     softmax : ``AdaptiveSoftmax``
         The adaptive softmax for predicting next words
@@ -41,10 +42,10 @@ class WordLM(Model):
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
-                 rnn: LMRNN,
-                 softmax: AdaptiveSoftmax,
-                 proj: bool=True,
-                 relu: bool=True,
+                 encoder: Seq2SeqEncoder,
+                 softmax: SoftmaxWithNLL,
+                 proj: bool = False,
+                 relu: bool = False,
                  dropout: float = 0.0,
                  batch_first: bool=True,
                  initializer: InitializerApplicator = InitializerApplicator(),
@@ -52,7 +53,7 @@ class WordLM(Model):
 
         super().__init__(vocab, regularizer)
 
-        self.rnn = rnn
+        self.encoder = encoder
         self.batch_first = batch_first
         self.text_field_embedder = text_field_embedder
 
@@ -64,7 +65,7 @@ class WordLM(Model):
             dropout_list = []
 
         if proj:
-            self.proj = nn.Linear(self.rnn.get_output_dim(), softmax.get_input_dim())
+            self.proj = nn.Linear(self.encoder.get_output_dim(), softmax.get_input_dim())
             proj_list = [self.proj] 
             if relu:
                 proj_list += [nn.ReLU()]
@@ -73,8 +74,8 @@ class WordLM(Model):
             self.proj = None
             proj_list = []
 
-        rnn_list = [self.rnn] + dropout_list + proj_list
-        self.lm_rnn = nn.Sequential(*rnn_list)
+        encoder_list = [self.encoder] + dropout_list + proj_list
+        self.lm_encoder = nn.Sequential(*encoder_list)
 
         self.softmax = softmax
         if not self.softmax.adaptive and self.softmax.head.weight.size() == self.text_field_embedder.token_embedder_tokens.weight.size():
@@ -85,13 +86,13 @@ class WordLM(Model):
         self.metrics = {"ppl": Perplexity()}
 
         check_dimensions_match(text_field_embedder.get_output_dim(), 
-            rnn.get_input_dim(), 
+            encoder.get_input_dim(), 
             "text field embedder output dim",
-            "rnn input dim")
+            "encoder input dim")
         if not proj:
-            check_dimensions_match(rnn.get_output_dim(), 
+            check_dimensions_match(encoder.get_output_dim(), 
                 self.softmax_in,
-                "rnn output dim",
+                "encoder output dim",
                 "softmax input dim")
 
         initializer(self)
@@ -102,7 +103,7 @@ class WordLM(Model):
         
     @overrides
     def train(self, mode=True):
-        self.rnn.init_hidden()
+        self.encoder.reset_states()
         self.training = mode
         for module in self.children():
             module.train(mode)
@@ -131,13 +132,13 @@ class WordLM(Model):
             token in your input.
         output_tokens : Dict[str, torch.LongTensor], optional
             The expected prediction of the language model. If set to be None, the output would contains
-            ```emb_rnn_out```, which is the output of the LMRNNs. Otherwise, the output would be the loss
+            ```emb_encoder_out```, which is the output of the LMRNNs. Otherwise, the output would be the loss
             alone.
 
         Returns
         -------
         An output dictionary consisting of:
-        emb_rnn_out : torch.FloatTensor, optional
+        emb_encoder_out : torch.FloatTensor, optional
             A tensor of shape ``(batch_size, num_tokens, tag_vocab_size)`` representing
             a distribution of the tag classes per word.
         loss : torch.FloatTensor, optional
@@ -157,15 +158,15 @@ class WordLM(Model):
 
         embedded_text_input = self.text_field_embedder(n_input_tokens)
 
-        emb_rnn_out = self.lm_rnn(embedded_text_input)
+        emb_encoder_out = self.lm_encoder(embedded_text_input)
 
         if n_output_tokens is None:
         
-            output_dict = {"emb_rnn_out": emb_rnn_out}
+            output_dict = {"emb_encoder_out": emb_encoder_out}
         
         else:
             
-            nll = self.softmax(emb_rnn_out, n_output_tokens["tokens"])
+            nll = self.softmax(emb_encoder_out, n_output_tokens["tokens"])
 
             for metric in self.metrics.values():
                 metric(nll.data[0])
@@ -180,15 +181,15 @@ class WordLM(Model):
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
 
-        rnn_params = params.pop("rnn")
-        rnn = LMRNN.from_params(rnn_params)
+        encoder_params = params.pop("encoder")
+        encoder = Seq2SeqEncoder.from_params(encoder_params)
 
-        proj = params.pop("proj")
-        relu = params.pop("relu")
+        proj = params.pop("proj", False)
+        relu = params.pop("relu", False)
         dropout = params.pop("dropout", None)
 
         softmax_params = params.pop('softmax')
-        softmax = AdaptiveSoftmax.from_params(vocab, softmax_params)
+        softmax = SoftmaxWithNLL.from_params(vocab, softmax_params)
         
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
@@ -197,7 +198,7 @@ class WordLM(Model):
 
         return cls(vocab=vocab,
                  text_field_embedder=text_field_embedder,
-                 rnn=rnn,
+                 encoder=encoder,
                  softmax=softmax,
                  proj=proj,
                  relu=relu,

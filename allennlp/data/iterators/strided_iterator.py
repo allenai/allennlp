@@ -26,6 +26,7 @@ class StridedIterator(DataIterator):
     """
     def __init__(self, batch_size: int = 20, lazy: bool = False) -> None:
         self._batch_size = batch_size
+        self._lazy = lazy
         if lazy:
             raise ConfigurationError(f"This iterator cannot be used lazy")
 
