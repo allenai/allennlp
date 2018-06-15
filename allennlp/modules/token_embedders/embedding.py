@@ -310,16 +310,16 @@ class EmbeddingsTextFile:
         self.embeddings_file_uri = embeddings_file_uri
         self.encoding = encoding
         self.cache_dir = cache_dir
-        self._handle = None
+        self._handle: Optional[IO] = None
 
         # To use this with tqdm we'd like to know the number of tokens.
         # It's possible that the first line of the embeddings file contains this;
         # however, if we check, and it doesn't, we need to store it in a buffer
         # so that we can include it with the contents of the file.
-        self.num_tokens = None
-        self.buffer = None
+        self.num_tokens: Optional[int] = None
+        self.buffer: Optional[str] = None
 
-    def __enter__(self) -> None:
+    def __enter__(self) -> 'EmbeddingsTextFile':
         first_level_path, second_level_path = decode_embeddings_file_uri(self.embeddings_file_uri)
         cached_first_level_path = cached_path(first_level_path, cache_dir=self.cache_dir)
 
@@ -389,7 +389,8 @@ class EmbeddingsTextFile:
             yield self.buffer
             self.buffer = None
 
-        yield from self._handle
+        # This useless call to iter is necessary to make mypy happy.
+        yield from iter(self._handle)
 
     def __exit__(self, typ, value, traceback) -> None:
         self._handle.close()
