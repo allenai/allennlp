@@ -14,7 +14,7 @@ from math import sqrt
 
 logger = logging.getLogger(__name__)
 
-class AdaptiveSoftmax(nn.Module):
+class AdaptiveSoftmax(torch.nn.Module):
     """
     The implementation of the adaptive softmax, which is a two layer hierarchical
     softmax, while the hierarchical is constructed based on the word frequency.
