@@ -44,6 +44,7 @@ def check_for_gpu(device_id: int):
                                  " if you want to run on CPU use the override"
                                  " 'trainer.cuda_device=-1' in the json config file.")
 
-    # wordaround for <https://github.com/pytorch/pytorch/issues/7280>
-    if device_id is not None and device_id > 0:
+    # a wordaround for <https://github.com/pytorch/pytorch/issues/7280>
+    # TODO: revert this once this problem is fixed
+    if device_id is not None and device_id >= 0:
         cuda.set_device(device_id)
