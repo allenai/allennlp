@@ -22,13 +22,11 @@
       }
     },
     "encoder": {
-      "type": "basic_stateful_rnn",
-      "layer_num": 2,
-      "unit": "lstm", 
-      "input_dim": 30,
-      "hid_dim": 64,
-      "dropout": 0.5,
-      "batch_norm": false
+      "type": "stateful_lstm",
+      "num_layers": 2, 
+      "input_size": 30,
+      "hidden_size": 64,
+      "dropout": 0.5
     },
     "proj": true,
     "relu": true,
