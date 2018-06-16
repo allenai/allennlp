@@ -16,7 +16,6 @@ from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.embedding import (Embedding,
                                                         _read_pretrained_embeddings_file,
                                                         EmbeddingsTextFile,
-                                                        _get_num_tokens_in_file_from_1st_line,
                                                         get_embeddings_file_uri,
                                                         decode_embeddings_file_uri)
 
@@ -187,13 +186,13 @@ class TestEmbedding(AllenNlpTestCase):
         # Valid header
         valid_headers = ['1000000 300\n', '300 1000000\n', '1000000\n']
         for header in valid_headers:
-            assert _get_num_tokens_in_file_from_1st_line(header) == 1_000_000, \
+            assert EmbeddingsTextFile._get_num_tokens_from_first_line(header) == 1_000_000, \
                 "Failed with header: " + header
 
         # No header
         not_headers = ['hello 1\n', 'hello 1 2\n', '111 222 333\n', '111 222 hello\n']
         for header in not_headers:
-            num_tokens = _get_num_tokens_in_file_from_1st_line(header)
+            num_tokens = EmbeddingsTextFile._get_num_tokens_from_first_line(header)
             assert num_tokens is None, \
                 f"Failed with header: {header}. Num tokens: {num_tokens}"
 

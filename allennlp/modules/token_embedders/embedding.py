@@ -7,7 +7,7 @@ import gzip
 import re
 import logging
 import warnings
-from typing import Optional, Tuple, Sequence, cast, IO, Iterator
+from typing import Optional, Tuple, Sequence, cast, IO, Iterator, Any, TextIO
 
 from overrides import overrides
 import numpy
@@ -263,14 +263,6 @@ def _read_pretrained_embeddings_file(embeddings_file_uri: str,
                                            vocab, namespace)
 
 
-def _get_the_only_file_in_the_archive(members_list: Sequence[str], archive_path: str) -> str:
-    if len(members_list) > 1:
-        raise ValueError('The archive %s contains multiple files, so you must select '
-                         'one of the files inside it providing a pair '
-                         '[archive_path, path_of_the_file_inside_archive]' % archive_path)
-    return members_list[0]
-
-
 def get_embeddings_file_uri(path_or_url: str, path_inside_archive: Optional[str] = None) -> str:
     if path_inside_archive:
         return "({})#{}".format(path_or_url, path_inside_archive)
@@ -293,66 +285,38 @@ class EmbeddingsTextFile:
     ----------
     embeddings_file_uri: str
         It can be:
-
         * a file system path or a URL to an eventually compressed text file or a zip/tar archive
           containing a single file.
-
         * URI of the type ``(archive_path_or_url)#file_path_inside_archive`` if the text file
           is contained in a multi-file archive.
-
     encoding: str
     cache_dir: str
     """
-    def __init__(self,
-                 embeddings_file_uri: str,
-                 encoding: str = EMBEDDINGS_FILE_ENCODING,
-                 cache_dir: str = None) -> None:
-        self.embeddings_file_uri = embeddings_file_uri
-        self.encoding = encoding
-        self.cache_dir = cache_dir
-        self._handle: Optional[IO] = None
+    def __init__(self, embeddings_file_uri: str,
+                 encoding=EMBEDDINGS_FILE_ENCODING,
+                 cache_dir=None) -> None:
 
-        # To use this with tqdm we'd like to know the number of tokens.
-        # It's possible that the first line of the embeddings file contains this;
-        # however, if we check, and it doesn't, we need to store it in a buffer
-        # so that we can include it with the contents of the file.
-        self.num_tokens: Optional[int] = None
-        self.buffer: Optional[str] = None
+        self._uri = embeddings_file_uri
+        self._encoding = encoding
+        self._cache_dir = cache_dir
+        self._handle: TextIO
+        self._archive_handle: Any = None   # if the file is inside an archive
 
-    def __enter__(self) -> 'EmbeddingsTextFile':
-        first_level_path, second_level_path = decode_embeddings_file_uri(self.embeddings_file_uri)
-        cached_first_level_path = cached_path(first_level_path, cache_dir=self.cache_dir)
+        decoded_uri = decode_embeddings_file_uri(embeddings_file_uri)
+        cached_main_file_path = cached_path(decoded_uri[0], cache_dir=cache_dir)
 
-        if zipfile.is_zipfile(cached_first_level_path):  # ZIP archive
-            logger.debug('Reading pretrained embeddings file contained in a zip archive')
-            zip_archive = zipfile.ZipFile(cached_first_level_path, 'r')
-            if second_level_path is None:
-                members_list = zip_archive.namelist()
-                second_level_path = _get_the_only_file_in_the_archive(members_list, first_level_path)
-            second_level_path = cast(str, second_level_path)   # mypy is not smart enough
-            self._handle = io.TextIOWrapper(zip_archive.open(second_level_path, 'r'), encoding=self.encoding)
+        if zipfile.is_zipfile(cached_main_file_path):  # ZIP archive
+            self._open_inside_zip(*decoded_uri)
 
-        elif tarfile.is_tarfile(first_level_path):  # TAR archive
-            logger.debug('Reading pretrained embeddings file contained in a tar archive')
-            tar_archive = tarfile.open(cached_first_level_path, 'r')
-            if second_level_path is None:
-                members_list = tar_archive.getnames()
-                second_level_path = _get_the_only_file_in_the_archive(members_list, first_level_path)
-            second_level_path = cast(str, second_level_path)  # mypy is not smart enough
-            tar_member = tar_archive.getmember(second_level_path)
-            tar_member_file = tar_archive.extractfile(tar_member)
-            if not tar_member_file:
-                raise ValueError(f'File {second_level_path} not found in the archive {first_level_path}')
-            tar_member_file = cast(IO[bytes], tar_member_file)
+        elif tarfile.is_tarfile(cached_main_file_path):  # TAR archive
+            self._open_inside_tar(*decoded_uri)
 
-            self._handle = io.TextIOWrapper(tar_member_file, encoding=self.encoding)
-
-        else:  # (eventually compressed) text file
-            if second_level_path:
-                raise ValueError(f'Unsupported archive format: {first_level_path}')
+        else:  # all the other supported formats, including uncompressed files
+            if decoded_uri[1]:
+                raise ValueError('Unsupported archive format: %s' + decoded_uri[0])
 
             # All the python packages for compressed files share the same interface of io.open
-            extension = get_file_extension(first_level_path)
+            extension = get_file_extension(decoded_uri[0])
             package = {
                     '.txt': io,
                     '.vec': io,
@@ -362,65 +326,99 @@ class EmbeddingsTextFile:
                     }.get(extension, None)
 
             if package is None:
-                logger.warning('The embedding file has an unknown file extension "%s". '
+                logger.warning('The embeddings file has an unknown file extension "%s". '
                                'We will assume the file is an (uncompressed) text file', extension)
                 package = io
 
-            self._handle = package.open(cached_first_level_path, 'rt', encoding=self.encoding)
+            self._handle = package.open(cached_main_file_path, 'rt', encoding=encoding)  # type: ignore
 
-        # Populate buffer
+        # To use this with tqdm we'd like to know the number of tokens.
+        # It's possible that the first line of the embeddings file contains this;
+        # however, if we check, and it doesn't, we need to store it in a buffer
+        # so that we can include it with the contents of the file.
         first_line = next(self._handle)
-        num_tokens = _get_num_tokens_in_file_from_1st_line(first_line)
-        if num_tokens is None:
-            self.buffer = first_line
-        else:
-            self.num_tokens = num_tokens
+        self._num_tokens = EmbeddingsTextFile._get_num_tokens_from_first_line(first_line)
+        self._buffer = None if self._num_tokens else first_line
 
-        return self
+    def _open_inside_zip(self, archive_path: str, member_path: Optional[str] = None) -> None:
+        cached_archive_path = cached_path(archive_path, cache_dir=self._cache_dir)
+        archive = zipfile.ZipFile(cached_archive_path, 'r')
+        if member_path is None:
+            members_list = archive.namelist()
+            member_path = EmbeddingsTextFile._get_the_only_file_in_the_archive(members_list, archive_path)
+        member_path = cast(str, member_path)
+        member_file = archive.open(member_path, 'r')
+        self._handle = io.TextIOWrapper(member_file, encoding=self._encoding)
+        self._archive_handle = archive
 
-    def read(self) -> bytes:
-        if self.buffer is not None:
-            return self.buffer + self._handle.read()
+    def _open_inside_tar(self, archive_path: str, member_path: Optional[str] = None) -> None:
+        cached_archive_path = cached_path(archive_path, cache_dir=self._cache_dir)
+        archive = tarfile.open(cached_archive_path, 'r')
+        if member_path is None:
+            members_list = archive.getnames()
+            member_path = self._get_the_only_file_in_the_archive(members_list, archive_path)
+        member_path = cast(str, member_path)
+        member = archive.getmember(member_path)   # raises exception if not present
+        member_file = cast(IO[bytes], archive.extractfile(member))
+        self._handle = io.TextIOWrapper(member_file, encoding=self._encoding)
+        self._archive_handle = archive
+
+    @property
+    def num_tokens(self) -> Optional[int]:
+        return self._num_tokens
+
+    @property
+    def uri(self) -> str:
+        return self._uri
+
+    def read(self) -> str:
+        if self._buffer:
+            return self._buffer + self._handle.read()
         else:
             return self._handle.read()
 
-    def __iter__(self) -> Iterator[str]:
-        if self.buffer is not None:
-            yield self.buffer
-            self.buffer = None
-
-        # This useless call to iter is necessary to make mypy happy.
-        yield from iter(self._handle)
-
-    def __exit__(self, typ, value, traceback) -> None:
+    def close(self) -> None:
+        self._buffer = None
         self._handle.close()
-        self._handle = None
+        if self._archive_handle:
+            self._archive_handle.close()
 
+    def __enter__(self) -> 'EmbeddingsTextFile':
+        return self
 
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
 
-def _get_num_tokens_in_file_from_1st_line(first_line: str) -> Optional[int]:
-    """
-    Some pretrained embedding files (e.g. FastText) start declaring the number of tokens
-    and the embedding size. The former is useful for showing progress.
+    def __iter__(self) -> Iterator[str]:
+        if self._buffer:
+            yield self._buffer
+            self._buffer = None
+        yield from self._handle
 
-    This function takes in input the first line and if it's a "valid" header, it returns
-    the number of tokens in the embedding file. It assumes a header is composed of 1 or 2 integers
-    and that the maximum one (or the only one) is the number of pretrained tokens.
+    @staticmethod
+    def _get_the_only_file_in_the_archive(members_list: Sequence[str], archive_path: str) -> str:
+        if len(members_list) > 1:
+            raise ValueError('The archive %s contains multiple files, so you must select '
+                             'one of the files inside it providing a pair '
+                             '[archive_path, path_of_the_file_inside_archive]' % archive_path)
+        return members_list[0]
 
-    It returns None if the string doesn't match this pattern.
-    """
-    fields = first_line.split(' ')
-    if 1 <= len(fields) <= 2:
-        try:
-            int_fields = [int(x) for x in fields]
-        except ValueError:
-            return None
-        else:
-            num_tokens = max(int_fields)
-            logger.info('Number of pretrained tokens heuristically inferred from the first row: %d',
-                        num_tokens)
-            return num_tokens
-    return None
+    @staticmethod
+    def _get_num_tokens_from_first_line(line: str) -> Optional[int]:
+        """ This function takes in input a string and if it contains 1 or 2 integers, it assumes the
+        largest one it the number of tokens. Returns None if the line doesn't match that pattern. """
+        fields = line.split(' ')
+        if 1 <= len(fields) <= 2:
+            try:
+                int_fields = [int(x) for x in fields]
+            except ValueError:
+                return None
+            else:
+                num_tokens = max(int_fields)
+                logger.info('Recognized a header line in the embedding file with number of tokens: %d',
+                            num_tokens)
+                return num_tokens
+        return None
 
 
 def _read_embeddings_from_text_file(embeddings_file_uri: str,
