@@ -396,15 +396,12 @@ class EmbeddingsTextFile:
             self._buffer = None
         yield from self._handle
 
-    def __len__(self):
-        return self.num_tokens
-
     @staticmethod
     def _get_the_only_file_in_the_archive(members_list: Sequence[str], archive_path: str) -> str:
         if len(members_list) > 1:
             raise ValueError('The archive %s contains multiple files, so you must select '
-                             'one of the files inside it providing a pair '
-                             '[archive_path, path_of_the_file_inside_archive]' % archive_path)
+                             'one of the files inside providing a uri of the type: '
+                             '(path_or_url_to_archive)#path_file_inside_archive' % archive_path)
         return members_list[0]
 
     @staticmethod
