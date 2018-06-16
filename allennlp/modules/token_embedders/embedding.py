@@ -260,6 +260,98 @@ def _read_pretrained_embeddings_file(embeddings_file_uri: str,
                                            vocab, namespace)
 
 
+def _read_embeddings_from_text_file(embeddings_file_uri: str,
+                                    embedding_dim: int,
+                                    vocab: Vocabulary,
+                                    namespace: str = "tokens") -> torch.FloatTensor:
+    """
+    Read pre-trained word vectors from an eventually compressed text file, possibly contained
+    inside an archive with multiple files. The text file is assumed to be utf-8 encoded with
+    space-separated fields: [word] [dim 1] [dim 2] ...
+
+    Lines that contain more numerical tokens than ``embedding_dim`` raise a warning and are skipped.
+
+    The remainder of the docstring is identical to ``_read_pretrained_embeddings_file``.
+    """
+    tokens_to_keep = set(vocab.get_index_to_token_vocabulary(namespace).values())
+    vocab_size = vocab.get_vocab_size(namespace)
+    embeddings = {}
+
+    # First we read the embeddings from the file, only keeping vectors for the words we need.
+    logger.info("Reading pretrained embeddings from file")
+
+    with EmbeddingsTextFile(embeddings_file_uri) as embeddings_file:
+        num_tokens = embeddings_file.num_tokens
+        for line in Tqdm.tqdm(embeddings_file, total=num_tokens):
+            token = line.split(' ', 1)[0]
+            if token in tokens_to_keep:
+                fields = line.rstrip().split(' ')
+                if len(fields) - 1 != embedding_dim:
+                    # Sometimes there are funny unicode parsing problems that lead to different
+                    # fields lengths (e.g., a word with a unicode space character that splits
+                    # into more than one column).  We skip those lines.  Note that if you have
+                    # some kind of long header, this could result in all of your lines getting
+                    # skipped.  It's hard to check for that here; you just have to look in the
+                    # embedding_misses_file and at the model summary to make sure things look
+                    # like they are supposed to.
+                    logger.warning("Found line with wrong number of dimensions (expected: %d; actual: %d): %s",
+                                   embedding_dim, len(fields) - 1, line)
+                    continue
+
+                vector = numpy.asarray(fields[1:], dtype='float32')
+                embeddings[token] = vector
+
+    if not embeddings:
+        raise ConfigurationError("No embeddings of correct dimension found; you probably "
+                                 "misspecified your embedding_dim parameter, or didn't "
+                                 "pre-populate your Vocabulary")
+
+    all_embeddings = numpy.asarray(list(embeddings.values()))
+    embeddings_mean = float(numpy.mean(all_embeddings))
+    embeddings_std = float(numpy.std(all_embeddings))
+    # Now we initialize the weight matrix for an embedding layer, starting with random vectors,
+    # then filling in the word vectors we just read.
+    logger.info("Initializing pre-trained embedding layer")
+    embedding_matrix = torch.FloatTensor(vocab_size, embedding_dim).normal_(embeddings_mean,
+                                                                            embeddings_std)
+    num_tokens_found = 0
+    index_to_token = vocab.get_index_to_token_vocabulary(namespace)
+    for i in range(vocab_size):
+        token = index_to_token[i]
+
+        # If we don't have a pre-trained vector for this word, we'll just leave this row alone,
+        # so the word has a random initialization.
+        if token in embeddings:
+            embedding_matrix[i] = torch.FloatTensor(embeddings[token])
+            num_tokens_found += 1
+        else:
+            logger.debug("Token %s was not found in the embedding file. Initialising randomly.", token)
+
+    logger.info("Pretrained embeddings were found for %d out of %d tokens",
+                num_tokens_found, vocab_size)
+
+    return embedding_matrix
+
+
+def _read_embeddings_from_hdf5(embeddings_filename: str,
+                               embedding_dim: int,
+                               vocab: Vocabulary,
+                               namespace: str = "tokens") -> torch.FloatTensor:
+    """
+    Reads from a hdf5 formatted file. The embedding matrix is assumed to
+    be keyed by 'embedding' and of size ``(num_tokens, embedding_dim)``.
+    """
+    with h5py.File(embeddings_filename, 'r') as fin:
+        embeddings = fin['embedding'][...]
+
+    if list(embeddings.shape) != [vocab.get_vocab_size(namespace), embedding_dim]:
+        raise ConfigurationError(
+                "Read shape {0} embeddings from the file, but expected {1}".format(
+                        list(embeddings.shape), [vocab.get_vocab_size(namespace), embedding_dim]))
+
+    return torch.FloatTensor(embeddings)
+
+
 def get_embeddings_file_uri(path_or_url: str, path_inside_archive: Optional[str] = None) -> str:
     if path_inside_archive:
         return "({})#{}".format(path_or_url, path_inside_archive)
@@ -282,10 +374,12 @@ class EmbeddingsTextFile:
     ----------
     embeddings_file_uri: str
         It can be:
+
         * a file system path or a URL to an eventually compressed text file or a zip/tar archive
           containing a single file.
         * URI of the type ``(archive_path_or_url)#file_path_inside_archive`` if the text file
           is contained in a multi-file archive.
+
     encoding: str
     cache_dir: str
     """
@@ -419,95 +513,3 @@ class EmbeddingsTextFile:
                             num_tokens)
                 return num_tokens
         return None
-
-
-def _read_embeddings_from_text_file(embeddings_file_uri: str,
-                                    embedding_dim: int,
-                                    vocab: Vocabulary,
-                                    namespace: str = "tokens") -> torch.FloatTensor:
-    """
-    Read pre-trained word vectors from an eventually compressed text file, possibly contained
-    inside an archive with multiple files. The text file is assumed to be utf-8 encoded with
-    space-separated fields: [word] [dim 1] [dim 2] ...
-
-    Lines that contain more numerical tokens than ``embedding_dim`` raise a warning and are skipped.
-
-    The remainder of the docstring is identical to ``_read_pretrained_embeddings_file``.
-    """
-    tokens_to_keep = set(vocab.get_index_to_token_vocabulary(namespace).values())
-    vocab_size = vocab.get_vocab_size(namespace)
-    embeddings = {}
-
-    # First we read the embeddings from the file, only keeping vectors for the words we need.
-    logger.info("Reading pretrained embeddings from file")
-
-    with EmbeddingsTextFile(embeddings_file_uri) as embeddings_file:
-        num_tokens = embeddings_file.num_tokens
-        for line in Tqdm.tqdm(embeddings_file, total=num_tokens):
-            token = line.split(' ', 1)[0]
-            if token in tokens_to_keep:
-                fields = line.rstrip().split(' ')
-                if len(fields) - 1 != embedding_dim:
-                    # Sometimes there are funny unicode parsing problems that lead to different
-                    # fields lengths (e.g., a word with a unicode space character that splits
-                    # into more than one column).  We skip those lines.  Note that if you have
-                    # some kind of long header, this could result in all of your lines getting
-                    # skipped.  It's hard to check for that here; you just have to look in the
-                    # embedding_misses_file and at the model summary to make sure things look
-                    # like they are supposed to.
-                    logger.warning("Found line with wrong number of dimensions (expected: %d; actual: %d): %s",
-                                   embedding_dim, len(fields) - 1, line)
-                    continue
-
-                vector = numpy.asarray(fields[1:], dtype='float32')
-                embeddings[token] = vector
-
-    if not embeddings:
-        raise ConfigurationError("No embeddings of correct dimension found; you probably "
-                                 "misspecified your embedding_dim parameter, or didn't "
-                                 "pre-populate your Vocabulary")
-
-    all_embeddings = numpy.asarray(list(embeddings.values()))
-    embeddings_mean = float(numpy.mean(all_embeddings))
-    embeddings_std = float(numpy.std(all_embeddings))
-    # Now we initialize the weight matrix for an embedding layer, starting with random vectors,
-    # then filling in the word vectors we just read.
-    logger.info("Initializing pre-trained embedding layer")
-    embedding_matrix = torch.FloatTensor(vocab_size, embedding_dim).normal_(embeddings_mean,
-                                                                            embeddings_std)
-    num_tokens_found = 0
-    index_to_token = vocab.get_index_to_token_vocabulary(namespace)
-    for i in range(vocab_size):
-        token = index_to_token[i]
-
-        # If we don't have a pre-trained vector for this word, we'll just leave this row alone,
-        # so the word has a random initialization.
-        if token in embeddings:
-            embedding_matrix[i] = torch.FloatTensor(embeddings[token])
-            num_tokens_found += 1
-        else:
-            logger.debug("Token %s was not found in the embedding file. Initialising randomly.", token)
-
-    logger.info("Pretrained embeddings were found for %d out of %d tokens",
-                num_tokens_found, vocab_size)
-
-    return embedding_matrix
-
-
-def _read_embeddings_from_hdf5(embeddings_filename: str,
-                               embedding_dim: int,
-                               vocab: Vocabulary,
-                               namespace: str = "tokens") -> torch.FloatTensor:
-    """
-    Reads from a hdf5 formatted file. The embedding matrix is assumed to
-    be keyed by 'embedding' and of size ``(num_tokens, embedding_dim)``.
-    """
-    with h5py.File(embeddings_filename, 'r') as fin:
-        embeddings = fin['embedding'][...]
-
-    if list(embeddings.shape) != [vocab.get_vocab_size(namespace), embedding_dim]:
-        raise ConfigurationError(
-                "Read shape {0} embeddings from the file, but expected {1}".format(
-                        list(embeddings.shape), [vocab.get_vocab_size(namespace), embedding_dim]))
-
-    return torch.FloatTensor(embeddings)
