@@ -182,19 +182,22 @@ class TestEmbedding(AllenNlpTestCase):
             with EmbeddingsTextFile(get_embeddings_file_uri(txt_path, 'a/fake/path')):
                 pass
 
-    def test_get_num_tokens_in_file_from_1st_line(self):
-        # Valid header
-        valid_headers = ['1000000 300\n', '300 1000000\n', '1000000\n']
-        for header in valid_headers:
-            assert EmbeddingsTextFile._get_num_tokens_from_first_line(header) == 1_000_000, \
-                "Failed with header: " + header
+    def test_embeddings_text_file_num_tokens(self):
+        test_filename = str(self.TEST_DIR / 'temp_embeddings.vec')
 
-        # No header
-        not_headers = ['hello 1\n', 'hello 1 2\n', '111 222 333\n', '111 222 hello\n']
-        for header in not_headers:
-            num_tokens = EmbeddingsTextFile._get_num_tokens_from_first_line(header)
-            assert num_tokens is None, \
-                f"Failed with header: {header}. Num tokens: {num_tokens}"
+        def check_num_tokens(first_line, expected_num_tokens):
+            with open(test_filename, 'w') as f:
+                f.write(first_line)
+            with EmbeddingsTextFile(test_filename) as f:
+                assert f.num_tokens == expected_num_tokens, f"Wrong num tokens for line: {first_line}"
+
+        valid_header_lines = ['1000000 300', '300 1000000', '1000000']
+        for line in valid_header_lines:
+            check_num_tokens(line, expected_num_tokens=1_000_000)
+
+        not_header_lines = ['hello 1', 'hello 1 2', '111 222 333', '111 222 hello']
+        for line in not_header_lines:
+            check_num_tokens(line, expected_num_tokens=None)
 
     def test_decode_embeddings_file_uri(self):
         first_level_paths = [
