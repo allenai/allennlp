@@ -27,9 +27,6 @@ from allennlp.modules.time_distributed import TimeDistributed
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-EMBEDDINGS_FILE_ENCODING = 'utf-8'
-
-
 @TokenEmbedder.register("embedding")
 class Embedding(TokenEmbedder):
     """
@@ -292,9 +289,11 @@ class EmbeddingsTextFile:
     encoding: str
     cache_dir: str
     """
+    DEFAULT_ENCODING = 'utf-8'
+
     def __init__(self,
                  embeddings_file_uri: str,
-                 encoding: str = EMBEDDINGS_FILE_ENCODING,
+                 encoding: str = DEFAULT_ENCODING,
                  cache_dir: str = None) -> None:
 
         self._uri = embeddings_file_uri
