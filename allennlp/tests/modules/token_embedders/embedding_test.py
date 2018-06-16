@@ -155,7 +155,7 @@ class TestEmbedding(AllenNlpTestCase):
                 i = vocab.get_token_index(tok)
                 assert torch.equal(embeddings[i], vec), 'Problem with format ' + archive_path
 
-    def test_oembeddings_text_file(self):
+    def test_embeddings_text_file(self):
         txt_path = str(self.FIXTURES_ROOT / 'utf-8_sample/utf-8_sample.txt')
 
         # This is for sure a correct way to read an utf-8 encoded text file
@@ -196,7 +196,7 @@ class TestEmbedding(AllenNlpTestCase):
             assert num_tokens is None, \
                 f"Failed with header: {header}. Num tokens: {num_tokens}"
 
-    def test_decode_embeddings_file_path(self):
+    def test_decode_embeddings_file_uri(self):
         first_level_paths = [
                 'path/to/embeddings.gz',
                 'unicode/path/òàè+ù.vec',
@@ -213,6 +213,6 @@ class TestEmbedding(AllenNlpTestCase):
             assert decode_embeddings_file_uri(simple_path), (simple_path, None)
 
         for path1, path2 in zip(first_level_paths, second_level_paths):
-            member_path = get_embeddings_file_uri(path1, path2)
-            decoded = decode_embeddings_file_uri(member_path)
+            uri = get_embeddings_file_uri(path1, path2)
+            decoded = decode_embeddings_file_uri(uri)
             assert decoded == (path1, path2)

@@ -292,9 +292,10 @@ class EmbeddingsTextFile:
     encoding: str
     cache_dir: str
     """
-    def __init__(self, embeddings_file_uri: str,
-                 encoding=EMBEDDINGS_FILE_ENCODING,
-                 cache_dir=None) -> None:
+    def __init__(self,
+                 embeddings_file_uri: str,
+                 encoding: str = EMBEDDINGS_FILE_ENCODING,
+                 cache_dir: str = None) -> None:
 
         self._uri = embeddings_file_uri
         self._encoding = encoding
@@ -345,7 +346,7 @@ class EmbeddingsTextFile:
         archive = zipfile.ZipFile(cached_archive_path, 'r')
         if member_path is None:
             members_list = archive.namelist()
-            member_path = EmbeddingsTextFile._get_the_only_file_in_the_archive(members_list, archive_path)
+            member_path = self._get_the_only_file_in_the_archive(members_list, archive_path)
         member_path = cast(str, member_path)
         member_file = archive.open(member_path, 'r')
         self._handle = io.TextIOWrapper(member_file, encoding=self._encoding)
@@ -394,6 +395,9 @@ class EmbeddingsTextFile:
             yield self._buffer
             self._buffer = None
         yield from self._handle
+
+    def __len__(self):
+        return self.num_tokens
 
     @staticmethod
     def _get_the_only_file_in_the_archive(members_list: Sequence[str], archive_path: str) -> str:
