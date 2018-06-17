@@ -16,8 +16,8 @@ from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.embedding import (Embedding,
                                                         _read_pretrained_embeddings_file,
                                                         EmbeddingsTextFile,
-                                                        get_embeddings_file_uri,
-                                                        decode_embeddings_file_uri)
+                                                        format_embeddings_file_uri,
+                                                        parse_embeddings_file_uri)
 
 
 class TestEmbedding(AllenNlpTestCase):
@@ -145,7 +145,7 @@ class TestEmbedding(AllenNlpTestCase):
 
         for ext in ['.zip', '.tar.gz']:
             archive_path = str(self.FIXTURES_ROOT / 'embeddings/multi-file-archive') + ext
-            embeddings_file_uri = get_embeddings_file_uri(archive_path, 'folder/fake_embeddings.5d.txt')
+            embeddings_file_uri = format_embeddings_file_uri(archive_path, 'folder/fake_embeddings.5d.txt')
             params = Params({
                     'pretrained_file': embeddings_file_uri,
                     'embedding_dim': 5
@@ -172,14 +172,14 @@ class TestEmbedding(AllenNlpTestCase):
         # Check for a file contained inside an archive with multiple files
         for ext in ['.zip', '.tar.gz', '.tar.bz2', '.tar.lzma']:
             archive_path = str(self.FIXTURES_ROOT / 'utf-8_sample/archives/utf-8') + ext
-            embeddings_file_uri = get_embeddings_file_uri(archive_path, 'folder/utf-8_sample.txt')
+            embeddings_file_uri = format_embeddings_file_uri(archive_path, 'folder/utf-8_sample.txt')
             with EmbeddingsTextFile(embeddings_file_uri) as f:
                 text = f.read()
             assert text == correct_text, "Test failed for file: " + archive_path
 
         # Passing a second level path when not reading an archive
         with pytest.raises(ValueError):
-            with EmbeddingsTextFile(get_embeddings_file_uri(txt_path, 'a/fake/path')):
+            with EmbeddingsTextFile(format_embeddings_file_uri(txt_path, 'a/fake/path')):
                 pass
 
     def test_embeddings_text_file_num_tokens(self):
@@ -213,9 +213,9 @@ class TestEmbedding(AllenNlpTestCase):
                 ]
 
         for simple_path in first_level_paths:
-            assert decode_embeddings_file_uri(simple_path), (simple_path, None)
+            assert parse_embeddings_file_uri(simple_path) == (simple_path, None)
 
         for path1, path2 in zip(first_level_paths, second_level_paths):
-            uri = get_embeddings_file_uri(path1, path2)
-            decoded = decode_embeddings_file_uri(uri)
+            uri = format_embeddings_file_uri(path1, path2)
+            decoded = parse_embeddings_file_uri(uri)
             assert decoded == (path1, path2)

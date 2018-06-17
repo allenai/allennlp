@@ -8,7 +8,7 @@ import re
 import logging
 import warnings
 import itertools
-from typing import Optional, Tuple, Sequence, cast, IO, Iterator, Any, TextIO
+from typing import Optional, Tuple, Sequence, cast, IO, Iterator, Any, TextIO, NamedTuple
 
 from overrides import overrides
 import numpy
@@ -353,17 +353,25 @@ def _read_embeddings_from_hdf5(embeddings_filename: str,
     return torch.FloatTensor(embeddings)
 
 
-def get_embeddings_file_uri(path_or_url: str, path_inside_archive: Optional[str] = None) -> str:
+def format_embeddings_file_uri(main_file_path_or_url: str,
+                               path_inside_archive: Optional[str] = None) -> str:
     if path_inside_archive:
-        return "({})#{}".format(path_or_url, path_inside_archive)
-    return path_or_url
+        return "({})#{}".format(main_file_path_or_url, path_inside_archive)
+    return main_file_path_or_url
 
 
-def decode_embeddings_file_uri(uri: str) -> Tuple[str, Optional[str]]:
+class EmbeddingsFileURI(NamedTuple):
+    main_file_uri: str
+    path_inside_archive: Optional[str] = None
+
+
+def parse_embeddings_file_uri(uri: str) -> 'EmbeddingsFileURI':
     match = re.fullmatch('\((.*)\)#(.*)', uri)      # pylint: disable=anomalous-backslash-in-string
     if match:
-        return cast(Tuple[str, str], match.groups())
-    return uri, None
+        fields = cast(Tuple[str, str], match.groups())
+        return EmbeddingsFileURI(*fields)
+    else:
+        return EmbeddingsFileURI(uri, None)
 
 
 class EmbeddingsTextFile(Iterator[str]):
@@ -400,21 +408,21 @@ class EmbeddingsTextFile(Iterator[str]):
         self._iterator: Iterator[str]
         self._num_tokens: Optional[int]
 
-        decoded_uri = decode_embeddings_file_uri(embeddings_file_uri)
-        cached_main_file_path = cached_path(decoded_uri[0], cache_dir=cache_dir)
+        main_file_uri, path_inside_archive = parse_embeddings_file_uri(embeddings_file_uri)
+        main_file_local_path = cached_path(main_file_uri, cache_dir=cache_dir)
 
-        if zipfile.is_zipfile(cached_main_file_path):  # ZIP archive
-            self._open_inside_zip(*decoded_uri)
+        if zipfile.is_zipfile(main_file_local_path):  # ZIP archive
+            self._open_inside_zip(main_file_uri, path_inside_archive)
 
-        elif tarfile.is_tarfile(cached_main_file_path):  # TAR archive
-            self._open_inside_tar(*decoded_uri)
+        elif tarfile.is_tarfile(main_file_local_path):  # TAR archive
+            self._open_inside_tar(main_file_uri, path_inside_archive)
 
         else:  # all the other supported formats, including uncompressed files
-            if decoded_uri[1]:
-                raise ValueError('Unsupported archive format: %s' + decoded_uri[0])
+            if path_inside_archive:
+                raise ValueError('Unsupported archive format: %s' + main_file_uri)
 
             # All the python packages for compressed files share the same interface of io.open
-            extension = get_file_extension(decoded_uri[0])
+            extension = get_file_extension(main_file_uri)
             package = {
                     '.txt': io,
                     '.vec': io,
@@ -428,13 +436,13 @@ class EmbeddingsTextFile(Iterator[str]):
                                'We will assume the file is an (uncompressed) text file', extension)
                 package = io
 
-            self._handle = package.open(cached_main_file_path, 'rt', encoding=encoding)  # type: ignore
+            self._handle = package.open(main_file_local_path, 'rt', encoding=encoding)  # type: ignore
 
-        # To use this with tqdm we'd like to know the number of tokens.
-        # It's possible that the first line of the embeddings file contains this:
-        # if it does, we start iteration from the 2nd line, otherwise we start from the 1st.
-        # Unfortunately, once read the first line, we cannot move back the file iterator
-        # because the underlying file may be not seekable; we use itertools.chain instead.
+        # To use this with tqdm we'd like to know the number of tokens. It's possible that the
+        # first line of the embeddings file contains this: if it does, we want to start iteration
+        # from the 2nd line, otherwise we want to start from the 1st.
+        # Unfortunately, once we read the first line, we cannot move back the file iterator
+        # because the underlying file may be "not seekable"; we use itertools.chain instead.
         first_line = next(self._handle)     # this moves the iterator forward
         self._num_tokens = EmbeddingsTextFile._get_num_tokens_from_first_line(first_line)
         if self._num_tokens:
@@ -502,8 +510,9 @@ class EmbeddingsTextFile(Iterator[str]):
     def _get_the_only_file_in_the_archive(members_list: Sequence[str], archive_path: str) -> str:
         if len(members_list) > 1:
             raise ValueError('The archive %s contains multiple files, so you must select '
-                             'one of the files inside providing a uri of the type: '
-                             '(path_or_url_to_archive)#path_file_inside_archive' % archive_path)
+                             'one of the files inside providing a uri of the type: %s'
+                             % (archive_path, format_embeddings_file_uri('path_or_url_to_archive',
+                                                                         'path_inside_archive')))
         return members_list[0]
 
     @staticmethod
