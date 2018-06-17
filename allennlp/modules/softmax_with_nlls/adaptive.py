@@ -35,7 +35,11 @@ class AdaptiveSoftmax(SoftmaxWithNLL):
 
     """
 
-    def __init__(self, input_dim: int, vocab: Vocabulary, cutoff: list) -> None:
+    def __init__(self, 
+            input_dim: int, 
+            vocab: Vocabulary, 
+            cutoff: list, 
+            reduce_factor: int = 4) -> None:
 
         super().__init__()
 
@@ -49,15 +53,19 @@ class AdaptiveSoftmax(SoftmaxWithNLL):
 
         self.adaptive = len(cutoff) > 1
         self.tail = nn.ModuleList()
+        self.reduce_factor = reduce_factor
         for i in range(len(self.cutoff) - 1):
 
             if cutoff[i+1] <= cutoff[i]:
                 raise ConfigurationError(f"cutoff values have to be increasing,"
                         f" while cutoff[{i+1}]({cutoff[i+1]}) > cutoff[{i}]({cutoff[i]})")
-
+            
+            if input_dim // self.reduce_factor ** (i + 1) <=0 :
+                raise ConfigurationError(f"smaller reduce_factor is needed for the adaptive softmax")
+                
             seq = nn.Sequential(
-                nn.Linear(input_dim, input_dim // 4 ** (i + 1), False),
-                nn.Linear(input_dim // 4 ** (i + 1), cutoff[i + 1] - cutoff[i], False)
+                nn.Linear(input_dim, input_dim // self.reduce_factor ** (i + 1), False),
+                nn.Linear(input_dim // self.reduce_factor ** (i + 1), cutoff[i + 1] - cutoff[i], False)
             )
             self.tail.append(seq)
 
@@ -70,6 +78,7 @@ class AdaptiveSoftmax(SoftmaxWithNLL):
         label_namespace = params.pop("label_namespace")
         vocab_size = vocab.get_vocab_size(label_namespace)
 
+        reduce_factor = params.pop("reduce_factor", 4)
 
         if len(cutoff) > 0 and cutoff[-1] > vocab_size:
             raise ConfigurationError(f"the largest cutoff value ({cutoff[-1]}) have to be smaller"
@@ -79,7 +88,7 @@ class AdaptiveSoftmax(SoftmaxWithNLL):
 
         cutoff.append(vocab_size)
 
-        return cls(input_dim=input_dim, vocab=vocab, cutoff=cutoff)
+        return cls(input_dim=input_dim, vocab=vocab, cutoff=cutoff, reduce_factor=reduce_factor)
 
     def get_input_dim(self) -> int:
         return self.input_dim
