@@ -177,7 +177,7 @@ class ModelTestCase(AllenNlpTestCase):
         for i, instance_predictions in enumerate(single_predictions):
             for key, single_predicted in instance_predictions.items():
                 tolerance = 1e-6
-                if key == 'loss':
+                if 'loss' in key:
                     # Loss is particularly unstable; we'll just be satisfied if everything else is
                     # close.
                     continue
