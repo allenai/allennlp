@@ -56,8 +56,8 @@ class AdaptiveSoftmax(SoftmaxWithNLL):
                         f" while cutoff[{i+1}]({cutoff[i+1]}) > cutoff[{i}]({cutoff[i]})")
 
             seq = nn.Sequential(
-                nn.Linear(input_dim, input_dim // 4 ** i, False),
-                nn.Linear(input_dim // 4 ** i, cutoff[i + 1] - cutoff[i], False)
+                nn.Linear(input_dim, input_dim // 4 ** (i + 1), False),
+                nn.Linear(input_dim // 4 ** (i + 1), cutoff[i + 1] - cutoff[i], False)
             )
             self.tail.append(seq)
 
