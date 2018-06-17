@@ -7,6 +7,7 @@ import gzip
 import re
 import logging
 import warnings
+import itertools
 from typing import Optional, Tuple, Sequence, cast, IO, Iterator, Any, TextIO
 
 from overrides import overrides
@@ -365,7 +366,7 @@ def decode_embeddings_file_uri(uri: str) -> Tuple[str, Optional[str]]:
     return uri, None
 
 
-class EmbeddingsTextFile:
+class EmbeddingsTextFile(Iterator[str]):
     """
     Utility class for opening embeddings text files. Handles various compression formats,
     as well as context management.
@@ -393,8 +394,11 @@ class EmbeddingsTextFile:
         self._uri = embeddings_file_uri
         self._encoding = encoding
         self._cache_dir = cache_dir
+
         self._handle: TextIO
-        self._archive_handle: Any = None   # if the file is inside an archive
+        self._archive_handle: Any = None   # only if the file is inside an archive
+        self._iterator: Iterator[str]
+        self._num_tokens: Optional[int]
 
         decoded_uri = decode_embeddings_file_uri(embeddings_file_uri)
         cached_main_file_path = cached_path(decoded_uri[0], cache_dir=cache_dir)
@@ -427,12 +431,18 @@ class EmbeddingsTextFile:
             self._handle = package.open(cached_main_file_path, 'rt', encoding=encoding)  # type: ignore
 
         # To use this with tqdm we'd like to know the number of tokens.
-        # It's possible that the first line of the embeddings file contains this;
-        # however, if we check, and it doesn't, we need to store it in a buffer
-        # so that we can include it with the contents of the file.
-        first_line = next(self._handle)
+        # It's possible that the first line of the embeddings file contains this:
+        # if it does, we start iteration from the 2nd line, otherwise we start from the 1st.
+        # Unfortunately, once read the first line, we cannot move back the file iterator
+        # because the underlying file may be not seekable; we use itertools.chain instead.
+        first_line = next(self._handle)     # this moves the iterator forward
         self._num_tokens = EmbeddingsTextFile._get_num_tokens_from_first_line(first_line)
-        self._buffer = None if self._num_tokens else first_line
+        if self._num_tokens:
+            # the first line is a header line: start iterating from the 2nd line
+            self._iterator = self._handle
+        else:
+            # the first line is not a header line: start iterating from the 1st line
+            self._iterator = itertools.chain([first_line], self._handle)
 
     def _open_inside_zip(self, archive_path: str, member_path: Optional[str] = None) -> None:
         cached_archive_path = cached_path(archive_path, cache_dir=self._cache_dir)
@@ -466,13 +476,12 @@ class EmbeddingsTextFile:
         return self._uri
 
     def read(self) -> str:
-        if self._buffer:
-            return self._buffer + self._handle.read()
-        else:
-            return self._handle.read()
+        return ''.join(self._iterator)
+
+    def readline(self) -> str:
+        return next(self._iterator)
 
     def close(self) -> None:
-        self._buffer = None
         self._handle.close()
         if self._archive_handle:
             self._archive_handle.close()
@@ -483,11 +492,11 @@ class EmbeddingsTextFile:
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.close()
 
-    def __iter__(self) -> Iterator[str]:
-        if self._buffer:
-            yield self._buffer
-            self._buffer = None
-        yield from self._handle
+    def __iter__(self) -> 'EmbeddingsTextFile':
+        return self
+
+    def __next__(self) -> str:
+        return next(self._iterator)
 
     @staticmethod
     def _get_the_only_file_in_the_archive(members_list: Sequence[str], archive_path: str) -> str:
