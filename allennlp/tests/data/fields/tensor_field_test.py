@@ -34,6 +34,16 @@ class TestLabelField(AllenNlpTestCase):
         assert_allclose(empty_tensorfield.tensor.cpu().numpy(),
                         torch.Tensor([]).cpu().numpy())
 
+    def test_tensor_field_batch_tensors(self):
+        field = TensorField(torch.Tensor([1.0, 2.0]))
+        tensor1 = field.as_tensor(field.get_padding_lengths())
+
+        field = TensorField(torch.Tensor([3.0, 4.0]))
+        tensor2 = field.as_tensor(field.get_padding_lengths())
+        tensor_list = [tensor1, tensor2]
+        assert_allclose(field.batch_tensors(tensor_list).cpu().numpy(),
+                        torch.stack(tensor_list).cpu().numpy())
+
     def test_printing_doesnt_crash(self):
         tensorfield = TensorField(torch.Tensor([1.0, 2.0]))
         print(tensorfield)
