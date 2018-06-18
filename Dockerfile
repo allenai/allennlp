@@ -19,6 +19,11 @@ LABEL com.nvidia.volumes.needed="nvidia_driver"
 
 WORKDIR /stage/allennlp
 
+ARG VERSION
+ARG SOURCE_COMMIT
+ENV VERSION=$VERSION
+ENV SOURCE_COMMIT=$SOURCE_COMMIT
+
 # Install the specified version of AllenNLP.
 RUN if [ ! -z "$VERSION" ]; \
     then pip install allennlp==$VERSION; \
@@ -26,9 +31,6 @@ RUN if [ ! -z "$VERSION" ]; \
     then pip install "git+git://github.com/allenai/allennlp.git@$SOURCE_COMMIT"; \
     else pip install allennlp; \
     fi
-
-ENV VERSION=$VERSION
-ENV SOURCE_COMMIT=$SOURCE_COMMIT
 
 LABEL maintainer="allennlp-contact@allenai.org"
 
