@@ -43,25 +43,25 @@ RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - && apt-get install -y
 
 # Copy select files needed for installing requirements.
 # We only copy what we need here so small changes to the repository does not trigger re-installation of the requirements.
-COPY ../requirements.txt .
-COPY ../requirements_test.txt .
-COPY ../scripts/install_requirements.sh scripts/install_requirements.sh
+COPY requirements.txt .
+COPY requirements_test.txt .
+COPY scripts/install_requirements.sh scripts/install_requirements.sh
 RUN INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh
 
 # And the demo; `npm install` and `npm run build` are slow, so we skip them if we can.
-COPY ../demo/ demo/
-COPY ../scripts/build_demo.py scripts/build_demo.py
+COPY demo/ demo/
+COPY scripts/build_demo.py scripts/build_demo.py
 ARG BUILD_DEMO=false
 RUN ./scripts/build_demo.py
 
-COPY ../scripts/ scripts/
-COPY ../allennlp/ allennlp/
-COPY ../pytest.ini pytest.ini
-COPY ../.pylintrc .pylintrc
+COPY scripts/ scripts/
+COPY allennlp/ allennlp/
+COPY pytest.ini pytest.ini
+COPY .pylintrc .pylintrc
 
-COPY ../tutorials/ tutorials/
-COPY ../training_config training_config/
-COPY ../setup.py setup.py
+COPY tutorials/ tutorials/
+COPY training_config training_config/
+COPY setup.py setup.py
 
 # Compile EVALB - required for parsing evaluation.
 # EVALB produces scary looking c-level output which we don't
