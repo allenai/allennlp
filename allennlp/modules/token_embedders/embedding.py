@@ -8,7 +8,7 @@ import re
 import logging
 import warnings
 import itertools
-from typing import Optional, Tuple, Sequence, cast, IO, Iterator, Any, TextIO, NamedTuple
+from typing import Optional, Tuple, Sequence, cast, IO, Iterator, Any, NamedTuple
 
 from overrides import overrides
 import numpy
@@ -403,11 +403,7 @@ class EmbeddingsTextFile(Iterator[str]):
         self._uri = file_uri
         self._encoding = encoding
         self._cache_dir = cache_dir
-
-        self._handle: TextIO
         self._archive_handle: Any = None   # only if the file is inside an archive
-        self._iterator: Iterator[str]
-        self._num_tokens: Optional[int]
 
         main_file_uri, path_inside_archive = parse_embeddings_file_uri(file_uri)
         main_file_local_path = cached_path(main_file_uri, cache_dir=cache_dir)
