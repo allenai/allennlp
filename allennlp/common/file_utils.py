@@ -101,7 +101,7 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
     os.makedirs(cache_dir, exist_ok=True)
 
     # make HEAD request to check ETag
-    response = requests.head(url)
+    response = requests.head(url, allow_redirects=True)
     if response.status_code != 200:
         raise IOError("HEAD request failed for url {}".format(url))
 

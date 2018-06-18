@@ -58,3 +58,17 @@ class TestWikiTablesParserPredictor(AllenNlpTestCase):
         result = predictor.predict_json(inputs)
         answer = result.get("answer")
         assert answer is not None
+
+    def test_answer_present_with_batch_predict(self):
+        inputs = [{
+                "question": "Who is 18 years old?",
+                "table": "Name\tAge\nShallan\t16\nKaladin\t18"
+        }]
+
+        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'serialization' / 'model.tar.gz'
+        archive = load_archive(archive_path)
+        predictor = Predictor.from_archive(archive, 'wikitables-parser')
+
+        result = predictor.predict_batch_json(inputs)
+        answer = result[0].get("answer")
+        assert answer is not None
