@@ -1,7 +1,8 @@
 from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
+from parsimonious.nodes import RegexNode
 
-sql_grammar = Grammar(r"""
+SQL_GRAMMAR = Grammar(r"""
     query    = select_cores orderby? limit?
     select_cores   = select_core (compound_op select_core)*
     select_core    = SELECT wsp select_results from_clause? where_clause? gb_clause?
@@ -124,35 +125,40 @@ sql_grammar = Grammar(r"""
     """)
 
 class SQLVisitor(NodeVisitor):
-    grammar = sql_grammar 
-    prod_acc = []
+    grammar = SQL_GRAMMAR
 
     def __init__(self):
-        grammar = sql_grammar 
-        prod_acc = []
-        
-        for nonterm in grammar.keys():
+        self.prod_acc = []
+
+        for nonterm in self.grammar.keys():
             if nonterm != 'query':
-                self.__setattr__("visit_" + nonterm, self.add_prod_rule) 
-        self.__setattr__("generic_visit", self.add_prod_rule)
+                self.__setattr__('visit_' + nonterm, self.add_prod_rule)
 
-    def add_prod_rule(self, node, children):
-        '''
-        if node.expr_name == "":
-            return
-        '''
+    def generic_visit(self, node, visited_children):
+        self.add_prod_rule(node)
 
-        rule = "{} =".format(node.expr_name)
-        if children:
+    def add_prod_rule(self, node, children=None):
+        if node.expr.name:
+            rule = '{} ='.format(node.expr.name)
+
+            if isinstance(node, RegexNode):
+                rule += '"{}"'.format(node.text)
+
             for child in node.__iter__():
-                rule += " {}".format(child.expr_name)
-        else:
-            rule += " {}".format(node.text)
+                if child.expr.name != '':
+                    rule += ' {}'.format(child.expr.name)
+                else:
+                    rule += ' {}'.format(child.expr._as_rhs())
 
-        self.prod_acc = [rule] + self.prod_acc  
+            print('adding rule: {}'.format(rule))
+            self.prod_acc = [rule] + self.prod_acc
 
     def visit_query(self, node, children):
-        self.add_prod_rule(node, children)
+        self.add_prod_rule(node)
+        print(node)
         return self.prod_acc
 
-print(SQLVisitor().parse("SELECT tcol FROM table"))
+sql_visitor = SQLVisitor()
+print(sql_visitor.parse(
+    "SELECT EmployeeID, FirstName, LastName, HireDate, Country, City FROM Employees ORDER BY Country, City DESC"
+    ))
