@@ -145,9 +145,9 @@ class TestEmbedding(AllenNlpTestCase):
 
         for ext in ['.zip', '.tar.gz']:
             archive_path = str(self.FIXTURES_ROOT / 'embeddings/multi-file-archive') + ext
-            embeddings_file_uri = format_embeddings_file_uri(archive_path, 'folder/fake_embeddings.5d.txt')
+            file_uri = format_embeddings_file_uri(archive_path, 'folder/fake_embeddings.5d.txt')
             params = Params({
-                    'pretrained_file': embeddings_file_uri,
+                    'pretrained_file': file_uri,
                     'embedding_dim': 5
                     })
             embeddings = Embedding.from_params(vocab, params).weight.data
@@ -172,8 +172,8 @@ class TestEmbedding(AllenNlpTestCase):
         # Check for a file contained inside an archive with multiple files
         for ext in ['.zip', '.tar.gz', '.tar.bz2', '.tar.lzma']:
             archive_path = str(self.FIXTURES_ROOT / 'utf-8_sample/archives/utf-8') + ext
-            embeddings_file_uri = format_embeddings_file_uri(archive_path, 'folder/utf-8_sample.txt')
-            with EmbeddingsTextFile(embeddings_file_uri) as f:
+            file_uri = format_embeddings_file_uri(archive_path, 'folder/utf-8_sample.txt')
+            with EmbeddingsTextFile(file_uri) as f:
                 text = f.read()
             assert text == correct_text, "Test failed for file: " + archive_path
 

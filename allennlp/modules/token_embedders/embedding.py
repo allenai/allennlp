@@ -205,7 +205,7 @@ class Embedding(TokenEmbedder):
                    sparse=sparse)
 
 
-def _read_pretrained_embeddings_file(embeddings_file_uri: str,
+def _read_pretrained_embeddings_file(file_uri: str,
                                      embedding_dim: int,
                                      vocab: Vocabulary,
                                      namespace: str = "tokens") -> torch.FloatTensor:
@@ -229,7 +229,7 @@ def _read_pretrained_embeddings_file(embeddings_file_uri: str,
 
     Parameters
     ----------
-    embeddings_file_uri : str, required.
+    file_uri : str, required.
         It can be:
 
         * a file system path or a URL of an eventually compressed text file or a zip/tar archive
@@ -251,18 +251,18 @@ def _read_pretrained_embeddings_file(embeddings_file_uri: str,
     ``(vocab.get_vocab_size(namespace), embedding_dim)``, where the indices of words appearing in
     the pretrained embedding file are initialized to the pretrained embedding value.
     """
-    file_ext = get_file_extension(embeddings_file_uri)
+    file_ext = get_file_extension(file_uri)
     if file_ext in ['.h5', '.hdf5']:
-        return _read_embeddings_from_hdf5(embeddings_file_uri,
+        return _read_embeddings_from_hdf5(file_uri,
                                           embedding_dim,
                                           vocab, namespace)
 
-    return _read_embeddings_from_text_file(embeddings_file_uri,
+    return _read_embeddings_from_text_file(file_uri,
                                            embedding_dim,
                                            vocab, namespace)
 
 
-def _read_embeddings_from_text_file(embeddings_file_uri: str,
+def _read_embeddings_from_text_file(file_uri: str,
                                     embedding_dim: int,
                                     vocab: Vocabulary,
                                     namespace: str = "tokens") -> torch.FloatTensor:
@@ -282,7 +282,7 @@ def _read_embeddings_from_text_file(embeddings_file_uri: str,
     # First we read the embeddings from the file, only keeping vectors for the words we need.
     logger.info("Reading pretrained embeddings from file")
 
-    with EmbeddingsTextFile(embeddings_file_uri) as embeddings_file:
+    with EmbeddingsTextFile(file_uri) as embeddings_file:
         num_tokens = embeddings_file.num_tokens
         for line in Tqdm.tqdm(embeddings_file, total=num_tokens):
             token = line.split(' ', 1)[0]
@@ -382,7 +382,7 @@ class EmbeddingsTextFile(Iterator[str]):
 
     Parameters
     ----------
-    embeddings_file_uri: str
+    file_uri: str
         It can be:
 
         * a file system path or a URL of an eventually compressed text file or a zip/tar archive
@@ -396,11 +396,11 @@ class EmbeddingsTextFile(Iterator[str]):
     DEFAULT_ENCODING = 'utf-8'
 
     def __init__(self,
-                 embeddings_file_uri: str,
+                 file_uri: str,
                  encoding: str = DEFAULT_ENCODING,
                  cache_dir: str = None) -> None:
 
-        self._uri = embeddings_file_uri
+        self._uri = file_uri
         self._encoding = encoding
         self._cache_dir = cache_dir
 
@@ -409,7 +409,7 @@ class EmbeddingsTextFile(Iterator[str]):
         self._iterator: Iterator[str]
         self._num_tokens: Optional[int]
 
-        main_file_uri, path_inside_archive = parse_embeddings_file_uri(embeddings_file_uri)
+        main_file_uri, path_inside_archive = parse_embeddings_file_uri(file_uri)
         main_file_local_path = cached_path(main_file_uri, cache_dir=cache_dir)
 
         if zipfile.is_zipfile(main_file_local_path):  # ZIP archive
