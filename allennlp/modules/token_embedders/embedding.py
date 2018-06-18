@@ -283,8 +283,7 @@ def _read_embeddings_from_text_file(file_uri: str,
     logger.info("Reading pretrained embeddings from file")
 
     with EmbeddingsTextFile(file_uri) as embeddings_file:
-        num_tokens = embeddings_file.num_tokens
-        for line in Tqdm.tqdm(embeddings_file, total=num_tokens):
+        for line in Tqdm.tqdm(embeddings_file):
             token = line.split(' ', 1)[0]
             if token in tokens_to_keep:
                 fields = line.rstrip().split(' ')
@@ -494,6 +493,9 @@ class EmbeddingsTextFile(Iterator[str]):
 
     def __next__(self) -> str:
         return next(self._iterator)
+
+    def __len__(self) -> Optional[int]:
+        return self.num_tokens
 
     @staticmethod
     def _get_the_only_file_in_the_archive(members_list: Sequence[str], archive_path: str) -> str:

@@ -98,8 +98,7 @@ def _read_pretrained_tokens(embeddings_file_uri: str) -> Set[str]:
     logger.info('Reading pretrained tokens from: %s', embeddings_file_uri)
     tokens = set()
     with EmbeddingsTextFile(embeddings_file_uri) as embeddings_file:
-        num_tokens = embeddings_file.num_tokens
-        for line_number, line in enumerate(Tqdm.tqdm(embeddings_file, total=num_tokens), start=1):
+        for line_number, line in enumerate(Tqdm.tqdm(embeddings_file), start=1):
             token_end = line.find(' ')
             if token_end >= 0:
                 token = line[:token_end]
