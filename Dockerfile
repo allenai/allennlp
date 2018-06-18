@@ -58,7 +58,6 @@ COPY scripts/ scripts/
 COPY allennlp/ allennlp/
 COPY pytest.ini pytest.ini
 COPY .pylintrc .pylintrc
-
 COPY tutorials/ tutorials/
 COPY training_config training_config/
 COPY setup.py setup.py
