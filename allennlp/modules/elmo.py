@@ -141,9 +141,9 @@ class Elmo(torch.nn.Module):
             original_word_size = word_inputs.size()
             if self._has_cached_vocab and len(original_word_size) > 2:
                 reshaped_word_inputs = word_inputs.view(-1, original_word_size[-1])
-            elif self._has_cached_vocab is not None:
+            elif not self._has_cached_vocab:
                 logger.warning("Word inputs were passed to ELMo but it does not have a cached vocab.")
-                reshaped_word_inputs = word_inputs
+                reshaped_word_inputs = None
             else:
                 reshaped_word_inputs = word_inputs
         else:
