@@ -495,7 +495,12 @@ class EmbeddingsTextFile(Iterator[str]):
         return next(self._iterator)
 
     def __len__(self) -> Optional[int]:
-        return self.num_tokens
+        """ Hack for tqdm: no need for explicitly passing ``total=file.num_tokens`` """
+        if self.num_tokens:
+            return self.num_tokens
+        raise AttributeError('an object of type EmbeddingsTextFile has "len()" only if the underlying '
+                             'text file declares the number of tokens (i.e. the number of lines following)'
+                             'in the first line. That is not the case of this particular instance.')
 
     @staticmethod
     def _get_the_only_file_in_the_archive(members_list: Sequence[str], archive_path: str) -> str:
