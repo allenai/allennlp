@@ -146,8 +146,9 @@ class Embedding(TokenEmbedder):
         mapping for the things getting embedded here, then you can pass in the ``num_embeddings``
         key directly, and the vocabulary will be ignored.
 
-        A file containing pretrained embeddings can be specified using the parameter ``pretrained_file``.
-        It can be the path to a local file or an URL to a (cached) remote file.
+        In the hocon configuration file, a file containing pretrained embeddings can be specified
+        using the parameter ``"pretrained_file"``.
+        It can be the path to a local file or an URL of a (cached) remote file.
         Two formats are supported:
 
             * hdf5 file - containing an embedding matrix in the form of a torch.Tensor;
@@ -162,7 +163,7 @@ class Embedding(TokenEmbedder):
 
                     "(archive_uri)#file_path_inside_the_archive"
 
-              where ``archive_uri`` can be a file system path or a URL. For example:
+              where ``archive_uri`` can be a file system path or a URL. For example::
 
                     "(http://nlp.stanford.edu/data/glove.twitter.27B.zip)#glove.twitter.27B.200d.txt"
         """
@@ -231,7 +232,7 @@ def _read_pretrained_embeddings_file(embeddings_file_uri: str,
     embeddings_file_uri : str, required.
         It can be:
 
-        * a file system path or a URL to an eventually compressed text file or a zip/tar archive
+        * a file system path or a URL of an eventually compressed text file or a zip/tar archive
           containing a single file.
 
         * URI of the type ``(archive_path_or_url)#file_path_inside_archive`` if the text file
@@ -384,7 +385,7 @@ class EmbeddingsTextFile(Iterator[str]):
     embeddings_file_uri: str
         It can be:
 
-        * a file system path or a URL to an eventually compressed text file or a zip/tar archive
+        * a file system path or a URL of an eventually compressed text file or a zip/tar archive
           containing a single file.
         * URI of the type ``(archive_path_or_url)#file_path_inside_archive`` if the text file
           is contained in a multi-file archive.
