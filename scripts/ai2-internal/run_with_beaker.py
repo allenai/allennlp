@@ -42,7 +42,7 @@ def main(param_file: str, args: argparse.Namespace):
         print(f"Using the specified blueprint: {blueprint}")
     else:
         print(f"Building the Docker image ({image})...")
-        subprocess.run(f'docker build -t {image} .', shell=True, check=True)
+        subprocess.run(f'docker build -t {image} -f ci/Dockerfile .', shell=True, check=True)
 
         print(f"Create a Beaker blueprint...")
         blueprint = subprocess.check_output(f'beaker blueprint create --quiet {image}', shell=True, universal_newlines=True).strip()
