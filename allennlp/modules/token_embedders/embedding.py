@@ -400,7 +400,7 @@ class EmbeddingsTextFile(Iterator[str]):
                  encoding: str = DEFAULT_ENCODING,
                  cache_dir: str = None) -> None:
 
-        self._uri = file_uri
+        self.uri = file_uri
         self._encoding = encoding
         self._cache_dir = cache_dir
         self._archive_handle: Any = None   # only if the file is inside an archive
@@ -441,8 +441,8 @@ class EmbeddingsTextFile(Iterator[str]):
         # Unfortunately, once we read the first line, we cannot move back the file iterator
         # because the underlying file may be "not seekable"; we use itertools.chain instead.
         first_line = next(self._handle)     # this moves the iterator forward
-        self._num_tokens = EmbeddingsTextFile._get_num_tokens_from_first_line(first_line)
-        if self._num_tokens:
+        self.num_tokens = EmbeddingsTextFile._get_num_tokens_from_first_line(first_line)
+        if self.num_tokens:
             # the first line is a header line: start iterating from the 2nd line
             self._iterator = self._handle
         else:
@@ -471,14 +471,6 @@ class EmbeddingsTextFile(Iterator[str]):
         member_file = cast(IO[bytes], archive.extractfile(member))
         self._handle = io.TextIOWrapper(member_file, encoding=self._encoding)
         self._archive_handle = archive
-
-    @property
-    def num_tokens(self) -> Optional[int]:
-        return self._num_tokens
-
-    @property
-    def uri(self) -> str:
-        return self._uri
 
     def read(self) -> str:
         return ''.join(self._iterator)
