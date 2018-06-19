@@ -45,7 +45,7 @@ https://arxiv.org/abs/1802.05365
      --cuda-device CUDA_DEVICE
                            The cuda_device to run on.
      --use-sentence-keys USE_SENTENCE_KEYS
-                           Whether to use line numbers or sentence keys as ids. 
+                           Whether to use line numbers or sentence keys as ids.
      --include-package INCLUDE_PACKAGE
                            additional packages to include
 """
@@ -115,8 +115,7 @@ class Elmo(Subcommand):
         subparser.add_argument('--cuda-device', type=int, default=-1, help='The cuda_device to run on.')
         subparser.add_argument(
                 '--use-sentence-keys',
-                type=bool,
-                action='store_true',
+                action='store_false',
                 help='Whether to use line numbers or sentence keys as ids.')
 
         subparser.set_defaults(func=elmo_command)
