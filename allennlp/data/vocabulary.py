@@ -3,17 +3,16 @@ A Vocabulary maps strings to integers, allowing for strings to be mapped to an
 out-of-vocabulary token.
 """
 
-from collections import defaultdict
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Union
 import codecs
 import logging
 import os
-import gzip
+from collections import defaultdict
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Union
+from typing import TextIO  # pylint: disable=unused-import
 
 from allennlp.common.util import namespace_match
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.file_utils import cached_path
 from allennlp.common.tqdm import Tqdm
 from allennlp.data import instance as adi  # pylint: disable=unused-import
 
@@ -91,14 +90,23 @@ class _IndexToTokenDefaultDict(_NamespaceDependentDefaultDict):
                                                        lambda: {0: padding_token, 1: oov_token},
                                                        lambda: {})
 
-def _read_pretrained_words(embeddings_filename: str)-> Set[str]:
-    words = set()
-    with gzip.open(cached_path(embeddings_filename), 'rb') as embeddings_file:
-        for line in embeddings_file:
-            fields = line.decode('utf-8').strip().split(' ')
-            word = fields[0]
-            words.add(word)
-    return words
+
+def _read_pretrained_tokens(embeddings_file_uri: str) -> Set[str]:
+    # Moving this import to the top breaks everything (cycling import, I guess)
+    from allennlp.modules.token_embedders.embedding import EmbeddingsTextFile
+
+    logger.info('Reading pretrained tokens from: %s', embeddings_file_uri)
+    tokens = set()
+    with EmbeddingsTextFile(embeddings_file_uri) as embeddings_file:
+        for line_number, line in enumerate(Tqdm.tqdm(embeddings_file), start=1):
+            token_end = line.find(' ')
+            if token_end >= 0:
+                token = line[:token_end]
+                tokens.add(token)
+            else:
+                line_begin = line[:20] + '...' if len(line) > 20 else line
+                logger.warning(f'Skipping line number %d: %s', line_number, line_begin)
+    return tokens
 
 
 class Vocabulary:
@@ -192,7 +200,7 @@ class Vocabulary:
         if counter is not None:
             for namespace in counter:
                 if namespace in pretrained_files:
-                    pretrained_list = _read_pretrained_words(pretrained_files[namespace])
+                    pretrained_list = _read_pretrained_tokens(pretrained_files[namespace])
                 else:
                     pretrained_list = None
                 token_counts = list(counter[namespace].items())
@@ -363,9 +371,10 @@ class Vocabulary:
         Parameters
         ----------
         params: Params, required.
-        dataset: Dataset, optional.
+        instances: Iterable['adi.Instance'], optional
             If ``params`` doesn't contain a ``vocabulary_directory`` key,
-            the ``Vocabulary`` can be built directly from a ``Dataset``.
+            the ``Vocabulary`` can be built directly from a collection of
+            instances (i.e. a dataset).
 
         Returns
         -------
