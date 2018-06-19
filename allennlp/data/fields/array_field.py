@@ -1,21 +1,32 @@
-from typing import Dict
+from typing import Dict, Union
 
 import numpy
 import torch
 from overrides import overrides
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields.field import Field
 
 
-class ArrayField(Field[numpy.ndarray]):
+class ArrayField(Field[Union[numpy.ndarray, torch.Tensor]]):
     """
     A class representing an array, which could have arbitrary dimensions.
     A batch of these arrays are padded to the max dimension length in the batch
-    for each dimension.
+    for each dimension. This class takes an array as input, which can be either
+    a NumPy ndarray or a PyTorch Tensor.
     """
-    def __init__(self, array: numpy.ndarray, padding_value: int = 0) -> None:
+    def __init__(self,
+                 array: Union[numpy.ndarray, torch.Tensor],
+                 padding_value: int = 0) -> None:
         self.array = array
         self.padding_value = padding_value
+        if isinstance(array, numpy.ndarray):
+            self.array_type = "numpy"
+        elif isinstance(array, torch.Tensor):
+            self.array_type = "torch"
+        else:
+            raise ConfigurationError("ArrayFields must be passed numpy.ndarrays or torch.Tensors. "
+                                     "Found: {} with type {}.".format(array, type(array)))
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
@@ -30,14 +41,17 @@ class ArrayField(Field[numpy.ndarray]):
                      for i in range(len(padding_lengths))]
 
         return_array = numpy.ones(max_shape, "float32") * self.padding_value
-
         # If the tensor has a different shape from the largest tensor, pad dimensions with zeros to
         # form the right shaped list of slices for insertion into the final tensor.
         slicing_shape = list(self.array.shape)
         if len(self.array.shape) < len(max_shape):
             slicing_shape = slicing_shape + [0 for _ in range(len(max_shape) - len(self.array.shape))]
         slices = [slice(0, x) for x in slicing_shape]
-        return_array[slices] = self.array
+        # torch seems to have trouble with this, so we cast to numpy
+        if self.array_type == "numpy":
+            return_array[slices] = self.array
+        else:
+            return_array[slices] = self.array.cpu().numpy()
         tensor = torch.from_numpy(return_array)
         return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
 
@@ -45,8 +59,10 @@ class ArrayField(Field[numpy.ndarray]):
     def empty_field(self):  # pylint: disable=no-self-use
         # Pass the padding_value, so that any outer field, e.g., `ListField[ArrayField]` uses the
         # same padding_value in the padded ArrayFields
-        return ArrayField(numpy.array([], dtype="float32"), padding_value=self.padding_value)
-
+        if self.array_type == "numpy":
+            return ArrayField(numpy.array([], dtype="float32"), padding_value=self.padding_value)
+        else:
+            return ArrayField(self.array.new([]), padding_value=self.padding_value)
 
     def __str__(self) -> str:
         return f"ArrayField with shape: {self.array.shape}."
