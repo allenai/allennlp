@@ -63,6 +63,7 @@ import torch
 
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import lazy_groups_of
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.nn.util import remove_sentence_boundaries
 from allennlp.modules.elmo import _ElmoBiLm, batch_to_ids
@@ -256,7 +257,8 @@ class ElmoEmbedder():
                    batch_size: int = DEFAULT_BATCH_SIZE) -> None:
         """
         Computes ELMo embeddings from an input_file where each line contains a sentence tokenized by whitespace.
-        The ELMo embeddings are written out in HDF5 format, where each sentences is saved in a dataset.
+        The ELMo embeddings are written out in HDF5 format, where each sentence embedding
+        is saved in a dataset with the line number in the original file as the key.
 
         Parameters
         ----------
@@ -273,29 +275,28 @@ class ElmoEmbedder():
         assert output_format in ["all", "top", "average"]
 
         # Tokenizes the sentences.
-        sentences = [line.strip() for line in input_file if line.strip()]
+        sentences = [line.strip() for line in input_file]
+        if "" in sentences:
+            raise ConfigurationError("Your input file contains empty lines. Please remove them.")
         split_sentences = [sentence.split() for sentence in sentences]
-        # Uses the sentence as the key.
-        embedded_sentences = zip(sentences, self.embed_sentences(split_sentences, batch_size))
+        # Uses the sentence index as the key.
+        embedded_sentences = enumerate(self.embed_sentences(split_sentences, batch_size))
 
         logger.info("Processing sentences.")
         with h5py.File(output_file_path, 'w') as fout:
             for key, embeddings in Tqdm.tqdm(embedded_sentences):
-                if key in fout.keys():
-                    logger.warning(f"Key already exists in {output_file_path}, skipping: {key}")
-                else:
-                    if output_format == "all":
-                        output = embeddings
-                    elif output_format == "top":
-                        output = embeddings[2]
-                    elif output_format == "average":
-                        output = numpy.average(embeddings, axis=0)
+                if output_format == "all":
+                    output = embeddings
+                elif output_format == "top":
+                    output = embeddings[2]
+                elif output_format == "average":
+                    output = numpy.average(embeddings, axis=0)
 
-                    fout.create_dataset(
-                            key,
-                            output.shape, dtype='float32',
-                            data=output
-                    )
+                fout.create_dataset(
+                        str(key),
+                        output.shape, dtype='float32',
+                        data=output
+                )
         input_file.close()
 
 def elmo_command(args):
