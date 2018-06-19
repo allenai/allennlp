@@ -116,7 +116,7 @@ class Elmo(Subcommand):
         subparser.add_argument(
                 '--use-sentence-keys',
                 type=bool,
-                default=False,
+                action='store_true',
                 help='Whether to use line numbers or sentence keys as ids.')
 
         subparser.set_defaults(func=elmo_command)
