@@ -44,6 +44,8 @@ https://arxiv.org/abs/1802.05365
                            The batch size to use.
      --cuda-device CUDA_DEVICE
                            The cuda_device to run on.
+     --use-sentence-keys USE_SENTENCE_KEYS
+                           Whether to use line numbers or sentence keys as ids. 
      --include-package INCLUDE_PACKAGE
                            additional packages to include
 """
@@ -112,7 +114,7 @@ class Elmo(Subcommand):
         subparser.add_argument('--batch-size', type=int, default=DEFAULT_BATCH_SIZE, help='The batch size to use.')
         subparser.add_argument('--cuda-device', type=int, default=-1, help='The cuda_device to run on.')
         subparser.add_argument(
-                '--use-sentenc-keys',
+                '--use-sentence-keys',
                 type=bool,
                 default=False,
                 help='Whether to use line numbers or sentence keys as ids.')
