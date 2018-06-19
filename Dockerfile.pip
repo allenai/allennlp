@@ -29,7 +29,7 @@ RUN if [ ! -z "$VERSION" ]; \
     then pip install allennlp==$VERSION; \
     elif [ ! -z "$SOURCE_COMMIT" ]; \
     then pip install "git+git://github.com/allenai/allennlp.git@$SOURCE_COMMIT"; \
-    else pip install allennlp;
+    else pip install allennlp; \
     fi
 
 LABEL maintainer="allennlp-contact@allenai.org"
