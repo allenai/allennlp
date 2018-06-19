@@ -111,6 +111,11 @@ class Elmo(Subcommand):
                 help='The path to the ELMo weight file.')
         subparser.add_argument('--batch-size', type=int, default=DEFAULT_BATCH_SIZE, help='The batch size to use.')
         subparser.add_argument('--cuda-device', type=int, default=-1, help='The cuda_device to run on.')
+        subparser.add_argument(
+                '--use-sentenc-keys',
+                type=bool,
+                default=False,
+                help='Whether to use line numbers or sentence keys as ids.')
 
         subparser.set_defaults(func=elmo_command)
 
@@ -254,7 +259,8 @@ class ElmoEmbedder():
                    input_file: IO,
                    output_file_path: str,
                    output_format: str = "all",
-                   batch_size: int = DEFAULT_BATCH_SIZE) -> None:
+                   batch_size: int = DEFAULT_BATCH_SIZE,
+                   use_sentence_keys: bool = False) -> None:
         """
         Computes ELMo embeddings from an input_file where each line contains a sentence tokenized by whitespace.
         The ELMo embeddings are written out in HDF5 format, where each sentence embedding
@@ -270,21 +276,36 @@ class ElmoEmbedder():
             The embeddings to output.  Must be one of "all", "top", or "average".
         batch_size : ``int``, optional, (default = 64)
             The number of sentences to process in ELMo at one time.
+        use_sentence_keys : ``bool``, optional, (default = False).
+            Whether or not to use full sentences as keys. By default,
+            the line numbers of the input file are used as ids, which is more robust.
         """
 
         assert output_format in ["all", "top", "average"]
 
         # Tokenizes the sentences.
         sentences = [line.strip() for line in input_file]
-        if "" in sentences:
-            raise ConfigurationError("Your input file contains empty lines. Please remove them.")
+
+        blank_lines = [i for (i, line) in enumerate(sentences) if line == ""]
+        if blank_lines is not None:
+            raise ConfigurationError(f"Your input file contains empty lines at indexes "
+                                     f"{blank_lines}. Please remove them.")
         split_sentences = [sentence.split() for sentence in sentences]
         # Uses the sentence index as the key.
-        embedded_sentences = enumerate(self.embed_sentences(split_sentences, batch_size))
+
+        if use_sentence_keys:
+            embedded_sentences = zip(sentences, self.embed_sentences(split_sentences, batch_size))
+        else:
+            embedded_sentences = enumerate(self.embed_sentences(split_sentences, batch_size))
 
         logger.info("Processing sentences.")
         with h5py.File(output_file_path, 'w') as fout:
             for key, embeddings in Tqdm.tqdm(embedded_sentences):
+                if key in fout.keys() and use_sentence_keys:
+                    raise ConfigurationError(f"Key already exists in {output_file_path}. "
+                                             f"To encode duplicate sentences, do not pass "
+                                             f"the --use_sentence_ids flag.")
+
                 if output_format == "all":
                     output = embeddings
                 elif output_format == "top":
@@ -314,4 +335,5 @@ def elmo_command(args):
                 args.input_file,
                 args.output_file,
                 output_format,
-                args.batch_size)
+                args.batch_size,
+                args.use_sentence_keys)
