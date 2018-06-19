@@ -8,7 +8,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.fields import TensorField
 
 
-class TestLabelField(AllenNlpTestCase):
+class TestTensorField(AllenNlpTestCase):
     def test_as_tensor(self):
         random_tensor = torch.rand(3, 5)
         tensorfield = TensorField(random_tensor)
