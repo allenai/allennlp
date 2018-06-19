@@ -12,6 +12,7 @@ import numpy
 
 from allennlp.commands import main
 from allennlp.commands.elmo import ElmoEmbedder
+from allennlp.commands.elmo import read_sentences_from_h5py
 from allennlp.tests.modules.elmo_test import ElmoTestCase
 
 
@@ -170,6 +171,39 @@ class TestElmoCommand(ElmoTestCase):
             # The vectors in the test configuration are smaller (32 length)
             for sentence in set(sentences):
                 assert h5py_file.get(sentence).shape == (3, len(sentence.split()), 32)
+
+    def test_slash_sentences(self):
+        tempdir = tempfile.mkdtemp()
+        sentences_path = os.path.join(tempdir, "sentences.txt")
+        output_path = os.path.join(tempdir, "output.txt")
+
+        sentences = [
+                "my / sentence",
+                "my / test / sentence",
+                "one / two / three",
+        ]
+
+        with open(sentences_path, 'w') as f:
+            for line in sentences:
+                f.write(line + '\n')
+
+        sys.argv = ["run.py",  # executable
+                    "elmo",  # command
+                    sentences_path,
+                    output_path,
+                    "--all",
+                    "--options-file",
+                    self.options_file,
+                    "--weight-file",
+                    self.weight_file]
+
+        main()
+
+        assert os.path.exists(output_path)
+
+        with h5py.File(output_path, 'r') as h5py_file:
+            read_sentences = list(zip(*read_sentences_from_h5py(h5py_file)))[0]
+            assert set(read_sentences) == set(sentences)
 
     def test_empty_sentences_are_filtered(self):
         sentences = [
