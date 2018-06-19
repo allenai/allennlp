@@ -294,6 +294,8 @@ class ElmoEmbedder():
         # Uses the sentence index as the key.
 
         if use_sentence_keys:
+            logger.warning("Using sentences as keys can fail if sentences "
+                           "contain backslashes or colons. Use with caution.")
             embedded_sentences = zip(sentences, self.embed_sentences(split_sentences, batch_size))
         else:
             embedded_sentences = enumerate(self.embed_sentences(split_sentences, batch_size))
@@ -309,7 +311,7 @@ class ElmoEmbedder():
                 if output_format == "all":
                     output = embeddings
                 elif output_format == "top":
-                    output = embeddings[2]
+                    output = embeddings[-1]
                 elif output_format == "average":
                     output = numpy.average(embeddings, axis=0)
 
