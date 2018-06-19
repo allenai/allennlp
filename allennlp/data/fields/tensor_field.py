@@ -26,7 +26,8 @@ class TensorField(Field[torch.Tensor]):
                   padding_lengths: Dict[str, int],
                   cuda_device: int = -1) -> torch.Tensor:
         # pylint: disable=unused-argument,not-callable
-        return self.tensor if cuda_device == -1 else self.tensor.cuda(cuda_device)
+        device = torch.device(f"cuda:{cuda_device}" if cuda_device >= 0 else "cpu")
+        return self.tensor.to(device)
 
     @overrides
     def empty_field(self):
