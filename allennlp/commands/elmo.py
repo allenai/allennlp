@@ -308,7 +308,7 @@ class ElmoEmbedder():
                 if key in fout.keys() and use_sentence_keys:
                     raise ConfigurationError(f"Key already exists in {output_file_path}. "
                                              f"To encode duplicate sentences, do not pass "
-                                             f"the --use_sentence_ids flag.")
+                                             f"the --use-sentence-keys flag.")
 
                 if output_format == "all":
                     output = embeddings
