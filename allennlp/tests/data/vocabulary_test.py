@@ -1,6 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 import codecs
 import gzip
+import zipfile
 from copy import deepcopy
 
 import pytest
@@ -10,9 +11,11 @@ from allennlp.data.dataset import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import CharacterTokenizer
-from allennlp.data.vocabulary import Vocabulary, _NamespaceDependentDefaultDict, DEFAULT_OOV_TOKEN
+from allennlp.data.vocabulary import (Vocabulary, _NamespaceDependentDefaultDict,
+                                      DEFAULT_OOV_TOKEN, _read_pretrained_tokens)
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.modules.token_embedders.embedding import format_embeddings_file_uri
 
 
 class TestVocabulary(AllenNlpTestCase):
@@ -49,7 +52,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'c' in words
 
     def test_from_dataset_respects_exclusive_embedding_file(self):
-        embeddings_filename = self.TEST_DIR / "embeddings.gz"
+        embeddings_filename = str(self.TEST_DIR / "embeddings.gz")
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("a 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("b 0.1 0.4 -4.0\n".encode('utf-8'))
@@ -72,7 +75,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'c' not in words
 
     def test_from_dataset_respects_inclusive_embedding_file(self):
-        embeddings_filename = self.TEST_DIR / "embeddings.gz"
+        embeddings_filename = str(self.TEST_DIR / "embeddings.gz")
         with gzip.open(embeddings_filename, 'wb') as embeddings_file:
             embeddings_file.write("a 1.0 2.3 -1.0\n".encode('utf-8'))
             embeddings_file.write("b 0.1 0.4 -4.0\n".encode('utf-8'))
@@ -315,3 +318,61 @@ class TestVocabulary(AllenNlpTestCase):
         vocab.add_token_to_namespace("b2", namespace="b")
         vocab.add_token_to_namespace("b3", namespace="b")
         print(vocab)
+
+    def test_read_pretrained_words(self):
+        # The fixture "fake_embeddings.5d.txt" was generated using the words in this random quote
+        words = set("If you think you are too small to make a difference "
+                    "try to sleeping with a mosquito àèìòù".split(' '))
+
+        # Reading from a single (compressed) file or a single-file archive
+        base_path = str(self.FIXTURES_ROOT / "embeddings/fake_embeddings.5d.txt")
+        for ext in ['', '.gz', '.lzma', '.bz2', '.zip', '.tar.gz']:
+            file_path = base_path + ext
+            words_read = _read_pretrained_tokens(file_path)
+            assert words_read == words, f"Wrong words for file {file_path}\n" \
+                                        f"   Read: {sorted(words_read)}\n" \
+                                        f"Correct: {sorted(words)}"
+
+        # Reading from a multi-file archive
+        base_path = str(self.FIXTURES_ROOT / "embeddings/multi-file-archive")
+        file_path = 'folder/fake_embeddings.5d.txt'
+        for ext in ['.zip', '.tar.gz']:
+            archive_path = base_path + ext
+            embeddings_file_uri = format_embeddings_file_uri(archive_path, file_path)
+            words_read = _read_pretrained_tokens(embeddings_file_uri)
+            assert words_read == words, f"Wrong words for file {archive_path}\n" \
+                                        f"   Read: {sorted(words_read)}\n" \
+                                        f"Correct: {sorted(words)}"
+
+    def test_from_instances_exclusive_embeddings_file_inside_archive(self):
+        """ Just for ensuring there are no problems when reading pretrained tokens from an archive """
+        # Read embeddings file from archive
+        archive_path = str(self.TEST_DIR / "embeddings-archive.zip")
+
+        with zipfile.ZipFile(archive_path, 'w') as archive:
+            file_path = 'embedding.3d.vec'
+            with archive.open(file_path, 'w') as embeddings_file:
+                embeddings_file.write("a 1.0 2.3 -1.0\n".encode('utf-8'))
+                embeddings_file.write("b 0.1 0.4 -4.0\n".encode('utf-8'))
+
+            with archive.open('dummy.vec', 'w') as dummy_file:
+                dummy_file.write("c 1.0 2.3 -1.0 3.0\n".encode('utf-8'))
+
+        embeddings_file_uri = format_embeddings_file_uri(archive_path, file_path)
+        vocab = Vocabulary.from_instances(self.dataset,
+                                          min_count={'tokens': 4},
+                                          pretrained_files={'tokens': embeddings_file_uri},
+                                          only_include_pretrained_words=True)
+
+        words = set(vocab.get_index_to_token_vocabulary().values())
+        assert 'a' in words
+        assert 'b' not in words
+        assert 'c' not in words
+
+        vocab = Vocabulary.from_instances(self.dataset,
+                                          pretrained_files={'tokens': embeddings_file_uri},
+                                          only_include_pretrained_words=True)
+        words = set(vocab.get_index_to_token_vocabulary().values())
+        assert 'a' in words
+        assert 'b' in words
+        assert 'c' not in words

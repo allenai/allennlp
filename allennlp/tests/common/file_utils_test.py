@@ -10,6 +10,7 @@ import responses
 from allennlp.common.file_utils import url_to_filename, filename_to_url, get_from_cache, cached_path
 from allennlp.common.testing import AllenNlpTestCase
 
+
 def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
     # Mock response for the datastore url that returns glove vectors
     responses.add(
@@ -49,7 +50,7 @@ def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
 class TestFileUtils(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.glove_file = self.FIXTURES_ROOT / 'glove.6B.100d.sample.txt.gz'
+        self.glove_file = self.FIXTURES_ROOT / 'embeddings/glove.6B.100d.sample.txt.gz'
         with open(self.glove_file, 'rb') as glove:
             self.glove_bytes = glove.read()
 
