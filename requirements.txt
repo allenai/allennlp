@@ -48,9 +48,6 @@ flask==0.12.1
 flask-cors==3.0.3
 gevent==1.2.2
 
-# Talk to postgres demo database
-psycopg2-binary
-
 # Used by semantic parsing code to strip diacritics from unicode strings.
 unidecode
 
