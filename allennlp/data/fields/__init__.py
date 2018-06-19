@@ -15,4 +15,5 @@ from allennlp.data.fields.production_rule_field import ProductionRuleField
 from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.data.fields.sequence_label_field import SequenceLabelField
 from allennlp.data.fields.span_field import SpanField
+from allennlp.data.fields.tensor_field import TensorField
 from allennlp.data.fields.text_field import TextField

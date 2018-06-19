@@ -18,6 +18,7 @@ allennlp.data.fields
 * :ref:`ProductionRuleField<production-rule-field>`
 * :ref:`SequenceField<sequence-field>`
 * :ref:`SequenceLabelField<sequence-label-field>`
+* :ref:`TensorField<tensor-field>`
 * :ref:`TextField<text-field>`
 
 .. _field:
@@ -94,6 +95,12 @@ allennlp.data.fields
 
 .. _text-field:
 .. automodule:: allennlp.data.fields.text_field
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _tensor-field:
+.. automodule:: allennlp.data.fields.tensor_field
    :members:
    :undoc-members:
    :show-inheritance:
