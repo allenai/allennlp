@@ -164,7 +164,7 @@ state of the art models with high quality engineering.
 </tr>
 <tr>
     <td><b> allennlp.service </b></td>
-    <td> a web server to serve our demo and API </td>
+    <td> a web server to that can serve demos for your models </td>
 </tr>
 <tr>
     <td><b> allennlp.training </b></td>
