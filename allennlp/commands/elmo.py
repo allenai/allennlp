@@ -288,7 +288,7 @@ class ElmoEmbedder():
         sentences = [line.strip() for line in input_file]
 
         blank_lines = [i for (i, line) in enumerate(sentences) if line == ""]
-        if blank_lines is not None:
+        if blank_lines:
             raise ConfigurationError(f"Your input file contains empty lines at indexes "
                                      f"{blank_lines}. Please remove them.")
         split_sentences = [sentence.split() for sentence in sentences]
