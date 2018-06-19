@@ -6,7 +6,6 @@ clipping on both the hidden state and the memory state of the LSTM.
 from typing import Optional, Tuple, List
 
 import torch
-from torch.autograd import Variable
 
 from allennlp.nn.util import get_dropout_mask
 from allennlp.nn.initializers import block_orthogonal
@@ -123,16 +122,11 @@ class LstmCellWithProjection(torch.nn.Module):
         batch_size = inputs.size()[0]
         total_timesteps = inputs.size()[1]
 
-        # We have to use this '.data.new().fill_' pattern to create tensors with the correct
-        # type - forward has no knowledge of whether these are torch.Tensors or torch.cuda.Tensors.
-        output_accumulator = Variable(inputs.data.new(batch_size,
-                                                      total_timesteps,
-                                                      self.hidden_size).fill_(0))
+        output_accumulator = inputs.new_zeros(batch_size, total_timesteps, self.hidden_size)
+
         if initial_state is None:
-            full_batch_previous_memory = Variable(inputs.data.new(batch_size,
-                                                                  self.cell_size).fill_(0))
-            full_batch_previous_state = Variable(inputs.data.new(batch_size,
-                                                                 self.hidden_size).fill_(0))
+            full_batch_previous_memory = inputs.new_zeros(batch_size, self.cell_size)
+            full_batch_previous_state = inputs.new_zeros(batch_size, self.hidden_size)
         else:
             full_batch_previous_state = initial_state[0].squeeze(0)
             full_batch_previous_memory = initial_state[1].squeeze(0)
@@ -221,8 +215,8 @@ class LstmCellWithProjection(torch.nn.Module):
             # We've been doing computation with less than the full batch, so here we create a new
             # variable for the the whole batch at this timestep and insert the result for the
             # relevant elements of the batch into it.
-            full_batch_previous_memory = Variable(full_batch_previous_memory.data.clone())
-            full_batch_previous_state = Variable(full_batch_previous_state.data.clone())
+            full_batch_previous_memory = full_batch_previous_memory.clone()
+            full_batch_previous_state = full_batch_previous_state.clone()
             full_batch_previous_memory[0:current_length_index + 1] = memory
             full_batch_previous_state[0:current_length_index + 1] = timestep_output
             output_accumulator[0:current_length_index + 1, index] = timestep_output

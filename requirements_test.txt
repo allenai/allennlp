@@ -27,9 +27,6 @@ sphinx==1.5.3
 # Watches the documentation directory and rebuilds on changes.
 sphinx-autobuild
 
-# enables numpydoc formatting in sphinx
-numpydoc
-
 # doc theme
 sphinx_rtd_theme
 
@@ -37,4 +34,4 @@ sphinx_rtd_theme
 pypandoc
 
 # Pypi uploads
-twine
+twine==1.11.0

@@ -13,7 +13,7 @@ is a "Prediction" button that reveals the following example.
 
 ```bash
 echo '{"sentence": "Did Uriah honestly think he could beat The Legend of Zelda in under three hours?"}' > ner-examples.jsonl
-python -m allennlp.run predict \
+allennlp predict \
     https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.26.tar.gz \
     ner-examples.jsonl
 ```
@@ -26,7 +26,7 @@ Here is an example of running the above example but specifying
 explicitly.
 
 ```bash
-python -m allennlp.run predict \
+allennlp predict \
     https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.26.tar.gz \
     ner-examples.jsonl \
     --predictor sentence-tagger

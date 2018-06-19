@@ -6,7 +6,6 @@ from typing import Callable, Dict, List, Set
 import editdistance
 from overrides import overrides
 import torch
-from torch.autograd import Variable
 
 from allennlp.common import util
 from allennlp.common.checks import ConfigurationError
@@ -207,8 +206,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
     @overrides
     def as_tensor(self,
                   padding_lengths: Dict[str, int],
-                  cuda_device: int = -1,
-                  for_training: bool = True) -> Dict[str, torch.Tensor]:
+                  cuda_device: int = -1) -> Dict[str, torch.Tensor]:
         tensors = {}
         desired_num_entities = padding_lengths['num_entities']
         desired_num_entity_tokens = padding_lengths['num_entity_tokens']
@@ -223,7 +221,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                                                           desired_num_entity_tokens,
                                                           padding_lengths)
                 padded_arrays.append(padded_array)
-            tensor = Variable(torch.LongTensor(padded_arrays), volatile=not for_training)
+            tensor = torch.LongTensor(padded_arrays)
             tensors[indexer_name] = tensor if cuda_device == -1 else tensor.cuda(cuda_device)
         padded_linking_features = util.pad_sequence_to_length(self.linking_features,
                                                               desired_num_entities,
@@ -235,8 +233,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                                                           desired_num_utterance_tokens,
                                                           default_value=default_feature_value)
             padded_linking_arrays.append(padded_features)
-        linking_features_tensor = Variable(torch.FloatTensor(padded_linking_arrays),
-                                           volatile=not for_training)
+        linking_features_tensor = torch.FloatTensor(padded_linking_arrays)
         if cuda_device != -1:
             linking_features_tensor = linking_features_tensor.cuda(cuda_device)
         return {'text': tensors, 'linking': linking_features_tensor}

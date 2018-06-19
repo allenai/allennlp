@@ -2,14 +2,15 @@
 Utilities for working with the local dataset cache.
 """
 
-from typing import Tuple
 import os
-from hashlib import sha256
 import logging
 import shutil
 import tempfile
-from urllib.parse import urlparse
 import json
+from urllib.parse import urlparse
+from pathlib import Path
+from typing import Tuple, Union
+from hashlib import sha256
 
 import requests
 
@@ -17,8 +18,9 @@ from allennlp.common.tqdm import Tqdm
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-CACHE_ROOT = os.getenv('ALLENNLP_CACHE_ROOT', os.path.expanduser(os.path.join('~', '.allennlp')))
-DATASET_CACHE = os.path.join(CACHE_ROOT, "datasets")
+CACHE_ROOT = Path(os.getenv('ALLENNLP_CACHE_ROOT', Path.home() / '.allennlp'))
+DATASET_CACHE = str(CACHE_ROOT / "datasets")
+
 
 def url_to_filename(url: str, etag: str = None) -> str:
     """
@@ -36,6 +38,7 @@ def url_to_filename(url: str, etag: str = None) -> str:
         filename += '.' + etag_hash.hexdigest()
 
     return filename
+
 
 def filename_to_url(filename: str, cache_dir: str = None) -> Tuple[str, str]:
     """
@@ -60,7 +63,8 @@ def filename_to_url(filename: str, cache_dir: str = None) -> Tuple[str, str]:
 
     return url, etag
 
-def cached_path(url_or_filename: str, cache_dir: str = None) -> str:
+
+def cached_path(url_or_filename: Union[str, Path], cache_dir: str = None) -> str:
     """
     Given something that might be a URL (or might be a local path),
     determine which. If it's a URL, download the file and cache it, and
@@ -69,6 +73,8 @@ def cached_path(url_or_filename: str, cache_dir: str = None) -> str:
     """
     if cache_dir is None:
         cache_dir = DATASET_CACHE
+    if isinstance(url_or_filename, Path):
+        url_or_filename = str(url_or_filename)
 
     parsed = urlparse(url_or_filename)
 
@@ -98,7 +104,7 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
     os.makedirs(cache_dir, exist_ok=True)
 
     # make HEAD request to check ETag
-    response = requests.head(url)
+    response = requests.head(url, allow_redirects=True)
     if response.status_code != 200:
         raise IOError("HEAD request failed for url {}".format(url))
 
@@ -144,3 +150,9 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
             logger.info("removing temp file %s", temp_file.name)
 
     return cache_path
+
+
+def get_file_extension(path: str, dot=True, lower: bool = True):
+    ext = os.path.splitext(path)[1]
+    ext = ext if dot else ext[1:]
+    return ext.lower() if lower else ext

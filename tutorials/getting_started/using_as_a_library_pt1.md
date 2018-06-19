@@ -18,16 +18,13 @@ lines of code to get a very flexible classifier for academic papers.
 ## First step: install AllenNLP
 
 The first thing we need to do is specify AllenNLP as a dependency in our project.  We'll do this by
-adding a
+creating a
 [`requirements.txt`](https://github.com/allenai/allennlp-as-a-library-example/blob/master/requirements.txt)
-file.  It contains a single line: `allennlp==0.3`.  Then, after creating a python 3.6 environment,
-you install AllenNLP by running `pip install -r requirements.txt`.  You also need to install
-pytorch and a spacy model, as described in [the installation tutorial](installation.md):
+file.  It contains a single line: `allennlp==0.5.1`.  Then, after creating a python 3.6 environment,
+you install AllenNLP by running `pip install -r requirements.txt`.
 
 ```bash
 pip install -r requirements.txt
-pip install http://download.pytorch.org/whl/cu80/torch-0.3.1-cp36-cp36m-linux_x86_64.whl
-python -m spacy download en_core_web_sm
 ```
 
 (The above is assuming CUDA 8 installed on a linux machine; use a different pytorch version as
@@ -604,6 +601,6 @@ allennlp train \
 
 When we do this, we get to around 80% validation accuracy after a few epochs of training.
 
-To see how to make predictions and build a demo for our new model, see the 
+To see how to make predictions and build a demo for our new model, see the
 [Making Predictions and Creating a Demo](making_predictions_and_creating_a_demo.md) tutorial, which continues
 where this tutorial leaves off.
