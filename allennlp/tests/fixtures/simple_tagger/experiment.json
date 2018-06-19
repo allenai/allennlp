@@ -8,7 +8,7 @@
       "tokens": {
         "type": "embedding",
         "projection_dim": 2,
-        "pretrained_file": "tests/fixtures/glove.6B.100d.sample.txt.gz",
+        "pretrained_file": "tests/fixtures/embeddings/glove.6B.100d.sample.txt.gz",
         "embedding_dim": 100,
         "trainable": true
       }
