@@ -324,7 +324,6 @@ class ElmoEmbedder():
         input_file.close()
 
 def elmo_command(args):
-    print(args.use_sentence_keys)
     elmo_embedder = ElmoEmbedder(args.options_file, args.weight_file, args.cuda_device)
     output_format = ""
     if args.all:
