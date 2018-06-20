@@ -42,9 +42,7 @@ https://arxiv.org/abs/1802.05365
                            The batch size to use.
    --cuda-device CUDA_DEVICE
                            The cuda_device to run on.
-   --use-sentence-keys   Normally a sentence's line number is used as the HDF5
-                           key for its embedding. If this flag is specified, the
-                           sentence itself will be used as the key.
+   --use-sentence-keys   Normally a sentence's line number is used - instead, use the sentence itself.
    --include-package INCLUDE_PACKAGE
                            additional packages to include
 """
