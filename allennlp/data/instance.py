@@ -26,6 +26,16 @@ class Instance:
         self.fields = fields
         self.indexed = False
 
+    def add_field(self, field_name: str, field: Field, vocab: Vocabulary = None) -> None:
+        """
+        Add the field to the existing fields mapping.
+        If we have already indexed the Instance, then we also index `field`, so
+        it is necessary to supply the vocab.
+        """
+        self.fields[field_name] = field
+        if self.indexed:
+            field.index(vocab)
+
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         """
         Increments counts in the given ``counter`` for all of the vocabulary items in all of the
