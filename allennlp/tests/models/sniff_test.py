@@ -1,7 +1,41 @@
 # pylint: disable=no-self-use,line-too-long
 
-from allennlp.service.server_flask import DEFAULT_MODELS
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.models.archival import load_archive
+from allennlp.predictors import Predictor
+
+def demo_model(archive_file: str, predictor_name: str) -> Predictor:
+    archive = load_archive(archive_file)
+    return Predictor.from_archive(archive, predictor_name)
+
+# TODO(joelgrus): this is duplicated in the demo repo
+# figure out where it really belongs
+DEFAULT_MODELS = {
+        'machine-comprehension': (
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz',  # pylint: disable=line-too-long
+                'machine-comprehension'
+        ),
+        'semantic-role-labeling': (
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2018.05.25.tar.gz', # pylint: disable=line-too-long
+                'semantic-role-labeling'
+        ),
+        'textual-entailment': (
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-elmo-2018.02.19.tar.gz',  # pylint: disable=line-too-long
+                'textual-entailment'
+        ),
+        'coreference-resolution': (
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2018.02.05.tar.gz',  # pylint: disable=line-too-long
+                'coreference-resolution'
+        ),
+        'named-entity-recognition': (
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.30.tar.gz',  # pylint: disable=line-too-long
+                'sentence-tagger'
+        ),
+        'constituency-parsing': (
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/elmo-constituency-parser-2018.03.14.tar.gz',  # pylint: disable=line-too-long
+                'constituency-parser'
+        )
+}
 
 
 class SniffTest(AllenNlpTestCase):
@@ -17,7 +51,7 @@ class SniffTest(AllenNlpTestCase):
         }
 
     def test_machine_comprehension(self):
-        predictor = DEFAULT_MODELS['machine-comprehension'].predictor()
+        predictor = demo_model(*DEFAULT_MODELS['machine-comprehension'])
 
         passage = """The Matrix is a 1999 science fiction action film written and directed by The Wachowskis, starring Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, and Joe Pantoliano. It depicts a dystopian future in which reality as perceived by most humans is actually a simulated reality called "the Matrix", created by sentient machines to subdue the human population, while their bodies' heat and electrical activity are used as an energy source. Computer programmer Neo" learns this truth and is drawn into a rebellion against the machines, which involves other people who have been freed from the "dream world". """  # pylint: disable=line-too-long
         question = "Who stars in The Matrix?"
@@ -29,7 +63,7 @@ class SniffTest(AllenNlpTestCase):
         assert correct == result["best_span_str"]
 
     def test_semantic_role_labeling(self):
-        predictor = DEFAULT_MODELS['semantic-role-labeling'].predictor()
+        predictor = demo_model(*DEFAULT_MODELS['semantic-role-labeling'])
 
         sentence = "If you liked the music we were playing last night, you will absolutely love what we're playing tomorrow!"
 
@@ -65,7 +99,7 @@ class SniffTest(AllenNlpTestCase):
         ]
 
     def test_textual_entailment(self):
-        predictor = DEFAULT_MODELS['textual-entailment'].predictor()
+        predictor = demo_model(*DEFAULT_MODELS['textual-entailment'])
 
         result = predictor.predict_json({
                 "premise": "An interplanetary spacecraft is in orbit around a gas giant's icy moon.",
@@ -89,7 +123,7 @@ class SniffTest(AllenNlpTestCase):
         assert result["label_probs"][2] > 0.6  # neutral
 
     def test_coreference_resolution(self):
-        predictor = DEFAULT_MODELS['coreference-resolution'].predictor()
+        predictor = demo_model(*DEFAULT_MODELS['coreference-resolution'])
 
         document = "We 're not going to skimp on quality , but we are very focused to make next year . The only problem is that some of the fabrics are wearing out - since I was a newbie I skimped on some of the fabric and the poor quality ones are developing holes ."
 
@@ -105,7 +139,7 @@ class SniffTest(AllenNlpTestCase):
                                       'quality', 'ones', 'are', 'developing', 'holes', '.']
 
     def test_ner(self):
-        predictor = DEFAULT_MODELS['named-entity-recognition'].predictor()
+        predictor = demo_model(*DEFAULT_MODELS['named-entity-recognition'])
 
         sentence = """Michael Jordan is a professor at Berkeley."""
 
@@ -115,7 +149,7 @@ class SniffTest(AllenNlpTestCase):
         assert result["tags"] == ["B-PER", "L-PER", "O", "O", "O", "O", "U-LOC", "O"]
 
     def test_constituency_parsing(self):
-        predictor = DEFAULT_MODELS['constituency-parsing'].predictor()
+        predictor = demo_model(*DEFAULT_MODELS['constituency-parsing'])
 
         sentence = """Pierre Vinken died aged 81; immortalised aged 61."""
 

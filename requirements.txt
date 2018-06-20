@@ -26,6 +26,9 @@ spacy>=2.0,<2.1
 # Used by span prediction models.
 numpy
 
+# Used for reading configuration info out of numpy-style docstrings.
+numpydoc==0.8.0
+
 # Used in coreference resolution evaluation metrics.
 scipy
 scikit-learn
@@ -44,9 +47,6 @@ awscli>=1.11.91
 flask==0.12.1
 flask-cors==3.0.3
 gevent==1.2.2
-
-# Talk to postgres demo database
-psycopg2-binary
 
 # Used by semantic parsing code to strip diacritics from unicode strings.
 unidecode
@@ -77,3 +77,6 @@ flaky
 
 # Required to mock out `requests` calls
 responses>=0.7
+
+# Reads Universal Dependencies files.
+conllu

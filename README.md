@@ -57,12 +57,12 @@ isolation and consistency, and also makes it easy to distribute your
 environment to a compute cluster.
 
 Once you have [installed Docker](https://docs.docker.com/engine/installation/)
-just run `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.5.0` to get an environment that will run on either the cpu or gpu.
+just run `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.5.1` to get an environment that will run on either the cpu or gpu.
 
 You can now test your installation with `./scripts/verify.py`.
 
 Our Docker image contains the AllenNLP source rather than a `pip` installation. Consequently, the `allennlp` commandline tool is not
-installed and you will have to use `./bin/allennlp` instead.
+installed and you will have to use `./allennlp/run.py` instead.
 
 ### Installing from source
 
@@ -164,7 +164,7 @@ state of the art models with high quality engineering.
 </tr>
 <tr>
     <td><b> allennlp.service </b></td>
-    <td> a web server to serve our demo and API </td>
+    <td> a web server to that can serve demos for your models </td>
 </tr>
 <tr>
     <td><b> allennlp.training </b></td>

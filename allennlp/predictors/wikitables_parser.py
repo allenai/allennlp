@@ -1,7 +1,7 @@
 import os
 import pathlib
 from subprocess import run
-from typing import Tuple
+from typing import Tuple, List
 import shutil
 
 from overrides import overrides
@@ -79,6 +79,16 @@ class WikiTablesParserPredictor(Predictor):
 
         return_dict.update(outputs)
         return sanitize(return_dict)
+
+    @overrides
+    def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
+        instances, return_dicts = zip(*self._batch_json_to_instances(inputs))
+        outputs = self._model.forward_on_instances(instances)
+        for input_, output, return_dict in zip(inputs, outputs, return_dicts):
+            output['answer'] = self._execute_logical_form_on_table(output['logical_form'],
+                                                                   input_['table'])
+            return_dict.update(output)
+        return sanitize(return_dicts)
 
     @staticmethod
     def _execute_logical_form_on_table(logical_form, table):
