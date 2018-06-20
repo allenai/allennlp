@@ -115,7 +115,7 @@ class Elmo(Subcommand):
         subparser.add_argument('--cuda-device', type=int, default=-1, help='The cuda_device to run on.')
         subparser.add_argument(
                 '--use-sentence-keys',
-                action='store_false',
+                action='store_true',
                 help='Whether to use line numbers or sentence keys as ids.')
 
         subparser.set_defaults(func=elmo_command)
@@ -304,7 +304,7 @@ class ElmoEmbedder():
         logger.info("Processing sentences.")
         with h5py.File(output_file_path, 'w') as fout:
             for key, embeddings in Tqdm.tqdm(embedded_sentences):
-                if key in fout.keys() and use_sentence_keys:
+                if str(key) in fout.keys() and use_sentence_keys:
                     raise ConfigurationError(f"Key already exists in {output_file_path}. "
                                              f"To encode duplicate sentences, do not pass "
                                              f"the --use-sentence-keys flag.")
@@ -324,6 +324,7 @@ class ElmoEmbedder():
         input_file.close()
 
 def elmo_command(args):
+    print(args.use_sentence_keys)
     elmo_embedder = ElmoEmbedder(args.options_file, args.weight_file, args.cuda_device)
     output_format = ""
     if args.all:
