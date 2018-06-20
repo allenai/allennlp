@@ -91,7 +91,7 @@ class WordLM(Model):
             "encoder input dim")
         if not proj:
             check_dimensions_match(encoder.get_output_dim(), 
-                self.softmax_in,
+                self.softmax_input_size,
                 "encoder output dim",
                 "softmax input dim")
 

@@ -47,7 +47,7 @@
     "patience": 2,
     "cuda_device": -1,
     "grad_clipping": 5.0,
-    "validation_metric": "-ppl",
+    "validation_metric": "-perplexity",
     "num_serialized_models_to_keep":2,
     "optimizer": {
       "type": "adam",

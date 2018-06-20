@@ -18,13 +18,13 @@ class TestAdaptiveSoftmax(AllenNlpTestCase):
 
         vocab0 = Vocabulary(counter={"tokens": {"hello": 1, "world": 2, ":": 3, "-": 4}})
         params0 = Params({
-                "input_dim": 10,
+                "input_dim": 256,
                 "cutoff": [1, 3],
                 "label_namespace": "tokens"
                 })
         softmax = AdaptiveSoftmax.from_params(vocab0, params0)
 
-        assert softmax.input_dim == 10
+        assert softmax.input_dim == 256
         assert softmax.cutoff == [1, 3, 6]
         assert softmax.output_size == 3
         assert softmax.adaptive == True
@@ -32,13 +32,13 @@ class TestAdaptiveSoftmax(AllenNlpTestCase):
 
         vocab0 = Vocabulary(counter={"tokens": {"hello": 1, "world": 2, ":": 3, "-": 4}})
         params0 = Params({
-                "input_dim": 10,
+                "input_dim": 256,
                 "cutoff": [],
                 "label_namespace": "tokens"
                 })
         softmax = AdaptiveSoftmax.from_params(vocab0, params0)
 
-        assert softmax.input_dim == 10
+        assert softmax.input_dim == 256
         assert softmax.cutoff == [6]
         assert softmax.output_size == 6
         assert softmax.adaptive == False
@@ -49,7 +49,7 @@ class TestAdaptiveSoftmax(AllenNlpTestCase):
 
         vocab0 = Vocabulary(counter={"tokens": {"hello": 1, "world": 2, ":": 3, "-": 4}})
         params0 = Params({
-                "input_dim": 10,
+                "input_dim": 256,
                 "cutoff": [3, 1],
                 "label_namespace": "tokens"
                 })
@@ -59,7 +59,7 @@ class TestAdaptiveSoftmax(AllenNlpTestCase):
 
         vocab1 = Vocabulary(counter={"tokens": {"hello": 1, "world": 2, ":": 3, "-": 4}})
         params1 = Params({
-                "input_dim": 10,
+                "input_dim": 256,
                 "cutoff": [1, 3],
                 "label_namespace": "tokens"
                 })
@@ -71,7 +71,7 @@ class TestAdaptiveSoftmax(AllenNlpTestCase):
 
         vocab0 = Vocabulary(counter={"tokens": {"hello": 1}})
         params0 = Params({
-                "input_dim": 10,
+                "input_dim": 256,
                 "cutoff": [3],
                 "label_namespace": "tokens"
                 })
@@ -81,7 +81,7 @@ class TestAdaptiveSoftmax(AllenNlpTestCase):
 
         vocab1 = Vocabulary(counter={"tokens": {"hello": 1, "world": 2}})
         params1 = Params({
-                "input_dim": 10,
+                "input_dim": 256,
                 "cutoff": [3],
                 "label_namespace": "tokens"
                 })
