@@ -103,11 +103,11 @@ class WordLM(Model):
         
     def train(self, mode=True):
         self.encoder.reset_states()
-        return super().train(mode)
+        return super(WordLM, self).train(mode)
 
     def eval(self):
         self.encoder.reset_states()
-        return super().eval()
+        return super(WordLM, self).eval()
 
     @overrides
     def forward(self,  # type: ignore
