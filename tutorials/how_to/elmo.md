@@ -13,7 +13,8 @@ For more detail about ELMo, please see the publication ["Deep contextualized wor
 
 You can write ELMo representations to disk with the `elmo` command.  The `elmo`
 command will write all the biLM individual layer representations for a dataset
-of sentences to an HDF5 file.  Here is an example of using the `elmo` command:
+of sentences to an HDF5 file. The generated hdf5 file will contain line indices
+of the original sentences as keys. Here is an example of using the `elmo` command:
 
 ```bash
 echo "The cryptocurrency space is now figuring out to have the highest search on Google globally ." > sentences.txt

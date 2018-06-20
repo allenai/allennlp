@@ -45,7 +45,9 @@ https://arxiv.org/abs/1802.05365
      --cuda-device CUDA_DEVICE
                            The cuda_device to run on.
      --use-sentence-keys USE_SENTENCE_KEYS
-                           Whether to use line numbers or sentence keys as ids.
+                           Normally a sentence's line number is used as the HDF5
+                           key for its embedding. If this flag is specified, the
+                           sentence itself will be used as the key.
      --include-package INCLUDE_PACKAGE
                            additional packages to include
 """
@@ -116,7 +118,9 @@ class Elmo(Subcommand):
         subparser.add_argument(
                 '--use-sentence-keys',
                 action='store_true',
-                help='Whether to use line numbers or sentence keys as ids.')
+                help="Normally a sentence's line number is used as the "
+                     "HDF5 key for its embedding. If this flag is specified, "
+                     "the sentence itself will be used as the key.")
 
         subparser.set_defaults(func=elmo_command)
 
@@ -296,15 +300,16 @@ class ElmoEmbedder():
 
         if use_sentence_keys:
             logger.warning("Using sentences as keys can fail if sentences "
-                           "contain backslashes or colons. Use with caution.")
+                           "contain forward slashes or colons. Use with caution.")
             embedded_sentences = zip(sentences, self.embed_sentences(split_sentences, batch_size))
         else:
-            embedded_sentences = enumerate(self.embed_sentences(split_sentences, batch_size))
+            embedded_sentences = ((str(i), x) for i, x in
+                                  enumerate(self.embed_sentences(split_sentences, batch_size)))
 
         logger.info("Processing sentences.")
         with h5py.File(output_file_path, 'w') as fout:
             for key, embeddings in Tqdm.tqdm(embedded_sentences):
-                if str(key) in fout.keys() and use_sentence_keys:
+                if use_sentence_keys and key in fout.keys():
                     raise ConfigurationError(f"Key already exists in {output_file_path}. "
                                              f"To encode duplicate sentences, do not pass "
                                              f"the --use-sentence-keys flag.")
