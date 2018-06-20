@@ -384,7 +384,7 @@ class Trainer:
 
         # Only the 'loss' is needed.
         # a (num_gpu, ) tensor with loss on each GPU
-        losses = gather([output['loss'] for output in outputs], used_device_ids[0], 0)
+        losses = gather([output['loss'].unsqueeze(0) for output in outputs], used_device_ids[0], 0)
         return {'loss': losses.mean()}
 
     def _batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
