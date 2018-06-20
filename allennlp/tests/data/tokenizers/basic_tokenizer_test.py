@@ -2,18 +2,18 @@
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.tokenizers import BasicTokenizer
+from allennlp.data.tokenizers import BasicTokenizerWithEOS
 
-class TestBasicTokenizer(AllenNlpTestCase):
+class TestBasicTokenizerWithEOS(AllenNlpTestCase):
     def test_passes_through_correctly(self):
-        tokenizer = BasicTokenizer()
+        tokenizer = BasicTokenizerWithEOS()
         sentence = "this (sentence) has 'crazy' \"punctuation\"."
         tokens = [t.text for t in tokenizer.tokenize(sentence)]
-        expected_tokens = ["this", "(sentence)", "has", "'crazy'", "\"punctuation\".", "<eof>"]
+        expected_tokens = ["this", "(sentence)", "has", "'crazy'", "\"punctuation\".", "</S>"]
         assert tokens == expected_tokens
 
     def test_batch_tokenization(self):
-        tokenizer = BasicTokenizer()
+        tokenizer = BasicTokenizerWithEOS()
         sentences = ["This is a sentence",
                      "This isn't a sentence.",
                      "This is the 3rd sentence."

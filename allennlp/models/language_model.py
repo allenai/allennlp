@@ -11,8 +11,6 @@ from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, SoftmaxWithNLL
 from allennlp.common.checks import check_dimensions_match
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 
-from ipdb import set_trace
-
 from allennlp.training.metrics.perplexity import Perplexity
 
 @Model.register("word-lm")
@@ -83,9 +81,9 @@ class WordLM(Model):
         if not self.softmax.adaptive and self.softmax.head.weight.size() == self.text_field_embedder.token_embedder_tokens.weight.size():
             self.softmax.head.weight = self.text_field_embedder.token_embedder_tokens.weight
 
-        self.softmax_in = softmax.get_input_dim()
+        self.softmax_input_size = softmax.get_input_dim()
 
-        self.metrics = {"ppl": Perplexity()}
+        self.metrics = {"perplexity": Perplexity()}
 
         check_dimensions_match(text_field_embedder.get_output_dim(), 
             encoder.get_input_dim(), 
@@ -103,17 +101,13 @@ class WordLM(Model):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
         
-    @overrides
     def train(self, mode=True):
         self.encoder.reset_states()
-        self.training = mode
-        for module in self.children():
-            module.train(mode)
-        return self
+        return super().train(mode)
 
-    @overrides
     def eval(self):
-        return self.train(False)
+        self.encoder.reset_states()
+        return super().eval()
 
     @overrides
     def forward(self,  # type: ignore
@@ -124,14 +118,9 @@ class WordLM(Model):
         Parameters
         ----------
         input_tokens : Dict[str, torch.LongTensor], required
-            The output of ``TextField.as_array()``, which should typically be passed directly to a
-            ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
-            tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is: ``{"tokens":
-            Tensor(batch_size, num_tokens)}``. This dictionary will have the same keys as were used
-            for the ``TokenIndexers`` when you created the ``TextField`` representing your
-            sequence.  The dictionary is designed to be passed directly to a ``TextFieldEmbedder``,
-            which knows how to combine different word representations into a single vector per
-            token in your input.
+            The output of ``TextField.as_array()``, which is the input of the language model. Since language
+            models are trained in a teacher forcing manner, their input is usually the 1-st to n-th tokens 
+            and their output is usually the 2-rd to (n+1)-th tokens (n is the sequence length).
         output_tokens : Dict[str, torch.LongTensor], optional
             The expected prediction of the language model. If set to be None, the output would contains
             ```emb_encoder_out```, which is the output of the LMRNNs. Otherwise, the output would be the loss
@@ -141,8 +130,8 @@ class WordLM(Model):
         -------
         An output dictionary consisting of:
         emb_encoder_out : torch.FloatTensor, optional
-            A tensor of shape ``(batch_size, num_tokens, tag_vocab_size)`` representing
-            a distribution of the tag classes per word.
+            A tensor of shape ``(batch_size, num_tokens, softmax_input_size)`` representing the embedding
+            of the predicted next token.
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
 
@@ -153,11 +142,9 @@ class WordLM(Model):
         if self.dropout:
             embedded_text_input = self.dropout(embedded_text_input)
 
-        # set_trace()
         emb_encoder_out = self.encoder(embedded_text_input, 
             embedded_text_input.new_ones((embedded_text_input.size(0), embedded_text_input.size(1))))
 
-        # set_trace()
         if self.after_encoder:
             emb_encoder_out = self.after_encoder(emb_encoder_out)
 

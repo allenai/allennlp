@@ -21,8 +21,6 @@ from allennlp.data import DataIterator, DatasetReader, Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.models import Model, load_archive
 
-from ipdb import set_trace
-
 class WordLMTest(ModelTestCase):
     def setUp(self):
         super().setUp()

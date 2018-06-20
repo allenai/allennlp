@@ -2,7 +2,7 @@
   "dataset_reader": {
     "type": "language_modeling",
     "tokenizer": {
-      "type": "basic"
+      "type": "basic-with-eos"
     },
     "tokens_per_instance": 4
   },

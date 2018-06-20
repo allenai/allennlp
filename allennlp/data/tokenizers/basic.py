@@ -6,8 +6,8 @@ from allennlp.common import Params
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 
-@Tokenizer.register("basic")
-class BasicTokenizer(Tokenizer):
+@Tokenizer.register("basic-with-eos")
+class BasicTokenizerWithEOS(Tokenizer):
     """
     A ``BasicTokenizer`` splits strings of text into tokens by treating space characters as 
     separator, and pad a special EOF token to the end of each sentence. This tokenizer is 
@@ -18,13 +18,13 @@ class BasicTokenizer(Tokenizer):
     @overrides
     def tokenize(self, text: str) -> List[Token]:
         if text and not text.isspace():
-            return [Token(word) for word in text.split()] + [Token("<eof>")]
+            return [Token(word) for word in text.split()] + [Token("</S>")]
         else:
             return []
 
     @overrides
     def batch_tokenize(self, texts: List[str]) -> List[List[Token]]:
-        return [[Token(word) for word in words.split()] + [Token("<eof>")]
+        return [[Token(word) for word in words.split()] + [Token("</S>")]
          if words and not words.isspace() else [] for words in texts]
 
     @classmethod
