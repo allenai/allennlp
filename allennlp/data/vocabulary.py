@@ -11,11 +11,12 @@ import os
 import gzip
 
 from allennlp.common.util import namespace_match
-from allennlp.common.params import Params
+from allennlp.common import Params, Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.tqdm import Tqdm
 from allennlp.data import instance as adi  # pylint: disable=unused-import
+
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -101,7 +102,17 @@ def _read_pretrained_words(embeddings_filename: str)-> Set[str]:
     return words
 
 
-class Vocabulary:
+class RegistrableVocabulary(Registrable):
+    default_implementation = "vocabulary"
+
+    @classmethod
+    def from_params(cls, params: Params, instances: Iterable['adi.Instance'] = None):
+        choice = params.pop_choice('type', cls.list_available())
+        return cls.by_name(choice).from_params(params, instances)
+
+
+@RegistrableVocabulary.register("vocabulary")
+class Vocabulary(RegistrableVocabulary):
     """
     A Vocabulary maps strings to integers, allowing for strings to be mapped to an
     out-of-vocabulary token.
