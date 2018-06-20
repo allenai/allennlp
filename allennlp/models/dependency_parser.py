@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 from overrides import overrides
 import torch
@@ -130,13 +130,69 @@ class DependencyParser(Model):
         minus_inf = -1e8
         minus_mask = (1 - float_mask) * minus_inf
         attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
+
+        # up to here is needed by everything.
+        # Now, 3 branches:
+        # 1. Loss
+        # 2. Greedy decoding.
+        # 3. MST decoding.
+
+        has_gold_labels = head_indices is not None and head_tags is not None
+        if self.training and has_gold_labels:
+            arc_nll, type_nll = self._construct_loss(head_type_representation,
+                                                    child_type_representation,
+                                                    attended_arcs,
+                                                    head_indices,
+                                                    head_tags,
+                                                    mask)
+
+        elif not self.training and has_gold_labels:
+
+            if self.use_mst_decoding_for_validation:
+                pass
+            
+            else:
+                pass
+            # compute accuracy
+        
+        elif not has_gold_labels:
+
+            if self.use_mst_decoding_for_validation:
+                pass
+
+            else:
+                pass
+
+        
+
+
+        output_dict = {
+                "arc_loss": arc_nll,
+                "type_loss": type_nll,
+                "loss": arc_nll + type_nll,
+                #"arc_logits": normalised_arc_logits,
+                #"head_type_logits": normalised_head_type_logits,
+                "mask": mask
+                }
+
+        return output_dict
+
+
+    def _construct_loss(self,
+                        head_type_representation,
+                        child_type_representation,
+                        attended_arcs,
+                        head_indices,
+                        head_tags,
+                        mask) -> Tuple[torch.Tensor, torch.Tensor]:
+        
+        float_mask = mask.float()
+        batch_size, timesteps, _ = attended_arcs.size()
+        range_vector = get_range_vector(batch_size, get_device_of(attended_arcs))
         # shape (batch_size, timesteps, timesteps)
         normalised_arc_logits = last_dim_log_softmax(attended_arcs,
                                                      mask) * float_mask.unsqueeze(2) * float_mask.unsqueeze(1)
 
-        # TODO this is wrong (needs zeroed out diag + mask)
-        if head_indices is None:
-            _, head_indices = normalised_arc_logits.max(-1)
 
         # shape (batch_size, timesteps, num_head_tags)
         head_type_logits = self._get_head_types(head_type_representation, child_type_representation, head_indices)
@@ -149,7 +205,8 @@ class DependencyParser(Model):
         # shape (timesteps, batch_size)
         arc_loss = normalised_arc_logits[range_vector, child_index, head_indices.data.t()]
         type_loss = normalised_head_type_logits[range_vector, child_index, head_tags.data.t()]
-        # We don't care about predictions for the ROOT token, so we remove it from the loss.
+        # We don't care about predictions for the ROOT token,
+        # so we remove it from the loss.
         arc_loss = arc_loss[1:, :]
         type_loss = type_loss[1:, :]
 
@@ -160,16 +217,9 @@ class DependencyParser(Model):
         arc_nll = -arc_loss.sum() / valid_positions.float()
         type_nll = -type_loss.sum() / valid_positions.float()
 
-        output_dict = {
-                "arc_loss": arc_nll,
-                "type_loss": type_nll,
-                "loss": arc_nll + type_nll,
-                "arc_logits": normalised_arc_logits,
-                "head_type_logits": normalised_head_type_logits,
-                "mask": mask
-                }
+        return arc_nll, type_nll
 
-        return output_dict
+
 
     def _get_head_types(self,
                         head_type_representation: torch.Tensor,
