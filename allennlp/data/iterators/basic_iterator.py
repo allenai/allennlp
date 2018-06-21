@@ -152,14 +152,16 @@ class BasicIterator(DataIterator):
 
                     if padding_length * len(list_batch_instances) > limit:
                         # need to shrink
-                        shrunk_batch_size = max(limit // padding_length, 1)
+                        num_samples = padding_length * len(list_batch_instances)
+                        num_shrunk_batches = math.ceil(num_samples / float(limit))
+                        shrunk_batch_size = math.ceil(len(list_batch_instances) / num_shrunk_batches)
                         start = 0
                         while start < len(list_batch_instances):
                             end = start + shrunk_batch_size
                             yield Batch(list_batch_instances[start:end])
                             start = end
                     else:
-                        Batch(batch_instances)
+                        yield Batch(batch_instances)
                 else:
                     yield Batch(batch_instances)
 
