@@ -49,11 +49,12 @@ class TestElmoCommand(ElmoTestCase):
         expected_embedding = embedder.embed_sentence(sentence.split())
 
         with h5py.File(self.output_path, 'r') as h5py_file:
-            assert list(h5py_file.keys()) == ["0"]
+            assert set(h5py_file.keys()) == {"0", "sentence_to_index"}
             # The vectors in the test configuration are smaller (32 length)
             embedding = h5py_file.get("0")
             assert embedding.shape == (3, len(sentence.split()), 32)
             numpy.testing.assert_allclose(embedding, expected_embedding, rtol=1e-4)
+            assert json.loads(h5py_file.get("sentence_to_index")[0]) == {sentence: "0"}
 
     def test_top_embedding_works(self):
         sentence = "Michael went to the store to buy some eggs ."
@@ -78,11 +79,12 @@ class TestElmoCommand(ElmoTestCase):
         expected_embedding = embedder.embed_sentence(sentence.split())[2]
 
         with h5py.File(self.output_path, 'r') as h5py_file:
-            assert list(h5py_file.keys()) == ["0"]
+            assert set(h5py_file.keys()) == {"0", "sentence_to_index"}
             # The vectors in the test configuration are smaller (32 length)
             embedding = h5py_file.get("0")
             assert embedding.shape == (len(sentence.split()), 32)
             numpy.testing.assert_allclose(embedding, expected_embedding, rtol=1e-4)
+            assert json.loads(h5py_file.get("sentence_to_index")[0]) == {sentence: "0"}
 
     def test_average_embedding_works(self):
         sentence = "Michael went to the store to buy some eggs ."
@@ -108,16 +110,19 @@ class TestElmoCommand(ElmoTestCase):
         expected_embedding = (expected_embedding[0] + expected_embedding[1] + expected_embedding[2]) / 3
 
         with h5py.File(self.output_path, 'r') as h5py_file:
-            assert list(h5py_file.keys()) == ["0"]
+            assert set(h5py_file.keys()) == {"0", "sentence_to_index"}
             # The vectors in the test configuration are smaller (32 length)
             embedding = h5py_file.get("0")
             assert embedding.shape == (len(sentence.split()), 32)
             numpy.testing.assert_allclose(embedding, expected_embedding, rtol=1e-4)
+            assert json.loads(h5py_file.get("sentence_to_index")[0]) == {sentence: "0"}
 
     def test_batch_embedding_works(self):
         sentences = [
                 "Michael went to the store to buy some eggs .",
-                "Joel rolled down the street on his skateboard ."
+                "Joel rolled down the street on his skateboard .",
+                "test / this is a first sentence",
+                "Take a look , then , at Tuesday 's elections in New York City , New Jersey and Virginia :"
         ]
 
         with open(self.sentences_path, 'w') as f:
@@ -139,10 +144,12 @@ class TestElmoCommand(ElmoTestCase):
         assert os.path.exists(self.output_path)
 
         with h5py.File(self.output_path, 'r') as h5py_file:
-            assert set(h5py_file.keys()) == {"0", "1"}
+            assert set(h5py_file.keys()) == {"0", "1", "2", "3", "sentence_to_index"}
             # The vectors in the test configuration are smaller (32 length)
-            for sentence_id, sentence in zip(["0", "1"], sentences):
+            for sentence_id, sentence in zip(["0", "1", "2", "3"], sentences):
                 assert h5py_file.get(sentence_id).shape == (3, len(sentence.split()), 32)
+            assert (json.loads(h5py_file.get("sentence_to_index")[0]) ==
+                    {sentences[i]: str(i) for i in range(len(sentences))})
 
     def test_batch_embedding_works_with_sentences_as_keys(self):
         sentences = [
@@ -174,7 +181,7 @@ class TestElmoCommand(ElmoTestCase):
             for sentence in sentences:
                 assert h5py_file.get(sentence).shape == (3, len(sentence.split()), 32)
 
-    def test_batch_embedding_works_with_include_sentence_indices(self):
+    def test_batch_embedding_works_with_forget_sentences(self):
         sentences = [
                 "Michael went to the store to buy some eggs .",
                 "Joel rolled down the street on his skateboard .",
@@ -195,20 +202,17 @@ class TestElmoCommand(ElmoTestCase):
                     self.options_file,
                     "--weight-file",
                     self.weight_file,
-                    "--include-sentence-indices"]
+                    "--forget-sentences"]
 
         main()
 
         assert os.path.exists(self.output_path)
 
         with h5py.File(self.output_path, 'r') as h5py_file:
-            assert set(h5py_file.keys()) == {"0", "1", "2", "3", "sentence_to_index"}
+            assert set(h5py_file.keys()) == {"0", "1", "2", "3"}
             # The vectors in the test configuration are smaller (32 length)
             for sentence_id, sentence in zip(["0", "1", "2", "3"], sentences):
                 assert h5py_file.get(sentence_id).shape == (3, len(sentence.split()), 32)
-            # Test that sentence_to_index is correct
-            assert (json.loads(h5py_file.get("sentence_to_index")[0]) ==
-                    {sentences[i]: str(i) for i in range(len(sentences))})
 
     def test_duplicate_sentences(self):
         sentences = [
@@ -235,8 +239,8 @@ class TestElmoCommand(ElmoTestCase):
         assert os.path.exists(self.output_path)
 
         with h5py.File(self.output_path, 'r') as h5py_file:
-            assert len(h5py_file.keys()) == 2
-            assert set(h5py_file.keys()) == {"0", "1"}
+            assert len(h5py_file.keys()) == 3
+            assert set(h5py_file.keys()) == {"0", "1", "sentence_to_index"}
             # The vectors in the test configuration are smaller (32 length)
             for sentence_id, sentence in zip(["0", "1"], sentences):
                 assert h5py_file.get(sentence_id).shape == (3, len(sentence.split()), 32)

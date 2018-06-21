@@ -17,7 +17,7 @@ https://arxiv.org/abs/1802.05365
    usage: allennlp elmo [-h] (--all | --top | --average)
                         [--vocab-path VOCAB_PATH] [--options-file OPTIONS_FILE]
                         [--weight-file WEIGHT_FILE] [--batch-size BATCH_SIZE]
-                        [--cuda-device CUDA_DEVICE] [--include-sentence-indices]
+                        [--cuda-device CUDA_DEVICE] [--forget-sentences]
                         [--use-sentence-keys] [--include-package INCLUDE_PACKAGE]
                         input_file output_file
 
@@ -42,14 +42,11 @@ https://arxiv.org/abs/1802.05365
                            The batch size to use.
      --cuda-device CUDA_DEVICE
                            The cuda_device to run on.
-     --include-sentence-indices
-                           If this flag is specified, and --use-sentence-keys is
-                           not, we include a string serialized JSON dictionary
-                           that associates sentences with their line number (its
-                           HDF5 key). The mapping is placed in the
-                           "sentence_to_index" HDF5 key. This is useful if you
-                           want to use the embeddings without keeping the
-                           original file of sentences around.
+     --forget-sentences    If this flag is specified, and --use-sentence-keys is
+                           not, remove the string serialized JSON dictionary that
+                           associates sentences with their line number (its HDF5
+                           key) that is normally placed in the
+                           "sentence_to_index" HDF5 key.
      --use-sentence-keys   Normally a sentence's line number is used as the HDF5
                            key for its embedding. If this flag is specified, the
                            sentence itself will be used as the key.
@@ -121,14 +118,13 @@ class Elmo(Subcommand):
         subparser.add_argument('--batch-size', type=int, default=DEFAULT_BATCH_SIZE, help='The batch size to use.')
         subparser.add_argument('--cuda-device', type=int, default=-1, help='The cuda_device to run on.')
         subparser.add_argument(
-                '--include-sentence-indices',
+                '--forget-sentences',
                 action='store_true',
-                help="If this flag is specified, and --use-sentence-keys is not, "
-                     "we include a string serialized JSON dictionary that associates "
-                     "sentences with their line number (its HDF5 key). The mapping is "
-                     "placed in the \"sentence_to_index\" HDF5 key. This is useful if "
-                     "you want to use the embeddings without keeping the original file "
-                     "of sentences around.")
+                help="If this flag is specified, and --use-sentence-keys is "
+                     "not, remove the string serialized JSON dictionary "
+                     "that associates sentences with their line number (its "
+                     "HDF5 key) that is normally placed in the "
+                     "\"sentence_to_index\" HDF5 key.")
         subparser.add_argument(
                 '--use-sentence-keys',
                 action='store_true',
@@ -279,7 +275,7 @@ class ElmoEmbedder():
                    output_file_path: str,
                    output_format: str = "all",
                    batch_size: int = DEFAULT_BATCH_SIZE,
-                   include_sentence_indices: bool = False,
+                   forget_sentences: bool = False,
                    use_sentence_keys: bool = False) -> None:
         """
         Computes ELMo embeddings from an input_file where each line contains a sentence tokenized by whitespace.
@@ -296,7 +292,7 @@ class ElmoEmbedder():
             The embeddings to output.  Must be one of "all", "top", or "average".
         batch_size : ``int``, optional, (default = 64)
             The number of sentences to process in ELMo at one time.
-        include_sentence_indices : ``bool``, optional, (default = False).
+        forget_sentences : ``bool``, optional, (default = False).
             If use_sentence_keys is False, whether or not to include a string
             serialized JSON dictionary that associates sentences with their
             line number (its HDF5 key). The mapping is placed in the
@@ -337,7 +333,7 @@ class ElmoEmbedder():
                                              f"To encode duplicate sentences, do not pass "
                                              f"the --use-sentence-keys flag.")
 
-                if include_sentence_indices and not use_sentence_keys:
+                if not forget_sentences and not use_sentence_keys:
                     sentence = sentences[int(key)]
                     sentence_to_index[sentence] = key
 
@@ -353,7 +349,7 @@ class ElmoEmbedder():
                         output.shape, dtype='float32',
                         data=output
                 )
-            if include_sentence_indices and not use_sentence_keys:
+            if not forget_sentences and not use_sentence_keys:
                 sentence_index_dataset = fout.create_dataset(
                         "sentence_to_index",
                         (1,),
@@ -378,5 +374,5 @@ def elmo_command(args):
                 args.output_file,
                 output_format,
                 args.batch_size,
-                args.include_sentence_indices,
+                args.forget_sentences,
                 args.use_sentence_keys)
