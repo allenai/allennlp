@@ -9,7 +9,9 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
 import numpy
+import pytest
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.commands import main
 from allennlp.commands.elmo import ElmoEmbedder
 from allennlp.tests.modules.elmo_test import ElmoTestCase
@@ -45,9 +47,9 @@ class TestElmoCommand(ElmoTestCase):
         expected_embedding = embedder.embed_sentence(sentence.split())
 
         with h5py.File(self.output_path, 'r') as h5py_file:
-            assert list(h5py_file.keys()) == [sentence]
+            assert list(h5py_file.keys()) == ["0"]
             # The vectors in the test configuration are smaller (32 length)
-            embedding = h5py_file.get(sentence)
+            embedding = h5py_file.get("0")
             assert embedding.shape == (3, len(sentence.split()), 32)
             numpy.testing.assert_allclose(embedding, expected_embedding, rtol=1e-4)
 
@@ -74,9 +76,9 @@ class TestElmoCommand(ElmoTestCase):
         expected_embedding = embedder.embed_sentence(sentence.split())[2]
 
         with h5py.File(self.output_path, 'r') as h5py_file:
-            assert list(h5py_file.keys()) == [sentence]
+            assert list(h5py_file.keys()) == ["0"]
             # The vectors in the test configuration are smaller (32 length)
-            embedding = h5py_file.get(sentence)
+            embedding = h5py_file.get("0")
             assert embedding.shape == (len(sentence.split()), 32)
             numpy.testing.assert_allclose(embedding, expected_embedding, rtol=1e-4)
 
@@ -104,9 +106,9 @@ class TestElmoCommand(ElmoTestCase):
         expected_embedding = (expected_embedding[0] + expected_embedding[1] + expected_embedding[2]) / 3
 
         with h5py.File(self.output_path, 'r') as h5py_file:
-            assert list(h5py_file.keys()) == [sentence]
+            assert list(h5py_file.keys()) == ["0"]
             # The vectors in the test configuration are smaller (32 length)
-            embedding = h5py_file.get(sentence)
+            embedding = h5py_file.get("0")
             assert embedding.shape == (len(sentence.split()), 32)
             numpy.testing.assert_allclose(embedding, expected_embedding, rtol=1e-4)
 
@@ -130,6 +132,36 @@ class TestElmoCommand(ElmoTestCase):
                     "--weight-file",
                     self.weight_file]
 
+        main()
+
+        assert os.path.exists(self.output_path)
+
+        with h5py.File(self.output_path, 'r') as h5py_file:
+            assert set(h5py_file.keys()) == {"0", "1"}
+            # The vectors in the test configuration are smaller (32 length)
+            for sentence_id, sentence in zip(["0", "1"], sentences):
+                assert h5py_file.get(sentence_id).shape == (3, len(sentence.split()), 32)
+
+    def test_batch_embedding_works_with_sentences_as_keys(self):
+        sentences = [
+                "Michael went to the store to buy some eggs .",
+                "Joel rolled down the street on his skateboard ."
+        ]
+
+        with open(self.sentences_path, 'w') as f:
+            for line in sentences:
+                f.write(line + '\n')
+
+        sys.argv = ["run.py",  # executable
+                    "elmo",  # command
+                    self.sentences_path,
+                    self.output_path,
+                    "--all",
+                    "--options-file",
+                    self.options_file,
+                    "--weight-file",
+                    self.weight_file,
+                    "--use-sentence-keys"]
         main()
 
         assert os.path.exists(self.output_path)
@@ -165,13 +197,13 @@ class TestElmoCommand(ElmoTestCase):
         assert os.path.exists(self.output_path)
 
         with h5py.File(self.output_path, 'r') as h5py_file:
-            assert len(h5py_file.keys()) == 1
-            assert set(h5py_file.keys()) == set(sentences)
+            assert len(h5py_file.keys()) == 2
+            assert set(h5py_file.keys()) == {"0", "1"}
             # The vectors in the test configuration are smaller (32 length)
-            for sentence in set(sentences):
-                assert h5py_file.get(sentence).shape == (3, len(sentence.split()), 32)
+            for sentence_id, sentence in zip(["0", "1"], sentences):
+                assert h5py_file.get(sentence_id).shape == (3, len(sentence.split()), 32)
 
-    def test_empty_sentences_are_filtered(self):
+    def test_empty_sentences_raise_errors(self):
         sentences = [
                 "A",
                 "",
@@ -192,14 +224,8 @@ class TestElmoCommand(ElmoTestCase):
                     self.options_file,
                     "--weight-file",
                     self.weight_file]
-
-        main()
-
-        assert os.path.exists(self.output_path)
-
-        with h5py.File(self.output_path, 'r') as h5py_file:
-            assert len(h5py_file.keys()) == 2
-            assert set(h5py_file.keys()) == set(["A", "B"])
+        with pytest.raises(ConfigurationError):
+            main()
 
 
 class TestElmoEmbedder(ElmoTestCase):
