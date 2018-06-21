@@ -1,6 +1,10 @@
 # pylint: disable=no-self-use,invalid-name,bad-continuation
+import json
 import os
+import re
 import tempfile
+
+import pytest
 
 from allennlp.common.params import Params, unflatten, with_fallback, parse_overrides
 from allennlp.common.testing import AllenNlpTestCase
@@ -111,6 +115,100 @@ class TestParams(AllenNlpTestCase):
         }).as_flat_dict()
 
         assert params == {'a': 10, 'b.c': 20, 'b.d': 'stuff'}
+
+    def test_jsonnet_features(self):
+        config_file = self.TEST_DIR / 'config.jsonnet'
+        with open(config_file, 'w') as f:
+            f.write("""{
+                            // This example is copied straight from the jsonnet docs
+                            person1: {
+                                name: "Alice",
+                                welcome: "Hello " + self.name + "!",
+                            },
+                            person2: self.person1 { name: "Bob" },
+                        }""")
+
+        params = Params.from_file(config_file)
+
+        alice = params.pop("person1")
+        bob = params.pop("person2")
+
+        assert alice.as_dict() == {"name": "Alice", "welcome": "Hello Alice!"}
+        assert bob.as_dict() == {"name": "Bob", "welcome": "Hello Bob!"}
+
+        params.assert_empty("TestParams")
+
+
+    def test_regexes_with_backslashes(self):
+        bad_regex = self.TEST_DIR / 'bad_regex.jsonnet'
+        good_regex = self.TEST_DIR / 'good_regex.jsonnet'
+
+        with open(bad_regex, 'w') as f:
+            f.write(r'{"myRegex": "a\.b"}')
+
+        with open(good_regex, 'w') as f:
+            f.write(r'{"myRegex": "a\\.b"}')
+
+        with pytest.raises(RuntimeError):
+            Params.from_file(bad_regex)
+
+        params = Params.from_file(good_regex)
+        regex = params['myRegex']
+
+        assert re.match(regex, "a.b")
+        assert not re.match(regex, "a-b")
+
+        # Check roundtripping
+        good_regex2 = self.TEST_DIR / 'good_regex2.jsonnet'
+        with open(good_regex2, 'w') as f:
+            f.write(json.dumps(params.as_dict()))
+        params2 = Params.from_file(good_regex2)
+
+        assert params.as_dict() == params2.as_dict()
+
+    def test_env_var_substitution(self):
+        substitutor = self.TEST_DIR / 'substitutor.jsonnet'
+        key = 'TEST_ENV_VAR_SUBSTITUTION'
+
+        assert os.environ.get(key) is None
+
+        with open(substitutor, 'w') as f:
+            f.write(f'{{"path": std.extVar("{key}")}}')
+
+        # raises without environment variable set
+        with pytest.raises(RuntimeError):
+            Params.from_file(substitutor)
+
+        os.environ[key] = "PERFECT"
+
+        params = Params.from_file(substitutor)
+        assert params['path'] == "PERFECT"
+
+        del os.environ[key]
+
+    def test_known_configs(self):
+        configs = os.listdir(self.PROJECT_ROOT / "training_config")
+
+        forced_variables = [
+            # constituency parser
+            'PTB_TRAIN_PATH', 'PTB_DEV_PATH', 'PTB_TEST_PATH',
+
+            # srl_elmo_5.5B
+            'SRL_TRAIN_DATA_PATH', 'SRL_VALIDATION_DATA_PATH'
+        ]
+
+        for var in forced_variables:
+            os.environ[var] = os.environ.get(var) or str(self.TEST_DIR)
+
+        for config in configs:
+            try:
+                Params.from_file(self.PROJECT_ROOT / "training_config" / config)
+            except Exception as e:
+                raise AssertionError(f"unable to load params for {config}, because {e}")
+
+        for var in forced_variables:
+            if os.environ[var] == str(self.TEST_DIR):
+                del os.environ[var]
 
     def test_add_file_to_archive(self):
         # Creates actual files since add_file_to_archive will throw an exception

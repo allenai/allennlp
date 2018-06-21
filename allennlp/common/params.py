@@ -9,6 +9,7 @@ from collections import MutableMapping
 import copy
 import json
 import logging
+import os
 
 from overrides import overrides
 import _jsonnet
@@ -75,7 +76,8 @@ def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[s
 
 def parse_overrides(serialized_overrides: str) -> Dict[str, Any]:
     if serialized_overrides:
-        return unflatten(json.loads(_jsonnet.evaluate_snippet("", serialized_overrides)))
+        ext_vars = dict(os.environ)
+        return unflatten(json.loads(_jsonnet.evaluate_snippet("", serialized_overrides, ext_vars=ext_vars)))
     else:
         return {}
 
@@ -343,8 +345,9 @@ class Params(MutableMapping):
         """
         # redirect to cache, if necessary
         params_file = cached_path(params_file)
+        ext_vars = dict(os.environ)
 
-        file_dict = json.loads(_jsonnet.evaluate_file(params_file))
+        file_dict = json.loads(_jsonnet.evaluate_file(params_file, ext_vars=ext_vars))
 
         overrides_dict = parse_overrides(params_overrides)
         param_dict = with_fallback(preferred=overrides_dict, fallback=file_dict)
