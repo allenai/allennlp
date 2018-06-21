@@ -204,7 +204,7 @@ class TestElmoCommand(ElmoTestCase):
         with h5py.File(self.output_path, 'r') as h5py_file:
             assert set(h5py_file.keys()) == {"0", "1", "2", "3", "sentence_to_index"}
             # The vectors in the test configuration are smaller (32 length)
-            for sentence_id, sentence in zip(["0", "1", "2"], sentences):
+            for sentence_id, sentence in zip(["0", "1", "2", "3"], sentences):
                 assert h5py_file.get(sentence_id).shape == (3, len(sentence.split()), 32)
             # Test that sentence_to_index is correct
             assert (json.loads(h5py_file.get("sentence_to_index")[0]) ==
