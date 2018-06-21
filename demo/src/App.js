@@ -8,6 +8,8 @@ import CorefComponent from './components/CorefComponent'
 import NamedEntityComponent from './components/NamedEntityComponent'
 import ConstituencyParserComponent from './components/ConstituencyParserComponent'
 import Menu from './components/Menu';
+import ModelIntro from './components/ModelIntro'
+import { PaneTop } from './components/Pane'
 import WaitingForPermalink from './components/WaitingForPermalink'
 
 /*******************************************************************************
@@ -119,6 +121,34 @@ class Demo extends React.Component {
       }
       else if (selectedModel === "constituency-parsing") {
         return (<ConstituencyParserComponent requestData={requestData} responseData={responseData}/>)
+      }
+      else if (selectedModel === "user-models") {
+        const modelRequest = "User Contributed Models"
+        const modelDescription = (
+          <span>
+            <span>
+              AllenNLP is looking to add contributed models implemented using AllenNLP as either library components or demos (with free hosting!).
+              If you have a published result or novel model demonstrating strong performance on a dataset and you are interested
+              in adding your model to a list of publically available implementations, as a service to this demo, or as a component in the library itself,
+              please consider opening an issue on our
+            </span>
+            <a href="https://github.com/allenai/allennlp/issues" target="_blank" rel="noopener noreferrer">{' '} public Github repository </a>
+            <span>
+              or sending us an email at allennlp-contact@allenai.org to discuss what you have in mind.
+            </span>
+          </span>
+      );
+
+        return (
+          <div className="pane__horizontal model">
+            <div className='model__content'>
+              <PaneTop>
+                <ModelIntro title={modelRequest} description={modelDescription}/>
+              </PaneTop>
+              </div>
+          </div>
+
+        )
       }
     }
 

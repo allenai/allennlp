@@ -20,7 +20,7 @@ import argparse
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.service import server_flask as server
-from allennlp.service.predictors import DemoModel
+from allennlp.predictors import DemoModel
 
 # This maps from the name of the task
 # to the ``DemoModel`` indicating the location of the trained model
@@ -34,7 +34,7 @@ DEFAULT_MODELS = {
                 'machine-comprehension'
         ),
         'semantic-role-labeling': DemoModel(
-                'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2018.02.27.tar.gz', # pylint: disable=line-too-long
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2018.05.25.tar.gz', # pylint: disable=line-too-long
                 'semantic-role-labeling'
         ),
         'textual-entailment': DemoModel(

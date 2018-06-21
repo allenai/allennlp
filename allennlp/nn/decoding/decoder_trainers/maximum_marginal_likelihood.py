@@ -54,6 +54,6 @@ class MaximumMarginalLikelihood(DecoderTrainer[Tuple[torch.Tensor, torch.Tensor]
 
         loss = 0
         for instance_states in finished_states.values():
-            scores = [state.score[0] for state in instance_states]
+            scores = [state.score[0].view(-1) for state in instance_states]
             loss += -util.logsumexp(torch.cat(scores))
         return {'loss': loss / len(finished_states)}

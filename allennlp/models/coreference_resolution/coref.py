@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
-from torch.autograd import Variable
 from overrides import overrides
 
 from allennlp.common import Params
@@ -311,17 +310,17 @@ class CoreferenceResolver(Model):
 
         # A tensor of shape (batch_size, num_spans_to_keep, 2), representing
         # the start and end indices of each span.
-        batch_top_spans = output_dict["top_spans"].data.cpu()
+        batch_top_spans = output_dict["top_spans"].detach().cpu()
 
         # A tensor of shape (batch_size, num_spans_to_keep) representing, for each span,
         # the index into ``antecedent_indices`` which specifies the antecedent span. Additionally,
         # the index can be -1, specifying that the span has no predicted antecedent.
-        batch_predicted_antecedents = output_dict["predicted_antecedents"].data.cpu()
+        batch_predicted_antecedents = output_dict["predicted_antecedents"].detach().cpu()
 
         # A tensor of shape (num_spans_to_keep, max_antecedents), representing the indices
         # of the predicted antecedents with respect to the 2nd dimension of ``batch_top_spans``
         # for each antecedent we considered.
-        antecedent_indices = output_dict["antecedent_indices"].data.cpu()
+        antecedent_indices = output_dict["antecedent_indices"].detach().cpu()
         batch_clusters: List[List[List[Tuple[int, int]]]] = []
 
         # Calling zip() on two tensors results in an iterator over their
@@ -344,10 +343,11 @@ class CoreferenceResolver(Model):
                 # most likely antecedent.
                 predicted_index = antecedent_indices[i, predicted_antecedent]
 
-                antecedent_span = (top_spans[predicted_index, 0],
-                                   top_spans[predicted_index, 1])
+                antecedent_span = (top_spans[predicted_index, 0].item(),
+                                   top_spans[predicted_index, 1].item())
+
                 # Check if we've seen the span before.
-                if antecedent_span in spans_to_cluster_ids.keys():
+                if antecedent_span in spans_to_cluster_ids:
                     predicted_cluster_id: int = spans_to_cluster_ids[antecedent_span]
                 else:
                     # We start a new cluster.
@@ -358,7 +358,7 @@ class CoreferenceResolver(Model):
                     spans_to_cluster_ids[antecedent_span] = predicted_cluster_id
 
                 # Now add the span we are currently considering.
-                span_start, span_end = span
+                span_start, span_end = span[0].item(), span[1].item()
                 clusters[predicted_cluster_id].append((span_start, span_end))
                 spans_to_cluster_ids[(span_start, span_end)] = predicted_cluster_id
             batch_clusters.append(clusters)
@@ -576,7 +576,7 @@ class CoreferenceResolver(Model):
 
         # Shape: (batch_size, num_spans_to_keep, 1)
         shape = [antecedent_scores.size(0), antecedent_scores.size(1), 1]
-        dummy_scores = Variable(antecedent_scores.data.new(*shape).fill_(0), requires_grad=False)
+        dummy_scores = antecedent_scores.new_zeros(*shape)
 
         # Shape: (batch_size, num_spans_to_keep, max_antecedents + 1)
         coreference_scores = torch.cat([dummy_scores, antecedent_scores], -1)

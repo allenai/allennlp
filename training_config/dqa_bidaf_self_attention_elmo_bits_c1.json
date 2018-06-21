@@ -16,9 +16,8 @@
      }
     }
   },
-
-  "train_data_path": "/home/my89/dqa/data/train_bits_c1.json",
-  "validation_data_path": "/home/my89/dqa/data/val_bits_c1.json",
+  "train_data_path": "/home/eunsol/Data/dqa/data/train_c1_v.json",
+  "validation_data_path": "/home/eunsol/Data/dqa/data/vv.json",
   "model": {
     "type": "bidaf-self-atten-bits",
     "text_field_embedder": {
@@ -77,7 +76,7 @@
   "iterator": {
     "type": "bucket",
     "sorting_keys": [["passage", "num_tokens"], ["question", "num_tokens"]],
-    "batch_size": 15,
+    "batch_size": 13,
     "max_instances_in_memory": 1500
   },
 

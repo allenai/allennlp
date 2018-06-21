@@ -57,7 +57,7 @@ class DQAReader(DatasetReader):
           if v == "y" : return 0
           if v == "m" : return 1
           if v == "n" : return 2
-
+          if v == "n/a": return 3
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
@@ -71,14 +71,14 @@ class DQAReader(DatasetReader):
                 paragraph = paragraph_json["context"]
                 tokenized_paragraph = self._tokenizer.tokenize(paragraph)
                 for question_answer in paragraph_json['qas']:
-                
                     metadata = {}
-                    question_text = question_answer["question"].strip().replace("\n", "")
+                    question_text = question_answer["question"].strip().replace("\n", "")#.split("CURRQ")[1].strip()
                     answer_texts = [answer['text'] for answer in question_answer['answers']]
                     span_starts = [answer['answer_start'] for answer in question_answer['answers']]
                     span_ends = [start + len(answer) for start, answer in zip(span_starts, answer_texts)]
                     yesno = _encode_yesno(question_answer['yesno'])
                     followup = _encode_followup(question_answer['followup'])
+                    prev_followup = _encode_followup(question_answer.get('prev_followup', 'n/a'))
                     metadata["question"] = question_text
                     metadata["instance_id"] = question_answer['id'] 
                     instance = self.text_to_instance(question_text,
@@ -88,6 +88,7 @@ class DQAReader(DatasetReader):
                                                      tokenized_paragraph,
                                                      yesno,
                                                      followup, 
+                                                     prev_followup,
                                                      metadata)
                     yield instance
 
@@ -100,6 +101,7 @@ class DQAReader(DatasetReader):
                          passage_tokens: List[Token] = None, 
                          yesno: int = None,
                          followup: int = None,
+                         prev_followup: int = None,
                          additional_metadata: Dict[str, Any] = None) -> Instance:
         # pylint: disable=arguments-differ
         if not passage_tokens:
@@ -131,6 +133,7 @@ class DQAReader(DatasetReader):
                                                         answer_texts, 
                                                         yesno,
                                                         followup,
+                                                        prev_followup,
                                                         additional_metadata)
 
     @classmethod

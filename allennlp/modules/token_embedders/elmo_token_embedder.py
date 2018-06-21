@@ -60,7 +60,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
         """
         Parameters
         ----------
-        inputs: ``torch.autograd.Variable``
+        inputs: ``torch.Tensor``
             Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
 
         Returns
@@ -79,8 +79,8 @@ class ElmoTokenEmbedder(TokenEmbedder):
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'ElmoTokenEmbedder':
-        params.add_file_to_archive('options_file')
-        params.add_file_to_archive('weight_file')
+        #params.add_file_to_archive('options_file')
+        #params.add_file_to_archive('weight_file')
         options_file = params.pop('options_file')
         weight_file = params.pop('weight_file')
         requires_grad = params.pop('requires_grad', False)

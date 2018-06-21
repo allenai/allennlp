@@ -14,7 +14,7 @@ https://arxiv.org/abs/1802.05365
 .. code-block:: bash
 
    $ allennlp elmo --help
-   usage: python -m allennlp.run elmo [-h] (--all | --top | --average)
+   usage: allennlp elmo [-h] (--all | --top | --average)
                                       [--vocab-path VOCAB_PATH]
                                       [--options-file OPTIONS_FILE]
                                       [--weight-file WEIGHT_FILE]
@@ -217,7 +217,7 @@ class ElmoEmbedder():
                 if length == 0:
                     elmo_embeddings.append(empty_embedding())
                 else:
-                    elmo_embeddings.append(embeddings[i, :, :length, :].data.cpu().numpy())
+                    elmo_embeddings.append(embeddings[i, :, :length, :].detach().cpu().numpy())
 
         return elmo_embeddings
 
@@ -302,8 +302,10 @@ def elmo_command(args):
         output_format = "top"
     elif args.average:
         output_format = "average"
-    elmo_embedder.embed_file(
-            args.input_file,
-            args.output_file,
-            output_format,
-            args.batch_size)
+
+    with torch.no_grad():
+        elmo_embedder.embed_file(
+                args.input_file,
+                args.output_file,
+                output_format,
+                args.batch_size)
