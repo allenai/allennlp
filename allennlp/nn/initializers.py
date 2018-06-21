@@ -180,22 +180,29 @@ Registrable._registry[Initializer] = {  # pylint: disable=protected-access
 }
 
 
+
 class InitializerApplicator:
     """
     Applies initializers to the parameters of a Module based on regex matches.  Any parameter not
     explicitly matching a regex will not be initialized, instead using whatever the default
     initialization was in the module's code.
     """
-    def __init__(self, initializers: List[Tuple[str, Initializer]] = None) -> None:
+    def __init__(self,
+                 initializers: List[Tuple[str, Initializer]] = None,
+                 prevent_regexes: List[str] = None) -> None:
         """
         Parameters
         ----------
         initializers : ``List[Tuple[str, Initializer]]``, optional (default = [])
             A list mapping parameter regexes to initializers.  We will check each parameter against
             each regex in turn, and apply the initializer paired with the first matching regex, if
-            any.
+            any. If "prevent" is assigned to any regex, then it will override and prevent the matched
+            parameters to be initialzed.
         """
         self._initializers = initializers or []
+        self._prevent_regex = None
+        if prevent_regexes:
+            self._prevent_regex = "(" + ")|(".join(prevent_regexes) + ")"
 
     def __call__(self, module: torch.nn.Module) -> None:
         """
@@ -213,7 +220,8 @@ class InitializerApplicator:
         # Store which initialisers were applied to which parameters.
         for name, parameter in module.named_parameters():
             for initializer_regex, initializer in self._initializers:
-                if re.search(initializer_regex, name):
+                allow = self._prevent_regex is None or not bool(re.search(self._prevent_regex, name))
+                if allow and re.search(initializer_regex, name):
                     logger.info("Initializing %s using %s intitializer", name, initializer_regex)
                     initializer(parameter)
                     unused_regexes.discard(initializer_regex)
@@ -244,6 +252,7 @@ class InitializerApplicator:
                     }
                 ],
                 ["parameter_regex_match2", "uniform"]
+                ["prevent_init_regex", "prevent"]
             ]
 
         where the first item in each tuple is the regex that matches to parameters, and the second
@@ -252,11 +261,15 @@ class InitializerApplicator:
         or dictionaries, in which case they must contain the "type" key, corresponding to the name
         of an initializer.  In addition, they may contain auxiliary named parameters which will be
         fed to the initializer itself. To determine valid auxiliary parameters, please refer to the
-        torch.nn.init documentation.
+        torch.nn.init documentation. Only "prevent" is a special type which does not have corresponding
+        initializer. Any parameter matching its corresponding regex will be overriden to NOT initialize.
 
         Returns
         -------
         An InitializerApplicator containing the specified initializers.
         """
+        is_prevent = lambda item: item == "prevent" or item == {"type": "prevent"}
+        prevent_regexes = [param[0] for param in params if is_prevent(param[1])]
+        params = [param for param in params if param[1] if not is_prevent(param[1])]
         initializers = [(name, Initializer.from_params(init_params)) for name, init_params in params]
-        return InitializerApplicator(initializers)
+        return InitializerApplicator(initializers, prevent_regexes)
