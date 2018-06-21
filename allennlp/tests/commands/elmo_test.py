@@ -1,4 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
+import json
 import os
 import pathlib
 import sys
@@ -171,6 +172,40 @@ class TestElmoCommand(ElmoTestCase):
             # The vectors in the test configuration are smaller (32 length)
             for sentence in sentences:
                 assert h5py_file.get(sentence).shape == (3, len(sentence.split()), 32)
+
+    def test_batch_embedding_works_with_include_sentence_indices(self):
+        sentences = [
+                "Michael went to the store to buy some eggs .",
+                "Joel rolled down the street on his skateboard ."
+        ]
+
+        with open(self.sentences_path, 'w') as f:
+            for line in sentences:
+                f.write(line + '\n')
+
+        sys.argv = ["run.py",  # executable
+                    "elmo",  # command
+                    self.sentences_path,
+                    self.output_path,
+                    "--all",
+                    "--options-file",
+                    self.options_file,
+                    "--weight-file",
+                    self.weight_file,
+                    "--include-sentence-indices"]
+
+        main()
+
+        assert os.path.exists(self.output_path)
+
+        with h5py.File(self.output_path, 'r') as h5py_file:
+            assert set(h5py_file.keys()) == {"0", "1", "sentence_to_index"}
+            # The vectors in the test configuration are smaller (32 length)
+            for sentence_id, sentence in zip(["0", "1"], sentences):
+                assert h5py_file.get(sentence_id).shape == (3, len(sentence.split()), 32)
+            # Test that sentence_to_index is correct
+            assert json.loads(h5py_file.get("sentence_to_index")[0]) == {sentences[0] : "0",
+                                                                         sentences[1] : "1"}
 
     def test_duplicate_sentences(self):
         sentences = [
