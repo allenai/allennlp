@@ -287,7 +287,7 @@ class InitializerApplicator:
         or dictionaries, in which case they must contain the "type" key, corresponding to the name
         of an initializer.  In addition, they may contain auxiliary named parameters which will be
         fed to the initializer itself. To determine valid auxiliary parameters, please refer to the
-        torch.nn.init documentation. "prevent" is a special type which when assigned to a regex, the 
+        torch.nn.init documentation. "prevent" is a special type which when assigned to a regex, the
         matching parameters will be overriden to NOT initialize.
 
         Returns
