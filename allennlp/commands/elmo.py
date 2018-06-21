@@ -355,9 +355,9 @@ class ElmoEmbedder():
                 )
             if include_sentence_indices and not use_sentence_keys:
                 sentence_index_dataset = fout.create_dataset(
-                    "sentence_to_index",
-                    (1,),
-                    dtype=h5py.special_dtype(vlen=str))
+                        "sentence_to_index",
+                        (1,),
+                        dtype=h5py.special_dtype(vlen=str))
                 sentence_index_dataset[0] = json.dumps(sentence_to_index)
 
         input_file.close()
