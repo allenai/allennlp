@@ -18,7 +18,7 @@ each training run.
     optional arguments:
     -h, --help            show this help message and exit
     -o OVERRIDES, --overrides OVERRIDES
-                          a HOCON structure used to override the experiment
+                          a JSON structure used to override the experiment
                           configuration
     --include-package INCLUDE_PACKAGE
                             additional packages to include
@@ -50,7 +50,7 @@ class MakeVocab(Subcommand):
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
-                               help='a HOCON structure used to override the experiment configuration')
+                               help='a JSON structure used to override the experiment configuration')
 
         subparser.set_defaults(func=make_vocab_from_args)
 

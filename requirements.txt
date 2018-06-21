@@ -8,7 +8,7 @@
 torch==0.4.0
 
 # Parameter parsing.
-pyhocon==0.3.35
+jsonnet==0.10.0
 
 # Type checking for python
 typing

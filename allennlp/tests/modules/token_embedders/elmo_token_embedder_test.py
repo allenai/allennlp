@@ -58,7 +58,7 @@ class TestElmoTokenEmbedder(ModelTestCase):
         fta_file = os.path.join(unarchive_dir, 'files_to_archive.json')
         assert os.path.exists(fta_file)
 
-        # Which should properly contain { hocon_key -> original_filename }
+        # Which should properly contain { flattened_key -> original_filename }
         with open(fta_file) as fta:
             files_to_archive = json.loads(fta.read())
 

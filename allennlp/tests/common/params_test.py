@@ -1,8 +1,8 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,bad-continuation
 import os
 import tempfile
 
-from allennlp.common import Params
+from allennlp.common.params import Params, unflatten, with_fallback, parse_overrides
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -21,7 +21,7 @@ class TestParams(AllenNlpTestCase):
     def test_overrides(self):
         filename = self.FIXTURES_ROOT / 'bidaf' / 'experiment.json'
         overrides = '{ "train_data_path": "FOO", "model": { "type": "BAR" },'\
-                    'model.text_field_embedder.tokens.type: "BAZ" }'
+                    '"model.text_field_embedder.tokens.type": "BAZ" }'
         params = Params.from_file(filename, overrides)
 
         assert "dataset_reader" in params
@@ -30,7 +30,76 @@ class TestParams(AllenNlpTestCase):
 
         model_params = params.pop("model")
         assert model_params.pop("type") == "BAR"
-        assert model_params["text_field_embedder.tokens.type"] == "BAZ"
+        assert model_params["text_field_embedder"]["tokens"]["type"] == "BAZ"
+
+    def test_unflatten(self):
+        flattened = {"a.b.c": 1, "a.b.d": 0, "a.e.f.g.h": 2, "b": 3}
+        unflattened = unflatten(flattened)
+        assert unflattened == {
+            "a": {
+                "b": {
+                    "c": 1,
+                    "d": 0
+                },
+                "e": {
+                    "f": {
+                        "g": {
+                            "h": 2
+                        }
+                    }
+                }
+            },
+            "b": 3
+        }
+
+        # should do nothing to a non-flat dictionary
+        assert unflatten(unflattened) == unflattened
+
+    def test_with_fallback(self):
+        preferred = {"a": 1}
+        fallback = {"a": 0, "b": 2}
+
+        merged = with_fallback(preferred=preferred, fallback=fallback)
+        assert merged == {"a": 1, "b": 2}
+
+        # incompatibility is ok
+        preferred = {"a": {"c": 3}}
+        fallback = {"a": 0, "b": 2}
+        merged = with_fallback(preferred=preferred, fallback=fallback)
+        assert merged == {"a": {"c": 3}, "b": 2}
+
+        # goes deep
+        preferred = {"deep": {"a": 1}}
+        fallback = {"deep": {"a": 0, "b": 2}}
+
+        merged = with_fallback(preferred=preferred, fallback=fallback)
+        assert merged == {"deep": {"a": 1, "b": 2}}
+
+    def test_parse_overrides(self):
+        assert parse_overrides("") == {}
+        assert parse_overrides("{}") == {}
+
+        override_dict = parse_overrides('{"train_data": "/train", "trainer.num_epochs": 10}')
+        assert override_dict == {
+            "train_data": "/train",
+            "trainer": {
+                "num_epochs": 10
+            }
+        }
+
+        params = with_fallback(
+            preferred=override_dict,
+            fallback={
+                "train_data": "/test",
+                "model": "bidaf",
+                "trainer": {"num_epochs": 100, "optimizer": "sgd"}
+            })
+
+        assert params == {
+            "train_data": "/train",
+            "model": "bidaf",
+            "trainer": {"num_epochs": 10, "optimizer": "sgd"}
+        }
 
     def test_as_flat_dict(self):
         params = Params({

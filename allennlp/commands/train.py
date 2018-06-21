@@ -23,7 +23,7 @@ which to write the results.
    -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
                            directory in which to save the model and its logs
    -o OVERRIDES, --overrides OVERRIDES
-                           a HOCON structure used to override the experiment
+                           a JSON structure used to override the experiment
                            configuration
    --include-package INCLUDE_PACKAGE
                            additional packages to include
@@ -79,7 +79,7 @@ class Train(Subcommand):
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
-                               help='a HOCON structure used to override the experiment configuration')
+                               help='a JSON structure used to override the experiment configuration')
 
         subparser.add_argument('--file-friendly-logging',
                                action='store_true',
@@ -117,7 +117,7 @@ def train_model_from_file(parameter_filename: str,
         The directory in which to save results and logs. We just pass this along to
         :func:`train_model`.
     overrides : ``str``
-        A HOCON string that we will use to override values in the input parameter file.
+        A JSON string that we will use to override values in the input parameter file.
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we make our output more friendly to saved model files.  We just pass this
         along to :func:`train_model`.

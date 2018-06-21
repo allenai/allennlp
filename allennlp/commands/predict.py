@@ -31,7 +31,7 @@ predictions using a trained model and its :class:`~allennlp.service.predictors.p
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
     -o OVERRIDES, --overrides OVERRIDES
-                            a HOCON structure used to override the experiment
+                            a JSON structure used to override the experiment
                             configuration
     --include-package INCLUDE_PACKAGE
                             additional packages to include
@@ -75,7 +75,7 @@ class Predict(Subcommand):
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
-                               help='a HOCON structure used to override the experiment configuration')
+                               help='a JSON structure used to override the experiment configuration')
 
         subparser.add_argument('--predictor',
                                type=str,

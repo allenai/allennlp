@@ -146,7 +146,7 @@ class Embedding(TokenEmbedder):
         mapping for the things getting embedded here, then you can pass in the ``num_embeddings``
         key directly, and the vocabulary will be ignored.
 
-        In the hocon configuration file, a file containing pretrained embeddings can be specified
+        In the configuration file, a file containing pretrained embeddings can be specified
         using the parameter ``"pretrained_file"``.
         It can be the path to a local file or an URL of a (cached) remote file.
         Two formats are supported:
