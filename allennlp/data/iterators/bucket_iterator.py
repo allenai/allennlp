@@ -54,6 +54,10 @@ class BucketIterator(BasicIterator):
         See :class:`BasicIterator`.
     max_instances_in_memory : int, optional, (default = None)
         See :class:`BasicIterator`.
+    maximum_samples_per_batch : Tuple(padding_key, limit), optional, (default = None)
+        If set, then shrink the batch size for very long sequences such that
+            batch_size * sequence_length <= limit
+        where sequence_length is given by the padding_key
     """
 
     def __init__(self,
@@ -62,7 +66,8 @@ class BucketIterator(BasicIterator):
                  biggest_batch_first: bool = False,
                  batch_size: int = 32,
                  instances_per_epoch: int = None,
-                 max_instances_in_memory: int = None) -> None:
+                 max_instances_in_memory: int = None,
+                 maximum_samples_per_batch: Tuple[str, int] = None) -> None:
         if not sorting_keys:
             raise ConfigurationError("BucketIterator requires sorting_keys to be specified")
 
@@ -71,7 +76,8 @@ class BucketIterator(BasicIterator):
         self._biggest_batch_first = biggest_batch_first
         super(BucketIterator, self).__init__(batch_size=batch_size,
                                              instances_per_epoch=instances_per_epoch,
-                                             max_instances_in_memory=max_instances_in_memory)
+                                             max_instances_in_memory=max_instances_in_memory,
+                                             maximum_samples_per_batch=maximum_samples_per_batch)
 
     @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
@@ -131,10 +137,12 @@ class BucketIterator(BasicIterator):
         batch_size = params.pop_int('batch_size', 32)
         instances_per_epoch = params.pop_int('instances_per_epoch', None)
         max_instances_in_memory = params.pop_int('max_instances_in_memory', None)
+        maximum_samples_per_batch = params.pop("maximum_samples_per_batch", None)
         params.assert_empty(cls.__name__)
         return cls(sorting_keys=sorting_keys,
                    padding_noise=padding_noise,
                    biggest_batch_first=biggest_batch_first,
                    batch_size=batch_size,
                    instances_per_epoch=instances_per_epoch,
-                   max_instances_in_memory=max_instances_in_memory)
+                   max_instances_in_memory=max_instances_in_memory,
+                   maximum_samples_per_batch=maximum_samples_per_batch)

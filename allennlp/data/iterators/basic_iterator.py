@@ -1,4 +1,4 @@
-from typing import Iterable, Dict, Iterator, Optional, List
+from typing import Iterable, Dict, Iterator, Optional, List, Tuple
 import logging
 import math
 import random
@@ -32,14 +32,20 @@ class BasicIterator(DataIterator):
         If specified, the iterator will load this many instances at a time into an
         in-memory list and then produce batches from one such list at a time. This
         could be useful if your instances are read lazily from disk.
+    maximum_samples_per_batch : tuple(padding_key, limit), optional, (default = None)
+        If set, then shrink the batch size for very long sequences such that
+            batch_size * sequence_length <= limit
+        where sequence_length is given by the padding_key
     """
     def __init__(self,
                  batch_size: int = 32,
                  instances_per_epoch: int = None,
-                 max_instances_in_memory: int = None) -> None:
+                 max_instances_in_memory: int = None,
+                 maximum_samples_per_batch: Tuple[str, int] = None) -> None:
         self._batch_size = batch_size
         self._instances_per_epoch = instances_per_epoch
         self._max_instances_in_memory = max_instances_in_memory
+        self._maximum_samples_per_batch = maximum_samples_per_batch
 
         self._cursors: Dict[int, Iterator[Instance]] = {}
 
@@ -130,14 +136,41 @@ class BasicIterator(DataIterator):
             iterator = iter(instance_list)
             # Then break each memory-sized list into batches.
             for batch_instances in lazy_groups_of(iterator, self._batch_size):
-                yield Batch(batch_instances)
+                if self._maximum_samples_per_batch:
+                    # check if we need to break into smaller chunks
+                    key, limit = self._maximum_samples_per_batch
+                    padding_length = -1
+                    list_batch_instances = list(batch_instances)
+                    for instance in list_batch_instances:
+                        field_lengths = instance.get_padding_lengths()
+                        for _, lengths in field_lengths.items():
+                            try:
+                                padding_length = max(padding_length,
+                                                         lengths[key])
+                            except KeyError:
+                                pass
+
+                    if padding_length * len(list_batch_instances) > limit:
+                        # need to shrink
+                        shrunk_batch_size = max(limit // padding_length, 1)
+                        start = 0
+                        while start < len(list_batch_instances):
+                            end = start + shrunk_batch_size
+                            yield Batch(list_batch_instances[start:end])
+                            start = end
+                    else:
+                        Batch(batch_instances)
+                else:
+                    yield Batch(batch_instances)
 
     @classmethod
     def from_params(cls, params: Params) -> 'BasicIterator':
         batch_size = params.pop_int('batch_size', 32)
         instances_per_epoch = params.pop_int('instances_per_epoch', None)
         max_instances_in_memory = params.pop_int('max_instances_in_memory', None)
+        maximum_samples_per_batch = params.pop("maximum_samples_per_batch", None)
         params.assert_empty(cls.__name__)
         return cls(batch_size=batch_size,
                    instances_per_epoch=instances_per_epoch,
-                   max_instances_in_memory=max_instances_in_memory)
+                   max_instances_in_memory=max_instances_in_memory,
+                   maximum_samples_per_batch=maximum_samples_per_batch)
