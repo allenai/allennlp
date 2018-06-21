@@ -179,6 +179,27 @@ Registrable._registry[Initializer] = {  # pylint: disable=protected-access
         "uniform_unit_scaling": _initializer_wrapper(uniform_unit_scaling)
 }
 
+@Initializer.register("prevent")
+class PreventRegexInitializer(Initializer):
+    """
+    Overrides and prevents initializations of the corresponding regex.
+    It can be useful when you have transferred some modules from a pretrained model
+    and want to initialize your whole model except transferred modules marked by provided regex.
+    """
+
+    def __init__(self):
+        # leave tensor as it is. _init_function of this Initializer will never be called.
+        # It is only to pass test: every registered Initializer class must have _init_function
+        self._init_function = lambda tensor: tensor
+
+    def __call__(self, tensor: torch.Tensor) -> None:
+        self._init_function(tensor)
+
+    @classmethod
+    def from_params(cls, params: Params):
+        return cls()
+
+
 
 class InitializerApplicator:
     """
@@ -193,9 +214,22 @@ class InitializerApplicator:
         initializers : ``List[Tuple[str, Initializer]]``, optional (default = [])
             A list mapping parameter regexes to initializers.  We will check each parameter against
             each regex in turn, and apply the initializer paired with the first matching regex, if
-            any.
+            any. If "prevent" is assigned to any regex, then it will override and prevent the matched
+            parameters to be initialzed.
         """
-        self._initializers = initializers or []
+
+        self._initializers: List[Tuple[str, Initializer]] = []
+        initializers = initializers or []
+        self._prevent_regex = None
+        prevent_regexes = []
+        for initializer in initializers:
+            if isinstance(initializer[1], PreventRegexInitializer):
+                prevent_regexes.append(initializer[0])
+            else:
+                self._initializers.append(initializer)
+        if prevent_regexes:
+            self._prevent_regex = "("+")|(".join(prevent_regexes)+")"
+
 
     def __call__(self, module: torch.nn.Module) -> None:
         """
@@ -213,7 +247,8 @@ class InitializerApplicator:
         # Store which initialisers were applied to which parameters.
         for name, parameter in module.named_parameters():
             for initializer_regex, initializer in self._initializers:
-                if re.search(initializer_regex, name):
+                allow = self._prevent_regex is None or not bool(re.search(self._prevent_regex, name))
+                if allow and re.search(initializer_regex, name):
                     logger.info("Initializing %s using %s intitializer", name, initializer_regex)
                     initializer(parameter)
                     unused_regexes.discard(initializer_regex)
@@ -252,7 +287,8 @@ class InitializerApplicator:
         or dictionaries, in which case they must contain the "type" key, corresponding to the name
         of an initializer.  In addition, they may contain auxiliary named parameters which will be
         fed to the initializer itself. To determine valid auxiliary parameters, please refer to the
-        torch.nn.init documentation.
+        torch.nn.init documentation. "prevent" is a special type which when assigned to a regex, the 
+        matching parameters will be overriden to NOT initialize.
 
         Returns
         -------
