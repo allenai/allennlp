@@ -103,7 +103,7 @@ class TestInitializers(AllenNlpTestCase):
         [".*pretrained.*",{"type": "prevent"}]
         ]}
         """
-        params = Params(pyhocon.ConfigFactory.parse_string(json_params))
+        params = Params(json.loads(_jsonnet.evaluate_snippet("", json_params)))
         initializers = InitializerApplicator.from_params(params['initializer'])
         model = Net()
         initializers(model)
