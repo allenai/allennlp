@@ -15,43 +15,50 @@ https://arxiv.org/abs/1802.05365
 
    $ allennlp elmo --help
    usage: allennlp elmo [-h] (--all | --top | --average)
-                       [--vocab-path VOCAB_PATH] [--options-file OPTIONS_FILE]
-                       [--weight-file WEIGHT_FILE] [--batch-size BATCH_SIZE]
-                       [--cuda-device CUDA_DEVICE] [--use-sentence-keys]
-                       [--include-package INCLUDE_PACKAGE]
-                       input_file output_file
+                        [--vocab-path VOCAB_PATH] [--options-file OPTIONS_FILE]
+                        [--weight-file WEIGHT_FILE] [--batch-size BATCH_SIZE]
+                        [--cuda-device CUDA_DEVICE] [--forget-sentences]
+                        [--use-sentence-keys] [--include-package INCLUDE_PACKAGE]
+                        input_file output_file
 
    Create word vectors using ELMo.
 
    positional arguments:
-   input_file            The path to the input file.
-   output_file           The path to the output file.
+     input_file            The path to the input file.
+     output_file           The path to the output file.
 
    optional arguments:
-   -h, --help            show this help message and exit
-   --all                 Output all three ELMo vectors.
-   --top                 Output the top ELMo vector.
-   --average             Output the average of the ELMo vectors.
-   --vocab-path VOCAB_PATH
+     -h, --help            show this help message and exit
+     --all                 Output all three ELMo vectors.
+     --top                 Output the top ELMo vector.
+     --average             Output the average of the ELMo vectors.
+     --vocab-path VOCAB_PATH
                            A path to a vocabulary file to generate.
-   --options-file OPTIONS_FILE
+     --options-file OPTIONS_FILE
                            The path to the ELMo options file.
-   --weight-file WEIGHT_FILE
+     --weight-file WEIGHT_FILE
                            The path to the ELMo weight file.
-   --batch-size BATCH_SIZE
+     --batch-size BATCH_SIZE
                            The batch size to use.
-   --cuda-device CUDA_DEVICE
+     --cuda-device CUDA_DEVICE
                            The cuda_device to run on.
-   --use-sentence-keys   Normally a sentence's line number is used - instead, use the sentence itself.
-   --include-package INCLUDE_PACKAGE
+     --forget-sentences    If this flag is specified, and --use-sentence-keys is
+                           not, remove the string serialized JSON dictionary that
+                           associates sentences with their line number (its HDF5
+                           key) that is normally placed in the
+                           "sentence_to_index" HDF5 key.
+     --use-sentence-keys   Normally a sentence's line number is used as the HDF5
+                           key for its embedding. If this flag is specified, the
+                           sentence itself will be used as the key.
+     --include-package INCLUDE_PACKAGE
                            additional packages to include
 """
 
+import argparse
+import json
 import logging
 from typing import IO, List, Iterable, Tuple
 import warnings
-
-import argparse
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
@@ -110,6 +117,14 @@ class Elmo(Subcommand):
                 help='The path to the ELMo weight file.')
         subparser.add_argument('--batch-size', type=int, default=DEFAULT_BATCH_SIZE, help='The batch size to use.')
         subparser.add_argument('--cuda-device', type=int, default=-1, help='The cuda_device to run on.')
+        subparser.add_argument(
+                '--forget-sentences',
+                action='store_true',
+                help="If this flag is specified, and --use-sentence-keys is "
+                     "not, remove the string serialized JSON dictionary "
+                     "that associates sentences with their line number (its "
+                     "HDF5 key) that is normally placed in the "
+                     "\"sentence_to_index\" HDF5 key.")
         subparser.add_argument(
                 '--use-sentence-keys',
                 action='store_true',
@@ -260,6 +275,7 @@ class ElmoEmbedder():
                    output_file_path: str,
                    output_format: str = "all",
                    batch_size: int = DEFAULT_BATCH_SIZE,
+                   forget_sentences: bool = False,
                    use_sentence_keys: bool = False) -> None:
         """
         Computes ELMo embeddings from an input_file where each line contains a sentence tokenized by whitespace.
@@ -276,6 +292,13 @@ class ElmoEmbedder():
             The embeddings to output.  Must be one of "all", "top", or "average".
         batch_size : ``int``, optional, (default = 64)
             The number of sentences to process in ELMo at one time.
+        forget_sentences : ``bool``, optional, (default = False).
+            If use_sentence_keys is False, whether or not to include a string
+            serialized JSON dictionary that associates sentences with their
+            line number (its HDF5 key). The mapping is placed in the
+            "sentence_to_index" HDF5 key. This is useful if
+            you want to use the embeddings without keeping the original file
+            of sentences around.
         use_sentence_keys : ``bool``, optional, (default = False).
             Whether or not to use full sentences as keys. By default,
             the line numbers of the input file are used as ids, which is more robust.
@@ -301,6 +324,7 @@ class ElmoEmbedder():
             embedded_sentences = ((str(i), x) for i, x in
                                   enumerate(self.embed_sentences(split_sentences, batch_size)))
 
+        sentence_to_index = {}
         logger.info("Processing sentences.")
         with h5py.File(output_file_path, 'w') as fout:
             for key, embeddings in Tqdm.tqdm(embedded_sentences):
@@ -308,6 +332,10 @@ class ElmoEmbedder():
                     raise ConfigurationError(f"Key already exists in {output_file_path}. "
                                              f"To encode duplicate sentences, do not pass "
                                              f"the --use-sentence-keys flag.")
+
+                if not forget_sentences and not use_sentence_keys:
+                    sentence = sentences[int(key)]
+                    sentence_to_index[sentence] = key
 
                 if output_format == "all":
                     output = embeddings
@@ -321,6 +349,13 @@ class ElmoEmbedder():
                         output.shape, dtype='float32',
                         data=output
                 )
+            if not forget_sentences and not use_sentence_keys:
+                sentence_index_dataset = fout.create_dataset(
+                        "sentence_to_index",
+                        (1,),
+                        dtype=h5py.special_dtype(vlen=str))
+                sentence_index_dataset[0] = json.dumps(sentence_to_index)
+
         input_file.close()
 
 def elmo_command(args):
@@ -339,4 +374,5 @@ def elmo_command(args):
                 args.output_file,
                 output_format,
                 args.batch_size,
+                args.forget_sentences,
                 args.use_sentence_keys)

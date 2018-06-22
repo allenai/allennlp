@@ -22,7 +22,12 @@ echo "Bitcoin alone has a sixty percent share of global search ." >> sentences.t
 allennlp elmo sentences.txt elmo_layers.hdf5 --all
 ```
 
-For more details, see `allennlp elmo -h`.
+If you'd like to use the ELMo embeddings without keeping the original dataset of
+sentences around, using the `--include-sentence-indices` flag will write a
+JSON-serialized string with a mapping from sentences to line indices to the
+`"sentence_indices"` key.
+
+For more details, see `allennlp elmo -h`. 
 
 ## Using ELMo programmatically
 
