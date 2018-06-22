@@ -4,9 +4,9 @@ Now that we know how to train and evaluate models,
 let's take a deeper look at our experiment configuration file,
 [tutorials/getting_started/simple_tagger.json](https://github.com/allenai/allennlp/blob/master/tutorials/getting_started/simple_tagger.json).
 
-The configuration is a [HOCON](https://github.com/typesafehub/config/blob/master/HOCON.md) file
+The configuration is a [Jsonnet](https://jsonnet.org/) file
 that defines all the parameters for our experiment and model. Don't worry if you're not familiar
-with HOCON, any JSON file is valid HOCON; indeed, the configuration file we use in this tutorial
+with Jsonnet, any JSON file is valid Jsonnet; indeed, the configuration file we use in this tutorial
 is just JSON.
 
 In this tutorial we'll go through

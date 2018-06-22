@@ -1,11 +1,12 @@
 # pylint: disable=no-self-use, invalid-name
+import json
 import logging
 import math
 
 import numpy
 import pytest
-import pyhocon
 import torch
+import _jsonnet
 
 from allennlp.nn import InitializerApplicator
 from allennlp.nn.initializers import block_orthogonal, uniform_unit_scaling
@@ -33,14 +34,13 @@ class TestInitializers(AllenNlpTestCase):
             def forward(self, inputs):  # pylint: disable=arguments-differ
                 pass
 
-        # pyhocon does funny things if there's a . in a key.  This test makes sure that we
-        # handle these kinds of regexes correctly.
+        # Make sure we handle regexes properly
         json_params = """{"initializer": [
         ["conv", {"type": "constant", "val": 5}],
         ["funky_na.*bi", {"type": "constant", "val": 7}]
         ]}
         """
-        params = Params(pyhocon.ConfigFactory.parse_string(json_params))
+        params = Params(json.loads(_jsonnet.evaluate_snippet("", json_params)))
         initializers = InitializerApplicator.from_params(params['initializer'])
         model = Net()
         initializers(model)
@@ -103,7 +103,7 @@ class TestInitializers(AllenNlpTestCase):
         [".*pretrained.*",{"type": "prevent"}]
         ]}
         """
-        params = Params(pyhocon.ConfigFactory.parse_string(json_params))
+        params = Params(json.loads(_jsonnet.evaluate_snippet("", json_params)))
         initializers = InitializerApplicator.from_params(params['initializer'])
         model = Net()
         initializers(model)

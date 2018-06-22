@@ -11,7 +11,7 @@ In particular, we will train a model on 4000 randomly chosen sentences (`sentenc
 as the validation set (`sentences.small.dev`).
 
 One of the key design principles behind AllenNLP is that
-you configure experiments using JSON files. (More specifically, [HOCON](https://github.com/typesafehub/config/blob/master/HOCON.md) files.)
+you configure experiments using JSON files. (More specifically, [Jsonnet](https://jsonnet.org/) files.)
 
 Our tagging experiment is defined in
 [tutorials/getting_started/simple_tagger.json](https://github.com/allenai/allennlp/blob/master/tutorials/getting_started/simple_tagger.json).
