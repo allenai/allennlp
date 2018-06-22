@@ -6,7 +6,6 @@ from typing import Callable, Dict, List, Set
 import editdistance
 from overrides import overrides
 import torch
-from torch.autograd import Variable
 
 from allennlp.common import util
 from allennlp.common.checks import ConfigurationError
@@ -112,7 +111,8 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
         self._indexed_entity_texts: Dict[str, TokenList] = None
         self._max_table_tokens = max_table_tokens
 
-        feature_extractors = feature_extractors or [
+        feature_extractors = feature_extractors if feature_extractors is not None else [
+                'number_token_match',
                 'exact_token_match',
                 'contains_exact_token_match',
                 'lemma_match',
@@ -121,6 +121,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                 'related_column',
                 'related_column_lemma',
                 'span_overlap_fraction',
+                'span_lemma_overlap_fraction',
                 ]
         self._feature_extractors: List[Callable[[str, List[Token], Token, int, List[Token]], float]] = []
         for feature_extractor_name in feature_extractors:
@@ -205,8 +206,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
     @overrides
     def as_tensor(self,
                   padding_lengths: Dict[str, int],
-                  cuda_device: int = -1,
-                  for_training: bool = True) -> Dict[str, torch.Tensor]:
+                  cuda_device: int = -1) -> Dict[str, torch.Tensor]:
         tensors = {}
         desired_num_entities = padding_lengths['num_entities']
         desired_num_entity_tokens = padding_lengths['num_entity_tokens']
@@ -221,7 +221,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                                                           desired_num_entity_tokens,
                                                           padding_lengths)
                 padded_arrays.append(padded_array)
-            tensor = Variable(torch.LongTensor(padded_arrays), volatile=not for_training)
+            tensor = torch.LongTensor(padded_arrays)
             tensors[indexer_name] = tensor if cuda_device == -1 else tensor.cuda(cuda_device)
         padded_linking_features = util.pad_sequence_to_length(self.linking_features,
                                                               desired_num_entities,
@@ -233,8 +233,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                                                           desired_num_utterance_tokens,
                                                           default_value=default_feature_value)
             padded_linking_arrays.append(padded_features)
-        linking_features_tensor = Variable(torch.FloatTensor(padded_linking_arrays),
-                                           volatile=not for_training)
+        linking_features_tensor = torch.FloatTensor(padded_linking_arrays)
         if cuda_device != -1:
             linking_features_tensor = linking_features_tensor.cuda(cuda_device)
         return {'text': tensors, 'linking': linking_features_tensor}
@@ -268,9 +267,47 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
 
     # Below here we have feature extractor functions.  To keep a consistent API for easy logic
     # above, some of these functions have unused arguments.
+    # pylint: disable=unused-argument,no-self-use
+
+    # These feature extractors are generally pretty specific to the logical form language and
+    # problem setting in WikiTableQuestions.  This whole notion of feature extraction should
+    # eventually be made more general (or just removed, if we can replace it with CNN features...).
     # For the feature functions used in the original parser written in PNP, see here:
     # https://github.com/allenai/pnp/blob/wikitables2/src/main/scala/org/allenai/wikitables/SemanticParserFeatureGenerator.scala
-    # pylint: disable=unused-argument,no-self-use
+
+    # One notable difference between how the features work here and how they worked in PNP is that
+    # we're using the table text when computing string matches, while PNP used the _entity name_.
+    # It turns out that the entity name is derived from the table text, so this should be roughly
+    # equivalent, except in the case of some numbers.  If there are cells with different text that
+    # normalize to the same name, you could get `_2` or similar appended to the name, so the way we
+    # do it here should just be better.  But it's a possible minor source of variation from the
+    # original parser.
+
+    # Another difference between these features and the PNP features is that the span overlap used
+    # a weighting scheme to downweight matches on frequent words (like "the"), and the lemma
+    # overlap feature value was calculated a little differently.  I'm guessing that doesn't make a
+    # huge difference...
+
+    def _number_token_match(self,
+                            entity: str,
+                            entity_text: List[Token],
+                            token: Token,
+                            token_index: int,
+                            tokens: List[Token]) -> float:
+        # PNP had a "spanFeatures" function that said whether an entity was a-priori known to link
+        # to a token or set of tokens in the question.  This was only used for numbers, and it's
+        # not totally clear to me how this number feature overlapped with the token match features
+        # in the original implementation (I think in most cases it was the same, except for things
+        # like "four million", because the token match is derived from the entity name, which would
+        # be 4000000, and wouldn't match "four million").
+        #
+        # Our implementation basically just adds a duplicate token match feature that's specific to
+        # numbers.  It'll break in some rare cases (e.g., "Which four had four million ..."), but
+        # those shouldn't be a big deal.
+        if entity.startswith('fb:'):
+            # This check works because numbers are the only entities that don't start with "fb:".
+            return 0.0
+        return self._contains_exact_token_match(entity, entity_text, token, token_index, tokens)
 
     def _exact_token_match(self,
                            entity: str,
@@ -366,5 +403,21 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             seen_entity_words.add(tokens[token_index].text)
             token_index += 1
         return len(seen_entity_words) / len(entity_words)
+
+    def _span_lemma_overlap_fraction(self,
+                                     entity: str,
+                                     entity_text: List[Token],
+                                     token: Token,
+                                     token_index: int,
+                                     tokens: List[Token]) -> float:
+        entity_lemmas = set(entity_token.lemma_ for entity_token in entity_text)
+        if not entity_lemmas:
+            # Some tables have empty cells.
+            return 0
+        seen_entity_lemmas = set()
+        while token_index < len(tokens) and tokens[token_index].lemma_ in entity_lemmas:
+            seen_entity_lemmas.add(tokens[token_index].lemma_)
+            token_index += 1
+        return len(seen_entity_lemmas) / len(entity_lemmas)
 
     # pylint: enable=unused-argument,no-self-use

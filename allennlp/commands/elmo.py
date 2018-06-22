@@ -11,26 +11,29 @@ sentence is a size (3, num_tokens, 1024) array with the biLM representations.
 For information, see "Deep contextualized word representations", Peters et al 2018.
 https://arxiv.org/abs/1802.05365
 
-.. code-block:: bash
+.. code-block:: console
 
    $ allennlp elmo --help
-   usage: allennlp [command] elmo [-h] [--vocab-path VOCAB_PATH]
-                                       [--options-file OPTIONS_FILE]
-                                       [--weight-file WEIGHT_FILE]
-                                       [--batch-size BATCH_SIZE]
-                                       [--cuda-device CUDA_DEVICE]
-                                       input_file output_file
+   usage: allennlp elmo [-h] (--all | --top | --average)
+                        [--vocab-path VOCAB_PATH] [--options-file OPTIONS_FILE]
+                        [--weight-file WEIGHT_FILE] [--batch-size BATCH_SIZE]
+                        [--cuda-device CUDA_DEVICE] [--forget-sentences]
+                        [--use-sentence-keys] [--include-package INCLUDE_PACKAGE]
+                        input_file output_file
 
    Create word vectors using ELMo.
 
    positional arguments:
-     input_file            path to input file
-     output_file           path to output file
+     input_file            The path to the input file.
+     output_file           The path to the output file.
 
    optional arguments:
      -h, --help            show this help message and exit
+     --all                 Output all three ELMo vectors.
+     --top                 Output the top ELMo vector.
+     --average             Output the average of the ELMo vectors.
      --vocab-path VOCAB_PATH
-                           A path to a vocabulary file to generate
+                           A path to a vocabulary file to generate.
      --options-file OPTIONS_FILE
                            The path to the ELMo options file.
      --weight-file WEIGHT_FILE
@@ -39,24 +42,37 @@ https://arxiv.org/abs/1802.05365
                            The batch size to use.
      --cuda-device CUDA_DEVICE
                            The cuda_device to run on.
+     --forget-sentences    If this flag is specified, and --use-sentence-keys is
+                           not, remove the string serialized JSON dictionary that
+                           associates sentences with their line number (its HDF5
+                           key) that is normally placed in the
+                           "sentence_to_index" HDF5 key.
+     --use-sentence-keys   Normally a sentence's line number is used as the HDF5
+                           key for its embedding. If this flag is specified, the
+                           sentence itself will be used as the key.
+     --include-package INCLUDE_PACKAGE
+                           additional packages to include
 """
 
+import argparse
+import json
 import logging
 from typing import IO, List, Iterable, Tuple
+import warnings
 
-import argparse
-import h5py
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import h5py
+
 import numpy
 import torch
 
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import lazy_groups_of
-from allennlp.data.dataset import Batch
-from allennlp.data import Token, Vocabulary, Instance
-from allennlp.data.fields import TextField
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.nn.util import remove_sentence_boundaries
-from allennlp.modules.elmo import _ElmoBiLm
+from allennlp.modules.elmo import _ElmoBiLm, batch_to_ids
 from allennlp.commands.subcommand import Subcommand
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -67,6 +83,13 @@ DEFAULT_BATCH_SIZE = 64
 
 
 class Elmo(Subcommand):
+    """
+    Note that ELMo maintains an internal state dependent on previous batches.
+    As a result, ELMo will return differing results if the same sentence is
+    passed to the same ``Elmo`` instance multiple times.
+
+    See https://github.com/allenai/allennlp/blob/master/tutorials/how_to/elmo.md for more details.
+    """
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         # pylint: disable=protected-access
         description = '''Create word vectors using ELMo.'''
@@ -94,6 +117,20 @@ class Elmo(Subcommand):
                 help='The path to the ELMo weight file.')
         subparser.add_argument('--batch-size', type=int, default=DEFAULT_BATCH_SIZE, help='The batch size to use.')
         subparser.add_argument('--cuda-device', type=int, default=-1, help='The cuda_device to run on.')
+        subparser.add_argument(
+                '--forget-sentences',
+                action='store_true',
+                help="If this flag is specified, and --use-sentence-keys is "
+                     "not, remove the string serialized JSON dictionary "
+                     "that associates sentences with their line number (its "
+                     "HDF5 key) that is normally placed in the "
+                     "\"sentence_to_index\" HDF5 key.")
+        subparser.add_argument(
+                '--use-sentence-keys',
+                action='store_true',
+                help="Normally a sentence's line number is used as the "
+                     "HDF5 key for its embedding. If this flag is specified, "
+                     "the sentence itself will be used as the key.")
 
         subparser.set_defaults(func=elmo_command)
 
@@ -127,33 +164,6 @@ class ElmoEmbedder():
 
         self.cuda_device = cuda_device
 
-    def batch_to_ids(self, batch: List[List[str]]) -> torch.Tensor:
-        """
-        Converts a batch of tokenized sentences to a tensor representing the sentences with encoded characters
-        (len(batch), max sentence length, max word length).
-
-        Parameters
-        ----------
-        batch : ``List[List[str]]``, required
-            A list of tokenized sentences.
-
-        Returns
-        -------
-            A tensor of padded character ids.
-        """
-        instances = []
-        for sentence in batch:
-            tokens = [Token(token) for token in sentence]
-            field = TextField(tokens,
-                              {'character_ids': self.indexer})
-            instance = Instance({"elmo": field})
-            instances.append(instance)
-
-        dataset = Batch(instances)
-        vocab = Vocabulary()
-        dataset.index_instances(vocab)
-        return dataset.as_tensor_dict()['elmo']['character_ids']
-
     def batch_to_embeddings(self, batch: List[List[str]]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Parameters
@@ -166,7 +176,7 @@ class ElmoEmbedder():
             A tuple of tensors, the first representing activations (batch_size, 3, num_timesteps, 1024) and
         the second a mask (batch_size, num_timesteps).
         """
-        character_ids = self.batch_to_ids(batch)
+        character_ids = batch_to_ids(batch)
         if self.cuda_device >= 0:
             character_ids = character_ids.cuda(device=self.cuda_device)
 
@@ -188,6 +198,9 @@ class ElmoEmbedder():
         """
         Computes the ELMo embeddings for a single tokenized sentence.
 
+        Please note that ELMo has internal state and will give different results for the same input.
+        See the comment under the class definition.
+
         Parameters
         ----------
         sentence : ``List[str]``, required
@@ -203,6 +216,9 @@ class ElmoEmbedder():
     def embed_batch(self, batch: List[List[str]]) -> List[numpy.ndarray]:
         """
         Computes the ELMo embeddings for a batch of tokenized sentences.
+
+        Please note that ELMo has internal state and will give different results for the same input.
+        See the comment under the class definition.
 
         Parameters
         ----------
@@ -227,7 +243,7 @@ class ElmoEmbedder():
                 if length == 0:
                     elmo_embeddings.append(empty_embedding())
                 else:
-                    elmo_embeddings.append(embeddings[i, :, :length, :].data.cpu().numpy())
+                    elmo_embeddings.append(embeddings[i, :, :length, :].detach().cpu().numpy())
 
         return elmo_embeddings
 
@@ -236,6 +252,9 @@ class ElmoEmbedder():
                         batch_size: int = DEFAULT_BATCH_SIZE) -> Iterable[numpy.ndarray]:
         """
         Computes the ELMo embeddings for a iterable of sentences.
+
+        Please note that ELMo has internal state and will give different results for the same input.
+        See the comment under the class definition.
 
         Parameters
         ----------
@@ -255,10 +274,13 @@ class ElmoEmbedder():
                    input_file: IO,
                    output_file_path: str,
                    output_format: str = "all",
-                   batch_size: int = DEFAULT_BATCH_SIZE) -> None:
+                   batch_size: int = DEFAULT_BATCH_SIZE,
+                   forget_sentences: bool = False,
+                   use_sentence_keys: bool = False) -> None:
         """
         Computes ELMo embeddings from an input_file where each line contains a sentence tokenized by whitespace.
-        The ELMo embeddings are written out in HDF5 format, where each sentences is saved in a dataset.
+        The ELMo embeddings are written out in HDF5 format, where each sentence embedding
+        is saved in a dataset with the line number in the original file as the key.
 
         Parameters
         ----------
@@ -270,34 +292,70 @@ class ElmoEmbedder():
             The embeddings to output.  Must be one of "all", "top", or "average".
         batch_size : ``int``, optional, (default = 64)
             The number of sentences to process in ELMo at one time.
+        forget_sentences : ``bool``, optional, (default = False).
+            If use_sentence_keys is False, whether or not to include a string
+            serialized JSON dictionary that associates sentences with their
+            line number (its HDF5 key). The mapping is placed in the
+            "sentence_to_index" HDF5 key. This is useful if
+            you want to use the embeddings without keeping the original file
+            of sentences around.
+        use_sentence_keys : ``bool``, optional, (default = False).
+            Whether or not to use full sentences as keys. By default,
+            the line numbers of the input file are used as ids, which is more robust.
         """
 
         assert output_format in ["all", "top", "average"]
 
         # Tokenizes the sentences.
-        sentences = [line.strip() for line in input_file if line.strip()]
-        split_sentences = [sentence.split() for sentence in sentences]
-        # Uses the sentence as the key.
-        embedded_sentences = zip(sentences, self.embed_sentences(split_sentences, batch_size))
+        sentences = [line.strip() for line in input_file]
 
+        blank_lines = [i for (i, line) in enumerate(sentences) if line == ""]
+        if blank_lines:
+            raise ConfigurationError(f"Your input file contains empty lines at indexes "
+                                     f"{blank_lines}. Please remove them.")
+        split_sentences = [sentence.split() for sentence in sentences]
+        # Uses the sentence index as the key.
+
+        if use_sentence_keys:
+            logger.warning("Using sentences as keys can fail if sentences "
+                           "contain forward slashes or colons. Use with caution.")
+            embedded_sentences = zip(sentences, self.embed_sentences(split_sentences, batch_size))
+        else:
+            embedded_sentences = ((str(i), x) for i, x in
+                                  enumerate(self.embed_sentences(split_sentences, batch_size)))
+
+        sentence_to_index = {}
         logger.info("Processing sentences.")
         with h5py.File(output_file_path, 'w') as fout:
             for key, embeddings in Tqdm.tqdm(embedded_sentences):
-                if key in fout.keys():
-                    logger.warning(f"Key already exists in {output_file_path}, skipping: {key}")
-                else:
-                    if output_format == "all":
-                        output = embeddings
-                    elif output_format == "top":
-                        output = embeddings[2]
-                    elif output_format == "average":
-                        output = numpy.average(embeddings, axis=0)
+                if use_sentence_keys and key in fout.keys():
+                    raise ConfigurationError(f"Key already exists in {output_file_path}. "
+                                             f"To encode duplicate sentences, do not pass "
+                                             f"the --use-sentence-keys flag.")
 
-                    fout.create_dataset(
-                            key,
-                            output.shape, dtype='float32',
-                            data=output
-                    )
+                if not forget_sentences and not use_sentence_keys:
+                    sentence = sentences[int(key)]
+                    sentence_to_index[sentence] = key
+
+                if output_format == "all":
+                    output = embeddings
+                elif output_format == "top":
+                    output = embeddings[-1]
+                elif output_format == "average":
+                    output = numpy.average(embeddings, axis=0)
+
+                fout.create_dataset(
+                        str(key),
+                        output.shape, dtype='float32',
+                        data=output
+                )
+            if not forget_sentences and not use_sentence_keys:
+                sentence_index_dataset = fout.create_dataset(
+                        "sentence_to_index",
+                        (1,),
+                        dtype=h5py.special_dtype(vlen=str))
+                sentence_index_dataset[0] = json.dumps(sentence_to_index)
+
         input_file.close()
 
 def elmo_command(args):
@@ -309,8 +367,12 @@ def elmo_command(args):
         output_format = "top"
     elif args.average:
         output_format = "average"
-    elmo_embedder.embed_file(
-            args.input_file,
-            args.output_file,
-            output_format,
-            args.batch_size)
+
+    with torch.no_grad():
+        elmo_embedder.embed_file(
+                args.input_file,
+                args.output_file,
+                output_format,
+                args.batch_size,
+                args.forget_sentences,
+                args.use_sentence_keys)

@@ -1,6 +1,7 @@
 import atexit
 import logging
 import os
+import pathlib
 import subprocess
 
 from overrides import overrides
@@ -13,7 +14,9 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 SEMPRE_EXECUTOR_JAR = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-executor-0.1.0.jar"
 ABBREVIATIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-abbreviations.tsv"
 GROW_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-grow.grammar"
-SEMPRE_DIR = 'data/'
+SEMPRE_DIR = str(pathlib.Path('data/'))
+SEMPRE_ABBREVIATIONS_PATH = os.path.join(SEMPRE_DIR, "abbreviations.tsv")
+SEMPRE_GRAMMAR_PATH = os.path.join(SEMPRE_DIR, "grow.grammar")
 
 
 class WikiTablesAccuracy(Metric):
@@ -32,7 +35,7 @@ class WikiTablesAccuracy(Metric):
         example_lisp_string : ``str``
             The value to average.
         """
-        denotation_correct = self._evaluate_logical_form(logical_form, example_lisp_string)
+        denotation_correct = self.evaluate_logical_form(logical_form, example_lisp_string)
         if denotation_correct:
             self._correct += 1
         self._count += 1
@@ -52,7 +55,7 @@ class WikiTablesAccuracy(Metric):
     def __str__(self):
         return f"WikiTablesAccuracy(correct={self._correct}, count={self._count})"
 
-    def _evaluate_logical_form(self, logical_form: str, example_lisp_string: str) -> bool:
+    def evaluate_logical_form(self, logical_form: str, example_lisp_string: str) -> bool:
         if not logical_form or logical_form.startswith('Error'):
             return False
         if example_lisp_string[-1] != '\n':

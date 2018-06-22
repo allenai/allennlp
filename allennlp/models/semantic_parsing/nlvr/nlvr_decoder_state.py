@@ -1,10 +1,8 @@
 from typing import List, Dict, Tuple
 
 import torch
-from torch.autograd import Variable
-
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
-from allennlp.nn.decoding import DecoderState, GrammarState, RnnState
+from allennlp.nn.decoding import DecoderState, GrammarState, RnnState, ChecklistState
 from allennlp.semparse.worlds import NlvrWorld
 
 
@@ -44,30 +42,11 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         String representations of labels for the elements provided. When scoring finished states, we
         will compare the denotations of their action sequences against these labels. For each
         element, there will be as many labels as there are worlds.
-    terminal_actions : ``List[torch.Tensor]``, optional
-        Each element in the list is a vector containing the indices of terminal actions. Currently
-        the vectors are the same for all instances, because we consider all terminals for each
-        instance. In the future, we may want to include only world-specific terminal actions here.
-        Each of these vectors is needed for computing checklists for next states, only if this state
-        is being while training a parser without logical forms.
-    checklist_target : ``List[torch.LongTensor]``, optional
-        List of targets corresponding to agendas that indicate the states we want the checklists to
-        ideally be. Each element in this list is the same size as the corresponding element in
-        ``agenda_relevant_actions``, and it contains 1 for each corresponding action in the relevant
-        actions list that we want to see in the final logical form, and 0 for each corresponding
-        action that we do not. Needed only if this state is being used while training a parser
-        without logical forms.
-    checklist_masks : ``List[torch.Tensor]``, optional
-        Masks corresponding to ``terminal_actions``, indicating which of those actions are relevant
-        for checklist computation. For example, if the parser is penalizing non-agenda terminal
-        actions, all the terminal actions are relevant. Needed only if this state is being used
-        while training a parser without logical forms.
-    checklist : ``List[Variable]``, optional
-        A checklist for each instance indicating how many times each action in its agenda has
-        been chosen previously. It contains the actual counts of the agenda actions. Needed only if
-        this state is being used while training a parser without logical forms.
+    checklist_state : ``List[ChecklistState]``, optional (default=None)
+        If you are using this state within a parser being trained for coverage, we need to store a
+        ``ChecklistState`` which keeps track of the coverage information. Not needed if you are
+        using a non-coverage based training algorithm.
     """
-    # TODO(pradeep): Group checklist related pieces into a checklist state.
     def __init__(self,
                  batch_indices: List[int],
                  action_history: List[List[int]],
@@ -79,22 +58,26 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
                  possible_actions: List[List[ProductionRuleArray]],
                  worlds: List[List[NlvrWorld]],
                  label_strings: List[List[str]],
-                 terminal_actions: List[torch.Tensor] = None,
-                 checklist_target: List[torch.Tensor] = None,
-                 checklist_masks: List[torch.Tensor] = None,
-                 checklist: List[Variable] = None) -> None:
+                 checklist_state: List[ChecklistState] = None) -> None:
         super(NlvrDecoderState, self).__init__(batch_indices, action_history, score)
         self.rnn_state = rnn_state
         self.grammar_state = grammar_state
-        self.terminal_actions = terminal_actions
-        self.checklist_target = checklist_target
-        self.checklist_mask = checklist_masks
-        self.checklist = checklist
+        # Converting None to list of Nones if needed, to simplify state operations.
+        self.checklist_state = checklist_state if checklist_state is not None else [None for _ in
+                                                                                    batch_indices]
         self.action_embeddings = action_embeddings
         self.action_indices = action_indices
         self.possible_actions = possible_actions
         self.worlds = worlds
         self.label_strings = label_strings
+
+    def print_action_history(self, group_index: int = None) -> None:
+        scores = self.score if group_index is None else [self.score[group_index]]
+        batch_indices = self.batch_indices if group_index is None else [self.batch_indices[group_index]]
+        histories = self.action_history if group_index is None else [self.action_history[group_index]]
+        for score, batch_index, action_history in zip(scores, batch_indices, histories):
+            print('  ', score.detach().cpu().numpy()[0],
+                  [self.possible_actions[batch_index][action][0] for action in action_history])
 
     def get_valid_actions(self) -> List[List[int]]:
         """
@@ -116,17 +99,7 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
         scores = [score for state in states for score in state.score]
         rnn_states = [rnn_state for state in states for rnn_state in state.rnn_state]
         grammar_states = [grammar_state for state in states for grammar_state in state.grammar_state]
-        if states[0].terminal_actions is not None:
-            terminal_actions = [actions for state in states for actions in state.terminal_actions]
-            checklist_target = [target_list for state in states for target_list in
-                                state.checklist_target]
-            checklist_masks = [mask for state in states for mask in state.checklist_mask]
-            checklist = [checklist_list for state in states for checklist_list in state.checklist]
-        else:
-            terminal_actions = None
-            checklist_target = None
-            checklist_masks = None
-            checklist = None
+        checklist_states = [checklist_state for state in states for checklist_state in state.checklist_state]
         return NlvrDecoderState(batch_indices=batch_indices,
                                 action_history=action_histories,
                                 score=scores,
@@ -137,7 +110,4 @@ class NlvrDecoderState(DecoderState['NlvrDecoderState']):
                                 possible_actions=states[0].possible_actions,
                                 worlds=states[0].worlds,
                                 label_strings=states[0].label_strings,
-                                terminal_actions=terminal_actions,
-                                checklist_target=checklist_target,
-                                checklist_masks=checklist_masks,
-                                checklist=checklist)
+                                checklist_state=checklist_states)

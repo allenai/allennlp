@@ -51,6 +51,7 @@ run chmod 600 ./pypirc so only you can read/write.
 
 """
 from setuptools import setup, find_packages
+import sys
 
 # PEP0440 compatible formatted version, see:
 # https://www.python.org/dev/peps/pep-0440/
@@ -71,9 +72,20 @@ VERSION = {}
 with open("allennlp/version.py", "r") as version_file:
     exec(version_file.read(), VERSION)
 
+# make pytest-runner a conditional requirement,
+# per: https://github.com/pytest-dev/pytest-runner#considerations
+needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
+pytest_runner = ['pytest-runner'] if needs_pytest else []
+
+setup_requirements = [
+    # add other setup requirements as necessary
+] + pytest_runner
+
 setup(name='allennlp',
       version=VERSION["VERSION"],
       description='An open-source NLP research library, built on PyTorch.',
+      long_description=open("README.md").read(),
+      long_description_content_type="text/markdown",
       classifiers=[
           'Intended Audience :: Science/Research',
           'Development Status :: 3 - Alpha',
@@ -86,34 +98,40 @@ setup(name='allennlp',
       author='Allen Institute for Artificial Intelligence',
       author_email='allennlp@allenai.org',
       license='Apache',
-      packages=find_packages(),
+      packages=find_packages(exclude=["*.tests", "*.tests.*",
+                                      "tests.*", "tests"]),
       install_requires=[
-          'torch==0.3.1',
-          'pyhocon==0.3.35',
+          'torch==0.4.0',
+          'jsonnet==0.10.0',
           'typing',
           'overrides',
           'nltk',
           'spacy>=2.0,<2.1',
           'numpy',
-          'tensorboardX==1.0',
+          'tensorboardX==1.2',
           'cffi==1.11.2',
           'awscli>=1.11.91',
           'flask==0.12.1',
           'flask-cors==3.0.3',
           'gevent==1.2.2',
           'psycopg2',
-          'argparse',
           'requests>=2.18',
           'tqdm>=4.19',
           'editdistance',
           'h5py',
           'scikit-learn',
           'scipy',
-          'pytz==2017.3'
+          'pytz==2017.3',
+          'unidecode',
+          'pytest',
+          'flaky',
+          'responses>=0.7',
+          'numpydoc==0.8.0',
+          'conllu'
       ],
       scripts=["bin/allennlp"],
-      setup_requires=['pytest-runner'],
-      tests_require=['pytest'],
+      setup_requires=setup_requirements,
+      tests_require=['pytest', 'flaky', 'responses>=0.7', 'jupyter'],
       include_package_data=True,
       python_requires='>=3.6',
       zip_safe=False)

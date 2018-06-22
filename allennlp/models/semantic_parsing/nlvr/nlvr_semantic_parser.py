@@ -39,6 +39,8 @@ class NlvrSemanticParser(Model):
         Dimension to use for action embeddings.
     encoder : ``Seq2SeqEncoder``
         The encoder to use for the input question.
+    dropout : ``float``, optional (default=0.0)
+        Dropout on the encoder outputs.
     rule_namespace : ``str``, optional (default=rule_labels)
         The vocabulary namespace to use for production rules.  The default corresponds to the
         default used in the dataset reader, so you likely don't need to modify this.
@@ -48,6 +50,7 @@ class NlvrSemanticParser(Model):
                  sentence_embedder: TextFieldEmbedder,
                  action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
+                 dropout: float = 0.0,
                  rule_namespace: str = 'rule_labels') -> None:
         super(NlvrSemanticParser, self).__init__(vocab=vocab)
 
@@ -55,6 +58,10 @@ class NlvrSemanticParser(Model):
         self._denotation_accuracy = Average()
         self._consistency = Average()
         self._encoder = encoder
+        if dropout > 0:
+            self._dropout = torch.nn.Dropout(p=dropout)
+        else:
+            self._dropout = lambda x: x
         self._rule_namespace = rule_namespace
 
         self._action_embedder = Embedding(num_embeddings=vocab.get_vocab_size(self._rule_namespace),
@@ -63,7 +70,7 @@ class NlvrSemanticParser(Model):
         # This is what we pass as input in the first step of decoding, when we don't have a
         # previous action.
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
-        torch.nn.init.normal(self._first_action_embedding)
+        torch.nn.init.normal_(self._first_action_embedding)
 
     @overrides
     def forward(self):  # type: ignore
@@ -79,14 +86,12 @@ class NlvrSemanticParser(Model):
         batch_size = embedded_input.size(0)
 
         # (batch_size, sentence_length, encoder_output_dim)
-        encoder_outputs = self._encoder(embedded_input, sentence_mask)
+        encoder_outputs = self._dropout(self._encoder(embedded_input, sentence_mask))
 
         final_encoder_output = util.get_final_encoder_states(encoder_outputs,
                                                              sentence_mask,
                                                              self._encoder.is_bidirectional())
-        memory_cell = util.new_variable_with_size(encoder_outputs,
-                                                  (batch_size, self._encoder.get_output_dim()),
-                                                  0)
+        memory_cell = encoder_outputs.new_zeros(batch_size, self._encoder.get_output_dim())
         attended_sentence = self._decoder_step.attend_on_sentence(final_encoder_output,
                                                                   encoder_outputs, sentence_mask)
         encoder_outputs_list = [encoder_outputs[i] for i in range(batch_size)]
@@ -103,7 +108,7 @@ class NlvrSemanticParser(Model):
 
     def _get_label_strings(self, labels):
         # TODO (pradeep): Use an unindexed field for labels?
-        labels_data = labels.data.cpu()
+        labels_data = labels.detach().cpu()
         label_strings: List[List[str]] = []
         for instance_labels_data in labels_data:
             label_strings.append([])

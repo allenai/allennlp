@@ -7,15 +7,79 @@ logging and validation.
 from typing import Any, Dict, List
 from collections import MutableMapping
 import copy
-
+import json
 import logging
-import pyhocon
+import os
 
 from overrides import overrides
+import _jsonnet
+
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+
+def unflatten(flat_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Given a "flattened" dict with compound keys, e.g.
+        {"a.b": 0}
+    unflatten it:
+        {"a": {"b": 0}}
+    """
+    unflat: Dict[str, Any] = {}
+
+    for compound_key, value in flat_dict.items():
+        curr_dict = unflat
+        parts = compound_key.split(".")
+        for key in parts[:-1]:
+            curr_value = curr_dict.get(key)
+            if key not in curr_dict:
+                curr_dict[key] = {}
+                curr_dict = curr_dict[key]
+            elif isinstance(curr_value, dict):
+                curr_dict = curr_value
+            else:
+                raise ConfigurationError("flattened dictionary is invalid")
+        if not isinstance(curr_dict, dict) or parts[-1] in curr_dict:
+            raise ConfigurationError("flattened dictionary is invalid")
+        else:
+            curr_dict[parts[-1]] = value
+
+    return unflat
+
+def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Deep merge two dicts, preferring values from `preferred`.
+    """
+    preferred_keys = set(preferred.keys())
+    fallback_keys = set(fallback.keys())
+    common_keys = preferred_keys & fallback_keys
+
+    merged: Dict[str, Any] = {}
+
+    for key in preferred_keys - fallback_keys:
+        merged[key] = copy.deepcopy(preferred[key])
+    for key in fallback_keys - preferred_keys:
+        merged[key] = copy.deepcopy(fallback[key])
+
+    for key in common_keys:
+        preferred_value = preferred[key]
+        fallback_value = fallback[key]
+
+        if isinstance(preferred_value, dict) and isinstance(fallback_value, dict):
+            merged[key] = with_fallback(preferred_value, fallback_value)
+        else:
+            merged[key] = copy.deepcopy(preferred_value)
+
+    return merged
+
+def parse_overrides(serialized_overrides: str) -> Dict[str, Any]:
+    if serialized_overrides:
+        ext_vars = dict(os.environ)
+        return unflatten(json.loads(_jsonnet.evaluate_snippet("", serialized_overrides, ext_vars=ext_vars)))
+    else:
+        return {}
 
 
 class Params(MutableMapping):
@@ -30,7 +94,7 @@ class Params(MutableMapping):
        representing discrete choices actually have acceptable values, and making sure no extra
        parameters are passed.
     #. We log all parameter reads, including default values.  This gives a more complete
-       specification of the actual parameters used than is given in a JSON / HOCON file, because
+       specification of the actual parameters used than is given in a JSON file, because
        those may not specify what default values were used, whereas this will log them.
 
     The convention for using a ``Params`` object in AllenNLP is that you will consume the parameters
@@ -281,11 +345,13 @@ class Params(MutableMapping):
         """
         # redirect to cache, if necessary
         params_file = cached_path(params_file)
+        ext_vars = dict(os.environ)
 
-        file_dict = pyhocon.ConfigFactory.parse_file(params_file)
+        file_dict = json.loads(_jsonnet.evaluate_file(params_file, ext_vars=ext_vars))
 
-        overrides_dict = pyhocon.ConfigFactory.parse_string(params_overrides)
-        param_dict = overrides_dict.with_fallback(file_dict)
+        overrides_dict = parse_overrides(params_overrides)
+        param_dict = with_fallback(preferred=overrides_dict, fallback=file_dict)
+
         return Params(param_dict)
 
 
@@ -312,6 +378,6 @@ def _replace_none(dictionary: Dict[str, Any]) -> Dict[str, Any]:
     for key in dictionary.keys():
         if dictionary[key] == "None":
             dictionary[key] = None
-        elif isinstance(dictionary[key], pyhocon.config_tree.ConfigTree):
+        elif isinstance(dictionary[key], dict):
             dictionary[key] = _replace_none(dictionary[key])
     return dictionary

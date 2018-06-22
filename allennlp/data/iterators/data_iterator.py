@@ -39,8 +39,7 @@ class DataIterator(Registrable):
                  instances: Iterable[Instance],
                  num_epochs: int = None,
                  shuffle: bool = True,
-                 cuda_device: int = -1,
-                 for_training: bool = True) -> Iterator[TensorDict]:
+                 cuda_device: int = -1) -> Iterator[TensorDict]:
         """
         Returns a generator that yields batches over the given dataset
         for the given number of epochs. If ``num_epochs`` is not specified,
@@ -62,10 +61,6 @@ class DataIterator(Registrable):
         cuda_device : ``int``
             If cuda_device >= 0, GPUs are available and Pytorch was compiled with CUDA support, the
             tensor will be copied to the cuda_device specified.
-        for_training : ``bool``, optional (default=``True``)
-            If ``False``, we will pass the ``volatile=True`` flag when constructing variables,
-            which disables gradient computations in the graph.  This makes inference more efficient
-            (particularly in memory usage), but is incompatible with training models.
         """
         # Instances is likely to be a list, which cannot be used as a key,
         # so we take the object id instead.
@@ -109,8 +104,7 @@ class DataIterator(Registrable):
                     logger.debug("Batch padding lengths: %s", str(padding_lengths))
                     logger.debug("Batch size: %d", len(batch.instances))
                     tensor_dict = batch.as_tensor_dict(padding_lengths,
-                                                       cuda_device=cuda_device,
-                                                       for_training=for_training)
+                                                       cuda_device=cuda_device)
 
                     if add_to_cache:
                         self._cache[key].append(tensor_dict)

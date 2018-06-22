@@ -14,6 +14,7 @@ from allennlp.nn import InitializerApplicator, RegularizerApplicator
 import allennlp.nn.util as util
 from allennlp.training.metrics import SpanBasedF1Measure
 
+
 @Model.register("crf_tagger")
 class CrfTagger(Model):
     """
@@ -31,9 +32,12 @@ class CrfTagger(Model):
     label_namespace : ``str``, optional (default=``labels``)
         This is needed to compute the SpanBasedF1Measure metric.
         Unless you did something unusual, the default value should be what you want.
+    dropout:  ``float``, optional (detault=``None``)
     constraint_type : ``str``, optional (default=``None``)
         If provided, the CRF will be constrained at decoding time
         to produce valid labels based on the specified type (e.g. "BIO", or "BIOUL").
+    include_start_end_transitions : ``bool``, optional (default=``True``)
+        Whether to include start and end transition parameters in the CRF.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
@@ -45,6 +49,8 @@ class CrfTagger(Model):
                  encoder: Seq2SeqEncoder,
                  label_namespace: str = "labels",
                  constraint_type: str = None,
+                 include_start_end_transitions: bool = True,
+                 dropout: float = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
@@ -53,6 +59,10 @@ class CrfTagger(Model):
         self.text_field_embedder = text_field_embedder
         self.num_tags = self.vocab.get_vocab_size(label_namespace)
         self.encoder = encoder
+        if dropout:
+            self.dropout = torch.nn.Dropout(dropout)
+        else:
+            self.dropout = None
         self.tag_projection_layer = TimeDistributed(Linear(self.encoder.get_output_dim(),
                                                            self.num_tags))
 
@@ -62,7 +72,10 @@ class CrfTagger(Model):
         else:
             constraints = None
 
-        self.crf = ConditionalRandomField(self.num_tags, constraints)
+        self.crf = ConditionalRandomField(
+                self.num_tags, constraints,
+                include_start_end_transitions=include_start_end_transitions
+        )
 
         self.span_metric = SpanBasedF1Measure(vocab,
                                               tag_namespace=label_namespace,
@@ -101,17 +114,27 @@ class CrfTagger(Model):
             The logits that are the output of the ``tag_projection_layer``
         mask : ``torch.LongTensor``
             The text field mask for the input tokens
-        tags : ``List[List[str]]``
+        tags : ``List[List[int]]``
             The predicted tags using the Viterbi algorithm.
         loss : ``torch.FloatTensor``, optional
             A scalar loss to be optimised. Only computed if gold label ``tags`` are provided.
         """
         embedded_text_input = self.text_field_embedder(tokens)
         mask = util.get_text_field_mask(tokens)
+
+        if self.dropout:
+            embedded_text_input = self.dropout(embedded_text_input)
+
         encoded_text = self.encoder(embedded_text_input, mask)
 
+        if self.dropout:
+            encoded_text = self.dropout(encoded_text)
+
         logits = self.tag_projection_layer(encoded_text)
-        predicted_tags = self.crf.viterbi_tags(logits, mask)
+        best_paths = self.crf.viterbi_tags(logits, mask)
+
+        # Just get the tags and ignore the score.
+        predicted_tags = [x for x, y in best_paths]
 
         output = {"logits": logits, "mask": mask, "tags": predicted_tags}
 
@@ -158,6 +181,8 @@ class CrfTagger(Model):
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
         label_namespace = params.pop("label_namespace", "labels")
         constraint_type = params.pop("constraint_type", None)
+        dropout = params.pop("dropout", None)
+        include_start_end_transitions = params.pop("include_start_end_transitions", True)
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
 
@@ -168,5 +193,7 @@ class CrfTagger(Model):
                    encoder=encoder,
                    label_namespace=label_namespace,
                    constraint_type=constraint_type,
+                   dropout=dropout,
+                   include_start_end_transitions=include_start_end_transitions,
                    initializer=initializer,
                    regularizer=regularizer)

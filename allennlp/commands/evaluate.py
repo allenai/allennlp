@@ -25,7 +25,7 @@ and report any metrics calculated by the model.
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
     -o OVERRIDES, --overrides OVERRIDES
-                            a HOCON structure used to override the experiment
+                            a JSON structure used to override the experiment
                             configuration
     --include-package INCLUDE_PACKAGE
                             additional packages to include
@@ -34,7 +34,10 @@ from typing import Dict, Any, Iterable
 import argparse
 import logging
 
+import torch
+
 from allennlp.commands.subcommand import Subcommand
+from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import prepare_environment
 from allennlp.common.tqdm import Tqdm
 from allennlp.data import Instance
@@ -72,7 +75,7 @@ class Evaluate(Subcommand):
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
-                               help='a HOCON structure used to override the experiment configuration')
+                               help='a JSON structure used to override the experiment configuration')
 
         subparser.set_defaults(func=evaluate_from_args)
 
@@ -83,18 +86,20 @@ def evaluate(model: Model,
              instances: Iterable[Instance],
              data_iterator: DataIterator,
              cuda_device: int) -> Dict[str, Any]:
-    model.eval()
+    check_for_gpu(cuda_device)
+    with torch.no_grad():
+        model.eval()
 
-    iterator = data_iterator(instances, num_epochs=1, cuda_device=cuda_device, for_training=False)
-    logger.info("Iterating over dataset")
-    generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
-    for batch in generator_tqdm:
-        model(**batch)
-        metrics = model.get_metrics()
-        description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
-        generator_tqdm.set_description(description, refresh=False)
+        iterator = data_iterator(instances, num_epochs=1, cuda_device=cuda_device)
+        logger.info("Iterating over dataset")
+        generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
+        for batch in generator_tqdm:
+            model(**batch)
+            metrics = model.get_metrics()
+            description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
+            generator_tqdm.set_description(description, refresh=False)
 
-    return model.get_metrics(reset=True)
+        return model.get_metrics(reset=True)
 
 
 def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:

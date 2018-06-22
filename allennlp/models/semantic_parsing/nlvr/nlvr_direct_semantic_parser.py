@@ -8,11 +8,9 @@ import torch
 from allennlp.common import Params
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
-from allennlp.modules.similarity_functions import SimilarityFunction
+from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.nn.decoding import BeamSearch
 from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
-from allennlp.nn import util
 from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.nlvr.nlvr_decoder_state import NlvrDecoderState
 from allennlp.models.semantic_parsing.nlvr.nlvr_decoder_step import NlvrDecoderStep
@@ -41,31 +39,35 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         Passed to super-class.
     encoder : ``Seq2SeqEncoder``
         Passed to super-class.
-    attention_function : ``SimilarityFunction``
+    input_attention : ``Attention``
         We compute an attention over the input question at each step of the decoder, using the
-        decoder hidden state as the query.  This is the similarity function we use for that
-        attention.
+        decoder hidden state as the query.  Passed to the DecoderStep.
     decoder_beam_search : ``BeamSearch``
         Beam search used to retrieve best sequences after training.
     max_decoding_steps : ``int``
         Maximum number of steps for beam search after training.
+    dropout : ``float``, optional (default=0.0)
+        Probability of dropout to apply on encoder outputs, decoder outputs and predicted actions.
     """
     def __init__(self,
                  vocab: Vocabulary,
                  sentence_embedder: TextFieldEmbedder,
                  action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
-                 attention_function: SimilarityFunction,
+                 input_attention: Attention,
                  decoder_beam_search: BeamSearch,
-                 max_decoding_steps: int) -> None:
+                 max_decoding_steps: int,
+                 dropout: float = 0.0) -> None:
         super(NlvrDirectSemanticParser, self).__init__(vocab=vocab,
                                                        sentence_embedder=sentence_embedder,
                                                        action_embedding_dim=action_embedding_dim,
-                                                       encoder=encoder)
+                                                       encoder=encoder,
+                                                       dropout=dropout)
         self._decoder_trainer = MaximumMarginalLikelihood()
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
-                                             attention_function=attention_function)
+                                             input_attention=input_attention,
+                                             dropout=dropout)
         self._decoder_beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
         self._action_padding_index = -1
@@ -75,6 +77,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                 sentence: Dict[str, torch.LongTensor],
                 worlds: List[List[NlvrWorld]],
                 actions: List[List[ProductionRuleArray]],
+                identifier: List[str] = None,
                 target_action_sequences: torch.LongTensor = None,
                 labels: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
@@ -86,8 +89,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         action_embeddings, action_indices = self._embed_actions(actions)
 
         initial_rnn_state = self._get_initial_rnn_state(sentence)
-        initial_score_list = [util.new_variable_with_data(list(sentence.values())[0],
-                                                          torch.Tensor([0.0]))
+        initial_score_list = [next(iter(sentence.values())).new_zeros(1, dtype=torch.float)
                               for i in range(batch_size)]
         label_strings = self._get_label_strings(labels) if labels is not None else None
         # TODO (pradeep): Assuming all worlds give the same set of valid actions.
@@ -114,6 +116,8 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
             target_mask = None
 
         outputs: Dict[str, torch.Tensor] = {}
+        if identifier is not None:
+            outputs["identifier"] = identifier
         if target_action_sequences is not None:
             outputs = self._decoder_trainer.decode(initial_state,
                                                    self._decoder_step,
@@ -175,11 +179,8 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         sentence_embedder = TextFieldEmbedder.from_params(vocab, sentence_embedder_params)
         action_embedding_dim = params.pop_int('action_embedding_dim')
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        attention_function_type = params.pop("attention_function", None)
-        if attention_function_type is not None:
-            attention_function = SimilarityFunction.from_params(attention_function_type)
-        else:
-            attention_function = None
+        dropout = params.pop_float('dropout', 0.0)
+        input_attention = Attention.from_params(params.pop("attention"))
         decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
         max_decoding_steps = params.pop_int("max_decoding_steps")
         params.assert_empty(cls.__name__)
@@ -187,6 +188,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                    sentence_embedder=sentence_embedder,
                    action_embedding_dim=action_embedding_dim,
                    encoder=encoder,
-                   attention_function=attention_function,
+                   input_attention=input_attention,
                    decoder_beam_search=decoder_beam_search,
-                   max_decoding_steps=max_decoding_steps)
+                   max_decoding_steps=max_decoding_steps,
+                   dropout=dropout)

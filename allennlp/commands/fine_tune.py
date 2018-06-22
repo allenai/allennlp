@@ -51,7 +51,7 @@ class FineTune(Subcommand):
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
-                               help='a HOCON structure used to override the training configuration '
+                               help='a JSON structure used to override the training configuration '
                                '(only affects the config_file, _not_ the model_archive)')
 
         subparser.add_argument('--file-friendly-logging',
@@ -95,7 +95,7 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
         The directory in which to save results and logs. We just pass this along to
         :func:`fine_tune_model`.
     overrides : ``str``
-        A HOCON string that we will use to override values in the input parameter file.
+        A JSON string that we will use to override values in the input parameter file.
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we make our output more friendly to saved model files.  We just pass this
         along to :func:`fine_tune_model`.

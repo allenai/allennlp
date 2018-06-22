@@ -4,9 +4,9 @@ Now that we know how to train and evaluate models,
 let's take a deeper look at our experiment configuration file,
 [tutorials/getting_started/simple_tagger.json](https://github.com/allenai/allennlp/blob/master/tutorials/getting_started/simple_tagger.json).
 
-The configuration is a [HOCON](https://github.com/typesafehub/config/blob/master/HOCON.md) file
+The configuration is a [Jsonnet](https://jsonnet.org/) file
 that defines all the parameters for our experiment and model. Don't worry if you're not familiar
-with HOCON, any JSON file is valid HOCON; indeed, the configuration file we use in this tutorial
+with Jsonnet, any JSON file is valid Jsonnet; indeed, the configuration file we use in this tutorial
 is just JSON.
 
 In this tutorial we'll go through
@@ -54,7 +54,7 @@ model = Model.by_name(model_name).from_params(model_params)
 ```
 
 Because a class doesn't get registered until it's loaded, any code that uses
-`BaseClass.by_name('subclass_name')` must have already imported the code for `Subclass`.
+`BaseClass.by_name('subclass_name')` must have already imported the code for the subclass.
 In particular, this means that once you start creating your own named models and helper classes,
 the included `allennlp.run` command will not be aware of them. However, `allennlp.run` is simply
 a wrapper around the `allennlp.commands.main` function,

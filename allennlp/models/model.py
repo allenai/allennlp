@@ -3,13 +3,14 @@
 an AllenNLP model.
 """
 
-from typing import Dict, Union, List
-import os
 import logging
+import os
+from typing import Dict, Union, List
 
 import numpy
 import torch
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary
@@ -51,7 +52,7 @@ class Model(torch.nn.Module, Registrable):
         self.vocab = vocab
         self._regularizer = regularizer
 
-    def get_regularization_penalty(self) -> Union[float, torch.autograd.Variable]:
+    def get_regularization_penalty(self) -> Union[float, torch.Tensor]:
         """
         Computes the regularization penalty for the model.
         Returns 0 if the model was not configured to use regularization.
@@ -109,25 +110,24 @@ class Model(torch.nn.Module, Registrable):
         """
         raise NotImplementedError
 
-    def forward_on_instance(self, instance: Instance, cuda_device: int) -> Dict[str, numpy.ndarray]:
+    def forward_on_instance(self, instance: Instance) -> Dict[str, numpy.ndarray]:
         """
         Takes an :class:`~allennlp.data.instance.Instance`, which typically has raw text in it,
         converts that text into arrays using this model's :class:`Vocabulary`, passes those arrays
         through :func:`self.forward()` and :func:`self.decode()` (which by default does nothing)
-        and returns the result.  Before returning the result, we convert any ``torch.autograd.Variables``
-        or ``torch.Tensors`` into numpy arrays and remove the batch dimension.
+        and returns the result.  Before returning the result, we convert any
+        ``torch.Tensors`` into numpy arrays and remove the batch dimension.
         """
-        return self.forward_on_instances([instance], cuda_device)[0]
+        return self.forward_on_instances([instance])[0]
 
     def forward_on_instances(self,
-                             instances: List[Instance],
-                             cuda_device: int) -> List[Dict[str, numpy.ndarray]]:
+                             instances: List[Instance]) -> List[Dict[str, numpy.ndarray]]:
         """
         Takes a list of  :class:`~allennlp.data.instance.Instance`s, converts that text into
         arrays using this model's :class:`Vocabulary`, passes those arrays through
         :func:`self.forward()` and :func:`self.decode()` (which by default does nothing)
         and returns the result.  Before returning the result, we convert any
-        ``torch.autograd.Variables`` or ``torch.Tensors`` into numpy arrays and separate the
+        ``torch.Tensors`` into numpy arrays and separate the
         batched output into a list of individual dicts per instance. Note that typically
         this will be faster on a GPU (and conditionally, on a CPU) than repeated calls to
         :func:`forward_on_instance`.
@@ -143,19 +143,21 @@ class Model(torch.nn.Module, Registrable):
         -------
         A list of the models output for each instance.
         """
-        dataset = Batch(instances)
-        dataset.index_instances(self.vocab)
-        model_input = dataset.as_tensor_dict(cuda_device=cuda_device, for_training=False)
-        outputs = self.decode(self(**model_input))
+        with torch.no_grad():
+            cuda_device = self._get_prediction_device()
+            dataset = Batch(instances)
+            dataset.index_instances(self.vocab)
+            model_input = dataset.as_tensor_dict(cuda_device=cuda_device)
+            outputs = self.decode(self(**model_input))
 
-        instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]
-        for name, output in list(outputs.items()):
-            if isinstance(output, torch.autograd.Variable):
-                output = output.data.cpu().numpy()
-            outputs[name] = output
-            for instance_output, batch_element in zip(instance_separated_output, output):
-                instance_output[name] = batch_element
-        return instance_separated_output
+            instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]
+            for name, output in list(outputs.items()):
+                if isinstance(output, torch.Tensor):
+                    output = output.detach().cpu().numpy()
+                outputs[name] = output
+                for instance_output, batch_element in zip(instance_separated_output, output):
+                    instance_output[name] = batch_element
+            return instance_separated_output
 
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
@@ -188,6 +190,26 @@ class Model(torch.nn.Module, Registrable):
         """
         # pylint: disable=unused-argument,no-self-use
         return {}
+
+    def _get_prediction_device(self) -> int:
+        """
+        This method checks the device of the model parameters to determine the cuda_device
+        this model should be run on for predictions.  If there are no parameters, it returns -1.
+
+        Returns
+        -------
+        The cuda device this model should run on for predictions.
+        """
+        devices = {util.get_device_of(param) for param in self.parameters()}
+
+        if len(devices) > 1:
+            devices_string = ", ".join(str(x) for x in devices)
+            raise ConfigurationError(f"Parameters have mismatching cuda_devices: {devices_string}")
+        elif len(devices) == 1:
+            return devices.pop()
+        else:
+            return -1
+
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':

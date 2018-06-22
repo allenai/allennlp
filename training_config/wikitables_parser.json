@@ -19,12 +19,13 @@
     "keep_if_no_dpd": true
   },
   "vocabulary": {
-    "min_count": {"tokens": 3}
+    "min_count": {"tokens": 3},
+    "tokens_to_add": {"tokens": ["-1", "0", "1"]}
   },
   "train_data_path": "/wikitables_preprocessed/train.jsonl",
   "validation_data_path": "/wikitables_preprocessed/validation.jsonl",
   "model": {
-    "type": "wikitables_parser",
+    "type": "wikitables_mml_parser",
     "question_embedder": {
       "tokens": {
         "type": "embedding",
@@ -48,6 +49,7 @@
     "decoder_beam_search": {
       "beam_size": 10
     },
+    "training_beam_size": 5,
     "max_decoding_steps": 40,
     "attention_function": {
       "type": "bilinear",

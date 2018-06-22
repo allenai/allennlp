@@ -31,7 +31,7 @@ predictions using a trained model and its :class:`~allennlp.service.predictors.p
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
     -o OVERRIDES, --overrides OVERRIDES
-                            a HOCON structure used to override the experiment
+                            a JSON structure used to override the experiment
                             configuration
     --include-package INCLUDE_PACKAGE
                             additional packages to include
@@ -45,8 +45,9 @@ import sys
 from typing import Optional, IO
 
 from allennlp.commands.subcommand import Subcommand
+from allennlp.common.checks import check_for_gpu
 from allennlp.models.archival import load_archive
-from allennlp.service.predictors import Predictor
+from allennlp.predictors import Predictor
 
 class Predict(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
@@ -74,7 +75,7 @@ class Predict(Subcommand):
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
-                               help='a HOCON structure used to override the experiment configuration')
+                               help='a JSON structure used to override the experiment configuration')
 
         subparser.add_argument('--predictor',
                                type=str,
@@ -85,6 +86,7 @@ class Predict(Subcommand):
         return subparser
 
 def _get_predictor(args: argparse.Namespace) -> Predictor:
+    check_for_gpu(args.cuda_device)
     archive = load_archive(args.archive_file,
                            weights_file=args.weights_file,
                            cuda_device=args.cuda_device,
@@ -96,17 +98,16 @@ def _run(predictor: Predictor,
          input_file: IO,
          output_file: Optional[IO],
          batch_size: int,
-         print_to_console: bool,
-         cuda_device: int) -> None:
+         print_to_console: bool) -> None:
 
     def _run_predictor(batch_data):
         if len(batch_data) == 1:
-            result = predictor.predict_json(batch_data[0], cuda_device)
+            result = predictor.predict_json(batch_data[0])
             # Batch results return a list of json objects, so in
             # order to iterate over the result below we wrap this in a list.
             results = [result]
         else:
-            results = predictor.predict_batch_json(batch_data, cuda_device)
+            results = predictor.predict_batch_json(batch_data)
 
         for model_input, output in zip(batch_data, results):
             string_output = predictor.dump_line(output)
@@ -151,5 +152,4 @@ def _predict(args: argparse.Namespace) -> None:
              input_file,
              output_file,
              args.batch_size,
-             not args.silent,
-             args.cuda_device)
+             not args.silent)

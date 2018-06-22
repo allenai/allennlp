@@ -29,6 +29,7 @@ from allennlp.modules.seq2seq_encoders.intra_sentence_attention import IntraSent
 from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import PytorchSeq2SeqWrapper
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
+from allennlp.modules.stacked_bidirectional_lstm import StackedBidirectionalLstm
 from allennlp.modules.seq2seq_encoders.stacked_self_attention import StackedSelfAttentionEncoder
 from allennlp.modules.seq2seq_encoders.multi_head_self_attention import MultiHeadSelfAttention
 from allennlp.modules.seq2seq_encoders.pass_through_encoder import PassThroughEncoder
@@ -83,6 +84,7 @@ Seq2SeqEncoder.register("lstm")(_Seq2SeqWrapper(torch.nn.LSTM))
 Seq2SeqEncoder.register("rnn")(_Seq2SeqWrapper(torch.nn.RNN))
 Seq2SeqEncoder.register("augmented_lstm")(_Seq2SeqWrapper(AugmentedLstm))
 Seq2SeqEncoder.register("alternating_lstm")(_Seq2SeqWrapper(StackedAlternatingLstm))
+Seq2SeqEncoder.register("stacked_bidirectional_lstm")(_Seq2SeqWrapper(StackedBidirectionalLstm))
 if torch.cuda.is_available():
     try:
         # TODO(Mark): Remove this once we have a CPU wrapper for the kernel/switch to ATen.

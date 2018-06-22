@@ -158,7 +158,7 @@ class SemanticRoleLabeler(Model):
         sequence_lengths = get_lengths_from_binary_sequence_mask(output_dict["mask"]).data.tolist()
 
         if all_predictions.dim() == 3:
-            predictions_list = [all_predictions[i].data.cpu() for i in range(all_predictions.size(0))]
+            predictions_list = [all_predictions[i].detach().cpu() for i in range(all_predictions.size(0))]
         else:
             predictions_list = [all_predictions]
         all_tags = []

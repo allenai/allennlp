@@ -38,9 +38,6 @@ RUN echo "deb http://http.debian.net/debian jessie-backports main" >>/etc/apt/so
 RUN apt-get update
 RUN apt-get install -y -t jessie-backports openjdk-8-jdk
 
-# Install npm
-RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - && apt-get install -y nodejs
-
 # Copy select files needed for installing requirements.
 # We only copy what we need here so small changes to the repository does not trigger re-installation of the requirements.
 COPY requirements.txt .
@@ -48,28 +45,18 @@ COPY requirements_test.txt .
 COPY scripts/install_requirements.sh scripts/install_requirements.sh
 RUN INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh
 
-# Same idea as above, but for EVALB this time.
-COPY scripts/EVALB scripts/EVALB
-
-# Compile EVALB - required for parsing evaluation.
-# EVALB produces scary looking c-level output which we don't
-# care about, so we redirect the output to /dev/null.
-RUN cd scripts/EVALB && make &> /dev/null && cd ..
-
-# And the demo; `npm install` and `npm run build` are slow, so we skip them if we can.
-COPY demo/ demo/
-COPY scripts/build_demo.py scripts/build_demo.py
-ARG BUILD_DEMO=false
-RUN ./scripts/build_demo.py
-
 COPY scripts/ scripts/
 COPY allennlp/ allennlp/
-COPY tests/ tests/
 COPY pytest.ini pytest.ini
 COPY .pylintrc .pylintrc
 COPY tutorials/ tutorials/
 COPY training_config training_config/
 COPY setup.py setup.py
+
+# Compile EVALB - required for parsing evaluation.
+# EVALB produces scary looking c-level output which we don't
+# care about, so we redirect the output to /dev/null.
+RUN cd allennlp/tools/EVALB && make &> /dev/null && cd ../../../
 
 # Caching models when building the image makes a dockerized server start up faster, but is slow for
 # running tests and things, so we skip it by default.
