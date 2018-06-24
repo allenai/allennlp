@@ -372,7 +372,7 @@ class Vocabulary:
         ----------
         params: Params, required.
         instances: Iterable['adi.Instance'], optional
-            If ``params`` doesn't contain a ``vocabulary_directory`` key,
+            If ``params`` doesn't contain a ``directory_path`` key,
             the ``Vocabulary`` can be built directly from a collection of
             instances (i.e. a dataset).
 
