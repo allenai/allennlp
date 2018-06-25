@@ -43,13 +43,6 @@ class Predictor(Registrable):
         """
         return json.dumps(outputs) + "\n"
 
-    def predict(self, inputs: Union[JsonDict, Instance]) -> JsonDict:
-
-        if isinstance(inputs, Instance):
-            return self.predict_instance(inputs)
-        else:
-            return self.predict_json(inputs)
-
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         instance = self._json_to_instance(inputs)
         return self.predict_instance(instance)
@@ -65,18 +58,6 @@ class Predictor(Registrable):
         such as tokenised inputs.
         """
         raise NotImplementedError
-
-
-    def predict_batch(self, inputs: Union[JsonDict, Instance]) -> JsonDict:
-
-        if all([isinstance(x, Instance) for x in inputs]):
-            return self.predict_instance(inputs)
-        elif all([isinstance(x, JsonDict) for x in inputs]):
-            return self.predict_json(inputs)
-        else:
-            raise ConfigurationError("predict_batch must be passed either a "
-                                     "list of Instances or a list of JSON blobs.")
-
 
     def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
         instances = self._batch_json_to_instances(inputs)
