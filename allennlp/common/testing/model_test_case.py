@@ -1,5 +1,4 @@
 import copy
-import os
 
 from numpy.testing import assert_allclose
 import torch

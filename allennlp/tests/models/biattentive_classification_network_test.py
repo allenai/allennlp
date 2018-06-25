@@ -1,6 +1,5 @@
 # pylint: disable=invalid-name,protected-access
 from copy import deepcopy
-import os
 import pytest
 
 

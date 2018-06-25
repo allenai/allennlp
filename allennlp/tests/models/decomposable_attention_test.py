@@ -1,6 +1,4 @@
 # pylint: disable=no-self-use,invalid-name
-import os
-
 from flaky import flaky
 import pytest
 import numpy
