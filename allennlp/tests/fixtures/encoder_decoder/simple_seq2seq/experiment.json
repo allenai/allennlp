@@ -37,8 +37,8 @@
       }
     }
   },
-  "train_data_path": "tests/fixtures/data/seq2seq_copy.tsv",
-  "validation_data_path": "tests/fixtures/data/seq2seq_copy.tsv",
+  "train_data_path": "allennlp/tests/fixtures/data/seq2seq_copy.tsv",
+  "validation_data_path": "allennlp/tests/fixtures/data/seq2seq_copy.tsv",
   "model": {
     "type": "simple_seq2seq",
     "source_embedder": {
