@@ -1,14 +1,14 @@
 {
   "dataset_reader":{"type":"sequence_tagging"},
-  "train_data_path": "tests/fixtures/data/sequence_tagging.tsv",
-  "validation_data_path": "tests/fixtures/data/sequence_tagging.tsv",
+  "train_data_path": "allennlp/tests/fixtures/data/sequence_tagging.tsv",
+  "validation_data_path": "allennlp/tests/fixtures/data/sequence_tagging.tsv",
   "model": {
     "type": "simple_tagger",
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
         "projection_dim": 2,
-        "pretrained_file": "tests/fixtures/embeddings/glove.6B.100d.sample.txt.gz",
+        "pretrained_file": "allennlp/tests/fixtures/embeddings/glove.6B.100d.sample.txt.gz",
         "embedding_dim": 100,
         "trainable": true
       }
