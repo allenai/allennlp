@@ -3,8 +3,8 @@
         "type":"ptb_trees",
         "use_pos_tags": true
     },
-    "train_data_path": "tests/fixtures/data/example_ptb.trees",
-    "validation_data_path": "tests/fixtures/data/example_ptb.trees",
+    "train_data_path": "allennlp/tests/fixtures/data/example_ptb.trees",
+    "validation_data_path": "allennlp/tests/fixtures/data/example_ptb.trees",
     "model": {
       "type": "constituency_parser",
       "text_field_embedder": {
