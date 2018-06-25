@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Union
 import json
 
 from allennlp.common import Registrable
@@ -43,13 +43,22 @@ class Predictor(Registrable):
         """
         return json.dumps(outputs) + "\n"
 
-    def predict_json(self, inputs: JsonDict) -> JsonDict:
-        instance, return_dict = self._json_to_instance(inputs)
-        outputs = self._model.forward_on_instance(instance)
-        return_dict.update(outputs)
-        return sanitize(return_dict)
+    def predict(self, inputs: Union[JsonDict, Instance]) -> JsonDict:
 
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+        if isinstance(inputs, Instance):
+            return self.predict_instance(inputs)
+        else:
+            return self.predict_json(inputs)
+
+    def predict_json(self, inputs: JsonDict) -> JsonDict:
+        instance = self._json_to_instance(inputs)
+        return self.predict_instance(instance)
+
+    def predict_instance(self, inputs: Instance) -> JsonDict:
+        outputs = self._model.forward_on_instance(inputs)
+        return sanitize(outputs)
+
+    def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
         Converts a JSON object into an :class:`~allennlp.data.instance.Instance`
         and a ``JsonDict`` of information which the ``Predictor`` should pass through,
@@ -57,14 +66,27 @@ class Predictor(Registrable):
         """
         raise NotImplementedError
 
-    def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
-        instances, return_dicts = zip(*self._batch_json_to_instances(inputs))
-        outputs = self._model.forward_on_instances(instances)
-        for output, return_dict in zip(outputs, return_dicts):
-            return_dict.update(output)
-        return sanitize(return_dicts)
 
-    def _batch_json_to_instances(self, json_dicts: List[JsonDict]) -> List[Tuple[Instance, JsonDict]]:
+    def predict_batch(self, inputs: Union[JsonDict, Instance]) -> JsonDict:
+
+        if all([isinstance(x, Instance) for x in inputs]):
+            return self.predict_instance(inputs)
+        elif all([isinstance(x, JsonDict) for x in inputs]):
+            return self.predict_json(inputs)
+        else:
+            raise ConfigurationError("predict_batch must be passed either a "
+                                     "list of Instances or a list of JSON blobs.")
+
+
+    def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
+        instances = self._batch_json_to_instances(inputs)
+        return self.predict_batch_instance(instances)
+
+    def predict_batch_instance(self, inputs: Instance) -> JsonDict:
+        outputs = self._model.forward_on_instances(inputs)
+        return sanitize(outputs)
+
+    def _batch_json_to_instances(self, json_dicts: List[JsonDict]) -> List[Instance]:
         """
         Converts a list of JSON objects into a list of :class:`~allennlp.data.instance.Instance`s.
         By default, this expects that a "batch" consists of a list of JSON blobs which would
