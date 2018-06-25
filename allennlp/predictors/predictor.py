@@ -45,10 +45,7 @@ class Predictor(Registrable):
 
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         instance = self._json_to_instance(inputs)
-        return self.predict_instance(instance)
-
-    def predict_instance(self, inputs: Instance) -> JsonDict:
-        outputs = self._model.forward_on_instance(inputs)
+        outputs = self._model.forward_on_instance(instance)
         return sanitize(outputs)
 
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
@@ -61,10 +58,7 @@ class Predictor(Registrable):
 
     def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
         instances = self._batch_json_to_instances(inputs)
-        return self.predict_batch_instance(instances)
-
-    def predict_batch_instance(self, inputs: Instance) -> JsonDict:
-        outputs = self._model.forward_on_instances(inputs)
+        outputs = self._model.forward_on_instances(instances)
         return sanitize(outputs)
 
     def _batch_json_to_instances(self, json_dicts: List[JsonDict]) -> List[Instance]:

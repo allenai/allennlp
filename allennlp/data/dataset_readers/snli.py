@@ -75,7 +75,8 @@ class SnliReader(DatasetReader):
         if label:
             fields['label'] = LabelField(label)
 
-        metadata = {"premise_tokens": [x.text for x in premise_tokens], "hypothesis_tokens": [x.text for x in hypothesis_tokens]}
+        metadata = {"premise_tokens": [x.text for x in premise_tokens], 
+                    "hypothesis_tokens": [x.text for x in hypothesis_tokens]}
         fields["metadata"] = MetadataField(metadata)
         return Instance(fields)
 
