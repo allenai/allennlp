@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from typing import List
 import json
 
 from allennlp.common import Registrable
