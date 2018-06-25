@@ -177,6 +177,13 @@ class Vocabulary:
         If given, this is a list of tokens to add to the vocabulary, keyed by the namespace to add
         the tokens to.  This is a way to be sure that certain items appear in your vocabulary,
         regardless of any other vocabulary computation.
+    extend_vocab : Vocabulary, optional
+        If ``extend_vocab`` is passed, ``counter`` and ``tokens_to_add`` dictionary will be used to
+        extend the ``extend_vocab`` and that will be returned vocabaulary. If ``counter`` is None
+        and ``extend_vocab`` is passed, ``extend_vocab`` with extension of ``tokens_to_add`` will be
+        returned vocabulary. If ``counter`` and ``tokens_to_add`` are None and ``extend_vocab`` is
+        passed, only ``extend_vocab`` will be returned vocabulary. If ``extend_vocab`` is None,
+        vocabulary will be build out of ``counter`` and ``tokens_to_add``.
     """
     def __init__(self,
                  counter: Dict[str, Dict[str, int]] = None,
@@ -210,11 +217,14 @@ class Vocabulary:
             extend_vocab_namespaces = extend_vocab.get_all_namespaces()
             for namespace in extend_vocab_namespaces:
                 if namespace in dataset_namespaces:
-                    namespace_padding_combatible = (namespace in non_padded_namespaces) \
-                                                    == (namespace in extend_vocab.get_non_padded_namespaces())
+                    instances_padding = namespace in non_padded_namespaces
+                    extend_vocab_padding = namespace in extend_vocab.get_non_padded_namespaces()
+                    namespace_padding_combatible = (instances_padding == extend_vocab_padding)
                     if not namespace_padding_combatible:
-                        raise ConfigurationError("Padding (padded/non-padded) setting is not compatible"
-                                                 " for {} namespace".format(namespace))
+                        raise ConfigurationError("For {} namespace extend_vocab has ".format(namespace)+
+                                                 "padding: {} but dataset instances ".format(extend_vocab_padding)+
+                                                 "have padding: {}. ".format(instances_padding)+
+                                                 "For extension compatibility both should be same.")
             self._non_padded_namespaces = list(set(list(extend_vocab.get_non_padded_namespaces())
                                                    +list(non_padded_namespaces)))
             self._token_to_index = extend_vocab.get_token_to_index()
