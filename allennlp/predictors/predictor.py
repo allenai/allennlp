@@ -103,7 +103,8 @@ class Predictor(Registrable):
         that is, from the result of training a model. Optionally specify which `Predictor`
         subclass; otherwise, the default one for the model will be used.
         """
-        config = archive.config
+        # Duplicate the config so that the config inside the archive doesn't get consumed
+        config = archive.config.duplicate()
 
         if not predictor_name:
             model_type = config.get("model").get("type")
