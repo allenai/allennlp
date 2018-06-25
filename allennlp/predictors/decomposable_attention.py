@@ -39,10 +39,4 @@ class DecomposableAttentionPredictor(Predictor):
         """
         premise_text = json_dict["premise"]
         hypothesis_text = json_dict["hypothesis"]
-        snli_reader: SnliReader = self._dataset_reader   # type: ignore
-        tokenizer = snli_reader._tokenizer # pylint: disable=protected-access
-
-        return self._dataset_reader.text_to_instance(premise_text, hypothesis_text), {
-                'premise_tokens': [token.text for token in tokenizer.tokenize(premise_text)],
-                'hypothesis_tokens': [token.text for token in tokenizer.tokenize(hypothesis_text)]
-        }
+        return self._dataset_reader.text_to_instance(premise_text, hypothesis_text)
