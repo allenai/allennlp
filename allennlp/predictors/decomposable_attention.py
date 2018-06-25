@@ -1,7 +1,5 @@
-from typing import Tuple
 
 from overrides import overrides
-from allennlp.data.dataset_readers.snli import SnliReader
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
@@ -33,7 +31,7 @@ class DecomposableAttentionPredictor(Predictor):
         return self.predict_json({"premise" : premise, "hypothesis": hypothesis})
 
     @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+    def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
         Expects JSON that looks like ``{"premise": "...", "hypothesis": "..."}``.
         """
