@@ -63,7 +63,7 @@ class _NamespaceDependentDefaultDict(defaultdict):
                  non_padded_namespaces: Sequence[str],
                  padded_function: Callable[[], Any],
                  non_padded_function: Callable[[], Any]) -> None:
-        self._non_padded_namespaces = non_padded_namespaces
+        self._non_padded_namespaces = list(non_padded_namespaces)
         self._padded_function = padded_function
         self._non_padded_function = non_padded_function
         super(_NamespaceDependentDefaultDict, self).__init__()
@@ -76,6 +76,9 @@ class _NamespaceDependentDefaultDict(defaultdict):
         dict.__setitem__(self, key, value)
         return value
 
+    def add_non_padded_namespaces(self, namespaces: Sequence[str]):
+        self._non_padded_namespaces.extend(namespaces)
+        self._non_padded_namespaces = list(set(self._non_padded_namespaces))
 
 class _TokenToIndexDefaultDict(_NamespaceDependentDefaultDict):
     def __init__(self, non_padded_namespaces: Sequence[str], padding_token: str, oov_token: str) -> None:
@@ -182,19 +185,42 @@ class Vocabulary:
                  non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
                  pretrained_files: Optional[Dict[str, str]] = None,
                  only_include_pretrained_words: bool = False,
-                 tokens_to_add: Dict[str, List[str]] = None) -> None:
+                 tokens_to_add: Dict[str, List[str]] = None,
+                 extend_vocab=None) -> None:
+                 # extend_vocab: Vocabulary = None doest not work. Suggestions?
         self._padding_token = DEFAULT_PADDING_TOKEN
         self._oov_token = DEFAULT_OOV_TOKEN
         if not isinstance(max_vocab_size, dict):
             int_max_vocab_size = max_vocab_size
             max_vocab_size = defaultdict(lambda: int_max_vocab_size)  # type: ignore
-        self._non_padded_namespaces = non_padded_namespaces
-        self._token_to_index = _TokenToIndexDefaultDict(non_padded_namespaces,
-                                                        self._padding_token,
-                                                        self._oov_token)
-        self._index_to_token = _IndexToTokenDefaultDict(non_padded_namespaces,
-                                                        self._padding_token,
-                                                        self._oov_token)
+        if not extend_vocab:
+            self._non_padded_namespaces = non_padded_namespaces
+            self._token_to_index = _TokenToIndexDefaultDict(non_padded_namespaces,
+                                                            self._padding_token,
+                                                            self._oov_token)
+            self._index_to_token = _IndexToTokenDefaultDict(non_padded_namespaces,
+                                                            self._padding_token,
+                                                            self._oov_token)
+        else:
+            incompatible_padding_or_oov_token = self._padding_token != extend_vocab.get_padding_token() \
+                                                or self._oov_token != extend_vocab.get_oov_token()
+            if incompatible_padding_or_oov_token:
+                raise ConfigurationError("Incompatible padding and/or oov_token")
+            dataset_namespaces = list(counter.keys())
+            extend_vocab_namespaces = extend_vocab.get_all_namespaces()
+            for namespace in extend_vocab_namespaces:
+                if namespace in dataset_namespaces:
+                    namespace_padding_combatible = (namespace in non_padded_namespaces) \
+                                                    == (namespace in extend_vocab.get_non_padded_namespaces())
+                    if not namespace_padding_combatible:
+                        raise ConfigurationError("Padding (padded/non-padded) setting is not compatible"
+                                                 " for {} namespace".format(namespace))
+            self._non_padded_namespaces = list(set(list(extend_vocab.get_non_padded_namespaces())
+                                                   +list(non_padded_namespaces)))
+            self._token_to_index = extend_vocab.get_token_to_index()
+            self._index_to_token = extend_vocab.get_index_to_token()
+            self._token_to_index.add_non_padded_namespaces(non_padded_namespaces)
+            self._index_to_token.add_non_padded_namespaces(non_padded_namespaces)
         min_count = min_count or {}
         pretrained_files = pretrained_files or {}
         if counter is not None:
@@ -339,7 +365,8 @@ class Vocabulary:
                        non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
                        pretrained_files: Optional[Dict[str, str]] = None,
                        only_include_pretrained_words: bool = False,
-                       tokens_to_add: Dict[str, List[str]] = None) -> 'Vocabulary':
+                       tokens_to_add: Dict[str, List[str]] = None,
+                       extend_vocab=None) -> 'Vocabulary':
         """
         Constructs a vocabulary given a collection of `Instances` and some parameters.
         We count all of the vocabulary items in the instances, then pass those counts
@@ -350,17 +377,21 @@ class Vocabulary:
         namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
         for instance in Tqdm.tqdm(instances):
             instance.count_vocab_items(namespace_token_counts)
-
         return Vocabulary(counter=namespace_token_counts,
                           min_count=min_count,
                           max_vocab_size=max_vocab_size,
                           non_padded_namespaces=non_padded_namespaces,
                           pretrained_files=pretrained_files,
                           only_include_pretrained_words=only_include_pretrained_words,
-                          tokens_to_add=tokens_to_add)
+                          tokens_to_add=tokens_to_add,
+                          extend_vocab=extend_vocab)
 
     @classmethod
-    def from_params(cls, params: Params, instances: Iterable['adi.Instance'] = None):
+    def from_params(cls,
+                    params: Params,
+                    instances: Iterable['adi.Instance'] = None,
+                    extend_vocab=None):
+                   # extend_vocab: Vocabulary = None doest not work. Suggestions?
         """
         There are two possible ways to build a vocabulary; from a
         collection of instances, using :func:`Vocabulary.from_instances`, or
@@ -374,23 +405,42 @@ class Vocabulary:
         instances: Iterable['adi.Instance'], optional
             If ``params`` doesn't contain a ``directory_path`` key,
             the ``Vocabulary`` can be built directly from a collection of
-            instances (i.e. a dataset).
-
+            instances (i.e. a dataset). If ``extend`` key is set False,
+            dataset instances will be ignored and final vocabulary will be
+            one loaded from ``directory_path``. If ``extend`` key is set True,
+            dataset instances will be used to extend the vocabulary loaded
+            from ``directory_path`` and that will be final vocabulary used.
+        extend_vocab: Vocabulary, optional
+            If ``extend_vocab`` is passed, dataset instances will be used to
+            extend the ``extend_vocab`` and that will be final vocabaulary
+            used. If ``directory_path`` key is present in ``params`` it will
+            be ignored. ``extend_vocab`` overrides it.
         Returns
         -------
         A ``Vocabulary``.
         """
-        vocabulary_directory = params.pop("directory_path", None)
-        if not vocabulary_directory and not instances:
-            raise ConfigurationError("You must provide either a Params object containing a "
-                                     "vocab_directory key or a Dataset to build a vocabulary from.")
-        if vocabulary_directory and instances:
-            logger.info("Loading Vocab from files instead of dataset.")
-
-        if vocabulary_directory:
-            params.assert_empty("Vocabulary - from files")
-            return Vocabulary.from_files(vocabulary_directory)
-
+        if not extend_vocab:
+            vocabulary_directory = params.pop("directory_path", None)
+            extend = params.pop("extend", False)
+            vocab = None
+            if not vocabulary_directory and not instances:
+                raise ConfigurationError("You must provide either a Params object containing a "
+                                         "vocab_directory key or a Dataset to build a vocabulary from.")
+            if extend and not instances:
+                raise ConfigurationError("extend is true but there are not instances passed to extend to")
+            if extend and not vocabulary_directory:
+                raise ConfigurationError("extend is true but there is not directory_path to extend from")
+            if vocabulary_directory and instances:
+                if not extend:
+                    logger.info("Loading Vocab from files instead of dataset.")
+                else:
+                    logger.info("Loading Vocab from files and extending with dataset.")
+            if vocabulary_directory:
+                vocab = Vocabulary.from_files(vocabulary_directory)
+                if not extend:
+                    params.assert_empty("Vocabulary - from files")
+                    return vocab
+                extend_vocab = vocab
         min_count = params.pop("min_count", None)
         max_vocab_size = params.pop_int("max_vocab_size", None)
         non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
@@ -404,7 +454,8 @@ class Vocabulary:
                                          non_padded_namespaces=non_padded_namespaces,
                                          pretrained_files=pretrained_files,
                                          only_include_pretrained_words=only_include_pretrained_words,
-                                         tokens_to_add=tokens_to_add)
+                                         tokens_to_add=tokens_to_add,
+                                         extend_vocab=extend_vocab)
 
     def is_padded(self, namespace: str) -> bool:
         """
@@ -450,6 +501,24 @@ class Vocabulary:
 
     def get_vocab_size(self, namespace: str = 'tokens') -> int:
         return len(self._token_to_index[namespace])
+
+    def get_non_padded_namespaces(self) -> List[str]:
+        return list(self._non_padded_namespaces)
+
+    def get_all_namespaces(self) -> List[str]:
+        return list(self._token_to_index.keys())
+
+    def get_token_to_index(self) -> Dict[str, Dict[str, int]]:
+        return self._token_to_index
+
+    def get_index_to_token(self) -> Dict[str, Dict[int, str]]:
+        return self._index_to_token
+
+    def get_oov_token(self) -> str:
+        return self._oov_token
+
+    def get_padding_token(self) -> str:
+        return self._padding_token
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
