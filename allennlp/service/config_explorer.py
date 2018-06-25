@@ -364,20 +364,20 @@ _HTML = """
                     const configurable = isConfigurable(valueAnnotation)
 
                     const dict = {}
-                    let nonEmpty = false
+                    let nonEmpty = false;
 
-                        (value || Immutable.List()).forEach((entry) => {
-                            const entryKey = entry.get("key")
-                            const entryValue = entry.get("value")
+                    (value || Immutable.List()).forEach((entry) => {
+                        const entryKey = entry.get("key")
+                        const entryValue = entry.get("value")
 
-                            if (entryKey && entryKey.length && entryValue) {
-                                const valueJson = jsonify(entryValue, valueAnnotation, configurable, true)
-                                if (valueJson) {
-                                    nonEmpty = true
-                                    dict[entryKey] = valueJson
-                                }
+                        if (entryKey && entryKey.length && entryValue) {
+                            const valueJson = jsonify(entryValue, valueAnnotation, configurable, true)
+                            if (valueJson) {
+                                nonEmpty = true
+                                dict[entryKey] = valueJson
                             }
-                        })
+                        }
+                    })
 
                     return (nonEmpty || !optional) ? dict : undefined
                 } else if (origin === 'List' || origin === 'Sequence') {
