@@ -1,4 +1,3 @@
-from typing import Tuple
 from overrides import overrides
 
 from allennlp.common.util import JsonDict
@@ -32,10 +31,10 @@ class BidafPredictor(Predictor):
         return self.predict_json({"passage" : passage, "question" : question})
 
     @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+    def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
         Expects JSON that looks like ``{"question": "...", "passage": "..."}``.
         """
         question_text = json_dict["question"]
         passage_text = json_dict["passage"]
-        return self._dataset_reader.text_to_instance(question_text, passage_text), {}
+        return self._dataset_reader.text_to_instance(question_text, passage_text)
