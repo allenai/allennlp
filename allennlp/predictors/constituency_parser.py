@@ -109,7 +109,7 @@ class ConstituencyParserPredictor(Predictor):
             tree = output.pop("trees")
             output["hierplane_tree"] = self._build_hierplane_tree(tree, 0, is_root=True)
             output["trees"] = tree.pformat(margin=1000000)
-        return sanitize(output)
+        return sanitize(outputs)
 
 
     def _build_hierplane_tree(self, tree: Tree, index: int, is_root: bool) -> JsonDict:

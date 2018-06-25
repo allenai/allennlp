@@ -166,7 +166,7 @@ class ConllCorefReader(DatasetReader):
             sentence_offset += len(sentence)
 
         span_field = ListField(spans)
-        metadata_field = MetadataField(metdata)
+        metadata_field = MetadataField(metadata)
 
         fields: Dict[str, Field] = {"text": text_field,
                                     "spans": span_field,

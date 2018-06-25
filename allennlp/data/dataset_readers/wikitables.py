@@ -389,7 +389,7 @@ class WikiTablesDatasetReader(DatasetReader):
         example_string_field = MetadataField(json_obj['example_lisp_string'])
 
         fields = {'question': question_field,
-                  'metadata': question_metadata
+                  'metadata': question_metadata,
                   'table': table_field,
                   'world': world_field,
                   'actions': action_field,
