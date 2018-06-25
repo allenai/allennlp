@@ -39,10 +39,6 @@ class TestElmoTokenEmbedder(ModelTestCase):
 
     def test_file_archiving(self):
         # This happens to be a good place to test auxiliary file archiving.
-        initial_working_dir = os.getcwd()
-        # Change directory to module root.
-        os.chdir(self.MODULE_ROOT)
-
         # Train the model
         params = Params.from_file(self.FIXTURES_ROOT / 'elmo' / 'config' / 'characters_token_embedder.json')
         serialization_dir = os.path.join(self.TEST_DIR, 'serialization')
@@ -73,8 +69,6 @@ class TestElmoTokenEmbedder(ModelTestCase):
         for key, original_filename in files_to_archive.items():
             new_filename = os.path.join(unarchive_dir, "fta", key)
             assert filecmp.cmp(original_filename, new_filename)
-        # Change directory back to what it was initially
-        os.chdir(initial_working_dir)
 
     def test_forward_works_with_projection_layer(self):
         params = Params({
