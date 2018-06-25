@@ -812,30 +812,16 @@ class Trainer:
                         for fname in paths_to_remove[1:]:
                             os.remove(fname)
 
-    def _restore_checkpoint(self) -> Tuple[int, List[float]]:
+    def find_latest_checkpoint(self) -> Tuple[str, str]:
         """
-        Restores a model from a serialization_dir to the last saved checkpoint.
-        This includes an epoch count and optimizer state, which is serialized separately
-        from  model parameters. This function should only be used to continue training -
-        if you wish to load a model for inference/load parts of a model into a new
-        computation graph, you should use the native Pytorch functions:
-        `` model.load_state_dict(torch.load("/path/to/model/weights.th"))``
-
-        If ``self._serialization_dir`` does not exist or does not contain any checkpointed weights,
-        this function will do nothing and return 0.
-
-        Returns
-        -------
-        epoch: int
-            The epoch at which to resume training, which should be one after the epoch
-            in the saved training state.
+        Return the location of the latest model and training state files.
+        If there isn't a valid checkpoint then return None.
         """
         have_checkpoint = (self._serialization_dir is not None and
                            any("model_state_epoch_" in x for x in os.listdir(self._serialization_dir)))
 
         if not have_checkpoint:
-            # No checkpoint to restore, start at 0
-            return 0, []
+            return None
 
         serialization_files = os.listdir(self._serialization_dir)
         model_checkpoints = [x for x in serialization_files if "model_state_epoch" in x]
@@ -866,6 +852,34 @@ class Trainer:
                                   "model_state_epoch_{}.th".format(epoch_to_load))
         training_state_path = os.path.join(self._serialization_dir,
                                            "training_state_epoch_{}.th".format(epoch_to_load))
+
+        return (model_path, training_state_path)
+
+    def _restore_checkpoint(self) -> Tuple[int, List[float]]:
+        """
+        Restores a model from a serialization_dir to the last saved checkpoint.
+        This includes an epoch count and optimizer state, which is serialized separately
+        from  model parameters. This function should only be used to continue training -
+        if you wish to load a model for inference/load parts of a model into a new
+        computation graph, you should use the native Pytorch functions:
+        `` model.load_state_dict(torch.load("/path/to/model/weights.th"))``
+
+        If ``self._serialization_dir`` does not exist or does not contain any checkpointed weights,
+        this function will do nothing and return 0.
+
+        Returns
+        -------
+        epoch: int
+            The epoch at which to resume training, which should be one after the epoch
+            in the saved training state.
+        """
+        latest_checkpoint = self.find_latest_checkpoint()
+
+        if latest_checkpoint is None:
+            # No checkpoint to restore, start at 0
+            return 0, []
+
+        model_path, training_state_path = latest_checkpoint
 
         # Load the parameters onto CPU, then transfer to GPU.
         # This avoids potential OOM on GPU for large models that

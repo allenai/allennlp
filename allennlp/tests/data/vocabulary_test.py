@@ -299,7 +299,7 @@ class TestVocabulary(AllenNlpTestCase):
             _ = Vocabulary.from_params(Params({}))
 
         # Test from_params raises when there are any other dict keys
-        # present apart from 'vocabulary_directory' and we aren't calling from_dataset.
+        # present apart from 'directory_path' and we aren't calling from_dataset.
         with pytest.raises(ConfigurationError):
             _ = Vocabulary.from_params(Params({"directory_path": vocab_dir, "min_count": {'tokens': 2}}))
 
