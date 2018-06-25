@@ -186,6 +186,8 @@ class TestParams(AllenNlpTestCase):
 
         del os.environ[key]
 
+    @pytest.mark.xfail(not os.path.exists(AllenNlpTestCase.PROJECT_ROOT / "training_config"),
+                       reason="Training configs not installed with pip")
     def test_known_configs(self):
         configs = os.listdir(self.PROJECT_ROOT / "training_config")
 
