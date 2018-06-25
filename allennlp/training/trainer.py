@@ -156,7 +156,7 @@ class Trainer:
                  validation_metric: str = "-loss",
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
-                 num_serialized_models_to_keep: int = None,
+                 num_serialized_models_to_keep: int = 20,
                  keep_serialized_model_every_num_seconds: int = None,
                  model_save_interval: float = None,
                  cuda_device: Union[int, List] = -1,
@@ -195,8 +195,9 @@ class Trainer:
         serialization_dir : str, optional (default=None)
             Path to directory for saving and loading model files. Models will not be saved if
             this parameter is not passed.
-        num_serialized_models_to_keep : ``int``, optional (default=None)
-            Number of previous model checkpoints to retain.  Default is to keep all checkpoints.
+        num_serialized_models_to_keep : ``int``, optional (default=20)
+            Number of previous model checkpoints to retain.  Default is to keep 20 checkpoints.
+            A value of None or -1 means all checkpoints will be kept.
         keep_serialized_model_every_num_seconds : ``int``, optional (default=None)
             If num_serialized_models_to_keep is not None, then occasionally it's useful to
             save models at a given interval in addition to the last num_serialized_models_to_keep.
@@ -793,7 +794,7 @@ class Trainer:
                             "Copying weights to '%s/best.th'.", self._serialization_dir)
                 shutil.copyfile(model_path, os.path.join(self._serialization_dir, "best.th"))
 
-            if self._num_serialized_models_to_keep:
+            if self._num_serialized_models_to_keep and self._num_serialized_models_to_keep >= 0:
                 self._serialized_paths.append([time.time(), model_path, training_path])
                 if len(self._serialized_paths) > self._num_serialized_models_to_keep:
                     paths_to_remove = self._serialized_paths.pop(0)
@@ -940,7 +941,7 @@ class Trainer:
         else:
             scheduler = None
 
-        num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", None)
+        num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", 20)
         keep_serialized_model_every_num_seconds = params.pop_int(
                 "keep_serialized_model_every_num_seconds", None)
         model_save_interval = params.pop_float("model_save_interval", None)
