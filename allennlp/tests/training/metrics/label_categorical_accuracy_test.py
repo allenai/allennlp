@@ -90,7 +90,7 @@ class LabelCategoricalAccuracyTest(AllenNlpTestCase):
         actual_accuracy = accuracy.get_metric(reset=True)
         numpy.testing.assert_almost_equal(actual_accuracy, 2 / 3)
 
-    def test_top_k_categorical_accuracy_catches_exceptions(self):
+    def test_top_k_label_categorical_accuracy_catches_exceptions(self):
         accuracy = LabelCategoricalAccuracy(positive_label=3)
         predictions = torch.rand([5, 7])
         out_of_range_labels = torch.Tensor([10, 3, 4, 0, 1])
