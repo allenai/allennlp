@@ -12,6 +12,7 @@ from allennlp.training.metrics.conll_coref_scores import ConllCorefScores
 from allennlp.training.metrics.entropy import Entropy
 from allennlp.training.metrics.evalb_bracketing_scorer import EvalbBracketingScorer, DEFAULT_EVALB_DIR
 from allennlp.training.metrics.f1_measure import F1Measure
+from allennlp.training.metrics.label_categorical_accuracy import LabelCategoricalAccuracy
 from allennlp.training.metrics.mention_recall import MentionRecall
 from allennlp.training.metrics.span_based_f1_measure import SpanBasedF1Measure
 from allennlp.training.metrics.squad_em_and_f1 import SquadEmAndF1
