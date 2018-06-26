@@ -227,7 +227,7 @@ class TestVocabulary(AllenNlpTestCase):
         vocab.save_to_files(vocab_dir)
         vocab2 = Vocabulary.from_files(vocab_dir)
 
-        assert vocab2._non_padded_namespaces == ["a", "c"]
+        assert vocab2._non_padded_namespaces == {"a", "c"}
 
         # Check namespace a.
         assert vocab2.get_vocab_size(namespace='a') == 3
@@ -508,12 +508,12 @@ class TestVocabulary(AllenNlpTestCase):
 
         # namespaces: tokens0, tokens1 is common.
         # tokens2, tokens3 only vocab has. tokens4, tokens5 only instances
-        assert set(extended_vocab.get_all_namespaces()) \
-                   == set(["tokens{}".format(i) for i in range(6)])
+        assert extended_vocab.get_all_namespaces() \
+                   == {"tokens{}".format(i) for i in range(6)}
 
         # # Check that _non_padded_namespaces list is consistent after extension
-        assert set(extended_vocab.get_non_padded_namespaces()) \
-                   == set(["tokens1", "tokens3", "tokens5"])
+        assert extended_vocab.get_non_padded_namespaces() \
+                   == {"tokens1", "tokens3", "tokens5"}
 
         # # original_vocab["tokens1"] has 3 tokens, instances of "tokens1" ns has 5 tokens. 2 overlapping
         assert extended_vocab.get_vocab_size("tokens1") == 6

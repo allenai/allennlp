@@ -63,7 +63,7 @@ class _NamespaceDependentDefaultDict(defaultdict):
                  non_padded_namespaces: Sequence[str],
                  padded_function: Callable[[], Any],
                  non_padded_function: Callable[[], Any]) -> None:
-        self._non_padded_namespaces = list(non_padded_namespaces)
+        self._non_padded_namespaces = set(non_padded_namespaces)
         self._padded_function = padded_function
         self._non_padded_function = non_padded_function
         super(_NamespaceDependentDefaultDict, self).__init__()
@@ -76,10 +76,9 @@ class _NamespaceDependentDefaultDict(defaultdict):
         dict.__setitem__(self, key, value)
         return value
 
-    def add_non_padded_namespaces(self, non_padded_namespaces: Sequence[str]):
+    def add_non_padded_namespaces(self, non_padded_namespaces: Set[str]):
         # add non_padded_namespaces which weren't already present
-        self._non_padded_namespaces.extend(non_padded_namespaces)
-        self._non_padded_namespaces = list(set(self._non_padded_namespaces))
+        self._non_padded_namespaces.update(non_padded_namespaces)
 
 class _TokenToIndexDefaultDict(_NamespaceDependentDefaultDict):
     def __init__(self, non_padded_namespaces: Sequence[str], padding_token: str, oov_token: str) -> None:
@@ -189,7 +188,7 @@ class Vocabulary:
                  tokens_to_add: Dict[str, List[str]] = None) -> None:
         self._padding_token = DEFAULT_PADDING_TOKEN
         self._oov_token = DEFAULT_OOV_TOKEN
-        self._non_padded_namespaces = list(non_padded_namespaces)
+        self._non_padded_namespaces = set(non_padded_namespaces)
         self._token_to_index = _TokenToIndexDefaultDict(non_padded_namespaces,
                                                         self._padding_token,
                                                         self._oov_token)
@@ -426,6 +425,7 @@ class Vocabulary:
             max_vocab_size = defaultdict(lambda: int_max_vocab_size)  # type: ignore
         min_count = min_count or {}
         pretrained_files = pretrained_files or {}
+        non_padded_namespaces = set(non_padded_namespaces)
 
         if counter is not None:
             # Make sure vocabulary extension is safe.
@@ -495,17 +495,16 @@ class Vocabulary:
                     only_include_pretrained_words=only_include_pretrained_words,
                     tokens_to_add=tokens_to_add)
 
-    def add_non_padded_namespaces(self, non_padded_namespaces: Sequence[str]):
+    def add_non_padded_namespaces(self, non_padded_namespaces: Set[str]):
         self._token_to_index.add_non_padded_namespaces(non_padded_namespaces)
         self._index_to_token.add_non_padded_namespaces(non_padded_namespaces)
-        self._non_padded_namespaces.extend(non_padded_namespaces)
-        self._non_padded_namespaces = list(set(self._non_padded_namespaces))
+        self._non_padded_namespaces.update(non_padded_namespaces)
 
-    def get_all_namespaces(self) -> List[str]:
-        return list(self._token_to_index.keys())
+    def get_all_namespaces(self) -> Set[str]:
+        return set(self._token_to_index.keys())
 
     def get_non_padded_namespaces(self) -> List[str]:
-        return list(self._non_padded_namespaces)
+        return self._non_padded_namespaces
 
     def get_token_to_index(self) -> Dict[str, Dict[str, int]]:
         return self._token_to_index
