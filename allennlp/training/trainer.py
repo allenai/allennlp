@@ -757,7 +757,8 @@ class Trainer:
             return this_epoch_val_metric > max(validation_metric_per_epoch)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
-        if not self._warned_tqdm_ignores_underscores and any(itemA.startswith("_")):
+        if (not self._warned_tqdm_ignores_underscores and
+                any(metric_name.startswith("_") for metric_name in metrics)):
             logger.warning("Metrics with names beginning with \"_\" will "
                            "not be logged to the tqdm progress bar.")
             self._warned_tqdm_ignores_underscores = True
