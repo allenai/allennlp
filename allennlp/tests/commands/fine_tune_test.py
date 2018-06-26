@@ -2,7 +2,10 @@
 import argparse
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.commands.fine_tune import FineTune, fine_tune_model_from_file_paths, fine_tune_model_from_args
+from allennlp.commands.fine_tune import FineTune, fine_tune_model_from_file_paths, \
+                               fine_tune_model_from_args, fine_tune_model
+from allennlp.common.params import Params
+from allennlp.models import load_archive
 
 class TestFineTune(AllenNlpTestCase):
     def setUp(self):
@@ -50,3 +53,36 @@ class TestFineTune(AllenNlpTestCase):
         with self.assertRaises(SystemExit) as context:
             self.parser.parse_args(["fine-tune", "-s", "serialization_dir", "-c", "path/to/config"])
             assert context.exception.code == 2  # argparse code for incorrect usage
+
+    def test_fine_tune_nograd_regex(self):
+        original_model = load_archive(self.model_archive).model
+        name_parameters_original = dict(original_model.named_parameters())
+        regex_lists = [[],
+                       [".*attend_feedforward.*", ".*token_embedder.*"],
+                       [".*compare_feedforward.*"]]
+        for regex_list in regex_lists:
+            params = Params.from_file(self.config_file)
+            params["trainer"]["no_grad"] = regex_list
+            shutil.rmtree(self.serialization_dir, ignore_errors=True)
+            tuned_model = fine_tune_model(model=original_model,
+                                          params=params,
+                                          serialization_dir=self.serialization_dir)
+            # If regex is matched, parameter name should have requires_grad False
+            # If regex is matched, parameter name should have same requires_grad
+            # as the originally loaded model
+            if regex_list:
+                nograd_regex = "(" + ")|(".join(regex_list) + ")"
+                for name, parameter in tuned_model.named_parameters():
+                    if re.search(nograd_regex, name):
+                        assert not parameter.requires_grad
+                    else:
+                        assert parameter.requires_grad \
+                        == name_parameters_original[name].requires_grad
+        # If all parameters have requires_grad=False, then error.
+        with pytest.raises(Exception) as _:
+            params = Params.from_file(self.config_file)
+            params["trainer"]["no_grad"] = ["*"]
+            shutil.rmtree(self.serialization_dir, ignore_errors=True)
+            tuned_model = fine_tune_model(model=original_model,
+                                          params=params,
+                                          serialization_dir=self.serialization_dir)
