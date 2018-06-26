@@ -103,8 +103,12 @@ class SrlReader(DatasetReader):
         if tags:
             fields['tags'] = SequenceLabelField(tags, text_field)
 
+        if all([x == 0 for x in verb_label]):
+            verb = None
+        else:
+            verb = tokens[verb_label.index(1)].text
         fields["metadata"] = MetadataField({"words": [x.text for x in tokens],
-                                            "verb": tokens[verb_label.index(1)].text})
+                                            "verb": verb})
         return Instance(fields)
 
     @classmethod
