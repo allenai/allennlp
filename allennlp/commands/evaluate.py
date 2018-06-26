@@ -98,7 +98,7 @@ def evaluate(model: Model,
             model(**batch)
             metrics = model.get_metrics()
             if (not _warned_tqdm_ignores_underscores and
-                    any(metric_name.startswith("_") for metric_name in metrics)):
+                        any(metric_name.startswith("_") for metric_name in metrics)):
                 logger.warning("Metrics with names beginning with \"_\" will "
                                "not be logged to the tqdm progress bar.")
                 _warned_tqdm_ignores_underscores = True
