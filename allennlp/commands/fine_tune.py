@@ -21,7 +21,6 @@ from allennlp.models import load_archive, archive_model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer
-from allennlp.data import Vocabulary
 from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -166,11 +165,11 @@ def fine_tune_model(model: Model,
             raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
 
     logger.info("Extending model vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
-    vocab = Vocabulary.from_params(vocabulary_params,
-                                   (instance for key, dataset in all_datasets.items()
-                                    for instance in dataset
-                                    if key in datasets_for_vocab_creation),
-                                   model.vocab)
+    vocab = model.vocab
+    vocab.extend_from_instances(vocabulary_params,
+                                (instance for key, dataset in all_datasets.items()
+                                 for instance in dataset
+                                 if key in datasets_for_vocab_creation))
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     iterator = DataIterator.from_params(params.pop("iterator"))
