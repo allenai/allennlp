@@ -14,6 +14,7 @@ allennlp.training.metrics
 * :ref:`Entropy<entropy>`
 * :ref:`EvalbBracketingScorer<evalb>`
 * :ref:`F1Measure<f1-measure>`
+* :ref:`LabelCategoricalAccuracy<label-categorical-accuracy>`
 * :ref:`MentionRecall<mention-recall>`
 * :ref:`SpanBasedF1Measure<span-based-f1-measure>`
 * :ref:`SquadEmAndF1<squad-em-and-f1>`
@@ -64,6 +65,12 @@ allennlp.training.metrics
 
 .. _f1-measure:
 .. automodule:: allennlp.training.metrics.f1_measure
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _label-categorical-accuracy:
+.. automodule:: allennlp.training.metrics.label_categorical_accuracy
    :members:
    :undoc-members:
    :show-inheritance:
