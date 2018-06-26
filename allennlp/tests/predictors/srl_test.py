@@ -54,7 +54,9 @@ class TestSrlPredictor(AllenNlpTestCase):
 
         input2 = {"sentence": "This sentence has a verb."}
         results = predictor.predict_batch_json([input1, input2])
+        print(results[0])
         assert results[0] == {'words': ['Blah', 'no', 'verb', 'sentence', '.'], 'verbs': []}
+        print(results[1])
         assert results[1] == {'words': ['This', 'sentence', 'has', 'a', 'verb', '.'],
                               'verbs': [{'verb': 'has', 'description': 'This sentence has a verb .',
                                          'tags': ['O', 'O', 'O', 'O', 'O', 'O']}]}
