@@ -7,7 +7,7 @@ import logging
 import string
 from typing import Any, Dict, List, Tuple
 
-from allennlp.data.fields import Field, TextField, IndexField, MetadataField
+from allennlp.data.fields import Field, TextField, IndexField, MetadataField, LabelField, ListField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.tokenizers import Token
@@ -215,14 +215,15 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     return Instance(fields)
 
 def make_reading_comprehension_instance_dqaseq(
-                                        question_tokens: List[Token],
+                                        question_list_tokens: List[List[Token]],
                                         passage_tokens: List[Token],
                                         token_indexers: Dict[str, TokenIndexer],
                                         passage_text: str,
-                                        token_spans: List[Tuple[int, int]] = None,
+                                        token_span_lists: List[List[Tuple[int, int]]] = None,
                                         answer_texts: List[str] = None,
-                                        yesno: List[int] = None,
-                                        followup: List[int] = None,
+                                        single_answer_list_tokens: List[List[Token]]=None,
+                                        yesno_list: List[int] = None,
+                                        followup_list: List[int] = None,
                                         additional_metadata: Dict[str, Any] = None) -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
@@ -270,28 +271,32 @@ def make_reading_comprehension_instance_dqaseq(
     # This is separate so we can reference it later with a known type.
     passage_field = TextField(passage_tokens, token_indexers)
     fields['passage'] = passage_field
-    fields['question'] = TextField(question_tokens, token_indexers)
+    fields['question'] = ListField([TextField(q_tokens, token_indexers) for q_tokens in question_list_tokens])
+    fields['single_answers'] = ListField([TextField(a_tokens, token_indexers) for a_tokens in single_answer_list_tokens])
     metadata = {
             'original_passage': passage_text,
             'token_offsets': passage_offsets,
-            'question_tokens': [token.text for token in question_tokens],
+            'question_tokens': [[token.text for token in q] for q in question_list_tokens],
             'passage_tokens': [token.text for token in passage_tokens],
             }
     if answer_texts:
-        metadata['answer_texts'] = answer_texts
+        metadata['answer_texts'] = ListField(answer_texts)
 
-    if token_spans:
+    if token_span_lists:
+
+      span_start_list=[]
+      span_end_list=[]
+      for doc_qs_spans in token_span_lists:
         candidate_answers: Counter = Counter()
-        for span_start, span_end in token_spans:
+        for span_start, span_end in doc_qs_spans:
             candidate_answers[(span_start, span_end)] += 1
         span_start, span_end = candidate_answers.most_common(1)[0][0]
-
-        fields['span_start'] = IndexField(span_start, passage_field)
-        fields['span_end'] = IndexField(span_end, passage_field)
-        fields['yesno'] = IndexField(yesno, None)
-        fields['followup'] = IndexField(followup, None)
-        fields['prev_followup'] = IndexField(prev_followup, None)
-
+        span_start_list.append(IndexField(span_start, passage_field))
+        span_end_list.append(IndexField(span_end, passage_field))
+      fields['span_start'] = ListField(span_start_list)
+      fields['span_end'] = ListField(span_end_list)
+      fields['yesno_list'] =ListField([LabelField(yesno) for yesno in yesno_list])
+      fields['followup_list'] = ListField([LabelField(followup) for followup in followup_list])
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)

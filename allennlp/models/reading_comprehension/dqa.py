@@ -19,8 +19,8 @@ from allennlp.training.metrics import Average, BooleanAccuracy, CategoricalAccur
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@Model.register("bidaf-self-atten-bits")
-class BidafPlusSelfAttentionBits(Model):
+@Model.register("dqa")
+class DQA(Model):
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  phrase_layer: Seq2SeqEncoder,
@@ -31,7 +31,7 @@ class BidafPlusSelfAttentionBits(Model):
                  dropout: float = 0.2,
                  mask_lstms: bool = True,
                  outfile: str = None) -> None:
-        super(BidafPlusSelfAttentionBits, self).__init__(vocab)
+        super(DQA, self).__init__(vocab)
         outfile = './wdev_l.txt'
         if outfile is not None: 
           self.write_out = True
@@ -49,7 +49,7 @@ class BidafPlusSelfAttentionBits(Model):
         self._residual_encoder = residual_encoder
         self._self_atten = TriLinearAttention(200)
 
-        #self._followup_emb = torch.nn.Embedding(4, 200)
+
         self._followup_lin = torch.nn.Linear(200, 4)
         self._merge_self_atten = TimeDistributed(torch.nn.Linear(200 * 3, 200))
 
@@ -85,76 +85,34 @@ class BidafPlusSelfAttentionBits(Model):
 
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
+                single_answers: Dict[str, torch.LongTensor],
                 passage: Dict[str, torch.LongTensor],
+                answer_texts: Dict[str, torch.LongTensor]=None,
                 span_start: torch.IntTensor = None,
                 span_end: torch.IntTensor = None,
-                yesno: torch.IntTensor = None,
-                followup: torch.IntTensor = None,
-                prev_followup: torch.IntTensor = None,
+                yesno_list: torch.IntTensor = None,
+                followup_list: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
-        """
-        Parameters
-        ----------
-        question : Dict[str, torch.LongTensor]
-            From a ``TextField``.
-        passage : Dict[str, torch.LongTensor]
-            From a ``TextField``.  The model assumes that this passage contains the answer to the
-            question, and predicts the beginning and ending positions of the answer within the
-            passage.
-        span_start : ``torch.IntTensor``, optional
-            From an ``IndexField``.  This is one of the things we are trying to predict - the
-            beginning position of the answer with the passage.  This is an `inclusive` index.  If
-            this is given, we will compute a loss that gets included in the output dictionary.
-        span_end : ``torch.IntTensor``, optional
-            From an ``IndexField``.  This is one of the things we are trying to predict - the
-            ending position of the answer with the passage.  This is an `inclusive` index.  If
-            this is given, we will compute a loss that gets included in the output dictionary.
-        metadata : ``List[Dict[str, Any]]``, optional
-            If present, this should contain the question ID, original passage text, and token
-            offsets into the passage for each instance in the batch.  We use this for computing
-            official metrics using the official SQuAD evaluation script.  The length of this list
-            should be the batch size, and each dictionary should have the keys ``id``,
-            ``original_passage``, and ``token_offsets``.  If you only want the best span string and
-            don't care about official metrics, you can omit the ``id`` key.
+        batch_size, maxqapair_len, max_q_len, max_word_len = question['token_characters'].size()
+        question = {k: v.view(batch_size*maxqapair_len, max_q_len, -1)for k, v in question.items()}
 
-        Returns
-        -------
-        An output dictionary consisting of:
-        span_start_logits : torch.FloatTensor
-            A tensor of shape ``(batch_size, passage_length)`` representing unnormalised log
-            probabilities of the span start position.
-        span_start_probs : torch.FloatTensor
-            The result of ``softmax(span_start_logits)``.
-        span_end_logits : torch.FloatTensor
-            A tensor of shape ``(batch_size, passage_length)`` representing unnormalised log
-            probabilities of the span end position (inclusive).
-        span_end_probs : torch.FloatTensor
-            The result of ``softmax(span_end_logits)``.
-        best_span : torch.IntTensor
-            The result of a constrained inference over ``span_start_logits`` and
-            ``span_end_logits`` to find the most probable span.  Shape is ``(batch_size, 2)``.
-        loss : torch.FloatTensor, optional
-            A scalar loss to be optimised.
-        best_span_str : List[str]
-            If sufficient metadata was provided for the instances in the batch, we also return the
-            string from the original passage that the model thinks is the best answer to the
-            question.
-        """
         embedded_question = self._dropout(self._text_field_embedder(question))
         embedded_passage = self._dropout(self._text_field_embedder(passage))
-        batch_size = embedded_question.size(0)
         passage_length = embedded_passage.size(1)
+
         question_mask = util.get_text_field_mask(question).float()
         passage_mask = util.get_text_field_mask(passage).float()
+
         question_lstm_mask = question_mask if self._mask_lstms else None
         passage_lstm_mask = passage_mask if self._mask_lstms else None
 
-        encoded_question = self._dropout(self._phrase_layer(embedded_question, question_lstm_mask))
-        encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_lstm_mask))
+        encoded_question = self._dropout(self._phrase_layer(
+          embedded_question, question_lstm_mask))
+        # batch_size, token_len, emb_dim
+        encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_lstm_mask)).\
+          unsqueeze(1).repeat(1, maxqapair_len, 1, 1).view(batch_size*maxqapair_len, passage_lstm_mask.size()[1], -1)# batch_size * maxqapair_len, max_q_len, max_word_len
         encoding_dim = encoded_question.size(-1)
         #prev_followup_emb = self._followup_emb(prev_followup)
-
 
         # Shape: (batch_size, passage_length, question_length)
         passage_question_similarity = self._matrix_attention(encoded_passage, encoded_question)
@@ -168,17 +126,20 @@ class BidafPlusSelfAttentionBits(Model):
         masked_similarity = util.replace_masked_values(passage_question_similarity,
                                                        question_mask.unsqueeze(1),
                                                        -1e7)
+
+
+        passage_mask = passage_mask.unsqueeze(1).repeat(1,maxqapair_len,1).view(batch_size*maxqapair_len, -1)
         # Shape: (batch_size, passage_length)
         question_passage_similarity = masked_similarity.max(dim=-1)[0].squeeze(-1)
         # Shape: (batch_size, passage_length)
-        question_passage_attention = util.masked_softmax(question_passage_similarity, passage_mask)
+        question_passage_attention = util.masked_softmax(question_passage_similarity,
+                                                         passage_mask)
         # Shape: (batch_size, encoding_dim)
         question_passage_vector = util.weighted_sum(encoded_passage, question_passage_attention)
         # Shape: (batch_size, passage_length, encoding_dim)
-        tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(batch_size,
+        tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(batch_size*maxqapair_len,
                                                                                     passage_length,
                                                                                     encoding_dim)
-        #tiled_prev_followup = prev_followup_emb.expand(batch_size, passage_length, 200)
         # Shape: (batch_size, passage_length, encoding_dim * 4)
         final_merged_passage = torch.cat([encoded_passage,
                                           passage_question_vectors,
@@ -191,11 +152,13 @@ class BidafPlusSelfAttentionBits(Model):
         residual_layer = self._dropout(self._residual_encoder(self._dropout(final_merged_passage), passage_mask))
         self_atten_matrix = self._self_atten(residual_layer, residual_layer)
 
-        mask = passage_mask.resize(batch_size, passage_length, 1) * passage_mask.resize(batch_size, 1, passage_length)
+        mask = passage_mask.resize(batch_size*maxqapair_len, passage_length, 1) * passage_mask.resize(
+          batch_size*maxqapair_len, 1, passage_length)
 
         # torch.eye does not have a gpu implementation, so we are forced to use the cpu one and .cuda()
         # Not sure if this matters for performance
         self_mask = Variable(torch.eye(passage_length, passage_length).cuda()).resize(1, passage_length, passage_length)
+        #self_mask = Variable(torch.eye(passage_length, passage_length)).resize(1, passage_length, passage_length)
         mask = mask * (1 - self_mask)
 
         self_atten_probs = util.last_dim_softmax(self_atten_matrix, mask)
@@ -207,22 +170,20 @@ class BidafPlusSelfAttentionBits(Model):
         residual_layer = F.relu(self._merge_self_atten(torch.cat(
             [self_atten_vecs, residual_layer, residual_layer * self_atten_vecs], dim=-1)))
 
-        final_merged_passage += residual_layer
-
+        final_merged_passage += residual_layer # batch_size * maxqa_pair_len * max_passage_len * 200
         final_merged_passage = self._dropout(final_merged_passage)
-
-        start_rep = self._span_start_encoder(final_merged_passage, passage_lstm_mask)
+        start_rep = self._span_start_encoder(final_merged_passage, passage_mask)
         span_start_logits = self._span_start_predictor(start_rep).squeeze(-1)
         span_start_probs = util.masked_softmax(span_start_logits, passage_mask)
 
-        end_rep = self._span_end_encoder(torch.cat([final_merged_passage, start_rep], dim=-1), passage_lstm_mask)
+        end_rep = self._span_end_encoder(torch.cat([final_merged_passage, start_rep], dim=-1), passage_mask)
         span_end_logits = self._span_end_predictor(end_rep).squeeze(-1)
         span_end_probs = util.masked_softmax(span_end_logits, passage_mask)
 
         span_yesno_logits = self._span_yesno_predictor(end_rep).squeeze(-1)
         span_followup_logits = self._span_followup_predictor(end_rep).squeeze(-1)
         
-        span_start_logits = util.replace_masked_values(span_start_logits, passage_mask, -1e7)
+        span_start_logits = util.replace_masked_values(span_start_logits, passage_mask, -1e7) # batch_size * maxqa_len_pair, max_document_len
         span_end_logits = util.replace_masked_values(span_end_logits, passage_mask, -1e7)
 
         best_span = self._get_best_span(span_start_logits, span_end_logits, span_yesno_logits, span_followup_logits)
@@ -235,10 +196,10 @@ class BidafPlusSelfAttentionBits(Model):
                        "span_followup_logits": span_followup_logits,
                        "best_span": best_span}
         if span_start is not None:
-            loss = nll_loss(util.masked_log_softmax(span_start_logits, passage_mask), span_start.squeeze(-1))
-            self._span_start_accuracy(span_start_logits, span_start.squeeze(-1))
-            loss += nll_loss(util.masked_log_softmax(span_end_logits, passage_mask), span_end.squeeze(-1))
-            self._span_end_accuracy(span_end_logits, span_end.squeeze(-1))
+            loss = nll_loss(util.masked_log_softmax(span_start_logits, passage_mask), span_start.view(-1), ignore_index=-1)
+            self._span_start_accuracy(span_start_logits, span_start.view(-1))
+            loss += nll_loss(util.masked_log_softmax(span_end_logits, passage_mask), span_end.view(-1), ignore_index=-1)
+            self._span_end_accuracy(span_end_logits, span_end.view(-1))
             self._span_accuracy(best_span[:,0:2], torch.stack([span_start, span_end], -1))
             #add a select for the right span
             v = []
@@ -258,19 +219,21 @@ class BidafPlusSelfAttentionBits(Model):
 
             predicted_end = Variable(torch.LongTensor(v).cuda())
 
+
+            # ALL OF THESE NEEDS A MASK NOW.
             _yesno = span_yesno_logits.view(-1).index_select(0,gt_end).view(-1,3)
             _followup = span_followup_logits.view(-1).index_select(0,gt_end).view(-1,3)
-            loss += nll_loss(F.log_softmax(_yesno,dim=-1), yesno.squeeze(-1))
-            loss += nll_loss(F.log_softmax(_followup,dim=-1), followup.squeeze(-1))
+            loss += nll_loss(F.log_softmax(_yesno,dim=-1), yesno_list.view(-1), ignore_index=-1)
+            loss += nll_loss(F.log_softmax(_followup,dim=-1), followup_list.view(-1), ignore_index=-1)
  
-            self._span_gt_yesno_accuracy(_yesno, yesno.squeeze(-1))
-            self._span_gt_followup_accuracy(_followup, followup.squeeze(-1))          
+            self._span_gt_yesno_accuracy(_yesno, yesno_list.view(-1))
+            self._span_gt_followup_accuracy(_followup, followup_list.view(-1))
             
             _yesno = span_yesno_logits.view(-1).index_select(0,predicted_end).view(-1,3)
             _followup = span_followup_logits.view(-1).index_select(0,predicted_end).view(-1,3)
 
-            self._span_yesno_accuracy(_yesno, yesno.squeeze(-1))
-            self._span_followup_accuracy(_followup, followup.squeeze(-1))
+            self._span_yesno_accuracy(_yesno, yesno_list.view(-1))
+            self._span_followup_accuracy(_followup, followup_list.view(-1))
 
             #add a select for the right span
             output_dict["loss"] = loss
