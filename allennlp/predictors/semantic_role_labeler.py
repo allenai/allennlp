@@ -1,7 +1,6 @@
 from typing import List
 
 from overrides import overrides
-import numpy
 
 from allennlp.common.util import JsonDict, sanitize, group_by_count
 from allennlp.data import DatasetReader, Instance
@@ -152,7 +151,7 @@ class SemanticRoleLabelerPredictor(Predictor):
             outputs.extend(self._model.forward_on_instances(batch))
 
         verbs_per_sentence = [len(sent) for sent in instances_per_sentence]
-        return_dicts = [{"verbs": []} for x in inputs]
+        return_dicts: List[JsonDict] = [{"verbs": []} for x in inputs]
 
         output_index = 0
         for sentence_index, verb_count in enumerate(verbs_per_sentence):

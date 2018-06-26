@@ -111,7 +111,6 @@ class ModelTestCase(AllenNlpTestCase):
         return model, loaded_model
 
     def assert_fields_equal(self, field1, field2, name: str, tolerance: float = 1e-6) -> None:
-
         if isinstance(field1, torch.Tensor):
             assert_allclose(field1.detach().cpu().numpy(),
                             field2.detach().cpu().numpy(),
