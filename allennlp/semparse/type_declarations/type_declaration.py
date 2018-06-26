@@ -126,6 +126,26 @@ class NamedBasicType(BasicType):
     def str(self):
         return self._string_rep
 
+class HierarchalNamedBasicType(NamedBasicType):
+    """
+    A ``BasicType`` that takes in the name of the type as an argument to its constructor and also
+    a list of names of types that it should also resolve to.
+    
+    Parameters
+    ----------
+    string_rep: str
+        String representation of the type.
+    child_types: List[str]
+        List of the string representations of all child types
+    """
+    def __init__(self, string_rep : str, child_types : List[str]) -> None:
+        self._string_rep = string_rep
+        self._child_types = child_types
+    
+    @overrides
+    def __eq__(self, other):
+        return isinstance(other, BasicType) and \
+               (("%s" % self) == ("%s" % other) or ("%s" % other) in self._child_types)
 
 class PlaceholderType(ComplexType):
     """
