@@ -7,11 +7,6 @@ from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
 
-DEFAULT_EXECUTOR_JAR = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-executor-0.1.0.jar"
-ABBREVIATIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-abbreviations.tsv"
-GROW_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-grow.grammar"
-SEMPRE_DIR = 'data/'
-
 @Predictor.register('ratecalculus-parser')
 class RateCalculusParserPredictor(Predictor):
     """
@@ -23,10 +18,11 @@ class RateCalculusParserPredictor(Predictor):
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
         """
-        Expects JSON that looks like ``{"question": "...", "table": "..."}``.
+        Expects JSON that looks like ``{"question": "..."}``.
         """
         question_text = json_dict["question"]
 
+        print("Question: ", question_text)
         # pylint: disable=protected-access
         tokenized_question = self._dataset_reader._tokenizer.tokenize(question_text.lower())  # type: ignore
         # pylint: enable=protected-access
@@ -39,9 +35,9 @@ class RateCalculusParserPredictor(Predictor):
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         instance, return_dict = self._json_to_instance(inputs)
         outputs = self._model.forward_on_instance(instance)
-        outputs['answer'] = self._execute_logical_form(outputs['logical_form'])
 
-        return_dict.update(outputs)
+        logical_forms_dict = {"logical_forms": outputs['logical_forms']}
+        return_dict.update(logical_forms_dict)
         return sanitize(return_dict)
 
     @staticmethod
@@ -50,9 +46,5 @@ class RateCalculusParserPredictor(Predictor):
         The parameters are written out to files which the jar file reads and then executes the
         logical form.
         """
-        logical_form_filename = os.path.join(SEMPRE_DIR, 'logical_forms.txt')
-        with open(logical_form_filename, 'w') as temp_file:
-            temp_file.write(logical_form + '\n')
-
         #WARNING: CHANGME
         return "-1"

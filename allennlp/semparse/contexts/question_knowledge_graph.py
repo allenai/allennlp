@@ -232,4 +232,13 @@ class QuestionKnowledgeGraph(KnowledgeGraph):
                     while text[-(num_zeros + 1)] == '0':
                         num_zeros += 1
                     numbers.append((str(int(number + 10 ** num_zeros)), token_text))
+
+        # WARNING: To avoid empty entity sets, we arbitrarily add 2 dummy ones if less than 2 numbers were extracted.
+        if len(numbers) < 1:
+            numbers.append(("1","one"))
+
+        if len(numbers) < 2:
+            numbers.append(("1", "a"))
+
+        print("numbers: ", numbers)
         return numbers

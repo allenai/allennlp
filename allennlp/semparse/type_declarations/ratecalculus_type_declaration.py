@@ -60,9 +60,6 @@ add_common_name_with_type("Div", "D", BINARY_NUM_OP_TYPE)
 # Object Dimensions
 add_common_name_with_type("Unit0", "U0", DIMENSION_TYPE)
 add_common_name_with_type("Unit1", "U1", DIMENSION_TYPE)
-add_common_name_with_type("Unit2", "U2", DIMENSION_TYPE)
-add_common_name_with_type("Unit3", "U3", DIMENSION_TYPE)
-add_common_name_with_type("Unit4", "U4", DIMENSION_TYPE)
 add_common_name_with_type("Dollar", "U5", DIMENSION_TYPE)
 add_common_name_with_type("Unit", "U6", DIMENSION_TYPE)
 
@@ -77,11 +74,6 @@ add_common_name_with_type("o5", "O5", OBJECT_TYPE)
 # Numerical Variables
 add_common_name_with_type("x0", "X0", NUMBER_TYPE)
 add_common_name_with_type("x1", "X1", NUMBER_TYPE)
-add_common_name_with_type("x2", "X2", NUMBER_TYPE)
-add_common_name_with_type("x3", "X3", NUMBER_TYPE)
-add_common_name_with_type("x4", "X4", NUMBER_TYPE)
-add_common_name_with_type("x5", "X5", NUMBER_TYPE)
-
 # Numerical Query Variables
 add_common_name_with_type("q0", "Q0", NUMBER_TYPE)
 add_common_name_with_type("q1", "Q1", NUMBER_TYPE)

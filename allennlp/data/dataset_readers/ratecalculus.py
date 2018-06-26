@@ -94,9 +94,11 @@ class RateCalculusDatasetReader(DatasetReader):
         tokenized_question = tokenized_question or self._tokenizer.tokenize(question.lower())
         question_field = TextField(tokenized_question, self._question_token_indexers)
         question_knowledge_graph = QuestionKnowledgeGraph.read(tokenized_question)
+        feat_extractors = ['number_token_match']
         question_knowledge_graph_field = KnowledgeGraphField(question_knowledge_graph,
                                                              tokenized_question,
                                                              self._question_token_indexers,
+                                                             feature_extractors=feat_extractors,
                                                              tokenizer=self._tokenizer)
 
         world = RateCalculusWorld(question_knowledge_graph)

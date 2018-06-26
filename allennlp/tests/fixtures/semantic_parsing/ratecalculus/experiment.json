@@ -5,7 +5,8 @@
   "train_data_path": "tests/fixtures/data/ratecalculus/sample_data.json",
   "validation_data_path": "tests/fixtures/data/ratecalculus/sample_data.json",
   "model": {
-    "type": "ratecalculus_parser",
+    "type": "ratecalculus_mml_parser",
+    "tables_directory": "tests/fixtures/data/wikitables/",
     "question_embedder": {
       "tokens": {
         "type": "embedding",
@@ -25,12 +26,11 @@
       "embedding_dim": 25,
       "averaged": true
     },
-    "checklist_cost_weight": 0.6,
-    "max_decoding_steps": 10,
-    "decoder_beam_size": 10,
-    "decoder_num_finished_states": 200,
-    "attention_function": {"type": "dot_product"},
-    "num_linking_features": 8
+    "decoder_beam_search": {
+      "beam_size": 3
+    },
+    "max_decoding_steps": 200,
+    "attention": {"type": "dot_product"}
   },
   "iterator": {
     "type": "bucket",

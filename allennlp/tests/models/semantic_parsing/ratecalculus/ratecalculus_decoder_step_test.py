@@ -1,7 +1,6 @@
 # pylint: disable=invalid-name,no-self-use,protected-access
 from numpy.testing import assert_almost_equal
 import torch
-from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
@@ -18,7 +17,7 @@ class RateCalculusDecoderStepTest(AllenNlpTestCase):
 
         batch_indices = [0, 1, 0]
         action_history = [[1], [3, 4], []]
-        score = [Variable(torch.FloatTensor([x])) for x in [.1, 1.1, 2.2]]
+        score = [torch.FloatTensor([x]) for x in [.1, 1.1, 2.2]]
         hidden_state = torch.FloatTensor([[i, i] for i in range(len(batch_indices))])
         memory_cell = torch.FloatTensor([[i, i] for i in range(len(batch_indices))])
         previous_action_embedding = torch.FloatTensor([[i, i] for i in range(len(batch_indices))])
@@ -27,6 +26,8 @@ class RateCalculusDecoderStepTest(AllenNlpTestCase):
         self.encoder_outputs = torch.FloatTensor([[1, 2], [3, 4], [5, 6]])
         self.encoder_output_mask = torch.FloatTensor([[1, 1], [1, 0], [1, 1]])
         self.action_embeddings = torch.FloatTensor([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5]])
+        self.output_action_embeddings = torch.FloatTensor([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5]])
+        self.action_biases = torch.FloatTensor([[0], [1], [2], [3], [4], [5]])
         self.action_indices = {
                 (0, 0): 1,
                 (0, 1): 0,
@@ -92,16 +93,18 @@ class RateCalculusDecoderStepTest(AllenNlpTestCase):
                                       self.encoder_outputs,
                                       self.encoder_output_mask))
         self.state = RateCalculusDecoderState(batch_indices=batch_indices,
-                                              action_history=action_history,
-                                              score=score,
-                                              rnn_state=rnn_state,
-                                              grammar_state=grammar_state,
-                                              action_embeddings=self.action_embeddings,
-                                              action_indices=self.action_indices,
-                                              possible_actions=self.possible_actions,
-                                              flattened_linking_scores=flattened_linking_scores,
-                                              actions_to_entities=actions_to_entities,
-                                              entity_types=entity_types)
+                                            action_history=action_history,
+                                            score=score,
+                                            rnn_state=rnn_state,
+                                            grammar_state=grammar_state,
+                                            action_embeddings=self.action_embeddings,
+                                            output_action_embeddings=self.output_action_embeddings,
+                                            action_biases=self.action_biases,
+                                            action_indices=self.action_indices,
+                                            possible_actions=self.possible_actions,
+                                            flattened_linking_scores=flattened_linking_scores,
+                                            actions_to_entities=actions_to_entities,
+                                            entity_types=entity_types)
 
     def test_get_actions_to_consider(self):
         # pylint: disable=protected-access
@@ -163,9 +166,11 @@ class RateCalculusDecoderStepTest(AllenNlpTestCase):
     def test_get_action_embeddings(self):
         action_embeddings = torch.rand(5, 4)
         self.state.action_embeddings = action_embeddings
+        self.state.output_action_embeddings = action_embeddings
+        self.state.action_biases = torch.rand(5, 1)
         actions_to_embed = [[0, 4], [1], [2, 3, 4]]
-        embeddings, mask = RateCalculusDecoderStep._get_action_embeddings(self.state, actions_to_embed)
-        assert_almost_equal(mask.data.cpu().numpy(), [[1, 1, 0], [1, 0, 0], [1, 1, 1]])
+        embeddings, _, _, mask = RateCalculusDecoderStep._get_action_embeddings(self.state, actions_to_embed)
+        assert_almost_equal(mask.detach().cpu().numpy(), [[1, 1, 0], [1, 0, 0], [1, 1, 1]])
         assert tuple(embeddings.size()) == (3, 3, 4)
         assert_almost_equal(embeddings[0, 0].detach().cpu().numpy(), action_embeddings[0].detach().cpu().numpy())
         assert_almost_equal(embeddings[0, 1].detach().cpu().numpy(), action_embeddings[4].detach().cpu().numpy())
@@ -176,41 +181,40 @@ class RateCalculusDecoderStepTest(AllenNlpTestCase):
         assert_almost_equal(embeddings[2, 0].detach().cpu().numpy(), action_embeddings[2].detach().cpu().numpy())
         assert_almost_equal(embeddings[2, 1].detach().cpu().numpy(), action_embeddings[3].detach().cpu().numpy())
         assert_almost_equal(embeddings[2, 2].detach().cpu().numpy(), action_embeddings[4].detach().cpu().numpy())
-        assert_almost_equal(embeddings[2, 2].detach().cpu().numpy(), action_embeddings[4].detach().cpu().numpy())
 
     def test_get_entity_action_logits(self):
-        decoder_step = RateCalculusDecoderStep(1, 5, SimilarityFunction.from_params(Params({})), 3)
+        decoder_step = RateCalculusDecoderStep(1, 5, SimilarityFunction.from_params(Params({})), 5, 3)
         actions_to_link = [[1, 2], [3, 4, 5], [6]]
         # (group_size, num_question_tokens) = (3, 3)
-        attention_weights = Variable(torch.Tensor([[.2, .8, 0],
-                                                   [.7, .1, .2],
-                                                   [.3, .3, .4]]))
+        attention_weights = torch.Tensor([[.2, .8, 0],
+                                          [.7, .1, .2],
+                                          [.3, .3, .4]])
         action_logits, mask, type_embeddings = decoder_step._get_entity_action_logits(self.state,
                                                                                       actions_to_link,
                                                                                       attention_weights)
-        assert_almost_equal(mask.data.cpu().numpy(), [[1, 1, 0], [1, 1, 1], [1, 0, 0]])
+        assert_almost_equal(mask.detach().cpu().numpy(), [[1, 1, 0], [1, 1, 1], [1, 0, 0]])
 
         assert tuple(action_logits.size()) == (3, 3)
-        assert_almost_equal(action_logits[0, 0].data.cpu().numpy(), .4 * .2 + .5 * .8 + .6 * 0)
-        assert_almost_equal(action_logits[0, 1].data.cpu().numpy(), .7 * .2 + .8 * .8 + .9 * 0)
-        assert_almost_equal(action_logits[1, 0].data.cpu().numpy(), -.4 * .7 + -.5 * .1 + -.6 * .2)
-        assert_almost_equal(action_logits[1, 1].data.cpu().numpy(), -.7 * .7 + -.8 * .1 + -.9 * .2)
-        assert_almost_equal(action_logits[1, 2].data.cpu().numpy(), -1.0 * .7 + -1.1 * .1 + -1.2 * .2)
-        assert_almost_equal(action_logits[2, 0].data.cpu().numpy(), 1.0 * .3 + 1.1 * .3 + 1.2 * .4)
+        assert_almost_equal(action_logits[0, 0].detach().cpu().numpy(), .4 * .2 + .5 * .8 + .6 * 0)
+        assert_almost_equal(action_logits[0, 1].detach().cpu().numpy(), .7 * .2 + .8 * .8 + .9 * 0)
+        assert_almost_equal(action_logits[1, 0].detach().cpu().numpy(), -.4 * .7 + -.5 * .1 + -.6 * .2)
+        assert_almost_equal(action_logits[1, 1].detach().cpu().numpy(), -.7 * .7 + -.8 * .1 + -.9 * .2)
+        assert_almost_equal(action_logits[1, 2].detach().cpu().numpy(), -1.0 * .7 + -1.1 * .1 + -1.2 * .2)
+        assert_almost_equal(action_logits[2, 0].detach().cpu().numpy(), 1.0 * .3 + 1.1 * .3 + 1.2 * .4)
 
-        embedding_matrix = decoder_step._entity_type_embedding.weight.data.cpu().numpy()
-        assert_almost_equal(type_embeddings[0, 0].data.cpu().numpy(), embedding_matrix[2])
-        assert_almost_equal(type_embeddings[0, 1].data.cpu().numpy(), embedding_matrix[1])
-        assert_almost_equal(type_embeddings[1, 0].data.cpu().numpy(), embedding_matrix[0])
-        assert_almost_equal(type_embeddings[1, 1].data.cpu().numpy(), embedding_matrix[1])
-        assert_almost_equal(type_embeddings[1, 2].data.cpu().numpy(), embedding_matrix[2])
-        assert_almost_equal(type_embeddings[2, 0].data.cpu().numpy(), embedding_matrix[0])
+        embedding_matrix = decoder_step._entity_type_embedding.weight.detach().cpu().numpy()
+        assert_almost_equal(type_embeddings[0, 0].detach().cpu().numpy(), embedding_matrix[2])
+        assert_almost_equal(type_embeddings[0, 1].detach().cpu().numpy(), embedding_matrix[1])
+        assert_almost_equal(type_embeddings[1, 0].detach().cpu().numpy(), embedding_matrix[0])
+        assert_almost_equal(type_embeddings[1, 1].detach().cpu().numpy(), embedding_matrix[1])
+        assert_almost_equal(type_embeddings[1, 2].detach().cpu().numpy(), embedding_matrix[2])
+        assert_almost_equal(type_embeddings[2, 0].detach().cpu().numpy(), embedding_matrix[0])
 
     def test_compute_new_states(self):
         # pylint: disable=protected-access
-        log_probs = Variable(torch.FloatTensor([[.1, .9, -.1, .2],
-                                                [.3, 1.1, .1, .8],
-                                                [.1, .25, .3, .4]]))
+        log_probs = torch.FloatTensor([[.1, .9, -.1, .2],
+                                       [.3, 1.1, .1, .8],
+                                       [.1, .25, .3, .4]])
         considered_actions = [[0, 1, 2, 3], [0, -1, 3, -1], [0, 2, 4, -1]]
         allowed_actions = [{2, 3}, {0}, {4}]
         max_actions = 1
@@ -222,25 +226,24 @@ class RateCalculusDecoderStepTest(AllenNlpTestCase):
         new_attended_question = torch.FloatTensor([[i + 1, i + 1] for i in range(len(allowed_actions))])
         new_attention_weights = torch.FloatTensor([[i + 1, i + 1] for i in range(len(allowed_actions))])
         new_states = RateCalculusDecoderStep._compute_new_states(self.state,
-                                                                 log_probs,
-                                                                 new_hidden_state,
-                                                                 new_memory_cell,
-                                                                 step_action_embeddings,
-                                                                 new_attended_question,
-                                                                 new_attention_weights,
-                                                                 considered_actions,
-                                                                 allowed_actions,
-                                                                 max_actions)
+                                                               log_probs,
+                                                               new_hidden_state,
+                                                               new_memory_cell,
+                                                               step_action_embeddings,
+                                                               new_attended_question,
+                                                               new_attention_weights,
+                                                               considered_actions,
+                                                               allowed_actions,
+                                                               max_actions)
 
         assert len(new_states) == 2
         new_state = new_states[0]
         # For batch instance 0, we should have selected action 4 from group index 2.
         assert new_state.batch_indices == [0]
-        # These three have values taken from what's defined in setUp() - the prior action history
-        # (empty in this case), the initial score (2.2), and the nonterminals corresponding to the
-        # action we picked ('j').
+        assert_almost_equal(new_state.score[0].detach().cpu().numpy().tolist(), [.3])
+        # These have values taken from what's defined in setUp() - the prior action history
+        # (empty in this case)  and the nonterminals corresponding to the action we picked ('j').
         assert new_state.action_history == [[4]]
-        assert_almost_equal(new_state.score[0].data.cpu().numpy().tolist(), [2.2 + .3])
         assert new_state.grammar_state[0]._nonterminal_stack == ['j']
         # All of these values come from the objects instantiated directly above.
         assert_almost_equal(new_state.rnn_state[0].hidden_state.cpu().numpy().tolist(), [3, 3])
@@ -250,7 +253,7 @@ class RateCalculusDecoderStepTest(AllenNlpTestCase):
         # And these should just be copied from the prior state.
         assert_almost_equal(new_state.rnn_state[0].encoder_outputs.cpu().numpy(),
                             self.encoder_outputs.cpu().numpy())
-        assert_almost_equal(new_state.rnn_state[0].encoder_output_mask.data.cpu().numpy(),
+        assert_almost_equal(new_state.rnn_state[0].encoder_output_mask.detach().cpu().numpy(),
                             self.encoder_output_mask.detach().cpu().numpy())
         assert_almost_equal(new_state.action_embeddings.cpu().numpy(),
                             self.action_embeddings.cpu().numpy())
@@ -260,11 +263,10 @@ class RateCalculusDecoderStepTest(AllenNlpTestCase):
         new_state = new_states[1]
         # For batch instance 1, we should have selected action 0 from group index 1.
         assert new_state.batch_indices == [1]
-        # These three have values taken from what's defined in setUp() - the prior action history
-        # ([3, 4]), the initial score (1.1), and the nonterminals corresponding to the action we
-        # picked ('q').
+        assert_almost_equal(new_state.score[0].detach().cpu().numpy().tolist(), [.3])
+        # These two have values taken from what's defined in setUp() - the prior action history
+        # ([3, 4]) and the nonterminals corresponding to the action we picked ('q').
         assert new_state.action_history == [[3, 4, 0]]
-        assert_almost_equal(new_state.score[0].data.cpu().numpy().tolist(), [1.1 + .3])
         assert new_state.grammar_state[0]._nonterminal_stack == ['q']
         # All of these values come from the objects instantiated directly above.
         assert_almost_equal(new_state.rnn_state[0].hidden_state.cpu().numpy().tolist(), [2, 2])
@@ -274,7 +276,7 @@ class RateCalculusDecoderStepTest(AllenNlpTestCase):
         # And these should just be copied from the prior state.
         assert_almost_equal(new_state.rnn_state[0].encoder_outputs.cpu().numpy(),
                             self.encoder_outputs.cpu().numpy())
-        assert_almost_equal(new_state.rnn_state[0].encoder_output_mask.data.cpu().numpy(),
+        assert_almost_equal(new_state.rnn_state[0].encoder_output_mask.detach().cpu().numpy(),
                             self.encoder_output_mask.detach().cpu().numpy())
         assert_almost_equal(new_state.action_embeddings.cpu().numpy(),
                             self.action_embeddings.cpu().numpy())
@@ -285,9 +287,9 @@ class RateCalculusDecoderStepTest(AllenNlpTestCase):
         # pylint: disable=protected-access
         # This test is basically identical to the previous one, but without specifying
         # `allowed_actions`.  This makes sure we get the right behavior at test time.
-        log_probs = Variable(torch.FloatTensor([[.1, .9, -.1, .2],
-                                                [.3, 1.1, .1, .8],
-                                                [.1, .25, .3, .4]]))
+        log_probs = torch.FloatTensor([[.1, .9, -.1, .2],
+                                       [.3, 1.1, .1, .8],
+                                       [.1, .25, .3, .4]])
         considered_actions = [[0, 1, 2, 3], [0, -1, 3, -1], [0, 2, 4, -1]]
         max_actions = 1
         step_action_embeddings = torch.FloatTensor([[[1, 1], [9, 9], [2, 2], [3, 3]],
@@ -298,25 +300,24 @@ class RateCalculusDecoderStepTest(AllenNlpTestCase):
         new_attended_question = torch.FloatTensor([[i + 1, i + 1] for i in range(len(considered_actions))])
         new_attention_weights = torch.FloatTensor([[i + 1, i + 1] for i in range(len(considered_actions))])
         new_states = RateCalculusDecoderStep._compute_new_states(self.state,
-                                                                 log_probs,
-                                                                 new_hidden_state,
-                                                                 new_memory_cell,
-                                                                 step_action_embeddings,
-                                                                 new_attended_question,
-                                                                 new_attention_weights,
-                                                                 considered_actions,
-                                                                 allowed_actions=None,
-                                                                 max_actions=max_actions)
+                                                               log_probs,
+                                                               new_hidden_state,
+                                                               new_memory_cell,
+                                                               step_action_embeddings,
+                                                               new_attended_question,
+                                                               new_attention_weights,
+                                                               considered_actions,
+                                                               allowed_actions=None,
+                                                               max_actions=max_actions)
 
         assert len(new_states) == 2
         new_state = new_states[0]
         # For batch instance 0, we should have selected action 1 from group index 0.
         assert new_state.batch_indices == [0]
-        # These three have values taken from what's defined in setUp() - the prior action history
-        # ([1]), the initial score (0.1), and the nonterminals corresponding to the
-        # action we picked ('j').
+        assert_almost_equal(new_state.score[0].detach().cpu().numpy().tolist(), [.9])
+        # These two have values taken from what's defined in setUp() - the prior action history
+        # ([1]) and the nonterminals corresponding to the action we picked ('j').
         assert new_state.action_history == [[1, 1]]
-        assert_almost_equal(new_state.score[0].data.cpu().numpy().tolist(), [0.1 + .9])
         assert new_state.grammar_state[0]._nonterminal_stack == ['g']
         # All of these values come from the objects instantiated directly above.
         assert_almost_equal(new_state.rnn_state[0].hidden_state.cpu().numpy().tolist(), [1, 1])
@@ -326,7 +327,7 @@ class RateCalculusDecoderStepTest(AllenNlpTestCase):
         # And these should just be copied from the prior state.
         assert_almost_equal(new_state.rnn_state[0].encoder_outputs.cpu().numpy(),
                             self.encoder_outputs.cpu().numpy())
-        assert_almost_equal(new_state.rnn_state[0].encoder_output_mask.data.cpu().numpy(),
+        assert_almost_equal(new_state.rnn_state[0].encoder_output_mask.detach().cpu().numpy(),
                             self.encoder_output_mask.detach().cpu().numpy())
         assert_almost_equal(new_state.action_embeddings.cpu().numpy(),
                             self.action_embeddings.cpu().numpy())
@@ -336,11 +337,10 @@ class RateCalculusDecoderStepTest(AllenNlpTestCase):
         new_state = new_states[1]
         # For batch instance 0, we should have selected action 0 from group index 1.
         assert new_state.batch_indices == [1]
-        # These three have values taken from what's defined in setUp() - the prior action history
-        # ([3, 4]), the initial score (1.1), and the nonterminals corresponding to the action we
-        # picked ('q').
+        assert_almost_equal(new_state.score[0].detach().cpu().numpy().tolist(), [.3])
+        # These have values taken from what's defined in setUp() - the prior action history
+        # ([3, 4]) and the nonterminals corresponding to the action we picked ('q').
         assert new_state.action_history == [[3, 4, 0]]
-        assert_almost_equal(new_state.score[0].data.cpu().numpy().tolist(), [1.1 + .3])
         assert new_state.grammar_state[0]._nonterminal_stack == ['q']
         # All of these values come from the objects instantiated directly above.
         assert_almost_equal(new_state.rnn_state[0].hidden_state.cpu().numpy().tolist(), [2, 2])
@@ -350,7 +350,7 @@ class RateCalculusDecoderStepTest(AllenNlpTestCase):
         # And these should just be copied from the prior state.
         assert_almost_equal(new_state.rnn_state[0].encoder_outputs.cpu().numpy(),
                             self.encoder_outputs.cpu().numpy())
-        assert_almost_equal(new_state.rnn_state[0].encoder_output_mask.data.cpu().numpy(),
+        assert_almost_equal(new_state.rnn_state[0].encoder_output_mask.detach().cpu().numpy(),
                             self.encoder_output_mask.detach().cpu().numpy())
         assert_almost_equal(new_state.action_embeddings.cpu().numpy(),
                             self.action_embeddings.cpu().numpy())

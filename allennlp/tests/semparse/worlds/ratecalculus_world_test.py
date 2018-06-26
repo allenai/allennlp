@@ -86,7 +86,7 @@ class TestRateCalculusWorld(AllenNlpTestCase):
                                 ['[<b,<b,b>>, b, b]', '[<n,<n,b>>, n, n]', '[<o,<o,b>>, o, o]'])
 
         check_productions_match(valid_actions['d'],
-                                ['Dollar', 'Unit', 'Unit0', 'Unit1', 'Unit2', 'Unit3', 'Unit4'])
+                                ['Dollar', 'Unit', 'Unit0', 'Unit1'])
 
         number_productions = ['20',
                               '50',
@@ -94,10 +94,6 @@ class TestRateCalculusWorld(AllenNlpTestCase):
                               '[<o,<d,n>>, o, d]',
                               'x0',
                               'x1',
-                              'x2',
-                              'x3',
-                              'x4',
-                              'x5',
                               'q0',
                               'q1',
                               '1',

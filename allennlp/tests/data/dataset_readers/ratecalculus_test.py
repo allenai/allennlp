@@ -142,9 +142,9 @@ class RateCalculusDatasetReaderTest(AllenNlpTestCase):
         dataset = reader.read(filepath)
         assert_sample_alg514_dataset_correct(dataset)
 
-    def test_reader_reads_all_alg514(self):
-        reader = RateCalculusDatasetReader(lazy=False)
-        filename = "alg514_canonical.json"
-        filepath = str(self.FIXTURES_ROOT / "data" / "ratecalculus" / filename)
-        dataset = reader.read(filepath)
-        assert(len(list(dataset)) >= 504)
+    #def test_reader_reads_all_alg514(self):
+    #    reader = RateCalculusDatasetReader(lazy=False)
+    #    filename = "alg514_canonical.json"
+    #    filepath = str(self.FIXTURES_ROOT / "data" / "ratecalculus" / filename)
+    #    dataset = reader.read(filepath)
+    #    assert(len(list(dataset)) >= 504)

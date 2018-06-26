@@ -3,26 +3,22 @@ from typing import Dict, List, Tuple
 from overrides import overrides
 import torch
 
-from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.ratecalculus.ratecalculus_decoder_state import RateCalculusDecoderState
-from allennlp.modules.similarity_functions import SimilarityFunction
-from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding, FeedForward
-from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
-from allennlp.modules.time_distributed import TimeDistributed
+from allennlp.modules import Embedding, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, TimeDistributed
+from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
 from allennlp.nn import util
 from allennlp.nn.decoding import GrammarState, RnnState, ChecklistState
 from allennlp.semparse.type_declarations import type_declaration
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import RateCalculusWorld
-from allennlp.training.metrics import Average
+from allennlp.training.metrics import Average, RateCalculusAccuracy
 
 
-@Model.register("ratecalculus_parser")
 class RateCalculusSemanticParser(Model):
     """
     A ``RateCalculusSemanticParser`` is a :class:`Model` which takes as input a table and a question,
@@ -48,10 +44,6 @@ class RateCalculusSemanticParser(Model):
     max_decoding_steps : ``int``
         When we're decoding with a beam search, what's the maximum number of steps we should take?
         This only applies at evaluation time, not during training.
-    attention_function : ``SimilarityFunction``
-        We compute an attention over the input question at each step of the decoder, using the
-        decoder hidden state as the query.  This is the similarity function we use for that
-        attention.
     use_neighbor_similarity_for_linking : ``bool``, optional (default=False)
         If ``True``, we will compute a max similarity between a question token and the `neighbors`
         of an entity as a component of the linking scores.  This is meant to capture the same kind
@@ -68,6 +60,10 @@ class RateCalculusSemanticParser(Model):
     rule_namespace : ``str``, optional (default=rule_labels)
         The vocabulary namespace to use for production rules.  The default corresponds to the
         default used in the dataset reader, so you likely don't need to modify this.
+    tables_directory : ``str``, optional (default=/wikitables/)
+        The directory to find tables when evaluating logical forms.  We rely on a call to SEMPRE to
+        evaluate logical forms, and SEMPRE needs to read the table from disk itself.  This tells
+        SEMPRE where to find the tables.
     """
     # pylint: disable=abstract-method
     def __init__(self,
@@ -76,18 +72,12 @@ class RateCalculusSemanticParser(Model):
                  action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
                  entity_encoder: Seq2VecEncoder,
-                 mixture_feedforward: FeedForward,
-                 attention_function: SimilarityFunction,
-                 decoder_beam_size: int,
-                 decoder_num_finished_states: int,
                  max_decoding_steps: int,
-                 normalize_beam_score_by_length: bool = False,
-                 checklist_cost_weight: float = 0.6,
                  use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
-                 num_linking_features: int = 10,
+                 num_linking_features: int = 1,
                  rule_namespace: str = 'rule_labels',
-                 initial_mml_model_file: str = None) -> None:
+                 tables_directory: str = '/wikitables/') -> None:
         super(RateCalculusSemanticParser, self).__init__(vocab)
         self._question_embedder = question_embedder
         self._encoder = encoder
@@ -99,6 +89,7 @@ class RateCalculusSemanticParser(Model):
         else:
             self._dropout = lambda x: x
         self._rule_namespace = rule_namespace
+        self._denotation_accuracy = RateCalculusAccuracy(tables_directory)
         self._action_sequence_accuracy = Average()
         self._has_logical_form = Average()
 
@@ -118,8 +109,8 @@ class RateCalculusSemanticParser(Model):
         check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
                                "entity word average embedding dim", "question embedding dim")
 
-        self._num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
-        self._num_start_types = 5  # TODO(mattg): get this in a more principled way somehow?
+        self._num_entity_types = 1  # TODO(mattg): get this in a more principled way somehow?
+        self._num_start_types = 1  # TODO(mattg): get this in a more principled way somehow?
         self._embedding_dim = question_embedder.get_output_dim()
         self._type_params = torch.nn.Linear(self._num_entity_types, self._embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
@@ -142,12 +133,14 @@ class RateCalculusSemanticParser(Model):
                                       world: List[RateCalculusWorld],
                                       actions: List[List[ProductionRuleArray]],
                                       example_lisp_string: List[str] = None,
-                                      add_world_to_initial_state: bool = False) -> Dict:
+                                      add_world_to_initial_state: bool = False,
+                                      checklist_states: List[ChecklistState] = None) -> Dict:
         """
-        Does initial preparation and creates an intial state for the semantic parser.
+        Does initial preparation and creates an intiial state for both the semantic parsers. Note
+        that the checklist state is optional, and the ``RateCalculusMmlParser`` is not expected to
+        pass it.
         """
         kg_text = question_knowledge_graph['text']
-
         # (batch_size, question_length, embedding_dim)
         embedded_question = self._question_embedder(question)
         question_mask = util.get_text_field_mask(question).float()
@@ -166,8 +159,9 @@ class RateCalculusSemanticParser(Model):
         # Neighbor_indices is padded with -1 since 0 is a potential neighbor index.
         # Thus, the absolute value needs to be taken in the index_select, and 1 needs to
         # be added for the mask since that method expects 0 for padding.
-        # (batch_size, num_entities, num_entities, embedding_dim)
+        # (batch_size, num_entities, num_neighbors, embedding_dim)
         embedded_neighbors = util.batched_index_select(encoded_kg, torch.abs(neighbor_indices))
+
         neighbor_mask = util.get_text_field_mask({'ignored': neighbor_indices + 1},
                                                  num_wrapping_dims=1).float()
 
@@ -188,11 +182,13 @@ class RateCalculusSemanticParser(Model):
         entity_embeddings = torch.nn.functional.tanh(entity_type_embeddings + projected_neighbor_embeddings)
 
 
-        # Compute entity and question word cosine similarity. Need to add a small value to
-        # to the table norm since there are padding values which cause a divide by 0.
+        # Compute entity and question word similarity.  We tried using cosine distance here, but
+        # because this similarity is the main mechanism that the model can use to push apart logit
+        # scores for certain actions (like "n -> 1" and "n -> -1"), this needs to have a larger
+        # output range than [-1, 1].
         question_entity_similarity = torch.bmm(embedded_kg.view(batch_size,
-                                                                num_entities * num_entity_tokens,
-                                                                self._embedding_dim),
+                                                        num_entities * num_entity_tokens,
+                                                        self._embedding_dim),
                                                torch.transpose(embedded_question, 1, 2))
 
         question_entity_similarity = question_entity_similarity.view(batch_size,
@@ -285,18 +281,22 @@ class RateCalculusSemanticParser(Model):
                                  for i in range(batch_size)]
         initial_state_world = world if add_world_to_initial_state else None
         initial_state = RateCalculusDecoderState(batch_indices=list(range(batch_size)),
-                                                 action_history=[[] for _ in range(batch_size)],
-                                                 score=initial_score_list,
-                                                 rnn_state=initial_rnn_state,
-                                                 grammar_state=initial_grammar_state,
-                                                 action_embeddings=action_embeddings,
-                                                 action_indices=action_indices,
-                                                 possible_actions=actions,
-                                                 flattened_linking_scores=flattened_linking_scores,
-                                                 actions_to_entities=actions_to_entities,
-                                                 entity_types=entity_type_dict,
-                                                 debug_info=None)
-
+                                               action_history=[[] for _ in range(batch_size)],
+                                               score=initial_score_list,
+                                               rnn_state=initial_rnn_state,
+                                               grammar_state=initial_grammar_state,
+                                               action_embeddings=action_embeddings,
+                                               output_action_embeddings=output_action_embeddings,
+                                               action_biases=action_biases,
+                                               action_indices=action_indices,
+                                               possible_actions=actions,
+                                               flattened_linking_scores=flattened_linking_scores,
+                                               actions_to_entities=actions_to_entities,
+                                               entity_types=entity_type_dict,
+                                               world=initial_state_world,
+                                               example_lisp_string=example_lisp_string,
+                                               checklist_state=checklist_states,
+                                               debug_info=None)
         return {"initial_state": initial_state,
                 "linking_scores": linking_scores,
                 "feature_scores": feature_scores,
@@ -350,7 +350,6 @@ class RateCalculusSemanticParser(Model):
             batch_neighbors.append(neighbor_indexes)
         return tensor.new_tensor(batch_neighbors, dtype=torch.long)
 
-
     @staticmethod
     def _get_type_vector(worlds: List[RateCalculusWorld],
                          num_entities: int,
@@ -378,18 +377,11 @@ class RateCalculusSemanticParser(Model):
         for batch_index, world in enumerate(worlds):
             types = []
             for entity_index, entity in enumerate(world.question_knowledge_graph.entities):
-                one_hot_vectors = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+                one_hot_vectors = [[1]]
                 # We need numbers to be first, then cells, then parts, then row, because our
                 # entities are going to be sorted.  We do a split by type and then a merge later,
                 # and it relies on this sorting.
-                if entity.startswith('fb:cell'):
-                    entity_type = 1
-                elif entity.startswith('fb:part'):
-                    entity_type = 2
-                elif entity.startswith('fb:row'):
-                    entity_type = 3
-                else:
-                    entity_type = 0
+                entity_type = 0
                 types.append(one_hot_vectors[entity_type])
 
                 # For easier lookups later, we're actually using a _flattened_ version
@@ -397,8 +389,12 @@ class RateCalculusSemanticParser(Model):
                 # linking scores are stored.
                 flattened_entity_index = batch_index * num_entities + entity_index
                 entity_types[flattened_entity_index] = entity_type
-            padded = pad_sequence_to_length(types, num_entities, lambda: [0, 0, 0, 0])
+            padded = pad_sequence_to_length(types, num_entities, lambda: [0])
             batch_types.append(padded)
+        print("_get_type_vector:")
+        print("num_entities:",num_entities)
+        print("batch_types:",batch_types)
+        print("entity_types:",entity_types)
         return tensor.new_tensor(batch_types), entity_types
 
     def _get_linking_probabilities(self,
@@ -684,51 +680,3 @@ class RateCalculusSemanticParser(Model):
             batch_action_info.append(instance_action_info)
         output_dict["predicted_actions"] = batch_action_info
         return output_dict
-
-
-    @classmethod
-    def from_params(cls, vocab, params: Params) -> 'RateCalculusSemanticParser':
-        question_embedder = TextFieldEmbedder.from_params(vocab, params.pop("question_embedder"))
-        action_embedding_dim = params.pop_int("action_embedding_dim")
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        entity_encoder = Seq2VecEncoder.from_params(params.pop('entity_encoder'))
-        mixture_feedforward_type = params.pop('mixture_feedforward', None)
-        if mixture_feedforward_type is not None:
-            mixture_feedforward = FeedForward.from_params(mixture_feedforward_type)
-        else:
-            mixture_feedforward = None
-        # If no attention function is specified, we should not use attention, not attention with
-        # default similarity function.
-        attention_function_type = params.pop("attention_function", None)
-        if attention_function_type is not None:
-            attention_function = SimilarityFunction.from_params(attention_function_type)
-        else:
-            attention_function = None
-        decoder_beam_size = params.pop_int("decoder_beam_size")
-        decoder_num_finished_states = params.pop_int("decoder_num_finished_states", None)
-        max_decoding_steps = params.pop_int("max_decoding_steps")
-        normalize_beam_score_by_length = params.pop("normalize_beam_score_by_length", False)
-        use_neighbor_similarity_for_linking = params.pop_bool("use_neighbor_similarity_for_linking", False)
-        dropout = params.pop_float('dropout', 0.0)
-        num_linking_features = params.pop_int('num_linking_features', 10)
-        rule_namespace = params.pop('rule_namespace', 'rule_labels')
-        checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.6)
-        mml_model_file = params.pop('mml_model_file', None)
-        params.assert_empty(cls.__name__)
-        return cls(vocab,
-                   question_embedder=question_embedder,
-                   action_embedding_dim=action_embedding_dim,
-                   encoder=encoder,
-                   entity_encoder=entity_encoder,
-                   mixture_feedforward=mixture_feedforward,
-                   attention_function=attention_function,
-                   decoder_beam_size=decoder_beam_size,
-                   decoder_num_finished_states=decoder_num_finished_states,
-                   max_decoding_steps=max_decoding_steps,
-                   normalize_beam_score_by_length=normalize_beam_score_by_length,
-                   checklist_cost_weight=checklist_cost_weight,
-                   use_neighbor_similarity_for_linking=use_neighbor_similarity_for_linking,
-                   dropout=dropout,
-                   num_linking_features=num_linking_features,
-                   rule_namespace=rule_namespace,
-                   initial_mml_model_file=mml_model_file)
