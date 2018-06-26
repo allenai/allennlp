@@ -145,7 +145,8 @@ class HierarchalNamedBasicType(NamedBasicType):
     @overrides
     def __eq__(self, other):
         return isinstance(other, BasicType) and \
-               (("%s" % self) == ("%s" % other) or ("%s" % other) in self._child_types)
+               (("%s" % self) == ("%s" % other) or \
+               ("%s" % other) in [child_str.lower()[0] for child_str in self._child_types])
 
 class PlaceholderType(ComplexType):
     """

@@ -9,8 +9,14 @@ class TestAtisWorld(AllenNlpTestCase):
         super().setUp()
         # test_filename = self.FIXTURES_ROOT / "data" / "atis" / "sample_data.sql"
         # data = open(test_filename).readlines()
-
-    def test_parse_logical_form(self):
+    
+    def test_atis_parse_strings(self):
+        # world = self.worlds[0]
+        world = AtisWorld() 
+        parsed = world.parse_logical_form("(>= string:'NEW_YORK_CITY' num:1234)")
+        print(world.get_action_sequence(parsed))
+     
+    def test_atis_parse_logical_form(self):
         # world = self.worlds[0]
         world = AtisWorld() 
         
@@ -22,6 +28,47 @@ class TestAtisWorld(AllenNlpTestCase):
         print(world.get_action_sequence(parsed))
         parsed = world.parse_logical_form("(SELECT string:flight_arrival_time (FROM string:flight) (WHERE (>= num:1234 num:1234)))")
         print(world.get_action_sequence(parsed))
+        
+        
+        parsed = world.parse_logical_form("(SELECT_DISTINCT string:flight_arrival_time (FROM string:flight) (WHERE (>= num:1234 num:1234)))")
+        print(world.get_action_sequence(parsed))
+
+    def test_atis_parse_conjunctions(self):
+        world = AtisWorld()
+        parsed = world.parse_logical_form("(AND (>= num:1234 num:1234) (>= num:1234 num:1234))")
+        print(world.get_action_sequence(parsed))
+
+        parsed = world.parse_logical_form("(AND (AND (>= num:1234 num:1234) (>= num:1234 num:1234)) (>= num:1234 num:1234))")
+        print(world.get_action_sequence(parsed))
+
+
+    def test_atis_parse_nested(self):
+        world = AtisWorld() 
+        parsed = world.parse_logical_form("(IN string:flight_arrival_time (SELECT string:flight_arrival_time (FROM string:flight) (WHERE (>= num:1234 num:1234))))") 
+        print(world.get_action_sequence(parsed))
+
+        parsed = world.parse_logical_form("(SELECT string:flight_arrival_time (FROM string:flight) (WHERE (IN string:flight_arrival_time (SELECT string:flight_arrival_time (FROM string:flight) (WHERE (>= num:1234 num:1234))))))") 
+        print(world.get_action_sequence(parsed))
+
+    def test_atis_parse_distinct(self):
+        world = AtisWorld() 
+        parsed = world.parse_logical_form("(SELECT_DISTINCT string:flight_flight_id (FROM string:flight) (WHERE   (IN string:flight_from_airport (SELECT string:airport_service_airport_code (FROM string:airport_service) (WHERE   (IN string:airport_service_city_code (SELECT string:city_city_code (FROM string:city) (WHERE   (= string:'KANSAS_CITY' string:city_city_name)))))))))")
+        print(world.get_action_sequence(parsed))
+
+
+
+
+
+
+
+        
+
+        
+
+        
+
+
+
 
 
 

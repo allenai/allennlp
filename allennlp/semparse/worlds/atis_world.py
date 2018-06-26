@@ -12,7 +12,8 @@ from allennlp.semparse.type_declarations import atis_type_declaration as types
 class AtisWorld(World):
     def __init__(self) -> None:
         super(AtisWorld, self).__init__(constant_type_prefixes={"string": types.STRING_TYPE,
-                                                                "num": types.NUM_TYPE},
+                                                                "num": types.NUM_TYPE,
+                                                                "ent": types.ENTITY_TYPE},
                                         global_type_signatures=types.COMMON_TYPE_SIGNATURE,
                                         global_name_mapping=types.COMMON_NAME_MAPPING)
     curried_functions = {
@@ -20,7 +21,9 @@ class AtisWorld(World):
             types.BINOP_TYPE: 2,
             types.SELECT_TYPE: 3,
             types.FROM_TYPE: 1,
-            types.WHERE_TYPE: 1}
+            types.WHERE_TYPE: 1,
+            types.IN_TYPE: 2
+            }
 
     def _get_curried_functions(self) -> Dict[Type, int]:
         return AtisWorld.curried_functions
