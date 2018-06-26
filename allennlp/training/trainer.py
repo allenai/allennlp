@@ -310,6 +310,7 @@ class Trainer:
             self._tensorboard = TensorboardWriter(train_log, validation_log)
         else:
             self._tensorboard = TensorboardWriter()
+        self._warned_tqdm_ignores_underscores = False
 
     def _enable_gradient_clipping(self) -> None:
         if self._grad_clipping is not None:
@@ -756,7 +757,10 @@ class Trainer:
             return this_epoch_val_metric > max(validation_metric_per_epoch)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
-        # pylint: disable=no-self-use
+        if not self._warned_tqdm_ignores_underscores and any(itemA.startswith("_")):
+            logger.warning("Metrics with names beginning with \"_\" will "
+                           "not be logged to the tqdm progress bar.")
+            self._warned_tqdm_ignores_underscores = True
         return ', '.join(["%s: %.4f" % (name, value) for name, value in
                           metrics.items() if not name.startswith("_")]) + " ||"
 

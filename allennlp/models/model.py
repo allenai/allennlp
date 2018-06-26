@@ -43,7 +43,8 @@ class Model(torch.nn.Module, Registrable):
 
     Finally, you can optionally implement :func:`Model.get_metrics` in order to make use
     of early stopping and best-model serialization based on a validation metric in
-    :class:`~allennlp.training.Trainer`.
+    :class:`~allennlp.training.Trainer`. Metrics that begin with "_" will not be logged
+    to the progress bar by :class:`~allennlp.training.Trainer`.
     """
     def __init__(self,
                  vocab: Vocabulary,
