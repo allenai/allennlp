@@ -429,14 +429,13 @@ class Vocabulary:
 
         if counter is not None:
             # Make sure vocabulary extension is safe.
-            # Common named namespaces must have same setting for padded=True/False
-            tob_added_namespaces = list(counter.keys())
-            existing_namespaces = self.get_all_namespaces()
-            for namespace in tob_added_namespaces:
-                if namespace in existing_namespaces:
-                    existing_namespace_padded = namespace in self._non_padded_namespaces
-                    tob_added_namespace_padded = namespace in non_padded_namespaces
-                    if existing_namespace_padded != tob_added_namespace_padded:
+            for namespace in counter:
+                if namespace in self.get_all_namespaces():
+                    # if new namespace was already present
+                    # Either both should be padded or none should be.
+                    original_padded = namespace not in self._non_padded_namespaces
+                    extension_padded = namespace not in non_padded_namespaces
+                    if original_padded != extension_padded:
                         raise ConfigurationError("Common namespace {} has conflicting ".format(namespace)+
                                                  "setting of padded = True/False. "+
                                                  "Hence extension cannot be done.")
