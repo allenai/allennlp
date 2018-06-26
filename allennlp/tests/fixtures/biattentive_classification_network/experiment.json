@@ -4,8 +4,8 @@
       "use_subtrees": true,
       "granularity": "5-class"
   },
-  "train_data_path": "tests/fixtures/data/sst.txt",
-  "validation_data_path": "tests/fixtures/data/sst.txt",
+  "train_data_path": "allennlp/tests/fixtures/data/sst.txt",
+  "validation_data_path": "allennlp/tests/fixtures/data/sst.txt",
   "model": {
     "type": "bcn",
     "text_field_embedder": {

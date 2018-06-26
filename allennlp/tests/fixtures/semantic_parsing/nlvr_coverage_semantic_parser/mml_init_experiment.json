@@ -6,8 +6,8 @@
   "vocabulary": {
     "non_padded_namespaces": ["denotations", "rule_labels"]
   },
-  "train_data_path": "tests/fixtures/data/nlvr/sample_grouped_data.jsonl",
-  "validation_data_path": "tests/fixtures/data/nlvr/sample_grouped_data.jsonl",
+  "train_data_path": "allennlp/tests/fixtures/data/nlvr/sample_grouped_data.jsonl",
+  "validation_data_path": "allennlp/tests/fixtures/data/nlvr/sample_grouped_data.jsonl",
   "model": {
     "type": "nlvr_coverage_parser",
     "sentence_embedder": {
@@ -33,7 +33,7 @@
       "rate": 0.1
     },
     "penalize_non_agenda_actions": true,
-    "initial_mml_model_file": "tests/fixtures/semantic_parsing/nlvr_direct_semantic_parser/serialization/model.tar.gz"
+    "initial_mml_model_file": "allennlp/tests/fixtures/semantic_parsing/nlvr_direct_semantic_parser/serialization/model.tar.gz"
   },
   "iterator": {
     "type": "epoch_tracking_bucket",
