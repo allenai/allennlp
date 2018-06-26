@@ -2,7 +2,9 @@
 import argparse
 import re
 import shutil
+
 import pytest
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.fine_tune import FineTune, fine_tune_model_from_file_paths, \
                                fine_tune_model_from_args, fine_tune_model
@@ -72,14 +74,12 @@ class TestFineTune(AllenNlpTestCase):
             # If regex is matched, parameter name should have requires_grad False
             # If regex is matched, parameter name should have same requires_grad
             # as the originally loaded model
-            if regex_list:
-                nograd_regex = "(" + ")|(".join(regex_list) + ")"
-                for name, parameter in tuned_model.named_parameters():
-                    if re.search(nograd_regex, name):
-                        assert not parameter.requires_grad
-                    else:
-                        assert parameter.requires_grad \
-                        == name_parameters_original[name].requires_grad
+            for name, parameter in tuned_model.named_parameters():
+                if any(re.search(regex, name) for regex in regex_list):
+                    assert not parameter.requires_grad
+                else:
+                    assert parameter.requires_grad \
+                    == name_parameters_original[name].requires_grad
         # If all parameters have requires_grad=False, then error.
         with pytest.raises(Exception) as _:
             params = Params.from_file(self.config_file)

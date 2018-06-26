@@ -4,6 +4,7 @@ from typing import Iterable
 import os
 import shutil
 import re
+
 import pytest
 import torch
 
@@ -271,13 +272,11 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
             model = train_model(params, serialization_dir=serialization_dir)
             # If regex is matched, parameter name should have requires_grad False
             # Or else True
-            if regex_list:
-                nograd_regex = "(" + ")|(".join(regex_list) + ")"
-                for name, parameter in model.named_parameters():
-                    if re.search(nograd_regex, name):
-                        assert not parameter.requires_grad
-                    else:
-                        assert parameter.requires_grad
+            for name, parameter in model.named_parameters():
+                if any(re.search(regex, name) for regex in regex_list):
+                    assert not parameter.requires_grad
+                else:
+                    assert parameter.requires_grad
         # If all parameters have requires_grad=False, then error.
         params = params_get()
         params["trainer"]["no_grad"] = ["*"]

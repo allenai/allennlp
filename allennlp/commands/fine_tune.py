@@ -11,6 +11,7 @@ import logging
 import os
 from copy import deepcopy
 import re
+
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.train import datasets_from_params
@@ -166,12 +167,10 @@ def fine_tune_model(model: Model,
     test_data = all_datasets.get('test')
 
     trainer_params = params.pop("trainer")
-    nograd_regex_list = trainer_params.pop("no_grad", ())
-    if nograd_regex_list:
-        nograd_regex = "(" + ")|(".join(nograd_regex_list) + ")"
-        for name, parameter in model.named_parameters():
-            if re.search(nograd_regex, name):
-                parameter.requires_grad_(False)
+    no_grad_regexes = trainer_params.pop("no_grad", ())
+    for name, parameter in model.named_parameters():
+        if any(re.search(regex, name) for regex in no_grad_regexes):
+            parameter.requires_grad_(False)
     trainer = Trainer.from_params(model,
                                   serialization_dir,
                                   iterator,
