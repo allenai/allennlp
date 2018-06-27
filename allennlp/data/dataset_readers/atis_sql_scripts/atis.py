@@ -7,54 +7,54 @@ from parsimonious.nodes import RegexNode
 
 SQL_GRAMMAR = Grammar(r"""
     stmt                = query ";" ws
-    query               = ws lparen?  ws "SELECT" ws "DISTINCT"? ws select_results ws "FROM" ws table_refs ws WHERE rparen?  ws
 
+    query               = ws lparen?  ws "SELECT" ws "DISTINCT"? ws select_results ws "FROM" ws table_refs ws where_clause rparen?  ws
     select_results      = agg / col_refs
 
     agg                 = agg_func ws lparen ws col_ref ws rparen
-    agg_func            = MIN / MAX / COUNT
-    MIN                 = "MIN"
-    MAX                 = "MAX"
-    COUNT               = "count" / "COUNT"
-
-    col_refs            = (col_ref (ws "," ws col_ref)*)  
-    name                = ~"[a-zA-Z]\w*"i
-    ws                  = ~"\s*"i
+    agg_func            = "MIN" / "min" / "MAX" / "max" / "COUNT" / "count" 
     
+    col_refs            = (col_ref (ws "," ws col_ref)*)  
+    col_ref             = (table_name ws "." ws column_name) / column_name / asterisk
+        
     table_refs          = table_name (ws "," ws table_name)* 
     table_name          = name
-    column_name         = name
-    col_ref             =  (table_name ws "." ws column_name) / column_name / asterisk
-    WHERE               = "WHERE" ws lparen? ws condition_paren (ws conj ws condition_paren)* ws rparen? ws
-    lparen              = "(" 
-    rparen              = ")"
 
-    condition_paren     = NOT? (lparen ws)? condition_paren2 (ws rparen)?
-    condition_paren2    = NOT? (lparen ws)? condition_paren3 (ws rparen)?
-    condition_paren3    = NOT? (lparen ws)? condition (ws rparen)?
+    column_name         = name
+
+    where_clause        = "WHERE" ws lparen? ws condition_paren (ws conj ws condition_paren)* ws rparen? ws
+    
+    condition_paren     = not? (lparen ws)? condition_paren2 (ws rparen)?
+    condition_paren2    = not? (lparen ws)? condition_paren3 (ws rparen)?
+    condition_paren3    = not? (lparen ws)? condition (ws rparen)?
     condition           = in_clause / ternaryexpr / biexpr 
 
     in_clause       = (lparen ws)? col_ref ws "IN" ws query (ws rparen)?
     
     biexpr          = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ( col_ref ws "LIKE" ws string)
-    binaryop        = "+" / "-" / "*" / "/" / "=" / ">=" /
-                      "<=" / ">" / "<" / ">" / "and" / "or" / "is" / "IS"
+    binaryop        = "+" / "-" / "*" / "/" / "=" / 
+                      ">=" / "<=" / ">" / "<"  / "is" / "IS"
 
-    ternaryexpr     = col_ref ws NOT? "BETWEEN" ws value ws AND value ws
+    ternaryexpr     = col_ref ws not? "BETWEEN" ws value ws and value ws
     
-    value           = NOT? ws? pos_value
+    value           = not? ws? pos_value
     pos_value       = ("ALL" ws query) / ("ANY" ws query) / number / boolean / col_ref / string / agg_results / "NULL"
 
-    agg_results     = ws lparen?  ws "SELECT" ws "DISTINCT"? ws agg ws "FROM" ws table_name ws WHERE rparen?  ws
+    agg_results     = ws lparen?  ws "SELECT" ws "DISTINCT"? ws agg ws "FROM" ws table_name ws where_clause rparen?  ws
 
     number          = ~"\d*\.?\d+"i
     string          = ~"\'.*?\'"i
     boolean         = "true" / "false"
-    
-    conj            = AND / OR
-    AND             = "AND" ws 
-    OR              = "OR" ws
-    NOT             = ("NOT" ws ) / ("not" ws)
+
+    name                = ~"[a-zA-Z]\w*"i
+    ws                  = ~"\s*"i
+
+    lparen              = "(" 
+    rparen              = ")"
+    conj            = and / or 
+    and             = "AND" ws 
+    or              = "OR" ws
+    not             = ("NOT" ws ) / ("not" ws)
     asterisk        = "*"
 
     """) 
