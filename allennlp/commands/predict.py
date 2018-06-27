@@ -38,10 +38,10 @@ predictions using a trained model and its :class:`~allennlp.service.predictors.p
     --predictor PREDICTOR
                             optionally specify a specific predictor to use
 """
-from typing import List
+from typing import List, IO, Iterator, Optional
 import argparse
-from contextlib import ExitStack
 import sys
+import json
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu, ConfigurationError
@@ -58,9 +58,9 @@ class Predict(Subcommand):
                 name, description=description, help='Use a trained model to make predictions.')
 
         subparser.add_argument('archive_file', type=str, help='the archived model to make predictions with')
-        subparser.add_argument('input_file', type=argparse.FileType('r'), help='path to input file')
+        subparser.add_argument('input_file', type=str, help='path to input file')
 
-        subparser.add_argument('--output-file', type=argparse.FileType('w'), help='path to output file')
+        subparser.add_argument('--output-file', type=str, help='path to output file')
         subparser.add_argument('--weights-file',
                                type=str,
                                help='a path that overrides which weights file to use')
@@ -103,11 +103,20 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
 
 class _Predict:
 
-    def __init__(self, predictor, input_file, output_file, batch_size, print_to_console, has_dataset_reader):
+    def __init__(self,
+                 predictor: Predictor,
+                 input_file: str,
+                 output_file: Optional[str],
+                 batch_size: int,
+                 print_to_console: bool,
+                 has_dataset_reader: bool) -> None:
 
         self._predictor = predictor
         self._input_file = input_file
-        self._output_file = output_file
+        if output_file is not None:
+            self._output_file = open(output_file, "w")
+        else:
+            self._output_file = None
         self._batch_size = batch_size
         self._print_to_console = print_to_console
         if has_dataset_reader:
@@ -115,7 +124,7 @@ class _Predict:
         else:
             self._dataset_reader = None
 
-    def _predict_json_lines(self, batch_data: List[JsonDict]):
+    def _predict_json_lines(self, batch_data: List[JsonDict]) -> Iterator[str]:
         if len(batch_data) == 1:
             result = self._predictor.predict_json(batch_data[0])
             # Batch results return a list of json objects, so in
@@ -126,7 +135,7 @@ class _Predict:
         for output in results:
             yield self._predictor.dump_line(output)
 
-    def _predict_on_instances(self, batch_data: List[Instance]):
+    def _predict_on_instances(self, batch_data: List[Instance]) -> Iterator[str]:
         if len(batch_data) == 1:
             result = self._predictor.predict_instance(batch_data[0])
             # Batch results return a list of json objects, so in
@@ -137,50 +146,50 @@ class _Predict:
         for output in results:
             yield self._predictor.dump_line(output)
 
-    def _maybe_print_to_console_and_file(self, prediction: JsonDict, model_input: JsonDict = None) -> None:
+    def _maybe_print_to_console_and_file(self,
+                                         prediction: str,
+                                         model_input: str = None) -> None:
         if self._print_to_console:
-            if model_input:
+            if model_input is not None:
                 print("input: ", model_input)
             print("prediction: ", prediction)
         if self._output_file is not None:
             self._output_file.write(prediction)
 
-    def _get_json_data(self):
-        for line in self._input_file:
+    def _get_json_data(self) -> Iterator[JsonDict]:
+        for line in open(self._input_file):
             if not line.isspace():
                 yield self._predictor.load_line(line)
-    def _get_instance_data(self):
+
+    def _get_instance_data(self) -> Iterator[Instance]:
         if self._dataset_reader is None:
             raise ConfigurationError("To generate instances directly, pass a DatasetReader.")
         else:
             yield from self._dataset_reader.read(self._input_file)
 
-    def run(self):
+    def run(self) -> None:
         has_reader = self._dataset_reader is not None
-        generator = self._get_instance_data() if has_reader else self._get_json_data()
-        predict_function = self._predict_on_instances if has_reader else self._predict_json_lines
+        if has_reader:
+            for batch_json in lazy_groups_of(self._get_instance_data(), self._batch_size):
+                for result in self._predict_on_instances(batch_json):
+                    self._maybe_print_to_console_and_file(result)
+        else:
+            for batch in lazy_groups_of(self._get_json_data(), self._batch_size):
+                print(batch)
+                for model_input, result in zip(batch, self._predict_json_lines(batch)):
+                    self._maybe_print_to_console_and_file(result, json.dumps(model_input))
 
-        for batch in lazy_groups_of(generator, self._batch_size):
-            for model_input, result in zip(batch, predict_function(batch)):
-                input_to_print = model_input if not has_reader else None
-                self._maybe_print_to_console_and_file(result,
-                                                      model_input=input_to_print)
+        if self._output_file is not None:
+            self._output_file.close()
 
 def _predict(args: argparse.Namespace) -> None:
     predictor = _get_predictor(args)
-    output_file = None
 
     if args.silent and not args.output_file:
         print("--silent specified without --output-file.")
         print("Exiting early because no output will be created.")
         sys.exit(0)
 
-    # ExitStack allows us to conditionally context-manage `output_file`, which may or may not exist
-    with ExitStack() as stack:
-        input_file = stack.enter_context(args.input_file)  # type: ignore
-        if args.output_file:
-            output_file = stack.enter_context(args.output_file)  # type: ignore
+    util = _Predict(predictor, args.input_file, args.output_file, args.batch_size, not args.silent, args.dataset_reader)
 
-        util = _Predict(predictor, input_file, output_file, args.batch_size, not args.silent, args.dataset_reader)
-
-        util.run()
+    util.run()

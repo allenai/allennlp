@@ -45,7 +45,7 @@ class TestPredict(AllenNlpTestCase):
 
         assert args.func.__name__ == '_predict'
         assert args.archive_file == "/path/to/archive"
-        assert args.output_file.name == "/dev/null"
+        assert args.output_file == "/dev/null"
         assert args.batch_size == 10
         assert args.cuda_device == 0
         assert args.silent
