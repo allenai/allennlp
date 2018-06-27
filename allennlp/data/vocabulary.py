@@ -7,7 +7,7 @@ import codecs
 import logging
 import os
 from collections import defaultdict
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union
 from typing import TextIO  # pylint: disable=unused-import
 
 from allennlp.common.util import namespace_match
@@ -18,7 +18,7 @@ from allennlp.data import instance as adi  # pylint: disable=unused-import
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels")
+DEFAULT_NON_PADDED_NAMESPACES = {"*tags", "*labels"}
 DEFAULT_PADDING_TOKEN = "@@PADDING@@"
 DEFAULT_OOV_TOKEN = "@@UNKNOWN@@"
 NAMESPACE_PADDING_FILE = 'non_padded_namespaces.txt'
@@ -38,17 +38,17 @@ class _NamespaceDependentDefaultDict(defaultdict):
     specify filters on the namespace (the key used in the ``defaultdict``), and use different
     default values depending on whether the namespace passes the filter.
 
-    To do filtering, we take a sequence of ``non_padded_namespaces``.  This is a list or tuple of
-    strings that are either matched exactly against the keys, or treated as suffixes, if the
+    To do filtering, we take a set of ``non_padded_namespaces``.  This is a set of strings
+    that are either matched exactly against the keys, or treated as suffixes, if the
     string starts with ``*``.  In other words, if ``*tags`` is in ``non_padded_namespaces`` then
     ``passage_tags``, ``question_tags``, etc. (anything that ends with ``tags``) will have the
     ``non_padded`` default value.
 
     Parameters
     ----------
-    non_padded_namespaces : ``Sequence[str]``
-        A list or tuple of strings describing which namespaces are not padded.  If a namespace
-        (key) is missing from this dictionary, we will use :func:`namespace_match` to see whether
+    non_padded_namespaces : ``Set[str]``
+        A set of strings describing which namespaces are not padded.  If a namespace (key)
+        is missing from this dictionary, we will use :func:`namespace_match` to see whether
         the namespace should be padded.  If the given namespace matches any of the strings in this
         list, we will use ``non_padded_function`` to initialize the value for that namespace, and
         we will use ``padded_function`` otherwise.
@@ -60,7 +60,7 @@ class _NamespaceDependentDefaultDict(defaultdict):
         padded.
     """
     def __init__(self,
-                 non_padded_namespaces: Sequence[str],
+                 non_padded_namespaces: Set[str],
                  padded_function: Callable[[], Any],
                  non_padded_function: Callable[[], Any]) -> None:
         self._non_padded_namespaces = set(non_padded_namespaces)
@@ -81,14 +81,14 @@ class _NamespaceDependentDefaultDict(defaultdict):
         self._non_padded_namespaces.update(non_padded_namespaces)
 
 class _TokenToIndexDefaultDict(_NamespaceDependentDefaultDict):
-    def __init__(self, non_padded_namespaces: Sequence[str], padding_token: str, oov_token: str) -> None:
+    def __init__(self, non_padded_namespaces: Set[str], padding_token: str, oov_token: str) -> None:
         super(_TokenToIndexDefaultDict, self).__init__(non_padded_namespaces,
                                                        lambda: {padding_token: 0, oov_token: 1},
                                                        lambda: {})
 
 
 class _IndexToTokenDefaultDict(_NamespaceDependentDefaultDict):
-    def __init__(self, non_padded_namespaces: Sequence[str], padding_token: str, oov_token: str) -> None:
+    def __init__(self, non_padded_namespaces: Set[str], padding_token: str, oov_token: str) -> None:
         super(_IndexToTokenDefaultDict, self).__init__(non_padded_namespaces,
                                                        lambda: {0: padding_token, 1: oov_token},
                                                        lambda: {})
@@ -145,7 +145,7 @@ class Vocabulary:
         to be no larger than this.  If you specify a dictionary, then each namespace in the
         ``counter`` can have a separate maximum vocabulary size.  Any missing key will have a value
         of ``None``, which means no cap on the vocabulary size.
-    non_padded_namespaces : ``Sequence[str]``, optional
+    non_padded_namespaces : ``Set[str]``, optional
         By default, we assume you are mapping word / character tokens to integers, and so you want
         to reserve word indices for padding and out-of-vocabulary tokens.  However, if you are
         mapping NER or SRL tags, or class labels, to integers, you probably do not want to reserve
@@ -182,17 +182,20 @@ class Vocabulary:
                  counter: Dict[str, Dict[str, int]] = None,
                  min_count: Dict[str, int] = None,
                  max_vocab_size: Union[int, Dict[str, int]] = None,
-                 non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
+                 non_padded_namespaces: Set[str] = None,
                  pretrained_files: Optional[Dict[str, str]] = None,
                  only_include_pretrained_words: bool = False,
                  tokens_to_add: Dict[str, List[str]] = None) -> None:
         self._padding_token = DEFAULT_PADDING_TOKEN
         self._oov_token = DEFAULT_OOV_TOKEN
-        self._non_padded_namespaces = set(non_padded_namespaces)
-        self._token_to_index = _TokenToIndexDefaultDict(non_padded_namespaces,
+        if non_padded_namespaces:
+            self._non_padded_namespaces = set(non_padded_namespaces)
+        else:
+            self._non_padded_namespaces = DEFAULT_NON_PADDED_NAMESPACES
+        self._token_to_index = _TokenToIndexDefaultDict(self._non_padded_namespaces,
                                                         self._padding_token,
                                                         self._oov_token)
-        self._index_to_token = _IndexToTokenDefaultDict(non_padded_namespaces,
+        self._index_to_token = _IndexToTokenDefaultDict(self._non_padded_namespaces,
                                                         self._padding_token,
                                                         self._oov_token)
         # Made an empty vocabulary, now extend it.
@@ -242,7 +245,7 @@ class Vocabulary:
         """
         logger.info("Loading token dictionary from %s.", directory)
         with codecs.open(os.path.join(directory, NAMESPACE_PADDING_FILE), 'r', 'utf-8') as namespace_file:
-            non_padded_namespaces = [namespace_str.strip() for namespace_str in namespace_file]
+            non_padded_namespaces = {namespace_str.strip() for namespace_str in namespace_file}
 
         vocab = Vocabulary(non_padded_namespaces=non_padded_namespaces)
 
@@ -317,7 +320,7 @@ class Vocabulary:
                        instances: Iterable['adi.Instance'],
                        min_count: Dict[str, int] = None,
                        max_vocab_size: Union[int, Dict[str, int]] = None,
-                       non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
+                       non_padded_namespaces: Set[str] = None,
                        pretrained_files: Optional[Dict[str, str]] = None,
                        only_include_pretrained_words: bool = False,
                        tokens_to_add: Dict[str, List[str]] = None) -> 'Vocabulary':
@@ -393,7 +396,7 @@ class Vocabulary:
             return vocab
         min_count = params.pop("min_count", None)
         max_vocab_size = params.pop_int("max_vocab_size", None)
-        non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
+        non_padded_namespaces = params.pop("non_padded_namespaces", None)
         pretrained_files = params.pop("pretrained_files", {})
         only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
         tokens_to_add = params.pop("tokens_to_add", None)
@@ -410,7 +413,7 @@ class Vocabulary:
                counter: Dict[str, Dict[str, int]] = None,
                min_count: Dict[str, int] = None,
                max_vocab_size: Union[int, Dict[str, int]] = None,
-               non_padded_namespaces: Sequence[str] = DEFAULT_NON_PADDED_NAMESPACES,
+               non_padded_namespaces: Set[str] = None,
                pretrained_files: Optional[Dict[str, str]] = None,
                only_include_pretrained_words: bool = False,
                tokens_to_add: Dict[str, List[str]] = None) -> None:
@@ -425,7 +428,10 @@ class Vocabulary:
             max_vocab_size = defaultdict(lambda: int_max_vocab_size)  # type: ignore
         min_count = min_count or {}
         pretrained_files = pretrained_files or {}
-        non_padded_namespaces = set(non_padded_namespaces)
+        if non_padded_namespaces:
+            non_padded_namespaces = set(non_padded_namespaces)
+        else:
+            non_padded_namespaces = DEFAULT_NON_PADDED_NAMESPACES
 
         if counter is not None:
             # Make sure vocabulary extension is safe.
@@ -476,7 +482,7 @@ class Vocabulary:
         """
         min_count = params.pop("min_count", None)
         max_vocab_size = params.pop_int("max_vocab_size", None)
-        non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
+        non_padded_namespaces = params.pop("non_padded_namespaces", None)
         pretrained_files = params.pop("pretrained_files", {})
         only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
         tokens_to_add = params.pop("tokens_to_add", None)
@@ -502,7 +508,7 @@ class Vocabulary:
     def get_all_namespaces(self) -> Set[str]:
         return set(self._token_to_index.keys())
 
-    def get_non_padded_namespaces(self) -> List[str]:
+    def get_non_padded_namespaces(self) -> Set[str]:
         return self._non_padded_namespaces
 
     def get_token_to_index(self) -> Dict[str, Dict[str, int]]:
