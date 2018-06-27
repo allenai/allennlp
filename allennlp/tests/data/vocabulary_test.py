@@ -1,9 +1,10 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,too-many-public-methods
 import codecs
 import gzip
 import zipfile
 from copy import deepcopy
-
+import copy
+import shutil
 import pytest
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance, Token
@@ -226,7 +227,7 @@ class TestVocabulary(AllenNlpTestCase):
         vocab.save_to_files(vocab_dir)
         vocab2 = Vocabulary.from_files(vocab_dir)
 
-        assert vocab2._non_padded_namespaces == ["a", "c"]
+        assert vocab2._non_padded_namespaces == {"a", "c"}
 
         # Check namespace a.
         assert vocab2.get_vocab_size(namespace='a') == 3
@@ -309,6 +310,257 @@ class TestVocabulary(AllenNlpTestCase):
                                                                  1: '@@UNKNOWN@@',
                                                                  2: 'a', 3: 'c', 4: 'b',
                                                                  5: 'q', 6: 'x', 7: 'z'}
+
+    def test_valid_vocab_extension(self):
+        vocab_dir = self.TEST_DIR / 'vocab_save'
+        extension_ways = ["from_params", "extend_from_instances"]
+        # Test: padded/non-padded common namespaces are extending appropriately
+        non_padded_namespaces_list = [[], ["tokens"]]
+        for non_padded_namespaces in non_padded_namespaces_list:
+            original_vocab = Vocabulary(non_padded_namespaces=non_padded_namespaces)
+            original_vocab.add_token_to_namespace("d", namespace="tokens")
+            original_vocab.add_token_to_namespace("a", namespace="tokens")
+            original_vocab.add_token_to_namespace("b", namespace="tokens")
+            text_field = TextField([Token(t) for t in ["a", "d", "c", "e"]],
+                                   {"tokens": SingleIdTokenIndexer("tokens")})
+            instances = Batch([Instance({"text": text_field})])
+            for way in extension_ways:
+                if way == "extend_from_instances":
+                    extended_vocab = copy.copy(original_vocab)
+                    params = Params({"non_padded_namespaces": non_padded_namespaces})
+                    extended_vocab.extend_from_instances(params, instances)
+                else:
+                    shutil.rmtree(vocab_dir, ignore_errors=True)
+                    original_vocab.save_to_files(vocab_dir)
+                    params = Params({"directory_path": vocab_dir, "extend": True,
+                                     "non_padded_namespaces": non_padded_namespaces})
+                    extended_vocab = Vocabulary.from_params(params, instances)
+
+                extra_count = 2 if extended_vocab.is_padded("tokens") else 0
+                assert extended_vocab.get_token_index("d", "tokens") == 0 + extra_count
+                assert extended_vocab.get_token_index("a", "tokens") == 1 + extra_count
+                assert extended_vocab.get_token_index("b", "tokens") == 2 + extra_count
+
+                assert extended_vocab.get_token_index("c", "tokens") # should be present
+                assert extended_vocab.get_token_index("e", "tokens") # should be present
+
+                assert extended_vocab.get_vocab_size("tokens") == 5 + extra_count
+
+        # Test: padded/non-padded non-common namespaces are extending appropriately
+        non_padded_namespaces_list = [[],
+                                      ["tokens1"],
+                                      ["tokens1", "tokens2"]]
+        for non_padded_namespaces in non_padded_namespaces_list:
+            original_vocab = Vocabulary(non_padded_namespaces=non_padded_namespaces)
+            original_vocab.add_token_to_namespace("a", namespace="tokens1") # index2
+            text_field = TextField([Token(t) for t in ["b"]],
+                                   {"tokens2": SingleIdTokenIndexer("tokens2")})
+            instances = Batch([Instance({"text": text_field})])
+
+            for way in extension_ways:
+                if way == "extend_from_instances":
+                    extended_vocab = copy.copy(original_vocab)
+                    params = Params({"non_padded_namespaces": non_padded_namespaces})
+                    extended_vocab.extend_from_instances(params, instances)
+                else:
+                    shutil.rmtree(vocab_dir, ignore_errors=True)
+                    original_vocab.save_to_files(vocab_dir)
+                    params = Params({"directory_path": vocab_dir, "extend": True,
+                                     "non_padded_namespaces": non_padded_namespaces})
+                    extended_vocab = Vocabulary.from_params(params, instances)
+
+                assert len(extended_vocab.get_all_namespaces()) == 2
+
+                extra_count = 2 if extended_vocab.is_padded("tokens1") else 0
+                assert extended_vocab.get_vocab_size("tokens1") == 1 + extra_count
+
+                extra_count = 2 if extended_vocab.is_padded("tokens2") else 0
+                assert extended_vocab.get_vocab_size("tokens2") == 1 + extra_count
+
+    def test_invalid_vocab_extension(self):
+        vocab_dir = self.TEST_DIR / 'vocab_save'
+        original_vocab = Vocabulary(non_padded_namespaces=["tokens1"])
+        original_vocab.add_token_to_namespace("a", namespace="tokens1")
+        original_vocab.add_token_to_namespace("b", namespace="tokens1")
+        original_vocab.add_token_to_namespace("p", namespace="tokens2")
+        original_vocab.save_to_files(vocab_dir)
+        text_field1 = TextField([Token(t) for t in ["a" "c"]],
+                                {"tokens1": SingleIdTokenIndexer("tokens1")})
+        text_field2 = TextField([Token(t) for t in ["p", "q", "r"]],
+                                {"tokens2": SingleIdTokenIndexer("tokens2")})
+        instances = Batch([Instance({"text1": text_field1, "text2": text_field2})])
+
+        # Following 2 should give error: token1 is non-padded in original_vocab but not in instances
+        params = Params({"directory_path": vocab_dir, "extend": True,
+                         "non_padded_namespaces": []})
+        with pytest.raises(ConfigurationError):
+            _ = Vocabulary.from_params(params, instances)
+        with pytest.raises(ConfigurationError):
+            extended_vocab = copy.copy(original_vocab)
+            params = Params({"non_padded_namespaces": []})
+            extended_vocab.extend_from_instances(params, instances)
+
+        # Following 2 should not give error: overlapping namespaces have same padding setting
+        params = Params({"directory_path": vocab_dir, "extend": True,
+                         "non_padded_namespaces": ["tokens1"]})
+        Vocabulary.from_params(params, instances)
+        extended_vocab = copy.copy(original_vocab)
+        params = Params({"non_padded_namespaces": ["tokens1"]})
+        extended_vocab.extend_from_instances(params, instances)
+
+        # Following 2 should give error: token1 is padded in instances but not in original_vocab
+        params = Params({"directory_path": vocab_dir, "extend": True,
+                         "non_padded_namespaces": ["tokens1", "tokens2"]})
+        with pytest.raises(ConfigurationError):
+            _ = Vocabulary.from_params(params, instances)
+        with pytest.raises(ConfigurationError):
+            extended_vocab = copy.copy(original_vocab)
+            params = Params({"non_padded_namespaces": ["tokens1", "tokens2"]})
+            extended_vocab.extend_from_instances(params, instances)
+
+    def test_from_params_extend_config(self):
+
+        vocab_dir = self.TEST_DIR / 'vocab_save'
+        original_vocab = Vocabulary(non_padded_namespaces=["tokens"])
+        original_vocab.add_token_to_namespace("a", namespace="tokens")
+        original_vocab.save_to_files(vocab_dir)
+
+        text_field = TextField([Token(t) for t in ["a", "b"]],
+                               {"tokens": SingleIdTokenIndexer("tokens")})
+        instances = Batch([Instance({"text": text_field})])
+
+        # If you ask to extend vocab from `directory_path`, instances must be passed
+        # in Vocabulary constructor, or else there is nothing to extend to.
+        params = Params({"directory_path": vocab_dir, "extend": True})
+        with pytest.raises(ConfigurationError):
+            _ = Vocabulary.from_params(params)
+
+        # If you ask to extend vocab, `directory_path` key must be present in params,
+        # or else there is nothing to extend from.
+        params = Params({"extend": True})
+        with pytest.raises(ConfigurationError):
+            _ = Vocabulary.from_params(params, instances)
+
+    def test_from_params_valid_vocab_extension_thoroughly(self):
+        '''
+        Tests for Valid Vocab Extension thoroughly: Vocab extension is valid
+        when overlapping namespaces have same padding behaviour (padded/non-padded)
+        Summary of namespace paddings in this test:
+        original_vocab namespaces
+            tokens0     padded
+            tokens1     non-padded
+            tokens2     padded
+            tokens3     non-padded
+        instances namespaces
+            tokens0     padded
+            tokens1     non-padded
+            tokens4     padded
+            tokens5     non-padded
+        TypicalExtention example: (of tokens1 namespace)
+        -> original_vocab index2token
+           apple          #0->apple
+           bat            #1->bat
+           cat            #2->cat
+        -> Token to be extended with: cat, an, apple, banana, atom, bat
+        -> extended_vocab: index2token
+           apple           #0->apple
+           bat             #1->bat
+           cat             #2->cat
+           an              #3->an
+           atom            #4->atom
+           banana          #5->banana
+        '''
+
+        vocab_dir = self.TEST_DIR / 'vocab_save'
+        original_vocab = Vocabulary(non_padded_namespaces=["tokens1", "tokens3"])
+        original_vocab.add_token_to_namespace("apple", namespace="tokens0") # index:2
+        original_vocab.add_token_to_namespace("bat", namespace="tokens0")   # index:3
+        original_vocab.add_token_to_namespace("cat", namespace="tokens0")   # index:4
+
+        original_vocab.add_token_to_namespace("apple", namespace="tokens1") # index:0
+        original_vocab.add_token_to_namespace("bat", namespace="tokens1")   # index:1
+        original_vocab.add_token_to_namespace("cat", namespace="tokens1")   # index:2
+
+        original_vocab.add_token_to_namespace("a", namespace="tokens2") # index:0
+        original_vocab.add_token_to_namespace("b", namespace="tokens2") # index:1
+        original_vocab.add_token_to_namespace("c", namespace="tokens2") # index:2
+
+        original_vocab.add_token_to_namespace("p", namespace="tokens3") # index:0
+        original_vocab.add_token_to_namespace("q", namespace="tokens3") # index:1
+
+        original_vocab.save_to_files(vocab_dir)
+
+        text_field0 = TextField([Token(t) for t in ["cat", "an", "apple", "banana", "atom", "bat"]],
+                                {"tokens0": SingleIdTokenIndexer("tokens0")})
+        text_field1 = TextField([Token(t) for t in ["cat", "an", "apple", "banana", "atom", "bat"]],
+                                {"tokens1": SingleIdTokenIndexer("tokens1")})
+        text_field4 = TextField([Token(t) for t in ["l", "m", "n", "o"]],
+                                {"tokens4": SingleIdTokenIndexer("tokens4")})
+        text_field5 = TextField([Token(t) for t in ["x", "y", "z"]],
+                                {"tokens5": SingleIdTokenIndexer("tokens5")})
+        instances = Batch([Instance({"text0": text_field0, "text1": text_field1,
+                                     "text4": text_field4, "text5": text_field5})])
+
+        params = Params({"directory_path": vocab_dir,
+                         "extend": True,
+                         "non_padded_namespaces": ["tokens1", "tokens5"]})
+        extended_vocab = Vocabulary.from_params(params, instances)
+
+        # namespaces: tokens0, tokens1 is common.
+        # tokens2, tokens3 only vocab has. tokens4, tokens5 only instances
+        assert extended_vocab.get_all_namespaces() \
+                   == {"tokens{}".format(i) for i in range(6)}
+
+        # # Check that _non_padded_namespaces list is consistent after extension
+        assert extended_vocab.get_non_padded_namespaces() \
+                   == {"tokens1", "tokens3", "tokens5"}
+
+        # # original_vocab["tokens1"] has 3 tokens, instances of "tokens1" ns has 5 tokens. 2 overlapping
+        assert extended_vocab.get_vocab_size("tokens1") == 6
+        assert extended_vocab.get_vocab_size("tokens0") == 8 # 2 extra overlapping because padded
+
+        # namespace tokens3, tokens4 was only in original_vocab,
+        # and its token count should be same in extended_vocab
+        assert extended_vocab.get_vocab_size("tokens2") == original_vocab.get_vocab_size("tokens2")
+        assert extended_vocab.get_vocab_size("tokens3") == original_vocab.get_vocab_size("tokens3")
+
+        # namespace tokens2 was only in instances,
+        # and its token count should be same in extended_vocab
+        assert extended_vocab.get_vocab_size("tokens4") == 6 # l,m,n,o + oov + padding
+        assert extended_vocab.get_vocab_size("tokens5") == 3 # x,y,z
+
+        # Word2index mapping of all words in all namespaces of original_vocab
+        # should be maintained in extended_vocab
+        for namespace, token2index in original_vocab.get_token_to_index().items():
+            for token, _ in token2index.items():
+                vocab_index = original_vocab.get_token_index(token, namespace)
+                extended_vocab_index = extended_vocab.get_token_index(token, namespace)
+                assert vocab_index == extended_vocab_index
+        # And same for Index2Word mapping
+        for namespace, index2token in original_vocab.get_index_to_token().items():
+            for index, _ in index2token.items():
+                vocab_token = original_vocab.get_token_from_index(index, namespace)
+                extended_vocab_token = extended_vocab.get_token_from_index(index, namespace)
+                assert vocab_token == extended_vocab_token
+
+        # Manual Print Check
+        # original_vocab._token_to_index :>
+        # {
+        #   "tokens0": {"@@PADDING@@":0,"@@UNKNOWN@@":1,"apple":2,"bat":3,"cat":4},
+        #   "tokens1": {"apple": 0,"bat":1,"cat":2},
+        #   "tokens2": {"@@PADDING@@":0,"@@UNKNOWN@@":1,"a":2,"b":3,"c": 4},
+        #   "tokens3": {"p":0,"q":1}
+        # }
+        # extended_vocab._token_to_index :>
+        # {
+        #   "tokens0": {"@@PADDING@@": 0,"@@UNKNOWN@@": 1,
+        #               "apple": 2,"bat": 3,"cat": 4,"an": 5,"banana": 6,"atom": 7},
+        #   "tokens1": {"apple": 0,"bat": 1,"cat": 2,"an": 3,"banana": 4,"atom": 5},
+        #   "tokens2": {"@@PADDING@@": 0,"@@UNKNOWN@@": 1,"a": 2,"b": 3,"c": 4},
+        #   "tokens3": {"p": 0,"q": 1},
+        #   "tokens4": {"@@PADDING@@": 0,"@@UNKNOWN@@": 1,"l": 2,"m": 3,"n": 4,"o": 5},
+        #   "tokens5": {"x": 0,"y": 1,"z": 2}
+        # }
 
     def test_vocab_can_print(self):
         vocab = Vocabulary(non_padded_namespaces=["a", "c"])
