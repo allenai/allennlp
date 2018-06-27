@@ -128,6 +128,7 @@ _HTML = """
 
         .required-icon {
             color: red;
+            position: absolute;
         }
 
         .tooltip-icon {
@@ -137,7 +138,7 @@ _HTML = """
         .name {
             border-right: thin solid darkGray;
             padding: 3px;
-            margin: 5px;
+            margin: 5px 5px 5px 14px;
         }
 
         input {
@@ -316,7 +317,7 @@ _HTML = """
         }
         */
 
-        const baseApi = '' // use for dev 'http://joelgsmall.dev.ai2:8123/'
+        const baseApi = ''
 
         // A configItem is optional if it has a default value
         const isOptional = (configItem) => configItem.get('defaultValue') !== undefined
@@ -604,13 +605,31 @@ _HTML = """
         // single input boxes and configuration buttons stay on the parent line
         function showItemInline(item, inGroup) {
             const configurable = item.get('configurable')
-            const choices = item.get('choices')
-            const config = item.get('value')
+            if (configurable) {
+                const choices = item.get('choices')
+                const config = item.get('value')
+                // configurators with no choices nor config are inlined
+                // if they are open with choices/config, then we dont inline
+                return (!choices && !config)
+            }
             const annotation = item.get('annotation')
-            const args = annotation.get('args')
             const origin = annotation.get('origin')
-            return (configurable && !choices && !config) ||
-                !(configurable || origin === 'Dict' || origin === 'List' || origin == 'Sequence' || (origin == 'Tuple' && args.size == 2 && args.get(2) === '...'))
+            switch(origin){
+                case 'Dict':
+                case 'List':
+                case 'Sequence': {
+                    // complex data is never inlined
+                    return false
+                }
+                case 'Tuple': {
+                    const args = annotation.get('args')
+                    // tuples treated as lists are not inlined
+                    // tuples with 2 items are inlined
+                    return args.size == 2 && args.get(2) === '...'
+                }
+            }
+            // simple input is inlined
+            return true;
         }
 
         // One of the key-value pairs that makes up a Config.
@@ -718,7 +737,7 @@ _HTML = """
                     <span class="prefix">{prefix}</span>
                     <select value={choice} onChange={select}>
                         {choice ? null : (<option value=""></option>)}
-                        {choices.map(subclass => <option value={subclass}>{subclass.slice(prefix?prefix.length:0)}</option>)}
+                        {choices.map(subclass => <option value={subclass}>{subclass.slice(prefix ? prefix.length : 0)}</option>)}
                     </select>
                     {deleteButton}
                 </span>
@@ -833,7 +852,7 @@ _HTML = """
                 setData(config => config.setIn(path.push(fieldName), evt.target.value))
             }
             const defaultValue = item.get('defaultValue')
-            const placeholder = defaultValue===undefined ? 'REQUIRED' : `default: ${defaultValue}`
+            const placeholder = defaultValue === undefined ? 'REQUIRED' : `default: ${defaultValue}`
 
             return (
                 <span>
