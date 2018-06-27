@@ -90,8 +90,7 @@ class ConstituencyParserPredictor(Predictor):
         return self._dataset_reader.text_to_instance(sentence_text, pos_tags)
 
     @overrides
-    def predict_json(self, inputs: JsonDict) -> JsonDict:
-        instance = self._json_to_instance(inputs)
+    def predict_instance(self, instance: Instance) -> JsonDict:
         outputs = self._model.forward_on_instance(instance)
 
         # format the NLTK tree as a string on a single line.
@@ -101,8 +100,7 @@ class ConstituencyParserPredictor(Predictor):
         return sanitize(outputs)
 
     @overrides
-    def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
-        instances = self._batch_json_to_instances(inputs)
+    def predict_batch_instance(self, instances: List[Instance]) -> List[JsonDict]:
         outputs = self._model.forward_on_instances(instances)
         for output in outputs:
             # format the NLTK tree as a string on a single line.
