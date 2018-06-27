@@ -316,7 +316,7 @@ _HTML = """
         }
         */
 
-        const baseApi = `` // use for dev 'http://joelgsmall.dev.ai2:8123/'
+        const baseApi = '' // use for dev 'http://joelgsmall.dev.ai2:8123/'
 
         // A configItem is optional if it has a default value
         const isOptional = (configItem) => configItem.get('defaultValue') !== undefined
@@ -369,7 +369,6 @@ _HTML = """
                     (value || Immutable.List()).forEach((entry) => {
                         const entryKey = entry.get("key")
                         const entryValue = entry.get("value")
-
                         if (entryKey && entryKey.length && entryValue) {
                             const valueJson = jsonify(entryValue, valueAnnotation, configurable, true)
                             if (valueJson) {
@@ -387,7 +386,6 @@ _HTML = """
                     const list = (value || Immutable.List()).map(item => jsonify(item.get('value'), valueAnnotation, configurable, true))
                         .filter(x => x !== undefined)
                         .toArray()
-
                     return (list.length || !optional) ? list : undefined
                 } else if (origin === 'int' || origin === 'float') {
                     const numeric = +value
@@ -720,7 +718,7 @@ _HTML = """
                     <span class="prefix">{prefix}</span>
                     <select value={choice} onChange={select}>
                         {choice ? null : (<option value=""></option>)}
-                        {choices.map(subclass => <option value={subclass}>{subclass.slice(prefix.length)}</option>)}
+                        {choices.map(subclass => <option value={subclass}>{subclass.slice(prefix?prefix.length:0)}</option>)}
                     </select>
                     {deleteButton}
                 </span>
@@ -834,10 +832,12 @@ _HTML = """
             const onChange = evt => {
                 setData(config => config.setIn(path.push(fieldName), evt.target.value))
             }
+            const defaultValue = item.get('defaultValue')
+            const placeholder = defaultValue===undefined ? 'REQUIRED' : `default: ${defaultValue}`
 
             return (
                 <span>
-                    <input type="text" value={item.get(fieldName)} placeholder={`default: ${item.get('defaultValue')}`} onChange={onChange} />
+                    <input type="text" value={item.get(fieldName)} placeholder={placeholder} onChange={onChange} />
                 </span>
             )
         }
