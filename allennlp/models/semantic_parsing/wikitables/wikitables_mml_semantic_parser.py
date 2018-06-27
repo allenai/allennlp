@@ -120,7 +120,8 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                 world: List[WikiTablesWorld],
                 actions: List[List[ProductionRuleArray]],
                 example_lisp_string: List[str] = None,
-                target_action_sequences: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                target_action_sequences: torch.LongTensor = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         In this method we encode the table entities, link them to words in the question, then
@@ -146,14 +147,16 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
             ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
-        example_lisp_string : ``List[str]``, optional (default=None)
+        example_lisp_string : ``List[str]``, optional (default = None)
             The example (lisp-formatted) string corresponding to the given input.  This comes
             directly from the ``.examples`` file provided with the dataset.  We pass this to SEMPRE
             when evaluating denotation accuracy; it is otherwise unused.
-        target_action_sequences : torch.Tensor, optional (default=None)
+        target_action_sequences : torch.Tensor, optional (default = None)
            A list of possibly valid action sequences, where each action is an index into the list
            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
            sequence_length)``.
+        metadata : ``List[Dict[str, Any]]``, optional, (default = None)
+            Metadata containing the original tokenized question within a 'question_tokens' key.
         """
         initial_info = self._get_initial_state_and_scores(question, table, world, actions)
         initial_state = initial_info["initial_state"]
@@ -230,6 +233,8 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                     self._has_logical_form(0.0)
                     if example_lisp_string:
                         self._denotation_accuracy(None, example_lisp_string[i])
+            if metadata is not None:
+                outputs["question_tokens"] = [x["question_tokens"] for x in metadata]
             return outputs
 
     @classmethod

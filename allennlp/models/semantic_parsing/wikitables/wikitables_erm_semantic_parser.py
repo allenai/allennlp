@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Dict, List, Tuple, Set
+from typing import Dict, List, Tuple, Set, Any
 
 from overrides import overrides
 import torch
@@ -204,7 +204,8 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 world: List[WikiTablesWorld],
                 actions: List[List[ProductionRuleArray]],
                 agenda: torch.LongTensor,
-                example_lisp_string: List[str]) -> Dict[str, torch.Tensor]:
+                example_lisp_string: List[str],
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -229,6 +230,8 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
             The example (lisp-formatted) string corresponding to the given input.  This comes
             directly from the ``.examples`` file provided with the dataset.  We pass this to SEMPRE
             when evaluating denotation accuracy; it is otherwise unused.
+        metadata : ``List[Dict[str, Any]]``, optional, (default = None)
+            Metadata containing the original tokenized question within a 'question_tokens' key.
         """
         batch_size = list(question.values())[0].size(0)
         # Each instance's agenda is of size (agenda_size, 1)
@@ -329,6 +332,8 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                     if example_lisp_string:
                         self._denotation_accuracy(None, example_lisp_string[i])
                 self._agenda_coverage(in_agenda_ratio)
+        if metadata is not None:
+            outputs["question_tokens"] = [x["question_tokens"] for x in metadata]
         return outputs
 
     @staticmethod
