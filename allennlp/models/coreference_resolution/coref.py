@@ -285,6 +285,9 @@ class CoreferenceResolver(Model):
             self._conll_coref_scores(top_spans, valid_antecedent_indices, predicted_antecedents, metadata)
 
             output_dict["loss"] = negative_marginal_log_likelihood
+
+        if metadata is not None:
+            output_dict["document"] = [x["original_text"] for x in metadata]
         return output_dict
 
     @overrides

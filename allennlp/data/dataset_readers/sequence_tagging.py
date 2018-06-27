@@ -6,7 +6,7 @@ from overrides import overrides
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import TextField, SequenceLabelField
+from allennlp.data.fields import TextField, SequenceLabelField, MetadataField, Field
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
@@ -66,18 +66,20 @@ class SequenceTaggingDatasetReader(DatasetReader):
                                    for pair in line.split(self._token_delimiter)]
                 tokens = [Token(token) for token, tag in tokens_and_tags]
                 tags = [tag for token, tag in tokens_and_tags]
+                yield self.text_to_instance(tokens, tags)
 
-                sequence = TextField(tokens, self._token_indexers)
-                sequence_tags = SequenceLabelField(tags, sequence)
-                yield Instance({'tokens': sequence,
-                                'tags': sequence_tags})
-
-    def text_to_instance(self, tokens: List[Token]) -> Instance:  # type: ignore
+    def text_to_instance(self, tokens: List[Token], tags: List[str] = None) -> Instance:  # type: ignore
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
         """
         # pylint: disable=arguments-differ
-        return Instance({'tokens': TextField(tokens, token_indexers=self._token_indexers)})
+        fields: Dict[str, Field] = {}
+        sequence = TextField(tokens, self._token_indexers)
+        fields["tokens"] = sequence
+        fields["metadata"] = MetadataField({"words": [x.text for x in tokens]})
+        if tags is not None:
+            fields["tags"] = SequenceLabelField(tags, sequence)
+        return Instance(fields)
 
     @classmethod
     def from_params(cls, params: Params) -> 'SequenceTaggingDatasetReader':

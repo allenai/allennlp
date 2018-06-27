@@ -1,4 +1,3 @@
-from typing import Tuple
 from overrides import overrides
 
 from allennlp.common.util import JsonDict
@@ -25,15 +24,11 @@ class SentenceTaggerPredictor(Predictor):
         return self.predict_json({"sentence" : sentence})
 
     @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+    def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
         Expects JSON that looks like ``{"sentence": "..."}``.
         Runs the underlying model, and adds the ``"words"`` to the output.
         """
         sentence = json_dict["sentence"]
         tokens = self._tokenizer.split_words(sentence)
-        instance = self._dataset_reader.text_to_instance(tokens)
-
-        return_dict: JsonDict = {"words":[token.text for token in tokens]}
-
-        return instance, return_dict
+        return self._dataset_reader.text_to_instance(tokens)
