@@ -72,10 +72,10 @@ class Predict(Subcommand):
 
         cuda_device = subparser.add_mutually_exclusive_group(required=False)
         cuda_device.add_argument('--cuda-device', type=int, default=-1, help='id of GPU to use (if any)')
-        subparser.add_argument('--dataset-reader',
-                               type=str,
-                               default=None,
-                               help='A dataset reader to use to load instances from input_file')
+
+        subparser.add_argument('--use-dataset-reader',
+                               action='store_true',
+                               help='Whether to use the dataset reader of the original model to load Instances')
 
         subparser.add_argument('-o', '--overrides',
                                type=str,
@@ -143,8 +143,8 @@ class _Predict:
             yield self._predictor.dump_line(result)
         else:
             results = self._predictor.predict_batch_instance(batch_data)
-        for output in results:
-            yield self._predictor.dump_line(output)
+            for output in results:
+                yield self._predictor.dump_line(output)
 
     def _maybe_print_to_console_and_file(self,
                                          prediction: str,
@@ -170,8 +170,8 @@ class _Predict:
     def run(self) -> None:
         has_reader = self._dataset_reader is not None
         if has_reader:
-            for batch_json in lazy_groups_of(self._get_instance_data(), self._batch_size):
-                for result in self._predict_on_instances(batch_json):
+            for batch in lazy_groups_of(self._get_instance_data(), self._batch_size):
+                for result in self._predict_on_instances(batch):
                     self._maybe_print_to_console_and_file(result)
         else:
             for batch in lazy_groups_of(self._get_json_data(), self._batch_size):
@@ -189,7 +189,7 @@ def _predict(args: argparse.Namespace) -> None:
         print("--silent specified without --output-file.")
         print("Exiting early because no output will be created.")
         sys.exit(0)
-
-    util = _Predict(predictor, args.input_file, args.output_file, args.batch_size, not args.silent, args.dataset_reader)
+    print(args.use_dataset_reader)
+    util = _Predict(predictor, args.input_file, args.output_file, args.batch_size, not args.silent, args.use_dataset_reader)
 
     util.run()

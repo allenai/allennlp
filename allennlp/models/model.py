@@ -155,6 +155,9 @@ class Model(torch.nn.Module, Registrable):
             for name, output in list(outputs.items()):
                 if isinstance(output, torch.Tensor):
                     output = output.detach().cpu().numpy()
+                # TODO(markn): This is a hack because 0-dim pytorch tensors are not iterable.
+                if name == "loss" and output.ndim == 0:
+                    output = numpy.expand_dims(output, 0)
                 outputs[name] = output
                 for instance_output, batch_element in zip(instance_separated_output, output):
                     instance_output[name] = batch_element

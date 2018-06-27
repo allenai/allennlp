@@ -24,6 +24,7 @@ class TestPredict(AllenNlpTestCase):
         super(TestPredict, self).setUp()
         self.bidaf_model_path = (self.FIXTURES_ROOT / "bidaf" /
                                  "serialization" / "model.tar.gz")
+        self.bidaf_data_path = self.FIXTURES_ROOT / 'data' / 'squad.json'
         self.tempdir = pathlib.Path(tempfile.mkdtemp())
         self.infile = self.tempdir / "inputs.txt"
         self.outfile = self.tempdir / "outputs.txt"
@@ -77,6 +78,32 @@ class TestPredict(AllenNlpTestCase):
                                           "passage_question_attention", "question_tokens",
                                           "passage_tokens", "span_start_probs", "span_end_probs",
                                           "best_span", "best_span_str"}
+
+        shutil.rmtree(self.tempdir)
+
+    def test_using_dataset_reader_works_with_known_model(self):
+
+        sys.argv = ["run.py",      # executable
+                    "predict",     # command
+                    str(self.bidaf_model_path),
+                    str(self.bidaf_data_path),     # input_file
+                    "--output-file", str(self.outfile),
+                    "--silent",
+                    "--use-dataset-reader"]
+
+        main()
+
+        assert os.path.exists(self.outfile)
+
+        with open(self.outfile, 'r') as f:
+            results = [json.loads(line) for line in f]
+
+        assert len(results) == 5
+        for result in results:
+            assert set(result.keys()) == {"span_start_logits", "span_end_logits",
+                                          "passage_question_attention", "question_tokens",
+                                          "passage_tokens", "span_start_probs", "span_end_probs",
+                                          "best_span", "best_span_str", "loss"}
 
         shutil.rmtree(self.tempdir)
 
