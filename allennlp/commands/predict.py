@@ -38,16 +38,17 @@ predictions using a trained model and its :class:`~allennlp.service.predictors.p
     --predictor PREDICTOR
                             optionally specify a specific predictor to use
 """
-
+from typing import List
 import argparse
 from contextlib import ExitStack
 import sys
-from typing import Optional, IO
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import check_for_gpu
+from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common.util import lazy_groups_of
 from allennlp.models.archival import load_archive
-from allennlp.predictors import Predictor
+from allennlp.predictors.predictor import Predictor, JsonDict
+from allennlp.data import Instance
 
 class Predict(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
@@ -71,6 +72,10 @@ class Predict(Subcommand):
 
         cuda_device = subparser.add_mutually_exclusive_group(required=False)
         cuda_device.add_argument('--cuda-device', type=int, default=-1, help='id of GPU to use (if any)')
+        subparser.add_argument('--dataset-reader',
+                               type=str,
+                               default=None,
+                               help='A dataset reader to use to load instances from input_file')
 
         subparser.add_argument('-o', '--overrides',
                                type=str,
@@ -94,44 +99,72 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
 
     return Predictor.from_archive(archive, args.predictor)
 
-def _run(predictor: Predictor,
-         input_file: IO,
-         output_file: Optional[IO],
-         batch_size: int,
-         print_to_console: bool) -> None:
 
-    def _run_predictor(batch_data):
+
+class _Predict:
+
+    def __init__(self, predictor, input_file, output_file, batch_size, print_to_console, has_dataset_reader):
+
+        self._predictor = predictor
+        self._input_file = input_file
+        self._output_file = output_file
+        self._batch_size = batch_size
+        self._print_to_console = print_to_console
+        if has_dataset_reader:
+            self._dataset_reader = predictor._dataset_reader
+        else:
+            self._dataset_reader = None
+
+    def _predict_json_lines(self, batch_data: List[JsonDict]):
         if len(batch_data) == 1:
-            result = predictor.predict_json(batch_data[0])
+            result = self._predictor.predict_json(batch_data[0])
             # Batch results return a list of json objects, so in
             # order to iterate over the result below we wrap this in a list.
-            results = [result]
+            yield self._predictor.dump_line(result)
         else:
-            results = predictor.predict_batch_json(batch_data)
+            results = self._predictor.predict_batch_json(batch_data)
+        for output in results:
+            yield self._predictor.dump_line(output)
 
-        for model_input, output in zip(batch_data, results):
-            string_output = predictor.dump_line(output)
-            if print_to_console:
+    def _predict_on_instances(self, batch_data: List[Instance]):
+        if len(batch_data) == 1:
+            result = self._predictor.predict_instance(batch_data[0])
+            # Batch results return a list of json objects, so in
+            # order to iterate over the result below we wrap this in a list.
+            yield self._predictor.dump_line(result)
+        else:
+            results = self._predictor.predict_batch_instance(batch_data)
+        for output in results:
+            yield self._predictor.dump_line(output)
+
+    def _maybe_print_to_console_and_file(self, prediction: JsonDict, model_input: JsonDict = None) -> None:
+        if self._print_to_console:
+            if model_input:
                 print("input: ", model_input)
-                print("prediction: ", string_output)
-            if output_file:
-                output_file.write(string_output)
+            print("prediction: ", prediction)
+        if self._output_file is not None:
+            self._output_file.write(prediction)
 
-    batch_json_data = []
-    for line in input_file:
-        if not line.isspace():
-            # Collect batch size amount of data.
-            json_data = predictor.load_line(line)
-            batch_json_data.append(json_data)
-            if len(batch_json_data) == batch_size:
-                _run_predictor(batch_json_data)
-                batch_json_data = []
+    def _get_json_data(self):
+        for line in self._input_file:
+            if not line.isspace():
+                yield self._predictor.load_line(line)
+    def _get_instance_data(self):
+        if self._dataset_reader is None:
+            raise ConfigurationError("To generate instances directly, pass a DatasetReader.")
+        else:
+            yield from self._dataset_reader.read(self._input_file)
 
-    # We might not have a dataset perfectly divisible by the batch size,
-    # so tidy up the scraps.
-    if batch_json_data:
-        _run_predictor(batch_json_data)
+    def run(self):
+        has_reader = self._dataset_reader is not None
+        generator = self._get_instance_data() if has_reader else self._get_json_data()
+        predict_function = self._predict_on_instances if has_reader else self._predict_json_lines
 
+        for batch in lazy_groups_of(generator, self._batch_size):
+            for model_input, result in zip(batch, predict_function(batch)):
+                input_to_print = model_input if not has_reader else None
+                self._maybe_print_to_console_and_file(result,
+                                                      model_input=input_to_print)
 
 def _predict(args: argparse.Namespace) -> None:
     predictor = _get_predictor(args)
@@ -148,8 +181,6 @@ def _predict(args: argparse.Namespace) -> None:
         if args.output_file:
             output_file = stack.enter_context(args.output_file)  # type: ignore
 
-        _run(predictor,
-             input_file,
-             output_file,
-             args.batch_size,
-             not args.silent)
+        util = _Predict(predictor, input_file, output_file, args.batch_size, not args.silent, args.dataset_reader)
+
+        util.run()
