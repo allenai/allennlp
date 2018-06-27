@@ -47,8 +47,8 @@ class _NamespaceDependentDefaultDict(defaultdict):
     Parameters
     ----------
     non_padded_namespaces : ``Iterable[str]``
-        A set of strings describing which namespaces are not padded.  If a namespace (key)
-        is missing from this dictionary, we will use :func:`namespace_match` to see whether
+        A set / list / tuple of strings describing which namespaces are not padded.  If a namespace
+        (key) is missing from this dictionary, we will use :func:`namespace_match` to see whether
         the namespace should be padded.  If the given namespace matches any of the strings in this
         list, we will use ``non_padded_function`` to initialize the value for that namespace, and
         we will use ``padded_function`` otherwise.
