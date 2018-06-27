@@ -7,7 +7,7 @@ import torch
 from allennlp.commands.train import train_model_from_file
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
-from allennlp.data import DataIterator, DatasetReader, Vocabulary
+from allennlp.data import DataIterator, DatasetReader, Vocabulary, RegistrableVocabulary
 from allennlp.data.dataset import Batch
 from allennlp.models import Model, load_archive
 
@@ -17,11 +17,23 @@ class ModelTestCase(AllenNlpTestCase):
     A subclass of :class:`~allennlp.common.testing.test_case.AllenNlpTestCase`
     with added methods for testing :class:`~allennlp.models.model.Model` subclasses.
     """
+    def setUp(self, working_dir: str = None):
+        """
+        Parameters
+        ----------
+        working_dir: ``str``, optional
+            Specify the working directory, otherwise use self.MODULE_ROOT.
+        """
+        super().setUp()
+        if working_dir is None:
+            self.working_dir = self.MODULE_ROOT
+        else:
+            self.working_dir = working_dir
+
     def set_up_model(self, param_file, dataset_file):
         # pylint: disable=attribute-defined-outside-init
         initial_working_dir = os.getcwd()
-        # Change directory to module root.
-        os.chdir(self.MODULE_ROOT)
+        os.chdir(self.working_dir)
 
         self.param_file = param_file
         params = Params.from_file(self.param_file)
@@ -32,7 +44,7 @@ class ModelTestCase(AllenNlpTestCase):
         # "non_padded_namespaces", "min_count" etc. can be set if needed.
         if 'vocabulary' in params:
             vocab_params = params['vocabulary']
-            vocab = Vocabulary.from_params(params=vocab_params, instances=instances)
+            vocab = RegistrableVocabulary.from_params(params=vocab_params, instances=instances)
         else:
             vocab = Vocabulary.from_instances(instances)
         self.vocab = vocab
@@ -52,8 +64,7 @@ class ModelTestCase(AllenNlpTestCase):
                                              tolerance: float = 1e-4,
                                              cuda_device: int = -1):
         initial_working_dir = os.getcwd()
-        # Change directory to module root.
-        os.chdir(self.MODULE_ROOT)
+        os.chdir(self.working_dir)
 
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
@@ -93,6 +104,7 @@ class ModelTestCase(AllenNlpTestCase):
 
         # The datasets themselves should be identical.
         assert model_batch.keys() == loaded_batch.keys()
+        print(len(loaded_dataset), model_batch['tokens']['elmo'].shape)
         for key in model_batch.keys():
             self.assert_fields_equal(model_batch[key], loaded_batch[key], key, 1e-6)
 
@@ -159,9 +171,13 @@ class ModelTestCase(AllenNlpTestCase):
         for name, parameter in model.named_parameters():
             zeros = torch.zeros(parameter.size())
             if parameter.requires_grad:
-
+    
                 if parameter.grad is None:
                     has_zero_or_none_grads[name] = "No gradient computed (i.e parameter.grad is None)"
+
+                elif parameter.grad.is_sparse or parameter.grad.data.is_sparse:
+                    pass
+
                 # Some parameters will only be partially updated,
                 # like embeddings, so we just check that any gradient is non-zero.
                 elif (parameter.grad.cpu() == zeros).all():
