@@ -32,7 +32,7 @@ SQL_GRAMMAR = Grammar(r"""
     condition_paren     = NOT? (lparen ws)? condition_paren2 (ws rparen)?
     condition_paren2    = NOT? (lparen ws)? condition_paren3 (ws rparen)?
     condition_paren3    = NOT? (lparen ws)? condition (ws rparen)?
-    condition           = biexpr / in_clause / ternaryexpr
+    condition           = in_clause / ternaryexpr / biexpr 
 
     in_clause       = (lparen ws)? col_ref ws "IN" ws query (ws rparen)?
     
@@ -40,10 +40,10 @@ SQL_GRAMMAR = Grammar(r"""
     binaryop        = "+" / "-" / "*" / "/" / "=" / ">=" /
                       "<=" / ">" / "<" / ">" / "and" / "or" / "is" / "IS"
 
-    ternaryexpr     = col_ref ws "BETWEEN" ws value ws AND value ws
+    ternaryexpr     = col_ref ws NOT? "BETWEEN" ws value ws AND value ws
     
     value           = NOT? ws? pos_value
-    pos_value       = number / boolean / col_ref / string / agg_results / "NULL" / ("ALL" ws query) / ("ANY" ws query)
+    pos_value       = ("ALL" ws query) / ("ANY" ws query) / number / boolean / col_ref / string / agg_results / "NULL"
 
     agg_results     = ws lparen?  ws "SELECT" ws "DISTINCT"? ws agg ws "FROM" ws table_name ws WHERE rparen?  ws
 
