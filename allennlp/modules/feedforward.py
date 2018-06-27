@@ -32,16 +32,24 @@ class FeedForward(torch.nn.Module):
     dropout : ``Union[float, Sequence[float]]``, optional
         If given, we will apply this amount of dropout after each layer.  Semantics of ``float``
         versus ``Sequence[float]`` is the same as with other parameters.
+    biases : ``Union[bool, Sequence[bool]]``, optional,
+        Default is True for all layers.
+        If given, we will specify bias for each of the layers.  Semantics of ``bool``
+        versus ``Sequence[bool]`` is the same as with other parameters.
     """
     def __init__(self,
                  input_dim: int,
                  num_layers: int,
                  hidden_dims: Union[int, Sequence[int]],
                  activations: Union[Activation, Sequence[Activation]],
-                 dropout: Union[float, Sequence[float]] = 0.0) -> None:
+                 dropout: Union[float, Sequence[float]] = 0.0,
+                 biases: Union[bool, Sequence[bool]] = True,
+                 ) -> None:
         super(FeedForward, self).__init__()
         if not isinstance(hidden_dims, list):
             hidden_dims = [hidden_dims] * num_layers  # type: ignore
+        if not isinstance(biases, list):
+            biases = [biases] * num_layers  # type: ignore
         if not isinstance(activations, list):
             activations = [activations] * num_layers  # type: ignore
         if not isinstance(dropout, list):
@@ -58,8 +66,8 @@ class FeedForward(torch.nn.Module):
         self._activations = activations
         input_dims = [input_dim] + hidden_dims[:-1]
         linear_layers = []
-        for layer_input_dim, layer_output_dim in zip(input_dims, hidden_dims):
-            linear_layers.append(torch.nn.Linear(layer_input_dim, layer_output_dim))
+        for layer_input_dim, layer_output_dim, layer_bias in zip(input_dims, hidden_dims, biases):
+            linear_layers.append(torch.nn.Linear(layer_input_dim, layer_output_dim, layer_bias))
         self._linear_layers = torch.nn.ModuleList(linear_layers)
         dropout_layers = [torch.nn.Dropout(p=value) for value in dropout]
         self._dropout = torch.nn.ModuleList(dropout_layers)
@@ -84,6 +92,7 @@ class FeedForward(torch.nn.Module):
         input_dim = params.pop_int('input_dim')
         num_layers = params.pop_int('num_layers')
         hidden_dims = params.pop('hidden_dims')
+        biases = params.pop('biases', True)
         activations = params.pop('activations')
         dropout = params.pop('dropout', 0.0)
         if isinstance(activations, list):
@@ -95,4 +104,5 @@ class FeedForward(torch.nn.Module):
                    num_layers=num_layers,
                    hidden_dims=hidden_dims,
                    activations=activations,
-                   dropout=dropout)
+                   dropout=dropout,
+                   biases=biases)
