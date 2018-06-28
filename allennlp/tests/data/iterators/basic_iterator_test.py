@@ -10,7 +10,6 @@ from allennlp.data.fields import TextField
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
-
 class IteratorTest(AllenNlpTestCase):
     def setUp(self):
         super(IteratorTest, self).setUp()
