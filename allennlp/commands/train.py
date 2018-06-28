@@ -37,6 +37,7 @@ import json
 import logging
 import os
 from copy import deepcopy
+import re
 
 import torch
 
@@ -282,6 +283,24 @@ def train_model(params: Params,
     test_data = all_datasets.get('test')
 
     trainer_params = params.pop("trainer")
+    no_grad_regexes = trainer_params.pop("no_grad", ())
+
+    nograd_parameter_names = []
+    grad_parameter_names = []
+    for name, parameter in model.named_parameters():
+        if any(re.search(regex, name) for regex in no_grad_regexes):
+            parameter.requires_grad_(False)
+            nograd_parameter_names.append(name)
+        else:
+            grad_parameter_names.append(name)
+
+    logger.info("Following parameters are Frozen  (without gradient):")
+    for name in nograd_parameter_names:
+        logger.info(name)
+    logger.info("Following parameters are Tunable (with gradient):")
+    for name in grad_parameter_names:
+        logger.info(name)
+
     trainer = Trainer.from_params(model,
                                   serialization_dir,
                                   iterator,
