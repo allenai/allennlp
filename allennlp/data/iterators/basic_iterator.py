@@ -9,7 +9,6 @@ from allennlp.common import Params
 from allennlp.common.util import ensure_list, is_lazy, lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
-from allennlp.data.iterators.utils import memory_sized_lists
 from allennlp.data.dataset import Batch
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -58,10 +57,10 @@ class BasicIterator(DataIterator):
 
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         # First break the dataset into memory-sized lists:
-        for instance_list in memory_sized_lists(instances,
-                                                self._batch_size,
-                                                self._max_instances_in_memory,
-                                                self._instances_per_epoch):
+        for instance_list in self._memory_sized_lists(instances,
+                                                      self._batch_size,
+                                                      self._max_instances_in_memory,
+                                                      self._instances_per_epoch):
             if shuffle:
                 random.shuffle(instance_list)
             iterator = iter(instance_list)

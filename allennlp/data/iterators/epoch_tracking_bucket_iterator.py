@@ -1,5 +1,6 @@
 import logging
 from typing import List, Tuple
+import warnings
 
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.iterators.bucket_iterator import BucketIterator
@@ -35,3 +36,6 @@ class EpochTrackingBucketIterator(BucketIterator):
                          instances_per_epoch=instances_per_epoch,
                          max_instances_in_memory=max_instances_in_memory,
                          track_epoch=True)
+        warnings.warn("EpochTrackingBucketIterator is deprecated, "
+                      "please just use BucketIterator with track_epoch=True",
+                      DeprecationWarning)

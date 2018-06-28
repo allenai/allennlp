@@ -1,19 +1,45 @@
 import logging
 import math
 import random
-from typing import List, Tuple, Dict, cast, Iterable
+from typing import List, Tuple, Iterable, cast, Dict
 
 from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common import Params
-from allennlp.common.util import add_noise_to_dict_values, is_lazy, lazy_groups_of, ensure_list
+from allennlp.common.util import is_lazy, lazy_groups_of, ensure_list, add_noise_to_dict_values
 from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
-from allennlp.data.iterators.utils import memory_sized_lists, sort_by_padding
+from allennlp.data.vocabulary import Vocabulary
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+def sort_by_padding(instances: List[Instance],
+                    sorting_keys: List[Tuple[str, str]],  # pylint: disable=invalid-sequence-index
+                    vocab: Vocabulary,
+                    padding_noise: float = 0.0) -> List[Instance]:
+    """
+    Sorts the ``Instances`` in this ``Batch`` by their padding lengths, using the keys in
+    ``sorting_keys`` (in the order in which they are provided).  ``sorting_keys`` is a list of
+    ``(field_name, padding_key)`` tuples.
+    """
+    instances_with_lengths = []
+    for instance in instances:
+        # Make sure instance is indexed before calling .get_padding
+        instance.index_fields(vocab)
+        padding_lengths = cast(Dict[str, Dict[str, float]], instance.get_padding_lengths())
+        if padding_noise > 0.0:
+            noisy_lengths = {}
+            for field_name, field_lengths in padding_lengths.items():
+                noisy_lengths[field_name] = add_noise_to_dict_values(field_lengths, padding_noise)
+            padding_lengths = noisy_lengths
+        instance_with_lengths = ([padding_lengths[field_name][padding_key]
+                                  for (field_name, padding_key) in sorting_keys],
+                                 instance)
+        instances_with_lengths.append(instance_with_lengths)
+    instances_with_lengths.sort(key=lambda x: x[0])
+    return [instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths]
 
 
 @DataIterator.register("bucket")
@@ -91,10 +117,10 @@ class BucketIterator(DataIterator):
 
     @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
-        for instance_list in memory_sized_lists(instances,
-                                                self._batch_size,
-                                                self._instances_per_epoch,
-                                                self._max_instances_in_memory):
+        for instance_list in self._memory_sized_lists(instances,
+                                                      self._batch_size,
+                                                      self._max_instances_in_memory,
+                                                      self._instances_per_epoch):
 
             instance_list = sort_by_padding(instance_list,
                                             self._sorting_keys,
