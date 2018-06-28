@@ -1,5 +1,4 @@
 import logging
-import math
 import random
 from typing import List, Tuple, Iterable, cast, Dict
 
@@ -7,7 +6,7 @@ from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common import Params
-from allennlp.common.util import is_lazy, lazy_groups_of, ensure_list, add_noise_to_dict_values
+from allennlp.common.util import lazy_groups_of, add_noise_to_dict_values
 from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -103,17 +102,6 @@ class BucketIterator(DataIterator):
         self._sorting_keys = sorting_keys
         self._padding_noise = padding_noise
         self._biggest_batch_first = biggest_batch_first
-
-    @overrides
-    def get_num_batches(self, instances: Iterable[Instance]) -> int:
-        if is_lazy(instances) and self._instances_per_epoch is None:
-            # Unable to compute num batches, so just return 1.
-            return 1
-        elif self._instances_per_epoch is not None:
-            return math.ceil(self._instances_per_epoch / self._batch_size)
-        else:
-            # Not lazy, so can compute the list length.
-            return math.ceil(len(ensure_list(instances)) / self._batch_size)
 
     @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:

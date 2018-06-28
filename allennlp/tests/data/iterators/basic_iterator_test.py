@@ -5,20 +5,11 @@ from collections import Counter
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance, Token, Vocabulary
-from allennlp.data.dataset import Batch
 from allennlp.data.dataset_readers.dataset_reader import _LazyInstances
 from allennlp.data.fields import TextField
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
-def assert_tensor_dict_eq(td1, td2) -> bool:
-    assert td1.keys() == td2.keys()
-
-    for k, v in td1.items():
-        if isinstance(v, dict):
-            assert_tensor_dict_eq(v, td2[k])
-        else:
-            assert v.equal(td2[k])
 
 class IteratorTest(AllenNlpTestCase):
     def setUp(self):

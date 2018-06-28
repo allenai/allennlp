@@ -44,7 +44,7 @@ class EpochTrackingBucketIterator(BucketIterator):
                       DeprecationWarning)
 
     @classmethod
-    def from_params(cls, params: Params) -> 'BucketIterator':
+    def from_params(cls, params: Params) -> 'EpochTrackingBucketIterator':
         sorting_keys = params.pop('sorting_keys')
         padding_noise = params.pop_float('padding_noise', 0.1)
         biggest_batch_first = params.pop_bool('biggest_batch_first', False)

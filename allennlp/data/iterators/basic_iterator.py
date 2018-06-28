@@ -14,12 +14,9 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @DataIterator.register("basic")
 class BasicIterator(DataIterator):
     """
-    A very basic iterator that takes a dataset, possibly shuffles it, and creates fixed sized batches.,
-    and pads all of the instances in a batch to the maximum lengths of the relevant fields
-    within that batch.
+    A very basic iterator that takes a dataset, possibly shuffles it, and creates fixed sized batches.
 
     It takes the same parameters as :class:`allennlp.data.iterators.DataIterator`
-
     """
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         # First break the dataset into memory-sized lists:
