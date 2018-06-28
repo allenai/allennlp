@@ -235,6 +235,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                         self._denotation_accuracy(None, example_lisp_string[i])
             if metadata is not None:
                 outputs["question_tokens"] = [x["question_tokens"] for x in metadata]
+                outputs["original_table"] = [x["original_table"] for x in metadata]
             return outputs
 
     @classmethod

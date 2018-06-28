@@ -334,6 +334,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 self._agenda_coverage(in_agenda_ratio)
         if metadata is not None:
             outputs["question_tokens"] = [x["question_tokens"] for x in metadata]
+            outputs["original_table"] = [x["original_table"] for x in metadata]
         return outputs
 
     @staticmethod

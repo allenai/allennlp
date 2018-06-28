@@ -2,7 +2,7 @@
 Reader for WikitableQuestions (https://github.com/ppasupat/WikiTableQuestions/releases/tag/v1.0.2).
 """
 
-from typing import Dict, List, Union
+from typing import Dict, List, Any
 import gzip
 import json
 import logging
@@ -208,8 +208,10 @@ class WikiTablesDatasetReader(DatasetReader):
                             continue
                 else:
                     sempre_forms = None
+
+                table_lines = open(table_filename).readlines()
                 instance = self.text_to_instance(question=question,
-                                                 table_info=table_filename,
+                                                 table_lines=table_lines,
                                                  example_lisp_string=line,
                                                  dpd_output=sempre_forms)
                 if instance is not None:
@@ -234,24 +236,21 @@ class WikiTablesDatasetReader(DatasetReader):
     @overrides
     def text_to_instance(self,  # type: ignore
                          question: str,
-                         table_info: Union[str, JsonDict],
+                         table_lines: List[str],
                          example_lisp_string: str = None,
                          dpd_output: List[str] = None,
                          tokenized_question: List[Token] = None) -> Instance:
         """
         Reads text inputs and makes an instance. WikitableQuestions dataset provides tables as TSV
-        files, which we use for training. For running a demo, we may want to provide tables in a
-        JSON format. To make this method compatible with both, we take ``table_info``, which can
-        either be a filename, or a dict. We check the argument's type and call the appropriate
-        method in ``TableQuestionKnowledgeGraph``.
+        files, which we use for training.
 
         Parameters
         ----------
         question : ``str``
             Input question
-        table_info : ``str`` or ``JsonDict``
-            Table filename or the table content itself, as a dict. See
-            ``TableQuestionKnowledgeGraph.read_from_json`` for the expected format.
+        table_lines : ``List[str]``
+            The table content itself, as a list of rows. See
+            ``TableQuestionKnowledgeGraph.read_from_lines`` for the expected format.
         example_lisp_string : ``str``, optional
             The original (lisp-formatted) example string in the WikiTableQuestions dataset.  This
             comes directly from the ``.examples`` file provided with the dataset.  We pass this to
@@ -268,14 +267,10 @@ class WikiTablesDatasetReader(DatasetReader):
         # pylint: disable=arguments-differ
         tokenized_question = tokenized_question or self._tokenizer.tokenize(question.lower())
         question_field = TextField(tokenized_question, self._question_token_indexers)
-        question_metadata = MetadataField({"question_tokens": [x.text for x in tokenized_question]})
-        if isinstance(table_info, str):
-            table_knowledge_graph = TableQuestionKnowledgeGraph.read_from_file(table_info,
-                                                                               tokenized_question)
-            table_metadata = MetadataField(open(table_info).readlines())
-        else:
-            table_knowledge_graph = TableQuestionKnowledgeGraph.read_from_json(table_info)
-            table_metadata = MetadataField(table_info)
+        metadata: Dict[str, Any] = {"question_tokens": [x.text for x in tokenized_question]}
+        metadata["original_table"] = "".join(table_lines)
+        table_knowledge_graph = TableQuestionKnowledgeGraph.read_from_lines(table_lines, tokenized_question)
+        table_metadata = MetadataField(table_lines)
         table_field = KnowledgeGraphField(table_knowledge_graph,
                                           tokenized_question,
                                           self._table_token_indexers,
@@ -295,7 +290,7 @@ class WikiTablesDatasetReader(DatasetReader):
         action_field = ListField(production_rule_fields)
 
         fields = {'question': question_field,
-                  'metadata': question_metadata,
+                  'metadata': MetadataField(metadata),
                   'table': table_field,
                   'world': world_field,
                   'actions': action_field}
@@ -314,7 +309,7 @@ class WikiTablesDatasetReader(DatasetReader):
             for logical_form in dpd_output:
                 if not self._should_keep_logical_form(logical_form):
                     logger.debug(f'Question was: {question}')
-                    logger.debug(f'Table info was: {table_info}')
+                    logger.debug(f'Table info was: {table_lines}')
                     continue
                 try:
                     expression = world.parse_logical_form(logical_form)
@@ -322,7 +317,7 @@ class WikiTablesDatasetReader(DatasetReader):
                     logger.debug(f'Parsing error: {error.message}, skipping logical form')
                     logger.debug(f'Question was: {question}')
                     logger.debug(f'Logical form was: {logical_form}')
-                    logger.debug(f'Table info was: {table_info}')
+                    logger.debug(f'Table info was: {table_lines}')
                     continue
                 except:
                     logger.error(logical_form)
@@ -336,7 +331,7 @@ class WikiTablesDatasetReader(DatasetReader):
                 except KeyError as error:
                     logger.debug(f'Missing production rule: {error.args}, skipping logical form')
                     logger.debug(f'Question was: {question}')
-                    logger.debug(f'Table info was: {table_info}')
+                    logger.debug(f'Table info was: {table_lines}')
                     logger.debug(f'Logical form was: {logical_form}')
                     continue
                 if len(action_sequence_fields) >= self._max_dpd_logical_forms:
