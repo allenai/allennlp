@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Union, Iterable, Iterator, List, Optional
 from collections import defaultdict
 import itertools
+import math
 import random
 
 import torch
@@ -30,13 +31,37 @@ def add_epoch_number(batch: Batch, epoch: int) -> Batch:
 class DataIterator(Registrable):
     """
     An abstract ``DataIterator`` class. ``DataIterators`` must override ``_create_batches()``.
+
+    Parameters
+    ----------
+    batch_size : int, optional, (default = 32)
+        The size of each batch of instances yielded when calling the iterator.
+    instances_per_epoch : int, optional, (default = None)
+        If specified, each epoch will consist of precisely this many instances.
+        If not specified, each epoch will consist of a single pass through the dataset.
+    max_instances_in_memory : int, optional, (default = None)
+        If specified, the iterator will load this many instances at a time into an
+        in-memory list and then produce batches from one such list at a time. This
+        could be useful if your instances are read lazily from disk.
+    cache_instances : bool, optional, (default = False)
+        If true, the iterator will cache the tensorized instances in memory.
+        If false, it will do the tensorization anew each iteration.
+    track_epoch : bool, optional, (default = False)
+        If true, each instance will get a ``MetadataField`` containing the epoch number.
     """
     default_implementation = 'bucket'
 
     def __init__(self,
+                 batch_size: int = 32,
+                 instances_per_epoch: int = None,
+                 max_instances_in_memory: int = None,
                  cache_instances: bool = False,
                  track_epoch: bool = False) -> None:
         self.vocab: Vocabulary = None
+
+        self._batch_size = batch_size
+        self._max_instances_in_memory = max_instances_in_memory
+        self._instances_per_epoch = instances_per_epoch
 
         # We might want to cache the instances in memory.
         self._cache_instances = cache_instances
@@ -162,10 +187,7 @@ class DataIterator(Registrable):
             self._cursors[key] = iterator
 
     def _memory_sized_lists(self,
-                            instances: Iterable[Instance],
-                            batch_size: int,
-                            max_instances_in_memory: Optional[int] = None,
-                            instances_per_epoch: Optional[int] = None) -> Iterable[List[Instance]]:
+                            instances: Iterable[Instance]) -> Iterable[List[Instance]]:
         """
         Breaks the dataset into "memory-sized" lists of instances,
         which it yields up one at a time until it gets through a full epoch.
@@ -178,21 +200,21 @@ class DataIterator(Registrable):
         lazy = is_lazy(instances)
 
         # Get an iterator over the next epoch worth of instances.
-        iterator = self._take_instances(instances, instances_per_epoch)
+        iterator = self._take_instances(instances, self._instances_per_epoch)
 
         # We have four different cases to deal with:
 
         # With lazy instances and no guidance about how many to load into memory,
         # we just load ``batch_size`` instances at a time:
-        if lazy and max_instances_in_memory is None:
-            yield from lazy_groups_of(iterator, batch_size)
+        if lazy and self._max_instances_in_memory is None:
+            yield from lazy_groups_of(iterator, self._batch_size)
         # If we specified max instances in memory, lazy or not, we just
         # load ``max_instances_in_memory`` instances at a time:
-        elif max_instances_in_memory is not None:
-            yield from lazy_groups_of(iterator, max_instances_in_memory)
+        elif self._max_instances_in_memory is not None:
+            yield from lazy_groups_of(iterator, self._max_instances_in_memory)
         # If we have non-lazy instances, and we want all instances each epoch,
         # then we just yield back the list of instances:
-        elif instances_per_epoch is None:
+        elif self._instances_per_epoch is None:
             yield ensure_list(instances)
         # In the final case we have non-lazy instances, we want a specific number
         # of instances each epoch, and we didn't specify how to many instances to load
@@ -204,10 +226,17 @@ class DataIterator(Registrable):
         """
         Returns the number of batches that ``dataset`` will be split into; if you want to track
         progress through the batch with the generator produced by ``__call__``, this could be
-        useful. If you don't override it, it will always return 1.
+        useful.
         """
-        # pylint: disable=unused-argument
-        return 1
+        if is_lazy(instances) and self._instances_per_epoch is None:
+            # Unable to compute num batches, so just return 1.
+            return 1
+        elif self._instances_per_epoch is not None:
+            return math.ceil(self._instances_per_epoch / self._batch_size)
+        else:
+            # Not lazy, so can compute the list length.
+            return math.ceil(len(ensure_list(instances)) / self._batch_size)
+
 
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         """

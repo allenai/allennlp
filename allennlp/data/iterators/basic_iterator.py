@@ -44,23 +44,9 @@ class BasicIterator(DataIterator):
         self._instances_per_epoch = instances_per_epoch
         self._max_instances_in_memory = max_instances_in_memory
 
-    @overrides
-    def get_num_batches(self, instances: Iterable[Instance]) -> int:
-        if is_lazy(instances) and self._instances_per_epoch is None:
-            # Unable to compute num batches, so just return 1.
-            return 1
-        elif self._instances_per_epoch is not None:
-            return math.ceil(self._instances_per_epoch / self._batch_size)
-        else:
-            # Not lazy, so can compute the list length.
-            return math.ceil(len(ensure_list(instances)) / self._batch_size)
-
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         # First break the dataset into memory-sized lists:
-        for instance_list in self._memory_sized_lists(instances,
-                                                      self._batch_size,
-                                                      self._max_instances_in_memory,
-                                                      self._instances_per_epoch):
+        for instance_list in self._memory_sized_lists(instances):
             if shuffle:
                 random.shuffle(instance_list)
             iterator = iter(instance_list)
