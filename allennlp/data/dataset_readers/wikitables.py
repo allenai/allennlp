@@ -2,7 +2,7 @@
 Reader for WikitableQuestions (https://github.com/ppasupat/WikiTableQuestions/releases/tag/v1.0.2).
 """
 
-from typing import Dict, List, Union, Any
+from typing import Dict, List, Any
 import gzip
 import json
 import logging

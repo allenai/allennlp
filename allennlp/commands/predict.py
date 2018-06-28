@@ -38,7 +38,7 @@ predictions using a trained model and its :class:`~allennlp.service.predictors.p
     --predictor PREDICTOR
                             optionally specify a specific predictor to use
 """
-from typing import List, IO, Iterator, Optional
+from typing import List, Iterator, Optional
 import argparse
 import sys
 import json
@@ -120,7 +120,7 @@ class _Predict:
         self._batch_size = batch_size
         self._print_to_console = print_to_console
         if has_dataset_reader:
-            self._dataset_reader = predictor._dataset_reader
+            self._dataset_reader = predictor._dataset_reader # pylint: disable=protected-access
         else:
             self._dataset_reader = None
 
@@ -174,9 +174,8 @@ class _Predict:
                 for result in self._predict_on_instances(batch):
                     self._maybe_print_to_console_and_file(result)
         else:
-            for batch in lazy_groups_of(self._get_json_data(), self._batch_size):
-                print(batch)
-                for model_input, result in zip(batch, self._predict_json_lines(batch)):
+            for batch_json in lazy_groups_of(self._get_json_data(), self._batch_size):
+                for model_input, result in zip(batch_json, self._predict_json_lines(batch_json)):
                     self._maybe_print_to_console_and_file(result, json.dumps(model_input))
 
         if self._output_file is not None:
@@ -190,6 +189,11 @@ def _predict(args: argparse.Namespace) -> None:
         print("Exiting early because no output will be created.")
         sys.exit(0)
     print(args.use_dataset_reader)
-    util = _Predict(predictor, args.input_file, args.output_file, args.batch_size, not args.silent, args.use_dataset_reader)
+    util = _Predict(predictor,
+                    args.input_file,
+                    args.output_file,
+                    args.batch_size,
+                    not args.silent,
+                    args.use_dataset_reader)
 
     util.run()
