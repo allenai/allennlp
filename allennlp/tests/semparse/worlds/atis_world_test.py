@@ -9,6 +9,14 @@ class TestAtisWorld(AllenNlpTestCase):
         super().setUp()
         # test_filename = self.FIXTURES_ROOT / "data" / "atis" / "sample_data.sql"
         # data = open(test_filename).readlines()
+
+    def test_atis_valid_actions(self):
+        world = AtisWorld("show me the flights from baltimore to denver") 
+        print(world.get_valid_actions())
+
+        world = AtisWorld("show me the delta flights")
+        print(world.get_valid_actions())
+
     
     def test_atis_parse_strings(self):
         # world = self.worlds[0]
