@@ -16,19 +16,6 @@ class ModelTestCase(AllenNlpTestCase):
     A subclass of :class:`~allennlp.common.testing.test_case.AllenNlpTestCase`
     with added methods for testing :class:`~allennlp.models.model.Model` subclasses.
     """
-    def setUp(self, working_dir: str = None):
-        """
-        Parameters
-        ----------
-        working_dir: ``str``, optional
-            Specify the working directory, otherwise use self.MODULE_ROOT.
-        """
-        super().setUp()
-        #if working_dir is None:
-        #    self.working_dir = self.MODULE_ROOT
-        #else:
-        #    self.working_dir = working_dir
-
     def set_up_model(self, param_file, dataset_file):
         # pylint: disable=attribute-defined-outside-init
         self.param_file = param_file
