@@ -399,6 +399,10 @@ class TestVocabulary(AllenNlpTestCase):
             extended_vocab = copy.copy(original_vocab)
             params = Params({"non_padded_namespaces": []})
             extended_vocab.extend_from_instances(params, instances)
+        with pytest.raises(ConfigurationError):
+            extended_vocab = copy.copy(original_vocab)
+            extended_vocab.extend(non_padded_namespaces=[],
+                                  tokens_to_add={"tokens1": ["a"], "tokens2": ["p"]})
 
         # Following 2 should not give error: overlapping namespaces have same padding setting
         params = Params({"directory_path": vocab_dir, "extend": True,
@@ -407,6 +411,9 @@ class TestVocabulary(AllenNlpTestCase):
         extended_vocab = copy.copy(original_vocab)
         params = Params({"non_padded_namespaces": ["tokens1"]})
         extended_vocab.extend_from_instances(params, instances)
+        extended_vocab = copy.copy(original_vocab)
+        extended_vocab.extend(non_padded_namespaces=["tokens1"],
+                              tokens_to_add={"tokens1": ["a"], "tokens2": ["p"]})
 
         # Following 2 should give error: token1 is padded in instances but not in original_vocab
         params = Params({"directory_path": vocab_dir, "extend": True,
@@ -417,6 +424,10 @@ class TestVocabulary(AllenNlpTestCase):
             extended_vocab = copy.copy(original_vocab)
             params = Params({"non_padded_namespaces": ["tokens1", "tokens2"]})
             extended_vocab.extend_from_instances(params, instances)
+        with pytest.raises(ConfigurationError):
+            extended_vocab = copy.copy(original_vocab)
+            extended_vocab.extend(non_padded_namespaces=["tokens1", "tokens2"],
+                                  tokens_to_add={"tokens1": ["a"], "tokens2": ["p"]})
 
     def test_from_params_extend_config(self):
 
