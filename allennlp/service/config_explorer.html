@@ -596,7 +596,6 @@
             const config = item.get('value')
 
             let prefix = choices ? commonPrefix(choices) : null
-            prefix = (prefix && prefix.length) ? prefix.substring(0, prefix.length - 1) : null // remove last dot
 
             const getChoices = () => {
                 fetch(`${baseApi}/api/config/?class=${className}`)
