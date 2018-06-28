@@ -5,7 +5,7 @@ from sqlparse.tokens import Whitespace, Punctuation, Keyword, Literal, String
 
 from itertools import chain, repeat
 
-CONJ = ["AND", "OR", "=", ">", "<", ">=", "<="] 
+OPS = ["AND", "OR", "=", ">", "<", ">=", "<=", "IN"] 
 
 def annotate(token: Token) -> Token:
     """
@@ -40,28 +40,32 @@ def annotate(token: Token) -> Token:
 
 def prefix_condition(token_list: TokenList, start=None, end=None) -> TokenList:
     """
-    Takes a TokenList and reorders its tokens such that the tokens are in prefix order
+    Takes a TokenList, start, end indices that indicate the range in the token list
+    that needs to be readjusted and reorders its tokens such that the tokens are in prefix order
     """
 
     stack = []
     prefix_token_list = []
     token_list.tokens = [token for token in token_list.tokens if token.ttype != Whitespace]
-    
-    in_idx = next( (idx for idx, token in enumerate(token_list.tokens) if (token.ttype == Keyword and token.value == "IN")), None)
 
+    if isinstance(token_list, Parenthesis) and token_list.tokens[1].value == "SELECT":
+        print(token_list.value)
+        return preprocess_select(token_list)
+
+   
+    '''
+    in_idx = next( (idx for idx, token in enumerate(token_list.tokens) if (token.ttype == Keyword and token.value == "IN")), None)
     if in_idx:
         token_list.tokens = [token_list.tokens[in_idx]] + \
                             [token_list.tokens[in_idx-1]] + \
-                            [to_logical(token_list.tokens[in_idx+1])]
-
+                            [preprocess_select(token_list.tokens[in_idx+1])]
 
         token_list.value = "(" + " ".join([token.value for token in token_list.tokens]) + ")"
-
         return token_list
-    
+    '''
 
     for token in token_list.tokens[start:end]:
-        if token.value not in CONJ:
+        if token.value not in OPS:
             if isinstance(token, Parenthesis):
                 token = prefix_condition(token, 1, -1)
 
@@ -71,7 +75,7 @@ def prefix_condition(token_list: TokenList, start=None, end=None) -> TokenList:
             prefix_token_list.append(token)
             prefix_token_list.append(Token(Whitespace, " "))
 
-        elif token.value in CONJ:
+        elif token.value in OPS:
             if len(stack) == 0:
                 stack.append(token)
             else:
@@ -91,36 +95,41 @@ def prefix_condition(token_list: TokenList, start=None, end=None) -> TokenList:
     return token_list
     
 
-def to_logical(token_list: TokenList) -> TokenList:
+def preprocess_where(where_token: TokenList) -> TokenList:
+    """
+    Convert a TokenList that represents a Keyword of the Where type to (lisp-like) logical form
+    """
+    where_token.tokens = [token for token in where_token.tokens if token.ttype != Whitespace]
+    
+    where_token = prefix_condition(where_token, 1, None)
+    where_token.tokens.insert(0, Token(Keyword, "WHERE"))
+    where_token.value = "(" + " ".join([token.value for token in where_token.tokens]) + ")"
+
+    return where_token
+
+def preprocess_select(token_list: TokenList) -> TokenList:
     """
     Convert a TokenList representing a parenthesized SELECT statement from SQL to (lisp-like) logical form
     so it can be input into into the NLTK parser.
     """
     token_list.tokens = [token for token in token_list.tokens if token.ttype != Whitespace]
-    new_token_list = []
 
     distinct_idx = next( (idx for idx, token in enumerate(token_list.tokens) if (token.ttype == Keyword and token.value == "DISTINCT")), None)
     if distinct_idx:
         del token_list.tokens[distinct_idx]
         token_list.tokens[distinct_idx - 1].value = "SELECT_DISTINCT" 
 
-    for idx, token in enumerate(token_list.tokens):
-        if isinstance(token, Where):
-            token = prefix_condition(token, 1, None)
-            token.tokens.insert(0, Token(Keyword, "WHERE"))
-            token.value = "(" + " ".join([where_token.value for where_token in token.tokens]) + ")"
-        new_token_list.append(token)
-    
-    new_token_list = [new_token_list[0]] + list(chain(*zip(new_token_list[1:len(new_token_list)-2], repeat(Token(Whitespace, " "))))) + new_token_list[-2:]
-    
-    from_idx = next(idx for idx, token in enumerate(new_token_list) if (token.ttype == Keyword and token.value == "FROM"))
-    new_token_list.insert(from_idx, Token(Punctuation, "("))
 
-    where_idx = next(idx for idx, token in enumerate(new_token_list) if isinstance(token, Where))
-    new_token_list.insert(where_idx - 1, Token(Punctuation, ")"))
+    where_idx = next( (idx for idx, token in enumerate(token_list.tokens) if isinstance(token, Where)), None)
+    if where_idx:
+        token_list.tokens[where_idx] = preprocess_where(token_list.tokens[where_idx])
 
-    token_list.tokens = new_token_list
-    token_list.value = "".join([token.value for token in new_token_list])
+    from_idx = next(idx for idx, token in enumerate(token_list.tokens) if (token.ttype == Keyword and token.value == "FROM"))
+
+    token_list.value = "(" + " ".join([token.value for token in token_list.tokens[1:from_idx]]) + \
+            " (" + " ".join([token.value for token in token_list.tokens[from_idx:from_idx + 2]]) + ") " + \
+            " ".join([token.value for token in token_list.tokens[from_idx + 2:]]) + ")"
+
     return token_list
 
 
@@ -135,7 +144,7 @@ with open(args.in_file, 'r') as sql_file:
             parsed = sqlparse.parse(line)
             stmt = parsed[0].tokens[0]
             annotated_stmt = annotate(stmt)
-            prefix_stmt = to_logical(annotated_stmt)
+            prefix_stmt = preprocess_select(annotated_stmt)
             prefix_stmt.value = prefix_stmt.value.rstrip("; ") + "\n"
             print(prefix_stmt.value)
             print("\n\n")
