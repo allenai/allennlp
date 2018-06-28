@@ -1,19 +1,18 @@
 """
 The ``predict`` subcommand allows you to make bulk JSON-to-JSON
-predictions using a trained model and its :class:`~allennlp.service.predictors.predictor.Predictor` wrapper.
+or dataset to JSON predictions using a trained model and its
+:class:`~allennlp.service.predictors.predictor.Predictor` wrapper.
 
 .. code-block:: bash
 
-    $ allennlp predict --help
-    usage: allennlp [command] predict [-h]
-                                      [--output-file OUTPUT_FILE]
-                                      [--batch-size BATCH_SIZE]
-                                      [--silent]
-                                      [--cuda-device CUDA_DEVICE]
-                                      [-o OVERRIDES]
-                                      [--include-package INCLUDE_PACKAGE]
-                                      [--predictor PREDICTOR]
-                                      archive_file input_file
+    $ allennlp predict -h
+    usage: allennlp predict [-h] [--output-file OUTPUT_FILE]
+                            [--weights-file WEIGHTS_FILE]
+                            [--batch-size BATCH_SIZE] [--silent]
+                            [--cuda-device CUDA_DEVICE] [--use-dataset-reader]
+                            [-o OVERRIDES] [--predictor PREDICTOR]
+                            [--include-package INCLUDE_PACKAGE]
+                            archive_file input_file
 
     Run the specified model against a JSON-lines input file.
 
@@ -25,18 +24,22 @@ predictions using a trained model and its :class:`~allennlp.service.predictors.p
     -h, --help            show this help message and exit
     --output-file OUTPUT_FILE
                             path to output file
+    --weights-file WEIGHTS_FILE
+                            a path that overrides which weights file to use
     --batch-size BATCH_SIZE
                             The batch size to use for processing
     --silent              do not print output to stdout
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
+    --use-dataset-reader  Whether to use the dataset reader of the original
+                            model to load Instances
     -o OVERRIDES, --overrides OVERRIDES
                             a JSON structure used to override the experiment
                             configuration
-    --include-package INCLUDE_PACKAGE
-                            additional packages to include
     --predictor PREDICTOR
                             optionally specify a specific predictor to use
+    --include-package INCLUDE_PACKAGE
+                            additional packages to include
 """
 from typing import List, Iterator, Optional
 import argparse
@@ -100,7 +103,6 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
     return Predictor.from_archive(archive, args.predictor)
 
 
-
 class _Predict:
 
     def __init__(self,
@@ -124,22 +126,18 @@ class _Predict:
         else:
             self._dataset_reader = None
 
-    def _predict_json_lines(self, batch_data: List[JsonDict]) -> Iterator[str]:
+    def _predict_json(self, batch_data: List[JsonDict]) -> Iterator[str]:
         if len(batch_data) == 1:
             result = self._predictor.predict_json(batch_data[0])
-            # Batch results return a list of json objects, so in
-            # order to iterate over the result below we wrap this in a list.
             yield self._predictor.dump_line(result)
         else:
             results = self._predictor.predict_batch_json(batch_data)
         for output in results:
             yield self._predictor.dump_line(output)
 
-    def _predict_on_instances(self, batch_data: List[Instance]) -> Iterator[str]:
+    def _predict_instances(self, batch_data: List[Instance]) -> Iterator[str]:
         if len(batch_data) == 1:
             result = self._predictor.predict_instance(batch_data[0])
-            # Batch results return a list of json objects, so in
-            # order to iterate over the result below we wrap this in a list.
             yield self._predictor.dump_line(result)
         else:
             results = self._predictor.predict_batch_instance(batch_data)
@@ -171,11 +169,11 @@ class _Predict:
         has_reader = self._dataset_reader is not None
         if has_reader:
             for batch in lazy_groups_of(self._get_instance_data(), self._batch_size):
-                for result in self._predict_on_instances(batch):
+                for result in self._predict_instances(batch):
                     self._maybe_print_to_console_and_file(result)
         else:
             for batch_json in lazy_groups_of(self._get_json_data(), self._batch_size):
-                for model_input, result in zip(batch_json, self._predict_json_lines(batch_json)):
+                for model_input, result in zip(batch_json, self._predict_json(batch_json)):
                     self._maybe_print_to_console_and_file(result, json.dumps(model_input))
 
         if self._output_file is not None:
@@ -188,12 +186,11 @@ def _predict(args: argparse.Namespace) -> None:
         print("--silent specified without --output-file.")
         print("Exiting early because no output will be created.")
         sys.exit(0)
-    print(args.use_dataset_reader)
+
     util = _Predict(predictor,
                     args.input_file,
                     args.output_file,
                     args.batch_size,
                     not args.silent,
                     args.use_dataset_reader)
-
     util.run()
