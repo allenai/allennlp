@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Any
 
 import torch
 
@@ -96,7 +96,8 @@ class DecomposableAttention(Model):
     def forward(self,  # type: ignore
                 premise: Dict[str, torch.LongTensor],
                 hypothesis: Dict[str, torch.LongTensor],
-                label: torch.IntTensor = None) -> Dict[str, torch.Tensor]:
+                label: torch.IntTensor = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -105,9 +106,11 @@ class DecomposableAttention(Model):
             From a ``TextField``
         hypothesis : Dict[str, torch.LongTensor]
             From a ``TextField``
-        label : torch.IntTensor, optional (default = None)
+        label : torch.IntTensor, optional, (default = None)
             From a ``LabelField``
-
+        metadata : ``List[Dict[str, Any]]``, optional, (default = None)
+            Metadata containing the original tokenization of the premise and
+            hypothesis with 'premise_tokens' and 'hypothesis_tokens' keys respectively.
         Returns
         -------
         An output dictionary consisting of:
@@ -172,6 +175,10 @@ class DecomposableAttention(Model):
             loss = self._loss(label_logits, label.long().view(-1))
             self._accuracy(label_logits, label)
             output_dict["loss"] = loss
+
+        if metadata is not None:
+            output_dict["premise_tokens"] = [x["premise_tokens"] for x in metadata]
+            output_dict["hypothesis_tokens"] = [x["hypothesis_tokens"] for x in metadata]
 
         return output_dict
 

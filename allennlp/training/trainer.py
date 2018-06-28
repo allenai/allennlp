@@ -111,9 +111,18 @@ class TensorboardWriter:
         self._train_log = train_log
         self._validation_log = validation_log
 
+    @staticmethod
+    def _item(value: Any):
+        if hasattr(value, 'item'):
+            val = value.item()
+        else:
+            val = value
+        return val
+
     def add_train_scalar(self, name: str, value: float, global_step: int) -> None:
+        # get the scalar
         if self._train_log is not None:
-            self._train_log.add_scalar(name, value, global_step)
+            self._train_log.add_scalar(name, self._item(value), global_step)
 
     def add_train_histogram(self, name: str, values: torch.Tensor, global_step: int) -> None:
         if self._train_log is not None:
@@ -122,8 +131,9 @@ class TensorboardWriter:
                 self._train_log.add_histogram(name, values_to_write, global_step)
 
     def add_validation_scalar(self, name: str, value: float, global_step: int) -> None:
+
         if self._validation_log is not None:
-            self._validation_log.add_scalar(name, value, global_step)
+            self._validation_log.add_scalar(name, self._item(value), global_step)
 
 
 def time_to_str(timestamp: int) -> str:
