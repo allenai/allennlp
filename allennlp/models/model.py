@@ -5,7 +5,7 @@ an AllenNLP model.
 
 import logging
 import os
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Set
 
 import numpy
 import torch
@@ -46,7 +46,7 @@ class Model(torch.nn.Module, Registrable):
     :class:`~allennlp.training.Trainer`. Metrics that begin with "_" will not be logged
     to the progress bar by :class:`~allennlp.training.Trainer`.
     """
-    _warn_for_unseparable_batches = set()
+    _warn_for_unseparable_batches: Set[str] = set()
 
     def __init__(self,
                  vocab: Vocabulary,
