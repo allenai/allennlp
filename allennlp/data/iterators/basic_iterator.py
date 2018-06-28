@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @DataIterator.register("basic")
 class BasicIterator(DataIterator):
     """
-    A very basic iterator thats takes a dataset, possibly shuffles it, and creates fixed sized batches.,
+    A very basic iterator that takes a dataset, possibly shuffles it, and creates fixed sized batches.,
     and pads all of the instances in a batch to the maximum lengths of the relevant fields
     within that batch.
 
