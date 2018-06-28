@@ -46,6 +46,8 @@ class Model(torch.nn.Module, Registrable):
     :class:`~allennlp.training.Trainer`. Metrics that begin with "_" will not be logged
     to the progress bar by :class:`~allennlp.training.Trainer`.
     """
+    _warn_for_unseparable_batches = True
+
     def __init__(self,
                  vocab: Vocabulary,
                  regularizer: RegularizerApplicator = None) -> None:
@@ -144,6 +146,7 @@ class Model(torch.nn.Module, Registrable):
         -------
         A list of the models output for each instance.
         """
+        batch_size = len(instances)
         with torch.no_grad():
             cuda_device = self._get_prediction_device()
             dataset = Batch(instances)
@@ -153,11 +156,19 @@ class Model(torch.nn.Module, Registrable):
 
             instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]
             for name, output in list(outputs.items()):
+                # NOTE(markn): This is a hack because 0-dim pytorch tensors are not iterable.
+                # This occurs with batch size 1, because we still want to include the loss in that case.
+                if name == "loss" and output.dim() == 0:
+                    output = output.unsqueeze(0)
+
                 if isinstance(output, torch.Tensor):
+                    if output.size(0) != batch_size:
+                        self._maybe_warn_for_unseparable_batches()
+                        continue
                     output = output.detach().cpu().numpy()
-                # TODO(markn): This is a hack because 0-dim pytorch tensors are not iterable.
-                if name == "loss" and output.ndim == 0:
-                    output = numpy.expand_dims(output, 0)
+                elif len(output) != batch_size:
+                    self._maybe_warn_for_unseparable_batches()
+                    continue
                 outputs[name] = output
                 for instance_output, batch_element in zip(instance_separated_output, output):
                     instance_output[name] = batch_element
@@ -214,6 +225,18 @@ class Model(torch.nn.Module, Registrable):
         else:
             return -1
 
+    def _maybe_warn_for_unseparable_batches(self):
+        """
+        This method warns once if a user implements a model which returns a dictionary with
+        values which we are unable to split back up into elements of the batch. This is controlled
+        by a class attribute ``_warn_for_unseperable_batches`` because it would be extremely verbose
+        otherwise.
+        """
+        if self._warn_for_unseparable_batches:
+            logger.warning("Encountered a key in the model's return dictionary which "
+                           "couldn't be split by the batch size. Key will be ignored.")
+            # We only want to warn once, so we set this to false so we don't warn again.
+            self._warn_for_unseparable_batches = False
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
