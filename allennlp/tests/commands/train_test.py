@@ -170,7 +170,7 @@ class LazyFakeReader(DatasetReader):
         return self.reader.read(file_path)
 
     @classmethod
-    def from_params(cls, params: Params) -> 'LazyTestReader':
+    def from_params(cls, params: Params) -> 'LazyFakeReader':
         return LazyFakeReader()
 
 
