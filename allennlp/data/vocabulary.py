@@ -500,11 +500,6 @@ class Vocabulary:
                      only_include_pretrained_words=only_include_pretrained_words,
                      tokens_to_add=tokens_to_add)
 
-    def _add_non_padded_namespaces(self, non_padded_namespaces: Set[str]):
-        self._token_to_index.add_non_padded_namespaces(non_padded_namespaces)
-        self._index_to_token.add_non_padded_namespaces(non_padded_namespaces)
-        self._non_padded_namespaces.update(non_padded_namespaces)
-
     def is_padded(self, namespace: str) -> bool:
         """
         Returns whether or not there are padding and OOV tokens added to the given namepsace.
