@@ -692,10 +692,8 @@ def flatten_and_batch_shift_indices(indices: torch.Tensor,
     offsets = get_range_vector(indices.size(0), get_device_of(indices)) * sequence_length
     for _ in range(len(indices.size()) - 1):
         offsets = offsets.unsqueeze(1)
-
     # Shape: (batch_size, d_1, ..., d_n)
     offset_indices = indices + offsets
-
     # Shape: (batch_size * d_1 * ... * d_n)
     offset_indices = offset_indices.view(-1)
     return offset_indices

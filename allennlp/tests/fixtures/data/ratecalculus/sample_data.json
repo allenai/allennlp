@@ -1,0 +1,24 @@
+[
+  {
+        "iIndex": "999",
+        "sQuestion": "I have $20. How much do I have?",
+        "lEquations": [
+            "x=20"
+        ],
+        "lSolutions": [
+            "20.0"
+        ],
+        "lSemantics": "(Equals (Value o1 Dollar) 20)"
+  },
+  {
+        "iIndex": "998",
+        "sQuestion": "I have five $20 bills and three $10 bills. How much do I have?",
+        "lEquations": [
+            "x=5*20+3*10"
+        ],
+        "lSolutions": [
+            "130.0"
+        ],
+        "lSemantics": "(And (Equals (Rate o1 Dollar Unit) 20) (And (Equals (Value o1 Unit) 5) (And (Equals (Rate o2 Dollar Unit) 10) (And (Equals (Value o2 Unit) 3) (And (IsPart o1 o0) (And (IsPart o2 o0) (Equals (Value o0 Dollar) q1)))))"
+  }
+]
