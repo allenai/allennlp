@@ -28,25 +28,26 @@ def add_epoch_number(batch: Batch, epoch: int) -> Batch:
         instance.fields['epoch_num'] = MetadataField(epoch)
     return batch
 
+
 class DataIterator(Registrable):
     """
     An abstract ``DataIterator`` class. ``DataIterators`` must override ``_create_batches()``.
 
     Parameters
     ----------
-    batch_size : int, optional, (default = 32)
+    batch_size : ``int``, optional, (default = 32)
         The size of each batch of instances yielded when calling the iterator.
-    instances_per_epoch : int, optional, (default = None)
+    instances_per_epoch : ``int``, optional, (default = None)
         If specified, each epoch will consist of precisely this many instances.
         If not specified, each epoch will consist of a single pass through the dataset.
-    max_instances_in_memory : int, optional, (default = None)
+    max_instances_in_memory : ``int``, optional, (default = None)
         If specified, the iterator will load this many instances at a time into an
         in-memory list and then produce batches from one such list at a time. This
         could be useful if your instances are read lazily from disk.
-    cache_instances : bool, optional, (default = False)
+    cache_instances : ``bool``, optional, (default = False)
         If true, the iterator will cache the tensorized instances in memory.
         If false, it will do the tensorization anew each iteration.
-    track_epoch : bool, optional, (default = False)
+    track_epoch : ``bool``, optional, (default = False)
         If true, each instance will get a ``MetadataField`` containing the epoch number.
     """
     default_implementation = 'bucket'

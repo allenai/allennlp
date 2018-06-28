@@ -35,7 +35,7 @@ class BasicIterator(DataIterator):
         instances_per_epoch = params.pop_int('instances_per_epoch', None)
         max_instances_in_memory = params.pop_int('max_instances_in_memory', None)
         cache_instances = params.pop_bool('cache_instances', False)
-        track_epoch = params.pop_bool('trach_epoch', False)
+        track_epoch = params.pop_bool('track_epoch', False)
 
         params.assert_empty(cls.__name__)
         return cls(batch_size=batch_size,

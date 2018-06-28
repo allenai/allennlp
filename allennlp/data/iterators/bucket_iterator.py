@@ -19,7 +19,7 @@ def sort_by_padding(instances: List[Instance],
                     vocab: Vocabulary,
                     padding_noise: float = 0.0) -> List[Instance]:
     """
-    Sorts the ``Instances`` in this ``Batch`` by their padding lengths, using the keys in
+    Sorts the instances by their padding lengths, using the keys in
     ``sorting_keys`` (in the order in which they are provided).  ``sorting_keys`` is a list of
     ``(field_name, padding_key)`` tuples.
     """
@@ -140,7 +140,7 @@ class BucketIterator(DataIterator):
         instances_per_epoch = params.pop_int('instances_per_epoch', None)
         max_instances_in_memory = params.pop_int('max_instances_in_memory', None)
         cache_instances = params.pop_bool('cache_instances', False)
-        track_epoch = params.pop_bool('trach_epoch', False)
+        track_epoch = params.pop_bool('track_epoch', False)
         params.assert_empty(cls.__name__)
 
         return cls(sorting_keys=sorting_keys,
