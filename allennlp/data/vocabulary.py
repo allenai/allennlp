@@ -427,23 +427,24 @@ class Vocabulary:
         pretrained_files = pretrained_files or {}
         non_padded_namespaces = set(non_padded_namespaces)
 
-        if counter is not None:
-            # Make sure vocabulary extension is safe.
-            for namespace in counter:
-                if namespace in self.get_all_namespaces():
-                    # if new namespace was already present
-                    # Either both should be padded or none should be.
-                    original_padded = not any(namespace_match(pattern, namespace)
-                                              for pattern in self._non_padded_namespaces)
-                    extension_padded = not any(namespace_match(pattern, namespace)
-                                               for pattern in non_padded_namespaces)
-                    if original_padded != extension_padded:
-                        raise ConfigurationError("Common namespace {} has conflicting ".format(namespace)+
-                                                 "setting of padded = True/False. "+
-                                                 "Hence extension cannot be done.")
-            # Add new non-padded namespaces for extension
-            self.add_non_padded_namespaces(non_padded_namespaces)
+        # Make sure vocabulary extension is safe.
+        extension_namespaces = list((counter or {}).keys()) + list((tokens_to_add or {}).keys())
+        for namespace in extension_namespaces:
+            if namespace in self.get_all_namespaces():
+                # if new namespace was already present
+                # Either both should be padded or none should be.
+                original_padded = not any(namespace_match(pattern, namespace)
+                                          for pattern in self._non_padded_namespaces)
+                extension_padded = not any(namespace_match(pattern, namespace)
+                                           for pattern in non_padded_namespaces)
+                if original_padded != extension_padded:
+                    raise ConfigurationError("Common namespace {} has conflicting ".format(namespace)+
+                                             "setting of padded = True/False. "+
+                                             "Hence extension cannot be done.")
+        # Add new non-padded namespaces for extension
+        self.add_non_padded_namespaces(non_padded_namespaces)
 
+        if counter is not None:
             for namespace in counter:
                 if namespace in pretrained_files:
                     pretrained_list = _read_pretrained_tokens(pretrained_files[namespace])
