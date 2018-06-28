@@ -67,7 +67,6 @@ class TestRegistrable(AllenNlpTestCase):
         assert DatasetReader.by_name('squad').__name__ == 'SquadReader'
 
     def test_registry_has_builtin_iterators(self):
-        assert DataIterator.by_name('adaptive').__name__ == 'AdaptiveIterator'
         assert DataIterator.by_name('basic').__name__ == 'BasicIterator'
         assert DataIterator.by_name('bucket').__name__ == 'BucketIterator'
 
