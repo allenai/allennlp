@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,too-many-public-methods
 import codecs
 import gzip
 import zipfile
@@ -20,6 +19,8 @@ from allennlp.modules.token_embedders.embedding import format_embeddings_file_ur
 
 
 class TestVocabulary(AllenNlpTestCase):
+    # pylint: disable=no-self-use, invalid-name, too-many-public-methods, protected-access
+
     def setUp(self):
         token_indexer = SingleIdTokenIndexer("tokens")
         text_field = TextField([Token(t) for t in ["a", "a", "a", "a", "b", "b", "c", "c", "c"]],
@@ -369,7 +370,8 @@ class TestVocabulary(AllenNlpTestCase):
                                      "non_padded_namespaces": non_padded_namespaces})
                     extended_vocab = Vocabulary.from_params(params, instances)
 
-                assert len(extended_vocab.get_all_namespaces()) == 2
+                # Should have two namespaces
+                assert len(extended_vocab._token_to_index) == 2
 
                 extra_count = 2 if extended_vocab.is_padded("tokens1") else 0
                 assert extended_vocab.get_vocab_size("tokens1") == 1 + extra_count
@@ -401,8 +403,8 @@ class TestVocabulary(AllenNlpTestCase):
             extended_vocab.extend_from_instances(params, instances)
         with pytest.raises(ConfigurationError):
             extended_vocab = copy.copy(original_vocab)
-            extended_vocab.extend(non_padded_namespaces=[],
-                                  tokens_to_add={"tokens1": ["a"], "tokens2": ["p"]})
+            extended_vocab._extend(non_padded_namespaces=[],
+                                   tokens_to_add={"tokens1": ["a"], "tokens2": ["p"]})
 
         # Following 2 should not give error: overlapping namespaces have same padding setting
         params = Params({"directory_path": vocab_dir, "extend": True,
@@ -412,8 +414,8 @@ class TestVocabulary(AllenNlpTestCase):
         params = Params({"non_padded_namespaces": ["tokens1"]})
         extended_vocab.extend_from_instances(params, instances)
         extended_vocab = copy.copy(original_vocab)
-        extended_vocab.extend(non_padded_namespaces=["tokens1"],
-                              tokens_to_add={"tokens1": ["a"], "tokens2": ["p"]})
+        extended_vocab._extend(non_padded_namespaces=["tokens1"],
+                               tokens_to_add={"tokens1": ["a"], "tokens2": ["p"]})
 
         # Following 2 should give error: token1 is padded in instances but not in original_vocab
         params = Params({"directory_path": vocab_dir, "extend": True,
@@ -426,8 +428,8 @@ class TestVocabulary(AllenNlpTestCase):
             extended_vocab.extend_from_instances(params, instances)
         with pytest.raises(ConfigurationError):
             extended_vocab = copy.copy(original_vocab)
-            extended_vocab.extend(non_padded_namespaces=["tokens1", "tokens2"],
-                                  tokens_to_add={"tokens1": ["a"], "tokens2": ["p"]})
+            extended_vocab._extend(non_padded_namespaces=["tokens1", "tokens2"],
+                                   tokens_to_add={"tokens1": ["a"], "tokens2": ["p"]})
 
     def test_from_params_extend_config(self):
 
@@ -519,12 +521,11 @@ class TestVocabulary(AllenNlpTestCase):
 
         # namespaces: tokens0, tokens1 is common.
         # tokens2, tokens3 only vocab has. tokens4, tokens5 only instances
-        assert extended_vocab.get_all_namespaces() \
-                   == {"tokens{}".format(i) for i in range(6)}
+        extended_namespaces = {*extended_vocab._token_to_index}
+        assert extended_namespaces == {"tokens{}".format(i) for i in range(6)}
 
         # # Check that _non_padded_namespaces list is consistent after extension
-        assert extended_vocab.get_non_padded_namespaces() \
-                   == {"tokens1", "tokens3", "tokens5"}
+        assert extended_vocab._non_padded_namespaces == {"tokens1", "tokens3", "tokens5"}
 
         # # original_vocab["tokens1"] has 3 tokens, instances of "tokens1" ns has 5 tokens. 2 overlapping
         assert extended_vocab.get_vocab_size("tokens1") == 6
@@ -542,13 +543,13 @@ class TestVocabulary(AllenNlpTestCase):
 
         # Word2index mapping of all words in all namespaces of original_vocab
         # should be maintained in extended_vocab
-        for namespace, token2index in original_vocab.get_token_to_index().items():
+        for namespace, token2index in original_vocab._token_to_index.items():
             for token, _ in token2index.items():
                 vocab_index = original_vocab.get_token_index(token, namespace)
                 extended_vocab_index = extended_vocab.get_token_index(token, namespace)
                 assert vocab_index == extended_vocab_index
         # And same for Index2Word mapping
-        for namespace, index2token in original_vocab.get_index_to_token().items():
+        for namespace, index2token in original_vocab._index_to_token.items():
             for index, _ in index2token.items():
                 vocab_token = original_vocab.get_token_from_index(index, namespace)
                 extended_vocab_token = extended_vocab.get_token_from_index(index, namespace)
