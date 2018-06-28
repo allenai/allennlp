@@ -144,7 +144,7 @@ class ModelTestCase(AllenNlpTestCase):
         for name, parameter in model.named_parameters():
             zeros = torch.zeros(parameter.size())
             if parameter.requires_grad:
-    
+
                 if parameter.grad is None:
                     has_zero_or_none_grads[name] = "No gradient computed (i.e parameter.grad is None)"
 

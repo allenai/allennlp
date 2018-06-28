@@ -214,6 +214,7 @@ class TestBasicIterator(IteratorTest):
 
     def test_maximum_samples_per_batch(self):
         for test_instances in (self.instances, self.lazy_instances):
+            # pylint: disable=protected-access
             iterator = BasicIterator(
                     batch_size=3, maximum_samples_per_batch=['num_tokens', 9]
             )
@@ -231,4 +232,3 @@ class TestBasicIterator(IteratorTest):
                          for instance in batch.instances]
                 )
                 assert batch_sequence_length * len(batch.instances) <= 9
-

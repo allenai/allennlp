@@ -565,13 +565,13 @@ class Trainer:
                     grad_data = param.grad.data
 
                 # skip empty gradients
-                if torch.prod(torch.tensor(grad_data.shape)).item() > 0:
+                if torch.prod(torch.tensor(grad_data.shape)).item() > 0: # pylint: disable=not-callable
                     self._tensorboard.add_train_scalar("gradient_mean/" + name,
-                                                        grad_data.mean(),
-                                                        epoch)
+                                                       grad_data.mean(),
+                                                       epoch)
                     self._tensorboard.add_train_scalar("gradient_std/" + name,
-                                                        grad_data.std(),
-                                                        epoch)
+                                                       grad_data.std(),
+                                                       epoch)
         # norm of gradients
         if batch_grad_norm is not None:
             self._tensorboard.add_train_scalar("gradient_norm",

@@ -146,7 +146,7 @@ class BasicIterator(DataIterator):
                         for _, lengths in field_lengths.items():
                             try:
                                 padding_length = max(padding_length,
-                                                         lengths[key])
+                                                     lengths[key])
                             except KeyError:
                                 pass
 
