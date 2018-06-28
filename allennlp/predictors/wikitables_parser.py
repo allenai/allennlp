@@ -1,7 +1,7 @@
 import os
 import pathlib
 from subprocess import run
-from typing import Tuple, List
+from typing import List
 import shutil
 
 from overrides import overrides
@@ -47,7 +47,7 @@ class WikiTablesParserPredictor(Predictor):
             run(f'mv wikitables-grow.grammar {grammar_path}', shell=True)
 
     @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+    def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
         Expects JSON that looks like ``{"question": "...", "table": "..."}``.
         """
@@ -67,28 +67,25 @@ class WikiTablesParserPredictor(Predictor):
         instance = self._dataset_reader.text_to_instance(question_text,  # type: ignore
                                                          table_json,
                                                          tokenized_question=tokenized_question)
-        extra_info = {'question_tokens': tokenized_question}
-        return instance, extra_info
+        return instance
 
     @overrides
     def predict_json(self, inputs: JsonDict) -> JsonDict:
-        instance, return_dict = self._json_to_instance(inputs)
+        instance = self._json_to_instance(inputs)
         outputs = self._model.forward_on_instance(instance)
         outputs['answer'] = self._execute_logical_form_on_table(outputs['logical_form'],
                                                                 inputs['table'])
 
-        return_dict.update(outputs)
-        return sanitize(return_dict)
+        return sanitize(outputs)
 
     @overrides
     def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
-        instances, return_dicts = zip(*self._batch_json_to_instances(inputs))
+        instances = self._batch_json_to_instances(inputs)
         outputs = self._model.forward_on_instances(instances)
-        for input_, output, return_dict in zip(inputs, outputs, return_dicts):
+        for input_, output in zip(inputs, outputs):
             output['answer'] = self._execute_logical_form_on_table(output['logical_form'],
                                                                    input_['table'])
-            return_dict.update(output)
-        return sanitize(return_dicts)
+        return sanitize(outputs)
 
     @staticmethod
     def _execute_logical_form_on_table(logical_form, table):

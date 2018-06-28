@@ -268,6 +268,7 @@ class WikiTablesDatasetReader(DatasetReader):
         # pylint: disable=arguments-differ
         tokenized_question = tokenized_question or self._tokenizer.tokenize(question.lower())
         question_field = TextField(tokenized_question, self._question_token_indexers)
+        question_metadata = MetadataField({"question_tokens": [x.text for x in tokenized_question]})
         if isinstance(table_info, str):
             table_knowledge_graph = TableQuestionKnowledgeGraph.read_from_file(table_info,
                                                                                tokenized_question)
@@ -294,6 +295,7 @@ class WikiTablesDatasetReader(DatasetReader):
         action_field = ListField(production_rule_fields)
 
         fields = {'question': question_field,
+                  'metadata': question_metadata,
                   'table': table_field,
                   'world': world_field,
                   'actions': action_field}
@@ -360,6 +362,7 @@ class WikiTablesDatasetReader(DatasetReader):
     def _json_blob_to_instance(self, json_obj: JsonDict) -> Instance:
         question_tokens = self._read_tokens_from_json_list(json_obj['question_tokens'])
         question_field = TextField(question_tokens, self._question_token_indexers)
+        question_metadata = MetadataField({"question_tokens": [x.text for x in question_tokens]})
         table_knowledge_graph = TableQuestionKnowledgeGraph.read_from_lines(json_obj['table_lines'],
                                                                             question_tokens)
         entity_tokens = [self._read_tokens_from_json_list(token_list)
@@ -386,6 +389,7 @@ class WikiTablesDatasetReader(DatasetReader):
         example_string_field = MetadataField(json_obj['example_lisp_string'])
 
         fields = {'question': question_field,
+                  'metadata': question_metadata,
                   'table': table_field,
                   'world': world_field,
                   'actions': action_field,

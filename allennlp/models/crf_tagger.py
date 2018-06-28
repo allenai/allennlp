@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Any
 
 from overrides import overrides
 import torch
@@ -88,7 +88,8 @@ class CrfTagger(Model):
     @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
-                tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                tags: torch.LongTensor = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -105,6 +106,8 @@ class CrfTagger(Model):
         tags : ``torch.LongTensor``, optional (default = ``None``)
             A torch tensor representing the sequence of integer gold class labels of shape
             ``(batch_size, num_tokens)``.
+        metadata : ``List[Dict[str, Any]]``, optional, (default = None)
+            metadata containg the original words in the sentence to be tagged under a 'words' key.
 
         Returns
         -------
@@ -151,7 +154,8 @@ class CrfTagger(Model):
                     class_probabilities[i, j, tag_id] = 1
 
             self.span_metric(class_probabilities, tags, mask)
-
+        if metadata is not None:
+            output["words"] = [x["words"] for x in metadata]
         return output
 
     @overrides

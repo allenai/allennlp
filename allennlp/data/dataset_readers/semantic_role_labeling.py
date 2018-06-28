@@ -6,7 +6,7 @@ from overrides import overrides
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, TextField, SequenceLabelField
+from allennlp.data.fields import Field, TextField, SequenceLabelField, MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token
@@ -102,6 +102,13 @@ class SrlReader(DatasetReader):
         fields['verb_indicator'] = SequenceLabelField(verb_label, text_field)
         if tags:
             fields['tags'] = SequenceLabelField(tags, text_field)
+
+        if all([x == 0 for x in verb_label]):
+            verb = None
+        else:
+            verb = tokens[verb_label.index(1)].text
+        fields["metadata"] = MetadataField({"words": [x.text for x in tokens],
+                                            "verb": verb})
         return Instance(fields)
 
     @classmethod

@@ -1,6 +1,5 @@
 # pylint: disable=invalid-name,no-self-use
 import argparse
-import os
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.fine_tune import FineTune, fine_tune_model_from_file_paths, fine_tune_model_from_args
@@ -18,21 +17,11 @@ class TestFineTune(AllenNlpTestCase):
 
 
     def test_fine_tune_model_runs_from_file_paths(self):
-        initial_working_dir = os.getcwd()
-        # Change directory to module root.
-        os.chdir(self.MODULE_ROOT)
-
         fine_tune_model_from_file_paths(model_archive_path=self.model_archive,
                                         config_file=self.config_file,
                                         serialization_dir=self.serialization_dir)
-        # Change directory back to what it was initially
-        os.chdir(initial_working_dir)
 
     def test_fine_tune_runs_from_parser_arguments(self):
-        initial_working_dir = os.getcwd()
-        # Change directory to module root.
-        os.chdir(self.MODULE_ROOT)
-
         raw_args = ["fine-tune",
                     "-m", self.model_archive,
                     "-c", self.config_file,
@@ -45,8 +34,6 @@ class TestFineTune(AllenNlpTestCase):
         assert args.config_file == self.config_file
         assert args.serialization_dir == self.serialization_dir
         fine_tune_model_from_args(args)
-        # Change directory back to what it was initially
-        os.chdir(initial_working_dir)
 
     def test_fine_tune_fails_without_required_args(self):
         # Configuration file is required.

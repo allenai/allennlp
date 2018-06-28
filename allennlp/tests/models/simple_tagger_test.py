@@ -1,6 +1,4 @@
 # pylint: disable=invalid-name,protected-access
-import os
-
 from flaky import flaky
 import numpy
 import pytest
@@ -35,19 +33,12 @@ class SimpleTaggerTest(ModelTestCase):
         numpy.testing.assert_almost_equal(numpy.sum(class_probs, -1), numpy.array([1, 1, 1, 1]))
 
     def test_mismatching_dimensions_throws_configuration_error(self):
-        initial_working_dir = os.getcwd()
-        # Change directory to module root.
-        os.chdir(self.MODULE_ROOT)
-
         params = Params.from_file(self.param_file)
         # Make the encoder wrong - it should be 2 to match
         # the embedding dimension from the text_field_embedder.
         params["model"]["encoder"]["input_size"] = 10
         with pytest.raises(ConfigurationError):
             Model.from_params(self.vocab, params.pop("model"))
-
-        # Change directory back to what it was initially
-        os.chdir(initial_working_dir)
 
     def test_regularization(self):
         penalty = self.model.get_regularization_penalty()
