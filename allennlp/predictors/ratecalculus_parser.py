@@ -22,7 +22,6 @@ class RateCalculusParserPredictor(Predictor):
         """
         question_text = json_dict["question"]
 
-        print("Question: ", question_text)
         # pylint: disable=protected-access
         tokenized_question = self._dataset_reader._tokenizer.tokenize(question_text.lower())  # type: ignore
         # pylint: enable=protected-access

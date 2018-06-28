@@ -136,7 +136,7 @@ class RateCalculusSemanticParser(Model):
                                       add_world_to_initial_state: bool = False,
                                       checklist_states: List[ChecklistState] = None) -> Dict:
         """
-        Does initial preparation and creates an intiial state for both the semantic parsers. Note
+        Does initial preparation and creates an initial state for both the semantic parsers. Note
         that the checklist state is optional, and the ``RateCalculusMmlParser`` is not expected to
         pass it.
         """
@@ -161,7 +161,6 @@ class RateCalculusSemanticParser(Model):
         # be added for the mask since that method expects 0 for padding.
         # (batch_size, num_entities, num_neighbors, embedding_dim)
         embedded_neighbors = util.batched_index_select(encoded_kg, torch.abs(neighbor_indices))
-
         neighbor_mask = util.get_text_field_mask({'ignored': neighbor_indices + 1},
                                                  num_wrapping_dims=1).float()
 
@@ -391,10 +390,6 @@ class RateCalculusSemanticParser(Model):
                 entity_types[flattened_entity_index] = entity_type
             padded = pad_sequence_to_length(types, num_entities, lambda: [0])
             batch_types.append(padded)
-        print("_get_type_vector:")
-        print("num_entities:",num_entities)
-        print("batch_types:",batch_types)
-        print("entity_types:",entity_types)
         return tensor.new_tensor(batch_types), entity_types
 
     def _get_linking_probabilities(self,

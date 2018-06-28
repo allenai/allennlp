@@ -70,10 +70,6 @@ class RateCalculusMmlSemanticParser(RateCalculusSemanticParser):
         The vocabulary namespace to use for production rules.  The default corresponds to the
         default used in the dataset reader, so you likely don't need to modify this. Passed to super
         class.
-    tables_directory : ``str``, optional (default=/wikitables/)
-        The directory to find tables when evaluating logical forms.  We rely on a call to SEMPRE to
-        evaluate logical forms, and SEMPRE needs to read the table from disk itself.  This tells
-        SEMPRE where to find the tables. Passed to super class.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -89,8 +85,7 @@ class RateCalculusMmlSemanticParser(RateCalculusSemanticParser):
                  use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
                  num_linking_features: int = 1,
-                 rule_namespace: str = 'rule_labels',
-                 tables_directory: str = '/wikitables/') -> None:
+                 rule_namespace: str = 'rule_labels') -> None:
         use_similarity = use_neighbor_similarity_for_linking
         super().__init__(vocab=vocab,
                          question_embedder=question_embedder,
@@ -101,8 +96,7 @@ class RateCalculusMmlSemanticParser(RateCalculusSemanticParser):
                          use_neighbor_similarity_for_linking=use_similarity,
                          dropout=dropout,
                          num_linking_features=num_linking_features,
-                         rule_namespace=rule_namespace,
-                         tables_directory=tables_directory)
+                         rule_namespace=rule_namespace)
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
         self._decoder_step = RateCalculusDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
@@ -133,7 +127,7 @@ class RateCalculusMmlSemanticParser(RateCalculusSemanticParser):
         question : Dict[str, torch.LongTensor]
            The output of ``TextField.as_array()`` applied on the question ``TextField``. This will
            be passed through a ``TextFieldEmbedder`` and then through an encoder.
-        table : ``Dict[str, torch.LongTensor]``
+        question_knowledge_graph : ``Dict[str, torch.LongTensor]``
             The output of ``KnowledgeGraphField.as_array()`` applied on the table
             ``KnowledgeGraphField``.  This output is similar to a ``TextField`` output, where each
             entity in the table is treated as a "token", and we will use a ``TextFieldEmbedder`` to
@@ -201,7 +195,6 @@ class RateCalculusMmlSemanticParser(RateCalculusSemanticParser):
             outputs['similarity_scores'] = similarity_scores
             outputs['logical_forms'] = []
             for i in range(batch_size):
-                print("batch: ", i)
                 # Decoding may not have terminated with any completed logical forms, if `num_steps`
                 # isn't long enough (or if the model is not trained enough and gets into an
                 # infinite action loop).
@@ -258,7 +251,6 @@ class RateCalculusMmlSemanticParser(RateCalculusSemanticParser):
         use_neighbor_similarity_for_linking = params.pop_bool('use_neighbor_similarity_for_linking', False)
         dropout = params.pop_float('dropout', 0.0)
         num_linking_features = params.pop_int('num_linking_features', 1)
-        tables_directory = params.pop('tables_directory', '/wikitables/')
         rule_namespace = params.pop('rule_namespace', 'rule_labels')
         params.assert_empty(cls.__name__)
         return cls(vocab,
@@ -274,5 +266,4 @@ class RateCalculusMmlSemanticParser(RateCalculusSemanticParser):
                    use_neighbor_similarity_for_linking=use_neighbor_similarity_for_linking,
                    dropout=dropout,
                    num_linking_features=num_linking_features,
-                   tables_directory=tables_directory,
                    rule_namespace=rule_namespace)

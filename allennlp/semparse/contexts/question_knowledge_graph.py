@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import DefaultDict, Dict, List, Tuple, Union
+from typing import DefaultDict, Dict, List, Tuple, Union, Set
 
 from allennlp.data.tokenizers import Token
 from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
@@ -233,12 +233,14 @@ class QuestionKnowledgeGraph(KnowledgeGraph):
                         num_zeros += 1
                     numbers.append((str(int(number + 10 ** num_zeros)), token_text))
 
-        # WARNING: To avoid empty entity sets, we arbitrarily add 2 dummy ones if less than 2 numbers were extracted.
-        if len(numbers) < 1:
-            numbers.append(("1","one"))
+        # WARNING: To avoid empty entity sets, we add 2 dummy ones if less than 2 distinct numbers were extracted.
+        keys = [x[0] for x in numbers]
+        if len(set(keys)) < 1:
+            numbers.append(("1", tokens[0].text))
 
-        if len(numbers) < 2:
-            numbers.append(("1", "a"))
+        keys = [x[0] for x in numbers]
+        if len(set(keys)) < 2:
+            numbers.append(("1", tokens[0].text))
+            numbers.append(("2", tokens[0].text))
 
-        print("numbers: ", numbers)
         return numbers
