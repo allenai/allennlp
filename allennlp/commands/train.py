@@ -23,7 +23,7 @@ which to write the results.
    -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
                            directory in which to save the model and its logs
    -o OVERRIDES, --overrides OVERRIDES
-                           a HOCON structure used to override the experiment
+                           a JSON structure used to override the experiment
                            configuration
    --include-package INCLUDE_PACKAGE
                            additional packages to include
@@ -37,6 +37,7 @@ import json
 import logging
 import os
 from copy import deepcopy
+import re
 
 import torch
 
@@ -79,7 +80,7 @@ class Train(Subcommand):
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
-                               help='a HOCON structure used to override the experiment configuration')
+                               help='a JSON structure used to override the experiment configuration')
 
         subparser.add_argument('--file-friendly-logging',
                                action='store_true',
@@ -117,7 +118,7 @@ def train_model_from_file(parameter_filename: str,
         The directory in which to save results and logs. We just pass this along to
         :func:`train_model`.
     overrides : ``str``
-        A HOCON string that we will use to override values in the input parameter file.
+        A JSON string that we will use to override values in the input parameter file.
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we make our output more friendly to saved model files.  We just pass this
         along to :func:`train_model`.
@@ -283,6 +284,24 @@ def train_model(params: Params,
     test_data = all_datasets.get('test')
 
     trainer_params = params.pop("trainer")
+    no_grad_regexes = trainer_params.pop("no_grad", ())
+
+    nograd_parameter_names = []
+    grad_parameter_names = []
+    for name, parameter in model.named_parameters():
+        if any(re.search(regex, name) for regex in no_grad_regexes):
+            parameter.requires_grad_(False)
+            nograd_parameter_names.append(name)
+        else:
+            grad_parameter_names.append(name)
+
+    logger.info("Following parameters are Frozen  (without gradient):")
+    for name in nograd_parameter_names:
+        logger.info(name)
+    logger.info("Following parameters are Tunable (with gradient):")
+    for name in grad_parameter_names:
+        logger.info(name)
+
     trainer = Trainer.from_params(model,
                                   serialization_dir,
                                   iterator,

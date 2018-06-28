@@ -25,7 +25,7 @@ and report any metrics calculated by the model.
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
     -o OVERRIDES, --overrides OVERRIDES
-                            a HOCON structure used to override the experiment
+                            a JSON structure used to override the experiment
                             configuration
     --include-package INCLUDE_PACKAGE
                             additional packages to include
@@ -75,7 +75,7 @@ class Evaluate(Subcommand):
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
-                               help='a HOCON structure used to override the experiment configuration')
+                               help='a JSON structure used to override the experiment configuration')
 
         subparser.set_defaults(func=evaluate_from_args)
 
@@ -86,6 +86,7 @@ def evaluate(model: Model,
              instances: Iterable[Instance],
              data_iterator: DataIterator,
              cuda_device: int) -> Dict[str, Any]:
+    _warned_tqdm_ignores_underscores = False
     check_for_gpu(cuda_device)
     with torch.no_grad():
         model.eval()
@@ -96,7 +97,13 @@ def evaluate(model: Model,
         for batch in generator_tqdm:
             model(**batch)
             metrics = model.get_metrics()
-            description = ', '.join(["%s: %.2f" % (name, value) for name, value in metrics.items()]) + " ||"
+            if (not _warned_tqdm_ignores_underscores and
+                        any(metric_name.startswith("_") for metric_name in metrics)):
+                logger.warning("Metrics with names beginning with \"_\" will "
+                               "not be logged to the tqdm progress bar.")
+                _warned_tqdm_ignores_underscores = True
+            description = ', '.join(["%s: %.2f" % (name, value) for name, value
+                                     in metrics.items() if not name.startswith("_")]) + " ||"
             generator_tqdm.set_description(description, refresh=False)
 
         return model.get_metrics(reset=True)
