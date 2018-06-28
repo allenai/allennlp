@@ -56,8 +56,8 @@ class BucketIterator(BasicIterator):
         See :class:`BasicIterator`.
     maximum_samples_per_batch : Tuple(padding_key, limit), optional, (default = None)
         If set, then shrink the batch size for very long sequences such that
-            batch_size * sequence_length <= limit
-        where sequence_length is given by the padding_key
+        batch_size * sequence_length <= limit where sequence_length is given
+        by the padding_key.
     """
 
     def __init__(self,

@@ -34,8 +34,8 @@ class BasicIterator(DataIterator):
         could be useful if your instances are read lazily from disk.
     maximum_samples_per_batch : tuple(padding_key, limit), optional, (default = None)
         If set, then shrink the batch size for very long sequences such that
-            batch_size * sequence_length <= limit
-        where sequence_length is given by the padding_key
+        batch_size * sequence_length <= limit where sequence_length is given
+        by the padding_key.
     """
     def __init__(self,
                  batch_size: int = 32,
