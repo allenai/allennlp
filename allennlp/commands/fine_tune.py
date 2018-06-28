@@ -21,6 +21,7 @@ from allennlp.models import load_archive, archive_model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer
+from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -149,17 +150,30 @@ def fine_tune_model(model: Model,
         logger.warning("You passed parameters for the model in your configuration file, but we "
                        "are ignoring them, using instead the model parameters in the archive.")
 
-    if params.pop('vocabulary', None):
-        logger.warning("You passed parameters for the vocabulary in your configuration file, but "
-                       "we are ignoring them, using instead the vocabulary from the saved model.")
+    vocabulary_params = params.pop('vocabulary', {})
+    if vocabulary_params.get('directory_path', None):
+        logger.warning("You passed `directory_path` in parameters for the vocabulary in "
+                       "your configuration file, but it will be ignored. "
+                       "Vocabulary from the saved model will be extended with current data.")
 
+    all_datasets = datasets_from_params(params)
+
+    datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
+
+    for dataset in datasets_for_vocab_creation:
+        if dataset not in all_datasets:
+            raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
+
+    logger.info("Extending model vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
     vocab = model.vocab
+    vocab.extend_from_instances(vocabulary_params,
+                                (instance for key, dataset in all_datasets.items()
+                                 for instance in dataset
+                                 if key in datasets_for_vocab_creation))
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     iterator = DataIterator.from_params(params.pop("iterator"))
     iterator.index_with(vocab)
-
-    all_datasets = datasets_from_params(params)
 
     train_data = all_datasets['train']
     validation_data = all_datasets.get('validation')
