@@ -223,17 +223,20 @@ class TestParams(AllenNlpTestCase):
 
         # Some nested classes just to exercise the ``from_params``
         # and ``add_file_to_archive`` methods.
-        class A:
-            def __init__(self, b: 'B') -> None:
-                self.b = b
+
+        class C:
+            def __init__(self, c_file: str) -> None:
+                self.c_file = c_file
 
             @classmethod
-            def from_params(cls, params: Params) -> 'A':
-                b_params = params.pop("b")
-                return cls(B.from_params(b_params))
+            def from_params(cls, params: Params) -> 'C':
+                params.add_file_to_archive("c_file")
+                c_file = params.pop("c_file")
+
+                return cls(c_file)
 
         class B:
-            def __init__(self, filename: str, c: 'C') -> None:
+            def __init__(self, filename: str, c) -> None:
                 self.filename = filename
                 self.c_dict = {"here": c}
 
@@ -247,17 +250,14 @@ class TestParams(AllenNlpTestCase):
 
                 return cls(filename, c)
 
-        class C:
-            def __init__(self, c_file: str) -> None:
-                self.c_file = c_file
+        class A:
+            def __init__(self, b) -> None:
+                self.b = b
 
             @classmethod
-            def from_params(cls, params: Params) -> 'C':
-                params.add_file_to_archive("c_file")
-                c_file = params.pop("c_file")
-
-                return cls(c_file)
-
+            def from_params(cls, params: Params) -> 'A':
+                b_params = params.pop("b")
+                return cls(B.from_params(b_params))
 
         params = Params({
                 "a": {
