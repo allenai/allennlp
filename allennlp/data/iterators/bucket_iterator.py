@@ -96,10 +96,10 @@ class BucketIterator(DataIterator):
             raise ConfigurationError("BucketIterator requires sorting_keys to be specified")
 
         super().__init__(cache_instances=cache_instances,
-                         track_epoch=track_epoch)
-        self._batch_size = batch_size
-        self._instances_per_epoch = instances_per_epoch
-        self._max_instances_in_memory = max_instances_in_memory
+                         track_epoch=track_epoch,
+                         batch_size=batch_size,
+                         instances_per_epoch=instances_per_epoch,
+                         max_instances_in_memory=max_instances_in_memory)
         self._sorting_keys = sorting_keys
         self._padding_noise = padding_noise
         self._biggest_batch_first = biggest_batch_first
@@ -117,10 +117,7 @@ class BucketIterator(DataIterator):
 
     @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
-        for instance_list in self._memory_sized_lists(instances,
-                                                      self._batch_size,
-                                                      self._max_instances_in_memory,
-                                                      self._instances_per_epoch):
+        for instance_list in self._memory_sized_lists(instances):
 
             instance_list = sort_by_padding(instance_list,
                                             self._sorting_keys,
@@ -154,10 +151,15 @@ class BucketIterator(DataIterator):
         batch_size = params.pop_int('batch_size', 32)
         instances_per_epoch = params.pop_int('instances_per_epoch', None)
         max_instances_in_memory = params.pop_int('max_instances_in_memory', None)
+        cache_instances = params.pop_bool('cache_instances', False)
+        track_epoch = params.pop_bool('trach_epoch', False)
         params.assert_empty(cls.__name__)
+
         return cls(sorting_keys=sorting_keys,
                    padding_noise=padding_noise,
                    biggest_batch_first=biggest_batch_first,
                    batch_size=batch_size,
                    instances_per_epoch=instances_per_epoch,
-                   max_instances_in_memory=max_instances_in_memory)
+                   max_instances_in_memory=max_instances_in_memory,
+                   cache_instances=cache_instances,
+                   track_epoch=track_epoch)

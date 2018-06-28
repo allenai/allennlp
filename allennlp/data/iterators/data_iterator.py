@@ -246,9 +246,6 @@ class DataIterator(Registrable):
 
     @classmethod
     def from_params(cls, params: Params) -> 'DataIterator':
-        # TODO(Mark): The adaptive iterator will need a bit of work here,
-        # to retrieve the scaling function etc.
-
         iterator_type = params.pop_choice("type", cls.list_available())
         return cls.by_name(iterator_type).from_params(params)
 
