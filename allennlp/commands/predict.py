@@ -21,23 +21,21 @@ or dataset to JSON predictions using a trained model and its
     input_file            path to input file
 
     optional arguments:
-    -h, --help            show this help message and exit
+    -h, --help              show this help message and exit
     --output-file OUTPUT_FILE
                             path to output file
     --weights-file WEIGHTS_FILE
                             a path that overrides which weights file to use
-    --batch-size BATCH_SIZE
-                            The batch size to use for processing
-    --silent              do not print output to stdout
+    --batch-size BATCH_SIZE The batch size to use for processing
+    --silent                do not print output to stdout
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
-    --use-dataset-reader  Whether to use the dataset reader of the original
+    --use-dataset-reader    Whether to use the dataset reader of the original
                             model to load Instances
     -o OVERRIDES, --overrides OVERRIDES
                             a JSON structure used to override the experiment
                             configuration
-    --predictor PREDICTOR
-                            optionally specify a specific predictor to use
+    --predictor PREDICTOR   optionally specify a specific predictor to use
     --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
@@ -103,7 +101,7 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
     return Predictor.from_archive(archive, args.predictor)
 
 
-class _Predict:
+class _PredictManager:
 
     def __init__(self,
                  predictor: Predictor,
@@ -128,8 +126,7 @@ class _Predict:
 
     def _predict_json(self, batch_data: List[JsonDict]) -> Iterator[str]:
         if len(batch_data) == 1:
-            result = self._predictor.predict_json(batch_data[0])
-            yield self._predictor.dump_line(result)
+            results = [self._predictor.predict_json(batch_data[0])]
         else:
             results = self._predictor.predict_batch_json(batch_data)
         for output in results:
@@ -137,12 +134,11 @@ class _Predict:
 
     def _predict_instances(self, batch_data: List[Instance]) -> Iterator[str]:
         if len(batch_data) == 1:
-            result = self._predictor.predict_instance(batch_data[0])
-            yield self._predictor.dump_line(result)
+            results = [self._predictor.predict_instance(batch_data[0])]
         else:
             results = self._predictor.predict_batch_instance(batch_data)
-            for output in results:
-                yield self._predictor.dump_line(output)
+        for output in results:
+            yield self._predictor.dump_line(output)
 
     def _maybe_print_to_console_and_file(self,
                                          prediction: str,
@@ -187,10 +183,10 @@ def _predict(args: argparse.Namespace) -> None:
         print("Exiting early because no output will be created.")
         sys.exit(0)
 
-    util = _Predict(predictor,
-                    args.input_file,
-                    args.output_file,
-                    args.batch_size,
-                    not args.silent,
-                    args.use_dataset_reader)
-    util.run()
+    manager = _PredictManager(predictor,
+                              args.input_file,
+                              args.output_file,
+                              args.batch_size,
+                              not args.silent,
+                              args.use_dataset_reader)
+    manager.run()

@@ -156,12 +156,12 @@ class Model(torch.nn.Module, Registrable):
 
             instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]
             for name, output in list(outputs.items()):
-                # NOTE(markn): This is a hack because 0-dim pytorch tensors are not iterable.
-                # This occurs with batch size 1, because we still want to include the loss in that case.
-                if name == "loss" and output.dim() == 0:
-                    output = output.unsqueeze(0)
-
                 if isinstance(output, torch.Tensor):
+                    # NOTE(markn): This is a hack because 0-dim pytorch tensors are not iterable.
+                    # This occurs with batch size 1, because we still want to include the loss in that case.
+                    if output.dim() == 0:
+                        output = output.unsqueeze(0)
+
                     if output.size(0) != batch_size:
                         self._maybe_warn_for_unseparable_batches()
                         continue
