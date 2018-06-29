@@ -20,6 +20,20 @@ class TestAtisWorld(AllenNlpTestCase):
         world = AtisWorld("i would like one coach reservation for may ninth from pittsburgh to atlanta leaving pittsburgh before 10 o'clock in morning 1991 august twenty sixth")
         print(world.get_valid_actions())
 
+    def test_atis_get_action_seq(self):
+        world = AtisWorld()
+        action_sequence = world.get_action_sequence(
+        """( SELECT DISTINCT flight.stops FROM flight WHERE ( flight.airline_code = 'DL' AND ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'SALT LAKE CITY' )) AND ( flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE
+        city.city_name = 'PHOENIX' )) AND ( flight.flight_number = 751 AND flight.stops >= 1 ) ) ) )   ) ;""")
+        print(action_sequence)
+
+
+    def test_atis_parse_strings(self):
+        # world = self.worlds[0]
+        world = AtisWorld() 
+        parsed = world.parse_logical_form("")
+        print(world.get_action_sequence(parsed))
+ 
     
     def test_atis_parse_strings(self):
         # world = self.worlds[0]
