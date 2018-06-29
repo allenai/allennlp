@@ -572,6 +572,9 @@ class Trainer:
                     self._tensorboard.add_train_scalar("gradient_std/" + name,
                                                        grad_data.std(),
                                                        epoch)
+                else:
+                    # no gradient for a parameter with sparse gradients
+                    logger.info("No gradient for " + name + ", skipping tensorboard logging")
         # norm of gradients
         if batch_grad_norm is not None:
             self._tensorboard.add_train_scalar("gradient_norm",
