@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Union, Iterable, Iterator, List, Optional
+from typing import Dict, Union, Iterable, Iterator, List, Optional, Tuple
 from collections import defaultdict
 import itertools
 import math
@@ -49,6 +49,11 @@ class DataIterator(Registrable):
         If false, it will do the tensorization anew each iteration.
     track_epoch : ``bool``, optional, (default = False)
         If true, each instance will get a ``MetadataField`` containing the epoch number.
+    maximum_samples_per_batch : ``Tuple[str, int]``, (default = None)
+        If specified, then is a tuple (padding_key, limit) and we will
+        shrink the batch size for very long sequences such that
+        batch_size * sequence_length <= limit where sequence_length is given
+        by the padding_key.
     """
     default_implementation = 'bucket'
 
@@ -57,12 +62,14 @@ class DataIterator(Registrable):
                  instances_per_epoch: int = None,
                  max_instances_in_memory: int = None,
                  cache_instances: bool = False,
-                 track_epoch: bool = False) -> None:
+                 track_epoch: bool = False,
+                 maximum_samples_per_batch: Tuple[str, int] = None) -> None:
         self.vocab: Vocabulary = None
 
         self._batch_size = batch_size
         self._max_instances_in_memory = max_instances_in_memory
         self._instances_per_epoch = instances_per_epoch
+        self._maximum_samples_per_batch = maximum_samples_per_batch
 
         # We might want to cache the instances in memory.
         self._cache_instances = cache_instances
@@ -222,6 +229,44 @@ class DataIterator(Registrable):
         # into memory. So we convert the whole iterator to a list:
         else:
             yield list(iterator)
+
+
+    def _ensure_batch_is_sufficiently_small(self, batch_instances: Iterable[Instance]) -> List[List[Instance]]:
+        """
+        If self._maximum_samples_per_batch is specified, then split the batch into smaller
+        sub-batches if it exceeds the maximum size.
+        """
+        if self._maximum_samples_per_batch is None:
+            return [list(batch_instances)]
+
+        # check if we need to break into smaller chunks
+        key, limit = self._maximum_samples_per_batch
+        padding_length = -1
+        list_batch_instances = list(batch_instances)
+        for instance in list_batch_instances:
+            field_lengths = instance.get_padding_lengths()
+            for _, lengths in field_lengths.items():
+                try:
+                    padding_length = max(padding_length,
+                                         lengths[key])
+                except KeyError:
+                    pass
+
+        if padding_length * len(list_batch_instances) > limit:
+            # need to shrink
+            num_samples = padding_length * len(list_batch_instances)
+            num_shrunk_batches = math.ceil(num_samples / float(limit))
+            shrunk_batch_size = math.ceil(len(list_batch_instances) / num_shrunk_batches)
+            shrunk_batches = []
+            start = 0
+            while start < len(list_batch_instances):
+                end = start + shrunk_batch_size
+                shrunk_batches.append(list_batch_instances[start:end])
+                start = end
+            return shrunk_batches
+        else:
+            return [list_batch_instances]
+
 
     def get_num_batches(self, instances: Iterable[Instance]) -> int:
         """

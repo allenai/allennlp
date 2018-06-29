@@ -563,12 +563,18 @@ class Trainer:
                     grad_data = param.grad.data._values()
                 else:
                     grad_data = param.grad.data
-                self._tensorboard.add_train_scalar("gradient_mean/" + name,
-                                                   grad_data.mean(),
-                                                   epoch)
-                self._tensorboard.add_train_scalar("gradient_std/" + name,
-                                                   grad_data.std(),
-                                                   epoch)
+
+                # skip empty gradients
+                if torch.prod(torch.tensor(grad_data.shape)).item() > 0: # pylint: disable=not-callable
+                    self._tensorboard.add_train_scalar("gradient_mean/" + name,
+                                                       grad_data.mean(),
+                                                       epoch)
+                    self._tensorboard.add_train_scalar("gradient_std/" + name,
+                                                       grad_data.std(),
+                                                       epoch)
+                else:
+                    # no gradient for a parameter with sparse gradients
+                    logger.info("No gradient for %s, skipping tensorboard logging.", name)
         # norm of gradients
         if batch_grad_norm is not None:
             self._tensorboard.add_train_scalar("gradient_norm",

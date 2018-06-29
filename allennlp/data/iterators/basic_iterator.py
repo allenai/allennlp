@@ -26,14 +26,16 @@ class BasicIterator(DataIterator):
             iterator = iter(instance_list)
             # Then break each memory-sized list into batches.
             for batch_instances in lazy_groups_of(iterator, self._batch_size):
-                batch = Batch(batch_instances)
-                yield batch
+                for possibly_smaller_batches in self._ensure_batch_is_sufficiently_small(batch_instances):
+                    batch = Batch(possibly_smaller_batches)
+                    yield batch
 
     @classmethod
     def from_params(cls, params: Params) -> 'BasicIterator':
         batch_size = params.pop_int('batch_size', 32)
         instances_per_epoch = params.pop_int('instances_per_epoch', None)
         max_instances_in_memory = params.pop_int('max_instances_in_memory', None)
+        maximum_samples_per_batch = params.pop("maximum_samples_per_batch", None)
         cache_instances = params.pop_bool('cache_instances', False)
         track_epoch = params.pop_bool('track_epoch', False)
 
@@ -42,4 +44,5 @@ class BasicIterator(DataIterator):
                    instances_per_epoch=instances_per_epoch,
                    max_instances_in_memory=max_instances_in_memory,
                    cache_instances=cache_instances,
-                   track_epoch=track_epoch)
+                   track_epoch=track_epoch,
+                   maximum_samples_per_batch=maximum_samples_per_batch)
