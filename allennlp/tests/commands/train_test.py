@@ -2,6 +2,8 @@
 import argparse
 from typing import Iterable
 import os
+import shutil
+import re
 
 import pytest
 import torch
@@ -168,7 +170,7 @@ class LazyFakeReader(DatasetReader):
         return self.reader.read(file_path)
 
     @classmethod
-    def from_params(cls, params: Params) -> 'LazyTestReader':
+    def from_params(cls, params: Params) -> 'LazyFakeReader':
         return LazyFakeReader()
 
 
@@ -232,3 +234,52 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
         })
 
         train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'lazy_test_set'))
+
+    def test_train_nograd_regex(self):
+        params_get = lambda: Params({
+                "model": {
+                        "type": "simple_tagger",
+                        "text_field_embedder": {
+                                "tokens": {
+                                        "type": "embedding",
+                                        "embedding_dim": 5
+                                }
+                        },
+                        "encoder": {
+                                "type": "lstm",
+                                "input_size": 5,
+                                "hidden_size": 7,
+                                "num_layers": 2
+                        }
+                },
+                "dataset_reader": {"type": "sequence_tagging"},
+                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "iterator": {"type": "basic", "batch_size": 2},
+                "trainer": {
+                        "num_epochs": 2,
+                        "optimizer": "adam"
+                }
+        })
+        serialization_dir = os.path.join(self.TEST_DIR, 'test_train_nograd')
+        regex_lists = [[],
+                       [".*text_field_embedder.*"],
+                       [".*text_field_embedder.*", ".*encoder.*"]]
+        for regex_list in regex_lists:
+            params = params_get()
+            params["trainer"]["no_grad"] = regex_list
+            shutil.rmtree(serialization_dir, ignore_errors=True)
+            model = train_model(params, serialization_dir=serialization_dir)
+            # If regex is matched, parameter name should have requires_grad False
+            # Or else True
+            for name, parameter in model.named_parameters():
+                if any(re.search(regex, name) for regex in regex_list):
+                    assert not parameter.requires_grad
+                else:
+                    assert parameter.requires_grad
+        # If all parameters have requires_grad=False, then error.
+        params = params_get()
+        params["trainer"]["no_grad"] = ["*"]
+        shutil.rmtree(serialization_dir, ignore_errors=True)
+        with pytest.raises(Exception) as _:
+            model = train_model(params, serialization_dir=serialization_dir)

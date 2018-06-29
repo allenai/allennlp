@@ -196,13 +196,13 @@ class Vocabulary:
                                                         self._padding_token,
                                                         self._oov_token)
         # Made an empty vocabulary, now extend it.
-        self.extend(counter,
-                    min_count,
-                    max_vocab_size,
-                    non_padded_namespaces,
-                    pretrained_files,
-                    only_include_pretrained_words,
-                    tokens_to_add)
+        self._extend(counter,
+                     min_count,
+                     max_vocab_size,
+                     non_padded_namespaces,
+                     pretrained_files,
+                     only_include_pretrained_words,
+                     tokens_to_add)
 
     def save_to_files(self, directory: str) -> None:
         """
@@ -406,14 +406,14 @@ class Vocabulary:
                                          only_include_pretrained_words=only_include_pretrained_words,
                                          tokens_to_add=tokens_to_add)
 
-    def extend(self,
-               counter: Dict[str, Dict[str, int]] = None,
-               min_count: Dict[str, int] = None,
-               max_vocab_size: Union[int, Dict[str, int]] = None,
-               non_padded_namespaces: Iterable[str] = DEFAULT_NON_PADDED_NAMESPACES,
-               pretrained_files: Optional[Dict[str, str]] = None,
-               only_include_pretrained_words: bool = False,
-               tokens_to_add: Dict[str, List[str]] = None) -> None:
+    def _extend(self,
+                counter: Dict[str, Dict[str, int]] = None,
+                min_count: Dict[str, int] = None,
+                max_vocab_size: Union[int, Dict[str, int]] = None,
+                non_padded_namespaces: Iterable[str] = DEFAULT_NON_PADDED_NAMESPACES,
+                pretrained_files: Optional[Dict[str, str]] = None,
+                only_include_pretrained_words: bool = False,
+                tokens_to_add: Dict[str, List[str]] = None) -> None:
         """
         This method can be used for extending already generated vocabulary.
         It takes same parameters as Vocabulary initializer. The token2index
@@ -426,55 +426,59 @@ class Vocabulary:
         min_count = min_count or {}
         pretrained_files = pretrained_files or {}
         non_padded_namespaces = set(non_padded_namespaces)
+        counter = counter or {}
+        tokens_to_add = tokens_to_add or {}
 
-        if counter is not None:
-            # Make sure vocabulary extension is safe.
-            for namespace in counter:
-                if namespace in self.get_all_namespaces():
-                    # if new namespace was already present
-                    # Either both should be padded or none should be.
-                    original_padded = not any(namespace_match(pattern, namespace)
-                                              for pattern in self._non_padded_namespaces)
-                    extension_padded = not any(namespace_match(pattern, namespace)
-                                               for pattern in non_padded_namespaces)
-                    if original_padded != extension_padded:
-                        raise ConfigurationError("Common namespace {} has conflicting ".format(namespace)+
-                                                 "setting of padded = True/False. "+
-                                                 "Hence extension cannot be done.")
-            # Add new non-padded namespaces for extension
-            self.add_non_padded_namespaces(non_padded_namespaces)
+        # Make sure vocabulary extension is safe.
+        current_namespaces = {*self._token_to_index}
+        extension_namespaces = {*counter, *tokens_to_add}
 
-            for namespace in counter:
-                if namespace in pretrained_files:
-                    pretrained_list = _read_pretrained_tokens(pretrained_files[namespace])
-                else:
-                    pretrained_list = None
-                token_counts = list(counter[namespace].items())
-                token_counts.sort(key=lambda x: x[1], reverse=True)
-                max_vocab = max_vocab_size[namespace]
-                if max_vocab:
-                    token_counts = token_counts[:max_vocab]
-                for token, count in token_counts:
-                    if pretrained_list is not None:
-                        if only_include_pretrained_words:
-                            if token in pretrained_list and count >= min_count.get(namespace, 1):
-                                self.add_token_to_namespace(token, namespace)
-                        elif token in pretrained_list or count >= min_count.get(namespace, 1):
+        for namespace in current_namespaces & extension_namespaces:
+            # if new namespace was already present
+            # Either both should be padded or none should be.
+            original_padded = not any(namespace_match(pattern, namespace)
+                                      for pattern in self._non_padded_namespaces)
+            extension_padded = not any(namespace_match(pattern, namespace)
+                                       for pattern in non_padded_namespaces)
+            if original_padded != extension_padded:
+                raise ConfigurationError("Common namespace {} has conflicting ".format(namespace)+
+                                         "setting of padded = True/False. "+
+                                         "Hence extension cannot be done.")
+
+        # Add new non-padded namespaces for extension
+        self._token_to_index.add_non_padded_namespaces(non_padded_namespaces)
+        self._index_to_token.add_non_padded_namespaces(non_padded_namespaces)
+        self._non_padded_namespaces.update(non_padded_namespaces)
+
+        for namespace in counter:
+            if namespace in pretrained_files:
+                pretrained_list = _read_pretrained_tokens(pretrained_files[namespace])
+            else:
+                pretrained_list = None
+            token_counts = list(counter[namespace].items())
+            token_counts.sort(key=lambda x: x[1], reverse=True)
+            max_vocab = max_vocab_size[namespace]
+            if max_vocab:
+                token_counts = token_counts[:max_vocab]
+            for token, count in token_counts:
+                if pretrained_list is not None:
+                    if only_include_pretrained_words:
+                        if token in pretrained_list and count >= min_count.get(namespace, 1):
                             self.add_token_to_namespace(token, namespace)
-                    elif count >= min_count.get(namespace, 1):
+                    elif token in pretrained_list or count >= min_count.get(namespace, 1):
                         self.add_token_to_namespace(token, namespace)
-
-        if tokens_to_add:
-            for namespace, tokens in tokens_to_add.items():
-                for token in tokens:
+                elif count >= min_count.get(namespace, 1):
                     self.add_token_to_namespace(token, namespace)
+
+        for namespace, tokens in tokens_to_add.items():
+            for token in tokens:
+                self.add_token_to_namespace(token, namespace)
 
     def extend_from_instances(self,
                               params: Params,
                               instances: Iterable['adi.Instance'] = ()) -> None:
         """
-        This method can be used for extending already generated vocabulary
-        from collection of instances. It is a wrapped around ``extend`` method.
+        Extends an already generated vocabulary using a collection of instances.
         """
         min_count = params.pop("min_count", None)
         max_vocab_size = params.pop_int("max_vocab_size", None)
@@ -488,30 +492,13 @@ class Vocabulary:
         namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
         for instance in Tqdm.tqdm(instances):
             instance.count_vocab_items(namespace_token_counts)
-        self.extend(counter=namespace_token_counts,
-                    min_count=min_count,
-                    max_vocab_size=max_vocab_size,
-                    non_padded_namespaces=non_padded_namespaces,
-                    pretrained_files=pretrained_files,
-                    only_include_pretrained_words=only_include_pretrained_words,
-                    tokens_to_add=tokens_to_add)
-
-    def add_non_padded_namespaces(self, non_padded_namespaces: Set[str]):
-        self._token_to_index.add_non_padded_namespaces(non_padded_namespaces)
-        self._index_to_token.add_non_padded_namespaces(non_padded_namespaces)
-        self._non_padded_namespaces.update(non_padded_namespaces)
-
-    def get_all_namespaces(self) -> Set[str]:
-        return set(self._token_to_index.keys())
-
-    def get_non_padded_namespaces(self) -> Set[str]:
-        return self._non_padded_namespaces
-
-    def get_token_to_index(self) -> Dict[str, Dict[str, int]]:
-        return self._token_to_index
-
-    def get_index_to_token(self) -> Dict[str, Dict[int, str]]:
-        return self._index_to_token
+        self._extend(counter=namespace_token_counts,
+                     min_count=min_count,
+                     max_vocab_size=max_vocab_size,
+                     non_padded_namespaces=non_padded_namespaces,
+                     pretrained_files=pretrained_files,
+                     only_include_pretrained_words=only_include_pretrained_words,
+                     tokens_to_add=tokens_to_add)
 
     def is_padded(self, namespace: str) -> bool:
         """
