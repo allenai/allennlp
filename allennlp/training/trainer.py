@@ -287,17 +287,17 @@ class Trainer:
         if not isinstance(cuda_devices, list):
             raise ConfigurationError("Expected a list for cuda_devices, got {}".format(cuda_devices))
 
+        self._cuda_devices = cuda_devices
+
         if len(cuda_devices) > 1:
             logger.info(f"WARNING: Multiple GPU support is experimental not recommended for use. "
                         "In some cases it may lead to incorrect results or undefined behavior.")
             self._multiple_gpu = True
-            self._cuda_devices = cuda_devices
             # data_parallel will take care of transfering to cuda devices,
             # so the iterator keeps data on CPU.
             self._iterator_device = -1
         else:
             self._multiple_gpu = False
-            self._cuda_devices = cuda_devices
             self._iterator_device = cuda_devices[0]
 
         if self._cuda_devices[0] != -1:
