@@ -265,7 +265,7 @@ class DataIterator(Registrable):
                 start = end
             return shrunk_batches
         else:
-            return list_batch_instances
+            return [list_batch_instances]
 
 
     def get_num_batches(self, instances: Iterable[Instance]) -> int:
