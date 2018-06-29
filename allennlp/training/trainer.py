@@ -389,7 +389,20 @@ class Trainer:
         of torch.nn.parallel.data_parallel to support the allennlp model
         interface.
         """
+        metadata_batch_size = len(batch['metadata']) if 'metadata' in batch and isinstance(batch['metadata'],list) else None
+
         inputs, module_kwargs = scatter_kwargs((), batch, self._cuda_devices, 0)
+
+        if metadata_batch_size is not None:
+            # Metadata batches also have to be chunked as PyTorch is unaware of them.
+            # Follows chunking implementation by ATen.native.TensorShape functions.
+            chunk_size = 1 + (metadata_batch_size - 1)//len(self._cuda_devices)
+            chunk_offset = 0
+            for instance in module_kwargs:
+                if 'metadata' in instance:
+                     instance['metadata'] = instance['metadata'][chunk_offset:chunk_size+chunk_offset]
+                     chunk_offset += chunk_size
+
         used_device_ids = self._cuda_devices[:len(inputs)]
         replicas = replicate(self._model, used_device_ids)
         outputs = parallel_apply(replicas, inputs, module_kwargs, used_device_ids)
