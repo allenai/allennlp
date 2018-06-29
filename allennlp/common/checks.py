@@ -38,14 +38,7 @@ def check_dimensions_match(dimension_1: int,
                                  f"and {dimension_2} instead")
 
 
-def check_for_gpu(device_id: Union[int, List]):
-    if device_id is None:
-        device_ids = []
-    elif isinstance(device_id, int):
-        device_ids = [device_id]
-    else:
-        device_ids = device_id
-
+def check_for_gpu(device_ids: List):
     if any([device_id >= cuda.device_count() for device_id in device_ids]):
         raise ConfigurationError("Experiment specified a GPU but none is available;"
                                  " if you want to run on CPU use the override"
