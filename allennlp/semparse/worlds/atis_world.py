@@ -17,7 +17,6 @@ from parsimonious.nodes import NodeVisitor
 from parsimonious.nodes import RegexNode
 
 
-
 class AtisWorld(World):
     def __init__(self, utterance) -> None:
         super(AtisWorld, self).__init__(constant_type_prefixes={"string": types.STRING_TYPE,
@@ -72,6 +71,10 @@ class AtisWorld(World):
             if airline.lower() in self.utterance.lower():
                 valid_actions["string"].add("{} -> {}".format("string", atis_tables.AIRLINE_CODES[airline]))
 
+        nums = atis_tables.get_nums_from_utterance(self.utterance) 
+        for num in nums:
+            valid_actions["number"].add("{} -> {}".format("number", num))
+
         return valid_actions
      
 
@@ -99,33 +102,33 @@ SQL_GRAMMAR = Grammar(r"""
     condition_paren3    = not? (lparen ws)? condition (ws rparen)?
     condition           = in_clause / ternaryexpr / biexpr
 
-    in_clause       = (lparen ws)? col_ref ws "IN" ws query (ws rparen)?
+    in_clause           = (lparen ws)? col_ref ws "IN" ws query (ws rparen)?
 
-    biexpr          = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ( col_ref ws "LIKE" ws string)
-    binaryop        = "+" / "-" / "*" / "/" / "=" /
-                      ">=" / "<=" / ">" / "<"  / "is" / "IS"
+    biexpr              = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ( col_ref ws "LIKE" ws string)
+    binaryop            = "+" / "-" / "*" / "/" / "=" /
+                          ">=" / "<=" / ">" / "<"  / "is" / "IS"
 
-    ternaryexpr     = col_ref ws not? "BETWEEN" ws value ws and value ws
+    ternaryexpr         = col_ref ws not? "BETWEEN" ws value ws and value ws
 
-    value           = not? ws? pos_value
-    pos_value       = ("ALL" ws query) / ("ANY" ws query) / number / boolean / col_ref / string / agg_results / "NULL"
+    value               = not? ws? pos_value
+    pos_value           = ("ALL" ws query) / ("ANY" ws query) / number / boolean / col_ref / string / agg_results / "NULL"
 
-    agg_results     = ws lparen?  ws "SELECT" ws "DISTINCT"? ws agg ws "FROM" ws table_name ws where_clause rparen?  ws
+    agg_results         = ws lparen?  ws "SELECT" ws "DISTINCT"? ws agg ws "FROM" ws table_name ws where_clause rparen?  ws
 
-    number          = ~"\d*\.?\d+"i
-    string          = ~"\'.*?\'"i
-    boolean         = "true" / "false"
+    number              = ~"\d*\.?\d+"i
+    string              = ~"\'.*?\'"i
+    boolean             = "true" / "false"
 
     name                = ~"[a-zA-Z]\w*"i
     ws                  = ~"\s*"i
 
     lparen              = "("
     rparen              = ")"
-    conj            = and / or
-    and             = "AND" ws
-    or              = "OR" ws
-    not             = ("NOT" ws ) / ("not" ws)
-    asterisk        = "*"
+    conj                = and / or
+    and                 = "AND" ws
+    or                  = "OR" ws
+    not                 = ("NOT" ws ) / ("not" ws)
+    asterisk            = "*"
 
     """)
         

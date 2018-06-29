@@ -14,7 +14,10 @@ class TestAtisWorld(AllenNlpTestCase):
         world = AtisWorld("show me the flights from baltimore to denver") 
         print(world.get_valid_actions())
 
-        world = AtisWorld("show me the delta flights")
+        world = AtisWorld("show me the delta or united flights")
+        print(world.get_valid_actions())
+
+        world = AtisWorld("i would like one coach reservation for may ninth from pittsburgh to atlanta leaving pittsburgh before 10 o'clock in morning 1991 august twenty sixth")
         print(world.get_valid_actions())
 
     
