@@ -1,4 +1,4 @@
-from typing import Dict, Mapping
+from typing import Dict, MutableMapping
 
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.vocabulary import Vocabulary
@@ -22,7 +22,7 @@ class Instance:
     fields : ``Dict[str, Field]``
         The ``Field`` objects that will be used to produce data arrays for this instance.
     """
-    def __init__(self, fields: Mapping[str, Field]) -> None:
+    def __init__(self, fields: MutableMapping[str, Field]) -> None:
         self.fields = fields
         self.indexed = False
 
