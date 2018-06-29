@@ -574,7 +574,7 @@ class Trainer:
                                                        epoch)
                 else:
                     # no gradient for a parameter with sparse gradients
-                    logger.info("No gradient for " + name + ", skipping tensorboard logging")
+                    logger.info("No gradient for %s, skipping tensorboard logging.", name)
         # norm of gradients
         if batch_grad_norm is not None:
             self._tensorboard.add_train_scalar("gradient_norm",
