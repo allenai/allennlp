@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Any
 
 import numpy
 from overrides import overrides
@@ -62,7 +62,8 @@ class SimpleTagger(Model):
     @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
-                tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                tags: torch.LongTensor = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -79,6 +80,8 @@ class SimpleTagger(Model):
         tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of integer gold class labels of shape
             ``(batch_size, num_tokens)``.
+        metadata : ``List[Dict[str, Any]]``, optional, (default = None)
+            metadata containg the original words in the sentence to be tagged under a 'words' key.
 
         Returns
         -------
@@ -112,6 +115,8 @@ class SimpleTagger(Model):
                 metric(logits, tags, mask.float())
             output_dict["loss"] = loss
 
+        if metadata is not None:
+            output_dict["words"] = [x["words"] for x in metadata]
         return output_dict
 
     @overrides

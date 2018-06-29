@@ -1,0 +1,52 @@
+{
+  "dataset_reader": {
+    "type": "nlvr",
+    "output_agendas": true
+  },
+  "vocabulary": {
+    "non_padded_namespaces": ["rule_labels", "denotations"]
+  },
+  "train_data_path": "allennlp/tests/fixtures/data/nlvr/sample_ungrouped_data.jsonl",
+  "validation_data_path": "allennlp/tests/fixtures/data/nlvr/sample_ungrouped_data.jsonl",
+  "model": {
+    "type": "nlvr_coverage_parser",
+    "sentence_embedder": {
+      "tokens": {
+        "type": "embedding",
+        "embedding_dim": 25,
+        "trainable": true
+      }
+    },
+    "action_embedding_dim": 50,
+    "encoder": {
+      "type": "lstm",
+      "input_size": 25,
+      "hidden_size": 10,
+      "num_layers": 1
+    },
+    "beam_size": 20,
+    "max_decoding_steps": 20,
+    "attention": {"type": "dot_product"},
+    "checklist_cost_weight": 0.8,
+    "dynamic_cost_weight": {
+      "wait_num_epochs": 0,
+      "rate": 0.1
+    },
+    "penalize_non_agenda_actions": true
+  },
+  "iterator": {
+    "type": "epoch_tracking_bucket",
+    "sorting_keys": [["sentence", "num_tokens"]],
+    "padding_noise": 0.0,
+    "batch_size" : 2
+  },
+  "trainer": {
+    "num_epochs": 1,
+    "patience": 2,
+    "cuda_device": -1,
+    "optimizer": {
+      "type": "sgd",
+      "lr": 0.01
+    }
+  }
+}

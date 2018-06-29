@@ -8,9 +8,9 @@
           }
         }
     },
-    "train_data_path": ${PTB_TRAIN_PATH},
-    "validation_data_path": ${PTB_DEV_PATH},
-    "test_data_path": ${PTB_TEST_PATH},
+    "train_data_path": std.extVar('PTB_TRAIN_PATH'),
+    "validation_data_path": std.extVar('PTB_DEV_PATH'),
+    "test_data_path": std.extVar('PTB_TEST_PATH'),
     "model": {
       "type": "constituency_parser",
       "text_field_embedder": {
@@ -50,8 +50,7 @@
       "span_extractor": {
         "type": "bidirectional_endpoint",
         "input_dim": 500
-      },
-      "evalb_directory_path": "scripts/EVALB"
+      }
     },
     "iterator": {
       "type": "bucket",

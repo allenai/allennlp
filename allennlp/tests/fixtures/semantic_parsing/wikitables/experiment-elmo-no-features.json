@@ -1,0 +1,65 @@
+{
+  "dataset_reader": {
+    "type": "wikitables",
+    "tables_directory": "allennlp/tests/fixtures/data/wikitables/",
+    "dpd_output_directory": "allennlp/tests/fixtures/data/wikitables/dpd_output/",
+    "question_token_indexers": {
+      "elmo": {
+       "type": "elmo_characters"
+      }
+    },
+    "max_table_tokens": 200
+  },
+  "vocabulary": {
+    "min_count": {"tokens": 1}
+  },
+  "train_data_path": "allennlp/tests/fixtures/data/wikitables/sample_data.examples",
+  "validation_data_path": "allennlp/tests/fixtures/data/wikitables/sample_data.examples",
+  "model": {
+    "type": "wikitables_mml_parser",
+    "question_embedder": {
+      "elmo":{
+       "type": "elmo_token_embedder",
+       "options_file": "allennlp/tests/fixtures/elmo/options.json",
+       "weight_file": "allennlp/tests/fixtures/elmo/lm_weights.hdf5",
+       "do_layer_norm": false,
+       "dropout": 0.5
+     }
+    },
+    "action_embedding_dim": 50,
+    "encoder": {
+      "type": "lstm",
+      "input_size": 64,
+      "hidden_size": 10,
+      "num_layers": 1
+    },
+    "entity_encoder": {
+      "type": "boe",
+      "embedding_dim": 32,
+      "averaged": true
+    },
+    "decoder_beam_search": {
+      "beam_size": 3
+    },
+    "max_decoding_steps": 200,
+    "attention": {"type": "dot_product"},
+    "num_linking_features": 0,
+    "use_neighbor_similarity_for_linking": true,
+    "tables_directory": "allennlp/tests/fixtures/data/wikitables/"
+  },
+  "iterator": {
+    "type": "bucket",
+    "sorting_keys": [["question", "num_tokens"]],
+    "padding_noise": 0.0,
+    "batch_size" : 2
+  },
+  "trainer": {
+    "num_epochs": 2,
+    "patience": 10,
+    "cuda_device": -1,
+    "optimizer": {
+      "type": "sgd",
+      "lr": 0.01
+    }
+  }
+}

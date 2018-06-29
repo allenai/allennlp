@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Any
 
 import torch
 
@@ -6,8 +6,9 @@ from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import FeedForward, MatrixAttention
+from allennlp.modules import FeedForward
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
+from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum
 from allennlp.training.metrics import CategoricalAccuracy
@@ -74,7 +75,7 @@ class DecomposableAttention(Model):
 
         self._text_field_embedder = text_field_embedder
         self._attend_feedforward = TimeDistributed(attend_feedforward)
-        self._matrix_attention = MatrixAttention(similarity_function)
+        self._matrix_attention = LegacyMatrixAttention(similarity_function)
         self._compare_feedforward = TimeDistributed(compare_feedforward)
         self._aggregate_feedforward = aggregate_feedforward
         self._premise_encoder = premise_encoder
@@ -95,7 +96,8 @@ class DecomposableAttention(Model):
     def forward(self,  # type: ignore
                 premise: Dict[str, torch.LongTensor],
                 hypothesis: Dict[str, torch.LongTensor],
-                label: torch.IntTensor = None) -> Dict[str, torch.Tensor]:
+                label: torch.IntTensor = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -104,9 +106,11 @@ class DecomposableAttention(Model):
             From a ``TextField``
         hypothesis : Dict[str, torch.LongTensor]
             From a ``TextField``
-        label : torch.IntTensor, optional (default = None)
+        label : torch.IntTensor, optional, (default = None)
             From a ``LabelField``
-
+        metadata : ``List[Dict[str, Any]]``, optional, (default = None)
+            Metadata containing the original tokenization of the premise and
+            hypothesis with 'premise_tokens' and 'hypothesis_tokens' keys respectively.
         Returns
         -------
         An output dictionary consisting of:
@@ -169,8 +173,12 @@ class DecomposableAttention(Model):
 
         if label is not None:
             loss = self._loss(label_logits, label.long().view(-1))
-            self._accuracy(label_logits, label.squeeze(-1))
+            self._accuracy(label_logits, label)
             output_dict["loss"] = loss
+
+        if metadata is not None:
+            output_dict["premise_tokens"] = [x["premise_tokens"] for x in metadata]
+            output_dict["hypothesis_tokens"] = [x["hypothesis_tokens"] for x in metadata]
 
         return output_dict
 

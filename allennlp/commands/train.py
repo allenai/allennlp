@@ -23,7 +23,7 @@ which to write the results.
    -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
                            directory in which to save the model and its logs
    -o OVERRIDES, --overrides OVERRIDES
-                           a HOCON structure used to override the experiment
+                           a JSON structure used to override the experiment
                            configuration
    --include-package INCLUDE_PACKAGE
                            additional packages to include
@@ -37,10 +37,13 @@ import json
 import logging
 import os
 from copy import deepcopy
+import re
+
+import torch
 
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import ConfigurationError
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import Params
 from allennlp.common.util import prepare_environment, prepare_global_logging
 from allennlp.data import Vocabulary
@@ -77,7 +80,7 @@ class Train(Subcommand):
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
-                               help='a HOCON structure used to override the experiment configuration')
+                               help='a JSON structure used to override the experiment configuration')
 
         subparser.add_argument('--file-friendly-logging',
                                action='store_true',
@@ -115,7 +118,7 @@ def train_model_from_file(parameter_filename: str,
         The directory in which to save results and logs. We just pass this along to
         :func:`train_model`.
     overrides : ``str``
-        A HOCON string that we will use to override values in the input parameter file.
+        A JSON string that we will use to override values in the input parameter file.
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we make our output more friendly to saved model files.  We just pass this
         along to :func:`train_model`.
@@ -163,8 +166,8 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
 
 def create_serialization_dir(params: Params, serialization_dir: str, recover: bool) -> None:
     """
-    This function creates the serialization directory if it doesn't exist.  If it already exists,
-    then it verifies that we're recovering from a training with an identical configuration.
+    This function creates the serialization directory if it doesn't exist.  If it already exists
+    and is non-empty, then it verifies that we're recovering from a training with an identical configuration.
 
     Parameters
     ----------
@@ -176,14 +179,10 @@ def create_serialization_dir(params: Params, serialization_dir: str, recover: bo
         If ``True``, we will try to recover from an existing serialization directory, and crash if
         the directory doesn't exist, or doesn't match the configuration we're given.
     """
-    if os.path.exists(serialization_dir):
-        if serialization_dir == '/output':
-            # Special-casing the beaker output directory, which will already exist when training
-            # starts.
-            return
+    if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
         if not recover:
-            raise ConfigurationError(f"Serialization directory ({serialization_dir}) already exists.  "
-                                     f"Specify --recover to recover training from existing output.")
+            raise ConfigurationError(f"Serialization directory ({serialization_dir}) already exists and is "
+                                     f"not empty. Specify --recover to recover training from existing output.")
 
         logger.info(f"Recovering from prior training at {serialization_dir}.")
 
@@ -220,7 +219,7 @@ def create_serialization_dir(params: Params, serialization_dir: str, recover: bo
         if recover:
             raise ConfigurationError(f"--recover specified but serialization_dir ({serialization_dir}) "
                                      "does not exist.  There is nothing to recover from.")
-        os.makedirs(serialization_dir)
+        os.makedirs(serialization_dir, exist_ok=True)
 
 
 def train_model(params: Params,
@@ -240,15 +239,22 @@ def train_model(params: Params,
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
-    recover : ``bool`, optional (default=False)
+    recover : ``bool``, optional (default=False)
         If ``True``, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
         of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
+
+    Returns
+    -------
+    best_model: ``Model``
+        The model with the best epoch weights.
     """
     prepare_environment(params)
 
     create_serialization_dir(params, serialization_dir, recover)
     prepare_global_logging(serialization_dir, file_friendly_logging)
+
+    check_for_gpu(params.params.get('trainer').get('cuda_device', -1))
 
     serialization_params = deepcopy(params).as_dict(quiet=True)
     with open(os.path.join(serialization_dir, CONFIG_NAME), "w") as param_file:
@@ -277,6 +283,24 @@ def train_model(params: Params,
     test_data = all_datasets.get('test')
 
     trainer_params = params.pop("trainer")
+    no_grad_regexes = trainer_params.pop("no_grad", ())
+
+    nograd_parameter_names = []
+    grad_parameter_names = []
+    for name, parameter in model.named_parameters():
+        if any(re.search(regex, name) for regex in no_grad_regexes):
+            parameter.requires_grad_(False)
+            nograd_parameter_names.append(name)
+        else:
+            grad_parameter_names.append(name)
+
+    logger.info("Following parameters are Frozen  (without gradient):")
+    for name in nograd_parameter_names:
+        logger.info(name)
+    logger.info("Following parameters are Tunable (with gradient):")
+    for name in grad_parameter_names:
+        logger.info(name)
+
     trainer = Trainer.from_params(model,
                                   serialization_dir,
                                   iterator,
@@ -300,8 +324,15 @@ def train_model(params: Params,
     # Now tar up results
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)
 
+    logger.info("Loading the best epoch weights.")
+    best_model_state_path = os.path.join(serialization_dir, 'best.th')
+    best_model_state = torch.load(best_model_state_path)
+    best_model = model
+    best_model.load_state_dict(best_model_state)
+
     if test_data and evaluate_on_test:
-        test_metrics = evaluate(model, test_data, iterator, cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
+        logger.info("The model will be evaluated using the best epoch weights.")
+        test_metrics = evaluate(best_model, test_data, iterator, cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
         for key, value in test_metrics.items():
             metrics["test_" + key] = value
 
@@ -314,4 +345,4 @@ def train_model(params: Params,
         metrics_file.write(metrics_json)
     logger.info("Metrics: %s", metrics_json)
 
-    return model
+    return best_model

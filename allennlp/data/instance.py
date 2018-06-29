@@ -1,4 +1,4 @@
-from typing import Dict, Mapping
+from typing import Dict, MutableMapping
 
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.vocabulary import Vocabulary
@@ -22,7 +22,7 @@ class Instance:
     fields : ``Dict[str, Field]``
         The ``Field`` objects that will be used to produce data arrays for this instance.
     """
-    def __init__(self, fields: Mapping[str, Field]) -> None:
+    def __init__(self, fields: MutableMapping[str, Field]) -> None:
         self.fields = fields
         self.indexed = False
 
@@ -61,8 +61,7 @@ class Instance:
 
     def as_tensor_dict(self,
                        padding_lengths: Dict[str, Dict[str, int]] = None,
-                       cuda_device: int = -1,
-                       for_training: bool = True) -> Dict[str, DataArray]:
+                       cuda_device: int = -1) -> Dict[str, DataArray]:
         """
         Pads each ``Field`` in this instance to the lengths given in ``padding_lengths`` (which is
         keyed by field name, then by padding key, the same as the return value in
@@ -75,8 +74,7 @@ class Instance:
         tensors = {}
         for field_name, field in self.fields.items():
             tensors[field_name] = field.as_tensor(padding_lengths[field_name],
-                                                  cuda_device=cuda_device,
-                                                  for_training=for_training)
+                                                  cuda_device=cuda_device)
         return tensors
 
 

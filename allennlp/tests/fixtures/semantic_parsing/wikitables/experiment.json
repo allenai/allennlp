@@ -1,0 +1,52 @@
+{
+  "dataset_reader": {
+    "type": "wikitables",
+    "tables_directory": "allennlp/tests/fixtures/data/wikitables/",
+    "dpd_output_directory": "allennlp/tests/fixtures/data/wikitables/dpd_output/"
+  },
+  "train_data_path": "allennlp/tests/fixtures/data/wikitables/sample_data.examples",
+  "validation_data_path": "allennlp/tests/fixtures/data/wikitables/sample_data.examples",
+  "model": {
+    "type": "wikitables_mml_parser",
+    "tables_directory": "allennlp/tests/fixtures/data/wikitables/",
+    "question_embedder": {
+      "tokens": {
+        "type": "embedding",
+        "embedding_dim": 25,
+        "trainable": true
+      }
+    },
+    "action_embedding_dim": 50,
+    "encoder": {
+      "type": "lstm",
+      "input_size": 50,
+      "hidden_size": 10,
+      "num_layers": 1
+    },
+    "entity_encoder": {
+      "type": "boe",
+      "embedding_dim": 25,
+      "averaged": true
+    },
+    "decoder_beam_search": {
+      "beam_size": 3
+    },
+    "max_decoding_steps": 200,
+    "attention": {"type": "dot_product"}
+  },
+  "iterator": {
+    "type": "bucket",
+    "sorting_keys": [["question", "num_tokens"]],
+    "padding_noise": 0.0,
+    "batch_size" : 2
+  },
+  "trainer": {
+    "num_epochs": 2,
+    "patience": 10,
+    "cuda_device": -1,
+    "optimizer": {
+      "type": "sgd",
+      "lr": 0.01
+    }
+  }
+}

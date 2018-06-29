@@ -57,7 +57,7 @@ visualize in the text output returned by the simple server you set up in the pre
 
 We've [set up a repository](https://github.com/allenai/allennlp-simple-server-visualization) with a
 stripped-down version of the code that runs the demo on
-[http://demo.allennlp.org](demo.allennlp.org).  Clone that repository and copy the `demo/`
+[demo.allennlp.org](http://demo.allennlp.org).  Clone that repository and copy the `demo/`
 directory to wherever you want.  `cd` to that directory, and run `npm install`, then `npm start`.
 That should show a screen in your terminal that says "Compiled successfully!", directing you to
 view your demo in a browser at `localhost:3000`.  If you go there, you should see a page that says

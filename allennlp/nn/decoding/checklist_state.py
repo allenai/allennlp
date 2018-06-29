@@ -39,7 +39,7 @@ class ChecklistState:
         self.checklist = checklist
         # Mapping from batch action indices to indices in any of the four vectors above.
         self.terminal_indices_dict: Dict[int, int] = {}
-        for checklist_index, batch_action_index in enumerate(terminal_actions.data.cpu()):
+        for checklist_index, batch_action_index in enumerate(terminal_actions.detach().cpu()):
             action_index = int(batch_action_index[0])
             if action_index == -1:
                 continue
