@@ -169,7 +169,7 @@ class Trainer:
                  num_serialized_models_to_keep: int = 20,
                  keep_serialized_model_every_num_seconds: int = None,
                  model_save_interval: float = None,
-                 cuda_device: Union[int, List] = -1,
+                 cuda_devices: List = [-1],
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
                  learning_rate_scheduler: Optional[LearningRateScheduler] = None,
@@ -284,21 +284,21 @@ class Trainer:
         self._validation_metric = validation_metric[1:]
         self._validation_metric_decreases = increase_or_decrease == "-"
 
-        if not isinstance(cuda_device, int) and not isinstance(cuda_device, list):
-            raise ConfigurationError("Expected an int or list for cuda_device, got {}".format(cuda_device))
+        if not isinstance(cuda_devices, list):
+            raise ConfigurationError("Expected a list for cuda_devices, got {}".format(cuda_devices))
 
-        if isinstance(cuda_device, list):
+        if len(cuda_devices) > 1:
             logger.info(f"WARNING: Multiple GPU support is experimental not recommended for use. "
                         "In some cases it may lead to incorrect results or undefined behavior.")
             self._multiple_gpu = True
-            self._cuda_devices = cuda_device
+            self._cuda_devices = cuda_devices
             # data_parallel will take care of transfering to cuda devices,
             # so the iterator keeps data on CPU.
             self._iterator_device = -1
         else:
             self._multiple_gpu = False
-            self._cuda_devices = [cuda_device]
-            self._iterator_device = cuda_device
+            self._cuda_devices = cuda_devices
+            self._iterator_device = cuda_devices[0]
 
         if self._cuda_devices[0] != -1:
             self._model = self._model.cuda(self._cuda_devices[0])
@@ -942,13 +942,18 @@ class Trainer:
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
         num_epochs = params.pop_int("num_epochs", 20)
-        cuda_device = params.pop_int("cuda_device", -1)
+        cuda_devices = params.pop("cuda_device", [])
+
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
 
-        if cuda_device >= 0:
-            model = model.cuda(cuda_device)
+
+        if isinstance(cuda_devices, int):
+            cuda_devices = [cuda_devices]
+
+        if cuda_devices[0] != -1:
+            model = model.cuda(cuda_devices[0])
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
@@ -971,7 +976,7 @@ class Trainer:
                        validation_metric=validation_metric,
                        num_epochs=num_epochs,
                        serialization_dir=serialization_dir,
-                       cuda_device=cuda_device,
+                       cuda_devices=cuda_devices,
                        grad_norm=grad_norm,
                        grad_clipping=grad_clipping,
                        learning_rate_scheduler=scheduler,

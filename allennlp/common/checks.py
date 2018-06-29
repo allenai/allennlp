@@ -4,7 +4,7 @@ AllenNLP and its models are configured correctly.
 """
 
 import logging
-
+from typing import Union, List
 from torch import cuda
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -38,8 +38,15 @@ def check_dimensions_match(dimension_1: int,
                                  f"and {dimension_2} instead")
 
 
-def check_for_gpu(device_id: int):
-    if device_id is not None and device_id >= cuda.device_count():
+def check_for_gpu(device_id: Union[int, List]):
+    if device_id is None:
+        device_ids = []
+    elif isinstance(device_id, int):
+        device_ids = [device_id]
+    else:
+        device_ids = device_id
+
+    if any([device_id >= cuda.device_count() for device_id in device_ids]):
         raise ConfigurationError("Experiment specified a GPU but none is available;"
                                  " if you want to run on CPU use the override"
                                  " 'trainer.cuda_device=-1' in the json config file.")
