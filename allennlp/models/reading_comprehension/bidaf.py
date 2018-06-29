@@ -41,7 +41,7 @@ class BidirectionalAttentionFlow(Model):
     phrase_layer : ``Seq2SeqEncoder``
         The encoder (with its own internal stacking) that we will use in between embedding tokens
         and doing the bidirectional attention.
-    attention_similarity_function : ``SimilarityFunction``
+    similarity_function : ``SimilarityFunction``
         The similarity function that we will use when comparing encoded passage and question
         representations.
     modeling_layer : ``Seq2SeqEncoder``
@@ -81,7 +81,7 @@ class BidirectionalAttentionFlow(Model):
         self._highway_layer = TimeDistributed(Highway(text_field_embedder.get_output_dim(),
                                                       num_highway_layers))
         self._phrase_layer = phrase_layer
-        self._matrix_attention = LegacyMatrixAttention(attention_similarity_function)
+        self._matrix_attention = LegacyMatrixAttention(similarity_function)
         self._modeling_layer = modeling_layer
         self._span_end_encoder = span_end_encoder
 

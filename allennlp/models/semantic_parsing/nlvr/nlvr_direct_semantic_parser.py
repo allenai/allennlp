@@ -39,7 +39,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         Passed to super-class.
     encoder : ``Seq2SeqEncoder``
         Passed to super-class.
-    input_attention : ``Attention``
+    attention : ``Attention``
         We compute an attention over the input question at each step of the decoder, using the
         decoder hidden state as the query.  Passed to the DecoderStep.
     decoder_beam_search : ``BeamSearch``
@@ -54,7 +54,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                  sentence_embedder: TextFieldEmbedder,
                  action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
-                 input_attention: Attention,
+                 attention: Attention,
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  dropout: float = 0.0) -> None:
@@ -66,7 +66,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         self._decoder_trainer = MaximumMarginalLikelihood()
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
-                                             input_attention=input_attention,
+                                             input_attention=attention,
                                              dropout=dropout)
         self._decoder_beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps

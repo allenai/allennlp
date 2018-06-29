@@ -91,6 +91,10 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
 
 
     def test_regularization(self):
+
+        print(self.model)
+
+
         penalty = self.model.get_regularization_penalty().data
         assert (penalty > 0).all()
 

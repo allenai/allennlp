@@ -238,7 +238,7 @@ class InitializerApplicator:
             logger.info("   %s", name)
 
     @classmethod
-    def from_params(cls, params: Iterable[Tuple[str, Params]]=()) -> "InitializerApplicator":
+    def from_params(cls, params: Iterable[Tuple[str, Params]] = ()) -> "InitializerApplicator":
         """
         Converts a Params object into an InitializerApplicator. The json should
         be formatted as follows::

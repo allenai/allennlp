@@ -43,12 +43,12 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         Passed to super-class.
     encoder : ``Seq2SeqEncoder``
         Passed to super-class.
-    input_attention : ``Attention``
+    attention : ``Attention``
         We compute an attention over the input question at each step of the decoder, using the
         decoder hidden state as the query.  Passed to the DecoderStep.
     beam_size : ``int``
         Beam size for the beam search used during training.
-    max_num_finished_states : ``int``
+    max_num_finished_states : ``int``, optional (default=None)
         Maximum number of finished states the trainer should compute costs for.
     normalize_beam_score_by_length : ``bool``, optional (default=False)
         Should the log probabilities be normalized by length before renormalizing them? Edunov et
@@ -80,10 +80,10 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                  sentence_embedder: TextFieldEmbedder,
                  action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
-                 input_attention: Attention,
+                 attention: Attention,
                  beam_size: int,
-                 max_num_finished_states: int,
                  max_decoding_steps: int,
+                 max_num_finished_states: int = None,
                  dropout: float = 0.0,
                  normalize_beam_score_by_length: bool = False,
                  checklist_cost_weight: float = 0.6,
@@ -106,7 +106,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         self._terminal_productions = set(NlvrWorld([]).terminal_productions.values())
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
-                                             input_attention=input_attention,
+                                             input_attention=attention,
                                              dropout=dropout,
                                              use_coverage=True)
         self._checklist_cost_weight = checklist_cost_weight

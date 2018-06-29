@@ -5,7 +5,7 @@ for registering them.
 """
 
 from collections import defaultdict
-from typing import TypeVar, Type, Dict, List, Any, Callable
+from typing import TypeVar, Type, Dict, List, Any, Callable, Union
 import inspect
 
 from allennlp.common.checks import ConfigurationError
@@ -14,27 +14,40 @@ from allennlp.common.params import Params
 T = TypeVar('T')
 
 _DEFAULT_TO_FIRST_CHOICE = {
-      'TextFieldEmbedder',
+        'TextFieldEmbedder',
 }
 
-def takes_arg(f: Callable, arg: str) -> bool:
-    signature = inspect.signature(f)
-    print("takes_arg", f, arg, signature, signature.parameters)
+NO_DEFAULT = inspect._empty
+
+def takes_arg(func: Callable, arg: str) -> bool:
+    signature = inspect.signature(func)
+    #print("takes_arg", func, arg, signature, signature.parameters)
     return arg in signature.parameters
+
+def remove_optional(annotation):
+    origin = getattr(annotation, '__origin__', None)
+    args = getattr(annotation, '__args__', ())
+    if origin == Union and len(args) == 2 and args[1] == type(None):
+        return args[0]
+    else:
+        return annotation
+
 
 def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
     signature = inspect.signature(cls.__init__)
-    print(signature)
+    #print(signature)
     kwargs: Dict[str, Any] = {}
 
     for name, param in signature.parameters.items():
-        print("create_kwargs", cls, name, param)
+        #print("create_kwargs", cls, name, param)
         # Don't need to sub in for `self`
         if name == "self":
             continue
 
-        annotation = param.annotation
+        annotation = remove_optional(param.annotation)
         default = param.default
+
+        print(name, annotation)
 
         if name in extras:
             # This is for stuff like Vocabulary, which is passed in manually
@@ -50,24 +63,24 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
                     subextras = extras
 
                 kwargs[name] = annotation.from_params(params=subparams, **subextras)
-            elif default == inspect._empty:
+            elif default == NO_DEFAULT:
                 raise ConfigurationError(f"expected key {name} for {cls.__name__}")
 
         elif annotation == str:
             kwargs[name] = (params.pop(name, default)
-                            if default != inspect._empty
+                            if default != NO_DEFAULT
                             else params.pop(name))
         elif annotation == int:
             kwargs[name] = (params.pop_int(name, default)
-                            if default != inspect._empty
+                            if default != NO_DEFAULT
                             else params.pop_int(name))
         elif annotation == bool:
             kwargs[name] = (params.pop_bool(name, default)
-                            if default != inspect._empty
+                            if default != NO_DEFAULT
                             else params.pop_bool(name))
         elif annotation == float:
             kwargs[name] = (params.pop_float(name, default)
-                            if default != inspect._empty
+                            if default != NO_DEFAULT
                             else params.pop_float(name))
 
         elif (getattr(annotation, '__origin__', None) == Dict and
@@ -81,6 +94,13 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
                 value_dict[key] = value_cls.from_params(params=value_params, **extras)
 
             kwargs[name] = value_dict
+
+        else:
+            # Pass it on as is and hope for the best.   ¯\_(ツ)_/¯
+            if default == NO_DEFAULT:
+                kwargs[name] = params.pop(name)
+            else:
+                kwargs[name] = params.pop(name, default)
 
     #params.assert_empty(cls.__name__)
     return {k: v for k, v in kwargs.items() if takes_arg(cls, k)}
@@ -145,17 +165,26 @@ class Registrable:
 
     @classmethod
     def from_params(cls: Type[T], params: Params, **extras) -> T:
+        print()
+        print(cls, params.params, extras)
         # pylint: disable=protected-access
         if params is None:
             return None
 
         # If this is the base class, delegate to the subclass.
         print("from_params", cls, params, extras)
-        if "type" in params or cls.__name__ in _DEFAULT_TO_FIRST_CHOICE:
+        registered_subclasses = Registrable._registry.get(cls)
+        if registered_subclasses is not None:
+            default = getattr(cls, 'default_implementation', None)
+            if default is not None:
+                choices = [default] + [k for k in registered_subclasses if k != default]
+            else:
+                choices = list(registered_subclasses)
+
             choice = params.pop_choice("type",
-                                       cls.list_available(),
-                                       cls.__name__ in _DEFAULT_TO_FIRST_CHOICE)
-            subclass = cls.by_name(choice)
+                                       choices=choices,
+                                       default_to_first_choice=cls.__name__ in _DEFAULT_TO_FIRST_CHOICE)
+            subclass = registered_subclasses[choice]
             if not takes_arg(subclass.from_params, 'extras'):
                 extras = {k:v for k, v in extras.items() if takes_arg(subclass.from_params, k)}
             return subclass.from_params(params=params, **extras)

@@ -39,7 +39,7 @@ class BiattentiveClassificationNetworkTest(ModelTestCase):
         # the embedding dimension from the text_field_embedder.
         params["model"]["encoder"]["input_size"] = 10
         with pytest.raises(ConfigurationError):
-            Model.from_params(self.vocab, params.get("model"))
+            Model.from_params(vocab=self.vocab, params=params.get("model"))
 
     def test_no_elmo_but_set_flags_throws_configuration_error(self):
         params = Params.from_file(self.param_file)
@@ -49,21 +49,21 @@ class BiattentiveClassificationNetworkTest(ModelTestCase):
         tmp_params = deepcopy(params)
         tmp_params["model"]["use_input_elmo"] = True
         with pytest.raises(ConfigurationError):
-            Model.from_params(self.vocab, tmp_params.get("model"))
+            Model.from_params(vocab=self.vocab, params=tmp_params.get("model"))
 
         # use_integrator_output_elmo set to True
         tmp_params = deepcopy(params)
         tmp_params["model"]["use_input_elmo"] = False
         tmp_params["model"]["use_integrator_output_elmo"] = True
         with pytest.raises(ConfigurationError):
-            Model.from_params(self.vocab, tmp_params.get("model"))
+            Model.from_params(vocab=self.vocab, params=tmp_params.get("model"))
 
         # both use_input_elmo and use_integrator_output_elmo set to True
         tmp_params = deepcopy(params)
         tmp_params["model"]["use_input_elmo"] = True
         tmp_params["model"]["use_integrator_output_elmo"] = True
         with pytest.raises(ConfigurationError):
-            Model.from_params(self.vocab, tmp_params.get("model"))
+            Model.from_params(vocab=self.vocab, params=tmp_params.get("model"))
 
     def test_elmo_but_no_set_flags_throws_configuration_error(self):
         # pylint: disable=line-too-long
@@ -72,7 +72,7 @@ class BiattentiveClassificationNetworkTest(ModelTestCase):
         params["model"]["use_input_elmo"] = False
         params["model"]["use_integrator_output_elmo"] = False
         with pytest.raises(ConfigurationError):
-            Model.from_params(self.vocab, params.get("model"))
+            Model.from_params(vocab=self.vocab, params=params.get("model"))
 
     def test_elmo_num_repr_set_flags_mismatch_throws_configuration_error(self):
         # pylint: disable=line-too-long
@@ -82,13 +82,13 @@ class BiattentiveClassificationNetworkTest(ModelTestCase):
         tmp_params = deepcopy(params)
         tmp_params["model"]["use_input_elmo"] = False
         with pytest.raises(ConfigurationError):
-            Model.from_params(self.vocab, tmp_params.get("model"))
+            Model.from_params(vocab=self.vocab, params=tmp_params.get("model"))
 
         tmp_params = deepcopy(params)
         tmp_params["model"]["use_input_elmo"] = True
         tmp_params["model"]["use_integrator_output_elmo"] = False
         with pytest.raises(ConfigurationError):
-            Model.from_params(self.vocab, tmp_params.get("model"))
+            Model.from_params(vocab=self.vocab, params=tmp_params.get("model"))
 
         # set num_output_representations to 1, and set both flags to True.
         tmp_params = deepcopy(params)
@@ -96,7 +96,7 @@ class BiattentiveClassificationNetworkTest(ModelTestCase):
         tmp_params["model"]["use_input_elmo"] = True
         tmp_params["model"]["use_integrator_output_elmo"] = True
         with pytest.raises(ConfigurationError):
-            Model.from_params(self.vocab, tmp_params.get("model"))
+            Model.from_params(vocab=self.vocab, params=tmp_params.get("model"))
 
     def test_no_elmo_tokenizer_throws_configuration_error(self):
         with pytest.raises(ConfigurationError):
