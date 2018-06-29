@@ -116,8 +116,10 @@ class BucketIterator(DataIterator):
                                             self.vocab,
                                             self._padding_noise)
 
-            batches = [Batch(batch_instances)
-                       for batch_instances in lazy_groups_of(iter(instance_list), self._batch_size)]
+            batches = []
+            for batch_instances in lazy_groups_of(iter(instance_list), self._batch_size):
+                for possibly_smaller_batches in self._ensure_batch_is_sufficiently_small(batch_instances):
+                    batches.append(Batch(possibly_smaller_batches))
 
             move_to_front = self._biggest_batch_first and len(batches) > 1
             if move_to_front:
