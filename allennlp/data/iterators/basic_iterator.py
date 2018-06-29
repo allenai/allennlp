@@ -26,36 +26,9 @@ class BasicIterator(DataIterator):
             iterator = iter(instance_list)
             # Then break each memory-sized list into batches.
             for batch_instances in lazy_groups_of(iterator, self._batch_size):
-#                if self._maximum_samples_per_batch:
-#                    # check if we need to break into smaller chunks
-#                    key, limit = self._maximum_samples_per_batch
-#                    padding_length = -1
-#                    list_batch_instances = list(batch_instances)
-#                    for instance in list_batch_instances:
-#                        field_lengths = instance.get_padding_lengths()
-#                        for _, lengths in field_lengths.items():
-#                            try:
-#                                padding_length = max(padding_length,
-#                                                     lengths[key])
-#                            except KeyError:
-#                                pass
-#
-#                    if padding_length * len(list_batch_instances) > limit:
-#                        # need to shrink
-#                        num_samples = padding_length * len(list_batch_instances)
-#                        num_shrunk_batches = math.ceil(num_samples / float(limit))
-#                        shrunk_batch_size = math.ceil(len(list_batch_instances) / num_shrunk_batches)
-#                        start = 0
-#                        while start < len(list_batch_instances):
-#                            end = start + shrunk_batch_size
-#                            yield Batch(list_batch_instances[start:end])
-#                            start = end
-#                    else:
-#                        yield Batch(batch_instances)
-#                else:
-#                    yield Batch(batch_instances)
-                batch = Batch(batch_instances)
-                yield batch
+                for possibly_smaller_batches in self._ensure_batch_is_sufficiently_small(batch_instances):
+                    batch = Batch(possibly_smaller_batches)
+                    yield batch
 
     @classmethod
     def from_params(cls, params: Params) -> 'BasicIterator':
@@ -70,6 +43,6 @@ class BasicIterator(DataIterator):
         return cls(batch_size=batch_size,
                    instances_per_epoch=instances_per_epoch,
                    max_instances_in_memory=max_instances_in_memory,
-                   maximum_samples_per_batch=maximum_samples_per_batch)
                    cache_instances=cache_instances,
-                   track_epoch=track_epoch)
+                   track_epoch=track_epoch,
+                   maximum_samples_per_batch=maximum_samples_per_batch)

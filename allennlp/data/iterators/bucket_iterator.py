@@ -80,10 +80,8 @@ class BucketIterator(DataIterator):
         See :class:`BasicIterator`.
     max_instances_in_memory : int, optional, (default = None)
         See :class:`BasicIterator`.
-    maximum_samples_per_batch : Tuple(padding_key, limit), optional, (default = None)
-        If set, then shrink the batch size for very long sequences such that
-        batch_size * sequence_length <= limit where sequence_length is given
-        by the padding_key.
+    maximum_samples_per_batch : ``Tuple[str, int]``, (default = None)
+        See :class:`BasicIterator`.
     """
 
     def __init__(self,
@@ -93,9 +91,9 @@ class BucketIterator(DataIterator):
                  batch_size: int = 32,
                  instances_per_epoch: int = None,
                  max_instances_in_memory: int = None,
-                 maximum_samples_per_batch: Tuple[str, int] = None) -> None:
                  cache_instances: bool = False,
-                 track_epoch: bool = False) -> None:
+                 track_epoch: bool = False,
+                 maximum_samples_per_batch: Tuple[str, int] = None) -> None:
         if not sorting_keys:
             raise ConfigurationError("BucketIterator requires sorting_keys to be specified")
 
@@ -103,7 +101,8 @@ class BucketIterator(DataIterator):
                          track_epoch=track_epoch,
                          batch_size=batch_size,
                          instances_per_epoch=instances_per_epoch,
-                         max_instances_in_memory=max_instances_in_memory)
+                         max_instances_in_memory=max_instances_in_memory,
+                         maximum_samples_per_batch=maximum_samples_per_batch)
         self._sorting_keys = sorting_keys
         self._padding_noise = padding_noise
         self._biggest_batch_first = biggest_batch_first
@@ -155,6 +154,6 @@ class BucketIterator(DataIterator):
                    batch_size=batch_size,
                    instances_per_epoch=instances_per_epoch,
                    max_instances_in_memory=max_instances_in_memory,
-                   maximum_samples_per_batch=maximum_samples_per_batch)
                    cache_instances=cache_instances,
-                   track_epoch=track_epoch)
+                   track_epoch=track_epoch,
+                   maximum_samples_per_batch=maximum_samples_per_batch)
