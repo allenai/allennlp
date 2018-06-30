@@ -188,14 +188,15 @@ def fine_tune_model(model: Model,
     for name, parameter in model.named_parameters():
         if any(re.search(regex, name) for regex in no_grad_regexes):
             parameter.requires_grad_(False)
-            nograd_parameter_names.append(name)
-        else:
+        if parameter.requires_grad:
             grad_parameter_names.append(name)
+        else:
+            nograd_parameter_names.append(name)
 
-    logger.info("Following parameters are Frozen  (without gradient):")
+    logger.info("FROZEN PARAMETERS  (WITHOUT GRADIENT):")
     for name in nograd_parameter_names:
         logger.info(name)
-    logger.info("Following parameters are Tunable (with gradient):")
+    logger.info("TUNABLE PARAMETERS (WITH GRADIENT):")
     for name in grad_parameter_names:
         logger.info(name)
 
