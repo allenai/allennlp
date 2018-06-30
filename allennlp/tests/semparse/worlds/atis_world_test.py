@@ -20,13 +20,33 @@ class TestAtisWorld(AllenNlpTestCase):
         world = AtisWorld("i would like one coach reservation for may ninth from pittsburgh to atlanta leaving pittsburgh before 10 o'clock in morning 1991 august twenty sixth")
         print(world.get_valid_actions())
 
-    def test_atis_get_action_seq(self):
-        world = AtisWorld()
-        action_sequence = world.get_action_sequence(
-        """( SELECT DISTINCT flight.stops FROM flight WHERE ( flight.airline_code = 'DL' AND ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'SALT LAKE CITY' )) AND ( flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE
-        city.city_name = 'PHOENIX' )) AND ( flight.flight_number = 751 AND flight.stops >= 1 ) ) ) )   ) ;""")
+    def test_atis_table_column_names(self):
+        world = AtisWorld("")
+        action_sequence = world.get_action_sequence("( SELECT DISTINCT flight.stops FROM flight WHERE ( flight.airline_code = 'DL') )  ;")
         print(action_sequence)
+    
+    def test_atis_table_valid_actions(self):
+        world = AtisWorld("give me all flights from boston to philadelphia next week arriving after lunch")
+        print(world.get_valid_actions())
 
+    def test_atis_table_action_seq(self):
+        world = AtisWorld("give me all flights from boston to philadelphia next week arriving after lunch")
+        action_sequence = world.get_action_sequence(
+        """( SELECT DISTINCT flight.flight_id FROM flight WHERE ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' )) AND ( flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'PHILADELPHIA' )) AND flight.arrival_time > 1400 ) ) ) ;""")
+
+
+        world = AtisWorld("what is the earliest flight in morning 1993 june fourth from boston to pittsburgh")
+        action_sequence = world.get_action_sequence(
+        """( SELECT DISTINCT flight.flight_id FROM flight WHERE ( flight.departure_time = ( SELECT MIN ( flight.departure_time ) FROM flight WHERE ( flight.departure_time BETWEEN 0 AND 1200 AND ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' )) AND flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service
+        . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'PITTSBURGH' )) ) ) ) AND ( flight.departure_time BETWEEN 0 AND 1200 AND ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' )) AND flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city .
+        city_code FROM city WHERE city.city_name = 'PITTSBURGH' )) ) ) )   ) ;""")
+        print(action_sequence)
+    
+    
+    def test_atis_get_context_str(self):
+        world = AtisWorld("give me all flights from boston to philadelphia next week arriving after lunch")
+        context_str = world.get_grammar_str_with_context()
+        print(context_str)
 
     def test_atis_parse_strings(self):
         # world = self.worlds[0]
@@ -80,21 +100,3 @@ class TestAtisWorld(AllenNlpTestCase):
         parsed = world.parse_logical_form("(SELECT_DISTINCT string:flight_flight_id (FROM string:flight) (WHERE   (IN string:flight_from_airport (SELECT string:airport_service_airport_code (FROM string:airport_service) (WHERE   (IN string:airport_service_city_code (SELECT string:city_city_code (FROM string:city) (WHERE   (= string:'KANSAS_CITY' string:city_city_name)))))))))")
         print(world.get_action_sequence(parsed))
 
-
-
-
-
-
-
-        
-
-        
-
-        
-
-
-
-
-
-
-        

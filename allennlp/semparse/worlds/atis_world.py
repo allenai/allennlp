@@ -16,8 +16,7 @@ from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
 from parsimonious.nodes import RegexNode
 
-
-SQL_GRAMMAR = Grammar(r"""
+SQL_GRAMMAR_STR = r"""
     stmt                = query ";" ws
 
     query               = ws lparen?  ws "SELECT" ws "DISTINCT"? ws select_results ws "FROM" ws table_refs ws where_clause rparen?  ws
@@ -27,12 +26,9 @@ SQL_GRAMMAR = Grammar(r"""
     agg_func            = "MIN" / "min" / "MAX" / "max" / "COUNT" / "count"
 
     col_refs            = (col_ref (ws "," ws col_ref)*)
-    col_ref             = (table_name ws "." ws column_name) / column_name / asterisk
 
     table_refs          = table_name (ws "," ws table_name)*
-    table_name          = name
 
-    column_name         = name
 
     where_clause        = "WHERE" ws lparen? ws condition_paren (ws conj ws condition_paren)* ws rparen? ws
 
@@ -54,11 +50,8 @@ SQL_GRAMMAR = Grammar(r"""
 
     agg_results         = ws lparen?  ws "SELECT" ws "DISTINCT"? ws agg ws "FROM" ws table_name ws where_clause rparen?  ws
 
-    number              = ~"\d*\.?\d+"i
-    string              = ~"\'.*?\'"i
     boolean             = "true" / "false"
 
-    name                = ~"[a-zA-Z]\w*"i
     ws                  = ~"\s*"i
 
     lparen              = "("
@@ -69,9 +62,7 @@ SQL_GRAMMAR = Grammar(r"""
     not                 = ("NOT" ws ) / ("not" ws)
     asterisk            = "*"
 
-    """)
-        
-
+"""
 
 class AtisWorld(World):
     def __init__(self, utterance=None) -> None:
@@ -81,8 +72,8 @@ class AtisWorld(World):
                                         global_type_signatures=types.COMMON_TYPE_SIGNATURE,
                                         global_name_mapping=types.COMMON_NAME_MAPPING)
 
-        self.grammar = SQL_GRAMMAR
         self.utterance = utterance
+        self.grammar = Grammar(self.get_grammar_str_with_context())
 
     curried_functions = {
         types.CONJ_TYPE: 2,
@@ -113,7 +104,7 @@ class AtisWorld(World):
             if isinstance(rhs, Sequence):
                 valid_actions[key].add("{} -> {}".format(key, " ".join(rhs._unicode_members())))
 
-        valid_actions = self.get_local_actions(valid_actions)
+        # valid_actions = self.get_local_actions(valid_actions)
 
         valid_action_strings = {key: sorted(value) for key, value in valid_actions.items()}
         return valid_action_strings
@@ -134,17 +125,50 @@ class AtisWorld(World):
         return valid_actions
 
     def get_action_sequence(self, query: str) -> List[str]:
-        sql_visitor = SQLVisitor()
+        grammar_with_context = Grammar(self.get_grammar_str_with_context())
+        sql_visitor = SQLVisitor(grammar_with_context)
         query = query.strip("\n")
         action_sequence = sql_visitor.parse(query)
         return action_sequence 
 
+    def get_local_strs(self) -> List[str]:
+        local_strs: List[str] = []
+        for city in atis_tables.CITIES:
+            if city.lower() in self.utterance.lower():
+                local_strs.append(city)
+
+        for airline in atis_tables.AIRLINE_CODES.keys():
+            if airline.lower() in self.utterance.lower():
+                local_strs.append(city)
+        return local_strs
+
+    def get_grammar_str_with_context(self) -> str:
+        grammar_str_with_context = SQL_GRAMMAR_STR
+        grammar_str_with_context  += "\n    col_ref \t\t = " 
+        
+        table_col_pairs = []
+
+        for table in atis_tables.TABLES.keys():
+            for column in sorted(atis_tables.TABLES[table], reverse=True):
+                table_col_pairs.append('("{}" ws "." ws "{}")'.format(table, column))
+        
+        grammar_str_with_context += " / ".join(table_col_pairs) + " / asterisk"
+        grammar_str_with_context += "\n    table_name \t\t = " + " / ".join(['"{}"'.format(table) for table in list(sorted(atis_tables.TABLES.keys(), reverse=True))])
+        
+        nums = atis_tables.get_nums_from_utterance(self.utterance)
+        grammar_str_with_context += "\n    number \t\t = " + " / ".join(['"{}"'.format(num) for num in nums])
+
+        local_strs = self.get_local_strs()
+        grammar_str_with_context += "\n    string \t\t = " + " / ".join(['''"'{}'"'''.format(local_str) for local_str in local_strs])
+
+        return grammar_str_with_context
+
 
 class SQLVisitor(NodeVisitor):
-    grammar = SQL_GRAMMAR
 
-    def __init__(self):
+    def __init__(self, grammar):
         self.prod_acc = []
+        self.grammar = grammar
 
         for nonterm in self.grammar.keys():
             if nonterm != 'stmt':
@@ -172,5 +196,4 @@ class SQLVisitor(NodeVisitor):
         self.add_prod_rule(node)
         return self.prod_acc
          
-     
 

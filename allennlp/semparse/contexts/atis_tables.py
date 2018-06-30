@@ -4,40 +4,39 @@ import re
 TWELVE_TO_TWENTY_FOUR = 1200
 HOUR_TO_TWENTY_FOUR = 100
 
-def get_times_from_utterance(utterance: str) -> List[int]:
+def get_times_from_utterance(utterance: str) -> List[str]:
     """
     Given an utterance, get the numbers that correspond to times and convert time 
     for example: convert ``7pm`` to 1900
     """
-    pm_times = [int(pm_str.rstrip('pm')) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR for pm_str in re.findall(r'\d+pm', utterance)]
-    am_times = [int(am_str.rstrip('am')) * HOUR_TO_TWENTY_FOUR for am_str in re.findall(r"\d+am", utterance)]
-    oclock_times = [int(oclock_str.rstrip("o'clock")) * HOUR_TO_TWENTY_FOUR for oclock_str in re.findall(r"\d+\so'clock", utterance)]
+    pm_times = [pm_str.rstrip('pm') * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR for pm_str in re.findall(r'\d+pm', utterance)]
+    am_times = [am_str.rstrip('am') * HOUR_TO_TWENTY_FOUR for am_str in re.findall(r"\d+am", utterance)]
+    oclock_times = [oclock_str.rstrip("o'clock") * HOUR_TO_TWENTY_FOUR for oclock_str in re.findall(r"\d+\so'clock", utterance)]
     return am_times + pm_times + oclock_times
 
 
-def get_nums_from_utterance(utterance: str) -> List[int]:
+def get_nums_from_utterance(utterance: str) -> List[str]:
     """
     Given an utterance, find all the numbers that are in the action space.
     """
-    nums = [1, 0]
+    nums = ['1', '0']
     nums.extend(re.findall(r'\d+', utterance))
     nums.extend(get_times_from_utterance(utterance)) 
 
     words = utterance.split(' ')
     for word in words:
         if word in MONTH_NUMBERS:
-            nums.append(MONTH_NUMBERS[word])
+            nums.append(str(MONTH_NUMBERS[word]))
         if word in DAY_NUMBERS:
-            nums.append(DAY_NUMBERS[word])
+            nums.append(str(DAY_NUMBERS[word]))
         if word in MISC_TIME_TRIGGERS:
             nums.extend(MISC_TIME_TRIGGERS[word])
 
     for tens, digits in zip(words, words[1:]):
         day = ' '.join([tens, digits])
         if day in DAY_NUMBERS:
-            nums.append(DAY_NUMBERS[day])
-
-    return nums
+            nums.append(str(DAY_NUMBERS[day]))
+    return sorted(nums, reverse=True)
 
 
 MONTH_NUMBERS = {
@@ -89,8 +88,10 @@ DAY_NUMBERS = {
         'thirty first': 31}
 
 MISC_TIME_TRIGGERS = {
-        'morning': [0, 1200],
-        'afternoon': [1200, 1800]}
+        'morning': ['0', '1200'],
+        'afternoon': ['1200', '1800'],
+        'lunch': ['1400']
+        }
 
 
         
@@ -142,3 +143,26 @@ AIRLINE_CODES = {'argentina': 'AR',
                  'united': 'UA',
                  'us': 'US',
                  'west': 'OE'}
+
+DEFAULT_TABLES = ['airport_service', 'city', 'flight']
+
+TABLES = {'aircraft': ['aircraft_code', 'aircraft_description', 'manufacturer', 'basic_type', 'propulsion', 'wide_body', 'pressurized'],
+          'airline': ['airline_name', 'airline_code'],
+          'airport': ['airport_code', 'airport_name', 'airport_location', 'state_code', 'country_name', 'time_zone_code', 'minimum_connect_time'],
+          'airport_service': ['city_code', 'airport_code', 'miles_distant', 'direction', 'minutes_distant'],
+          'city': ['city_code', 'city_name', 'state_code', 'country_name', 'time_zone_code'],
+           'date_day': ['month_number', 'day_number', 'year', 'day_name'],
+           'days': ['days_code', 'day_name'],
+           'equipment_sequence': ['aircraft_code_sequence', 'aircraft_code'],
+           'fare': ['faire_id', 'from_airport', 'to_airport', 'fare_basis_code', 'fare_airline', 'restriction_code', 'one_direction_cost', 'round_trip_cost', 'round_trip_required'],
+           'fare_basis': ['fare_basis_code', 'booking_class', 'class_type', 'premium', 'economy', 'discounted', 'night', 'season', 'basis_days'],
+           'flight': ['flight_id', 'flight_days', 'from_airport', 'to_airport', 'departure_time', 'arrival_time', 'airline_flight', 'airline_code', 'flight_number',
+               'aircraft_code_sequence', 'meal_code', 'stops', 'connections', 'dual_carrier', 'time_elapsed'],
+           'flight_fare': ['flight_id', 'flight_fare'],
+           'flight_leg': ['flight_id', 'leg_number', 'leg_flight'],
+           'food_service': ['meal_code', 'meal_number', 'compartment', 'meal_description'],
+           'ground_service': ['city_code', 'airport_code', 'transport_type', 'ground_fare'],
+           'month': ['month_number', 'month_name'],
+           'restriction': ['restriction_code', 'advance_purchase', 'stopovers', 'saturday_stay_required', 'minimum_say', 'maximum_stay', 'application', 'no_discounts'],
+           'state': ['state_code', 'state_name', 'country_name']}
+
