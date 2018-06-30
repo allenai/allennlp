@@ -15,8 +15,3 @@ class DotProductMatrixAttention(MatrixAttention):
     @overrides
     def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
         return matrix_1.bmm(matrix_2.transpose(2, 1))
-
-    @classmethod
-    def from_params(cls, params: Params):
-        params.assert_empty(cls.__name__)
-        return DotProductMatrixAttention()

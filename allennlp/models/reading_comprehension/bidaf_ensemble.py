@@ -106,6 +106,7 @@ class BidafEnsemble(Ensemble):
                 'f1': f1_score,
         }
 
+    # custom logic
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params):
         if vocab:

@@ -74,17 +74,3 @@ class LinearAttention(Attention):
         combined_tensors = util.combine_tensors(self._combination, [tiled_vector, matrix])
         dot_product = torch.matmul(combined_tensors, self._weight_vector)
         return self._activation(dot_product + self._bias)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'Attention':
-        tensor_1_dim = params.pop_int("tensor_1_dim")
-        tensor_2_dim = params.pop_int("tensor_2_dim")
-        combination = params.pop("combination", "x,y")
-        activation = Activation.by_name(params.pop("activation", "linear"))()
-        normalize = params.pop_bool('normalize', True)
-        params.assert_empty(cls.__name__)
-        return cls(normalize=normalize,
-                   tensor_1_dim=tensor_1_dim,
-                   tensor_2_dim=tensor_2_dim,
-                   combination=combination,
-                   activation=activation)

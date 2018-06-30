@@ -23,12 +23,6 @@ class WordStemmer(Registrable):
         """
         raise NotImplementedError
 
-    @classmethod
-    def from_params(cls, params: Params) -> 'WordStemmer':
-        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
-        params.assert_empty('WordStemmer')
-        return cls.by_name(choice)()
-
 
 @WordStemmer.register('pass_through')
 class PassThroughWordStemmer(WordStemmer):

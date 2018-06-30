@@ -66,15 +66,3 @@ class LinearSimilarity(SimilarityFunction):
         combined_tensors = util.combine_tensors(self._combination, [tensor_1, tensor_2])
         dot_product = torch.matmul(combined_tensors, self._weight_vector)
         return self._activation(dot_product + self._bias)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'LinearSimilarity':
-        tensor_1_dim = params.pop_int("tensor_1_dim")
-        tensor_2_dim = params.pop_int("tensor_2_dim")
-        combination = params.pop("combination", "x,y")
-        activation = Activation.by_name(params.pop("activation", "linear"))()
-        params.assert_empty(cls.__name__)
-        return cls(tensor_1_dim=tensor_1_dim,
-                   tensor_2_dim=tensor_2_dim,
-                   combination=combination,
-                   activation=activation)

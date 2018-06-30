@@ -169,10 +169,6 @@ class LazyFakeReader(DatasetReader):
         """
         return self.reader.read(file_path)
 
-    @classmethod
-    def from_params(cls, params: Params) -> 'LazyFakeReader':
-        return LazyFakeReader()
-
 
 class TestTrainOnLazyDataset(AllenNlpTestCase):
     def test_train_model(self):

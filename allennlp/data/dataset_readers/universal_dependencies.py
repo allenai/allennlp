@@ -89,11 +89,3 @@ class UniversalDependenciesDatasetReader(DatasetReader):
                                                         tokens,
                                                         label_namespace="head_index_tags")
         return Instance(fields)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'UniversalDependenciesDatasetReader':
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return UniversalDependenciesDatasetReader(token_indexers=token_indexers,
-                                                  lazy=lazy)

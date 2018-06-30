@@ -122,14 +122,3 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
         # pylint: disable=unused-argument
         return pad_sequence_to_length(tokens, desired_num_tokens,
                                       default_value=self._default_value_for_padding)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'ELMoTokenCharactersIndexer':
-        """
-        Parameters
-        ----------
-        namespace : ``str``, optional (default=``elmo_characters``)
-        """
-        namespace = params.pop('namespace', 'elmo_characters')
-        params.assert_empty(cls.__name__)
-        return cls(namespace=namespace)

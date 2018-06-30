@@ -82,6 +82,7 @@ class BeamSearch:
             best_states[batch_index] = [state[1] for state in finished_to_sort[:self._beam_size]]
         return best_states
 
+    # TODO(joelgrus): required because not registrable
     @classmethod
     def from_params(cls, params: Params) -> 'BeamSearch':
         beam_size = params.pop('beam_size')

@@ -69,10 +69,3 @@ class PosTagIndexer(TokenIndexer[int]):
                            desired_num_tokens: int,
                            padding_lengths: Dict[str, int]) -> List[int]:  # pylint: disable=unused-argument
         return pad_sequence_to_length(tokens, desired_num_tokens)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'PosTagIndexer':
-        namespace = params.pop('namespace', 'pos_tags')
-        coarse_tags = params.pop_bool('coarse_tags', False)
-        params.assert_empty(cls.__name__)
-        return cls(namespace=namespace, coarse_tags=coarse_tags)

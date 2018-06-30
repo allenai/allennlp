@@ -34,9 +34,3 @@ class PassThroughEncoder(Seq2SeqEncoder):
         # pylint: disable=unused-argument
 
         return inputs
-
-    @classmethod
-    def from_params(cls, params: Params) -> "PassThroughEncoder":
-        input_dim = params.pop_int("input_dim")
-        params.assert_empty(cls.__name__)
-        return PassThroughEncoder(input_dim=input_dim)

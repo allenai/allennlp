@@ -109,9 +109,3 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
             return attended_text_embeddings * span_indices_mask.unsqueeze(-1).float()
 
         return attended_text_embeddings
-
-    @classmethod
-    def from_params(cls, params: Params) -> "SelfAttentiveSpanExtractor":
-        input_dim = params.pop_int("input_dim")
-        params.assert_empty(cls.__name__)
-        return SelfAttentiveSpanExtractor(input_dim=input_dim)

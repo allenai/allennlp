@@ -35,9 +35,3 @@ class LegacyMatrixAttention(MatrixAttention):
                                                       matrix_2.size()[1],
                                                       matrix_2.size()[2])
         return self._similarity_function(tiled_matrix_1, tiled_matrix_2)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'MatrixAttention':
-        similarity_function = SimilarityFunction.from_params(params.pop("similarity_function", {}))
-        params.assert_empty(cls.__name__)
-        return cls(similarity_function=similarity_function)

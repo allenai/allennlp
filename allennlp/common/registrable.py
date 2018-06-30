@@ -7,14 +7,23 @@ for registering them.
 from collections import defaultdict
 from typing import TypeVar, Type, Dict, List, Any, Callable, Union
 import inspect
+import importlib
+import logging
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
 
 _DEFAULT_TO_FIRST_CHOICE = {
         'TextFieldEmbedder',
+        'WordFilter',
+        'WordSplitter',
+        'WordStemmer',
+        'TokenIndexer',
+        'SimilarityFunction'
 }
 
 NO_DEFAULT = inspect._empty
@@ -46,8 +55,6 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
 
         annotation = remove_optional(param.annotation)
         default = param.default
-
-        print(name, annotation)
 
         if name in extras:
             # This is for stuff like Vocabulary, which is passed in manually
@@ -105,6 +112,12 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
     #params.assert_empty(cls.__name__)
     return {k: v for k, v in kwargs.items() if takes_arg(cls, k)}
 
+def _load_module(cls: type) -> None:
+    module_name = cls.__module__
+    #parent = module_name[:module_name.rfind('.')]
+    importlib.import_module(module_name)
+
+
 class Registrable:
     """
     Any class that inherits from ``Registrable`` gains access to a named registry for its
@@ -126,7 +139,6 @@ class Registrable:
     module in which they reside (as this causes any import of either the abstract class or
     a subclass to load all other subclasses and the abstract class).
     """
-
     _registry: Dict[Type, Dict[str, Type]] = defaultdict(dict)
     default_implementation: str = None
 
@@ -145,6 +157,7 @@ class Registrable:
 
     @classmethod
     def by_name(cls: Type[T], name: str) -> Type[T]:
+        logger.info(f"instantiating registered subclass {name} of {cls}")
         if name not in Registrable._registry[cls]:
             raise ConfigurationError("%s is not a registered name for %s" % (name, cls.__name__))
         return Registrable._registry[cls].get(name)
@@ -152,6 +165,10 @@ class Registrable:
     @classmethod
     def list_available(cls) -> List[str]:
         """List default first if it exists"""
+        # This is necessary because some of the subclasses may not have been loaded
+        # at this point, and they're not registered until they're loaded.
+        _load_module(cls)
+
         keys = list(Registrable._registry[cls].keys())
         default = cls.default_implementation
 
@@ -165,15 +182,15 @@ class Registrable:
 
     @classmethod
     def from_params(cls: Type[T], params: Params, **extras) -> T:
-        print()
-        print(cls, params.params, extras)
+        logger.info(f"instantiating class {cls} from params {params.params} and extras {extras}")
         # pylint: disable=protected-access
         if params is None:
             return None
 
         # If this is the base class, delegate to the subclass.
-        print("from_params", cls, params, extras)
         registered_subclasses = Registrable._registry.get(cls)
+        #print()
+        #print("cls", cls)
         if registered_subclasses is not None:
             default = getattr(cls, 'default_implementation', None)
             if default is not None:
@@ -187,7 +204,10 @@ class Registrable:
             subclass = registered_subclasses[choice]
             if not takes_arg(subclass.from_params, 'extras'):
                 extras = {k:v for k, v in extras.items() if takes_arg(subclass.from_params, k)}
+            #print("params", params.params)
+            #print("extras", extras)
             return subclass.from_params(params=params, **extras)
         else:
             kwargs = create_kwargs(cls, params, **extras)
+            #print("kwargs", kwargs)
             return cls(**kwargs)

@@ -88,6 +88,7 @@ class Maxout(torch.nn.Module):
             output = dropped_output
         return output
 
+    # TODO(joelgrus): not registrable
     @classmethod
     def from_params(cls, params: Params):
         input_dim = params.pop_int('input_dim')

@@ -47,13 +47,3 @@ class BilinearSimilarity(SimilarityFunction):
         intermediate = torch.matmul(tensor_1, self._weight_matrix)
         result = (intermediate * tensor_2).sum(dim=-1)
         return self._activation(result + self._bias)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'BilinearSimilarity':
-        tensor_1_dim = params.pop_int("tensor_1_dim")
-        tensor_2_dim = params.pop_int("tensor_2_dim")
-        activation = Activation.by_name(params.pop("activation", "linear"))()
-        params.assert_empty(cls.__name__)
-        return cls(tensor_1_dim=tensor_1_dim,
-                   tensor_2_dim=tensor_2_dim,
-                   activation=activation)

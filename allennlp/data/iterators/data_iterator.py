@@ -245,10 +245,5 @@ class DataIterator(Registrable):
         """
         raise NotImplementedError
 
-    @classmethod
-    def from_params(cls, params: Params) -> 'DataIterator':
-        iterator_type = params.pop_choice("type", cls.list_available())
-        return cls.by_name(iterator_type).from_params(params)
-
     def index_with(self, vocab: Vocabulary):
         self.vocab = vocab

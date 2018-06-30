@@ -64,10 +64,3 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
                            desired_num_tokens: int,
                            padding_lengths: Dict[str, int]) -> List[int]:  # pylint: disable=unused-argument
         return pad_sequence_to_length(tokens, desired_num_tokens)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'SingleIdTokenIndexer':
-        namespace = params.pop('namespace', 'tokens')
-        lowercase_tokens = params.pop_bool('lowercase_tokens', False)
-        params.assert_empty(cls.__name__)
-        return cls(namespace=namespace, lowercase_tokens=lowercase_tokens)

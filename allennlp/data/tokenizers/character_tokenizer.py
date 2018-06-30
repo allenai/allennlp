@@ -73,15 +73,3 @@ class CharacterTokenizer(Tokenizer):
                 token = Token(text=end_token, idx=0)
             tokens.append(token)
         return tokens
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'CharacterTokenizer':
-        byte_encoding = params.pop('byte_encoding', None)
-        lowercase_characters = params.pop('lowercase_characters', False)
-        start_tokens = params.pop('start_tokens', None)
-        end_tokens = params.pop('end_tokens', None)
-        params.assert_empty(cls.__name__)
-        return cls(byte_encoding=byte_encoding,
-                   lowercase_characters=lowercase_characters,
-                   start_tokens=start_tokens,
-                   end_tokens=end_tokens)

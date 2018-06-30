@@ -91,22 +91,3 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
             padded_tokens.pop()
         # Truncates all the tokens to the desired length, and return the result.
         return [list(token[:desired_token_length]) for token in padded_tokens]
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'TokenCharactersIndexer':
-        """
-        Parameters
-        ----------
-        namespace : ``str``, optional (default=``token_characters``)
-            We will use this namespace in the :class:`Vocabulary` to map the characters in each token
-            to indices.
-        character_tokenizer : ``Params``, optional (default=``Params({})``)
-            We use a :class:`CharacterTokenizer` to handle splitting tokens into characters, as it has
-            options for byte encoding and other things.  These parameters get passed to the character
-            tokenizer.  The default is to use unicode characters and to retain casing.
-        """
-        namespace = params.pop('namespace', 'token_characters')
-        character_tokenizer_params = params.pop('character_tokenizer', {})
-        character_tokenizer = CharacterTokenizer.from_params(character_tokenizer_params)
-        params.assert_empty(cls.__name__)
-        return cls(namespace=namespace, character_tokenizer=character_tokenizer)

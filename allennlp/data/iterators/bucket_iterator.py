@@ -130,24 +130,3 @@ class BucketIterator(DataIterator):
                 batches.insert(0, last_batch)
 
             yield from batches
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'BucketIterator':
-        sorting_keys = params.pop('sorting_keys')
-        padding_noise = params.pop_float('padding_noise', 0.1)
-        biggest_batch_first = params.pop_bool('biggest_batch_first', False)
-        batch_size = params.pop_int('batch_size', 32)
-        instances_per_epoch = params.pop_int('instances_per_epoch', None)
-        max_instances_in_memory = params.pop_int('max_instances_in_memory', None)
-        cache_instances = params.pop_bool('cache_instances', False)
-        track_epoch = params.pop_bool('track_epoch', False)
-        params.assert_empty(cls.__name__)
-
-        return cls(sorting_keys=sorting_keys,
-                   padding_noise=padding_noise,
-                   biggest_batch_first=biggest_batch_first,
-                   batch_size=batch_size,
-                   instances_per_epoch=instances_per_epoch,
-                   max_instances_in_memory=max_instances_in_memory,
-                   cache_instances=cache_instances,
-                   track_epoch=track_epoch)

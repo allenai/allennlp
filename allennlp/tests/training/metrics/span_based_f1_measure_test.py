@@ -169,7 +169,7 @@ class SpanBasedF1Test(AllenNlpTestCase):
 
     def test_span_f1_can_build_from_params(self):
         params = Params({"type": "span_f1", "tag_namespace": "tags", "ignore_classes": ["V"]})
-        metric = Metric.from_params(params, self.vocab)
+        metric = Metric.from_params(params=params, vocabulary=self.vocab)
         assert metric._ignore_classes == ["V"]
         assert metric._label_vocabulary == self.vocab.get_index_to_token_vocabulary("tags")
 

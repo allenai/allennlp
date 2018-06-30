@@ -200,8 +200,7 @@ lets us be _really_ flexible later in how exactly our inputs get represented.  W
 with using character-level CNNs or POS-tag embeddings without changing our `DatasetReader` or our
 `Model` code at all.
 
-How does this work?  This brings us to the last pieces of our `DatasetReader`: the constructor and
-the `from_params` method.
+How does this work?  This brings us to the last piece of our `DatasetReader`: the constructor.
 
 ```python
 @DatasetReader.register("s2_papers")
@@ -211,13 +210,6 @@ class SemanticScholarDatasetReader(DatasetReader):
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'SemanticScholarDatasetReader':
-        tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        params.assert_empty(cls.__name__)
-        return cls(tokenizer=tokenizer, token_indexers=token_indexers)
 ```
 
 The constructor takes these dependencies as inputs, where by default we're splitting text into
@@ -233,12 +225,7 @@ you need to do two things.  First, you need to _register_ your objects with our 
 our code can find your class when it tries to instantiate a `DatasetReader`.  That is what the
 first line in the code above is doing; we register `SemanticScholarDatasetReader` as a
 `DatasetReader` with the name `s2_papers`, which will let us use that name in our JSON
-configuration file.  Then, when AllenNLP is trying to construct a `DatasetReader`, it will take the
-parameters you specify and pass them to the `from_params` method.  This method takes a `Params`
-object, which is just a JSON dictionary with some added functionality, and constructs the
-`SemanticScholarDatasetReader`.  All of the `DatasetReader`'s dependencies that we want to be able
-to configure from the JSON file need to be constructed here.  In this case, we just create a
-`Tokenizer` and a `TokenIndexer` dictionary, using methods that are built in to the library.
+configuration file.
 
 And that's it!  In just a few lines of code, we have a flexible `DatasetReader` that will get us
 data for our `Model`.  We can run the test we wrote with `pytest` and see that it passes.
@@ -313,25 +300,6 @@ class AcademicPaperClassifier(Model):
         }
         self.loss = torch.nn.CrossEntropyLoss()
         initializer(self)
-
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'AcademicPaperClassifier':
-        embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-        title_encoder = Seq2VecEncoder.from_params(params.pop("title_encoder"))
-        abstract_encoder = Seq2VecEncoder.from_params(params.pop("abstract_encoder"))
-        classifier_feedforward = FeedForward.from_params(params.pop("classifier_feedforward"))
-
-        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
-        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
-
-        return cls(vocab=vocab,
-                   text_field_embedder=text_field_embedder,
-                   title_encoder=title_encoder,
-                   abstract_encoder=abstract_encoder,
-                   classifier_feedforward=classifier_feedforward,
-                   initializer=initializer,
-                   regularizer=regularizer)
 ```
 
 Just as with the `DatasetReader`, we `register` our `Model` and provide a `from_params` method, so

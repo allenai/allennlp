@@ -297,6 +297,7 @@ class BiattentiveClassificationNetwork(Model):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
 
+    # The logic here needs a custom implementation
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BiattentiveClassificationNetwork':
         embedder_params = params.pop("text_field_embedder")

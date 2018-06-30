@@ -340,6 +340,7 @@ class Vocabulary:
                           only_include_pretrained_words=only_include_pretrained_words,
                           tokens_to_add=tokens_to_add)
 
+    # There's enough logic here to require a custom from_params
     @classmethod
     def from_params(cls, params: Params, instances: Iterable['adi.Instance'] = None):
         """

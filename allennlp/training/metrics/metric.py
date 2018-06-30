@@ -40,13 +40,6 @@ class Metric(Registrable):
         """
         raise NotImplementedError
 
-    @classmethod
-    def from_params(cls, params: Params, vocab: Optional[Vocabulary] = None):
-        metric_type = params.pop_choice("type", cls.list_available())
-        if vocab:
-            params["vocabulary"] = vocab
-        return cls.by_name(metric_type)(**params.as_dict())  # type: ignore
-
     @staticmethod
     def unwrap_to_tensors(*tensors: torch.Tensor):
         """

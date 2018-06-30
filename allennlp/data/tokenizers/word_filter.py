@@ -22,12 +22,6 @@ class WordFilter(Registrable):
         """
         raise NotImplementedError
 
-    @classmethod
-    def from_params(cls, params: Params) -> 'WordFilter':
-        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
-        params.assert_empty('WordFilter')
-        return cls.by_name(choice)()
-
 
 @WordFilter.register('pass_through')
 class PassThroughWordFilter(WordFilter):

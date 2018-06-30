@@ -462,6 +462,7 @@ class SpanConstituencyParser(Model):
             all_metrics.update(evalb_metrics)
         return all_metrics
 
+    # TODO(joelgrus): error on deletion
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'SpanConstituencyParser':
         embedder_params = params.pop("text_field_embedder")

@@ -79,6 +79,7 @@ class FeedForward(torch.nn.Module):
             output = dropout(activation(layer(output)))
         return output
 
+    # TODO(joelgrus): not registrable
     @classmethod
     def from_params(cls, params: Params):
         input_dim = params.pop_int('input_dim')
