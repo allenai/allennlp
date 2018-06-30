@@ -19,6 +19,7 @@ T = TypeVar('T')
 
 _DEFAULT_TO_FIRST_CHOICE = {
         'TextFieldEmbedder',
+        'Tokenizer',
         'WordFilter',
         'WordSplitter',
         'WordStemmer',
@@ -54,6 +55,8 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
             continue
 
         annotation = remove_optional(param.annotation)
+        origin = getattr(annotation, '__origin__', None)
+        args = getattr(annotation, '__args__', [])
         default = param.default
 
         if name in extras:
@@ -69,7 +72,11 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
                 else:
                     subextras = extras
 
-                kwargs[name] = annotation.from_params(params=subparams, **subextras)
+                # Special case for Activations
+                if isinstance(subparams, str):
+                    kwargs[name] = annotation.by_name(subparams)()
+                else:
+                    kwargs[name] = annotation.from_params(params=subparams, **subextras)
             elif default == NO_DEFAULT:
                 raise ConfigurationError(f"expected key {name} for {cls.__name__}")
 
@@ -90,9 +97,7 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
                             if default != NO_DEFAULT
                             else params.pop_float(name))
 
-        elif (getattr(annotation, '__origin__', None) == Dict and
-              hasattr(annotation, '__args__') and
-              hasattr(annotation.__args__[-1], 'from_params')):
+        elif origin == Dict and len(args) == 2 and hasattr(args[-1], 'from_params'):
             value_cls = annotation.__args__[-1]
 
             value_dict = {}
@@ -182,15 +187,14 @@ class Registrable:
 
     @classmethod
     def from_params(cls: Type[T], params: Params, **extras) -> T:
-        logger.info(f"instantiating class {cls} from params {params.params} and extras {extras}")
+        logger.info(f"instantiating class {cls} from params {getattr(params, 'params', params)} and extras {extras}")
         # pylint: disable=protected-access
         if params is None:
             return None
 
         # If this is the base class, delegate to the subclass.
         registered_subclasses = Registrable._registry.get(cls)
-        #print()
-        #print("cls", cls)
+
         if registered_subclasses is not None:
             default = getattr(cls, 'default_implementation', None)
             if default is not None:
@@ -206,6 +210,7 @@ class Registrable:
                 extras = {k:v for k, v in extras.items() if takes_arg(subclass.from_params, k)}
             #print("params", params.params)
             #print("extras", extras)
+
             return subclass.from_params(params=params, **extras)
         else:
             kwargs = create_kwargs(cls, params, **extras)

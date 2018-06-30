@@ -34,3 +34,17 @@ class TokenCharactersEncoder(TokenEmbedder):
     def forward(self, token_characters: torch.Tensor) -> torch.Tensor:  # pylint: disable=arguments-differ
         mask = (token_characters != 0).long()
         return self._dropout(self._encoder(self._embedding(token_characters), mask))
+
+    # required because of the setdefault
+    @classmethod
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'TokenCharactersEncoder':
+        embedding_params: Params = params.pop("embedding")
+        # Embedding.from_params() uses "tokens" as the default namespace, but we need to change
+        # that to be "token_characters" by default.
+        embedding_params.setdefault("vocab_namespace", "token_characters")
+        embedding = Embedding.from_params(vocab, embedding_params)
+        encoder_params: Params = params.pop("encoder")
+        encoder = Seq2VecEncoder.from_params(encoder_params)
+        dropout = params.pop_float("dropout", 0.0)
+        params.assert_empty(cls.__name__)
+        return cls(embedding, encoder, dropout)
