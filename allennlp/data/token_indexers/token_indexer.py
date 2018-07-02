@@ -81,6 +81,9 @@ class TokenIndexer(Generic[TokenType], Registrable):
         this and are based on checking for ``None``, if there were no parameters specifying any
         token indexers in the given ``params``, we return ``None`` instead of an empty dictionary.
         """
+        if params is None:
+            return None
+
         token_indexers = {}
         for name, indexer_params in params.items():
             token_indexers[name] = cls.from_params(indexer_params)
