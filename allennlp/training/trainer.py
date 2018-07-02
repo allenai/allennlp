@@ -961,7 +961,7 @@ class Trainer:
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
         num_epochs = params.pop_int("num_epochs", 20)
-        cuda_device = params.pop( "cuda_device")
+        cuda_device = params.pop("cuda_device", -1)
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
