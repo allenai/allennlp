@@ -254,6 +254,7 @@ class Model(torch.nn.Module, Registrable):
         # Load vocabulary from file
         vocab_dir = os.path.join(serialization_dir, 'vocabulary')
         vocab = Vocabulary.from_files(vocab_dir)
+        print(vocab._index_to_token)
 
         model_params = config.get('model')
 
