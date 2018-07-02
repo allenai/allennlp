@@ -4,11 +4,58 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.world import ExecutionError
 from allennlp.semparse.worlds.atis_world import AtisWorld
 
+
+from allennlp.semparse.contexts.atis_tables import ConversationContext  
+
 class TestAtisWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        # test_filename = self.FIXTURES_ROOT / "data" / "atis" / "sample_data.sql"
-        # data = open(test_filename).readlines()
+        test_filename = self.FIXTURES_ROOT / "data" / "atis" / "sample.json"
+        self.data = open(test_filename).readlines()
+
+    def test_atis_foo(self):
+        conv_context = ConversationContext(None)
+        world = AtisWorld(conv_context, "show me the flights from denver at 12 o'clock") 
+
+    def test_atis_parse_coverage(self):
+        num_queries = 0
+        num_parsed = 0
+
+        for line in self.data:
+            jline = json.loads(line)
+            conv_context = ConversationContext(jline['interaction'])
+
+            for interaction_round in conv_context.interaction:
+                print(interaction_round)
+
+                world = AtisWorld(conv_context, interaction_round['utterance']) 
+
+                try:
+                    num_queries += 1
+                    action_sequence = world.get_action_sequence(interaction_round['sql'])
+                    print(action_sequence)
+                    num_parsed += 1
+                except:
+                    print("Failed to parse")
+                    pass
+
+                conv_context.valid_actions = world.valid_actions
+
+        print("Parsed {} out of {}, coverage: {}".format(num_parsed, num_queries, num_parsed/num_queries))
+
+
+    def test_atis_with_context(self):
+        line = json.loads(self.data[12])
+        conv_context = ConversationContext(line['interaction'])
+
+        for interaction_round in conv_context.interaction:
+            print(interaction_round)
+
+            world = AtisWorld(conv_context, interaction_round['utterance']) 
+            action_sequence = world.get_action_sequence(interaction_round['sql'])
+            conv_context.valid_actions = world.valid_actions
+            print(action_sequence)
+
 
     def test_atis_valid_actions(self):
         world = AtisWorld("show me the flights from baltimore to denver") 

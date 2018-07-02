@@ -15,58 +15,64 @@ from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
 from parsimonious.nodes import RegexNode
 
-SQL_GRAMMAR_STR = r"""
-    stmt                = query ";" ws
-
-    query               = ws lparen?  ws "SELECT" ws "DISTINCT"? ws select_results ws "FROM" ws table_refs ws where_clause rparen?  ws
-    select_results      = agg / col_refs
-
-    agg                 = agg_func ws lparen ws col_ref ws rparen
-    agg_func            = "MIN" / "min" / "MAX" / "max" / "COUNT" / "count"
-
-    col_refs            = (col_ref (ws "," ws col_ref)*)
-
-    table_refs          = table_name (ws "," ws table_name)*
-
-
-    where_clause        = "WHERE" ws lparen? ws condition_paren (ws conj ws condition_paren)* ws rparen? ws
-
-    condition_paren     = not? (lparen ws)? condition_paren2 (ws rparen)?
-    condition_paren2    = not? (lparen ws)? condition_paren3 (ws rparen)?
-    condition_paren3    = not? (lparen ws)? condition (ws rparen)?
-    condition           = in_clause / ternaryexpr / biexpr
-
-    in_clause           = (lparen ws)? col_ref ws "IN" ws query (ws rparen)?
-
-    biexpr              = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ( col_ref ws "LIKE" ws string)
-    binaryop            = "+" / "-" / "*" / "/" / "=" /
-                          ">=" / "<=" / ">" / "<"  / "is" / "IS"
-
-    ternaryexpr         = col_ref ws not? "BETWEEN" ws value ws and value ws
-
-    value               = not? ws? pos_value
-    pos_value           = ("ALL" ws query) / ("ANY" ws query) / number / boolean / col_ref / string / agg_results / "NULL"
-
-    agg_results         = ws lparen?  ws "SELECT" ws "DISTINCT"? ws agg ws "FROM" ws table_name ws where_clause rparen?  ws
-
-    boolean             = "true" / "false"
-
-    ws                  = ~"\s*"i
-
-    lparen              = "("
-    rparen              = ")"
-    conj                = and / or
-    and                 = "AND" ws
-    or                  = "OR" ws
-    not                 = ("NOT" ws ) / ("not" ws)
-    asterisk            = "*"
-
-"""
-
 class AtisWorld(World):
-    def __init__(self, utterance=None) -> None:
+    def __init__(self, conversation_context, utterance=None) -> None:
+        self.conversation_context = conversation_context 
         self.utterance = utterance
-        self.grammar = Grammar(self.get_grammar_str_with_context())
+        self.valid_actions = self.get_all_valid_actions()
+        self.grammar_str = self.get_grammar_str()
+
+    def get_all_valid_actions(self):
+        valid_actions = self.conversation_context.valid_actions
+        for local_str in self.get_local_strs():
+            if local_str not in valid_actions['string']:
+                valid_actions['string'].append(local_str)
+
+        for local_num in atis_tables.get_nums_from_utterance(self.utterance):
+            if local_num not in valid_actions['number']:
+                valid_actions['number'].append(local_num)
+        
+        print(valid_actions)
+        return valid_actions
+
+    def get_grammar_str(self) -> str:
+        grammar_str_with_context = self.conversation_context.base_sql_def 
+        grammar_str_with_context += "\n    col_ref \t\t = " +" / ".join(self.valid_actions["col_ref"]) + " / asterisk"
+        grammar_str_with_context += self.generate_one_of_str("table_name", sorted(self.valid_actions["table_name"], reverse=True))
+        grammar_str_with_context += self.generate_one_of_str("number", sorted(self.valid_actions['number'], reverse=True))
+        grammar_str_with_context += self.generate_one_of_str("string", ["'{}'".format(local_str) for local_str in self.valid_actions['string']])
+        return grammar_str_with_context
+
+    def get_local_strs(self) -> List[str]:
+        local_strs: List[str] = []
+        for city in atis_tables.CITIES:
+            if city.lower() in self.utterance.lower():
+                local_strs.append(city)
+
+        for code in atis_tables.AIRPORT_CODES:
+            if code.lower() in self.utterance.lower():
+                local_strs.append(code)
+
+        for state in atis_tables.STATES:
+            if state.lower() in self.utterance.lower():
+                local_strs.append(state)
+
+        for state_codes in atis_tables.STATE_CODES:
+            if state_codes.lower() in self.utterance.lower():
+                local_strs.append(state_codes)
+
+        for airline in atis_tables.AIRLINE_CODES.keys():
+            if airline.lower() in self.utterance.lower() or atis_tables.AIRLINE_CODES[airline] in self.utterance.lower():
+                local_strs.append(atis_tables.AIRLINE_CODES[airline])
+
+        for service in atis_tables.GROUND_SERVICE.keys():
+            if service.lower() in self.utterance.lower():
+                local_strs.append(atis_tables.GROUND_SERVICE[service])
+
+        return local_strs
+
+    def generate_one_of_str(self, nonterminal: str, literals: List[str]) -> str:
+        return  "\n{} \t\t = ".format(nonterminal) + " / ".join(['"{}"'.format(lit) for lit in literals])
     
     @overrides
     def get_valid_actions(self) -> Dict[str, List[str]]:
@@ -80,42 +86,14 @@ class AtisWorld(World):
         return valid_action_strings
 
     def get_action_sequence(self, query: str) -> List[str]:
-        grammar_with_context = Grammar(self.get_grammar_str_with_context())
+        grammar_with_context = Grammar(self.get_grammar_str())
         sql_visitor = SQLVisitor(grammar_with_context)
-        query = query.strip("\n")
-        action_sequence = sql_visitor.parse(query)
-        return action_sequence 
+        query = query.split("\n")[0]
+        if query:
+            action_sequence = sql_visitor.parse(query)
+            return action_sequence 
 
-    def get_local_strs(self) -> List[str]:
-        local_strs: List[str] = []
-        for city in atis_tables.CITIES:
-            if city.lower() in self.utterance.lower():
-                local_strs.append(city)
-
-        for airline in atis_tables.AIRLINE_CODES.keys():
-            if airline.lower() in self.utterance.lower():
-                local_strs.append(city)
-        return local_strs
-
-    def get_grammar_str_with_context(self) -> str:
-        grammar_str_with_context = SQL_GRAMMAR_STR
-        grammar_str_with_context  += "\n    col_ref \t\t = " 
-        
-        table_col_pairs = []
-
-        for table in atis_tables.TABLES.keys():
-            for column in sorted(atis_tables.TABLES[table], reverse=True):
-                table_col_pairs.append('("{}" ws "." ws "{}")'.format(table, column))
-        
-        grammar_str_with_context += " / ".join(table_col_pairs) + " / asterisk"
-
-        grammar_str_with_context += self.generate_one_of_str("table_name", list(sorted(atis_tables.TABLES.keys(), reverse=True)))
-        grammar_str_with_context += self.generate_one_of_str("number", atis_tables.get_nums_from_utterance(self.utterance))
-        grammar_str_with_context += self.generate_one_of_str("string", ["'{}'".format(local_str) for local_str in self.get_local_strs()])
-        return grammar_str_with_context
-
-    def generate_one_of_str(self, nonterminal: str, literals: List[str]) -> str:
-        return  "\n{} \t\t = ".format(nonterminal) + " / ".join(['"{}"'.format(lit) for lit in literals])
+        return []
 
 
 class SQLVisitor(NodeVisitor):
@@ -150,4 +128,3 @@ class SQLVisitor(NodeVisitor):
         self.add_prod_rule(node)
         return self.prod_acc
          
-
