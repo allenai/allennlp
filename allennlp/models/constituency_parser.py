@@ -325,6 +325,7 @@ class SpanConstituencyParser(Model):
             # The spans we've selected might overlap, which causes problems when we try
             # to construct the tree as they won't nest properly.
             consistent_spans = self.resolve_overlap_conflicts_greedily(selected_spans)
+            print("cs", consistent_spans)
 
             spans_to_labels = {(span.start, span.end):
                                self.vocab.get_token_from_index(span.label_index, "labels")
