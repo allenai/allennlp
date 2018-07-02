@@ -8,7 +8,6 @@ from overrides import overrides
 
 from allennlp.semparse.worlds.world import ParsingError, World
 from allennlp.semparse.type_declarations import atis_type_declaration as types
-
 from allennlp.semparse.contexts import atis_tables
 
 from parsimonious.expressions import Sequence, OneOf
@@ -66,36 +65,9 @@ SQL_GRAMMAR_STR = r"""
 
 class AtisWorld(World):
     def __init__(self, utterance=None) -> None:
-        super(AtisWorld, self).__init__(constant_type_prefixes={"string": types.STRING_TYPE,
-                                                                "num": types.NUM_TYPE,
-                                                                "ent": types.ENTITY_TYPE},
-                                        global_type_signatures=types.COMMON_TYPE_SIGNATURE,
-                                        global_name_mapping=types.COMMON_NAME_MAPPING)
-
         self.utterance = utterance
         self.grammar = Grammar(self.get_grammar_str_with_context())
-
-    curried_functions = {
-        types.CONJ_TYPE: 2,
-        types.BINOP_TYPE: 2,
-        types.SELECT_TYPE: 3,
-        types.FROM_TYPE: 1,
-        types.WHERE_TYPE: 1,
-        types.IN_TYPE: 2
-        }
-
-
-    def _get_curried_functions(self) -> Dict[Type, int]:
-        return AtisWorld.curried_functions
-
-    @overrides
-    def get_basic_types(self) -> Set[Type]:
-        return types.BASIC_TYPES
-
-    @overrides
-    def _map_name(self, name: str, keep_mapping: bool = False) -> str:
-        return types.COMMON_NAME_MAPPING[name] if name in types.COMMON_NAME_MAPPING else name
-
+    
     @overrides
     def get_valid_actions(self) -> Dict[str, List[str]]:
         valid_actions: Dict[str, List[str]] = defaultdict(set)
@@ -104,25 +76,8 @@ class AtisWorld(World):
             if isinstance(rhs, Sequence):
                 valid_actions[key].add("{} -> {}".format(key, " ".join(rhs._unicode_members())))
 
-        # valid_actions = self.get_local_actions(valid_actions)
-
         valid_action_strings = {key: sorted(value) for key, value in valid_actions.items()}
         return valid_action_strings
-
-    def get_local_actions(self, valid_actions):
-        for city in atis_tables.CITIES:
-            if city.lower() in self.utterance.lower():
-                valid_actions["string"].add("{} -> {}".format("string", city))
-
-        for airline in atis_tables.AIRLINE_CODES.keys():
-            if airline.lower() in self.utterance.lower():
-                valid_actions["string"].add("{} -> {}".format("string", atis_tables.AIRLINE_CODES[airline]))
-
-        nums = atis_tables.get_nums_from_utterance(self.utterance) 
-        for num in nums:
-            valid_actions["number"].add("{} -> {}".format("number", num))
-
-        return valid_actions
 
     def get_action_sequence(self, query: str) -> List[str]:
         grammar_with_context = Grammar(self.get_grammar_str_with_context())
@@ -153,15 +108,14 @@ class AtisWorld(World):
                 table_col_pairs.append('("{}" ws "." ws "{}")'.format(table, column))
         
         grammar_str_with_context += " / ".join(table_col_pairs) + " / asterisk"
-        grammar_str_with_context += "\n    table_name \t\t = " + " / ".join(['"{}"'.format(table) for table in list(sorted(atis_tables.TABLES.keys(), reverse=True))])
-        
-        nums = atis_tables.get_nums_from_utterance(self.utterance)
-        grammar_str_with_context += "\n    number \t\t = " + " / ".join(['"{}"'.format(num) for num in nums])
 
-        local_strs = self.get_local_strs()
-        grammar_str_with_context += "\n    string \t\t = " + " / ".join(['''"'{}'"'''.format(local_str) for local_str in local_strs])
-
+        grammar_str_with_context += self.generate_one_of_str("table_name", list(sorted(atis_tables.TABLES.keys(), reverse=True)))
+        grammar_str_with_context += self.generate_one_of_str("number", atis_tables.get_nums_from_utterance(self.utterance))
+        grammar_str_with_context += self.generate_one_of_str("string", ["'{}'".format(local_str) for local_str in self.get_local_strs()])
         return grammar_str_with_context
+
+    def generate_one_of_str(self, nonterminal: str, literals: List[str]) -> str:
+        return  "\n{} \t\t = ".format(nonterminal) + " / ".join(['"{}"'.format(lit) for lit in literals])
 
 
 class SQLVisitor(NodeVisitor):

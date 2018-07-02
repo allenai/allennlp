@@ -33,6 +33,7 @@ class TestAtisWorld(AllenNlpTestCase):
         world = AtisWorld("give me all flights from boston to philadelphia next week arriving after lunch")
         action_sequence = world.get_action_sequence(
         """( SELECT DISTINCT flight.flight_id FROM flight WHERE ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' )) AND ( flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'PHILADELPHIA' )) AND flight.arrival_time > 1400 ) ) ) ;""")
+        print(action_sequence)
 
 
         world = AtisWorld("what is the earliest flight in morning 1993 june fourth from boston to pittsburgh")
