@@ -53,6 +53,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
     def index(self, vocab: Vocabulary):
         token_arrays = {}
         for indexer_name, indexer in self._token_indexers.items():
+            print(indexer_name, indexer, indexer.namespace)
             from allennlp.data.tokenizers.token import show_token
             for token in self.tokens:
                 print(show_token(token))
