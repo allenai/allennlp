@@ -69,11 +69,12 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
     def __init__(self,
                  input_dim: int,
                  forward_combination: str = "y-x",
-                 backward_combination: str = "y-x",
+                 backward_combination: str = "x-y",
                  num_width_embeddings: int = None,
                  span_width_embedding_dim: int = None,
                  bucket_widths: bool = False,
                  use_sentinels: bool = True) -> None:
+        print("bd", input_dim, forward_combination, backward_combination, num_width_embeddings, span_width_embedding_dim, bucket_widths, use_sentinels)
         super().__init__()
         self._input_dim = input_dim
         self._forward_combination = forward_combination

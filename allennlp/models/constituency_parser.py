@@ -203,10 +203,16 @@ class SpanConstituencyParser(Model):
 
         num_spans = get_lengths_from_binary_sequence_mask(span_mask)
 
+        print("eti", embedded_text_input)
         encoded_text = self.encoder(embedded_text_input, mask)
+        print("et", encoded_text)
+
         span_representations = self.span_extractor(encoded_text, spans, mask, span_mask)
+
         if self.feedforward_layer is not None:
+            print("before", span_representations)
             span_representations = self.feedforward_layer(span_representations)
+
         logits = self.tag_projection_layer(span_representations)
         class_probabilities = last_dim_softmax(logits, span_mask.unsqueeze(-1))
 
