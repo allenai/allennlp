@@ -407,6 +407,9 @@ class SpanConstituencyParser(Model):
         -------
         An ``nltk.Tree`` constructed from the labelled spans.
         """
+        print(sentence)
+        print(pos_tags)
+        print(spans_to_labels)
         def assemble_subtree(start: int, end: int):
             if (start, end) in spans_to_labels:
                 # Some labels contain nested spans, e.g S-VP.

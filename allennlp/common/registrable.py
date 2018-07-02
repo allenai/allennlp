@@ -29,9 +29,14 @@ _DEFAULT_TO_FIRST_CHOICE = {
 
 NO_DEFAULT = inspect._empty
 
-def takes_arg(func: Callable, arg: str) -> bool:
-    signature = inspect.signature(func)
-    #print("takes_arg", func, arg, signature, signature.parameters)
+def takes_arg(obj, arg: str) -> bool:
+    if inspect.isclass(obj):
+        signature = inspect.signature(obj.__init__)
+    elif inspect.ismethod(obj) or inspect.isfunction(obj):
+        signature = inspect.signature(obj)
+    else:
+        raise ConfigurationError(f"object {obj} is not callable")
+    #print("takes_arg", obj, arg, signature, signature.parameters)
     return arg in signature.parameters
 
 def remove_optional(annotation):
@@ -45,6 +50,7 @@ def remove_optional(annotation):
 
 def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
     signature = inspect.signature(cls.__init__)
+    #print("cls", cls)
     #print(signature)
     kwargs: Dict[str, Any] = {}
 
@@ -103,6 +109,7 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
             value_dict = {}
 
             for key, value_params in params.pop(name, Params({})).items():
+                #print("key", key, value_cls, value_params.params, extras)
                 value_dict[key] = value_cls.from_params(params=value_params, **extras)
 
             kwargs[name] = value_dict
@@ -115,6 +122,7 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
                 kwargs[name] = params.pop(name, default)
 
     #params.assert_empty(cls.__name__)
+    #print("computed kwargs for", cls, kwargs)
     return {k: v for k, v in kwargs.items() if takes_arg(cls, k)}
 
 def _load_module(cls: type) -> None:
@@ -188,6 +196,8 @@ class Registrable:
     @classmethod
     def from_params(cls: Type[T], params: Params, **extras) -> T:
         logger.info(f"instantiating class {cls} from params {getattr(params, 'params', params)} and extras {extras}")
+        #print(f"instantiating class {cls} from params {getattr(params, 'params', params)} and extras {extras}")
+
         # pylint: disable=protected-access
         if params is None:
             return None
@@ -214,5 +224,5 @@ class Registrable:
             return subclass.from_params(params=params, **extras)
         else:
             kwargs = create_kwargs(cls, params, **extras)
-            #print("kwargs", kwargs)
+            print("kwargs", kwargs)
             return cls(**kwargs)
