@@ -36,7 +36,6 @@ def takes_arg(obj, arg: str) -> bool:
         signature = inspect.signature(obj)
     else:
         raise ConfigurationError(f"object {obj} is not callable")
-    #print("takes_arg", obj, arg, signature, signature.parameters)
     return arg in signature.parameters
 
 def remove_optional(annotation):
@@ -50,12 +49,9 @@ def remove_optional(annotation):
 
 def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
     signature = inspect.signature(cls.__init__)
-    #print("cls", cls)
-    #print(signature)
     kwargs: Dict[str, Any] = {}
 
     for name, param in signature.parameters.items():
-        #print("create_kwargs", cls, name, param)
         # Don't need to sub in for `self`
         if name == "self":
             continue
@@ -109,7 +105,6 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
             value_dict = {}
 
             for key, value_params in params.pop(name, Params({})).items():
-                #print("key", key, value_cls, value_params.params, extras)
                 value_dict[key] = value_cls.from_params(params=value_params, **extras)
 
             kwargs[name] = value_dict
@@ -121,8 +116,7 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
             else:
                 kwargs[name] = params.pop(name, default)
 
-    #params.assert_empty(cls.__name__)
-    #print("computed kwargs for", cls, kwargs)
+    params.assert_empty(cls.__name__)
     return {k: v for k, v in kwargs.items() if takes_arg(cls, k)}
 
 def _load_module(cls: type) -> None:
@@ -196,7 +190,6 @@ class Registrable:
     @classmethod
     def from_params(cls: Type[T], params: Params, **extras) -> T:
         logger.info(f"instantiating class {cls} from params {getattr(params, 'params', params)} and extras {extras}")
-        #print(f"instantiating class {cls} from params {getattr(params, 'params', params)} and extras {extras}")
 
         # pylint: disable=protected-access
         if params is None:
@@ -218,11 +211,8 @@ class Registrable:
             subclass = registered_subclasses[choice]
             if not takes_arg(subclass.from_params, 'extras'):
                 extras = {k:v for k, v in extras.items() if takes_arg(subclass.from_params, k)}
-            #print("params", params.params)
-            #print("extras", extras)
 
             return subclass.from_params(params=params, **extras)
         else:
             kwargs = create_kwargs(cls, params, **extras)
-            print("kwargs", kwargs)
             return cls(**kwargs)

@@ -203,14 +203,11 @@ class SpanConstituencyParser(Model):
 
         num_spans = get_lengths_from_binary_sequence_mask(span_mask)
 
-        print("eti", embedded_text_input)
         encoded_text = self.encoder(embedded_text_input, mask)
-        print("et", encoded_text)
 
         span_representations = self.span_extractor(encoded_text, spans, mask, span_mask)
 
         if self.feedforward_layer is not None:
-            print("before", span_representations)
             span_representations = self.feedforward_layer(span_representations)
 
         logits = self.tag_projection_layer(span_representations)
@@ -331,7 +328,6 @@ class SpanConstituencyParser(Model):
             # The spans we've selected might overlap, which causes problems when we try
             # to construct the tree as they won't nest properly.
             consistent_spans = self.resolve_overlap_conflicts_greedily(selected_spans)
-            print("cs", consistent_spans)
 
             spans_to_labels = {(span.start, span.end):
                                self.vocab.get_token_from_index(span.label_index, "labels")
@@ -414,9 +410,6 @@ class SpanConstituencyParser(Model):
         -------
         An ``nltk.Tree`` constructed from the labelled spans.
         """
-        print(sentence)
-        print(pos_tags)
-        print(spans_to_labels)
         def assemble_subtree(start: int, end: int):
             if (start, end) in spans_to_labels:
                 # Some labels contain nested spans, e.g S-VP.

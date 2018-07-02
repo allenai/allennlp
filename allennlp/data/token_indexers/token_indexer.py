@@ -86,7 +86,6 @@ class TokenIndexer(Generic[TokenType], Registrable):
 
         token_indexers = {}
         for name, indexer_params in params.items():
-            print("name", name, "indexer_params", indexer_params)
             token_indexers[name] = cls.from_params(indexer_params)
         if token_indexers == {}:
             token_indexers = None

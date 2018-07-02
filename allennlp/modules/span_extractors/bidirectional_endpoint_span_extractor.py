@@ -46,7 +46,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         The method used to combine the ``forward_start_embeddings`` and ``forward_end_embeddings``
         for the forward direction of the bidirectional representation.
         See above for a full description.
-    backward_combination : str, optional (default = "y-x").
+    backward_combination : str, optional (default = "x-y").
         The method used to combine the ``backward_start_embeddings`` and ``backward_end_embeddings``
         for the backward direction of the bidirectional representation.
         See above for a full description.
@@ -74,7 +74,6 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
                  span_width_embedding_dim: int = None,
                  bucket_widths: bool = False,
                  use_sentinels: bool = True) -> None:
-        print("bd", input_dim, forward_combination, backward_combination, num_width_embeddings, span_width_embedding_dim, bucket_widths, use_sentinels)
         super().__init__()
         self._input_dim = input_dim
         self._forward_combination = forward_combination

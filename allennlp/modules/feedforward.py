@@ -83,7 +83,6 @@ class FeedForward(torch.nn.Module):
     # TODO(joelgrus): not registrable
     @classmethod
     def from_params(cls, params: Params):
-        print("feedforward from params", params.params)
         input_dim = params.pop_int('input_dim')
         num_layers = params.pop_int('num_layers')
         hidden_dims = params.pop('hidden_dims')

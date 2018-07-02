@@ -203,7 +203,6 @@ class Vocabulary:
                      pretrained_files,
                      only_include_pretrained_words,
                      tokens_to_add)
-        print("npn", non_padded_namespaces)
 
     def save_to_files(self, directory: str) -> None:
         """
