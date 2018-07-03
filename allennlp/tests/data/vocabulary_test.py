@@ -640,3 +640,21 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'a' in words
         assert 'b' in words
         assert 'c' not in words
+
+    def test_registrability(self):
+
+        @Vocabulary.register('my-vocabulary')
+        class MyVocabulary:
+            @classmethod
+            def from_params(cls, params, instances=None):
+                # pylint: disable=unused-argument
+                return MyVocabulary()
+
+
+        params = Params({'type': 'my-vocabulary'})
+
+        instance = Instance(fields={})
+
+        vocab = Vocabulary.from_params(params=params, instances=[instance])
+
+        assert isinstance(vocab, MyVocabulary)
