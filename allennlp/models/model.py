@@ -12,7 +12,7 @@ import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
-from allennlp.common.registrable import Registrable, create_kwargs
+from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.nn import util

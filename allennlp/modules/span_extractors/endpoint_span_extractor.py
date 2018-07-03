@@ -3,7 +3,6 @@ import torch
 from torch.nn.parameter import Parameter
 from overrides import overrides
 
-from allennlp.common.params import Params
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.nn import util

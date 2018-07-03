@@ -2,7 +2,6 @@ import logging
 from typing import List, Tuple
 import warnings
 
-from allennlp.common.params import Params
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.iterators.bucket_iterator import BucketIterator
 

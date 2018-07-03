@@ -1,6 +1,6 @@
 import torch
 
-from allennlp.common import Params, Registrable
+from allennlp.common import Registrable
 
 class SimilarityFunction(torch.nn.Module, Registrable):
     """

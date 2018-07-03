@@ -2,7 +2,6 @@
 import torch
 
 from overrides import overrides
-from allennlp.common import Params
 from allennlp.modules.attention.attention import Attention
 from allennlp.modules.similarity_functions import DotProductSimilarity, SimilarityFunction
 

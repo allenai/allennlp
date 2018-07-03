@@ -4,7 +4,7 @@ from typing import List
 from overrides import overrides
 import spacy
 
-from allennlp.common import Params, Registrable
+from allennlp.common import Registrable
 from allennlp.common.util import get_spacy_model
 from allennlp.data.tokenizers.token import Token
 

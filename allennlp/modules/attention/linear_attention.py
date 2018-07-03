@@ -6,7 +6,6 @@ from overrides import overrides
 from allennlp.modules.attention.legacy_attention import Attention
 from allennlp.nn import util
 from allennlp.nn.activations import Activation
-from allennlp.common.params import Params
 
 
 @Attention.register("linear")

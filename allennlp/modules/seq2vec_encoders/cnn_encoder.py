@@ -4,7 +4,6 @@ from overrides import overrides
 import torch
 from torch.nn import Conv1d, Linear
 
-from allennlp.common import Params
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.nn import Activation
 

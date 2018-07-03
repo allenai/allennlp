@@ -3,7 +3,6 @@ from typing import Any, Dict, List
 from overrides import overrides
 import torch
 
-from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model

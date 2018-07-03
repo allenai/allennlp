@@ -4,7 +4,6 @@ import logging
 from overrides import overrides
 from nltk.tree import Tree
 
-from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import LabelField, TextField, Field

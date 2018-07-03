@@ -299,7 +299,8 @@ class BiattentiveClassificationNetwork(Model):
 
     # The logic here requires a custom from_params.
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BiattentiveClassificationNetwork':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BiattentiveClassificationNetwork':  # type: ignore
+        # pylint: disable=arguments-differ
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab=vocab, params=embedder_params)
         embedding_dropout = params.pop("embedding_dropout")

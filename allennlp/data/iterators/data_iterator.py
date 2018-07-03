@@ -7,7 +7,6 @@ import random
 
 import torch
 
-from allennlp.common import Params
 from allennlp.common.registrable import Registrable
 from allennlp.common.util import is_lazy, lazy_groups_of, ensure_list
 from allennlp.data.dataset import Batch

@@ -4,7 +4,6 @@ from overrides import overrides
 import torch
 from torch.nn import Dropout
 
-from allennlp.common import Params
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.layer_norm import LayerNorm
 from allennlp.modules.seq2seq_encoders.multi_head_self_attention import MultiHeadSelfAttention

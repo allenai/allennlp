@@ -2,7 +2,6 @@ from overrides import overrides
 import torch
 from torch.nn.parameter import Parameter
 
-from allennlp.common import Params
 from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 from allennlp.nn import Activation
 
@@ -31,7 +30,7 @@ class BilinearMatrixAttention(MatrixAttention):
     def __init__(self,
                  matrix_1_dim: int,
                  matrix_2_dim: int,
-                 activation: Activation = lambda x: x) -> None:
+                 activation: Activation = Activation.by_name('linear')()) -> None:
         super().__init__()
         self._weight_matrix = Parameter(torch.Tensor(matrix_1_dim, matrix_2_dim))
         self._bias = Parameter(torch.Tensor(1))

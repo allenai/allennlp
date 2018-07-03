@@ -6,7 +6,6 @@ import torch
 import torch.nn.functional as F
 from overrides import overrides
 
-from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.token_embedders import Embedding

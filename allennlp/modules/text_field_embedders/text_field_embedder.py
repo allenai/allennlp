@@ -2,8 +2,7 @@ from typing import Dict
 
 import torch
 
-from allennlp.common import Params, Registrable
-from allennlp.data import Vocabulary
+from allennlp.common import Registrable
 
 class TextFieldEmbedder(torch.nn.Module, Registrable):
     """

@@ -1,6 +1,5 @@
 import torch
 from overrides import overrides
-from allennlp.common import Params
 from allennlp.modules.attention.legacy_attention import Attention
 
 

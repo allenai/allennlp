@@ -1,7 +1,6 @@
 import torch
 from overrides import overrides
 
-from allennlp.common.params import Params
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util

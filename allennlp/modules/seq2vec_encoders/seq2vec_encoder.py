@@ -1,5 +1,5 @@
 from allennlp.modules.encoder_base import _EncoderBase
-from allennlp.common import Params, Registrable
+from allennlp.common import Registrable
 
 
 class Seq2VecEncoder(_EncoderBase, Registrable):

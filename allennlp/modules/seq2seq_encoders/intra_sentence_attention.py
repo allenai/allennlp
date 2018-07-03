@@ -2,7 +2,6 @@ from overrides import overrides
 import torch
 from torch.nn import Linear
 
-from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder

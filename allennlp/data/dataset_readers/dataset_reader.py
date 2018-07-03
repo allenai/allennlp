@@ -2,7 +2,7 @@ from typing import Iterable, Iterator, Callable
 import logging
 
 from allennlp.data.instance import Instance
-from allennlp.common import Params, Tqdm
+from allennlp.common import Tqdm
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
 

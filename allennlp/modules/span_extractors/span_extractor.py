@@ -3,7 +3,6 @@ import torch
 from overrides import overrides
 
 from allennlp.common.registrable import Registrable
-from allennlp.common.params import Params
 
 class SpanExtractor(torch.nn.Module, Registrable):
     """

@@ -4,7 +4,6 @@ from torch.nn import Dropout, Linear
 
 from allennlp.nn.util import last_dim_softmax, weighted_sum
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
-from allennlp.common.params import Params
 
 
 @Seq2SeqEncoder.register("multi_head_self_attention")

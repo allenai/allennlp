@@ -1,6 +1,5 @@
 import torch
 from overrides import overrides
-from allennlp.common import Params
 from allennlp.modules.attention.legacy_attention import Attention
 
 
@@ -14,4 +13,3 @@ class CosineAttention(Attention):
         a_norm = vector / (vector.norm(p=2, dim=-1, keepdim=True) + 1e-13)
         b_norm = matrix / (matrix.norm(p=2, dim=-1, keepdim=True) + 1e-13)
         return torch.bmm(a_norm.unsqueeze(dim=1), b_norm.transpose(-1, -2)).squeeze(1)
-

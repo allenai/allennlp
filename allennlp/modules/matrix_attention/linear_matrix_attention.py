@@ -6,7 +6,6 @@ from overrides import overrides
 
 from allennlp.nn import util
 from allennlp.nn.activations import Activation
-from allennlp.common import Params
 from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 
 

@@ -2,7 +2,6 @@ from typing import Iterable
 import logging
 import random
 
-from allennlp.common import Params
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator

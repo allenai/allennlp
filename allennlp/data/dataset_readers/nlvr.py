@@ -4,7 +4,6 @@ import logging
 
 from overrides import overrides
 
-from allennlp.common import Params
 from allennlp.common.util import JsonDict
 from allennlp.data.instance import Instance
 from allennlp.data.fields import Field, TextField, ListField, IndexField, LabelField
@@ -201,4 +200,3 @@ class NlvrDatasetReader(DatasetReader):
             fields["labels"] = labels_field
 
         return Instance(fields)
-

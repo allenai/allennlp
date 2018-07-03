@@ -7,7 +7,6 @@ import torch
 
 from overrides import overrides
 from allennlp.common.registrable import Registrable
-from allennlp.common import Params
 from allennlp.nn.util import masked_softmax
 
 

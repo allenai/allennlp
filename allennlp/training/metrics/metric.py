@@ -2,8 +2,6 @@ from typing import Dict, Optional, Tuple, Union
 import torch
 
 from allennlp.common.registrable import Registrable
-from allennlp.common.params import Params
-from allennlp.data.vocabulary import Vocabulary
 
 
 class Metric(Registrable):

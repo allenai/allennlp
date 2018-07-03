@@ -8,7 +8,6 @@ from overrides import overrides
 from nltk.corpus.reader.bracket_parse import BracketParseCorpusReader # pylint: disable=no-name-in-module
 from nltk.tree import Tree
 
-from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, SpanField, SequenceLabelField, ListField, MetadataField, Field
@@ -218,4 +217,3 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
                 typed_spans[span] = tree.label() + "-" + current_span_label
 
         return end
-

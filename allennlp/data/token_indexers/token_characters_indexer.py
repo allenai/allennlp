@@ -4,7 +4,6 @@ import itertools
 from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.params import Params
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer

@@ -2,7 +2,6 @@ from typing import List
 
 from overrides import overrides
 
-from allennlp.common import Params
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.tokenizers.word_filter import WordFilter, PassThroughWordFilter
