@@ -280,6 +280,12 @@ def train_model(params: Params,
     model = Model.from_params(vocab, params.pop('model'))
     iterator = DataIterator.from_params(params.pop("iterator"))
     iterator.index_with(vocab)
+    validation_iterator_params = params.pop("validation_iterator", None)
+    if validation_iterator_params:
+        validation_iterator = DataIterator.from_params(validation_iterator_params)
+        validation_iterator.index_with(vocab)
+    else:
+        validation_iterator = None
 
     train_data = all_datasets['train']
     validation_data = all_datasets.get('validation')
@@ -309,7 +315,8 @@ def train_model(params: Params,
                                   iterator,
                                   train_data,
                                   validation_data,
-                                  trainer_params)
+                                  trainer_params,
+                                  validation_iterator=validation_iterator)
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
     params.assert_empty('base train command')
