@@ -6,7 +6,7 @@ import torch
 from allennlp.commands.train import train_model_from_file
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
-from allennlp.data import DataIterator, DatasetReader, Vocabulary
+from allennlp.data import DataIterator, DatasetReader, Vocabulary, RegistrableVocabulary
 from allennlp.data.dataset import Batch
 from allennlp.models import Model, load_archive
 
@@ -27,7 +27,7 @@ class ModelTestCase(AllenNlpTestCase):
         # "non_padded_namespaces", "min_count" etc. can be set if needed.
         if 'vocabulary' in params:
             vocab_params = params['vocabulary']
-            vocab = Vocabulary.from_params(params=vocab_params, instances=instances)
+            vocab = RegistrableVocabulary.from_params(params=vocab_params, instances=instances)
         else:
             vocab = Vocabulary.from_instances(instances)
         self.vocab = vocab
@@ -147,6 +147,10 @@ class ModelTestCase(AllenNlpTestCase):
 
                 if parameter.grad is None:
                     has_zero_or_none_grads[name] = "No gradient computed (i.e parameter.grad is None)"
+
+                elif parameter.grad.is_sparse or parameter.grad.data.is_sparse:
+                    pass
+
                 # Some parameters will only be partially updated,
                 # like embeddings, so we just check that any gradient is non-zero.
                 elif (parameter.grad.cpu() == zeros).all():
