@@ -342,7 +342,10 @@ def train_model(params: Params,
 
     if test_data and evaluate_on_test:
         logger.info("The model will be evaluated using the best epoch weights.")
-        test_metrics = evaluate(best_model, test_data, iterator, cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
+        test_metrics = evaluate(
+                best_model, test_data, validation_iterator or iterator,
+                cuda_device=trainer._cuda_devices[0]
+        )  # pylint: disable=protected-access
         for key, value in test_metrics.items():
             metrics["test_" + key] = value
 
