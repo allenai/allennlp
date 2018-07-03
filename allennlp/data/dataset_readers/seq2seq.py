@@ -93,13 +93,3 @@ class Seq2SeqDatasetReader(DatasetReader):
             return Instance({"source_tokens": source_field, "target_tokens": target_field})
         else:
             return Instance({'source_tokens': source_field})
-
-
-def do_stuff() -> str:
-    stuff1 = "something"
-    stuff2 = "something else"
-
-    concatenated = stuff1 + stuff1
-
-    return concatenated
-
