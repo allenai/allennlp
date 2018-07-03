@@ -124,6 +124,100 @@ class NoamLR(torch.optim.lr_scheduler._LRScheduler): # pylint: disable=protected
 
         return [scale for _ in range(len(self.base_lrs))]
 
+
+class STLR(torch.optim.lr_scheduler._LRScheduler): # pylint: disable=protected-access
+    """
+    Implements the Slanted Triangular Learning Rate schedule with optional gradual
+    unfreezing. The schedule corresponds to first linearly increasing the learning
+    rate and annealing the learning based on a fixed ratio.
+    If we gradually unfreeze, then in the first epoch of training, only the top
+    layer is trained; in the second epoch, the top two layers are trained, etc.
+    During freezing, the learning rate is increased and annealed over one epoch.
+    After freezing finished, the learning rate is increased and annealed over
+    the remaining training iterations.
+    Note that with this schedule, early stopping should typically be avoided.
+
+    Parameters
+    ----------
+    num_epochs : ``int``, required.
+        The total number of epochs for which the model should be trained.
+    num_steps_per_epoch: ``int``, required.
+        The number of steps (updates, batches) per training epoch.
+    cut_frac: ``float``, optional (default = 0.1).
+        The fraction of the steps to increase the learning rate.
+    ratio: ``float``, optional (default = 32).
+        The ratio of the smallest to the (largest) base learning rate.
+    gradual_unfreezing: ``bool``, optional (default = False).
+        Whether gradual unfreezing should be used.
+    """
+    def __init__(self,
+                 optimizer: torch.optim.Optimizer,
+                 num_epochs: int,
+                 num_steps_per_epoch: int,
+                 cut_frac: float = 0.1,
+                 ratio: int = 32,
+                 lr: float = 0.01,
+                 last_epoch: int = -1,
+                 gradual_unfreezing: bool = False) -> None:
+        self.num_epochs = num_epochs
+        self.num_steps_per_epoch = num_steps_per_epoch
+        self.cut_frac = cut_frac
+        self.ratio = ratio
+        self.lr = lr
+        self.gradual_unfreezing = gradual_unfreezing
+        self.freezing_current = self.gradual_unfreezing
+        self.first_epoch = True
+        super().__init__(optimizer, last_epoch=last_epoch)
+
+    def step(self, epoch=None):
+        if self.gradual_unfreezing:
+            assert not self.optimizer.param_groups[-1]["params"], \
+                "The default group should be empty."
+            # the method is called once when initialising before the
+            # first epoch (epoch 0) and then always at the end of each
+            # epoch; so the first time, with epoch id 0, we want to set
+            # up for epoch #1; the second time, still with epoch id 0,
+            # we want to set up for epoch #2, etc.
+            epoch_no = epoch+1 if self.first_epoch else epoch+2
+            if self.first_epoch:
+                self.first_epoch = False
+            if epoch_no >= len(self.optimizer.param_groups)-1:
+                print('Gradual unfreezing finished. Training all layers.')
+                self.freezing_current = False
+            else:
+                print(f'Gradual unfreezing. Training only the top {epoch_no} layers.')
+            for i, param_group in enumerate(reversed(self.optimizer.param_groups)):
+                for param in param_group["params"]:
+                    # i = 0 is the default group; we care about i > 0
+                    if i <= epoch_no:
+                        param.requires_grad = True
+                    else:
+                        param.requires_grad = False
+
+    def step_batch(self, epoch=None):
+        if epoch is None:
+            epoch = self.last_epoch + 1
+        self.last_epoch = epoch
+        for param_group, learning_rate in zip(self.optimizer.param_groups, self.get_lr()):
+            param_group['lr'] = learning_rate
+
+    def get_lr(self):
+        if self.freezing_current:
+            # if we still freeze, we restrict the schedule to the current epoch
+            num_steps = self.num_steps_per_epoch
+            step = max(self.last_epoch, 1) % self.num_steps_per_epoch
+        else:
+            # otherwise we use the schedule for the rest of training
+            steps_while_frozen = (len(self.optimizer.param_groups)-1) * self.num_steps_per_epoch
+            num_steps = self.num_epochs * self.num_steps_per_epoch - steps_while_frozen
+            step = max(self.last_epoch, 1) - steps_while_frozen
+        cut = int(num_steps * self.cut_frac)
+        if cut == step:
+            print()
+        p = step / cut if step < cut else 1 - (step - cut) / (num_steps - cut)
+        lrs = [lr * (1 + p * (self.ratio - 1)) / self.ratio for lr in self.base_lrs]
+        return lrs
+
 # We just use the Pytorch LRSchedulers, so here we force them into
 # Registry._registry so we can build them from params.
 Registrable._registry[LearningRateScheduler] = {   # pylint: disable=protected-access
@@ -133,4 +227,5 @@ Registrable._registry[LearningRateScheduler] = {   # pylint: disable=protected-a
         "reduce_on_plateau": torch.optim.lr_scheduler.ReduceLROnPlateau,
         "cosine": torch.optim.lr_scheduler.CosineAnnealingLR,
         "noam": NoamLR,
+        "stlr": STLR
 }
