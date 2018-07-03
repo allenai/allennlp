@@ -256,7 +256,7 @@ class Trainer:
         """
         self._model = model
         self._iterator = iterator
-        self._validation_iterator =  validation_iterator
+        self._validation_iterator = validation_iterator
         self._optimizer = optimizer
         self._train_data = train_dataset
         self._validation_data = validation_dataset
@@ -655,8 +655,8 @@ class Trainer:
             val_iterator = self._iterator
 
         val_generator = val_iterator(self._validation_data,
-                                       num_epochs=1,
-                                       cuda_device=self._iterator_device)
+                                     num_epochs=1,
+                                     cuda_device=self._iterator_device)
         num_validation_batches = val_iterator.get_num_batches(self._validation_data)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
