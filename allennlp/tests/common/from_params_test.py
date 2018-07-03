@@ -1,8 +1,15 @@
 # pylint: disable=no-self-use,invalid-name,too-many-public-methods
 from typing import Dict, Optional
 
-from allennlp.common.from_params import takes_arg, remove_optional
+from allennlp.common import Params
+from allennlp.common.from_params import FromParams, takes_arg, remove_optional, create_kwargs
 from allennlp.common.testing import AllenNlpTestCase
+
+
+class MyClass(FromParams):
+    def __init__(self, my_int: int, my_bool: bool = False):
+        self.my_int = my_int
+        self.my_bool = my_bool
 
 
 class TestFromParams(AllenNlpTestCase):
@@ -46,3 +53,22 @@ class TestFromParams(AllenNlpTestCase):
 
         assert remove_optional(Optional[str]) == str
         assert remove_optional(str) == str
+
+    def test_from_params(self):
+        my_class = MyClass.from_params(Params({"my_int": 10}), my_bool=True)
+
+        assert isinstance(my_class, MyClass)
+        assert my_class.my_int == 10
+        assert my_class.my_bool
+
+    def text_create_kwargs(self):
+        kwargs = create_kwargs(MyClass,
+                               Params({'my_int': 5}),
+                               my_bool=True,
+                               my_float=4.4)
+
+        # my_float should not be included because it's not a param of the MyClass constructor
+        assert kwargs == {
+                "my_int": 5,
+                "my_bool": True
+        }
