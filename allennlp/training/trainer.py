@@ -948,13 +948,14 @@ class Trainer:
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
         num_epochs = params.pop_int("num_epochs", 20)
-        cuda_device = params.pop_int("cuda_device", -1)
+        cuda_device = params.pop("cuda_device", -1)
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
-
-        if cuda_device >= 0:
+        if isinstance(cuda_device, int) and cuda_device >= 0:
             model = model.cuda(cuda_device)
+        elif isinstance(cuda_device, list):
+            model = model.cuda(cuda_device[0])
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
