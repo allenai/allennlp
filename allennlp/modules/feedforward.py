@@ -80,7 +80,8 @@ class FeedForward(torch.nn.Module):
             output = dropout(activation(layer(output)))
         return output
 
-    # TODO(joelgrus): not registrable
+    # Requires custom logic around the activations (mostly because the Union type is too complex
+    # to handle automatically).
     @classmethod
     def from_params(cls, params: Params):
         input_dim = params.pop_int('input_dim')

@@ -61,7 +61,7 @@ class SpanConstituencyParser(Model):
     encoder : ``Seq2SeqEncoder``, required.
         The encoder that we will use in between embedding tokens and
         generating span representations.
-    feedforward_layer : ``FeedForward``, required.
+    feedforward : ``FeedForward``, required.
         The FeedForward layer that we will use in between the encoder and the linear
         projection to a distribution over span labels.
     pos_tag_embedding : ``Embedding``, optional.
@@ -81,7 +81,7 @@ class SpanConstituencyParser(Model):
                  text_field_embedder: TextFieldEmbedder,
                  span_extractor: SpanExtractor,
                  encoder: Seq2SeqEncoder,
-                 feedforward_layer: FeedForward = None,
+                 feedforward: FeedForward = None,
                  pos_tag_embedding: Embedding = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None,
@@ -92,10 +92,10 @@ class SpanConstituencyParser(Model):
         self.span_extractor = span_extractor
         self.num_classes = self.vocab.get_vocab_size("labels")
         self.encoder = encoder
-        self.feedforward_layer = TimeDistributed(feedforward_layer) if feedforward_layer else None
+        self.feedforward_layer = TimeDistributed(feedforward) if feedforward else None
         self.pos_tag_embedding = pos_tag_embedding or None
-        if feedforward_layer is not None:
-            output_dim = feedforward_layer.get_output_dim()
+        if feedforward is not None:
+            output_dim = feedforward.get_output_dim()
         else:
             output_dim = span_extractor.get_output_dim()
 
@@ -112,9 +112,9 @@ class SpanConstituencyParser(Model):
                                span_extractor.get_input_dim(),
                                "encoder input dim",
                                "span extractor input dim")
-        if feedforward_layer is not None:
+        if feedforward is not None:
             check_dimensions_match(span_extractor.get_output_dim(),
-                                   feedforward_layer.get_input_dim(),
+                                   feedforward.get_input_dim(),
                                    "span extractor output dim",
                                    "feedforward input dim")
 
@@ -464,36 +464,3 @@ class SpanConstituencyParser(Model):
             evalb_metrics = self._evalb_score.get_metric(reset=reset)
             all_metrics.update(evalb_metrics)
         return all_metrics
-
-    # TODO(joelgrus): error on deletion
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'SpanConstituencyParser':
-        embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab=vocab, params=embedder_params)
-        span_extractor = SpanExtractor.from_params(params.pop("span_extractor"))
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-
-        feed_forward_params = params.pop("feedforward", None)
-        if feed_forward_params is not None:
-            feedforward_layer = FeedForward.from_params(feed_forward_params)
-        else:
-            feedforward_layer = None
-        pos_tag_embedding_params = params.pop("pos_tag_embedding", None)
-        if pos_tag_embedding_params is not None:
-            pos_tag_embedding = Embedding.from_params(vocab=vocab, params=pos_tag_embedding_params)
-        else:
-            pos_tag_embedding = None
-        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
-        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
-        evalb_directory_path = params.pop("evalb_directory_path", DEFAULT_EVALB_DIR)
-        params.assert_empty(cls.__name__)
-
-        return cls(vocab=vocab,
-                   text_field_embedder=text_field_embedder,
-                   span_extractor=span_extractor,
-                   encoder=encoder,
-                   feedforward_layer=feedforward_layer,
-                   pos_tag_embedding=pos_tag_embedding,
-                   initializer=initializer,
-                   regularizer=regularizer,
-                   evalb_directory_path=evalb_directory_path)

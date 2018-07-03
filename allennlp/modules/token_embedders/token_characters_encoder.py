@@ -35,7 +35,7 @@ class TokenCharactersEncoder(TokenEmbedder):
         mask = (token_characters != 0).long()
         return self._dropout(self._encoder(self._embedding(token_characters), mask))
 
-    # required because of the setdefault
+    # The setdefault requires a custom from_params
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'TokenCharactersEncoder':
         embedding_params: Params = params.pop("embedding")

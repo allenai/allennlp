@@ -930,6 +930,7 @@ class Trainer:
 
         return epoch_to_return, val_metric_per_epoch
 
+    # Requires custom from_params.
     @classmethod
     def from_params(cls,
                     model: Model,

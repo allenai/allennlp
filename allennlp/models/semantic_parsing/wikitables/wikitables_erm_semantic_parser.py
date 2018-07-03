@@ -81,7 +81,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         The directory to find tables when evaluating logical forms.  We rely on a call to SEMPRE to
         evaluate logical forms, and SEMPRE needs to read the table from disk itself.  This tells
         SEMPRE where to find the tables. Passed to super class.
-    initial_mml_model_file : ``str``, optional (default=None)
+    mml_model_file : ``str``, optional (default=None)
         If you want to initialize this model using weights from another model trained using MML,
         pass the path to the ``model.tar.gz`` file of that model here.
     """
@@ -103,7 +103,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                  num_linking_features: int = 10,
                  rule_namespace: str = 'rule_labels',
                  tables_directory: str = '/wikitables/',
-                 initial_mml_model_file: str = None) -> None:
+                 mml_model_file: str = None) -> None:
         use_similarity = use_neighbor_similarity_for_linking
         super().__init__(vocab=vocab,
                          question_embedder=question_embedder,
@@ -144,9 +144,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         # copied a trained ERM model from a different machine and the original MML model that was
         # used to initialize it does not exist on the current machine. This may not be the best
         # solution for the problem.
-        if initial_mml_model_file is not None:
-            if os.path.isfile(initial_mml_model_file):
-                archive = load_archive(initial_mml_model_file)
+        if mml_model_file is not None:
+            if os.path.isfile(mml_model_file):
+                archive = load_archive(mml_model_file)
                 self._initialize_weights_from_archive(archive)
             else:
                 # A model file is passed, but it does not exist. This is expected to happen when

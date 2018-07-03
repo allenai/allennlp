@@ -81,6 +81,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             embedded_representations.append(token_vectors)
         return torch.cat(embedded_representations, dim=-1)
 
+    # This is some unusual logic, it needs a custom from_params.
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BasicTextFieldEmbedder':
         embedder_to_indexer_map = params.pop("embedder_to_indexer_map", None)

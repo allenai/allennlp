@@ -52,8 +52,11 @@ class Initializer(Registrable):
         """
         raise NotImplementedError
 
+    # Requires custom from_params because of possibility of Params being a str.
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> 'Initializer':   # type: ignore
+        # pylint: disable=arguments-differ
+
         # Just a string - corresponds to the name of an initializer.
         if isinstance(params, str):
             return cls.by_name(params)()
@@ -157,7 +160,7 @@ def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer
         def __repr__(self):
             return 'Init: %s, with params: %s' % (self._init_function, self._kwargs)
         @classmethod
-        def from_params(cls, params: Params):
+        def from_params(cls, params: Params):  # type: ignore
             return cls(**params.as_dict())
     return Init
 
@@ -238,7 +241,7 @@ class InitializerApplicator:
             logger.info("   %s", name)
 
     @classmethod
-    def from_params(cls, params: Iterable[Tuple[str, Params]] = ()) -> "InitializerApplicator":
+    def from_params(cls, params: Iterable[Tuple[str, Params]] = ()) -> "InitializerApplicator":  # type: ignore
         """
         Converts a Params object into an InitializerApplicator. The json should
         be formatted as follows::
@@ -268,6 +271,8 @@ class InitializerApplicator:
         -------
         An InitializerApplicator containing the specified initializers.
         """
+        # pylint: disable=arguments-differ
+
         is_prevent = lambda item: item == "prevent" or item == {"type": "prevent"}
         prevent_regexes = [param[0] for param in params if is_prevent(param[1])]
         params = [param for param in params if param[1] if not is_prevent(param[1])]

@@ -2,7 +2,7 @@ from typing import List
 
 from overrides import overrides
 
-from allennlp.common import Params, Registrable
+from allennlp.common import Registrable
 from allennlp.data.tokenizers.token import Token
 
 

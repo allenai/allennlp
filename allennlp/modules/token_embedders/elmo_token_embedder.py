@@ -91,6 +91,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
             elmo_representations = projection(elmo_representations)
         return elmo_representations
 
+    # Custom vocab_to_cache logic requires a from_params implementation.
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'ElmoTokenEmbedder':
         params.add_file_to_archive('options_file')

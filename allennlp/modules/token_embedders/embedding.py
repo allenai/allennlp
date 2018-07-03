@@ -137,6 +137,7 @@ class Embedding(TokenEmbedder):
             embedded = projection(embedded)
         return embedded
 
+    # Custom logic requires custom from_params.
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'Embedding':
         """

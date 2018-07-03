@@ -32,6 +32,7 @@ class Optimizer(Registrable):
     """
     default_implementation = "adam"
 
+    # Requires custom from_params.
     @classmethod
     def from_params(cls, model_parameters: List, params: Params):  # type: ignore
         # pylint: disable=arguments-differ

@@ -40,6 +40,7 @@ class RegularizerApplicator:
 
         return accumulator
 
+    # Requires custom from_params because of complex logic.
     @classmethod
     def from_params(cls, params: Iterable[Tuple[str, Params]]=()) -> Optional['RegularizerApplicator']:
         """
