@@ -7,7 +7,7 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class MyClass(FromParams):
-    def __init__(self, my_int: int, my_bool: bool = False):
+    def __init__(self, my_int: int, my_bool: bool = False) -> None:
         self.my_int = my_int
         self.my_bool = my_bool
 
