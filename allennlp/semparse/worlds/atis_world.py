@@ -43,31 +43,25 @@ class AtisWorld(World):
         grammar_str_with_context += self.generate_one_of_str("string", ["'{}'".format(local_str) for local_str in self.valid_actions['string']])
         return grammar_str_with_context
 
+
     def get_local_strs(self) -> List[str]:
         local_strs: List[str] = []
-        for city in atis_tables.CITIES:
-            if city.lower() in self.utterance.lower():
-                local_strs.append(city)
+        
+        trigger_lists = [atis_tables.CITIES,  atis_tables.AIRPORT_CODES,  atis_tables.STATES,  atis_tables.STATE_CODES,  
+                       atis_tables.FARE_BASIS_CODE,  atis_tables.CLASS,  atis_tables.AIRLINE_CODE_LIST,  atis_tables.DAY_OF_WEEK]
 
-        for code in atis_tables.AIRPORT_CODES:
-            if code.lower() in self.utterance.lower():
-                local_strs.append(code)
 
-        for state in atis_tables.STATES:
-            if state.lower() in self.utterance.lower():
-                local_strs.append(state)
+        for trigger_list in trigger_lists:
+            for trigger in trigger_list:
+                if trigger.lower() in self.utterance.lower():
+                    local_strs.append(trigger)
+        
+        trigger_dict_list = [atis_tables.AIRLINE_CODES, atis_tables.GROUND_SERVICE, atis_tables.YES_NO]
 
-        for state_codes in atis_tables.STATE_CODES:
-            if state_codes.lower() in self.utterance.lower():
-                local_strs.append(state_codes)
-
-        for airline in atis_tables.AIRLINE_CODES.keys():
-            if airline.lower() in self.utterance.lower() or atis_tables.AIRLINE_CODES[airline] in self.utterance.lower():
-                local_strs.append(atis_tables.AIRLINE_CODES[airline])
-
-        for service in atis_tables.GROUND_SERVICE.keys():
-            if service.lower() in self.utterance.lower():
-                local_strs.append(atis_tables.GROUND_SERVICE[service])
+        for trigger_dict in trigger_dict_list:
+            for trigger in trigger_dict.keys():
+                if trigger.lower() in self.utterance.lower():
+                    local_strs.append(trigger_dict[trigger])
 
         return local_strs
 

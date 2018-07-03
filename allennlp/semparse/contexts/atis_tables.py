@@ -105,10 +105,12 @@ def get_times_from_utterance(utterance: str) -> List[str]:
     for example: convert ``7pm`` to 1900
     """
     pm_times = [int(pm_str.rstrip('pm')) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR for pm_str in re.findall(r'\d+pm', utterance)]
-    am_times = [int(am_str.rstrip('am')) * HOUR_TO_TWENTY_FOUR for am_str in re.findall(r"\d+am", utterance)]
+    am_times = [int(am_str.rstrip('am')) * HOUR_TO_TWENTY_FOUR for am_str in re.findall(r"\d+", utterance)]
     oclock_times = [int(oclock_str.rstrip("o'clock")) * HOUR_TO_TWENTY_FOUR for oclock_str in re.findall(r"\d+\so'clock", utterance)]
     
     times = am_times + pm_times + oclock_times 
+    if 'noon' in utterance:
+        times.append(1200)
     
     around_times = []
     if "around" in utterance:
@@ -199,14 +201,23 @@ DAY_NUMBERS = {
 MISC_TIME_TRIGGERS = {
         'morning': ['0', '1200'],
         'afternoon': ['1200', '1800'],
+        'after': ['1200', '1800'],
         'evening': ['1800', '2200'],
         'lunch': ['1400'],
         'noon': ['1200']
         }
 
 STATE_CODES = ['TN', 'MA', 'CA', 'MD', 'IL', 'OH', 'NC', 'CO', 'TX', 'MI', 'NY', 'IN', 'NJ', 'NV', 'GA', 'FL', 'MO', 'WI', 'MN', 'PA', 'AZ', 'WA', 'UT', 'DC', 'PQ', 'ON']
+
+DAY_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
         
 CITIES = ['NASHVILLE', 'BOSTON', 'BURBANK', 'BALTIMORE', 'CHICAGO', 'CLEVELAND', 'CHARLOTTE', 'COLUMBUS', 'CINCINNATI', 'DENVER', 'DALLAS', 'DETROIT', 'FORTWORTH', 'HOUSTON', 'WESTCHESTER COUNTY', 'INDIANAPOLIS', 'NEWARK', 'LAS VEGAS', 'LOS ANGELES', 'LONG BEACH', 'ATLANTA', 'MEMPHIS', 'MIAMI', 'KANSAS CITY', 'MILWAUKEE', 'MINNEAPOLIS', 'NEW YORK', 'OAKLAND', 'ONTARIO', 'ORLANDO', 'PHILADELPHIA', 'PHOENIX', 'PITTSBURGH', 'ST. PAUL', 'SAN DIEGO', 'SEATTLE', 'SAN FRANCISCO', 'SAN JOSE', 'SALT LAKE CITY', 'ST. LOUIS', 'ST. PETERSBURG', 'TACOMA', 'TAMPA', 'WASHINGTON', 'MONTREAL', 'TORONTO']
+
+FARE_BASIS_CODE = ['B', 'BH', 'BHW', 'BHX', 'BL', 'BLW', 'BLX', 'BN', 'BOW', 'BOX', 'BW', 'BX', 'C', 'CN', 'F', 'FN', 'H', 'HH', 'HHW', 'HHX', 'HL', 'HLW', 'HLX', 'HOW', 'HOX', 'J', 'K', 'KH', 'KL', 'KN', 'LX', 'M', 'MH', 'ML', 'MOW', 'P', 'Q', 'QH', 'QHW', 'QHX', 'QLW', 'QLX', 'QO', 'QOW', 'QOX', 'QW', 'QX', 'S', 'U', 'V', 'VHW', 'VHX', 'VW', 'VX', 'Y', 'YH', 'YL', 'YN', 'YW', 'YX']
+
+CLASS = ['COACH', 'BUSINESS', 'FIRST', 'THRIST', 'STANDARD', 'SHUTTLE']
+
+AIRLINE_CODE_LIST = ['AR', '3J', 'AC', '9X', 'ZW', 'AS', '7V', 'AA', 'TZ', 'HP', 'DH', 'EV', 'BE', 'BA', 'HQ', 'CP', 'KW', 'SX', '9L', 'OH', 'CO', 'OK', 'DL', '9E', 'QD', 'LH', 'XJ', 'MG', 'YX', 'NX', '2V', 'NW', 'RP', 'AT', 'SN', 'OO', 'WN', 'TG', 'FF', '9N', 'TW', 'RZ', 'UA', 'US', 'OE']
 
 AIRLINE_CODES = {'argentina': 'AR',
                  'alliance': '3J',
@@ -263,19 +274,17 @@ GROUND_SERVICE = {
         'car': 'RENTAL CAR',
         'taxi': 'TAXI'}
 
-DEFAULT_TABLES = ['airport_service', 'city', 'flight']
 
 AIRPORT_CODES = ['ATL', 'NA', 'OS', 'UR', 'WI', 'CLE', 'CLT', 'CMH', 'CVG', 'DAL', 'DCA', 'DEN', 'DET', 'DFW', 'DTW', 'EWR', 'HOU', 'HPN', 'IAD', 'IAH', 'IND', 'JFK', 'LAS', 'LAX', 'LGA', 'LG', 'MCI', 'MCO', 'MDW', 'MEM', 'MIA', 'MKE', 'MSP', 'OAK', 'ONT', 'ORD', 'PHL', 'PHX', 'PIE', 'PIT', 'SAN', 'SEA', 'SFO', 'SJC', 'SLC', 'STL', 'TPA', 'YKZ', 'YMX', 'YTZ', 'YUL', 'YYZ']
 
-STATES = ['ARIZONA', 'CALIFORNIA', 'COLORADO', 'DISTRICTOFCOLUMBIA', 'FLORIDA', 'GEORGIA', 'ILLINOIS', 'INDIANA', 'MASSACHUSETTS', 'MARYLAND', 'MICHIGAN', 'MINNESOTA', 'MISSOURI', 'NORTHCAROLINA', 'NEWJERSEY', 'NEVADA', 'NEWYORK', 'OHIO', 'ONTARIO', 'PENNSYLVANIA', 'QUEBEC', 'TENNESSEE', 'TEXAS', 'UTAH', 'WASHINGTON', 'WISCONSIN']
-
-
+STATES = ['ARIZONA', 'CALIFORNIA', 'COLORADO', 'DISTRICT OF COLUMBIA', 'FLORIDA', 'GEORGIA', 'ILLINOIS', 'INDIANA', 'MASSACHUSETTS', 'MARYLAND', 'MICHIGAN', 'MINNESOTA', 'MISSOURI', 'NORTH CAROLINA', 'NEW JERSEY', 'NEVADA', 'NEWYORK', 'OHIO', 'ONTARIO', 'PENNSYLVANIA', 'QUEBEC', 'TENNESSEE', 'TEXAS', 'UTAH', 'WASHINGTON', 'WISCONSIN']
 
 TABLES = {'aircraft': ['aircraft_code', 'aircraft_description', 'manufacturer', 'basic_type', 'propulsion', 'wide_body', 'pressurized'],
           'airline': ['airline_name', 'airline_code'],
           'airport': ['airport_code', 'airport_name', 'airport_location', 'state_code', 'country_name', 'time_zone_code', 'minimum_connect_time'],
           'airport_service': ['city_code', 'airport_code', 'miles_distant', 'direction', 'minutes_distant'],
           'city': ['city_code', 'city_name', 'state_code', 'country_name', 'time_zone_code'],
+          'class_of_service': ['booking_class', 'rank', 'class_description'],
            'date_day': ['month_number', 'day_number', 'year', 'day_name'],
            'days': ['days_code', 'day_name'],
            'equipment_sequence': ['aircraft_code_sequence', 'aircraft_code'],
@@ -291,3 +300,6 @@ TABLES = {'aircraft': ['aircraft_code', 'aircraft_description', 'manufacturer', 
            'month': ['month_number', 'month_name'],
            'restriction': ['restriction_code', 'advance_purchase', 'stopovers', 'saturday_stay_required', 'minimum_say', 'maximum_stay', 'application', 'no_discounts'],
            'state': ['state_code', 'state_name', 'country_name']}
+
+YES_NO = {'one way': 'NO',
+        'economy': 'YES'}

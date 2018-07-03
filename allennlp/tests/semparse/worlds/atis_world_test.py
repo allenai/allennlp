@@ -21,22 +21,20 @@ class TestAtisWorld(AllenNlpTestCase):
         num_queries = 0
         num_parsed = 0
 
-        for line in self.data:
+        for idx, line in enumerate(self.data):
             jline = json.loads(line)
             conv_context = ConversationContext(jline['interaction'])
 
             for interaction_round in conv_context.interaction:
-                print(interaction_round)
-
                 world = AtisWorld(conv_context, interaction_round['utterance']) 
 
                 try:
                     num_queries += 1
                     action_sequence = world.get_action_sequence(interaction_round['sql'])
-                    print(action_sequence)
                     num_parsed += 1
                 except:
-                    print("Failed to parse")
+                    print(line)
+                    print("Failed to parse, line {}".format(idx))
                     pass
 
                 conv_context.valid_actions = world.valid_actions
@@ -45,7 +43,7 @@ class TestAtisWorld(AllenNlpTestCase):
 
 
     def test_atis_with_context(self):
-        line = json.loads(self.data[12])
+        line = json.loads(self.data[26])
         conv_context = ConversationContext(line['interaction'])
 
         for interaction_round in conv_context.interaction:
