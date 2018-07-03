@@ -140,31 +140,24 @@ class DependencyParser(Model):
         has_gold_labels = head_indices is not None and head_tags is not None
         if self.training and has_gold_labels:
             arc_nll, type_nll = self._construct_loss(head_type_representation,
-                                                    child_type_representation,
-                                                    attended_arcs,
-                                                    head_indices,
-                                                    head_tags,
-                                                    mask)
+                                                     child_type_representation,
+                                                     attended_arcs,
+                                                     head_indices,
+                                                     head_tags,
+                                                     mask)
 
-        elif not self.training and has_gold_labels:
+            self._greedy_decode()
 
+        else:
             if self.use_mst_decoding_for_validation:
-                pass
-            
+                self._mst_decode()
+
             else:
-                pass
+                self._greedy_decode()
+
+        if has_gold_labels:
+            pass
             # compute accuracy
-        
-        elif not has_gold_labels:
-
-            if self.use_mst_decoding_for_validation:
-                pass
-
-            else:
-                pass
-
-        
-
 
         output_dict = {
                 "arc_loss": arc_nll,
@@ -179,13 +172,45 @@ class DependencyParser(Model):
 
 
     def _construct_loss(self,
-                        head_type_representation,
-                        child_type_representation,
-                        attended_arcs,
-                        head_indices,
-                        head_tags,
-                        mask) -> Tuple[torch.Tensor, torch.Tensor]:
-        
+                        head_type_representation: torch.Tensor,
+                        child_type_representation: torch.Tensor,
+                        attended_arcs: torch.Tensor,
+                        head_indices: torch.Tensor,
+                        head_tags: torch.Tensor,
+                        mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Computes the
+
+        Parameters
+        ----------
+        head_type_representation : ``torch.Tensor``, required.
+            A tensor of shape (batch_size, timesteps, type_representation_dim),
+            which will be used to generate predictions for the label type
+            for given arcs.
+        child_type_representation : ``torch.Tensor``, required
+            A tensor of shape (batch_size, timesteps, type_representation_dim),
+            which will be used to generate predictions for the label type
+            for given arcs.
+        attended_arcs : ``torch.Tensor``, required.
+            A tensor of shape (batch_size, timesteps, timesteps) used to generate
+            a distribution over attachements of a given word to all other words.
+        head_indices : ``torch.Tensor``, required.
+            A tensor of shape (batch_size, timesteps).
+            The indices of the heads for every word.
+        head_tags : ``torch.Tensor``, required.
+            A tensor of shape (batch_size, timesteps).
+            The dependency labels of the heads for every word.
+        mask : ``torch.Tensor``, required.
+            A mask of shape (batch_size, sequence_length), denoting unpadded
+            elements in the sequence.
+
+        Returns
+        -------
+        arc_nll : ``torch.Tensor``, required.
+            The negative log likelihood from the arc loss.
+        type_nll : ``torch.Tensor``, required.
+            The negative log likelihood from the arc type loss.
+        """
         float_mask = mask.float()
         batch_size, timesteps, _ = attended_arcs.size()
         range_vector = get_range_vector(batch_size, get_device_of(attended_arcs))
@@ -219,7 +244,10 @@ class DependencyParser(Model):
 
         return arc_nll, type_nll
 
-
+    def _greedy_decode(self):
+        pass
+    def _mst_decode(self):
+        pass
 
     def _get_head_types(self,
                         head_type_representation: torch.Tensor,
