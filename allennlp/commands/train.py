@@ -280,6 +280,12 @@ def train_model(params: Params,
     model = Model.from_params(vocab, params.pop('model'))
     iterator = DataIterator.from_params(params.pop("iterator"))
     iterator.index_with(vocab)
+    validation_iterator_params = params.pop("validation_iterator", None)
+    if validation_iterator_params:
+        validation_iterator = DataIterator.from_params(validation_iterator_params)
+        validation_iterator.index_with(vocab)
+    else:
+        validation_iterator = None
 
     train_data = all_datasets['train']
     validation_data = all_datasets.get('validation')
@@ -309,7 +315,8 @@ def train_model(params: Params,
                                   iterator,
                                   train_data,
                                   validation_data,
-                                  trainer_params)
+                                  trainer_params,
+                                  validation_iterator=validation_iterator)
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
     params.assert_empty('base train command')
@@ -335,7 +342,10 @@ def train_model(params: Params,
 
     if test_data and evaluate_on_test:
         logger.info("The model will be evaluated using the best epoch weights.")
-        test_metrics = evaluate(best_model, test_data, iterator, cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
+        test_metrics = evaluate(
+                best_model, test_data, validation_iterator or iterator,
+                cuda_device=trainer._cuda_devices[0] # pylint: disable=protected-access
+        )
         for key, value in test_metrics.items():
             metrics["test_" + key] = value
 
