@@ -135,7 +135,10 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     logger.info("Reading evaluation data from %s", evaluation_data_path)
     instances = dataset_reader.read(evaluation_data_path)
 
-    iterator = DataIterator.from_params(config.pop("iterator"))
+    iterator_params = config.pop("validation_iterator", None)
+    if iterator_params is None:
+        iterator_params = config.pop("iterator")
+    iterator = DataIterator.from_params(iterator_params)
     iterator.index_with(model.vocab)
 
     metrics = evaluate(model, instances, iterator, args.cuda_device)
