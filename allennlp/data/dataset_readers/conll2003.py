@@ -167,7 +167,7 @@ class Conll2003DatasetReader(DatasetReader):
     @classmethod
     def from_params(cls, params: Params) -> 'Conll2003DatasetReader':
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        tag_label = params.pop('tag_label', None)
+        tag_label = params.pop('tag_label', 'ner')
         feature_labels = params.pop('feature_labels', ())
         lazy = params.pop('lazy', False)
         coding_scheme = params.pop('coding_scheme', 'IOB1')
