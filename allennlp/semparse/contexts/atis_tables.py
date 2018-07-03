@@ -62,6 +62,8 @@ SQL_GRAMMAR_STR = r"""
     number              =  ""
     string              =  ""
 
+    rparen              =  ""
+
 """
 
 class ConversationContext():
@@ -83,11 +85,16 @@ class ConversationContext():
             if isinstance(rhs, Sequence):
                 valid_actions[key].add(" ".join(rhs._unicode_members()))
 
-            if isinstance(rhs, Literal):
+            elif isinstance(rhs, OneOf):
+                for option in rhs._unicode_members():
+                    valid_actions[key].add(option)
+
+            elif isinstance(rhs, Literal):
                 if len(rhs.literal) > 0:
                     valid_actions[key].add("%s" % rhs.literal)
                 else:
                     valid_actions[key] = set()
+
  
         for table in list(sorted(TABLES.keys(),reverse=True)):
             valid_actions['table_name'].add(table)

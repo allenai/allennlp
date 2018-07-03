@@ -86,8 +86,15 @@ class AtisWorld(World):
         if query:
             action_sequence = sql_visitor.parse(query)
             return action_sequence 
-
         return []
+    
+    @overrides
+    def all_possible_actions(self) -> List[str]:
+        all_actions = set()
+        for non_term, rhs_list in self.get_all_valid_actions().items():
+            for rhs in rhs_list:
+                all_actions.add("{} -> {}".format(non_term, rhs))
+        return sorted(all_actions)
 
 
 class SQLVisitor(NodeVisitor):
@@ -105,7 +112,7 @@ class SQLVisitor(NodeVisitor):
 
     def add_prod_rule(self, node, children=None):
         if node.expr.name and node.expr.name != 'ws':
-            rule = '{} ='.format(node.expr.name)
+            rule = '{} ->'.format(node.expr.name)
 
             if isinstance(node, RegexNode):
                 rule += '"{}"'.format(node.text)
