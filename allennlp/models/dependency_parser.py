@@ -13,7 +13,7 @@ from allennlp.modules.biaffine_attention import BiaffineAttention
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, get_range_vector, get_device_of, last_dim_log_softmax
-
+from allennlp.nn.decoding.chu_liu_edmonds import decode_mst
 
 @Model.register("dependency_parser")
 class DependencyParser(Model):
@@ -155,7 +155,10 @@ class DependencyParser(Model):
                                                     attended_arcs,
                                                     mask)
         elif self.use_mst_decoding_for_validation:
-            self._mst_decode()
+            self._mst_decode(head_type_representation,
+                             child_type_representation,
+                             attended_arcs,
+                             mask)
 
         if has_gold_labels:
             pass
@@ -294,8 +297,38 @@ class DependencyParser(Model):
         _, head_types = head_type_logits.max(dim=2)
         return heads, head_types
 
-    def _mst_decode(self):
-        pass
+    def _mst_decode(self,
+                    head_type_representation: torch.Tensor,
+                    child_type_representation: torch.Tensor,
+                    attended_arcs: torch.Tensor,
+                    mask: torch.Tensor):
+        batch_size, timesteps, num_head_tags = head_type_representation.size()
+
+        lengths = mask.data.sum(dim=1).long().cpu().numpy()
+
+        expanded_shape = [batch_size, timesteps, timesteps, num_head_tags]
+        head_type_representation = head_type_representation.unsqueeze(2)
+        head_type_representation = head_type_representation.expand(*expanded_shape).contiguous()
+        child_type_representation = child_type_representation.unsqueeze(1)
+        child_type_representation = child_type_representation.expand(*expanded_shape).contiguous()
+        # Shape (batch_size, timesteps, timesteps, num_head_tags)
+        pairwise_head_logits = self.type_bilinear(head_type_representation, child_type_representation)
+
+        # Shape (batch, length, length, num_labels)
+        pairwise_head_type_loss = F.log_softmax(pairwise_head_logits, dim=3).permute(0, 3, 1, 2)
+
+        # Mask padded tokens, because we only want to consider actual words as heads.
+        minus_inf = -1e8
+        minus_mask = (1 - mask.float()) * minus_inf
+        attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
+
+        # Shape (batch_size, timesteps, timesteps)
+        arc_loss = F.log_softmax(attended_arcs, dim=2)
+        # Shape (batch_size, num_head_tags, timesteps, timesteps)
+        energy = torch.exp(arc_loss.unsqueeze(1) + pairwise_head_type_loss)
+
+        return decode_mst(energy.detach().cpu().numpy(), lengths)
+        
 
     def _get_head_types(self,
                         head_type_representation: torch.Tensor,
