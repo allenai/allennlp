@@ -3,6 +3,7 @@ from typing import Dict, Optional, Tuple
 from overrides import overrides
 import torch
 import torch.nn.functional as F
+import numpy
 
 from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
@@ -123,9 +124,6 @@ class DependencyParser(Model):
                                            mask.float(),
                                            mask.float()).squeeze(1)
 
-        batch_size, timesteps, _ = attended_arcs.size()
-        # shape (batch_size,)
-        range_vector = get_range_vector(batch_size, get_device_of(attended_arcs))
 
         minus_inf = -1e8
         minus_mask = (1 - float_mask) * minus_inf
@@ -138,22 +136,26 @@ class DependencyParser(Model):
         # 3. MST decoding.
 
         has_gold_labels = head_indices is not None and head_tags is not None
-        if self.training and has_gold_labels:
+        if has_gold_labels:
             arc_nll, type_nll = self._construct_loss(head_type_representation,
                                                      child_type_representation,
                                                      attended_arcs,
                                                      head_indices,
                                                      head_tags,
                                                      mask)
-
-            self._greedy_decode()
-
+            loss = arc_nll + type_nll
         else:
-            if self.use_mst_decoding_for_validation:
-                self._mst_decode()
+            arc_nll = None
+            type_nll = None
+            loss = None
 
-            else:
-                self._greedy_decode()
+        if self.training or (self.eval and not self.use_mst_decoding_for_validation):
+            heads, head_types = self._greedy_decode(head_type_representation,
+                                                    child_type_representation,
+                                                    attended_arcs,
+                                                    mask)
+        elif self.use_mst_decoding_for_validation:
+            self._mst_decode()
 
         if has_gold_labels:
             pass
@@ -162,9 +164,7 @@ class DependencyParser(Model):
         output_dict = {
                 "arc_loss": arc_nll,
                 "type_loss": type_nll,
-                "loss": arc_nll + type_nll,
-                #"arc_logits": normalised_arc_logits,
-                #"head_type_logits": normalised_head_type_logits,
+                "loss": loss,
                 "mask": mask
                 }
 
@@ -179,7 +179,7 @@ class DependencyParser(Model):
                         head_tags: torch.Tensor,
                         mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Computes the
+        Computes the arc and type loss for a sequence given gold head indices and tags.
 
         Parameters
         ----------
@@ -218,19 +218,17 @@ class DependencyParser(Model):
         normalised_arc_logits = last_dim_log_softmax(attended_arcs,
                                                      mask) * float_mask.unsqueeze(2) * float_mask.unsqueeze(1)
 
-
         # shape (batch_size, timesteps, num_head_tags)
         head_type_logits = self._get_head_types(head_type_representation, child_type_representation, head_indices)
         normalised_head_type_logits = last_dim_log_softmax(head_type_logits,
                                                            mask.unsqueeze(-1)) * float_mask.unsqueeze(-1)
-
         # index matrix with shape (timesteps, batch)
         child_index = torch.arange(0, timesteps).view(timesteps, 1).expand(timesteps, batch_size)
         child_index = child_index.type_as(attended_arcs).long()
         # shape (timesteps, batch_size)
         arc_loss = normalised_arc_logits[range_vector, child_index, head_indices.data.t()]
         type_loss = normalised_head_type_logits[range_vector, child_index, head_tags.data.t()]
-        # We don't care about predictions for the ROOT token,
+        # We don't care about predictions for the symbolic ROOT token's head,
         # so we remove it from the loss.
         arc_loss = arc_loss[1:, :]
         type_loss = type_loss[1:, :]
@@ -244,8 +242,58 @@ class DependencyParser(Model):
 
         return arc_nll, type_nll
 
-    def _greedy_decode(self):
-        pass
+    def _greedy_decode(self,
+                       head_type_representation: torch.Tensor,
+                       child_type_representation: torch.Tensor,
+                       attended_arcs: torch.Tensor,
+                       mask: torch.Tensor):
+        """
+        Decode the head and head type predictions by decoding the unlabelled arcs
+        independently for each word and then again, predicting the
+        head types of these greedily chosen arcs indpendently.
+
+        Parameters
+        ----------
+        head_type_representation : ``torch.Tensor``, required.
+            A tensor of shape (batch_size, timesteps, type_representation_dim),
+            which will be used to generate predictions for the label type
+            for given arcs.
+        child_type_representation : ``torch.Tensor``, required
+            A tensor of shape (batch_size, timesteps, type_representation_dim),
+            which will be used to generate predictions for the label type
+            for given arcs.
+        attended_arcs : ``torch.Tensor``, required.
+            A tensor of shape (batch_size, timesteps, timesteps) used to generate
+            a distribution over attachements of a given word to all other words.
+
+        Returns
+        -------
+        heads : ``torch.Tensor``
+            A tensor of shape (batch_size, timesteps) representing the
+            greedily decoded heads of each word.
+        head_types : ``torch.Tensor``
+            A tensor of shape (batch_size, timesteps) representing the
+            types of the greedily decoded heads of each word.
+        """
+        # Mask the diagonal, because the head of a word can't be itself.
+        attended_arcs = attended_arcs + torch.diag(attended_arcs.new(mask.size(1)).fill_(-numpy.inf))
+        # Mask padded tokens, because we only want to consider actual words as heads.
+        if mask is not None:
+            minus_mask = (1 - mask).byte().unsqueeze(2)
+            attended_arcs.masked_fill_(minus_mask, -numpy.inf)
+
+        # Compute the heads greedily.
+        # shape (batch_size, timesteps)
+        _, heads = attended_arcs.max(dim=2)
+
+        # Given the greedily predicted heads, decode their types.
+        # shape (batch_size, timesteps, num_head_tags)
+        head_type_logits = self._get_head_types(head_type_representation,
+                                                child_type_representation,
+                                                heads)
+        _, head_types = head_type_logits.max(dim=2)
+        return heads, head_types
+
     def _mst_decode(self):
         pass
 
