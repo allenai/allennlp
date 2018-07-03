@@ -647,7 +647,7 @@ class TestVocabulary(AllenNlpTestCase):
         class MyVocabulary:
             @classmethod
             def from_params(cls, params, instances=None):
-                # pylint: disable=unused-arguments
+                # pylint: disable=unused-argument
                 return MyVocabulary()
 
 
