@@ -62,9 +62,10 @@ SQL_GRAMMAR_STR = r"""
     number              =  ""
     string              =  ""
 
-    rparen              =  ""
 
 """
+
+OPTIONAL = ['lparen', 'rparen', '(lparen ws)', '(ws rparen)', 'not', 'ws', 'asterisk']
 
 class ConversationContext():
     """
@@ -100,6 +101,8 @@ class ConversationContext():
             valid_actions['table_name'].add(table)
             for column in sorted(TABLES[table], reverse=True):
                 valid_actions['col_ref'].add('("{}" ws "." ws "{}")'.format(table, column))
+
+        valid_actions['col_ref'].add('asterisk')
 
         valid_action_strings = {key: sorted(value) for key, value in valid_actions.items()}
 

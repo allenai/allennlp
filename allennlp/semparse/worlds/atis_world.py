@@ -32,7 +32,6 @@ class AtisWorld(World):
             if local_num not in valid_actions['number']:
                 valid_actions['number'].append(local_num)
         
-        print(valid_actions)
         return valid_actions
 
     def get_grammar_str(self) -> str:
@@ -93,7 +92,15 @@ class AtisWorld(World):
         all_actions = set()
         for non_term, rhs_list in self.get_all_valid_actions().items():
             for rhs in rhs_list:
-                all_actions.add("{} -> {}".format(non_term, rhs))
+                if non_term == 'string':
+                    all_actions.add('{} -> "\'{}\'"'.format(non_term, rhs))
+                elif non_term == 'number' or non_term == 'table_name':
+                    all_actions.add('{} -> "{}"'.format(non_term, rhs))
+
+                else:
+                    all_actions.add("{} -> {}".format(non_term, rhs))
+        for opt in atis_tables.OPTIONAL:
+            all_actions.add("{} ->".format(opt))
         return sorted(all_actions)
 
 

@@ -43,7 +43,7 @@ class TestAtisWorld(AllenNlpTestCase):
 
 
     def test_atis_with_context(self):
-        line = json.loads(self.data[26])
+        line = json.loads(self.data[0])
         conv_context = ConversationContext(line['interaction'])
 
         for interaction_round in conv_context.interaction:
