@@ -113,17 +113,7 @@ def _read_pretrained_tokens(embeddings_file_uri: str) -> Set[str]:
     return tokens
 
 
-class RegistrableVocabulary(Registrable):
-    default_implementation = "vocabulary"
-
-    @classmethod
-    def from_params(cls, params: Params, instances: Iterable['adi.Instance'] = None):
-        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
-        return cls.by_name(choice).from_params(params, instances)
-
-
-@RegistrableVocabulary.register("vocabulary")
-class Vocabulary(RegistrableVocabulary):
+class Vocabulary(Registrable):
     """
     A Vocabulary maps strings to integers, allowing for strings to be mapped to an
     out-of-vocabulary token.
@@ -378,6 +368,15 @@ class Vocabulary(RegistrableVocabulary):
         -------
         A ``Vocabulary``.
         """
+        # Vocabulary is ``Registrable`` so that you can configure a custom subclass,
+        # but (unlike most of our registrables) almost everyone will want to use the
+        # base implementation. So instead of having an abstract ``VocabularyBase`` or
+        # such, we just add the logic for instantiating a registered subclass here,
+        # so that most users can continue doing what they were doing.
+        vocab_type = params.pop("type", None)
+        if vocab_type is not None:
+            return cls.by_name(vocab_type).from_params(params=params, instances=instances)
+
         extend = params.pop("extend", False)
         vocabulary_directory = params.pop("directory_path", None)
         if not vocabulary_directory and not instances:
