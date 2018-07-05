@@ -69,13 +69,12 @@ OPTIONAL = ['lparen', 'rparen', '(lparen ws)', '(ws rparen)', 'not', 'ws', 'aste
 
 class ConversationContext():
     """
-    A ``ConversationContext`` represents the interaction in which an utterance occurs 
+    A ``ConversationContext`` represents the interaction in which an utterance occurs
     """
-
-    def __init__(self, interaction: List[Dict[str, str]]) :
+    def __init__(self, interaction: List[Dict[str, str]]):
         self.interaction = interaction
-        self.base_sql_def = SQL_GRAMMAR_STR 
-        self.grammar    = Grammar(SQL_GRAMMAR_STR)
+        self.base_sql_def = SQL_GRAMMAR_STR
+        self.grammar = Grammar(SQL_GRAMMAR_STR)
         self.valid_actions = self.initialize_valid_actions()
 
     def initialize_valid_actions(self):
@@ -91,13 +90,13 @@ class ConversationContext():
                     valid_actions[key].add(option)
 
             elif isinstance(rhs, Literal):
-                if len(rhs.literal) > 0:
+                if rhs.literal != "":
                     valid_actions[key].add("%s" % rhs.literal)
                 else:
                     valid_actions[key] = set()
 
- 
-        for table in list(sorted(TABLES.keys(),reverse=True)):
+
+        for table in list(sorted(TABLES.keys(), reverse=True)):
             valid_actions['table_name'].add(table)
             for column in sorted(TABLES[table], reverse=True):
                 valid_actions['col_ref'].add('("{}" ws "." ws "{}")'.format(table, column))
@@ -111,17 +110,19 @@ class ConversationContext():
 
 def get_times_from_utterance(utterance: str) -> List[str]:
     """
-    Given an utterance, get the numbers that correspond to times and convert time 
+    Given an utterance, get the numbers that correspond to times and convert time
     for example: convert ``7pm`` to 1900
     """
-    pm_times = [int(pm_str.rstrip('pm')) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR for pm_str in re.findall(r'\d+pm', utterance)]
-    am_times = [int(am_str.rstrip('am')) * HOUR_TO_TWENTY_FOUR for am_str in re.findall(r"\d+", utterance)]
-    oclock_times = [int(oclock_str.rstrip("o'clock")) * HOUR_TO_TWENTY_FOUR for oclock_str in re.findall(r"\d+\so'clock", utterance)]
-    
-    times = am_times + pm_times + oclock_times 
+    pm_times = [int(pm_str.rstrip('pm')) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR
+                for pm_str in re.findall(r'\d+pm', utterance)]
+    am_times = [int(am_str.rstrip('am')) * HOUR_TO_TWENTY_FOUR
+                for am_str in re.findall(r"\d+", utterance)]
+    oclock_times = [int(oclock_str.rstrip("o'clock")) * HOUR_TO_TWENTY_FOUR
+                    for oclock_str in re.findall(r"\d+\so'clock", utterance)]
+    times = am_times + pm_times + oclock_times
     if 'noon' in utterance:
         times.append(1200)
-    
+
     around_times = []
     if "around" in utterance:
         for time in times:
@@ -130,7 +131,7 @@ def get_times_from_utterance(utterance: str) -> List[str]:
 
     times += around_times
 
-    return [str(time) for time in times] 
+    return [str(time) for time in times]
 
 
 
@@ -140,9 +141,10 @@ def get_nums_from_utterance(utterance: str) -> List[str]:
     """
     nums = ['1', '0']
     nums.extend(re.findall(r'\d+', utterance))
-    nums.extend([str(int(num_str.rstrip('pm')) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR) for num_str in re.findall(r'\d+', utterance)])
+    nums.extend([str(int(num_str.rstrip('pm')) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR)
+                 for num_str in re.findall(r'\d+', utterance)])
 
-    nums.extend(get_times_from_utterance(utterance)) 
+    nums.extend(get_times_from_utterance(utterance))
 
     words = utterance.split(' ')
     for word in words:
@@ -217,17 +219,36 @@ MISC_TIME_TRIGGERS = {
         'noon': ['1200']
         }
 
-STATE_CODES = ['TN', 'MA', 'CA', 'MD', 'IL', 'OH', 'NC', 'CO', 'TX', 'MI', 'NY', 'IN', 'NJ', 'NV', 'GA', 'FL', 'MO', 'WI', 'MN', 'PA', 'AZ', 'WA', 'UT', 'DC', 'PQ', 'ON']
+STATE_CODES = ['TN', 'MA', 'CA', 'MD', 'IL', 'OH', 'NC', 'CO', 'TX', 'MI', 'NY',
+               'IN', 'NJ', 'NV', 'GA', 'FL', 'MO', 'WI', 'MN', 'PA', 'AZ', 'WA',
+               'UT', 'DC', 'PQ', 'ON']
 
 DAY_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
-        
-CITIES = ['NASHVILLE', 'BOSTON', 'BURBANK', 'BALTIMORE', 'CHICAGO', 'CLEVELAND', 'CHARLOTTE', 'COLUMBUS', 'CINCINNATI', 'DENVER', 'DALLAS', 'DETROIT', 'FORTWORTH', 'HOUSTON', 'WESTCHESTER COUNTY', 'INDIANAPOLIS', 'NEWARK', 'LAS VEGAS', 'LOS ANGELES', 'LONG BEACH', 'ATLANTA', 'MEMPHIS', 'MIAMI', 'KANSAS CITY', 'MILWAUKEE', 'MINNEAPOLIS', 'NEW YORK', 'OAKLAND', 'ONTARIO', 'ORLANDO', 'PHILADELPHIA', 'PHOENIX', 'PITTSBURGH', 'ST. PAUL', 'SAN DIEGO', 'SEATTLE', 'SAN FRANCISCO', 'SAN JOSE', 'SALT LAKE CITY', 'ST. LOUIS', 'ST. PETERSBURG', 'TACOMA', 'TAMPA', 'WASHINGTON', 'MONTREAL', 'TORONTO']
 
-FARE_BASIS_CODE = ['B', 'BH', 'BHW', 'BHX', 'BL', 'BLW', 'BLX', 'BN', 'BOW', 'BOX', 'BW', 'BX', 'C', 'CN', 'F', 'FN', 'H', 'HH', 'HHW', 'HHX', 'HL', 'HLW', 'HLX', 'HOW', 'HOX', 'J', 'K', 'KH', 'KL', 'KN', 'LX', 'M', 'MH', 'ML', 'MOW', 'P', 'Q', 'QH', 'QHW', 'QHX', 'QLW', 'QLX', 'QO', 'QOW', 'QOX', 'QW', 'QX', 'S', 'U', 'V', 'VHW', 'VHX', 'VW', 'VX', 'Y', 'YH', 'YL', 'YN', 'YW', 'YX']
+CITIES = ['NASHVILLE', 'BOSTON', 'BURBANK', 'BALTIMORE', 'CHICAGO', 'CLEVELAND',
+          'CHARLOTTE', 'COLUMBUS', 'CINCINNATI', 'DENVER', 'DALLAS', 'DETROIT',
+          'FORTWORTH', 'HOUSTON', 'WESTCHESTER COUNTY', 'INDIANAPOLIS', 'NEWARK',
+          'LAS VEGAS', 'LOS ANGELES', 'LONG BEACH', 'ATLANTA', 'MEMPHIS', 'MIAMI',
+          'KANSAS CITY', 'MILWAUKEE', 'MINNEAPOLIS', 'NEW YORK', 'OAKLAND', 'ONTARIO',
+          'ORLANDO', 'PHILADELPHIA', 'PHOENIX', 'PITTSBURGH', 'ST. PAUL', 'SAN DIEGO',
+          'SEATTLE', 'SAN FRANCISCO', 'SAN JOSE', 'SALT LAKE CITY', 'ST. LOUIS',
+          'ST. PETERSBURG', 'TACOMA', 'TAMPA', 'WASHINGTON', 'MONTREAL', 'TORONTO']
+
+FARE_BASIS_CODE = ['B', 'BH', 'BHW', 'BHX', 'BL', 'BLW', 'BLX', 'BN', 'BOW', 'BOX',
+                   'BW', 'BX', 'C', 'CN', 'F', 'FN', 'H', 'HH', 'HHW', 'HHX', 'HL', 'HLW', 'HLX',
+                   'HOW', 'HOX', 'J', 'K', 'KH', 'KL', 'KN', 'LX', 'M', 'MH', 'ML', 'MOW', 'P',
+                   'Q', 'QH', 'QHW', 'QHX', 'QLW', 'QLX', 'QO', 'QOW', 'QOX', 'QW', 'QX', 'S',
+                   'U', 'V', 'VHW', 'VHX', 'VW', 'VX', 'Y', 'YH', 'YL', 'YN', 'YW', 'YX']
 
 CLASS = ['COACH', 'BUSINESS', 'FIRST', 'THRIST', 'STANDARD', 'SHUTTLE']
 
-AIRLINE_CODE_LIST = ['AR', '3J', 'AC', '9X', 'ZW', 'AS', '7V', 'AA', 'TZ', 'HP', 'DH', 'EV', 'BE', 'BA', 'HQ', 'CP', 'KW', 'SX', '9L', 'OH', 'CO', 'OK', 'DL', '9E', 'QD', 'LH', 'XJ', 'MG', 'YX', 'NX', '2V', 'NW', 'RP', 'AT', 'SN', 'OO', 'WN', 'TG', 'FF', '9N', 'TW', 'RZ', 'UA', 'US', 'OE']
+AIRLINE_CODE_LIST = ['AR', '3J', 'AC', '9X', 'ZW', 'AS', '7V',
+                     'AA', 'TZ', 'HP', 'DH', 'EV', 'BE', 'BA',
+                     'HQ', 'CP', 'KW', 'SX', '9L', 'OH', 'CO',
+                     'OK', 'DL', '9E', 'QD', 'LH', 'XJ', 'MG',
+                     'YX', 'NX', '2V', 'NW', 'RP', 'AT', 'SN',
+                     'OO', 'WN', 'TG', 'FF', '9N', 'TW', 'RZ',
+                     'UA', 'US', 'OE']
 
 AIRLINE_CODES = {'argentina': 'AR',
                  'alliance': '3J',
@@ -261,7 +282,7 @@ AIRLINE_CODES = {'argentina': 'AR',
                  'nation': 'NX',
                  'northeast': '2V',
                  'northwest': 'NW',
-                 'ontario': '9X',
+                 'ontario express': '9X',
                  'precision': 'RP',
                  'royal': 'AT',
                  'sabena': 'SN',
@@ -285,31 +306,53 @@ GROUND_SERVICE = {
         'taxi': 'TAXI'}
 
 
-AIRPORT_CODES = ['ATL', 'NA', 'OS', 'UR', 'WI', 'CLE', 'CLT', 'CMH', 'CVG', 'DAL', 'DCA', 'DEN', 'DET', 'DFW', 'DTW', 'EWR', 'HOU', 'HPN', 'IAD', 'IAH', 'IND', 'JFK', 'LAS', 'LAX', 'LGA', 'LG', 'MCI', 'MCO', 'MDW', 'MEM', 'MIA', 'MKE', 'MSP', 'OAK', 'ONT', 'ORD', 'PHL', 'PHX', 'PIE', 'PIT', 'SAN', 'SEA', 'SFO', 'SJC', 'SLC', 'STL', 'TPA', 'YKZ', 'YMX', 'YTZ', 'YUL', 'YYZ']
+AIRPORT_CODES = ['ATL', 'NA', 'OS', 'UR', 'WI', 'CLE', 'CLT', 'CMH',
+                 'CVG', 'DAL', 'DCA', 'DEN', 'DET', 'DFW', 'DTW',
+                 'EWR', 'HOU', 'HPN', 'IAD', 'IAH', 'IND', 'JFK',
+                 'LAS', 'LAX', 'LGA', 'LG', 'MCI', 'MCO', 'MDW', 'MEM',
+                 'MIA', 'MKE', 'MSP', 'OAK', 'ONT', 'ORD', 'PHL', 'PHX',
+                 'PIE', 'PIT', 'SAN', 'SEA', 'SFO', 'SJC', 'SLC',
+                 'STL', 'TPA', 'YKZ', 'YMX', 'YTZ', 'YUL', 'YYZ']
 
-STATES = ['ARIZONA', 'CALIFORNIA', 'COLORADO', 'DISTRICT OF COLUMBIA', 'FLORIDA', 'GEORGIA', 'ILLINOIS', 'INDIANA', 'MASSACHUSETTS', 'MARYLAND', 'MICHIGAN', 'MINNESOTA', 'MISSOURI', 'NORTH CAROLINA', 'NEW JERSEY', 'NEVADA', 'NEWYORK', 'OHIO', 'ONTARIO', 'PENNSYLVANIA', 'QUEBEC', 'TENNESSEE', 'TEXAS', 'UTAH', 'WASHINGTON', 'WISCONSIN']
+STATES = ['ARIZONA', 'CALIFORNIA', 'COLORADO', 'DISTRICT OF COLUMBIA',
+          'FLORIDA', 'GEORGIA', 'ILLINOIS', 'INDIANA', 'MASSACHUSETTS',
+          'MARYLAND', 'MICHIGAN', 'MINNESOTA', 'MISSOURI', 'NORTH CAROLINA',
+          'NEW JERSEY', 'NEVADA', 'NEWYORK', 'OHIO', 'ONTARIO', 'PENNSYLVANIA',
+          'QUEBEC', 'TENNESSEE', 'TEXAS', 'UTAH', 'WASHINGTON', 'WISCONSIN']
 
-TABLES = {'aircraft': ['aircraft_code', 'aircraft_description', 'manufacturer', 'basic_type', 'propulsion', 'wide_body', 'pressurized'],
+TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
+                       'manufacturer', 'basic_type', 'propulsion',
+                       'wide_body', 'pressurized'],
           'airline': ['airline_name', 'airline_code'],
-          'airport': ['airport_code', 'airport_name', 'airport_location', 'state_code', 'country_name', 'time_zone_code', 'minimum_connect_time'],
-          'airport_service': ['city_code', 'airport_code', 'miles_distant', 'direction', 'minutes_distant'],
+          'airport': ['airport_code', 'airport_name', 'airport_location',
+                      'state_code', 'country_name', 'time_zone_code',
+                      'minimum_connect_time'],
+          'airport_service': ['city_code', 'airport_code', 'miles_distant',
+                              'direction', 'minutes_distant'],
           'city': ['city_code', 'city_name', 'state_code', 'country_name', 'time_zone_code'],
           'class_of_service': ['booking_class', 'rank', 'class_description'],
-           'date_day': ['month_number', 'day_number', 'year', 'day_name'],
-           'days': ['days_code', 'day_name'],
-           'equipment_sequence': ['aircraft_code_sequence', 'aircraft_code'],
-           'fare': ['fare_id', 'from_airport', 'to_airport', 'fare_basis_code', 'fare_airline', 'restriction_code', 'one_direction_cost', 'round_trip_cost', 'round_trip_required'],
-           'fare_basis': ['fare_basis_code', 'booking_class', 'class_type', 'premium', 'economy', 'discounted', 'night', 'season', 'basis_days'],
-           'flight': ['flight_id', 'flight_days', 'from_airport', 'to_airport', 'departure_time', 'arrival_time', 'airline_flight', 'airline_code', 'flight_number',
-               'aircraft_code_sequence', 'meal_code', 'stops', 'connections', 'dual_carrier', 'time_elapsed'],
-           'flight_fare': ['flight_id', 'fare_id'],
-           'flight_leg': ['flight_id', 'leg_number', 'leg_flight'],
-           'flight_stop': ['flight_id', 'stop_number', 'stop_days', 'stop_airport', 'arrival_time', 'arrival_airline', 'arrival_flight_number', 'departure_time', 'departure_airline', 'departure_flight_number', 'stop_time'],
-           'food_service': ['meal_code', 'meal_number', 'compartment', 'meal_description'],
-           'ground_service': ['city_code', 'airport_code', 'transport_type', 'ground_fare'],
-           'month': ['month_number', 'month_name'],
-           'restriction': ['restriction_code', 'advance_purchase', 'stopovers', 'saturday_stay_required', 'minimum_say', 'maximum_stay', 'application', 'no_discounts'],
-           'state': ['state_code', 'state_name', 'country_name']}
+          'date_day': ['month_number', 'day_number', 'year', 'day_name'],
+          'days': ['days_code', 'day_name'],
+          'equipment_sequence': ['aircraft_code_sequence', 'aircraft_code'],
+          'fare': ['fare_id', 'from_airport', 'to_airport', 'fare_basis_code', 'fare_airline',
+                   'restriction_code', 'one_direction_cost', 'round_trip_cost', 'round_trip_required'],
+          'fare_basis': ['fare_basis_code', 'booking_class', 'class_type', 'premium', 'economy',
+                         'discounted', 'night', 'season', 'basis_days'],
+          'flight': ['flight_id', 'flight_days', 'from_airport', 'to_airport', 'departure_time',
+                     'arrival_time', 'airline_flight', 'airline_code', 'flight_number',
+                     'aircraft_code_sequence', 'meal_code', 'stops', 'connections',
+                     'dual_carrier', 'time_elapsed'],
+          'flight_fare': ['flight_id', 'fare_id'],
+          'flight_leg': ['flight_id', 'leg_number', 'leg_flight'],
+          'flight_stop': ['flight_id', 'stop_number', 'stop_days', 'stop_airport', 'arrival_time',
+                          'arrival_airline', 'arrival_flight_number', 'departure_time', 'departure_airline',
+                          'departure_flight_number', 'stop_time'],
+          'food_service': ['meal_code', 'meal_number', 'compartment', 'meal_description'],
+          'ground_service': ['city_code', 'airport_code', 'transport_type', 'ground_fare'],
+          'month': ['month_number', 'month_name'],
+          'restriction': ['restriction_code', 'advance_purchase', 'stopovers', 'saturday_stay_required',
+                          'minimum_say', 'maximum_stay', 'application', 'no_discounts'],
+          'state': ['state_code', 'state_name', 'country_name']}
 
 YES_NO = {'one way': 'NO',
-        'economy': 'YES'}
+          'economy': 'YES'}
