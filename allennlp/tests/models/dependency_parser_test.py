@@ -1,5 +1,4 @@
 # pylint: disable=no-self-use,invalid-name,no-value-for-parameter
-import torch
 
 from allennlp.common.testing.model_test_case import ModelTestCase
 
@@ -22,3 +21,12 @@ class DependencyParserTest(ModelTestCase):
     def test_batch_predictions_are_consistent(self):
         self.ensure_batch_predictions_are_consistent()
 
+    def test_decode_runs(self):
+        self.model.eval()
+        training_tensors = self.dataset.as_tensor_dict()
+        output_dict = self.model(**training_tensors)
+        decode_output_dict = self.model.decode(output_dict)
+
+        assert decode_output_dict.keys() == ['heads', 'head_types', 'arc_loss',
+                                             'type_loss', 'loss', 'mask',
+                                             'head_type_labels', 'head_indices']

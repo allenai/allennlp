@@ -12,7 +12,8 @@ from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.modules.biaffine_attention import BiaffineAttention
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
-from allennlp.nn.util import get_text_field_mask, get_range_vector, get_device_of, last_dim_log_softmax
+from allennlp.nn.util import get_text_field_mask, get_range_vector
+from allennlp.nn.util import get_device_of, last_dim_log_softmax, get_lengths_from_binary_sequence_mask
 from allennlp.nn.decoding.chu_liu_edmonds import decode_mst
 
 @Model.register("dependency_parser")
@@ -155,16 +156,18 @@ class DependencyParser(Model):
                                                     attended_arcs,
                                                     mask)
         elif self.use_mst_decoding_for_validation:
-            self._mst_decode(head_type_representation,
-                             child_type_representation,
-                             attended_arcs,
-                             mask)
+            heads, head_types = self._mst_decode(head_type_representation,
+                                                 child_type_representation,
+                                                 attended_arcs,
+                                                 mask)
 
         if has_gold_labels:
             pass
             # compute accuracy
 
         output_dict = {
+                "heads": heads,
+                "head_types": head_types,
                 "arc_loss": arc_nll,
                 "type_loss": type_nll,
                 "loss": loss,
@@ -173,6 +176,26 @@ class DependencyParser(Model):
 
         return output_dict
 
+    @overrides
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+
+        head_types = output_dict["head_types"].cpu().detach().numpy()
+        heads = output_dict["heads"].cpu().detach().numpy()
+        lengths = get_lengths_from_binary_sequence_mask(output_dict["mask"])
+        head_type_labels = []
+        head_indices = []
+        for batch, batch_type, length in zip(heads, head_types, lengths):
+
+            batch = list(batch[1: length])
+            batch_type = batch_type[1: length]
+            labels = [self.vocab.get_token_from_index(label, "head_tags")
+                      for label in batch_type]
+            head_type_labels.append(labels)
+            head_indices.append(batch)
+
+        output_dict["head_type_labels"] = head_type_labels
+        output_dict["head_indices"] = head_indices
+        return output_dict
 
     def _construct_loss(self,
                         head_type_representation: torch.Tensor,
@@ -327,8 +350,14 @@ class DependencyParser(Model):
         # Shape (batch_size, num_head_tags, timesteps, timesteps)
         energy = torch.exp(arc_loss.unsqueeze(1) + pairwise_head_type_loss)
 
-        return decode_mst(energy.detach().cpu().numpy(), lengths)
-        
+        heads = []
+        head_types = []
+        for e, length in zip(energy.detach().cpu().numpy(), lengths):
+            head, head_type = decode_mst(e, length)
+            heads.append(head)
+            head_types.append(head_type)
+        return torch.from_numpy(numpy.stack(heads)), torch.from_numpy(numpy.stack(head_types))
+
 
     def _get_head_types(self,
                         head_type_representation: torch.Tensor,
