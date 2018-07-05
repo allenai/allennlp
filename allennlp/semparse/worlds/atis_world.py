@@ -10,6 +10,9 @@ def generate_one_of_str(nonterminal: str, literals: List[str]) -> str:
     return  "\n{} \t\t = ".format(nonterminal) + " / ".join(['"{}"'.format(lit) for lit in literals])
 
 class AtisWorld():
+    """
+    World representation for the Atis SQL domain.
+    """
     def __init__(self, conversation_context, utterance=None) -> None:
         self.conversation_context = conversation_context
         self.utterance = utterance
@@ -30,9 +33,12 @@ class AtisWorld():
 
     def get_grammar_str(self) -> str:
         grammar_str_with_context = self.conversation_context.base_sql_def
+        
+
         grammar_str_with_context += "\n    col_ref \t\t = " +  \
-                                    " / ".join(self.valid_actions["col_ref"]) + \
+                                    " / ".join(self.valid_actions['col_ref']) + \
                                     " / asterisk"
+
         grammar_str_with_context += generate_one_of_str("table_name",
                                                         sorted(self.valid_actions["table_name"],
                                                                reverse=True))
@@ -120,7 +126,7 @@ class SQLVisitor(NodeVisitor):
                 else:
                     rule += ' {}'.format(child.expr._as_rhs())
 
-            self.prod_acc = [rule] + self.prod_acc
+            self.prod_acc = [rule.replace(" ws","").replace("ws ","")] + self.prod_acc
 
     def visit_stmt(self, node, children):
         self.add_prod_rule(node)

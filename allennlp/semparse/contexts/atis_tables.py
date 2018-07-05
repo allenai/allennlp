@@ -69,7 +69,9 @@ OPTIONAL = ['lparen', 'rparen', '(lparen ws)', '(ws rparen)', 'not', 'ws', 'aste
 
 class ConversationContext():
     """
-    A ``ConversationContext`` represents the interaction in which an utterance occurs
+    A ``ConversationContext`` represents the interaction in which an utterance occurs.
+    It initializes the global actions that are valid for every interaction. For each utterance,
+    local actions are added and are valid for future utterances in the same interaction.
     """
     def __init__(self, interaction: List[Dict[str, str]]):
         self.interaction = interaction
@@ -77,7 +79,7 @@ class ConversationContext():
         self.grammar = Grammar(SQL_GRAMMAR_STR)
         self.valid_actions = self.initialize_valid_actions()
 
-    def initialize_valid_actions(self):
+    def initialize_valid_actions(self) -> Dict[str, List[str]]:
         valid_actions: Dict[str, List[str]] = defaultdict(set)
 
         for key in self.grammar:
@@ -95,7 +97,6 @@ class ConversationContext():
                 else:
                     valid_actions[key] = set()
 
-
         for table in list(sorted(TABLES.keys(), reverse=True)):
             valid_actions['table_name'].add(table)
             for column in sorted(TABLES[table], reverse=True):
@@ -104,7 +105,6 @@ class ConversationContext():
         valid_actions['col_ref'].add('asterisk')
 
         valid_action_strings = {key: sorted(value) for key, value in valid_actions.items()}
-
         return valid_action_strings
 
 
