@@ -3,7 +3,7 @@ Various utilities that don't fit anwhere else.
 """
 
 from itertools import zip_longest, islice
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator
+from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator, Union
 import importlib
 import logging
 import pkgutil
@@ -12,6 +12,7 @@ import resource
 import subprocess
 import sys
 import os
+import re
 
 import torch
 import numpy
@@ -344,3 +345,25 @@ def is_lazy(iterable: Iterable[A]) -> bool:
     which here just means it's not a list.
     """
     return not isinstance(iterable, list)
+
+def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> List[int]:
+    """
+    Disambiguates single GPU and multiple GPU settings for cuda_device param
+    """
+    def from_list(l):
+        if len(l) > 1:
+            return [int(d) for d in l]
+        elif len(l) == 1:
+            return int(l[0])
+        else:
+            return -1
+
+    if isinstance(cuda_device, str):
+        return from_list( re.split(r',\s*', cuda_device) )
+    elif isinstance(cuda_device, int):
+        return cuda_device
+    elif isinstance(cuda_device, list):
+        return from_list(cuda_device)
+    else:
+        return int(cuda_device)
+

@@ -25,7 +25,7 @@ from tensorboardX import SummaryWriter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import peak_memory_mb, gpu_memory_mb
+from allennlp.common.util import peak_memory_mb, gpu_memory_mb, parse_cuda_device
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -394,7 +394,20 @@ class Trainer:
         of torch.nn.parallel.data_parallel to support the allennlp model
         interface.
         """
+        metadata_batch_size = len(batch['metadata']) if 'metadata' in batch and isinstance(batch['metadata'],list) else None
+
         inputs, module_kwargs = scatter_kwargs((), batch, self._cuda_devices, 0)
+
+        if metadata_batch_size is not None:
+            # Metadata batches also have to be chunked as PyTorch is unaware of them.
+            # Follows chunking implementation by ATen.native.TensorShape functions.
+            chunk_size = 1 + (metadata_batch_size - 1)//len(self._cuda_devices)
+            chunk_offset = 0
+            for instance in module_kwargs:
+                if 'metadata' in instance:
+                     instance['metadata'] = instance['metadata'][chunk_offset:chunk_size+chunk_offset]
+                     chunk_offset += chunk_size
+
         used_device_ids = self._cuda_devices[:len(inputs)]
         replicas = replicate(self._model, used_device_ids)
         outputs = parallel_apply(replicas, inputs, module_kwargs, used_device_ids)
@@ -959,13 +972,11 @@ class Trainer:
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
         num_epochs = params.pop_int("num_epochs", 20)
-        cuda_device = params.pop_int("cuda_device", -1)
+        cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
 
-        if cuda_device >= 0:
-            model = model.cuda(cuda_device)
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
