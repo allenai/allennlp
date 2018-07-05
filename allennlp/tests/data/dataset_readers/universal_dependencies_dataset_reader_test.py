@@ -16,23 +16,24 @@ class TestUniversalDependenciesDatasetReader(AllenNlpTestCase):
                                                             'Morphed', 'Into', 'GoogleOS', '?']
 
         assert fields["pos_tags"].labels == ['ROOT_POS', 'PRON', 'SCONJ', 'PROPN', 'VERB', 'ADP', 'PROPN', 'PUNCT']
-        assert fields["head_tags"].labels == ['root','root', 'mark', 'nsubj', 'advcl:if', 'case', 'obl:into', 'punct']
+        assert fields["head_tags"].labels == ['root', 'root', 'mark', 'nsubj', 'advcl:if',
+                                              'case', 'obl:into', 'punct']
         assert fields["head_indices"].labels == [0, 0, 4, 4, 1, 6, 4, 4]
 
         instance = instances[1]
         fields = instance.fields
-        assert [t.text for t in fields["words"].tokens] == ['ROOT_HEAD','What', 'if', 'Google', 'expanded', 'on',
+        assert [t.text for t in fields["words"].tokens] == ['ROOT_HEAD', 'What', 'if', 'Google', 'expanded', 'on',
                                                             'its', 'search', '-', 'engine', '(', 'and',
                                                             'now', 'e-mail', ')', 'wares', 'into', 'a',
                                                             'full', '-', 'fledged', 'operating', 'system', '?']
 
-        assert fields["pos_tags"].labels == ['ROOT_POS','PRON', 'SCONJ', 'PROPN', 'VERB', 'ADP', 'PRON', 'NOUN', 'PUNCT',
-                                             'NOUN', 'PUNCT', 'CCONJ', 'ADV', 'NOUN', 'PUNCT', 'NOUN', 'ADP',
-                                             'DET', 'ADV', 'PUNCT', 'ADJ', 'NOUN', 'NOUN', 'PUNCT']
-        assert fields["head_tags"].labels == ['root', 'root', 'mark', 'nsubj', 'advcl:if', 'case', 'nmod:poss', 'compound',
-                                              'punct', 'compound', 'punct', 'cc', 'advmod', 'conj:and', 'punct',
-                                              'obl:on', 'case', 'det', 'advmod', 'punct', 'amod', 'compound',
-                                              'obl:into', 'punct']
+        assert fields["pos_tags"].labels == ['ROOT_POS', 'PRON', 'SCONJ', 'PROPN', 'VERB', 'ADP', 'PRON', 'NOUN',
+                                             'PUNCT', 'NOUN', 'PUNCT', 'CCONJ', 'ADV', 'NOUN', 'PUNCT', 'NOUN',
+                                             'ADP', 'DET', 'ADV', 'PUNCT', 'ADJ', 'NOUN', 'NOUN', 'PUNCT']
+        assert fields["head_tags"].labels == ['root', 'root', 'mark', 'nsubj', 'advcl:if', 'case', 'nmod:poss',
+                                              'compound', 'punct', 'compound', 'punct', 'cc', 'advmod',
+                                              'conj:and', 'punct', 'obl:on', 'case', 'det', 'advmod', 'punct',
+                                              'amod', 'compound', 'obl:into', 'punct']
         assert fields["head_indices"].labels == [0, 0, 4, 4, 1, 15, 15, 9, 9, 15, 9, 13, 13,
                                                  9, 15, 4, 22, 22, 20, 20, 22, 22, 4, 4]
 

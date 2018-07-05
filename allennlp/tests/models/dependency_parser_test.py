@@ -27,6 +27,6 @@ class DependencyParserTest(ModelTestCase):
         output_dict = self.model(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
 
-        assert decode_output_dict.keys() == ['heads', 'head_types', 'arc_loss',
-                                             'type_loss', 'loss', 'mask',
-                                             'head_type_labels', 'head_indices']
+        assert list(decode_output_dict.keys()) == ['heads', 'head_types', 'arc_loss',
+                                                   'type_loss', 'loss', 'mask',
+                                                   'head_type_labels', 'head_indices']
