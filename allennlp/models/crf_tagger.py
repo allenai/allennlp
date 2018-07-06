@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Any
 
 from overrides import overrides
 import torch
@@ -13,6 +13,7 @@ from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 import allennlp.nn.util as util
 from allennlp.training.metrics import SpanBasedF1Measure
+
 
 @Model.register("crf_tagger")
 class CrfTagger(Model):
@@ -87,7 +88,8 @@ class CrfTagger(Model):
     @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
-                tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                tags: torch.LongTensor = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -104,6 +106,8 @@ class CrfTagger(Model):
         tags : ``torch.LongTensor``, optional (default = ``None``)
             A torch tensor representing the sequence of integer gold class labels of shape
             ``(batch_size, num_tokens)``.
+        metadata : ``List[Dict[str, Any]]``, optional, (default = None)
+            metadata containg the original words in the sentence to be tagged under a 'words' key.
 
         Returns
         -------
@@ -113,7 +117,7 @@ class CrfTagger(Model):
             The logits that are the output of the ``tag_projection_layer``
         mask : ``torch.LongTensor``
             The text field mask for the input tokens
-        tags : ``List[List[str]]``
+        tags : ``List[List[int]]``
             The predicted tags using the Viterbi algorithm.
         loss : ``torch.FloatTensor``, optional
             A scalar loss to be optimised. Only computed if gold label ``tags`` are provided.
@@ -130,7 +134,10 @@ class CrfTagger(Model):
             encoded_text = self.dropout(encoded_text)
 
         logits = self.tag_projection_layer(encoded_text)
-        predicted_tags = self.crf.viterbi_tags(logits, mask)
+        best_paths = self.crf.viterbi_tags(logits, mask)
+
+        # Just get the tags and ignore the score.
+        predicted_tags = [x for x, y in best_paths]
 
         output = {"logits": logits, "mask": mask, "tags": predicted_tags}
 
@@ -147,7 +154,8 @@ class CrfTagger(Model):
                     class_probabilities[i, j, tag_id] = 1
 
             self.span_metric(class_probabilities, tags, mask)
-
+        if metadata is not None:
+            output["words"] = [x["words"] for x in metadata]
         return output
 
     @overrides
@@ -158,7 +166,7 @@ class CrfTagger(Model):
         so we use an ugly nested list comprehension.
         """
         output_dict["tags"] = [
-                [self.vocab.get_token_from_index(tag, namespace="labels")
+                [self.vocab.get_token_from_index(tag, namespace=self.label_namespace)
                  for tag in instance_tags]
                 for instance_tags in output_dict["tags"]
         ]

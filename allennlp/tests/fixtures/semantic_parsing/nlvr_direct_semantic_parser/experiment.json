@@ -6,8 +6,8 @@
   "vocabulary": {
     "non_padded_namespaces": ["denotations", "rule_labels"]
   },
-  "train_data_path": "tests/fixtures/data/nlvr/sample_processed_data.jsonl",
-  "validation_data_path": "tests/fixtures/data/nlvr/sample_processed_data.jsonl",
+  "train_data_path": "allennlp/tests/fixtures/data/nlvr/sample_processed_data.jsonl",
+  "validation_data_path": "allennlp/tests/fixtures/data/nlvr/sample_processed_data.jsonl",
   "model": {
     "type": "nlvr_direct_parser",
     "sentence_embedder": {
@@ -28,7 +28,7 @@
       "beam_size": 5
     },
     "max_decoding_steps": 20,
-    "attention_function": {"type": "dot_product"},
+    "attention": {"type": "dot_product"},
     "dropout": 0.2
   },
   "iterator": {

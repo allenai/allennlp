@@ -1,5 +1,4 @@
 import copy
-import os
 
 from numpy.testing import assert_allclose
 import torch
@@ -19,10 +18,6 @@ class ModelTestCase(AllenNlpTestCase):
     """
     def set_up_model(self, param_file, dataset_file):
         # pylint: disable=attribute-defined-outside-init
-        initial_working_dir = os.getcwd()
-        # Change directory to module root.
-        os.chdir(self.MODULE_ROOT)
-
         self.param_file = param_file
         params = Params.from_file(self.param_file)
 
@@ -44,17 +39,10 @@ class ModelTestCase(AllenNlpTestCase):
         self.dataset = Batch(self.instances)
         self.dataset.index_instances(self.vocab)
 
-        # Change directory back to what it was initially
-        os.chdir(initial_working_dir)
-
     def ensure_model_can_train_save_and_load(self,
                                              param_file: str,
                                              tolerance: float = 1e-4,
                                              cuda_device: int = -1):
-        initial_working_dir = os.getcwd()
-        # Change directory to module root.
-        os.chdir(self.MODULE_ROOT)
-
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
         model = train_model_from_file(param_file, save_dir)
@@ -120,9 +108,6 @@ class ModelTestCase(AllenNlpTestCase):
                                      name=key,
                                      tolerance=tolerance)
 
-        # Change directory back to what it was initially
-        os.chdir(initial_working_dir)
-
         return model, loaded_model
 
     def assert_fields_equal(self, field1, field2, name: str, tolerance: float = 1e-6) -> None:
@@ -162,6 +147,10 @@ class ModelTestCase(AllenNlpTestCase):
 
                 if parameter.grad is None:
                     has_zero_or_none_grads[name] = "No gradient computed (i.e parameter.grad is None)"
+
+                elif parameter.grad.is_sparse or parameter.grad.data.is_sparse:
+                    pass
+
                 # Some parameters will only be partially updated,
                 # like embeddings, so we just check that any gradient is non-zero.
                 elif (parameter.grad.cpu() == zeros).all():

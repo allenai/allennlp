@@ -70,7 +70,7 @@ class TestMain(AllenNlpTestCase):
 
         # Write out config file
         config_path = self.TEST_DIR / 'config.json'
-        config_json = """
+        config_json = """{
                 "model": {
                         "type": "duplicate-test-tagger",
                         "text_field_embedder": {
@@ -87,14 +87,15 @@ class TestMain(AllenNlpTestCase):
                         }
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": $$$,
-                "validation_data_path": $$$,
+                "train_data_path": "$$$",
+                "validation_data_path": "$$$",
                 "iterator": {"type": "basic", "batch_size": 2},
                 "trainer": {
                         "num_epochs": 2,
                         "optimizer": "adam"
                 }
-            """.replace('$$$', data_path)
+            }""".replace('$$$', data_path)
+        print(config_json)
         with open(config_path, 'w') as config_file:
             config_file.write(config_json)
 

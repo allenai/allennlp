@@ -211,3 +211,24 @@ class TestBasicIterator(IteratorTest):
         params = Params({"batch_size": 10})
         iterator = BasicIterator.from_params(params)
         assert iterator._batch_size == 10
+
+    def test_maximum_samples_per_batch(self):
+        for test_instances in (self.instances, self.lazy_instances):
+            # pylint: disable=protected-access
+            iterator = BasicIterator(
+                    batch_size=3, maximum_samples_per_batch=['num_tokens', 9]
+            )
+            batches = list(iterator._create_batches(test_instances, shuffle=False))
+
+            # ensure all instances are in a batch
+            grouped_instances = [batch.instances for batch in batches]
+            num_instances = sum(len(group) for group in grouped_instances)
+            assert num_instances == len(self.instances)
+
+            # ensure all batches are sufficiently small
+            for batch in batches:
+                batch_sequence_length = max(
+                        [instance.get_padding_lengths()['text']['num_tokens']
+                         for instance in batch.instances]
+                )
+                assert batch_sequence_length * len(batch.instances) <= 9
