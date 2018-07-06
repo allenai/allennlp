@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 import sys
+from collections import OrderedDict
 
 import pytest
 import torch
@@ -65,3 +66,16 @@ class TestCommonUtils(AllenNlpTestCase):
         assert 'mymodule.submodule' in sys.modules
 
         sys.path.remove(str(self.TEST_DIR))
+
+    def test_get_frozen_and_tunable_parameter_names(self):
+        model = torch.nn.Sequential(OrderedDict([
+                ('conv', torch.nn.Conv1d(5, 5, 5)),
+                ('linear', torch.nn.Linear(5, 10)),
+                ]))
+        named_parameters = dict(model.named_parameters())
+        named_parameters['linear.weight'].requires_grad_(False)
+        named_parameters['linear.bias'].requires_grad_(False)
+        frozen_parameter_names, tunable_parameter_names = \
+                       util.get_frozen_and_tunable_parameter_names(model)
+        assert set(frozen_parameter_names) == {'linear.weight', 'linear.bias'}
+        assert set(tunable_parameter_names) == {'conv.weight', 'conv.bias'}
