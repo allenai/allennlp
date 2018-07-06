@@ -76,11 +76,9 @@ class DQA(Model):
         self._official_em = Average()
         self._official_f1 = Average()
         if dropout > 0:
-            # self._dropout = torch.nn.Dropout(p=dropout)
             self._dropout = VariationalDropout(p=dropout)
         else:
             raise ValueError()
-            # self._dropout = lambda x: x
         self._mask_lstms = mask_lstms
 
     def forward(self,  # type: ignore
@@ -94,10 +92,26 @@ class DQA(Model):
                 followup_list: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         batch_size, maxqapair_len, max_q_len, max_word_len = question['token_characters'].size()
-        question = {k: v.view(batch_size*maxqapair_len, max_q_len, -1)for k, v in question.items()}
+        _, _, max_ans_len, _ = question['token_characters'].size()
+        question = {k: v.view(batch_size * maxqapair_len, max_q_len, -1)for k, v in question.items()}
+
+        single_answers = {k: v.view(batch_size * maxqapair_len, max_ans_len, -1)for k, v in single_answers.items()}
+
 
         embedded_question = self._dropout(self._text_field_embedder(question))
         embedded_passage = self._dropout(self._text_field_embedder(passage))
+
+        ## NEW EDITIONS
+        # encode previous questions and previous answers.
+        # prev_questions : [batch_size * maxqapair_len, maxqapair_len, max_q_len, embed_dim]
+        # prev_answers : [batch_size * maxqapair_len, maxqapair_len, max_ans_len, embed_dim]
+
+        embedded_answers = self._dropout(self._text_field_embedder(single_answers))
+        answer_mask = util.get_text_field_mask(single_answers).float()
+
+
+
+
         passage_length = embedded_passage.size(1)
 
         question_mask = util.get_text_field_mask(question).float()
@@ -108,17 +122,22 @@ class DQA(Model):
 
         encoded_question = self._dropout(self._phrase_layer(
           embedded_question, question_lstm_mask))
+
+
+
+
+
         # batch_size, token_len, emb_dim
-        encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_lstm_mask)).\
+        encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_lstm_mask))
+        repeated_encoded_passage = encoded_passage.\
           unsqueeze(1).repeat(1, maxqapair_len, 1, 1).view(batch_size*maxqapair_len, passage_lstm_mask.size()[1], -1)# batch_size * maxqapair_len, max_q_len, max_word_len
         encoding_dim = encoded_question.size(-1)
-        #prev_followup_emb = self._followup_emb(prev_followup)
 
-        # Shape: (batch_size, passage_length, question_length)
-        passage_question_similarity = self._matrix_attention(encoded_passage, encoded_question)
-        # Shape: (batch_size, passage_length, question_length)
+        # Shape: (batch_size * maxqapair_len, passage_length, question_length)
+        passage_question_similarity = self._matrix_attention(repeated_encoded_passage, encoded_question)
+        # Shape: (batch_size * maxqapair_len, passage_length, question_length)
         passage_question_attention = util.last_dim_softmax(passage_question_similarity, question_mask)
-        # Shape: (batch_size, passage_length, encoding_dim)
+        # Shape: (batch_size * maxqapair_len, passage_length, encoding_dim)
         passage_question_vectors = util.weighted_sum(encoded_question, passage_question_attention)
 
         # We replace masked values with something really negative here, so they don't affect the
@@ -135,16 +154,16 @@ class DQA(Model):
         question_passage_attention = util.masked_softmax(question_passage_similarity,
                                                          passage_mask)
         # Shape: (batch_size, encoding_dim)
-        question_passage_vector = util.weighted_sum(encoded_passage, question_passage_attention)
+        question_passage_vector = util.weighted_sum(repeated_encoded_passage, question_passage_attention)
         # Shape: (batch_size, passage_length, encoding_dim)
         tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(batch_size*maxqapair_len,
                                                                                     passage_length,
                                                                                     encoding_dim)
-        # Shape: (batch_size, passage_length, encoding_dim * 4)
-        final_merged_passage = torch.cat([encoded_passage,
+        # Shape: (batch_size * maxqapair_len, passage_length, encoding_dim * 4)
+        final_merged_passage = torch.cat([repeated_encoded_passage,
                                           passage_question_vectors,
-                                          encoded_passage * passage_question_vectors,
-                                          encoded_passage * tiled_question_passage_vector],
+                                          repeated_encoded_passage * passage_question_vectors,
+                                          repeated_encoded_passage * tiled_question_passage_vector],
                                          dim=-1)
 
         final_merged_passage = F.relu(self._merge_atten(final_merged_passage))
@@ -157,8 +176,8 @@ class DQA(Model):
 
         # torch.eye does not have a gpu implementation, so we are forced to use the cpu one and .cuda()
         # Not sure if this matters for performance
-        self_mask = Variable(torch.eye(passage_length, passage_length).cuda()).resize(1, passage_length, passage_length)
-        #self_mask = Variable(torch.eye(passage_length, passage_length)).resize(1, passage_length, passage_length)
+        #self_mask = Variable(torch.eye(passage_length, passage_length).cuda()).resize(1, passage_length, passage_length)
+        self_mask = Variable(torch.eye(passage_length, passage_length)).resize(1, passage_length, passage_length)
         mask = mask * (1 - self_mask)
 
         self_atten_probs = util.last_dim_softmax(self_atten_matrix, mask)
@@ -203,23 +222,21 @@ class DQA(Model):
             self._span_accuracy(best_span[:,0:2], torch.stack([span_start, span_end], -1))
             #add a select for the right span
             v = []
-            _span_end = span_end.squeeze()
-            for i in range(0, batch_size):
-              v.append(span_end[i]*3 + i*passage_length*3)
-              v.append(span_end[i]*3 + i*passage_length*3 + 1)
-              v.append(span_end[i]*3 + i*passage_length*3 + 2)
-            gt_end = Variable(torch.LongTensor(v).cuda())
+            span_end = span_end.view(-1).squeeze().data.cpu().numpy()
+            for i in range(0, batch_size * maxqapair_len):
+              v.append(max(span_end[i]*3 + i*passage_length*3, 0))
+              v.append(max(span_end[i]*3 + i*passage_length*3 + 1, 0))
+              v.append(max(span_end[i]*3 + i*passage_length*3 + 2, 0))
+            gt_end = Variable(torch.LongTensor(v))#.cuda())
 
             v = []
-            for i in range(0, batch_size):
-              v.append(best_span[i][1]*3 + i*passage_length*3)
-              v.append(best_span[i][1]*3 + i*passage_length*3 + 1)
-              v.append(best_span[i][1]*3 + i*passage_length*3 + 2)
+            for i in range(0, batch_size * maxqapair_len):
+              v.append(max(best_span[i][1]*3 + i*passage_length*3, 0))
+              v.append(max(best_span[i][1]*3 + i*passage_length*3 + 1, 0))
+              v.append(max(best_span[i][1]*3 + i*passage_length*3 + 2, 0))
 
 
-            predicted_end = Variable(torch.LongTensor(v).cuda())
-
-
+            predicted_end = Variable(torch.LongTensor(v))#.cuda())
             # ALL OF THESE NEEDS A MASK NOW.
             _yesno = span_yesno_logits.view(-1).index_select(0,gt_end).view(-1,3)
             _followup = span_followup_logits.view(-1).index_select(0,gt_end).view(-1,3)
@@ -231,50 +248,42 @@ class DQA(Model):
             
             _yesno = span_yesno_logits.view(-1).index_select(0,predicted_end).view(-1,3)
             _followup = span_followup_logits.view(-1).index_select(0,predicted_end).view(-1,3)
-
             self._span_yesno_accuracy(_yesno, yesno_list.view(-1))
             self._span_followup_accuracy(_followup, followup_list.view(-1))
-
             #add a select for the right span
             output_dict["loss"] = loss
 
-        def clean(s):
-          for i in range(0,10):
-            prepend = "ANSWER{}_START".format(i)
-            postpend = "ANSWER{}_END".format(i)
-            s = s.replace(prepend, "").replace(postpend, "")
-          return s
 
         if metadata is not None:
+            best_span_cpu = best_span.data.cpu().numpy()
             output_dict['best_span_str'] = []
             if self.outfile is not None:
               f = open(self.outfile, "a")
             for i in range(batch_size):
                 passage_str = metadata[i]['original_passage']
                 offsets = metadata[i]['token_offsets']
-                predicted_span = tuple(best_span[i].data.cpu().numpy())
-                start_offset = offsets[predicted_span[0]][0]
-                end_offset = offsets[predicted_span[1]][1]
-                best_span_string = passage_str[start_offset:end_offset]
-                output_dict['best_span_str'].append(best_span_string)
-                answer_texts = metadata[i].get('answer_texts', [])
                 exact_match = f1_score = 0
-                
                 if self.outfile is not None:
-                  (aid, qid) = metadata[i]["instance_id"].split("_q#")
-                  f.write("{}\t{}\t{}\t{}\t{}\n".format(aid, qid, metadata[i]["question"], clean(best_span_string), answer_texts)) 
-
-                if answer_texts:
-                    exact_match = squad_eval.metric_max_over_ground_truths(
-                            squad_eval.exact_match_score,
-                            best_span_string,
-                            answer_texts)
-                    f1_score = squad_eval.metric_max_over_ground_truths(
-                            squad_eval.f1_score,
-                            best_span_string,
-                            answer_texts)
-                self._official_em(100 * exact_match)
-                self._official_f1(100 * f1_score)
+                  for currcount, (iid, qtext, answer_texts) in enumerate(
+                          zip(metadata[i]["instance_id"], metadata[i]["question"], metadata[i]["answer_text_lists"])):
+                    (aid, qid) = iid.split("_q#")
+                    predicted_span = tuple(best_span_cpu[i*maxqapair_len+currcount])
+                    start_offset = offsets[predicted_span[0]][0]
+                    end_offset = offsets[predicted_span[1]][1]
+                    best_span_string = passage_str[start_offset:end_offset]
+                    output_dict['best_span_str'].append(best_span_string)
+                    f.write("{}\t{}\t{}\t{}\t{}\n".format(aid, qid, qtext, best_span_string, answer_texts))
+                    if answer_texts:
+                      exact_match = squad_eval.metric_max_over_ground_truths(
+                              squad_eval.exact_match_score,
+                              best_span_string,
+                              answer_texts)
+                      f1_score = squad_eval.metric_max_over_ground_truths(
+                              squad_eval.f1_score,
+                              best_span_string,
+                              answer_texts)
+                    self._official_em(100 * exact_match)
+                    self._official_f1(100 * f1_score)
         if self.outfile is not None:
           f.close()
         

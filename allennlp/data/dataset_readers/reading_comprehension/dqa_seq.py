@@ -61,9 +61,11 @@ class DQASeqReader(DatasetReader):
                 tokenized_paragraph = self._tokenizer.tokenize(paragraph)
                 qas = paragraph_json['qas']
                 metadata = {}
-                metadata["instance_id"] = ' '.join([qa['id'] for qa in qas])
+                metadata["instance_id"] = [qa['id'] for qa in qas]
                 question_text_list = [qa["question"].strip().replace("\n", "") for qa in qas]
                 answer_texts_list = [[answer['text'] for answer in qa['answers']] for qa in qas]
+                metadata["answer_text_lists"] = answer_texts_list
+                metadata["question"] = question_text_list
                 single_answer_texts_list = [qa['answers'][0]['text'] for qa in qas]
                 span_starts_list = [[answer['answer_start'] for answer in qa['answers']] for qa in qas]
                 span_ends_list = []
