@@ -166,7 +166,7 @@ class CrfTagger(Model):
         so we use an ugly nested list comprehension.
         """
         output_dict["tags"] = [
-                [self.vocab.get_token_from_index(tag, namespace="labels")
+                [self.vocab.get_token_from_index(tag, namespace=self.label_namespace)
                  for tag in instance_tags]
                 for instance_tags in output_dict["tags"]
         ]
