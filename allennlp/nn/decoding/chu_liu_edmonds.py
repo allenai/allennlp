@@ -50,13 +50,12 @@ def decode_mst(energy: numpy.ndarray,
 
     old_input = numpy.zeros([length, length], dtype=numpy.int32)
     old_output = numpy.zeros([length, length], dtype=numpy.int32)
-    current_nodes = numpy.zeros([length], dtype=numpy.bool)
+    current_nodes = [True for _ in range(length)]
     reps: List[Set[int]] = []
 
     for node1 in range(length):
         original_score_matrix[node1, node1] = 0.0
         score_matrix[node1, node1] = 0.0
-        current_nodes[node1] = True
         reps.append({node1})
 
         for node2 in range(node1 + 1, length):
@@ -86,10 +85,10 @@ def decode_mst(energy: numpy.ndarray,
 
     return heads, head_type
 
-def _find_cycle(parents: numpy.ndarray,
+def _find_cycle(parents: List[int],
                 length: int,
-                current_nodes: numpy.ndarray) -> Tuple[bool, Set[int]]:
-    added = numpy.zeros([length], numpy.bool)
+                current_nodes: numpy.ndarray) -> Tuple[bool, List[int]]:
+    added = [False for _ in range(length)]
     added[0] = True
     cycle = set()
     has_cycle = False
@@ -127,16 +126,15 @@ def _find_cycle(parents: numpy.ndarray,
                 next_node = parents[next_node]
             break
 
-    return has_cycle, cycle
+    return has_cycle, list(cycle)
 
 def chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input, old_output, reps):
-    parents = numpy.zeros([length], dtype=numpy.int32)
-    # create best graph
-    parents[0] = -1
+    # Set the initial graph to be the greedy best one.
+    parents = [-1]
     for node1 in range(1, length):
+        parents.append(0)
         if current_nodes[node1]:
             max_score = score_matrix[0, node1]
-            parents[node1] = 0
             for node2 in range(1, length):
                 if node2 == node1 or not current_nodes[node2]:
                     continue
@@ -146,7 +144,7 @@ def chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input,
                     max_score = new_score
                     parents[node1] = node2
 
-    # find a cycle
+    # Check if this solution has a cycle.
     has_cycle, cycle = _find_cycle(parents, length, current_nodes)
     # If there are no cycles, find all edges and return.
     if not has_cycle:
@@ -160,16 +158,18 @@ def chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input,
             final_edges[child] = parent
         return
 
-    cycle_length = len(cycle)
+    # Otherwise, we have a cycle so we need to remove an edge.
+    # From here until the recursive call is the contraction stage of the algorithm.
     cycle_weight = 0.0
-    cycle_nodes = numpy.zeros([cycle_length], dtype=numpy.int32)
+    # Find the weight of the cycle.
     index = 0
     for node in cycle:
-        cycle_nodes[index] = node
         index += 1
         cycle_weight += score_matrix[parents[node], node]
 
-    rep = cycle_nodes[0]
+    # For each node in the graph, find the maximum weight incoming
+    # and outgoing edge into the cycle.
+    cycle_representative = cycle[0]
     for node in range(length):
         if not current_nodes[node] or node in cycle:
             continue
@@ -179,8 +179,7 @@ def chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input,
         max2 = float("-inf")
         wh2 = -1
 
-        for j in range(cycle_length):
-            node_in_cycle = cycle_nodes[j]
+        for node_in_cycle in cycle:
             if score_matrix[node_in_cycle, node] > max1:
                 max1 = score_matrix[node_in_cycle, node]
                 wh1 = node_in_cycle
@@ -191,36 +190,40 @@ def chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input,
                 max2 = score
                 wh2 = node_in_cycle
 
-        score_matrix[rep, node] = max1
-        old_input[rep, node] = old_input[wh1, node]
-        old_output[rep, node] = old_output[wh1, node]
-        score_matrix[node, rep] = max2
-        old_output[node, rep] = old_output[node, wh2]
-        old_input[node, rep] = old_input[node, wh2]
+        score_matrix[cycle_representative, node] = max1
+        old_input[cycle_representative, node] = old_input[wh1, node]
+        old_output[cycle_representative, node] = old_output[wh1, node]
+        score_matrix[node, cycle_representative] = max2
+        old_output[node, cycle_representative] = old_output[node, wh2]
+        old_input[node, cycle_representative] = old_input[node, wh2]
 
     rep_cons = []
-    for i in range(cycle_length):
+    for i, node_in_cycle in enumerate(cycle):
         rep_cons.append(set())
-
-        cycle_node = cycle_nodes[i]
-        for cc in reps[cycle_node]:
+        for cc in reps[node_in_cycle]:
             rep_cons[i].add(cc)
 
-    for i in range(1, cycle_length):
-        cycle_node = cycle_nodes[i]
-        current_nodes[cycle_node] = False
-        for cc in reps[cycle_node]:
-            reps[rep].add(cc)
+    # For the next recursive iteration,
+    # we want to consider the cycle as a single node.
+    # Here we collapse the cycle into the first node
+    # in the cycle (first node is arbitrary), set
+    # all the other nodes not be considered in the
+    # next iteration. 
+    for node_in_cycle in cycle[1:]:
+        current_nodes[node_in_cycle] = False
+        for cc in reps[node_in_cycle]:
+            reps[cycle_representative].add(cc)
 
     chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input, old_output, reps)
 
+    # Expansion stage.
     # check each node in cycle, if one of its representatives is a key in the final_edges, it is the one.
     found = False
     wh = -1
-    for i in range(cycle_length):
+    for i, node in enumerate(cycle):
         for repc in rep_cons[i]:
             if repc in final_edges:
-                wh = cycle_nodes[i]
+                wh = node
                 found = True
                 break
         if found:
@@ -232,4 +235,3 @@ def chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input,
         parent = old_input[parents[l], l]
         final_edges[child] = parent
         l = parents[l]
-
