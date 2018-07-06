@@ -15,6 +15,8 @@ from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, get_range_vector
 from allennlp.nn.util import get_device_of, last_dim_log_softmax, get_lengths_from_binary_sequence_mask
 from allennlp.nn.decoding.chu_liu_edmonds import decode_mst
+from allennlp.training.metrics import AttachmentScores
+
 
 @Model.register("dependency_parser")
 class DependencyParser(Model):
@@ -71,6 +73,7 @@ class DependencyParser(Model):
 
         self.use_mst_decoding_for_validation = use_mst_decoding_for_validation
 
+        self._attachement_scores = AttachmentScores()
         initializer(self)
 
     @overrides
@@ -108,7 +111,6 @@ class DependencyParser(Model):
         float_mask = mask.float()
         encoded_text = self.encoder(embedded_text_input, mask)
 
-
         # shape (batch_size, timesteps, arc_representation_dim)
         head_arc_representation = F.elu(self.head_arc_projection(encoded_text))
         child_arc_representation = F.elu(self.child_arc_projection(encoded_text))
@@ -136,20 +138,6 @@ class DependencyParser(Model):
         # 2. Greedy decoding.
         # 3. MST decoding.
 
-        has_gold_labels = head_indices is not None and head_tags is not None
-        if has_gold_labels:
-            arc_nll, type_nll = self._construct_loss(head_type_representation,
-                                                     child_type_representation,
-                                                     attended_arcs,
-                                                     head_indices,
-                                                     head_tags,
-                                                     mask)
-            loss = arc_nll + type_nll
-        else:
-            arc_nll = None
-            type_nll = None
-            loss = None
-
         if self.training or (self.eval and not self.use_mst_decoding_for_validation):
             heads, head_types = self._greedy_decode(head_type_representation,
                                                     child_type_representation,
@@ -161,9 +149,24 @@ class DependencyParser(Model):
                                                  attended_arcs,
                                                  mask)
 
-        if has_gold_labels:
-            pass
-            # compute accuracy
+
+        if head_indices is not None and head_tags is not None:
+            arc_nll, type_nll = self._construct_loss(head_type_representation,
+                                                     child_type_representation,
+                                                     attended_arcs,
+                                                     head_indices,
+                                                     head_tags,
+                                                     mask)
+            loss = arc_nll + type_nll
+            self._attachement_scores(heads[1:, :],
+                                     head_types[1:, :],
+                                     head_indices[1:, :],
+                                     head_tags[1:, :],
+                                     mask[1:, :])
+        else:
+            arc_nll = None
+            type_nll = None
+            loss = None
 
         output_dict = {
                 "heads": heads,
@@ -274,9 +277,11 @@ class DependencyParser(Model):
                        attended_arcs: torch.Tensor,
                        mask: torch.Tensor):
         """
-        Decode the head and head type predictions by decoding the unlabelled arcs
-        independently for each word and then again, predicting the
-        head types of these greedily chosen arcs indpendently.
+        Decodes the head and head type predictions by decoding the unlabelled arcs
+        independently for each word and then again, predicting the head types of
+        these greedily chosen arcs indpendently. Note that this method of decoding
+        is not guaranteed to produce trees (i.e. there maybe be multiple roots,
+        or cycles when children are attached to their parents).
 
         Parameters
         ----------
@@ -325,6 +330,37 @@ class DependencyParser(Model):
                     child_type_representation: torch.Tensor,
                     attended_arcs: torch.Tensor,
                     mask: torch.Tensor):
+        """
+        Decodes the head and head type predictions using the Edmonds' Algorithm
+        for finding minimum spanning trees on directed graphs. Nodes in the
+        graph are the words in the sentence, and between each pair of nodes,
+        there is an edge in each direction, where the weight of the edge corresponds
+        to the most likely dependency label probability for that arc. The MST is
+        then generated from this directed graph.
+
+        Parameters
+        ----------
+        head_type_representation : ``torch.Tensor``, required.
+            A tensor of shape (batch_size, timesteps, type_representation_dim),
+            which will be used to generate predictions for the label type
+            for given arcs.
+        child_type_representation : ``torch.Tensor``, required
+            A tensor of shape (batch_size, timesteps, type_representation_dim),
+            which will be used to generate predictions for the label type
+            for given arcs.
+        attended_arcs : ``torch.Tensor``, required.
+            A tensor of shape (batch_size, timesteps, timesteps) used to generate
+            a distribution over attachements of a given word to all other words.
+
+        Returns
+        -------
+        heads : ``torch.Tensor``
+            A tensor of shape (batch_size, timesteps) representing the
+            greedily decoded heads of each word.
+        head_types : ``torch.Tensor``
+            A tensor of shape (batch_size, timesteps) representing the
+            types of the greedily decoded heads of each word.
+        """
         batch_size, timesteps, num_head_tags = head_type_representation.size()
 
         lengths = mask.data.sum(dim=1).long().cpu().numpy()
@@ -375,6 +411,9 @@ class DependencyParser(Model):
         head_type_logits = self.type_bilinear(selected_head_type_representations,
                                               child_type_representation)
         return head_type_logits
+
+    def get_metrics(self, reset: bool = True):
+        return self._attachement_scores.get_metric(reset)
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'DependencyParser':
