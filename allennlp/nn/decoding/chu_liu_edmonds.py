@@ -209,10 +209,10 @@ def chu_liu_edmonds(length: int,
             # the first.
             current_nodes[node_in_cycle] = False
 
-        for cc in representatives[node_in_cycle]:
-            rep_cons[i].add(cc)
+        for node in representatives[node_in_cycle]:
+            rep_cons[i].add(node)
             if i > 0:
-                representatives[cycle_representative].add(cc)
+                representatives[cycle_representative].add(node)
 
     chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input, old_output, representatives)
 
@@ -220,22 +220,22 @@ def chu_liu_edmonds(length: int,
     # check each node in cycle, if one of its representatives
     # is a key in the final_edges, it is the one.
     found = False
-    wh = -1
+    key_node = -1
     for i, node in enumerate(cycle):
-        for repc in rep_cons[i]:
-            if repc in final_edges:
-                wh = node
+        for cycle_rep in rep_cons[i]:
+            if cycle_rep in final_edges:
+                key_node = node
                 found = True
                 break
         if found:
             break
 
-    l = parents[wh]
-    while l != wh:
-        child = old_output[parents[l], l]
-        parent = old_input[parents[l], l]
+    previous = parents[key_node]
+    while previous != key_node:
+        child = old_output[parents[previous], previous]
+        parent = old_input[parents[previous], previous]
         final_edges[child] = parent
-        l = parents[l]
+        previous = parents[previous]
 
 
 def _find_cycle(parents: List[int],
