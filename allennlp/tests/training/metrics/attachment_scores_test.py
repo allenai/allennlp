@@ -33,7 +33,6 @@ class AttachmentScoresTest(AllenNlpTestCase):
             assert value == 1.0
 
     def test_unlabeled_accuracy_ignores_incorrect_labels(self):
-
         label_predictions = self.label_predictions
         # Change some stuff so our 4 of our label predictions are wrong.
         label_predictions[0, 3:] = 3
@@ -53,7 +52,6 @@ class AttachmentScoresTest(AllenNlpTestCase):
         assert metrics["LEM"] == 0.0
 
     def test_labeled_accuracy_is_affected_by_incorrect_heads(self):
-
         predictions = self.predictions
         # Change some stuff so our 4 of our predictions are wrong.
         predictions[0, 3:] = 3

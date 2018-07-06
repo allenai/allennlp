@@ -23,7 +23,7 @@ class AttachmentScores(Metric):
         self._total_words = 0.
         self._total_sentences = 0.
 
-    def __call__(self,
+    def __call__(self, # type: ignore
                  predicted_indices: torch.Tensor,
                  predicted_labels: torch.Tensor,
                  gold_indices: torch.Tensor,
