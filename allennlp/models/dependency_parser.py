@@ -35,7 +35,7 @@ class DependencyParser(Model):
     arc_representation_dim : ``int``, required.
         The dimension of the MLPs used for head arc prediction.
     use_mst_decoding_for_validation : ``bool``, optional (default = True).
-        Whether to use Edmond's algorithm to find the optimal MST during validation.
+        Whether to use Edmond's algorithm to find the optimal minimum spanning tree during validation.
         If false, decoding is greedy.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
@@ -132,12 +132,6 @@ class DependencyParser(Model):
         minus_mask = (1 - float_mask) * minus_inf
         attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
-        # up to here is needed by everything.
-        # Now, 3 branches:
-        # 1. Loss
-        # 2. Greedy decoding.
-        # 3. MST decoding.
-
         if self.training or (self.eval and not self.use_mst_decoding_for_validation):
             heads, head_types = self._greedy_decode(head_type_representation,
                                                     child_type_representation,
@@ -158,11 +152,15 @@ class DependencyParser(Model):
                                                      head_tags,
                                                      mask)
             loss = arc_nll + type_nll
-            self._attachement_scores(heads[1:, :],
-                                     head_types[1:, :],
-                                     head_indices[1:, :],
-                                     head_tags[1:, :],
-                                     mask[1:, :])
+
+            # We calculate attatchment scores for the whole sentence
+            # but excluding the symbolic ROOT token at the start,
+            # which is why we start from the second element in the sequence.
+            self._attachement_scores(heads[:, 1:],
+                                     head_types[:, 1:],
+                                     head_indices[:, 1:],
+                                     head_tags[:, 1:],
+                                     mask[:, 1:])
         else:
             arc_nll = None
             type_nll = None
@@ -277,7 +275,7 @@ class DependencyParser(Model):
                        attended_arcs: torch.Tensor,
                        mask: torch.Tensor):
         """
-        Decodes the head and head type predictions by decoding the unlabelled arcs
+        Decodes the head and head type predictions by decoding the unlabeled arcs
         independently for each word and then again, predicting the head types of
         these greedily chosen arcs indpendently. Note that this method of decoding
         is not guaranteed to produce trees (i.e. there maybe be multiple roots,
@@ -361,11 +359,11 @@ class DependencyParser(Model):
             A tensor of shape (batch_size, timesteps) representing the
             types of the greedily decoded heads of each word.
         """
-        batch_size, timesteps, num_head_tags = head_type_representation.size()
+        batch_size, timesteps, type_representation_dim = head_type_representation.size()
 
         lengths = mask.data.sum(dim=1).long().cpu().numpy()
 
-        expanded_shape = [batch_size, timesteps, timesteps, num_head_tags]
+        expanded_shape = [batch_size, timesteps, timesteps, type_representation_dim]
         head_type_representation = head_type_representation.unsqueeze(2)
         head_type_representation = head_type_representation.expand(*expanded_shape).contiguous()
         child_type_representation = child_type_representation.unsqueeze(1)
@@ -384,12 +382,12 @@ class DependencyParser(Model):
         # Shape (batch_size, timesteps, timesteps)
         arc_loss = F.log_softmax(attended_arcs, dim=2)
         # Shape (batch_size, num_head_tags, timesteps, timesteps)
-        energy = torch.exp(arc_loss.unsqueeze(1) + pairwise_head_type_loss)
+        batch_energy = torch.exp(arc_loss.unsqueeze(1) + pairwise_head_type_loss)
 
         heads = []
         head_types = []
-        for e, length in zip(energy.detach().cpu().numpy(), lengths):
-            head, head_type = decode_mst(e, length)
+        for energy, length in zip(batch_energy.detach().cpu().numpy(), lengths):
+            head, head_type = decode_mst(energy, length)
             heads.append(head)
             head_types.append(head_type)
         return torch.from_numpy(numpy.stack(heads)), torch.from_numpy(numpy.stack(head_types))
@@ -412,6 +410,7 @@ class DependencyParser(Model):
                                               child_type_representation)
         return head_type_logits
 
+    @overrides
     def get_metrics(self, reset: bool = True):
         return self._attachement_scores.get_metric(reset)
 
