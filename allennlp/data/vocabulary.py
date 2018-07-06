@@ -113,6 +113,24 @@ def _read_pretrained_tokens(embeddings_file_uri: str) -> Set[str]:
     return tokens
 
 
+def pop_max_vocab_size(params: Params) -> Union[int, Dict[str, int]]:
+    """
+    max_vocab_size is allowed to be either an int or a Dict[str, int] (or nothing).
+    But it could also be a string representing an int (in the case of environment variable
+    substitution). So we need some complex logic to handle it.
+    """
+    size = params.pop("max_vocab_size", None)
+
+    if isinstance(size, Params):
+        # This is the Dict[str, int] case.
+        return size.as_dict()
+    elif size is not None:
+        # This is the int / str case.
+        return int(size)
+    else:
+        return None
+
+
 class Vocabulary(Registrable):
     """
     A Vocabulary maps strings to integers, allowing for strings to be mapped to an
@@ -402,7 +420,7 @@ class Vocabulary(Registrable):
             vocab.extend_from_instances(params, instances=instances)
             return vocab
         min_count = params.pop("min_count", None)
-        max_vocab_size = params.pop_int("max_vocab_size", None)
+        max_vocab_size = pop_max_vocab_size(params)
         non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
         pretrained_files = params.pop("pretrained_files", {})
         only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
@@ -491,7 +509,7 @@ class Vocabulary(Registrable):
         Extends an already generated vocabulary using a collection of instances.
         """
         min_count = params.pop("min_count", None)
-        max_vocab_size = params.pop_int("max_vocab_size", None)
+        max_vocab_size = pop_max_vocab_size(params)
         non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
         pretrained_files = params.pop("pretrained_files", {})
         only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
