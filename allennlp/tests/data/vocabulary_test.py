@@ -667,8 +667,6 @@ class TestVocabulary(AllenNlpTestCase):
                 }
         })
 
-        instances = [Instance({})]
-
         vocab = Vocabulary.from_params(params=params, instances=self.dataset)
         words = vocab.get_index_to_token_vocabulary().values()
         # Additional 2 tokens are '@@PADDING@@' and '@@UNKNOWN@@' by default
