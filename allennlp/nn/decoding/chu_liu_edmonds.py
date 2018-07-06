@@ -85,7 +85,13 @@ def decode_mst(energy: numpy.ndarray,
 
     return heads, head_type
 
-def chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input, old_output, reps):
+def chu_liu_edmonds(length: int,
+                    score_matrix: numpy.ndarray,
+                    current_nodes: List[bool],
+                    final_edges: Dict[int, int],
+                    old_input: numpy.ndarray,
+                    old_output: numpy.ndarray,
+                    reps: List[Set[int]]):
     # Set the initial graph to be the greedy best one.
     parents = [-1]
     for node1 in range(1, length):
@@ -154,27 +160,29 @@ def chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input,
         old_output[node, cycle_representative] = old_output[node, wh2]
         old_input[node, cycle_representative] = old_input[node, wh2]
 
-    rep_cons = []
+    # For the next recursive iteration, we want to consider the cycle as a
+    # single node. Here we collapse the cycle into the first node in the
+    # cycle (first node is arbitrary), set all the other nodes not be
+    # considered in the next iteration.
+    rep_cons: List[Set[int]] = []
     for i, node_in_cycle in enumerate(cycle):
         rep_cons.append(set())
+        if i > 0:
+            # We need to consider at least one
+            # node in the cycle, arbitrarily choose
+            # the first.
+            current_nodes[node_in_cycle] = False
+
         for cc in reps[node_in_cycle]:
             rep_cons[i].add(cc)
-
-    # For the next recursive iteration,
-    # we want to consider the cycle as a single node.
-    # Here we collapse the cycle into the first node
-    # in the cycle (first node is arbitrary), set
-    # all the other nodes not be considered in the
-    # next iteration. 
-    for node_in_cycle in cycle[1:]:
-        current_nodes[node_in_cycle] = False
-        for cc in reps[node_in_cycle]:
-            reps[cycle_representative].add(cc)
+            if i > 0:
+                reps[cycle_representative].add(cc)
 
     chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input, old_output, reps)
 
     # Expansion stage.
-    # check each node in cycle, if one of its representatives is a key in the final_edges, it is the one.
+    # check each node in cycle, if one of its representatives
+    # is a key in the final_edges, it is the one.
     found = False
     wh = -1
     for i, node in enumerate(cycle):
@@ -196,7 +204,8 @@ def chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input,
 
 def _find_cycle(parents: List[int],
                 length: int,
-                current_nodes: numpy.ndarray) -> Tuple[bool, List[int]]:
+                current_nodes: List[bool]) -> Tuple[bool, List[int]]:
+
     added = [False for _ in range(length)]
     added[0] = True
     cycle = set()
@@ -214,7 +223,6 @@ def _find_cycle(parents: List[int],
         added[i] = True
         has_cycle = True
         next_node = i
-
         while parents[next_node] not in this_cycle:
             next_node = parents[next_node]
             # If we see a node we've already processed,
