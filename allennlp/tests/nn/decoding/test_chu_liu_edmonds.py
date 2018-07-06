@@ -37,3 +37,10 @@ class ChuLiuEdmondsTest(AllenNlpTestCase):
         has_cycle, cycle = _find_cycle(parents, 5, current_nodes)
         assert has_cycle
         assert cycle == [3, 4]
+
+        # TODO figure out the weird case where cycles can include ignored nodes.
+
+
+    def test_mst(self):
+
+        

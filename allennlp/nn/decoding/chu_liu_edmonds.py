@@ -51,12 +51,12 @@ def decode_mst(energy: numpy.ndarray,
     old_input = numpy.zeros([length, length], dtype=numpy.int32)
     old_output = numpy.zeros([length, length], dtype=numpy.int32)
     current_nodes = [True for _ in range(length)]
-    reps: List[Set[int]] = []
+    representatives: List[Set[int]] = []
 
     for node1 in range(length):
         original_score_matrix[node1, node1] = 0.0
         score_matrix[node1, node1] = 0.0
-        reps.append({node1})
+        representatives.append({node1})
 
         for node2 in range(node1 + 1, length):
             old_input[node1, node2] = node1
@@ -67,7 +67,9 @@ def decode_mst(energy: numpy.ndarray,
 
     final_edges: Dict[int, int] = {}
 
-    chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input, old_output, reps)
+    # The main algorithm operates inplace.
+    chu_liu_edmonds(length, score_matrix, current_nodes,
+                    final_edges, old_input, old_output, representatives)
 
     heads = numpy.zeros([max_length], numpy.int32)
     if has_labels:
@@ -91,7 +93,40 @@ def chu_liu_edmonds(length: int,
                     final_edges: Dict[int, int],
                     old_input: numpy.ndarray,
                     old_output: numpy.ndarray,
-                    reps: List[Set[int]]):
+                    representatives: List[Set[int]]):
+    """
+    Applies the chu-liu-edmonds algorithm recursively
+    to a graph with edge weights defined by score_matrix.
+
+    Note that this function operates in place, so variables
+    will be modified.
+
+    Parameters
+    ----------
+    length : ``int``, required.
+        The number of nodes.
+    score_matrix : ``numpy.ndarray``, required.
+        The score matrix representing the scores for pairs
+        of nodes.
+    current_nodes : ``List[bool]``, required.
+        The nodes which are representatives in the graph.
+        A representative at it's most basic represents a node,
+        but as the algorithm progresses, individual nodes will
+        represent collapsed cycles in the graph.
+    final_edges: ``Dict[int, int]``, required.
+        An empty dictionary which will be populated with the
+        nodes which are connected in the minimum spanning tree.
+    old_input: ``numpy.ndarray``, required.
+    old_input: ``numpy.ndarray``, required.
+    representatives : ``List[Set[int]]``, required.
+        A list containing the nodes that a particular node
+        is representing at this iteration in the graph.
+
+    Returns
+    -------
+    Nothing - all variables are modified in place.
+
+    """
     # Set the initial graph to be the greedy best one.
     parents = [-1]
     for node1 in range(1, length):
@@ -156,6 +191,7 @@ def chu_liu_edmonds(length: int,
         score_matrix[cycle_representative, node] = max1
         old_input[cycle_representative, node] = old_input[wh1, node]
         old_output[cycle_representative, node] = old_output[wh1, node]
+
         score_matrix[node, cycle_representative] = max2
         old_output[node, cycle_representative] = old_output[node, wh2]
         old_input[node, cycle_representative] = old_input[node, wh2]
@@ -173,12 +209,12 @@ def chu_liu_edmonds(length: int,
             # the first.
             current_nodes[node_in_cycle] = False
 
-        for cc in reps[node_in_cycle]:
+        for cc in representatives[node_in_cycle]:
             rep_cons[i].add(cc)
             if i > 0:
-                reps[cycle_representative].add(cc)
+                representatives[cycle_representative].add(cc)
 
-    chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input, old_output, reps)
+    chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input, old_output, representatives)
 
     # Expansion stage.
     # check each node in cycle, if one of its representatives
