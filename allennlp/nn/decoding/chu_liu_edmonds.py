@@ -6,8 +6,7 @@ from allennlp.common.checks import ConfigurationError
 
 def decode_mst(energy: numpy.ndarray,
                length: int,
-               leading_symbolic: int = 0,
-               has_labels: bool = True):
+               has_labels: bool = True) -> Tuple[numpy.ndarray, numpy.ndarray]:
     """
     Decode the optimal MST tree with the Chu-Liu-Edmonds algorithm for
     minimum spanning arboresences on graphs.
@@ -21,8 +20,6 @@ def decode_mst(energy: numpy.ndarray,
     length : ``int``, required.
         The length of this sequence, as the energy may have come
         from a padded batch.
-    leading_symbolic : ``int``, optional, (default = 0)
-        The number of symbolic dependency types in the label space.
     has_labels : ``bool``, optional, (default = True)
         Whether the graph has labels or not.
     """
@@ -31,14 +28,14 @@ def decode_mst(energy: numpy.ndarray,
     elif not has_labels and energy.ndim != 2:
         raise ConfigurationError("The dimension of the energy array is not equal to 2.")
     input_shape = energy.shape
-    max_length = input_shape[2]
+    max_length = input_shape[-1]
 
     # Our energy matrix might have been batched -
     # here we clip it to contain only non padded tokens.
     if has_labels:
-        energy = energy[leading_symbolic:, :length, :length]
+        energy = energy[:, :length, :length]
         # get best label for each edge.
-        label_id_matrix = energy.argmax(axis=0) + leading_symbolic
+        label_id_matrix = energy.argmax(axis=0)
         energy = energy.max(axis=0)
     else:
         energy = energy[:length, :length]
@@ -74,6 +71,7 @@ def decode_mst(energy: numpy.ndarray,
     heads = numpy.zeros([max_length], numpy.int32)
     if has_labels:
         head_type = numpy.ones([max_length], numpy.int32)
+        # Set the head type of the symbolic head to be zero, arbitrarily.
         head_type[0] = 0
     else:
         head_type = None
@@ -83,6 +81,7 @@ def decode_mst(energy: numpy.ndarray,
         if has_labels and child != 0:
             head_type[child] = label_id_matrix[parent, child]
 
+    # Set the head of the symbolic head to be zero, arbitrarily.
     heads[0] = 0
 
     return heads, head_type

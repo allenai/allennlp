@@ -1,12 +1,13 @@
+# pylint: disable=invalid-name,no-self-use,protected-access
 
+import numpy
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.nn.decoding.chu_liu_edmonds import _find_cycle
+from allennlp.nn.decoding.chu_liu_edmonds import _find_cycle, decode_mst
 
 class ChuLiuEdmondsTest(AllenNlpTestCase):
 
     def test_find_cycle(self):
-        
         # No cycle
         parents = [0, 2, 3, 0, 3]
         current_nodes = [True for _ in range(5)]
@@ -38,4 +39,25 @@ class ChuLiuEdmondsTest(AllenNlpTestCase):
         assert has_cycle
         assert cycle == [3, 4]
 
-        # TODO figure out the weird case where cycles can include ignored nodes.
+    def test_mst(self):
+        # First, test some random cases as sanity checks.
+        # No label case
+        energy = numpy.random.rand(5, 5)
+        heads, types = decode_mst(energy, 5, has_labels=False)
+        assert not _find_cycle(heads, 5, [True] * 5)[0]
+
+        # Labelled label case
+        energy = numpy.random.rand(3, 5, 5)
+        heads, types = decode_mst(energy, 5)
+
+        assert not _find_cycle(heads, 5, [True] * 5)[0]
+        label_id_matrix = energy.argmax(axis=0)
+        # Check that the labels correspond to the
+        # argmax of the labels for the arcs.
+        for child, parent in enumerate(heads):
+            # The first index corresponds to the symbolic
+            # head token, which won't necessarily have an
+            # argmax type.
+            if child == 0:
+                continue
+            assert types[child] == label_id_matrix[parent, child]
