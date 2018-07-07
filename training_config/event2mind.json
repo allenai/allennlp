@@ -1,0 +1,68 @@
+{
+  "dataset_reader": {
+    "type": "event2mind",
+    "source_tokenizer": {
+      "type": "word",
+      "word_splitter": {
+        "type": "spacy"
+      }
+    },
+    "target_tokenizer": {
+      "type": "word"
+    },
+    "source_token_indexers": {
+      "tokens": {
+        "type": "single_id",
+        "namespace": "source_tokens"
+      }
+    },
+    "target_token_indexers": {
+      "tokens": {
+        "namespace": "target_tokens"
+      }
+    }
+  },
+  "vocabulary": {
+    "min_count": {"tokens": 2}
+  },
+  "train_data_path": "/home/brendanr/workbenches/event2mind/train.csv",
+  "validation_data_path": "/home/brendanr/workbenches/event2mind/dev.csv",
+  "model": {
+    "type": "event2mind",
+    "source_embedder": {
+      "tokens": {
+        "type": "embedding",
+        "vocab_namespace": "source_tokens",
+        #"pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
+	"pretrained_file" : "/home/brendanr/workbenches/event2mind/word2vec/GoogleNews-vectors-negative300.allennlp.txt",
+        "embedding_dim": 300,
+        "trainable": false
+      }
+    },
+    "encoder": {
+      "type": "gru",
+      "input_size": 300,
+      "hidden_size": 100,
+      "num_layers": 1,
+      "bidirectional": true,
+      "dropout": 0.2
+    },
+    "max_decoding_steps": 10,
+    "target_namespace": "target_tokens",
+    "scheduled_sampling_ratio": 0.0
+  },
+  "iterator": {
+    "type": "bucket",
+    "padding_noise": 0.0,
+    "batch_size" : 64,
+    "sorting_keys": [["source_tokens", "num_tokens"]]
+  },
+  "trainer": {
+    "num_epochs": 40,
+    "patience": 10,
+    "cuda_device": 0,
+    "optimizer": {
+      "type": "adam"
+    }
+  }
+}
