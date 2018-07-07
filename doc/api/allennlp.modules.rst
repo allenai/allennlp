@@ -31,3 +31,4 @@ allennlp.modules
    allennlp.modules.layer_norm
    allennlp.modules.span_pruner
    allennlp.modules.maxout
+   allennlp.modules.biaffine_attention
