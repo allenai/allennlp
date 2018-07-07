@@ -1,12 +1,13 @@
 # pylint: disable=invalid-name,no-self-use,protected-access
 
 import numpy
+import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.checks import ConfigurationError
 from allennlp.nn.decoding.chu_liu_edmonds import _find_cycle, decode_mst
 
 class ChuLiuEdmondsTest(AllenNlpTestCase):
-
     def test_find_cycle(self):
         # No cycle
         parents = [0, 2, 3, 0, 3]
@@ -46,12 +47,13 @@ class ChuLiuEdmondsTest(AllenNlpTestCase):
         heads, types = decode_mst(energy, 5, has_labels=False)
         assert not _find_cycle(heads, 5, [True] * 5)[0]
 
-        # Labelled label case
+        # Labeled case
         energy = numpy.random.rand(3, 5, 5)
         heads, types = decode_mst(energy, 5)
 
         assert not _find_cycle(heads, 5, [True] * 5)[0]
         label_id_matrix = energy.argmax(axis=0)
+
         # Check that the labels correspond to the
         # argmax of the labels for the arcs.
         for child, parent in enumerate(heads):
@@ -61,3 +63,12 @@ class ChuLiuEdmondsTest(AllenNlpTestCase):
             if child == 0:
                 continue
             assert types[child] == label_id_matrix[parent, child]
+
+        # Check wrong dimensions throw errors
+        with pytest.raises(ConfigurationError):
+            energy = numpy.random.rand(5, 5)
+            decode_mst(energy, 5, has_labels=True)
+
+        with pytest.raises(ConfigurationError):
+            energy = numpy.random.rand(3, 5, 5)
+            decode_mst(energy, 5, has_labels=False)

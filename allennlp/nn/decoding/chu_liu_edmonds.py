@@ -181,7 +181,11 @@ def chu_liu_edmonds(length: int,
                 max1 = score_matrix[node_in_cycle, node]
                 wh1 = node_in_cycle
 
-            score = cycle_weight + score_matrix[node, node_in_cycle] - score_matrix[parents[node_in_cycle], node_in_cycle]
+            # Add the new edge score to the cycle weight
+            # and subtract the edge we're # considering removing.
+            score = (cycle_weight +
+                     score_matrix[node, node_in_cycle] -
+                     score_matrix[parents[node_in_cycle], node_in_cycle])
 
             if score > max2:
                 max2 = score
