@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Any
 
 import torch
 from torch.autograd import Variable
@@ -7,7 +7,8 @@ from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import FeedForward, MatrixAttention
+from allennlp.modules import FeedForward
+from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum, replace_masked_values
@@ -95,7 +96,7 @@ class ESIM(Model):
         self._text_field_embedder = text_field_embedder
         self._encoder = encoder
 
-        self._matrix_attention = MatrixAttention(similarity_function)
+        self._matrix_attention = LegacyMatrixAttention(similarity_function)
         self._projection_feedforward = projection_feedforward
 
         self._inference_encoder = inference_encoder
@@ -127,7 +128,8 @@ class ESIM(Model):
     def forward(self,  # type: ignore
                 premise: Dict[str, torch.LongTensor],
                 hypothesis: Dict[str, torch.LongTensor],
-                label: torch.IntTensor = None) -> Dict[str, torch.Tensor]:
+                label: torch.IntTensor = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -138,6 +140,9 @@ class ESIM(Model):
             From a ``TextField``
         label : torch.IntTensor, optional (default = None)
             From a ``LabelField``
+        metadata : ``List[Dict[str, Any]]``, optional, (default = None)
+            Metadata containing the original tokenization of the premise and
+            hypothesis with 'premise_tokens' and 'hypothesis_tokens' keys respectively.
 
         Returns
         -------
@@ -233,7 +238,7 @@ class ESIM(Model):
 
         if label is not None:
             loss = self._loss(label_logits, label.long().view(-1))
-            self._accuracy(label_logits, label.squeeze(-1))
+            self._accuracy(label_logits, label)
             output_dict["loss"] = loss
 
         return output_dict
