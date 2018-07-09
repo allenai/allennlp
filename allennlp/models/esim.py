@@ -7,45 +7,12 @@ from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import FeedForward
+from allennlp.modules import FeedForward, InputVariationalDropout
 from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TextFieldEmbedder
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum, replace_masked_values
 from allennlp.training.metrics import CategoricalAccuracy
-
-class InputVariationalDropout(torch.nn.Dropout):
-    """
-    Apply the dropout technique in Gal and Ghahramani, "Dropout as a Bayesian Approximation:
-    Representing Model Uncertainty in Deep Learning" (https://arxiv.org/abs/1506.02142) to a
-    3D tensor.
-
-    This module accepts a 3D tensor of shape ``(batch_size, num_timesteps, embedding_dim)``
-    and samples a single dropout mask of shape ``(batch_size, embedding_dim)`` and applies
-    it to every time step.
-    """
-    def forward(self, input_tensor):
-        # pylint: disable=arguments-differ
-        """
-        Apply dropout to input tensor.
-
-        Parameters
-        ----------
-        input_tensor: torch.FloatTensor
-            A tensor of shape ``(batch_size, num_timesteps, embedding_dim)``
-
-        Returns
-        -------
-        output: torch.FloatTensor
-            A tensor of shape ``(batch_size, num_timesteps, embedding_dim)`` with dropout applied.
-        """
-        ones = Variable(input_tensor.data.new_ones(input_tensor.shape[0], input_tensor.shape[-1]))
-        dropout_mask = torch.nn.functional.dropout(ones, self.p, self.training, inplace=False)
-        if self.inplace:
-            input_tensor *= dropout_mask.unsqueeze(1)
-            return None
-        else:
-            return dropout_mask.unsqueeze(1) * input_tensor
 
 
 @Model.register("esim")
