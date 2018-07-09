@@ -32,11 +32,16 @@ class UniversalDependenciesDatasetReader(DatasetReader):
     ----------
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         The token indexers to be applied to the words TextField.
+    use_pos_tags : ``bool``, optional, (default = ``False``)
+        Whether or not the instance should contain gold POS tags
+        as a field.
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
+                 use_pos_tags: bool = False,
                  lazy: bool = False) -> None:
         super().__init__(lazy)
+        self._use_pos_tags = use_pos_tags
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
     @overrides
@@ -51,13 +56,13 @@ class UniversalDependenciesDatasetReader(DatasetReader):
 
                 yield self.text_to_instance(
                         [x["form"] for x in annotation],
-                        [x["upostag"] for x in annotation],
+                        [x["upostag"] for x in annotation] if self._use_pos_tags else None,
                         [x["deps"][0] for x in annotation])
 
     @overrides
     def text_to_instance(self,  # type: ignore
                          words: List[str],
-                         upos_tags: List[str],
+                         upos_tags: List[str] = None,
                          dependencies: List[Tuple[str, int]] = None) -> Instance:
         # pylint: disable=arguments-differ
         """
@@ -65,7 +70,7 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         ----------
         words : ``List[str]``, required.
             The words in the sentence to be encoded.
-        upos_tags : ``List[str]``, required.
+        upos_tags : ``List[str]``, optional (default = None).
             The universal dependencies POS tags for each word.
         dependencies ``List[Tuple[str, int]]``, optional (default = None)
             A list of  (head tag, head index) tuples. Indices are 1 indexed,
@@ -84,7 +89,8 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         # loss function.
         tokens = TextField([Token("ROOT_HEAD")] + [Token(w) for w in words], self._token_indexers)
         fields["words"] = tokens
-        fields["pos_tags"] = SequenceLabelField(["ROOT_POS"] + upos_tags, tokens, label_namespace="pos")
+        if self._use_pos_tags and upos_tags is not None:
+            fields["pos_tags"] = SequenceLabelField(["ROOT_POS"] + upos_tags, tokens, label_namespace="pos")
         # We don't want to expand the label namespace with an additional dummy token, so we'll
         # always give the 'ROOT_HEAD' token a label of 'root'.
         fields["head_tags"] = SequenceLabelField(["root"] + [x[0] for x in dependencies],
@@ -99,7 +105,9 @@ class UniversalDependenciesDatasetReader(DatasetReader):
     @classmethod
     def from_params(cls, params: Params) -> 'UniversalDependenciesDatasetReader':
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
+        use_pos_tags = params.pop('use_pos_tags', False)
         lazy = params.pop('lazy', False)
         params.assert_empty(cls.__name__)
         return UniversalDependenciesDatasetReader(token_indexers=token_indexers,
+                                                  use_pos_tags=use_pos_tags,
                                                   lazy=lazy)

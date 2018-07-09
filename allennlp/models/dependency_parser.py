@@ -6,9 +6,9 @@ import torch.nn.functional as F
 import numpy
 
 from allennlp.common import Params
-from allennlp.common.checks import check_dimensions_match
+from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data import Vocabulary
-from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder
+from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding
 from allennlp.modules.biaffine_attention import BiaffineAttention
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
@@ -34,6 +34,8 @@ class DependencyParser(Model):
         The dimension of the MLPs used for head type prediction.
     arc_representation_dim : ``int``, required.
         The dimension of the MLPs used for head arc prediction.
+    pos_tag_embedding : ``Embedding``, optional.
+        Used to embed the ``pos_tags`` ``SequenceLabelField`` we get as input to the model.
     use_mst_decoding_for_validation : ``bool``, optional (default = True).
         Whether to use Edmond's algorithm to find the optimal minimum spanning tree during validation.
         If false, decoding is greedy.
@@ -47,6 +49,7 @@ class DependencyParser(Model):
                  encoder: Seq2SeqEncoder,
                  type_representation_dim: int,
                  arc_representation_dim: int,
+                 pos_tag_embedding: Embedding = None,
                  use_mst_decoding_for_validation: bool = True,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
@@ -68,7 +71,11 @@ class DependencyParser(Model):
                                                        type_representation_dim,
                                                        num_labels)
 
-        check_dimensions_match(text_field_embedder.get_output_dim(), encoder.get_input_dim(),
+        self._pos_tag_embedding = pos_tag_embedding or None
+        representation_dim = text_field_embedder.get_output_dim()
+        if pos_tag_embedding is not None:
+            representation_dim += pos_tag_embedding.get_output_dim()
+        check_dimensions_match(representation_dim, encoder.get_input_dim(),
                                "text field embedding dim", "encoder input dim")
 
         self.use_mst_decoding_for_validation = use_mst_decoding_for_validation
@@ -79,7 +86,7 @@ class DependencyParser(Model):
     @overrides
     def forward(self,  # type: ignore
                 words: Dict[str, torch.LongTensor],
-                pos_tags: torch.LongTensor,
+                pos_tags: torch.LongTensor = None,
                 head_tags: torch.LongTensor = None,
                 head_indices: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
@@ -104,9 +111,14 @@ class DependencyParser(Model):
         An output dictionary consisting of:
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
-
         """
         embedded_text_input = self.text_field_embedder(words)
+        if pos_tags is not None and self._pos_tag_embedding is not None:
+            embedded_pos_tags = self._pos_tag_embedding(pos_tags)
+            embedded_text_input = torch.cat([embedded_text_input, embedded_pos_tags], -1)
+        elif self._pos_tag_embedding is not None:
+            raise ConfigurationError("Model uses a POS embedding, but no POS tags were passed.")
+
         mask = get_text_field_mask(words)
         float_mask = mask.float()
         encoded_text = self.encoder(embedded_text_input, mask)
@@ -419,7 +431,11 @@ class DependencyParser(Model):
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-
+        pos_tag_embedding_params = params.pop("pos_tag_embedding", None)
+        if pos_tag_embedding_params is not None:
+            pos_tag_embedding = Embedding.from_params(vocab, pos_tag_embedding_params)
+        else:
+            pos_tag_embedding = None
         type_representation_dim = params.pop_int("type_representation_dim")
         arc_representation_dim = params.pop_int("arc_representation_dim")
         use_mst_decoding_for_validation = params.pop("use_mst_decoding_for_validation", True)
@@ -430,6 +446,7 @@ class DependencyParser(Model):
                    text_field_embedder=text_field_embedder,
                    type_representation_dim=type_representation_dim,
                    arc_representation_dim=arc_representation_dim,
+                   pos_tag_embedding=pos_tag_embedding,
                    use_mst_decoding_for_validation=use_mst_decoding_for_validation,
                    encoder=encoder,
                    initializer=initializer,
