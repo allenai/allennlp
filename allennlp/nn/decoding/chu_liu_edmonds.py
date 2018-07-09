@@ -171,41 +171,43 @@ def chu_liu_edmonds(length: int,
         if not current_nodes[node] or node in cycle:
             continue
 
-        max1 = float("-inf")
-        wh1 = -1
-        max2 = float("-inf")
-        wh2 = -1
+        in_edge_weight = float("-inf")
+        in_edge = -1
+        out_edge_weight = float("-inf")
+        out_edge = -1
 
         for node_in_cycle in cycle:
-            if score_matrix[node_in_cycle, node] > max1:
-                max1 = score_matrix[node_in_cycle, node]
-                wh1 = node_in_cycle
+            if score_matrix[node_in_cycle, node] > in_edge_weight:
+                in_edge_weight = score_matrix[node_in_cycle, node]
+                in_edge = node_in_cycle
 
             # Add the new edge score to the cycle weight
-            # and subtract the edge we're # considering removing.
+            # and subtract the edge we're considering removing.
             score = (cycle_weight +
                      score_matrix[node, node_in_cycle] -
                      score_matrix[parents[node_in_cycle], node_in_cycle])
 
-            if score > max2:
-                max2 = score
-                wh2 = node_in_cycle
+            if score > out_edge_weight:
+                out_edge_weight = score
+                out_edge = node_in_cycle
 
-        score_matrix[cycle_representative, node] = max1
-        old_input[cycle_representative, node] = old_input[wh1, node]
-        old_output[cycle_representative, node] = old_output[wh1, node]
+        score_matrix[cycle_representative, node] = in_edge_weight
+        old_input[cycle_representative, node] = old_input[in_edge, node]
+        old_output[cycle_representative, node] = old_output[in_edge, node]
 
-        score_matrix[node, cycle_representative] = max2
-        old_output[node, cycle_representative] = old_output[node, wh2]
-        old_input[node, cycle_representative] = old_input[node, wh2]
+        score_matrix[node, cycle_representative] = out_edge_weight
+        old_output[node, cycle_representative] = old_output[node, out_edge]
+        old_input[node, cycle_representative] = old_input[node, out_edge]
 
     # For the next recursive iteration, we want to consider the cycle as a
     # single node. Here we collapse the cycle into the first node in the
     # cycle (first node is arbitrary), set all the other nodes not be
-    # considered in the next iteration.
-    rep_cons: List[Set[int]] = []
+    # considered in the next iteration. We also keep track of which
+    # representatives we are considering this iteration because we need
+    # them below to check if we're done.
+    considered_representatives: List[Set[int]] = []
     for i, node_in_cycle in enumerate(cycle):
-        rep_cons.append(set())
+        considered_representatives.append(set())
         if i > 0:
             # We need to consider at least one
             # node in the cycle, arbitrarily choose
@@ -213,7 +215,7 @@ def chu_liu_edmonds(length: int,
             current_nodes[node_in_cycle] = False
 
         for node in representatives[node_in_cycle]:
-            rep_cons[i].add(node)
+            considered_representatives[i].add(node)
             if i > 0:
                 representatives[cycle_representative].add(node)
 
@@ -221,11 +223,11 @@ def chu_liu_edmonds(length: int,
 
     # Expansion stage.
     # check each node in cycle, if one of its representatives
-    # is a key in the final_edges, it is the one.
+    # is a key in the final_edges, it is the one we need.
     found = False
     key_node = -1
     for i, node in enumerate(cycle):
-        for cycle_rep in rep_cons[i]:
+        for cycle_rep in considered_representatives[i]:
             if cycle_rep in final_edges:
                 key_node = node
                 found = True
