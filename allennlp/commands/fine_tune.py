@@ -10,17 +10,20 @@ import json
 import logging
 import os
 from copy import deepcopy
+import re
 
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.train import datasets_from_params
 from allennlp.common import Params
-from allennlp.common.util import prepare_environment, prepare_global_logging
+from allennlp.common.util import prepare_environment, prepare_global_logging, \
+                                 get_frozen_and_tunable_parameter_names
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models import load_archive, archive_model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer
+from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -51,7 +54,7 @@ class FineTune(Subcommand):
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
-                               help='a HOCON structure used to override the training configuration '
+                               help='a JSON structure used to override the training configuration '
                                '(only affects the config_file, _not_ the model_archive)')
 
         subparser.add_argument('--file-friendly-logging',
@@ -95,7 +98,7 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
         The directory in which to save results and logs. We just pass this along to
         :func:`fine_tune_model`.
     overrides : ``str``
-        A HOCON string that we will use to override values in the input parameter file.
+        A JSON string that we will use to override values in the input parameter file.
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we make our output more friendly to saved model files.  We just pass this
         along to :func:`fine_tune_model`.
@@ -149,23 +152,50 @@ def fine_tune_model(model: Model,
         logger.warning("You passed parameters for the model in your configuration file, but we "
                        "are ignoring them, using instead the model parameters in the archive.")
 
-    if params.pop('vocabulary', None):
-        logger.warning("You passed parameters for the vocabulary in your configuration file, but "
-                       "we are ignoring them, using instead the vocabulary from the saved model.")
+    vocabulary_params = params.pop('vocabulary', {})
+    if vocabulary_params.get('directory_path', None):
+        logger.warning("You passed `directory_path` in parameters for the vocabulary in "
+                       "your configuration file, but it will be ignored. "
+                       "Vocabulary from the saved model will be extended with current data.")
 
+    all_datasets = datasets_from_params(params)
+
+    datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
+
+    for dataset in datasets_for_vocab_creation:
+        if dataset not in all_datasets:
+            raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
+
+    logger.info("Extending model vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
     vocab = model.vocab
+    vocab.extend_from_instances(vocabulary_params,
+                                (instance for key, dataset in all_datasets.items()
+                                 for instance in dataset
+                                 if key in datasets_for_vocab_creation))
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     iterator = DataIterator.from_params(params.pop("iterator"))
     iterator.index_with(vocab)
-
-    all_datasets = datasets_from_params(params)
 
     train_data = all_datasets['train']
     validation_data = all_datasets.get('validation')
     test_data = all_datasets.get('test')
 
     trainer_params = params.pop("trainer")
+    no_grad_regexes = trainer_params.pop("no_grad", ())
+    for name, parameter in model.named_parameters():
+        if any(re.search(regex, name) for regex in no_grad_regexes):
+            parameter.requires_grad_(False)
+
+    frozen_parameter_names, tunable_parameter_names = \
+                   get_frozen_and_tunable_parameter_names(model)
+    logger.info("Following parameters are Frozen  (without gradient):")
+    for name in frozen_parameter_names:
+        logger.info(name)
+    logger.info("Following parameters are Tunable (with gradient):")
+    for name in tunable_parameter_names:
+        logger.info(name)
+
     trainer = Trainer.from_params(model,
                                   serialization_dir,
                                   iterator,

@@ -1,6 +1,6 @@
-
 import torch
 from overrides import overrides
+
 from allennlp.common import Params
 from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 
@@ -8,7 +8,8 @@ from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 @MatrixAttention.register("dot_product")
 class DotProductMatrixAttention(MatrixAttention):
     """
-    Computes attention between every entry in matrix_1 with every entry in matrix_2 using dot product.
+    Computes attention between every entry in matrix_1 with every entry in matrix_2 using a dot
+    product.
     """
 
     @overrides

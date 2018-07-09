@@ -64,3 +64,27 @@ class TestMakeVocab(AllenNlpTestCase):
 
         labels.sort()
         assert labels == ['N', 'V']
+
+    def test_make_vocab_makes_vocab_with_config(self):
+        vocab_path = self.TEST_DIR / 'vocabulary'
+
+        self.params['vocabulary'] = {}
+        self.params['vocabulary']['directory_path'] = vocab_path
+        self.params['vocabulary']['min_count'] = {"tokens" : 3}
+
+        make_vocab_from_params(self.params)
+
+        vocab_files = os.listdir(vocab_path)
+        assert set(vocab_files) == {'labels.txt', 'non_padded_namespaces.txt', 'tokens.txt'}
+
+        with open(vocab_path / 'tokens.txt') as f:
+            tokens = [line.strip() for line in f]
+
+        tokens.sort()
+        assert tokens == ['.', '@@UNKNOWN@@', 'animals', 'are']
+
+        with open(vocab_path / 'labels.txt') as f:
+            labels = [line.strip() for line in f]
+
+        labels.sort()
+        assert labels == ['N', 'V']

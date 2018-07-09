@@ -10,8 +10,7 @@ from torch.nn.modules.linear import Linear
 
 from allennlp.common import util as common_util
 from allennlp.models.semantic_parsing.nlvr.nlvr_decoder_state import NlvrDecoderState
-from allennlp.modules.attention.legacy_attention import LegacyAttention
-from allennlp.modules.similarity_functions import SimilarityFunction
+from allennlp.modules import Attention
 from allennlp.nn.decoding import DecoderStep, RnnState, ChecklistState
 from allennlp.nn import util as nn_util
 
@@ -22,7 +21,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
     ----------
     encoder_output_dim : ``int``
     action_embedding_dim : ``int``
-    attention_function : ``SimilarityFunction``
+    input_attention : ``Attention``
     dropout : ``float``
         Dropout to use on decoder outputs and before action prediction.
     use_coverage : ``bool``, optional (default=False)
@@ -32,11 +31,11 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
     def __init__(self,
                  encoder_output_dim: int,
                  action_embedding_dim: int,
-                 attention_function: SimilarityFunction,
+                 input_attention: Attention,
                  dropout: float = 0.0,
                  use_coverage: bool = False) -> None:
         super(NlvrDecoderStep, self).__init__()
-        self._input_attention = LegacyAttention(attention_function)
+        self._input_attention = input_attention
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with the final hidden state of the encoder.

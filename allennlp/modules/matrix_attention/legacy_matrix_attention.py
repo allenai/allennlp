@@ -1,5 +1,6 @@
 import torch
 from overrides import overrides
+
 from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
 from allennlp.modules.similarity_functions.similarity_function import SimilarityFunction
 from allennlp.common import Params
@@ -9,9 +10,10 @@ from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 @MatrixAttention.register("legacy")
 class LegacyMatrixAttention(MatrixAttention):
     """
-    The legacy impl of ``MatrixAttention``
-    It should be considered deprecated as it uses much more
-    memory than the newer specialized MatrixAttention modules.
+    The legacy implementation of ``MatrixAttention``.
+
+    It should be considered deprecated as it uses much more memory than the newer specialized
+    ``MatrixAttention`` modules.
 
     Parameters
     ----------

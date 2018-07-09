@@ -21,7 +21,7 @@ a model.
     -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
                             directory in which to save the output of the dry run.
     -o OVERRIDES, --overrides OVERRIDES
-                            a HOCON structure used to override the experiment
+                            a JSON structure used to override the experiment
                             configuration
     --include-package INCLUDE_PACKAGE
                             additional packages to include
@@ -64,7 +64,7 @@ class DryRun(Subcommand):
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
-                               help='a HOCON structure used to override the experiment configuration')
+                               help='a JSON structure used to override the experiment configuration')
 
         subparser.set_defaults(func=dry_run_from_args)
 

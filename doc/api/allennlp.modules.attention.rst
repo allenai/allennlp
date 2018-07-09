@@ -11,6 +11,11 @@ allennlp.modules.attention
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.modules.attention.bilinear_attention
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.modules.attention.cosine_attention
    :members:
    :undoc-members:

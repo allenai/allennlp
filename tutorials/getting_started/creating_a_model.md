@@ -193,9 +193,6 @@ $ allennlp train \
     -s /tmp/crf_model
 ```
 
-If you were to create your own model outside of
-the allennlp codebase, they wouldn't be.
-
 If you were to create your own model outside of the allennlp codebase,
 you would need to load the modules where you've defined your classes.
 Otherwise they never get registered and then AllenNLP is unable to

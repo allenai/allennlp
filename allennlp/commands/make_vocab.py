@@ -7,7 +7,7 @@ each training run.
 
    $ allennlp make-vocab --help
 
-    usage: allennlp make-vocab [-h] [-o OVERRIDES] param_path
+    usage: allennlp make-vocab [-h] [-o OVERRIDES] [--include-package INCLUDE_PACKAGE] param_path
 
     Create a vocabulary from the specified dataset.
 
@@ -18,8 +18,10 @@ each training run.
     optional arguments:
     -h, --help            show this help message and exit
     -o OVERRIDES, --overrides OVERRIDES
-                          a HOCON structure used to override the experiment
+                          a JSON structure used to override the experiment
                           configuration
+    --include-package INCLUDE_PACKAGE
+                            additional packages to include
 """
 import argparse
 import logging
@@ -48,7 +50,7 @@ class MakeVocab(Subcommand):
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
-                               help='a HOCON structure used to override the experiment configuration')
+                               help='a JSON structure used to override the experiment configuration')
 
         subparser.set_defaults(func=make_vocab_from_args)
 
@@ -70,7 +72,7 @@ def make_vocab_from_params(params: Params):
     prepare_environment(params)
 
     vocab_params = params.pop("vocabulary", {})
-    vocab_dir = vocab_params.get('directory_path')
+    vocab_dir = vocab_params.pop('directory_path', None)
     if vocab_dir is None:
         raise ConfigurationError("To use `make-vocab` your configuration must contain a value "
                                  "at vocabulary.directory_path")
@@ -86,7 +88,7 @@ def make_vocab_from_params(params: Params):
             raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
 
     logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
-    vocab = Vocabulary.from_params(Params({}),
+    vocab = Vocabulary.from_params(vocab_params,
                                    (instance for key, dataset in all_datasets.items()
                                     for instance in dataset
                                     if key in datasets_for_vocab_creation))

@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List
 import json
 
 from allennlp.common import Registrable
@@ -44,12 +44,14 @@ class Predictor(Registrable):
         return json.dumps(outputs) + "\n"
 
     def predict_json(self, inputs: JsonDict) -> JsonDict:
-        instance, return_dict = self._json_to_instance(inputs)
-        outputs = self._model.forward_on_instance(instance)
-        return_dict.update(outputs)
-        return sanitize(return_dict)
+        instance = self._json_to_instance(inputs)
+        return self.predict_instance(instance)
 
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+    def predict_instance(self, instance: Instance) -> JsonDict:
+        outputs = self._model.forward_on_instance(instance)
+        return sanitize(outputs)
+
+    def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
         Converts a JSON object into an :class:`~allennlp.data.instance.Instance`
         and a ``JsonDict`` of information which the ``Predictor`` should pass through,
@@ -58,13 +60,14 @@ class Predictor(Registrable):
         raise NotImplementedError
 
     def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
-        instances, return_dicts = zip(*self._batch_json_to_instances(inputs))
-        outputs = self._model.forward_on_instances(instances)
-        for output, return_dict in zip(outputs, return_dicts):
-            return_dict.update(output)
-        return sanitize(return_dicts)
+        instances = self._batch_json_to_instances(inputs)
+        return self.predict_batch_instance(instances)
 
-    def _batch_json_to_instances(self, json_dicts: List[JsonDict]) -> List[Tuple[Instance, JsonDict]]:
+    def predict_batch_instance(self, instances: List[Instance]) -> List[JsonDict]:
+        outputs = self._model.forward_on_instances(instances)
+        return sanitize(outputs)
+
+    def _batch_json_to_instances(self, json_dicts: List[JsonDict]) -> List[Instance]:
         """
         Converts a list of JSON objects into a list of :class:`~allennlp.data.instance.Instance`s.
         By default, this expects that a "batch" consists of a list of JSON blobs which would
@@ -103,7 +106,8 @@ class Predictor(Registrable):
         that is, from the result of training a model. Optionally specify which `Predictor`
         subclass; otherwise, the default one for the model will be used.
         """
-        config = archive.config
+        # Duplicate the config so that the config inside the archive doesn't get consumed
+        config = archive.config.duplicate()
 
         if not predictor_name:
             model_type = config.get("model").get("type")
@@ -119,18 +123,3 @@ class Predictor(Registrable):
         model.eval()
 
         return Predictor.by_name(predictor_name)(model, dataset_reader)
-
-
-class DemoModel:
-    """
-    A demo model is determined by both an archive file
-    (representing the trained model)
-    and a choice of predictor
-    """
-    def __init__(self, archive_file: str, predictor_name: str) -> None:
-        self.archive_file = archive_file
-        self.predictor_name = predictor_name
-
-    def predictor(self) -> Predictor:
-        archive = load_archive(self.archive_file)
-        return Predictor.from_archive(archive, self.predictor_name)

@@ -1,6 +1,4 @@
 # pylint: disable=invalid-name,protected-access
-import os
-
 from flaky import flaky
 import numpy
 import pytest
@@ -34,20 +32,22 @@ class SimpleTaggerTest(ModelTestCase):
         class_probs = output_dict['class_probabilities'][0].data.numpy()
         numpy.testing.assert_almost_equal(numpy.sum(class_probs, -1), numpy.array([1, 1, 1, 1]))
 
-    def test_mismatching_dimensions_throws_configuration_error(self):
-        initial_working_dir = os.getcwd()
-        # Change directory to module root.
-        os.chdir(self.MODULE_ROOT)
+    def test_forward_on_instances_ignores_loss_key_when_batched(self):
+        batch_outputs = self.model.forward_on_instances(self.dataset.instances)
+        for output in batch_outputs:
+            assert not "loss" in output.keys()
 
+        # It should be in the single batch case, because we special case it.
+        single_output = self.model.forward_on_instance(self.dataset.instances[0])
+        assert "loss" in single_output.keys()
+
+    def test_mismatching_dimensions_throws_configuration_error(self):
         params = Params.from_file(self.param_file)
         # Make the encoder wrong - it should be 2 to match
         # the embedding dimension from the text_field_embedder.
         params["model"]["encoder"]["input_size"] = 10
         with pytest.raises(ConfigurationError):
             Model.from_params(self.vocab, params.pop("model"))
-
-        # Change directory back to what it was initially
-        os.chdir(initial_working_dir)
 
     def test_regularization(self):
         penalty = self.model.get_regularization_penalty()
