@@ -9,6 +9,7 @@ allennlp.predictors
 * :ref:`Predictor<predictor>`
 * :ref:`BidafPredictor<bidaf>`
 * :ref:`DecomposableAttentionPredictor<decomposable-attention>`
+* :ref:`ESIMPredictor<esim>`
 * :ref:`SemanticRoleLabelerPredictor<semantic-role-labeler>`
 * :ref:`SentenceTaggerPredictor<sentence-tagger>`
 * :ref:`CorefPredictor<coreference-resolution>`
@@ -31,6 +32,12 @@ allennlp.predictors
 
 .. _decomposable-attention:
 .. automodule:: allennlp.predictors.decomposable_attention
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _esim:
+.. automodule:: allennlp.predictors.esim
    :members:
    :undoc-members:
    :show-inheritance:
