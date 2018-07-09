@@ -1,15 +1,17 @@
 # pylint: disable=no-self-use,invalid-name
 from collections import defaultdict
+from typing import Dict, List
 
 import pytest
 import numpy
 
 from allennlp.data import Token, Vocabulary
 from allennlp.data.fields import TextField
-from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
+from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer, TokenIndexer
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import pad_sequence_to_length
 
 
 class TestTextField(AllenNlpTestCase):
@@ -193,3 +195,38 @@ class TestTextField(AllenNlpTestCase):
         field = TextField([Token(t) for t in ["A", "sentence"]],
                           {"words": SingleIdTokenIndexer(namespace="words")})
         print(field)
+
+    def test_token_embedder_returns_dict(self):
+        field = TextField([Token(t) for t in ["A", "sentence"]],
+                          {"field_with_dict": DictReturningTokenIndexer()})
+        field.index(self.vocab)
+        padding_lengths = field.get_padding_lengths()
+        assert padding_lengths == {'num_tokens': 2}
+
+
+class DictReturningTokenIndexer(TokenIndexer[Dict[str, List[int]]]):
+    def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
+        pass
+
+    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> int:
+        raise NotImplementedError
+    
+    def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary):
+        return {
+            "token_ids": [10, 15] + \
+                         [vocabulary.get_token_index(token.text, 'words') for token in tokens] + \
+                         [25],
+            "additional_key": [22, 29]
+        }
+    
+    def get_padding_token(self) -> int:
+        return 0
+
+    def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument
+        return {"dict_indexer_" + key: len(indices) for key, indices in token.items()}
+
+    def pad_token_sequence(self,
+                           tokens: List[int],
+                           desired_num_tokens: int,
+                           padding_lengths: Dict[str, int]) -> List[int]:  # pylint: disable=unused-argument
+        return pad_sequence_to_length(tokens, desired_num_tokens)
