@@ -1,8 +1,3 @@
-# TODO: projection dropout with ELMO
-#   l2 reg with ELMO
-#   multiple ELMO layers
-#   doc
-
 from typing import Dict, Optional
 
 import torch
@@ -18,14 +13,31 @@ from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum, replace_masked_values
 from allennlp.training.metrics import CategoricalAccuracy
 
-class VariationalDropout(torch.nn.Dropout):
+class InputVariationalDropout(torch.nn.Dropout):
+    """
+    Apply the dropout technique in Gal and Ghahramani, "Dropout as a Bayesian Approximation:
+    Representing Model Uncertainty in Deep Learning" (https://arxiv.org/abs/1506.02142) to a
+    3D tensor.
+
+    This module accepts a 3D tensor of shape ``(batch_size, num_timesteps, embedding_dim)``
+    and samples a single dropout mask of shape ``(batch_size, embedding_dim)`` and applies
+    it to every time step.
+    """
     def forward(self, input):
         """
-        input is shape (batch_size, timesteps, embedding_dim)
-        Samples one mask of size (batch_size, embedding_dim) and applies it to every time step.
+        Apply dropout to input tensor.
+
+        Parameters
+        ----------
+        input: torch.FloatTensor
+            A tensor of shape ``(batch_size, num_timesteps, embedding_dim)``
+        
+        Returns
+        -------
+        output: torch.FloatTensor
+            A tensor of shape ``(batch_size, num_timesteps, embedding_dim)`` with dropout applied.
         """
-        #ones = Variable(torch.ones(input.shape[0], input.shape[-1]))
-        ones = Variable(input.data.new(input.shape[0], input.shape[-1]).fill_(1))
+        ones = Variable(input.data.new_ones(input.shape[0], input.shape[-1]))
         dropout_mask = torch.nn.functional.dropout(ones, self.p, self.training, inplace=False)
         if self.inplace:
             input *= dropout_mask.unsqueeze(1)
@@ -47,25 +59,21 @@ class ESIM(Model):
     text_field_embedder : ``TextFieldEmbedder``
         Used to embed the ``premise`` and ``hypothesis`` ``TextFields`` we get as input to the
         model.
-    attend_feedforward : ``FeedForward``
-        This feedforward network is applied to the encoded sentence representations before the
-        similarity matrix is computed between words in the premise and words in the hypothesis.
+    encoder : ``Seq2SeqEncoder``
+        Used to encode the premise and hypothesis.
     similarity_function : ``SimilarityFunction``
-        This is the similarity function used when computing the similarity matrix between words in
-        the premise and words in the hypothesis.
-    compare_feedforward : ``FeedForward``
-        This feedforward network is applied to the aligned premise and hypothesis representations,
-        individually.
-    aggregate_feedforward : ``FeedForward``
-        This final feedforward network is applied to the concatenated, summed result of the
-        ``compare_feedforward`` network, and its output is used as the entailment class logits.
-    premise_encoder : ``Seq2SeqEncoder``, optional (default=``None``)
-        After embedding the premise, we can optionally apply an encoder.  If this is ``None``, we
-        will do nothing.
-    hypothesis_encoder : ``Seq2SeqEncoder``, optional (default=``None``)
-        After embedding the hypothesis, we can optionally apply an encoder.  If this is ``None``,
-        we will use the ``premise_encoder`` for the encoding (doing nothing if ``premise_encoder``
-        is also ``None``).
+        This is the similarity function used when computing the similarity matrix between encoded
+        words in the premise and words in the hypothesis.
+    projection_feedforward : ``FeedForward``
+        The feedforward network used to project down the encoded and enhanced premise and hypothesis.
+    inference_encoder : ``Seq2SeqEncoder``
+        Used to encode the projected premise and hypothesis for prediction.
+    output_feedforward : ``FeedForward``
+        Used to prepare the concatenated premise and hypothesis for prediction.
+    output_logit : ``FeedForward``
+        This feedforward network computes the output logits.
+    dropout : ``float``, optional (default=0.5)
+        Dropout percentage to use.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
@@ -79,8 +87,8 @@ class ESIM(Model):
                  inference_encoder: Seq2SeqEncoder,
                  output_feedforward: FeedForward,
                  output_logit: FeedForward,
-                 initializer: InitializerApplicator = InitializerApplicator(),
                  dropout: float = 0.5,
+                 initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
 
@@ -94,7 +102,7 @@ class ESIM(Model):
 
         if dropout:
             self.dropout = torch.nn.Dropout(dropout)
-            self.rnn_input_dropout = VariationalDropout(dropout)
+            self.rnn_input_dropout = InputVariationalDropout(dropout)
         else:
             self.dropout = None
             self.rnn_input_dropout = None
@@ -185,12 +193,8 @@ class ESIM(Model):
                 dim=-1
         )
 
-        # embedding -> lstm w/ do -> enhanced attention -> dropout_proj, only if ELMO -> ff proj -> lstm w/ do -> dropout -> ff 300 -> dropout -> output
-
-        # add dropout here with ELMO
-
-        # the projection layer down to the model dimension
-        # no dropout in projection
+        # The projection layer down to the model dimension.  Dropout is not applied before
+        # projection.
         projected_enhanced_premise = self._projection_feedforward(premise_enhanced)
         projected_enhanced_hypothesis = self._projection_feedforward(hypothesis_enhanced)
 
@@ -235,12 +239,10 @@ class ESIM(Model):
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return {
-                'accuracy': self._accuracy.get_metric(reset),
-                }
+        return {'accuracy': self._accuracy.get_metric(reset)}
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'DecomposableAttention':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'ESIM':
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
 
@@ -264,6 +266,6 @@ class ESIM(Model):
                    inference_encoder=inference_encoder,
                    output_feedforward=output_feedforward,
                    output_logit=output_logit,
-                   initializer=initializer,
                    dropout=dropout,
+                   initializer=initializer,
                    regularizer=regularizer)
