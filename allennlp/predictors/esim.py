@@ -32,10 +32,10 @@ class ESIMPredictor(Predictor):
         return self.predict_json({"sentence1" : sentence1, "sentence2": sentence2})
 
     @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+    def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
         Expects JSON that looks like ``{"sentence1": "...", "sentence2": "..."}``.
         """
         sentence1_text = json_dict["sentence1"]
         sentence2_text = json_dict["sentence2"]
-        return self._dataset_reader.text_to_instance(sentence1_text, sentence2_text), {}
+        return self._dataset_reader.text_to_instance(sentence1_text, sentence2_text)
