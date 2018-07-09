@@ -297,7 +297,7 @@ class BiattentiveClassificationNetwork(Model):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
 
-    # The logic here requires a custom from_params.
+    # The FeedForward vs Maxout logic here requires a custom from_params.
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BiattentiveClassificationNetwork':  # type: ignore
         # pylint: disable=arguments-differ

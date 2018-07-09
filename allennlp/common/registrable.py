@@ -5,7 +5,6 @@ for registering them.
 """
 from collections import defaultdict
 from typing import TypeVar, Type, Dict, List
-import importlib
 import logging
 
 from allennlp.common.checks import ConfigurationError
@@ -14,15 +13,6 @@ from allennlp.common.from_params import FromParams
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 T = TypeVar('T')
-
-def _load_module(cls: type) -> None:
-    """
-    When we want to instantiate a class from_params we better load its module
-    to make sure all of its registered subclasses get loaded.
-    """
-    module_name = cls.__module__
-    importlib.import_module(module_name)
-
 
 class Registrable(FromParams):
     """
@@ -71,10 +61,6 @@ class Registrable(FromParams):
     @classmethod
     def list_available(cls) -> List[str]:
         """List default first if it exists"""
-        # This is necessary because some of the subclasses may not have been loaded
-        # at this point, and they're not registered until they're loaded.
-        _load_module(cls)
-
         keys = list(Registrable._registry[cls].keys())
         default = cls.default_implementation
 

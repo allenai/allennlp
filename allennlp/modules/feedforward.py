@@ -80,8 +80,8 @@ class FeedForward(torch.nn.Module):
             output = dropout(activation(layer(output)))
         return output
 
-    # Requires custom logic around the activations (mostly because the Union type is too complex
-    # to handle automatically).
+    # Requires custom logic around the activations (the automatic `from_params`
+    # method can't currently instatiate types like `Union[Activation, List[Activation]]`)
     @classmethod
     def from_params(cls, params: Params):
         input_dim = params.pop_int('input_dim')

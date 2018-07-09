@@ -61,7 +61,7 @@ class TestFromParams(AllenNlpTestCase):
         assert my_class.my_int == 10
         assert my_class.my_bool
 
-    def text_create_kwargs(self):
+    def test_create_kwargs(self):
         kwargs = create_kwargs(MyClass,
                                Params({'my_int': 5}),
                                my_bool=True,
@@ -72,3 +72,56 @@ class TestFromParams(AllenNlpTestCase):
                 "my_int": 5,
                 "my_bool": True
         }
+
+    def test_extras(self):
+        # pylint: disable=unused-variable,arguments-differ
+        from allennlp.common.registrable import Registrable
+
+        class A(Registrable):
+            pass
+
+        @A.register("b")
+        class B(A):
+            def __init__(self, size: int, name: str) -> None:
+                self.size = size
+                self.name = name
+
+        @A.register("c")
+        class C(A):
+            def __init__(self, size: int, name: str) -> None:
+                self.size = size
+                self.name = name
+
+            # custom from params
+            @classmethod
+            def from_params(cls, params: Params, size: int) -> 'C':
+                name = params.pop('name')
+                return cls(size=size, name=name)
+
+
+        # Check that extras get passed, even though A doesn't need them.
+        params = Params({"type": "b", "size": 10})
+        b = A.from_params(params, name="extra")
+
+        assert b.name == "extra"
+        assert b.size == 10
+
+        # Check that extra extras don't get passed.
+        params = Params({"type": "b", "size": 10})
+        b = A.from_params(params, name="extra", unwanted=True)
+
+        assert b.name == "extra"
+        assert b.size == 10
+
+        # Now the same with a custom from_params.
+        params = Params({"type": "c", "name": "extra_c"})
+        c = A.from_params(params, size=20)
+        assert c.name == "extra_c"
+        assert c.size == 20
+
+        # Check that extra extras don't get passed.
+        params = Params({"type": "c", "name": "extra_c"})
+        c = A.from_params(params, size=20, unwanted=True)
+
+        assert c.name == "extra_c"
+        assert c.size == 20

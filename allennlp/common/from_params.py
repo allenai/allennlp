@@ -9,8 +9,9 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 T = TypeVar('T')
 
-# getattr is necessary because mypy insists that no such attribute exists.
-_NO_DEFAULT = getattr(inspect, '_empty')  # pylint: disable=invalid-name
+# If a function parameter has no default value specified,
+# this is what the inspect module returns.
+_NO_DEFAULT = inspect.Parameter.empty  # pylint: disable=invalid-name
 
 def takes_arg(obj, arg: str) -> bool:
     """
@@ -27,7 +28,7 @@ def takes_arg(obj, arg: str) -> bool:
         raise ConfigurationError(f"object {obj} is not callable")
     return arg in signature.parameters
 
-def remove_optional(annotation):
+def remove_optional(annotation: type):
     """
     Optional[X] annotations are actually represented as Union[X, NoneType].
     For our purposes, the "Optional" part is not interesting, so here we
@@ -44,6 +45,13 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
     """
     Given some class, a `Params` object, and potentially other keyword arguments,
     create a dict of keyword args suitable for passing to the class's constructor.
+
+    The function does this by finding the class's constructor, matching the constructor
+    arguments to entries in the `params` object, and instantiating values for the parameters
+    using the type annotation and possibly a from_params method.
+
+    Any values that are provided in the `extras` will just be used as is.
+    For instance, you might provide an existing `Vocabulary` this way.
     """
     # Get the signature of the constructor.
     signature = inspect.signature(cls.__init__)
@@ -57,10 +65,14 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
         if name == "self":
             continue
 
-        # Get the annotation and break it into `origin` and `args`
+        # If the annotation is a compound type like typing.Dict[str, int],
+        # it will have an __origin__ field indicating `typing.Dict`
+        # and an __args__ field indicating `(str, int)`. We capture both.
         annotation = remove_optional(param.annotation)
         origin = getattr(annotation, '__origin__', None)
         args = getattr(annotation, '__args__', [])
+
+        # The parameter is optional if its default value is not the "no default" sentinel.
         default = param.default
         optional = default != _NO_DEFAULT
 
@@ -77,6 +89,8 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
 
                 if takes_arg(annotation.from_params, 'extras'):
                     # If annotation.params accepts **extras, we need to pass them all along.
+                    # For example, `BasicTextFieldEmbedder.from_params` requires a Vocabulary
+                    # object, but `TextFieldEmbedder.from_params` does not.
                     subextras = extras
                 else:
                     # Otherwise, only supply the ones that are actual args; any additional ones
@@ -88,10 +102,13 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
                 if isinstance(subparams, str):
                     kwargs[name] = annotation.by_name(subparams)()
                 else:
+                    print(annotation)
                     kwargs[name] = annotation.from_params(params=subparams, **subextras)
             elif not optional:
                 # Not optional and not supplied, that's an error!
                 raise ConfigurationError(f"expected key {name} for {cls.__name__}")
+            else:
+                kwargs[name] = default
 
         # If the parameter type is a Python primitive, just pop it off
         # using the correct casting pop_xyz operation.
@@ -112,8 +129,8 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
                             if optional
                             else params.pop_float(name))
 
-        # This handles types like Dict[str, TokenIndexer], where we need to instantiate
-        # each value from_params and return the resulting dict.
+        # This is special logic for handling types like Dict[str, TokenIndexer], which it creates by
+        # instantiating each value from_params and returning the resulting dict.
         elif origin == Dict and len(args) == 2 and hasattr(args[-1], 'from_params'):
             value_cls = annotation.__args__[-1]
 
@@ -132,8 +149,7 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
                 kwargs[name] = params.pop(name)
 
     params.assert_empty(cls.__name__)
-    return {k: v for k, v in kwargs.items() if takes_arg(cls, k)}
-
+    return kwargs
 
 
 class FromParams:
@@ -174,8 +190,15 @@ class FromParams:
                                        default_to_first_choice=default_to_first_choice)
             subclass = registered_subclasses[choice]
 
-            # Prune down the dict of extras, if necessary.
+            # We want to call subclass.from_params. It's possible that it's just the "free"
+            # implementation here, in which case it accepts `**extras` and we are not able
+            # to make any assumptions about what extra parameters it needs.
+            #
+            # It's also possible that it has a custom `from_params` method. In that case it
+            # won't accept any **extra parameters and we'll need to filter them out.
             if not takes_arg(subclass.from_params, 'extras'):
+                # Necessarily subclass.from_params is a custom implementation, so we need to
+                # pass it only the args it's expecting.
                 extras = {k: v for k, v in extras.items() if takes_arg(subclass.from_params, k)}
 
             return subclass.from_params(params=params, **extras)
