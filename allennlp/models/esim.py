@@ -9,7 +9,7 @@ from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward
 from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
-from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
+from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TextFieldEmbedder
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum, replace_masked_values
 from allennlp.training.metrics import CategoricalAccuracy
@@ -24,27 +24,28 @@ class InputVariationalDropout(torch.nn.Dropout):
     and samples a single dropout mask of shape ``(batch_size, embedding_dim)`` and applies
     it to every time step.
     """
-    def forward(self, input):
+    def forward(self, input_tensor):
+        # pylint: disable=arguments-differ
         """
         Apply dropout to input tensor.
 
         Parameters
         ----------
-        input: torch.FloatTensor
+        input_tensor: torch.FloatTensor
             A tensor of shape ``(batch_size, num_timesteps, embedding_dim)``
-        
+
         Returns
         -------
         output: torch.FloatTensor
             A tensor of shape ``(batch_size, num_timesteps, embedding_dim)`` with dropout applied.
         """
-        ones = Variable(input.data.new_ones(input.shape[0], input.shape[-1]))
+        ones = Variable(input_tensor.data.new_ones(input_tensor.shape[0], input_tensor.shape[-1]))
         dropout_mask = torch.nn.functional.dropout(ones, self.p, self.training, inplace=False)
         if self.inplace:
-            input *= dropout_mask.unsqueeze(1)
+            input_tensor *= dropout_mask.unsqueeze(1)
             return None
         else:
-            return dropout_mask.unsqueeze(1) * input
+            return dropout_mask.unsqueeze(1) * input_tensor
 
 
 @Model.register("esim")
@@ -129,7 +130,8 @@ class ESIM(Model):
                 premise: Dict[str, torch.LongTensor],
                 hypothesis: Dict[str, torch.LongTensor],
                 label: torch.IntTensor = None,
-                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
+                metadata: List[Dict[str, Any]] = None  # pylint:disable=unused-argument
+               ) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -192,7 +194,7 @@ class ESIM(Model):
                 dim=-1
         )
         hypothesis_enhanced = torch.cat(
-                [encoded_hypothesis, attended_premise, 
+                [encoded_hypothesis, attended_premise,
                  encoded_hypothesis - attended_premise,
                  encoded_hypothesis * attended_premise],
                 dim=-1
@@ -219,18 +221,22 @@ class ESIM(Model):
                 v_bi, hypothesis_mask.unsqueeze(-1), -1e7
         ).max(dim=1)
 
-        v_a_avg = torch.sum(v_ai * premise_mask.unsqueeze(-1), dim=1) / torch.sum(premise_mask, 1, keepdim=True)
-        v_b_avg = torch.sum(v_bi * hypothesis_mask.unsqueeze(-1), dim=1) / torch.sum(hypothesis_mask, 1, keepdim=True)
+        v_a_avg = torch.sum(v_ai * premise_mask.unsqueeze(-1), dim=1) / torch.sum(
+                premise_mask, 1, keepdim=True
+        )
+        v_b_avg = torch.sum(v_bi * hypothesis_mask.unsqueeze(-1), dim=1) / torch.sum(
+                hypothesis_mask, 1, keepdim=True
+        )
 
         # Now concat
         # (batch_size, model_dim * 2 * 4)
-        v = torch.cat([v_a_avg, v_a_max, v_b_avg, v_b_max], dim=1)
+        v_all = torch.cat([v_a_avg, v_a_max, v_b_avg, v_b_max], dim=1)
 
         # the final MLP -- apply dropout to input, and MLP applies to output & hidden
         if self.dropout:
-            v = self.dropout(v)
+            v_all = self.dropout(v_all)
 
-        output_hidden = self._output_feedforward(v)
+        output_hidden = self._output_feedforward(v_all)
         label_logits = self._output_logit(output_hidden)
         label_probs = torch.nn.functional.softmax(label_logits, dim=-1)
 
