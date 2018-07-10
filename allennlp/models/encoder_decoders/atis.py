@@ -140,7 +140,7 @@ class Atis(SimpleSeq2Seq):
         encoder_outputs = self._encoder(embedded_input, source_mask)
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
         if target_tokens:
-            targets = target_tokens["tokens"]
+            targets = target_tokens["tokens"].squeeze(2)
             target_sequence_length = targets.size()[1]
             # The last input from the target is either padding or the end symbol. Either way, we
             # don't have to process it.
@@ -159,7 +159,7 @@ class Atis(SimpleSeq2Seq):
             print('timestep', timestep)
             print('self.trianing', self.training)
             if self.training and torch.rand(1).item() >= self._scheduled_sampling_ratio:
-                input_choices = targets.squeeze(2)[:, timestep]
+                input_choices = targets[:, timestep]
             else:
                 if timestep == 0:
                     # For the first timestep, when we do not have targets, we input start symbols.
@@ -200,10 +200,10 @@ class Atis(SimpleSeq2Seq):
         if target_tokens:
             target_mask = get_text_field_mask(target_tokens)
             print('logits', logits.size())
-            print('targets', targets.squeeze(2).size())
+            print('targets', targets.size())
             print('targets_mask', target_mask.size())
 
-            loss = self._get_loss(logits, targets.squeeze(2), target_mask) # KLIN squeeze target so it is correct for logits
+            loss = self._get_loss(logits, targets, target_mask)
             output_dict["loss"] = loss
             # TODO: Define metrics
         return output_dict

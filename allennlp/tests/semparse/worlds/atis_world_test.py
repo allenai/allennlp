@@ -161,6 +161,7 @@ class TestAtisWorld(AllenNlpTestCase):
             print(action_sequence)
 
     def test_atis_parse_coverage(self):
+        print(self.data)
         num_queries = 0
         num_parsed = 0
 

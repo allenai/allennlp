@@ -84,8 +84,6 @@ class AtisDatasetReader(DatasetReader):
                             continue
 
                         print('yield instance')
-                        print('action_sequence', len(action_sequence))
-                        print('sql', interaction_round['sql'])
                         instance = self.text_to_instance(interaction_round[nl_key], action_sequence, world)
                         if not instance:
                             continue
