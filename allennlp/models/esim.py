@@ -2,7 +2,6 @@ from typing import Dict, Optional, List, Any
 
 import torch
 
-from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model

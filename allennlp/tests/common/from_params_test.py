@@ -94,7 +94,7 @@ class TestFromParams(AllenNlpTestCase):
 
             # custom from params
             @classmethod
-            def from_params(cls, params: Params, size: int) -> 'C':
+            def from_params(cls, params: Params, size: int) -> 'C':  # type: ignore
                 name = params.pop('name')
                 return cls(size=size, name=name)
 
