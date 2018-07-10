@@ -141,7 +141,5 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                         }
                 })
 
-        print(new_params)
-
         token_embedder = BasicTextFieldEmbedder.from_params(params=new_params, vocab=self.vocab)
         assert token_embedder(self.inputs).size() == (1, 4, 10)
