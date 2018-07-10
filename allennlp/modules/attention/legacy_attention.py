@@ -2,7 +2,6 @@
 import torch
 
 from overrides import overrides
-from allennlp.common import Params
 from allennlp.modules.attention.attention import Attention
 from allennlp.modules.similarity_functions import DotProductSimilarity, SimilarityFunction
 
@@ -26,11 +25,3 @@ class LegacyAttention(Attention):
                                                   matrix.size()[1],
                                                   vector.size()[1])
         return self._similarity_function(tiled_vector, matrix)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'Attention':
-        similarity_function = SimilarityFunction.from_params(params.pop('similarity_function', {}))
-        normalize = params.pop_bool('normalize', True)
-        params.assert_empty(cls.__name__)
-        return cls(similarity_function=similarity_function,
-                   normalize=normalize)

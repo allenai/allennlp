@@ -240,12 +240,6 @@ class Model(torch.nn.Module, Registrable):
             self._warn_for_unseparable_batches.add(output_key)
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
-        choice = params.pop_choice("type", cls.list_available())
-        model = cls.by_name(choice).from_params(vocab, params)
-        return model
-
-    @classmethod
     def _load(cls,
               config: Params,
               serialization_dir: str,
@@ -268,7 +262,7 @@ class Model(torch.nn.Module, Registrable):
         # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
         # want the code to look for it, so we remove it from the parameters here.
         remove_pretrained_embedding_params(model_params)
-        model = Model.from_params(vocab, model_params)
+        model = Model.from_params(vocab=vocab, params=model_params)
         model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
         model.load_state_dict(model_state)
 

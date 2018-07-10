@@ -359,8 +359,9 @@ class Vocabulary(Registrable):
                           only_include_pretrained_words=only_include_pretrained_words,
                           tokens_to_add=tokens_to_add)
 
+    # There's enough logic here to require a custom from_params.
     @classmethod
-    def from_params(cls, params: Params, instances: Iterable['adi.Instance'] = None):
+    def from_params(cls, params: Params, instances: Iterable['adi.Instance'] = None):  # type: ignore
         """
         There are two possible ways to build a vocabulary; from a
         collection of instances, using :func:`Vocabulary.from_instances`, or
@@ -386,6 +387,8 @@ class Vocabulary(Registrable):
         -------
         A ``Vocabulary``.
         """
+        # pylint: disable=arguments-differ
+
         # Vocabulary is ``Registrable`` so that you can configure a custom subclass,
         # but (unlike most of our registrables) almost everyone will want to use the
         # base implementation. So instead of having an abstract ``VocabularyBase`` or

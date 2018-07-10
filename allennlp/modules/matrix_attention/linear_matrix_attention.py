@@ -6,7 +6,6 @@ from overrides import overrides
 
 from allennlp.nn import util
 from allennlp.nn.activations import Activation
-from allennlp.common import Params
 from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 
 
@@ -82,15 +81,3 @@ class LinearMatrixAttention(MatrixAttention):
         combined_tensors = util.combine_tensors(self._combination, [tiled_matrix_1, tiled_matrix_2])
         dot_product = torch.matmul(combined_tensors, self._weight_vector)
         return self._activation(dot_product + self._bias)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'LinearMatrixAttention':
-        tensor_1_dim = params.pop_int("tensor_1_dim")
-        tensor_2_dim = params.pop_int("tensor_2_dim")
-        combination = params.pop("combination", "x,y")
-        activation = Activation.by_name(params.pop("activation", "linear"))()
-        params.assert_empty(cls.__name__)
-        return cls(tensor_1_dim=tensor_1_dim,
-                   tensor_2_dim=tensor_2_dim,
-                   combination=combination,
-                   activation=activation)

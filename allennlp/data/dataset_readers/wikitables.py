@@ -10,7 +10,6 @@ import os
 
 from overrides import overrides
 
-from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import JsonDict
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -439,38 +438,3 @@ class WikiTablesDatasetReader(DatasetReader):
             logger.debug(f'Skipping logical form with inordinate number of "ors": {logical_form}')
             return False
         return True
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'WikiTablesDatasetReader':
-        lazy = params.pop('lazy', False)
-        tables_directory = params.pop('tables_directory', None)
-        dpd_output_directory = params.pop('dpd_output_directory', None)
-        max_dpd_logical_forms = params.pop_int('max_dpd_logical_forms', 10)
-        sort_dpd_logical_forms = params.pop_bool('sort_dpd_logical_forms', True)
-        max_dpd_tries = params.pop_int('max_dpd_tries', 20)
-        keep_if_no_dpd = params.pop_bool('keep_if_no_dpd', False)
-        default_tokenizer_params = {'word_splitter': {'type': 'spacy', 'pos_tags': True}}
-        tokenizer = Tokenizer.from_params(params.pop('tokenizer', default_tokenizer_params))
-        question_token_indexers = TokenIndexer.dict_from_params(params.pop('question_token_indexers', {}))
-        table_token_indexers = TokenIndexer.dict_from_params(params.pop('table_token_indexers', {}))
-        use_table_for_vocab = params.pop_bool('use_table_for_vocab', False)
-        linking_feature_extracters = params.pop('linking_feature_extractors', None)
-        include_table_metadata = params.pop_bool('include_table_metadata', False)
-        max_table_tokens = params.pop_int('max_table_tokens', None)
-        output_agendas = params.pop_bool('output_agendas', False)
-        params.assert_empty(cls.__name__)
-        return WikiTablesDatasetReader(lazy=lazy,
-                                       tables_directory=tables_directory,
-                                       dpd_output_directory=dpd_output_directory,
-                                       max_dpd_logical_forms=max_dpd_logical_forms,
-                                       sort_dpd_logical_forms=sort_dpd_logical_forms,
-                                       max_dpd_tries=max_dpd_tries,
-                                       keep_if_no_dpd=keep_if_no_dpd,
-                                       tokenizer=tokenizer,
-                                       question_token_indexers=question_token_indexers,
-                                       table_token_indexers=table_token_indexers,
-                                       use_table_for_vocab=use_table_for_vocab,
-                                       linking_feature_extractors=linking_feature_extracters,
-                                       include_table_metadata=include_table_metadata,
-                                       max_table_tokens=max_table_tokens,
-                                       output_agendas=output_agendas)

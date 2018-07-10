@@ -3,7 +3,6 @@ from overrides import overrides
 
 from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
 from allennlp.modules.similarity_functions.similarity_function import SimilarityFunction
-from allennlp.common import Params
 from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 
 
@@ -35,9 +34,3 @@ class LegacyMatrixAttention(MatrixAttention):
                                                       matrix_2.size()[1],
                                                       matrix_2.size()[2])
         return self._similarity_function(tiled_matrix_1, tiled_matrix_2)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'MatrixAttention':
-        similarity_function = SimilarityFunction.from_params(params.pop("similarity_function", {}))
-        params.assert_empty(cls.__name__)
-        return cls(similarity_function=similarity_function)

@@ -32,3 +32,4 @@ allennlp.modules
    allennlp.modules.span_pruner
    allennlp.modules.maxout
    allennlp.modules.biaffine_attention
+   allennlp.modules.input_variational_dropout

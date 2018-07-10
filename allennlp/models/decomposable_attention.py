@@ -2,7 +2,6 @@ from typing import Dict, Optional, List, Any
 
 import torch
 
-from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
@@ -186,39 +185,3 @@ class DecomposableAttention(Model):
         return {
                 'accuracy': self._accuracy.get_metric(reset),
                 }
-
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'DecomposableAttention':
-        embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-
-        premise_encoder_params = params.pop("premise_encoder", None)
-        if premise_encoder_params is not None:
-            premise_encoder = Seq2SeqEncoder.from_params(premise_encoder_params)
-        else:
-            premise_encoder = None
-
-        hypothesis_encoder_params = params.pop("hypothesis_encoder", None)
-        if hypothesis_encoder_params is not None:
-            hypothesis_encoder = Seq2SeqEncoder.from_params(hypothesis_encoder_params)
-        else:
-            hypothesis_encoder = None
-
-        attend_feedforward = FeedForward.from_params(params.pop('attend_feedforward'))
-        similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
-        compare_feedforward = FeedForward.from_params(params.pop('compare_feedforward'))
-        aggregate_feedforward = FeedForward.from_params(params.pop('aggregate_feedforward'))
-        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
-        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
-
-        params.assert_empty(cls.__name__)
-        return cls(vocab=vocab,
-                   text_field_embedder=text_field_embedder,
-                   attend_feedforward=attend_feedforward,
-                   similarity_function=similarity_function,
-                   compare_feedforward=compare_feedforward,
-                   aggregate_feedforward=aggregate_feedforward,
-                   premise_encoder=premise_encoder,
-                   hypothesis_encoder=hypothesis_encoder,
-                   initializer=initializer,
-                   regularizer=regularizer)

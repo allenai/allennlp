@@ -22,3 +22,4 @@ allennlp.models
   allennlp.models.semantic_role_labeler
   allennlp.models.simple_tagger
   allennlp.models.dependency_parser
+  allennlp.models.esim
