@@ -464,28 +464,3 @@ class DependencyParser(Model):
     def get_metrics(self, reset: bool = True) -> Dict[str, float]:
         return self._attachement_scores.get_metric(reset)
 
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'DependencyParser':
-        embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        pos_tag_embedding_params = params.pop("pos_tag_embedding", None)
-        if pos_tag_embedding_params is not None:
-            pos_tag_embedding = Embedding.from_params(vocab, pos_tag_embedding_params)
-        else:
-            pos_tag_embedding = None
-        type_representation_dim = params.pop_int("type_representation_dim")
-        arc_representation_dim = params.pop_int("arc_representation_dim")
-        use_mst_decoding_for_validation = params.pop("use_mst_decoding_for_validation", True)
-        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
-        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
-        params.assert_empty(cls.__name__)
-        return cls(vocab=vocab,
-                   text_field_embedder=text_field_embedder,
-                   type_representation_dim=type_representation_dim,
-                   arc_representation_dim=arc_representation_dim,
-                   pos_tag_embedding=pos_tag_embedding,
-                   use_mst_decoding_for_validation=use_mst_decoding_for_validation,
-                   encoder=encoder,
-                   initializer=initializer,
-                   regularizer=regularizer)
