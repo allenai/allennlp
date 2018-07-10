@@ -53,13 +53,20 @@ class AtisDatasetReader(DatasetReader):
                     action_sequence = []
                     try:
                         action_sequence = world.get_action_sequence(interaction_round['sql'])
-                        yield self.text_to_instance(interaction_round['utterance'], action_sequence, world)
-
+                        conv_context.valid_actions = world.valid_actions
+                        
                     except: 
                         print('parsing error')
-                        break 
-                         
-                    conv_context.valid_actions = world.valid_actions
+                        continue
+
+                    print('yield instance')
+                    print('action_sequence', len(action_sequence))
+                    print('sql', interaction_round['sql'])
+                    instance = self.text_to_instance(interaction_round['utterance'], action_sequence, world)
+                    if not instance:
+                        continue
+                    yield instance
+
                                     
 
     @overrides
@@ -92,7 +99,7 @@ class AtisDatasetReader(DatasetReader):
 
         action_field = ListField(production_rule_fields)
         
-        action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
+        action_map = {action.rule.replace(" ws", "").replace("ws ", "") : i for i, action in enumerate(action_field.field_list)}  # type: ignore
         index_fields : List[IndexField] = []
 
         for production_rule in action_sequence:
@@ -100,11 +107,15 @@ class AtisDatasetReader(DatasetReader):
         
         field_class_set = set([field.__class__ for field in index_fields])
 
+        if not action_sequence:
+            return None
+
         action_sequence_field = ListField(index_fields)
 
         fields = {'utterance' : utterance_field,
-                 'actions' : action_field,
-                 'target_action_sequence' : action_sequence_field}
+                  'actions' : action_field,
+                  'target_action_sequence' : action_sequence_field}
+
         return Instance(fields)
 
 
