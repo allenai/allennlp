@@ -6,6 +6,7 @@ Typically you might create a configuration file specifying the model and
 training parameters and then use :mod:`~allennlp.commands.train`
 rather than instantiating a ``Trainer`` yourself.
 """
+# pylint: disable=too-many-lines
 
 import logging
 import os
