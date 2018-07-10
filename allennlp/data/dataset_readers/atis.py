@@ -30,13 +30,20 @@ def lazy_parse(text: str):
 @DatasetReader.register("atis")
 class AtisDatasetReader(DatasetReader):
     def __init__(self,
+                 source_token_indexers: Dict[str, TokenIndexer] = None,
+                 target_token_indexers: Dict[str, TokenIndexer] = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False,
+                 output_tokens: bool = True,
                  tokenizer: Tokenizer = None
                  ) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
+        self.output_tokens = output_tokens
+
+        self._source_token_indexers = source_token_indexers or {"tokens": SingleIdTokenIndexer()}
+        self._target_token_indexers = target_token_indexers or self._source_token_indexers
 
 
     @overrides
@@ -46,28 +53,59 @@ class AtisDatasetReader(DatasetReader):
 
         with open(file_path) as atis_file:
             logger.info("Reading ATIS instances from dataset at : %s", file_path)
-            for interaction in lazy_parse(atis_file.read()):
-                conv_context = ConversationContext(interaction['interaction'])
-                for interaction_round in conv_context.interaction:
-                    world = AtisWorld(conv_context, interaction_round['utterance'])
-                    action_sequence = []
-                    try:
-                        action_sequence = world.get_action_sequence(interaction_round['sql'])
-                        conv_context.valid_actions = world.valid_actions
-                        
-                    except: 
-                        print('parsing error')
-                        continue
+            
+            if self.output_tokens:
+                for interaction in lazy_parse(atis_file.read()):
+                    conv_context = ConversationContext(interaction['interaction'])
+                    for interaction_round in conv_context.interaction:
+                        nl_key = 'utterance'
+                        if nl_key not in interaction_round:
+                            nl_key = 'nl_with_dates'
 
-                    print('yield instance')
-                    print('action_sequence', len(action_sequence))
-                    print('sql', interaction_round['sql'])
-                    instance = self.text_to_instance(interaction_round['utterance'], action_sequence, world)
-                    if not instance:
-                        continue
-                    yield instance
+                        instance = self.text_to_instance_output_tokens(interaction_round[nl_key], interaction_round['sql'])
+                        yield instance
 
-                                    
+            else:
+                for interaction in lazy_parse(atis_file.read()):
+                    conv_context = ConversationContext(interaction['interaction'])
+                    for interaction_round in conv_context.interaction:
+                        nl_key = 'utterance'
+                        if nl_key not in interaction_round:
+                            nl_key = 'nl_with_dates'
+
+                        world = AtisWorld(conv_context, interaction_round[nl_key])
+                        action_sequence = []
+                        try:
+                            action_sequence = world.get_action_sequence(interaction_round['sql'])
+                            conv_context.valid_actions = world.valid_actions
+                            
+                        except: 
+                            print('parsing error')
+                            continue
+
+                        print('yield instance')
+                        print('action_sequence', len(action_sequence))
+                        print('sql', interaction_round['sql'])
+                        instance = self.text_to_instance(interaction_round[nl_key], action_sequence, world)
+                        if not instance:
+                            continue
+                        yield instance
+
+    def text_to_instance_output_tokens(self, # type: ignore
+                                       utterance: str,
+                                       sql: str) -> Instance:
+
+        tokenized_utterance = self._tokenizer.tokenize(utterance.lower())
+        utterance_field = TextField(tokenized_utterance, self._source_token_indexers)
+
+        tokenized_sql = self._tokenizer.tokenize(sql)
+        sql_field = TextField(tokenized_sql, self._target_token_indexers)
+        
+        fields = {'source_tokens': utterance_field,
+                  'target_tokens': sql_field}
+
+        return Instance(fields) 
+
 
     @overrides
     def text_to_instance(self,  # type: ignore
@@ -123,6 +161,22 @@ class AtisDatasetReader(DatasetReader):
     def from_params(cls, params: Params) -> 'AtisDatasetReader':
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         lazy = params.pop('lazy', False)
+        output_tokens = params.pop('output_tokens')
+        
+        source_indexers_type = params.pop('source_token_indexers', None)
+        if source_indexers_type is None:
+            source_token_indexers = None
+        else:
+            source_token_indexers = TokenIndexer.dict_from_params(source_indexers_type)
+        target_indexers_type = params.pop('target_token_indexers', None)
+        if target_indexers_type is None:
+            target_token_indexers = None
+        else:
+            target_token_indexers = TokenIndexer.dict_from_params(target_indexers_type)
+
         params.assert_empty(cls.__name__)
-        return AtisDatasetReader(token_indexers=token_indexers,
-                                                      lazy=lazy)
+        return AtisDatasetReader(source_token_indexers=source_token_indexers,
+                                 target_token_indexers=target_token_indexers,
+                                 token_indexers=token_indexers,
+                                 lazy=lazy,
+                                 output_tokens=output_tokens)
