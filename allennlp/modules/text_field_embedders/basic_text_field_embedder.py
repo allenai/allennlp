@@ -1,4 +1,5 @@
 from typing import Dict, List
+import warnings
 
 import torch
 from overrides import overrides
@@ -84,7 +85,27 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
     # This is some unusual logic, it needs a custom from_params.
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BasicTextFieldEmbedder':  # type: ignore
-        # pylint: disable=arguments-differ
+        # pylint: disable=arguments-differ,bad-super-call
+
+        # The original `from_params` for this class was designed in a way that didn't agree
+        # with the constructor. The constructor wants a 'token_embedders' parameter that is a
+        # `Dict[str, TokenEmbedder]`, but the original `from_params` implementation expected those
+        # key-value pairs to be top-level in the params object. In particular, this caused the automatic
+        # FromParams.from_params implementation to do the wrong thing with config files that were
+        # designed for the (idiosyncratic) old behavior.
+        #
+        # This updated implementation delegates to the automatic "from_params" method when it can,
+        # but (for now) it continues to support the old way with a `DeprecationWarning`.
+        if 'token_embedders' in params:
+            # We use `TextFieldEmbedder` as the first argument to super() so that we get
+            # Registrable.from_params.
+            return super(TextFieldEmbedder, cls).from_params(params=params, vocab=vocab)
+
+        # Warn that the original behavior is deprecated
+        warnings.warn(DeprecationWarning("the token embedders for BasicTextFieldEmbedder should now "
+                                         "be specified as a dict under the 'token_embedders' key, "
+                                         "not as top-level key-value pairs"))
+
         embedder_to_indexer_map = params.pop("embedder_to_indexer_map", None)
         if embedder_to_indexer_map is not None:
             embedder_to_indexer_map = embedder_to_indexer_map.as_dict(quiet=True)
