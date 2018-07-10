@@ -2,7 +2,6 @@ from overrides import overrides
 import torch
 from torch.nn.parameter import Parameter
 
-from allennlp.common import Params
 from allennlp.modules.attention.attention import Attention
 from allennlp.nn import Activation
 
@@ -50,15 +49,3 @@ class BilinearAttention(Attention):
     def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
         intermediate = vector.mm(self._weight_matrix).unsqueeze(1)
         return self._activation(intermediate.bmm(matrix.transpose(1, 2)).squeeze(1) + self._bias)
-
-    @classmethod
-    def from_params(cls, params: Params):
-        vector_dim = params.pop_int("vector_dim")
-        matrix_dim = params.pop_int("matrix_dim")
-        activation = Activation.by_name(params.pop("activation", "linear"))()
-        normalize = params.pop_bool('normalize', True)
-        params.assert_empty(cls.__name__)
-        return BilinearAttention(vector_dim=vector_dim,
-                                 matrix_dim=matrix_dim,
-                                 activation=activation,
-                                 normalize=normalize)

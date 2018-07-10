@@ -4,7 +4,6 @@ from typing import Dict, List, Set
 from overrides import overrides
 
 from allennlp.common.util import pad_sequence_to_length
-from allennlp.common import Params
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
@@ -57,9 +56,3 @@ class DepLabelIndexer(TokenIndexer[int]):
                            desired_num_tokens: int,
                            padding_lengths: Dict[str, int]) -> List[int]:  # pylint: disable=unused-argument
         return pad_sequence_to_length(tokens, desired_num_tokens)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'DepLabelIndexer':
-        namespace = params.pop('namespace', 'dep_labels')
-        params.assert_empty(cls.__name__)
-        return cls(namespace=namespace)

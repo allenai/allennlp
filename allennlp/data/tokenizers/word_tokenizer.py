@@ -2,7 +2,6 @@ from typing import List
 
 from overrides import overrides
 
-from allennlp.common import Params
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.tokenizers.word_filter import WordFilter, PassThroughWordFilter
@@ -75,17 +74,3 @@ class WordTokenizer(Tokenizer):
         for end_token in self._end_tokens:
             stemmed_words.append(Token(end_token, -1))
         return stemmed_words
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'WordTokenizer':
-        word_splitter = WordSplitter.from_params(params.pop('word_splitter', {}))
-        word_filter = WordFilter.from_params(params.pop('word_filter', {}))
-        word_stemmer = WordStemmer.from_params(params.pop('word_stemmer', {}))
-        start_tokens = params.pop('start_tokens', None)
-        end_tokens = params.pop('end_tokens', None)
-        params.assert_empty(cls.__name__)
-        return cls(word_splitter=word_splitter,
-                   word_filter=word_filter,
-                   word_stemmer=word_stemmer,
-                   start_tokens=start_tokens,
-                   end_tokens=end_tokens)

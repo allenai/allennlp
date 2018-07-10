@@ -7,7 +7,6 @@ import random
 
 import torch
 
-from allennlp.common import Params
 from allennlp.common.registrable import Registrable
 from allennlp.common.util import is_lazy, lazy_groups_of, ensure_list
 from allennlp.data.dataset import Batch
@@ -289,11 +288,6 @@ class DataIterator(Registrable):
         This method should return one epoch worth of batches.
         """
         raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'DataIterator':
-        iterator_type = params.pop_choice("type", cls.list_available())
-        return cls.by_name(iterator_type).from_params(params)
 
     def index_with(self, vocab: Vocabulary):
         self.vocab = vocab

@@ -5,7 +5,6 @@ from typing import Dict, List, Tuple, Set, Any
 from overrides import overrides
 import torch
 
-from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
@@ -41,7 +40,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         The encoder to use for the input question. Passed to super class.
     entity_encoder : ``Seq2VecEncoder``
         The encoder to used for averaging the words of an entity. Passed to super class.
-    input_attention : ``Attention``
+    attention : ``Attention``
         We compute an attention over the input question at each step of the decoder, using the
         decoder hidden state as the query.  Passed to WikiTablesDecoderStep.
     decoder_beam_size : ``int``
@@ -81,7 +80,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         The directory to find tables when evaluating logical forms.  We rely on a call to SEMPRE to
         evaluate logical forms, and SEMPRE needs to read the table from disk itself.  This tells
         SEMPRE where to find the tables. Passed to super class.
-    initial_mml_model_file : ``str``, optional (default=None)
+    mml_model_file : ``str``, optional (default=None)
         If you want to initialize this model using weights from another model trained using MML,
         pass the path to the ``model.tar.gz`` file of that model here.
     """
@@ -91,11 +90,11 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                  action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
                  entity_encoder: Seq2VecEncoder,
-                 mixture_feedforward: FeedForward,
-                 input_attention: Attention,
+                 attention: Attention,
                  decoder_beam_size: int,
                  decoder_num_finished_states: int,
                  max_decoding_steps: int,
+                 mixture_feedforward: FeedForward = None,
                  normalize_beam_score_by_length: bool = False,
                  checklist_cost_weight: float = 0.6,
                  use_neighbor_similarity_for_linking: bool = False,
@@ -103,7 +102,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                  num_linking_features: int = 10,
                  rule_namespace: str = 'rule_labels',
                  tables_directory: str = '/wikitables/',
-                 initial_mml_model_file: str = None) -> None:
+                 mml_model_file: str = None) -> None:
         use_similarity = use_neighbor_similarity_for_linking
         super().__init__(vocab=vocab,
                          question_embedder=question_embedder,
@@ -132,7 +131,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         self._num_unlinked_terminals = len(unlinked_terminals_global_indices)
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
-                                                   input_attention=input_attention,
+                                                   input_attention=attention,
                                                    num_start_types=self._num_start_types,
                                                    num_entity_types=self._num_entity_types,
                                                    mixture_feedforward=mixture_feedforward,
@@ -144,9 +143,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         # copied a trained ERM model from a different machine and the original MML model that was
         # used to initialize it does not exist on the current machine. This may not be the best
         # solution for the problem.
-        if initial_mml_model_file is not None:
-            if os.path.isfile(initial_mml_model_file):
-                archive = load_archive(initial_mml_model_file)
+        if mml_model_file is not None:
+            if os.path.isfile(mml_model_file):
+                archive = load_archive(mml_model_file)
                 self._initialize_weights_from_archive(archive)
             else:
                 # A model file is passed, but it does not exist. This is expected to happen when
@@ -419,46 +418,3 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         metrics = super().get_metrics(reset)
         metrics["agenda_coverage"] = self._agenda_coverage.get_metric(reset)
         return metrics
-
-    @classmethod
-    def from_params(cls, vocab, params: Params) -> 'WikiTablesErmSemanticParser':
-        question_embedder = TextFieldEmbedder.from_params(vocab, params.pop("question_embedder"))
-        action_embedding_dim = params.pop_int("action_embedding_dim")
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        entity_encoder = Seq2VecEncoder.from_params(params.pop('entity_encoder'))
-        mixture_feedforward_type = params.pop('mixture_feedforward', None)
-        if mixture_feedforward_type is not None:
-            mixture_feedforward = FeedForward.from_params(mixture_feedforward_type)
-        else:
-            mixture_feedforward = None
-        input_attention = Attention.from_params(params.pop("attention"))
-        decoder_beam_size = params.pop_int("decoder_beam_size")
-        decoder_num_finished_states = params.pop_int("decoder_num_finished_states", None)
-        max_decoding_steps = params.pop_int("max_decoding_steps")
-        normalize_beam_score_by_length = params.pop("normalize_beam_score_by_length", False)
-        use_neighbor_similarity_for_linking = params.pop_bool("use_neighbor_similarity_for_linking", False)
-        dropout = params.pop_float('dropout', 0.0)
-        num_linking_features = params.pop_int('num_linking_features', 10)
-        tables_directory = params.pop('tables_directory', '/wikitables/')
-        rule_namespace = params.pop('rule_namespace', 'rule_labels')
-        checklist_cost_weight = params.pop_float("checklist_cost_weight", 0.6)
-        mml_model_file = params.pop('mml_model_file', None)
-        params.assert_empty(cls.__name__)
-        return cls(vocab,
-                   question_embedder=question_embedder,
-                   action_embedding_dim=action_embedding_dim,
-                   encoder=encoder,
-                   entity_encoder=entity_encoder,
-                   mixture_feedforward=mixture_feedforward,
-                   input_attention=input_attention,
-                   decoder_beam_size=decoder_beam_size,
-                   decoder_num_finished_states=decoder_num_finished_states,
-                   max_decoding_steps=max_decoding_steps,
-                   normalize_beam_score_by_length=normalize_beam_score_by_length,
-                   checklist_cost_weight=checklist_cost_weight,
-                   use_neighbor_similarity_for_linking=use_neighbor_similarity_for_linking,
-                   dropout=dropout,
-                   num_linking_features=num_linking_features,
-                   tables_directory=tables_directory,
-                   rule_namespace=rule_namespace,
-                   initial_mml_model_file=mml_model_file)

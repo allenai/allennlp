@@ -278,7 +278,7 @@ def train_model(params: Params,
 
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
-    model = Model.from_params(vocab, params.pop('model'))
+    model = Model.from_params(vocab=vocab, params=params.pop('model'))
     iterator = DataIterator.from_params(params.pop("iterator"))
     iterator.index_with(vocab)
     validation_iterator_params = params.pop("validation_iterator", None)

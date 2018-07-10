@@ -1,6 +1,6 @@
 from typing import Dict, List, TypeVar, Generic
 
-from allennlp.common import Params, Registrable
+from allennlp.common import Registrable
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.vocabulary import Vocabulary
 
@@ -68,27 +68,3 @@ class TokenIndexer(Generic[TokenType], Registrable):
         character-level padding.
         """
         raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'TokenIndexer':  # type: ignore
-        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
-        return cls.by_name(choice).from_params(params)
-
-    @classmethod
-    def dict_from_params(cls, params: Params) -> 'Dict[str, TokenIndexer]':  # type: ignore
-        """
-        We typically use ``TokenIndexers`` in a dictionary, with each ``TokenIndexer`` getting a
-        name.  The specification for this in a ``Params`` object is typically ``{"name" ->
-        {indexer_params}}``.  This method reads that whole set of parameters and returns a
-        dictionary suitable for use in a ``TextField``.
-
-        Because default values for token indexers are typically handled in the calling class to
-        this and are based on checking for ``None``, if there were no parameters specifying any
-        token indexers in the given ``params``, we return ``None`` instead of an empty dictionary.
-        """
-        token_indexers = {}
-        for name, indexer_params in params.items():
-            token_indexers[name] = cls.from_params(indexer_params)
-        if token_indexers == {}:
-            token_indexers = None
-        return token_indexers

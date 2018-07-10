@@ -2,7 +2,7 @@ from typing import Iterable, Iterator, Callable
 import logging
 
 from allennlp.data.instance import Instance
-from allennlp.common import Params, Tqdm
+from allennlp.common import Tqdm
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
 
@@ -103,11 +103,3 @@ class DatasetReader(Registrable):
         to pass it the right information.
         """
         raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'DatasetReader':
-        """
-        Static method that constructs the dataset reader described by ``params``.
-        """
-        choice = params.pop_choice('type', cls.list_available())
-        return cls.by_name(choice).from_params(params)

@@ -5,11 +5,11 @@ from typing import Sequence, Union
 
 import torch
 
-from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.registrable import FromParams
 
 
-class Maxout(torch.nn.Module):
+class Maxout(torch.nn.Module, FromParams):
     """
     This ``Module`` is a maxout neural network.
 
@@ -87,17 +87,3 @@ class Maxout(torch.nn.Module):
             dropped_output = dropout(maxed_output)
             output = dropped_output
         return output
-
-    @classmethod
-    def from_params(cls, params: Params):
-        input_dim = params.pop_int('input_dim')
-        num_layers = params.pop_int('num_layers')
-        output_dims = params.pop('output_dims')
-        pool_sizes = params.pop('pool_sizes')
-        dropout = params.pop('dropout', 0.0)
-        params.assert_empty(cls.__name__)
-        return cls(input_dim=input_dim,
-                   num_layers=num_layers,
-                   output_dims=output_dims,
-                   pool_sizes=pool_sizes,
-                   dropout=dropout)

@@ -179,6 +179,7 @@ class Elmo(torch.nn.Module):
 
         return {'elmo_representations': elmo_representations, 'mask': mask}
 
+    # The add_to_archive logic here requires a custom from_params.
     @classmethod
     def from_params(cls, params: Params) -> 'Elmo':
         # Add files to archive

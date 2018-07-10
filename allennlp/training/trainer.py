@@ -6,6 +6,7 @@ Typically you might create a configuration file specifying the model and
 training parameters and then use :mod:`~allennlp.commands.train`
 rather than instantiating a ``Trainer`` yourself.
 """
+# pylint: disable=too-many-lines
 
 import logging
 import os
@@ -946,6 +947,7 @@ class Trainer:
 
         return epoch_to_return, val_metric_per_epoch
 
+    # Requires custom from_params.
     @classmethod
     def from_params(cls,
                     model: Model,

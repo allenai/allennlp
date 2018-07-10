@@ -2,7 +2,6 @@ from typing import Dict, Optional, List, Any
 
 import torch
 
-from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
@@ -217,32 +216,3 @@ class ESIM(Model):
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {'accuracy': self._accuracy.get_metric(reset)}
-
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'ESIM':
-        embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
-        projection_feedforward = FeedForward.from_params(params.pop('projection_feedforward'))
-        inference_encoder = Seq2SeqEncoder.from_params(params.pop("inference_encoder"))
-        output_feedforward = FeedForward.from_params(params.pop('output_feedforward'))
-        output_logit = FeedForward.from_params(params.pop('output_logit'))
-        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
-        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
-
-        dropout = params.pop("dropout", 0)
-
-        params.assert_empty(cls.__name__)
-        return cls(vocab=vocab,
-                   text_field_embedder=text_field_embedder,
-                   encoder=encoder,
-                   similarity_function=similarity_function,
-                   projection_feedforward=projection_feedforward,
-                   inference_encoder=inference_encoder,
-                   output_feedforward=output_feedforward,
-                   output_logit=output_logit,
-                   dropout=dropout,
-                   initializer=initializer,
-                   regularizer=regularizer)

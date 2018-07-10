@@ -95,7 +95,6 @@ class TestMain(AllenNlpTestCase):
                         "optimizer": "adam"
                 }
             }""".replace('$$$', data_path)
-        print(config_json)
         with open(config_path, 'w') as config_file:
             config_file.write(config_json)
 
