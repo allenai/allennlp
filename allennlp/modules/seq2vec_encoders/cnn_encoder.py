@@ -51,13 +51,13 @@ class CnnEncoder(Seq2VecEncoder):
                  embedding_dim: int,
                  num_filters: int,
                  ngram_filter_sizes: Tuple[int, ...] = (2, 3, 4, 5),  # pylint: disable=bad-whitespace
-                 conv_layer_activation: Activation = Activation.by_name('relu')(),
+                 conv_layer_activation: Activation = None,
                  output_dim: Optional[int] = None) -> None:
         super(CnnEncoder, self).__init__()
         self._embedding_dim = embedding_dim
         self._num_filters = num_filters
         self._ngram_filter_sizes = ngram_filter_sizes
-        self._activation = conv_layer_activation
+        self._activation = conv_layer_activation or Activation.by_name('relu')()
         self._output_dim = output_dim
 
         self._convolution_layers = [Conv1d(in_channels=self._embedding_dim,

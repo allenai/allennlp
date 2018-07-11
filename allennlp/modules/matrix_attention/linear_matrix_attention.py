@@ -49,13 +49,13 @@ class LinearMatrixAttention(MatrixAttention):
                  tensor_1_dim: int,
                  tensor_2_dim: int,
                  combination: str = 'x,y',
-                 activation: Activation = Activation.by_name('linear')()) -> None:
+                 activation: Activation = None) -> None:
         super().__init__()
         self._combination = combination
         combined_dim = util.get_combined_dim(combination, [tensor_1_dim, tensor_2_dim])
         self._weight_vector = Parameter(torch.Tensor(combined_dim))
         self._bias = Parameter(torch.Tensor(1))
-        self._activation = activation
+        self._activation = activation or Activation.by_name('linear')()
         self.reset_parameters()
 
     def reset_parameters(self):
