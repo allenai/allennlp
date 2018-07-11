@@ -66,6 +66,7 @@ class DQASeqReader(DatasetReader):
                 answer_texts_list = [[answer['text'] for answer in qa['answers']] for qa in qas]
                 metadata["answer_text_lists"] = answer_texts_list
                 metadata["question"] = question_text_list
+
                 single_answer_texts_list = [qa['answers'][0]['text'] for qa in qas]
                 span_starts_list = [[answer['answer_start'] for answer in qa['answers']] for qa in qas]
                 span_ends_list = []

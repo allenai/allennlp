@@ -10,9 +10,8 @@ import copy
 import json
 import logging
 import os
-
-from overrides import overrides
 import _jsonnet
+from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path

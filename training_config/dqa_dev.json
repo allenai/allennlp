@@ -75,8 +75,8 @@
   },
   "iterator": {
     "type": "bucket",
-    "sorting_keys": [["passage", "num_tokens"], ["question", "num_fields"]],
-    "batch_size": 10,
+    "sorting_keys": [["question", "num_fields"], ["passage", "num_tokens"]],
+    "batch_size": 5,
     "max_instances_in_memory": 1000
   },
   "trainer": {

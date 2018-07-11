@@ -49,7 +49,6 @@ class BidafPlusSelfAttentionBits(Model):
         self._residual_encoder = residual_encoder
         self._self_atten = TriLinearAttention(200)
 
-        #self._followup_emb = torch.nn.Embedding(4, 200)
         self._followup_lin = torch.nn.Linear(200, 4)
         self._merge_self_atten = TimeDistributed(torch.nn.Linear(200 * 3, 200))
 
