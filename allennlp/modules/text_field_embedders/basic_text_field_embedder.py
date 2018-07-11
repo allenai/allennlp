@@ -6,6 +6,7 @@ from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.from_params import FromParams
 from allennlp.data import Vocabulary
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
@@ -97,9 +98,9 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         # This updated implementation delegates to the automatic "from_params" method when it can,
         # but (for now) it continues to support the old way with a `DeprecationWarning`.
         if 'token_embedders' in params:
-            # We use `TextFieldEmbedder` as the first argument to super() so that we get
-            # Registrable.from_params.
-            return super(TextFieldEmbedder, cls).from_params(params=params, vocab=vocab)
+            # Have to use __func__ to unbind the classmethod from `FromParams`
+            # so that we can pass in this class.
+            return FromParams.from_params.__func__(cls, params=params, vocab=vocab)
 
         # Warn that the original behavior is deprecated
         warnings.warn(DeprecationWarning("the token embedders for BasicTextFieldEmbedder should now "
