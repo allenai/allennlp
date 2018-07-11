@@ -100,4 +100,3 @@ class UniversalDependenciesDatasetReader(DatasetReader):
                                                         tokens,
                                                         label_namespace="head_index_tags")
         return Instance(fields)
-

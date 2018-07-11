@@ -5,7 +5,6 @@ import torch
 import torch.nn.functional as F
 import numpy
 
-from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding
@@ -463,4 +462,3 @@ class DependencyParser(Model):
     @overrides
     def get_metrics(self, reset: bool = True) -> Dict[str, float]:
         return self._attachement_scores.get_metric(reset)
-
