@@ -4,7 +4,7 @@ from typing import Dict, Optional
 from allennlp.common import Params
 from allennlp.common.from_params import FromParams, takes_arg, remove_optional, create_kwargs
 from allennlp.common.testing import AllenNlpTestCase
-
+from allennlp.data.tokenizers.word_splitter import WordSplitter
 
 class MyClass(FromParams):
     def __init__(self, my_int: int, my_bool: bool = False) -> None:
@@ -125,3 +125,8 @@ class TestFromParams(AllenNlpTestCase):
 
         assert c.name == "extra_c"
         assert c.size == 20
+
+    def test_no_constructor(self):
+        params = Params({"type": "just_spaces"})
+
+        WordSplitter.from_params(params)
