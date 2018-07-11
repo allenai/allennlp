@@ -23,3 +23,4 @@ from allennlp.modules.tri_linear_attention import  TriLinearAttention
 from allennlp.modules.variational_dropout import VariationalDropout
 from allennlp.modules.matrix_attention import MatrixAttention
 from allennlp.modules.attention import Attention
+from allennlp.modules.input_variational_dropout import InputVariationalDropout

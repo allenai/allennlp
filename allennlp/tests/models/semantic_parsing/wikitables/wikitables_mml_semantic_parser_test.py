@@ -141,7 +141,7 @@ class WikiTablesMmlSemanticParserTest(ModelTestCase):
 
     def test_embed_actions_works_with_batched_and_padded_input(self):
         params = Params.from_file(self.param_file)
-        model = Model.from_params(self.vocab, params['model'])
+        model = Model.from_params(vocab=self.vocab, params=params['model'])
         action_embedding_weights = model._action_embedder.weight
         rule1 = model.vocab.get_token_from_index(1, 'rule_labels')
         rule1_tensor = torch.LongTensor([1])

@@ -3,7 +3,6 @@ from typing import Dict, List, Iterable
 
 from overrides import overrides
 
-from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, SequenceLabelField, MetadataField
@@ -110,13 +109,3 @@ class SrlReader(DatasetReader):
         fields["metadata"] = MetadataField({"words": [x.text for x in tokens],
                                             "verb": verb})
         return Instance(fields)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'SrlReader':
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        domain_identifier = params.pop("domain_identifier", None)
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return SrlReader(token_indexers=token_indexers,
-                         domain_identifier=domain_identifier,
-                         lazy=lazy)

@@ -2,7 +2,7 @@ from typing import List
 
 from overrides import overrides
 
-from allennlp.common import Params, Registrable
+from allennlp.common import Registrable
 from allennlp.data.tokenizers.token import Token
 
 
@@ -21,12 +21,6 @@ class WordFilter(Registrable):
         Returns a filtered list of words.
         """
         raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'WordFilter':
-        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
-        params.assert_empty('WordFilter')
-        return cls.by_name(choice)()
 
 
 @WordFilter.register('pass_through')

@@ -2,8 +2,7 @@ from typing import Dict
 
 import torch
 
-from allennlp.common import Params, Registrable
-from allennlp.data import Vocabulary
+from allennlp.common import Registrable
 
 class TextFieldEmbedder(torch.nn.Module, Registrable):
     """
@@ -49,8 +48,3 @@ class TextFieldEmbedder(torch.nn.Module, Registrable):
         that shape.
         """
         raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'TextFieldEmbedder':
-        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
-        return cls.by_name(choice).from_params(vocab, params)

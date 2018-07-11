@@ -2,7 +2,6 @@ from overrides import overrides
 import torch
 from torch.nn.parameter import Parameter
 
-from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.similarity_functions.similarity_function import SimilarityFunction
 from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
@@ -92,19 +91,3 @@ class MultiHeadedSimilarity(SimilarityFunction):
         # we don't need to do anything special here.  It will just compute similarity on the
         # projection dimension for each head, returning a tensor of shape (..., num_heads).
         return self._internal_similarity(split_tensor_1, split_tensor_2)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'MultiHeadedSimilarity':
-        num_heads = params.pop_int("num_heads")
-        tensor_1_dim = params.pop_int("tensor_1_dim")
-        tensor_1_projected_dim = params.pop_int("tensor_1_projected_dim", None)
-        tensor_2_dim = params.pop_int("tensor_2_dim", None)
-        tensor_2_projected_dim = params.pop_int("tensor_1_projected_dim", None)
-        internal_similarity = SimilarityFunction.from_params(params.pop("internal_similarity", {}))
-        params.assert_empty(cls.__name__)
-        return cls(num_heads=num_heads,
-                   tensor_1_dim=tensor_1_dim,
-                   tensor_1_projected_dim=tensor_1_projected_dim,
-                   tensor_2_dim=tensor_2_dim,
-                   tensor_2_projected_dim=tensor_2_projected_dim,
-                   internal_similarity=internal_similarity)

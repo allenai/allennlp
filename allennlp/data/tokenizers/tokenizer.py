@@ -1,6 +1,6 @@
 from typing import List
 
-from allennlp.common import Params, Registrable
+from allennlp.common import Registrable
 from allennlp.data.tokenizers.token import Token
 
 
@@ -39,8 +39,3 @@ class Tokenizer(Registrable):
         tokens : ``List[Token]``
         """
         raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'Tokenizer':
-        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
-        return cls.by_name(choice).from_params(params)

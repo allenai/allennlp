@@ -297,10 +297,12 @@ class BiattentiveClassificationNetwork(Model):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
 
+    # The FeedForward vs Maxout logic here requires a custom from_params.
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BiattentiveClassificationNetwork':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BiattentiveClassificationNetwork':  # type: ignore
+        # pylint: disable=arguments-differ
         embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
+        text_field_embedder = TextFieldEmbedder.from_params(vocab=vocab, params=embedder_params)
         embedding_dropout = params.pop("embedding_dropout")
         pre_encode_feedforward = FeedForward.from_params(params.pop("pre_encode_feedforward"))
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))

@@ -137,8 +137,9 @@ class Embedding(TokenEmbedder):
             embedded = projection(embedded)
         return embedded
 
+    # Custom logic requires custom from_params.
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'Embedding':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'Embedding':  # type: ignore
         """
         We need the vocabulary here to know how many items we need to embed, and we look for a
         ``vocab_namespace`` key in the parameter dictionary to know which vocabulary to use.  If
@@ -167,6 +168,7 @@ class Embedding(TokenEmbedder):
 
                     "(http://nlp.stanford.edu/data/glove.twitter.27B.zip)#glove.twitter.27B.200d.txt"
         """
+        # pylint: disable=arguments-differ
         num_embeddings = params.pop_int('num_embeddings', None)
         vocab_namespace = params.pop("vocab_namespace", "tokens")
         if num_embeddings is None:
