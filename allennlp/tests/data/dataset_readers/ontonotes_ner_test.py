@@ -31,9 +31,7 @@ class TestOntonotesNamedEntityRecognitionReader:
         assert fields["tags"].labels == ['B-PERSON', 'I-PERSON', 'B-WORK_OF_ART', 'I-WORK_OF_ART', 'O']
 
     def test_ner_reader_can_filter_by_domain(self):
-
         conll_reader = OntonotesNamedEntityRecognition(domain_identifier="subdomain2")
         instances = conll_reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'conll_2012')
         instances = ensure_list(instances)
-        # If we'd included the folder, we'd have 9 instances.
         assert len(instances) == 1
