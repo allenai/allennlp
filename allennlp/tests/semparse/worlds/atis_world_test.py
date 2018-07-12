@@ -74,72 +74,42 @@ class TestAtisWorld(AllenNlpTestCase):
         assert '26' in world.valid_actions['number'] 
         assert 'COACH' in world.valid_actions['string']
 
+
+    def test_simple_sequence(self):
+        conv_context = ConversationContext(None)
+        world = AtisWorld(conv_context, "give me all flights from boston to philadelphia next week arriving after lunch")
+        action_sequence = world.get_action_sequence("(SELECT DISTINCT city . city_code FROM city WHERE ( city.city_name = 'BOSTON' ) );")
+        print(action_sequence)
+
+        action_sequence = world.get_action_sequence("( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' ) ) ;")
+        print(action_sequence)
+
+        conv_context = ConversationContext(None)
+        world = AtisWorld(conv_context, "give me all flights from boston to philadelphia next week arriving after lunch")
+
+        action_sequence = world.get_action_sequence(
+        """( SELECT DISTINCT flight.flight_id FROM flight WHERE ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' )) AND ( flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'PHILADELPHIA' )) AND flight.arrival_time > 1400 ) ) ) ;""")
+        print(action_sequence)
+
+    def test_conjunctions(self):
+        conv_context = ConversationContext(None)
+        world = AtisWorld(conv_context, "give me all flights from boston to philadelphia next week arriving after lunch")
+
+        action_sequence = world.get_action_sequence(
+        """flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' )) AND ( flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'PHILADELPHIA' )) AND flight.arrival_time > 1400 ) """)
+        print(action_sequence)
+
+
+       
     def test_atis_action_sequence(self):
 
         conv_context = ConversationContext(None)
         world = AtisWorld(conv_context, "give me all flights from boston to philadelphia next week arriving after lunch")
+        action_sequence = world.get_action_sequence("(SELECT DISTINCT city . city_code FROM city WHERE city.city_name = 'BOSTON');")
+        print(action_sequence)
         action_sequence = world.get_action_sequence("( SELECT DISTINCT flight.flight_id FROM flight WHERE ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' ) ) ) );")
         print(action_sequence)
         
-        assert action_sequence == ['stmt -> query ";"',
-                                  'query -> lparen? "SELECT" "DISTINCT"? select_results "FROM" table_refs '
-                                   'where_clause rparen?',
-                                   'where_clause -> "WHERE" lparen? condition_paren (conj condition_paren)* '
-                                   'rparen?',
-                                   'condition_paren -> not? (lparen)? condition_paren2 (rparen)?',
-                                   'condition_paren2 -> not? (lparen)? condition_paren3 (rparen)?',
-                                   'condition_paren3 -> not? (lparen)? condition (rparen)?',
-                                   'condition -> in_clause',
-                                   'in_clause -> (lparen)? col_ref "IN" query (rparen)?',
-                                   'query -> lparen? "SELECT" "DISTINCT"? select_results "FROM" table_refs '
-                                   'where_clause rparen?',
-                                   'where_clause -> "WHERE" lparen? condition_paren (conj condition_paren)* '
-                                   'rparen?',
-                                   'condition_paren -> not? (lparen)? condition_paren2 (rparen)?',
-                                   'condition_paren2 -> not? (lparen)? condition_paren3 (rparen)?',
-                                   'condition_paren3 -> not? (lparen)? condition (rparen)?',
-                                   'condition -> in_clause',
-                                   'in_clause -> (lparen)? col_ref "IN" query (rparen)?',
-                                   'query -> lparen? "SELECT" "DISTINCT"? select_results "FROM" table_refs '
-                                   'where_clause rparen?',
-                                   'where_clause -> "WHERE" lparen? condition_paren (conj condition_paren)* '
-                                   'rparen?',
-                                   'rparen ->',
-                                   'condition_paren -> not? (lparen)? condition_paren2 (rparen)?',
-                                   'rparen ->',
-                                   'condition_paren2 -> not? (lparen)? condition_paren3 (rparen)?',
-                                   'rparen ->',
-                                   'condition_paren3 -> not? (lparen)? condition (rparen)?',
-                                   'rparen ->',
-                                   'condition -> biexpr',
-                                   'biexpr -> (col_ref binaryop value)',
-                                   'value -> not?? pos_value',
-                                   'pos_value -> string',
-                                   'string -> "\'BOSTON\'"',
-                                   'binaryop -> "="',
-                                   'col_ref -> ("city" "." "city_name")',
-                                   'table_refs -> table_name ("," table_name)*',
-                                   'table_name -> "city"',
-                                   'select_results -> col_refs',
-                                   'col_refs -> col_ref ("," col_ref)*',
-                                   'col_ref -> ("city" "." "city_code")',
-                                   'lparen ->',
-                                   'col_ref -> ("airport_service" "." "city_code")',
-                                   'table_refs -> table_name ("," table_name)*',
-                                   'table_name -> "airport_service"',
-                                   'select_results -> col_refs',
-                                   'col_refs -> col_ref ("," col_ref)*',
-                                   'col_ref -> ("airport_service" "." "airport_code")',
-                                   'lparen ->',
-                                   'col_ref -> ("flight" "." "from_airport")',
-                                   'lparen ->',
-                                   'table_refs -> table_name ("," table_name)*',
-                                   'table_name -> "flight"',
-                                   'select_results -> col_refs',
-                                   'col_refs -> col_ref ("," col_ref)*',
-                                   'col_ref -> ("flight" "." "flight_id")',
-                                   'lparen ->']
-
         conv_context = ConversationContext(None)
         world = AtisWorld(conv_context, "give me all flights from boston to philadelphia next week arriving after lunch")
 
