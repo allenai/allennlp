@@ -17,8 +17,8 @@ from allennlp.nn.decoding.chu_liu_edmonds import decode_mst
 from allennlp.training.metrics import AttachmentScores
 
 
-@Model.register("dependency_parser")
-class DependencyParser(Model):
+@Model.register("biaffine_parser")
+class BiaffineDependencyParser(Model):
     """
     Parameters
     ----------
@@ -52,7 +52,7 @@ class DependencyParser(Model):
                  use_mst_decoding_for_validation: bool = True,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(DependencyParser, self).__init__(vocab, regularizer)
+        super(BiaffineDependencyParser, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")

@@ -2,10 +2,10 @@
 
 from allennlp.common.testing.model_test_case import ModelTestCase
 
-class DependencyParserTest(ModelTestCase):
+class BiaffineDependencyParserTest(ModelTestCase):
 
     def setUp(self):
-        super(DependencyParserTest, self).setUp()
+        super(BiaffineDependencyParserTest, self).setUp()
         self.set_up_model(self.FIXTURES_ROOT / "dependency_parser" / "experiment.json",
                           self.FIXTURES_ROOT / "data" / "dependencies.conllu")
 
