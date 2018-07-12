@@ -12,20 +12,26 @@ AROUND_RANGE = 30
 
 SQL_GRAMMAR_STR = """
     stmt                = query ";" ws
-    query               = ws lparen ws "SELECT" ws "DISTINCT"? ws select_results ws "FROM" ws table_refs ws where_clause rparen ws
+    query               = (ws lparen ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause rparen ws) /
+                          (ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause ws)
                         
-    select_results      = agg / col_refs
+    select_results      = col_refs / agg
 
     agg                 = agg_func ws lparen ws col_ref ws rparen
     agg_func            = "MIN" / "min" / "MAX" / "max" / "COUNT" / "count"
 
-    col_refs            = col_ref / (col_refs (ws "," ws col_ref))
+    col_refs            = (col_ref ws "," ws col_refs) / (col_ref)
+    table_refs          = (table_name ws "," ws table_refs) / (table_name)
 
-    table_refs          = table_name / (table_refs (ws "," ws table_name))
-
-    where_clause        = ("WHERE" ws lparen ws condition ws rparen ws) / ("WHERE" ws condition ws)
-
-    condition           = in_clause / ternaryexpr / biexpr 
+    where_clause        = ("WHERE" ws lparen ws conditions ws rparen ws) / ("WHERE" ws conditions ws)
+    
+    conditions          = (condition ws conj ws conditions) / 
+                          (condition ws conj ws lparen ws conditions ws rparen) /
+                          (lparen ws conditions ws rparen ws conj ws condition) /
+                          (lparen ws conditions ws rparen) /
+                          (not ws conditions ws ) /
+                          condition
+    condition           = in_clause / ternaryexpr / biexpr
 
     in_clause           = (ws col_ref ws "IN" ws query ws)
 
@@ -33,12 +39,14 @@ SQL_GRAMMAR_STR = """
     binaryop            = "+" / "-" / "*" / "/" / "=" /
                           ">=" / "<=" / ">" / "<"  / "is" / "IS"
 
-    ternaryexpr         = col_ref ws not? "BETWEEN" ws value ws and value ws
+    ternaryexpr         = (col_ref ws not "BETWEEN" ws value ws and value ws) /
+                          (col_ref ws "BETWEEN" ws value ws and value ws)
 
-    value               = not? ws? pos_value
+    value               = (not ws pos_value) / (pos_value)
     pos_value           = ("ALL" ws query) / ("ANY" ws query) / number / boolean / col_ref / string / agg_results / "NULL"
 
-    agg_results         = ws lparen?  ws "SELECT" ws "DISTINCT"? ws agg ws "FROM" ws table_name ws where_clause rparen?  ws
+    agg_results         = (ws lparen  ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause rparen ws)
+                          (ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ws)
 
     boolean             = "true" / "false"
 
@@ -51,6 +59,7 @@ SQL_GRAMMAR_STR = """
     or                  = "OR" ws
     not                 = ("NOT" ws ) / ("not" ws)
     asterisk            = "*"
+    distinct            = ("DISTINCT") / ("")
 
     col_ref             =  ""
     table_ref           =  ""
@@ -99,10 +108,7 @@ class ConversationContext():
                 valid_actions['col_ref'].add('("{}" ws "." ws "{}")'.format(table, column))
 
         valid_actions['col_ref'].add('asterisk')
-
         valid_action_strings = {key: sorted(value) for key, value in valid_actions.items()}
-        print(valid_action_strings)
-
         return valid_action_strings
 
 
