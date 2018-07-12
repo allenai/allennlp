@@ -152,8 +152,8 @@ class BiaffineDependencyParser(Model):
         # shape (batch_size, timesteps, timesteps)
         attended_arcs = self.arc_attention(head_arc_representation,
                                            child_arc_representation,
-                                           mask.float(),
-                                           mask.float()).squeeze(1)
+                                           float_mask,
+                                           float_mask).squeeze(1)
 
         minus_inf = -1e8
         minus_mask = (1 - float_mask) * minus_inf
@@ -275,8 +275,8 @@ class BiaffineDependencyParser(Model):
         normalised_head_tag_logits = last_dim_log_softmax(head_tag_logits,
                                                           mask.unsqueeze(-1)) * float_mask.unsqueeze(-1)
         # index matrix with shape (timesteps, batch)
-        child_index = torch.arange(0, timesteps).view(timesteps, 1).expand(timesteps, batch_size)
-        child_index = child_index.type_as(attended_arcs).long()
+        timestep_index = get_range_vector(timesteps, get_device_of(attended_arcs))
+        child_index = timestep_index.view(timesteps, 1).expand(timesteps, batch_size).long()
         # shape (timesteps, batch_size)
         arc_loss = normalised_arc_logits[range_vector, child_index, head_indices.data.t()]
         tag_loss = normalised_head_tag_logits[range_vector, child_index, head_tags.data.t()]
