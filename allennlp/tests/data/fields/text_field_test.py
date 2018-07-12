@@ -14,6 +14,37 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
 
 
+class DictReturningTokenIndexer(TokenIndexer[Dict[str, List[int]]]):
+    """
+    A stub TokenIndexer that returns multiple arrays of different lengths.
+    """
+    def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
+        pass
+
+    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> int:
+        raise NotImplementedError
+
+    def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary):
+        return {
+            "token_ids": [10, 15] + \
+                         [vocabulary.get_token_index(token.text, 'words') for token in tokens] + \
+                         [25],
+            "additional_key": [22, 29]
+        }
+
+    def get_padding_token(self) -> int:
+        return 0
+
+    def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument
+        return {}
+
+    def pad_token_sequence(self,
+                           tokens: Dict[str, List[int]],
+                           desired_num_tokens: Dict[str, int],
+                           padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
+        return {key: pad_sequence_to_length(val, desired_num_tokens[key]) for key, val in tokens.items()}
+
+
 class TestTextField(AllenNlpTestCase):
     def setUp(self):
         self.vocab = Vocabulary()
@@ -198,35 +229,24 @@ class TestTextField(AllenNlpTestCase):
 
     def test_token_embedder_returns_dict(self):
         field = TextField([Token(t) for t in ["A", "sentence"]],
-                          {"field_with_dict": DictReturningTokenIndexer()})
+                          token_indexers={"field_with_dict": DictReturningTokenIndexer(),
+                                          "words": SingleIdTokenIndexer("words"),
+                                          "characters": TokenCharactersIndexer("characters")})
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
-        assert padding_lengths == {'num_tokens': 2}
-
-
-class DictReturningTokenIndexer(TokenIndexer[Dict[str, List[int]]]):
-    def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
-        pass
-
-    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> int:
-        raise NotImplementedError
-    
-    def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary):
-        return {
-            "token_ids": [10, 15] + \
-                         [vocabulary.get_token_index(token.text, 'words') for token in tokens] + \
-                         [25],
-            "additional_key": [22, 29]
+        assert padding_lengths == {
+                'num_tokens-_-field_with_dict_token_ids': 5,
+                'num_tokens-_-field_with_dict_additional_key': 2,
+                'num_tokens-_-words': 2,
+                'num_tokens-_-characters': 2,
+                'num_token_characters': 8
         }
-    
-    def get_padding_token(self) -> int:
-        return 0
-
-    def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument
-        return {"dict_indexer_" + key: len(indices) for key, indices in token.items()}
-
-    def pad_token_sequence(self,
-                           tokens: List[int],
-                           desired_num_tokens: int,
-                           padding_lengths: Dict[str, int]) -> List[int]:  # pylint: disable=unused-argument
-        return pad_sequence_to_length(tokens, desired_num_tokens)
+        padding_lengths['num_tokens-_-field_with_dict_token_ids'] = 7
+        padding_lengths['num_tokens-_-field_with_dict_additional_key'] = 3
+        padding_lengths['num_tokens-_-words'] = 4
+        padding_lengths['num_tokens-_-characters'] = 4
+        tensors = field.as_tensor(padding_lengths)
+        assert list(tensors['token_ids'].shape) == [7]
+        assert list(tensors['additional_key'].shape) == [3]
+        assert list(tensors['words'].shape) == [4]
+        assert list(tensors['characters'].shape) == [4, 8]
