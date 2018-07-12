@@ -10,28 +10,24 @@ HOUR_TO_TWENTY_FOUR = 100
 HOURS_IN_DAY = 2400
 AROUND_RANGE = 30
 
-SQL_GRAMMAR_STR = r"""
+SQL_GRAMMAR_STR = """
     stmt                = query ";" ws
-
-    query               = ws lparen?  ws "SELECT" ws "DISTINCT"? ws select_results ws "FROM" ws table_refs ws where_clause rparen?  ws
+    query               = ws lparen ws "SELECT" ws "DISTINCT"? ws select_results ws "FROM" ws table_refs ws where_clause rparen ws
+                        
     select_results      = agg / col_refs
 
     agg                 = agg_func ws lparen ws col_ref ws rparen
     agg_func            = "MIN" / "min" / "MAX" / "max" / "COUNT" / "count"
 
-    col_refs            = (col_ref (ws "," ws col_ref)*)
+    col_refs            = col_ref / (col_refs (ws "," ws col_ref))
 
-    table_refs          = table_name (ws "," ws table_name)*
+    table_refs          = table_name / (table_refs (ws "," ws table_name))
 
+    where_clause        = ("WHERE" ws lparen ws condition ws rparen ws) / ("WHERE" ws condition ws)
 
-    where_clause        = "WHERE" ws lparen? ws condition_paren (ws conj ws condition_paren)* ws rparen? ws
+    condition           = in_clause / ternaryexpr / biexpr 
 
-    condition_paren     = not? (lparen ws)? condition_paren2 (ws rparen)?
-    condition_paren2    = not? (lparen ws)? condition_paren3 (ws rparen)?
-    condition_paren3    = not? (lparen ws)? condition (ws rparen)?
-    condition           = in_clause / ternaryexpr / biexpr
-
-    in_clause           = (lparen ws)? col_ref ws "IN" ws query (ws rparen)?
+    in_clause           = (ws col_ref ws "IN" ws query ws)
 
     biexpr              = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ( col_ref ws "LIKE" ws string)
     binaryop            = "+" / "-" / "*" / "/" / "=" /
@@ -62,8 +58,8 @@ SQL_GRAMMAR_STR = r"""
     number              =  ""
     string              =  ""
 
-
 """
+
 
 OPTIONAL = ['lparen', 'rparen', '(lparen ws)', '(ws rparen)', 'not', 'ws', 'asterisk']
 
@@ -105,6 +101,8 @@ class ConversationContext():
         valid_actions['col_ref'].add('asterisk')
 
         valid_action_strings = {key: sorted(value) for key, value in valid_actions.items()}
+        print(valid_action_strings)
+
         return valid_action_strings
 
 
