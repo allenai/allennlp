@@ -26,7 +26,6 @@ def main(param_file: str, args: argparse.Namespace):
 
     # Reads params and sets environment.
     params = Params.from_file(param_file, overrides)
-    print(params)
     flat_params = params.as_flat_dict()
     env = {}
     for k, v in flat_params.items():
