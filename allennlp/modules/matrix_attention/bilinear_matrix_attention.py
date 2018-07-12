@@ -2,7 +2,6 @@ from overrides import overrides
 import torch
 from torch.nn.parameter import Parameter
 
-from allennlp.common import Params
 from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 from allennlp.nn import Activation
 
@@ -31,11 +30,11 @@ class BilinearMatrixAttention(MatrixAttention):
     def __init__(self,
                  matrix_1_dim: int,
                  matrix_2_dim: int,
-                 activation: Activation) -> None:
+                 activation: Activation = None) -> None:
         super().__init__()
         self._weight_matrix = Parameter(torch.Tensor(matrix_1_dim, matrix_2_dim))
         self._bias = Parameter(torch.Tensor(1))
-        self._activation = activation
+        self._activation = activation or Activation.by_name('linear')()
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -46,13 +45,3 @@ class BilinearMatrixAttention(MatrixAttention):
     def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
         intermediate = matrix_1.bmm(self._weight_matrix.unsqueeze(0))
         return self._activation(intermediate.bmm(matrix_2.transpose(1, 2)) + self._bias)
-
-    @classmethod
-    def from_params(cls, params: Params):
-        matrix_1_dim = params.pop_int("matrix_1_dim")
-        matrix_2_dim = params.pop_int("matrix_2_dim")
-        activation = Activation.by_name(params.pop("activation", "linear"))()
-        params.assert_empty(cls.__name__)
-        return BilinearMatrixAttention(matrix_1_dim=matrix_1_dim,
-                                       matrix_2_dim=matrix_2_dim,
-                                       activation=activation)

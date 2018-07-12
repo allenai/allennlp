@@ -3,7 +3,6 @@ import torch
 from torch.nn.parameter import Parameter
 from overrides import overrides
 
-from allennlp.common.params import Params
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.nn import util
@@ -46,7 +45,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         The method used to combine the ``forward_start_embeddings`` and ``forward_end_embeddings``
         for the forward direction of the bidirectional representation.
         See above for a full description.
-    backward_combination : str, optional (default = "y-x").
+    backward_combination : str, optional (default = "x-y").
         The method used to combine the ``backward_start_embeddings`` and ``backward_end_embeddings``
         for the backward direction of the bidirectional representation.
         See above for a full description.
@@ -69,7 +68,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
     def __init__(self,
                  input_dim: int,
                  forward_combination: str = "y-x",
-                 backward_combination: str = "y-x",
+                 backward_combination: str = "x-y",
                  num_width_embeddings: int = None,
                  span_width_embedding_dim: int = None,
                  bucket_widths: bool = False,
@@ -219,20 +218,3 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         if span_indices_mask is not None:
             return span_embeddings * span_indices_mask.float().unsqueeze(-1)
         return span_embeddings
-
-    @classmethod
-    def from_params(cls, params: Params) -> "BidirectionalEndpointSpanExtractor":
-        input_dim = params.pop_int("input_dim")
-        forward_combination = params.pop("forward_combination", "y-x")
-        backward_combination = params.pop("backward_combination", "x-y")
-        num_width_embeddings = params.pop_int("num_width_embeddings", None)
-        span_width_embedding_dim = params.pop_int("span_width_embedding_dim", None)
-        bucket_widths = params.pop_bool("bucket_widths", False)
-        use_sentinels = params.pop_bool("use_sentinels", True)
-        return BidirectionalEndpointSpanExtractor(input_dim=input_dim,
-                                                  forward_combination=forward_combination,
-                                                  backward_combination=backward_combination,
-                                                  num_width_embeddings=num_width_embeddings,
-                                                  span_width_embedding_dim=span_width_embedding_dim,
-                                                  bucket_widths=bucket_widths,
-                                                  use_sentinels=use_sentinels)

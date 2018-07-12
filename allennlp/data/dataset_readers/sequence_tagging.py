@@ -3,7 +3,6 @@ import logging
 
 from overrides import overrides
 
-from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, SequenceLabelField, MetadataField, Field
@@ -80,15 +79,3 @@ class SequenceTaggingDatasetReader(DatasetReader):
         if tags is not None:
             fields["tags"] = SequenceLabelField(tags, sequence)
         return Instance(fields)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'SequenceTaggingDatasetReader':
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        word_tag_delimiter = params.pop("word_tag_delimiter", DEFAULT_WORD_TAG_DELIMITER)
-        token_delimiter = params.pop("token_delimiter", None)
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return SequenceTaggingDatasetReader(token_indexers=token_indexers,
-                                            word_tag_delimiter=word_tag_delimiter,
-                                            token_delimiter=token_delimiter,
-                                            lazy=lazy)

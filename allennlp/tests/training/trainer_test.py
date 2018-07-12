@@ -38,7 +38,7 @@ class TestTrainer(AllenNlpTestCase):
                         "num_layers": 2
                         }
                 })
-        self.model = SimpleTagger.from_params(self.vocab, self.model_params)
+        self.model = SimpleTagger.from_params(vocab=self.vocab, params=self.model_params)
         self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01)
         self.iterator = BasicIterator(batch_size=2)
         self.iterator.index_with(vocab)

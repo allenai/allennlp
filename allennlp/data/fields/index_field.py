@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use
 from typing import Dict
 
 from overrides import overrides

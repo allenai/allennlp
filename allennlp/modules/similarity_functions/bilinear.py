@@ -2,7 +2,6 @@ from overrides import overrides
 import torch
 from torch.nn.parameter import Parameter
 
-from allennlp.common import Params
 from allennlp.modules.similarity_functions.similarity_function import SimilarityFunction
 from allennlp.nn import Activation
 
@@ -31,11 +30,11 @@ class BilinearSimilarity(SimilarityFunction):
     def __init__(self,
                  tensor_1_dim: int,
                  tensor_2_dim: int,
-                 activation: Activation = Activation.by_name('linear')()) -> None:
+                 activation: Activation = None) -> None:
         super(BilinearSimilarity, self).__init__()
         self._weight_matrix = Parameter(torch.Tensor(tensor_1_dim, tensor_2_dim))
         self._bias = Parameter(torch.Tensor(1))
-        self._activation = activation
+        self._activation = activation or Activation.by_name('linear')()
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -47,13 +46,3 @@ class BilinearSimilarity(SimilarityFunction):
         intermediate = torch.matmul(tensor_1, self._weight_matrix)
         result = (intermediate * tensor_2).sum(dim=-1)
         return self._activation(result + self._bias)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'BilinearSimilarity':
-        tensor_1_dim = params.pop_int("tensor_1_dim")
-        tensor_2_dim = params.pop_int("tensor_2_dim")
-        activation = Activation.by_name(params.pop("activation", "linear"))()
-        params.assert_empty(cls.__name__)
-        return cls(tensor_1_dim=tensor_1_dim,
-                   tensor_2_dim=tensor_2_dim,
-                   activation=activation)

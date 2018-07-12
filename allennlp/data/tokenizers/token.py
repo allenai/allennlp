@@ -58,3 +58,13 @@ class Token:
         if isinstance(self, other.__class__):
             return self.__dict__ == other.__dict__
         return NotImplemented
+
+
+def show_token(token: Token) -> str:
+    return (f"{token.text} "
+            f"(idx: {token.idx}) "
+            f"(lemma: {token.lemma_}) "
+            f"(pos: {token.pos_}) "
+            f"(tag: {token.tag_}) "
+            f"(dep: {token.dep_}) "
+            f"(ent_type: {token.ent_type_}) ")

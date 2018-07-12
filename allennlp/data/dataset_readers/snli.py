@@ -4,7 +4,6 @@ import logging
 
 from overrides import overrides
 
-from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, LabelField, MetadataField
@@ -79,13 +78,3 @@ class SnliReader(DatasetReader):
                     "hypothesis_tokens": [x.text for x in hypothesis_tokens]}
         fields["metadata"] = MetadataField(metadata)
         return Instance(fields)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'SnliReader':
-        tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return SnliReader(tokenizer=tokenizer,
-                          token_indexers=token_indexers,
-                          lazy=lazy)

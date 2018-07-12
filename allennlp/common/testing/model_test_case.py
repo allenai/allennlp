@@ -32,7 +32,7 @@ class ModelTestCase(AllenNlpTestCase):
             vocab = Vocabulary.from_instances(instances)
         self.vocab = vocab
         self.instances = instances
-        self.model = Model.from_params(self.vocab, params['model'])
+        self.model = Model.from_params(vocab=self.vocab, params=params['model'])
 
         # TODO(joelgrus) get rid of these
         # (a lot of the model tests use them, so they'll have to be changed)

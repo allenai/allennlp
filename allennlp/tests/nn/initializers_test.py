@@ -8,7 +8,7 @@ import pytest
 import torch
 import _jsonnet
 
-from allennlp.nn import InitializerApplicator
+from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.nn.initializers import block_orthogonal, uniform_unit_scaling
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
@@ -22,6 +22,9 @@ class TestInitializers(AllenNlpTestCase):
     def tearDown(self):
         super(TestInitializers, self).tearDown()
         logging.getLogger('allennlp.nn.initializers').disabled = True
+
+    def test_from_params_string(self):
+        Initializer.from_params(params="eye")
 
     def test_regex_matches_are_initialized_correctly(self):
         class Net(torch.nn.Module):
