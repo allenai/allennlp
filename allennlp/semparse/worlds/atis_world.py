@@ -1,8 +1,8 @@
 from typing import List
 
 from parsimonious.grammar import Grammar
-from parsimonious.nodes import NodeVisitor
-from parsimonious.nodes import RegexNode
+from parsimonious.nodes import NodeVisitor, RegexNode
+from parsimonious.expressions import Literal 
 
 from allennlp.semparse.contexts import atis_tables
 
@@ -95,8 +95,10 @@ class AtisWorld():
 
                 else:
                     all_actions.add("{} -> {}".format(non_term, rhs))
+        '''
         for opt in atis_tables.OPTIONAL:
             all_actions.add("{} ->".format(opt))
+        '''
         return sorted(all_actions)
 
 
@@ -115,18 +117,25 @@ class SQLVisitor(NodeVisitor):
 
     def add_prod_rule(self, node, children=None):
         if node.expr.name and node.expr.name != 'ws':
-            rule = '{} ->'.format(node.expr.name)
+            rule = '{} -> '.format(node.expr.name)
 
-            if isinstance(node, RegexNode):
+            if isinstance(node.expr, Literal):
                 rule += '"{}"'.format(node.text)
+                
+            else:
+                child_strs = []
+                for child in node.__iter__():
+                    if child.expr.name == 'ws':
+                        continue 
+                    if child.expr.name != '':
+                        child_strs.append(child.expr.name)
+                    else:
+                        child_strs.append(child.expr._as_rhs().replace(" ws", "").replace("ws ", ""))
 
-            for child in node.__iter__():
-                if child.expr.name != '':
-                    rule += ' {}'.format(child.expr.name)
-                else:
-                    rule += ' {}'.format(child.expr._as_rhs())
+                rule += " , ".join(child_strs) 
 
-            self.prod_acc = [rule.replace(" ws","").replace("ws ","")] + self.prod_acc
+            # self.prod_acc = [rule.replace(" ws","").replace("ws ","")] + self.prod_acc
+            self.prod_acc = [rule] + self.prod_acc
 
     def visit_stmt(self, node, children):
         self.add_prod_rule(node)
