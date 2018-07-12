@@ -7,7 +7,7 @@ class BiaffineAttention(nn.Module):
     """
     A Biaffine attention layer.
 
-    This layer computes two projections of its' inputs in addition
+    This layer computes two projections of its inputs in addition
     to a Biaffine projection and returns their sum.
 
     """
@@ -47,17 +47,17 @@ class BiaffineAttention(nn.Module):
         Parameters
         ----------
         input1 : ``torch.Tensor``
-            An input tensor with shape (batch, timesteps, input1_size).
+            An input tensor with shape (batch_size, timesteps, input1_dim).
         input2 : ``torch.Tensor``
-             An input tensor with shape (batch_size, timesteps, input2_size).
+             An input tensor with shape (batch_size, timesteps, input2_dim).
         input1_mask : ``torch.Tensor``
-            The input1 mask with shape (batch, timesteps).
+            The input1 mask with shape (batch_size, timesteps).
         input2_mask : ``torch.Tensor``
-            The input2 mask with shape (batch, timesteps).
+            The input2 mask with shape (batch_size, timesteps).
 
         Returns
         -------
-        A tensor with shape (batch, output_dim, length, length).
+        A tensor with shape (batch_size, output_dim, timesteps, timesteps).
         """
         # Shape (batch_size, num_labels, timesteps, 1)
         projected_input1 = torch.matmul(self._input1_projection, input1.transpose(1, 2)).unsqueeze(3)

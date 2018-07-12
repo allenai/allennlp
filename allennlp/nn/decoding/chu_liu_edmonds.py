@@ -116,7 +116,7 @@ def chu_liu_edmonds(length: int,
         An empty dictionary which will be populated with the
         nodes which are connected in the minimum spanning tree.
     old_input: ``numpy.ndarray``, required.
-    old_input: ``numpy.ndarray``, required.
+    old_output: ``numpy.ndarray``, required.
     representatives : ``List[Set[int]]``, required.
         A list containing the nodes that a particular node
         is representing at this iteration in the graph.

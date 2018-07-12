@@ -29,8 +29,8 @@ class DependencyParser(Model):
     encoder : ``Seq2SeqEncoder``
         The encoder (with its own internal stacking) that we will use to generate representations
         of tokens.
-    type_representation_dim : ``int``, required.
-        The dimension of the MLPs used for head type prediction.
+    tag_representation_dim : ``int``, required.
+        The dimension of the MLPs used for dependency tag prediction.
     arc_representation_dim : ``int``, required.
         The dimension of the MLPs used for head arc prediction.
     pos_tag_embedding : ``Embedding``, optional.
@@ -46,7 +46,7 @@ class DependencyParser(Model):
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
-                 type_representation_dim: int,
+                 tag_representation_dim: int,
                  arc_representation_dim: int,
                  pos_tag_embedding: Embedding = None,
                  use_mst_decoding_for_validation: bool = True,
@@ -64,10 +64,10 @@ class DependencyParser(Model):
         self.arc_attention = BiaffineAttention(arc_representation_dim, arc_representation_dim, 1)
 
         num_labels = self.vocab.get_vocab_size("head_tags")
-        self.head_type_projection = torch.nn.Linear(encoder_dim, type_representation_dim)
-        self.child_type_projection = torch.nn.Linear(encoder_dim, type_representation_dim)
-        self.type_bilinear = torch.nn.modules.Bilinear(type_representation_dim,
-                                                       type_representation_dim,
+        self.head_tag_projection = torch.nn.Linear(encoder_dim, tag_representation_dim)
+        self.child_tag_projection = torch.nn.Linear(encoder_dim, tag_representation_dim)
+        self.tag_bilinear = torch.nn.modules.Bilinear(tag_representation_dim,
+                                                      tag_representation_dim,
                                                        num_labels)
 
         self._pos_tag_embedding = pos_tag_embedding or None
@@ -79,7 +79,7 @@ class DependencyParser(Model):
 
         self.use_mst_decoding_for_validation = use_mst_decoding_for_validation
 
-        self._attachement_scores = AttachmentScores()
+        self._attachment_scores = AttachmentScores()
         initializer(self)
 
     @overrides
@@ -92,7 +92,7 @@ class DependencyParser(Model):
         """
         Parameters
         ----------
-        tokens : Dict[str, torch.LongTensor], required
+        words : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
             tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is: ``{"tokens":
@@ -101,15 +101,33 @@ class DependencyParser(Model):
             sequence.  The dictionary is designed to be passed directly to a ``TextFieldEmbedder``,
             which knows how to combine different word representations into a single vector per
             token in your input.
-        tags : torch.LongTensor, optional (default = None)
-            A torch tensor representing the sequence of integer gold class labels of shape
-            ``(batch_size, num_tokens)``.
+        pos_tags : ``torch.LongTensor``, optional (default = None)
+            The output of a ``SequenceLabelField`` containing POS tags.
+        head_tags : torch.LongTensor, optional (default = None)
+            A torch tensor representing the sequence of integer gold class labels for the arcs
+            in the dependency parse. Has shape ``(batch_size, num_tokens)``.
+        head_indices : torch.LongTensor, optional (default = None)
+            A torch tensor representing the sequence of integer indices denoting the parent of every
+            word in the dependency parse. Has shape ``(batch_size, num_tokens)``.
 
         Returns
         -------
         An output dictionary consisting of:
-        loss : torch.FloatTensor, optional
+        loss : ``torch.FloatTensor``, optional
             A scalar loss to be optimised.
+        arc_loss : ``torch.FloatTensor``
+            The loss contribution from the unlabeled arcs.
+        loss : ``torch.FloatTensor``, optional
+            The loss contribution from predicting the dependency
+            tags for the gold arcs.
+        heads : ``torch.FloatTensor``
+            The predicted head indices for each word. A tensor
+            of shape (batch_size, timesteps).
+        head_types : ``torch.FloatTensor``
+            The predicted head types for each arc. A tensor
+            of shape (batch_size, timesteps).
+        mask : ``torch.LongTensor``
+            A mask denoting the padded elements in the batch.
         """
         embedded_text_input = self.text_field_embedder(words)
         if pos_tags is not None and self._pos_tag_embedding is not None:
@@ -126,11 +144,11 @@ class DependencyParser(Model):
         head_arc_representation = F.elu(self.head_arc_projection(encoded_text))
         child_arc_representation = F.elu(self.child_arc_projection(encoded_text))
 
-        # shape (batch_size, timesteps, type_representation_dim)
-        head_type_representation = F.elu(self.head_type_projection(encoded_text))
-        child_type_representation = F.elu(self.child_type_projection(encoded_text))
-        head_type_representation = head_type_representation.contiguous()
-        child_type_representation = child_type_representation.contiguous()
+        # shape (batch_size, timesteps, tag_representation_dim)
+        head_tag_representation = F.elu(self.head_tag_projection(encoded_text))
+        child_tag_representation = F.elu(self.child_tag_projection(encoded_text))
+        head_tag_representation = head_tag_representation.contiguous()
+        child_tag_representation = child_tag_representation.contiguous()
         # shape (batch_size, timesteps, timesteps)
         attended_arcs = self.arc_attention(head_arc_representation,
                                            child_arc_representation,
@@ -141,45 +159,44 @@ class DependencyParser(Model):
         minus_mask = (1 - float_mask) * minus_inf
         attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
-        if self.training or (self.eval and not self.use_mst_decoding_for_validation):
-            heads, head_types = self._greedy_decode(head_type_representation,
-                                                    child_type_representation,
-                                                    attended_arcs,
-                                                    mask)
-        elif self.use_mst_decoding_for_validation:
-            heads, head_types = self._mst_decode(head_type_representation,
-                                                 child_type_representation,
-                                                 attended_arcs,
-                                                 mask)
-
-
+        if self.training or not self.use_mst_decoding_for_validation:
+            predicted_heads, predicted_head_tags = self._greedy_decode(head_tag_representation,
+                                                                       child_tag_representation,
+                                                                       attended_arcs,
+                                                                       mask)
+        else:
+            predicted_heads, predicted_head_tags = self._mst_decode(head_tag_representation,
+                                                                    child_tag_representation,
+                                                                    attended_arcs,
+                                                                    mask)
         if head_indices is not None and head_tags is not None:
-            arc_nll, type_nll = self._construct_loss(head_type_representation,
-                                                     child_type_representation,
-                                                     attended_arcs,
-                                                     head_indices,
-                                                     head_tags,
-                                                     mask)
-            loss = arc_nll + type_nll
+
+            arc_nll, tag_nll = self._construct_loss(head_tag_representation=head_tag_representation,
+                                                    child_tag_representation=child_tag_representation,
+                                                    attended_arcs=attended_arcs,
+                                                    head_indices=head_indices,
+                                                    head_tags=head_tags,
+                                                    mask=mask)
+            loss = arc_nll + tag_nll
 
             # We calculate attatchment scores for the whole sentence
             # but excluding the symbolic ROOT token at the start,
             # which is why we start from the second element in the sequence.
-            self._attachement_scores(heads[:, 1:],
-                                     head_types[:, 1:],
-                                     head_indices[:, 1:],
-                                     head_tags[:, 1:],
-                                     mask[:, 1:])
+            self._attachment_scores(predicted_heads[:, 1:],
+                                    predicted_head_tags[:, 1:],
+                                    head_indices[:, 1:],
+                                    head_tags[:, 1:],
+                                    mask[:, 1:])
         else:
             arc_nll = None
-            type_nll = None
+            tag_nll = None
             loss = None
 
         output_dict = {
-                "heads": heads,
-                "head_types": head_types,
+                "heads": predicted_heads,
+                "head_tags": predicted_head_tags,
                 "arc_loss": arc_nll,
-                "type_loss": type_nll,
+                "tag_loss": tag_nll,
                 "loss": loss,
                 "mask": mask
                 }
@@ -189,44 +206,43 @@ class DependencyParser(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
 
-        head_types = output_dict["head_types"].cpu().detach().numpy()
+        head_tags = output_dict["head_tags"].cpu().detach().numpy()
         heads = output_dict["heads"].cpu().detach().numpy()
         lengths = get_lengths_from_binary_sequence_mask(output_dict["mask"])
-        head_type_labels = []
+        head_tag_labels = []
         head_indices = []
-        for batch, batch_type, length in zip(heads, head_types, lengths):
-
-            batch = list(batch[1: length])
-            batch_type = batch_type[1: length]
+        for batch, batch_tag, length in zip(heads, head_tags, lengths):
+            batch = list(batch[1:length])
+            batch_tag = batch_tag[1:length]
             labels = [self.vocab.get_token_from_index(label, "head_tags")
-                      for label in batch_type]
-            head_type_labels.append(labels)
+                      for label in batch_tag]
+            head_tag_labels.append(labels)
             head_indices.append(batch)
 
-        output_dict["head_type_labels"] = head_type_labels
-        output_dict["head_indices"] = head_indices
+        output_dict["predicted_dependencies"] = head_tag_labels
+        output_dict["predicted_heads"] = head_indices
         return output_dict
 
     def _construct_loss(self,
-                        head_type_representation: torch.Tensor,
-                        child_type_representation: torch.Tensor,
+                        head_tag_representation: torch.Tensor,
+                        child_tag_representation: torch.Tensor,
                         attended_arcs: torch.Tensor,
                         head_indices: torch.Tensor,
                         head_tags: torch.Tensor,
                         mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Computes the arc and type loss for a sequence given gold head indices and tags.
+        Computes the arc and tag loss for a sequence given gold head indices and tags.
 
         Parameters
         ----------
-        head_type_representation : ``torch.Tensor``, required.
-            A tensor of shape (batch_size, timesteps, type_representation_dim),
-            which will be used to generate predictions for the label type
-            for given arcs.
-        child_type_representation : ``torch.Tensor``, required
-            A tensor of shape (batch_size, timesteps, type_representation_dim),
-            which will be used to generate predictions for the label type
-            for given arcs.
+        head_tag_representation : ``torch.Tensor``, required.
+            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            which will be used to generate predictions for the dependency tags
+            for the given arcs.
+        child_tag_representation : ``torch.Tensor``, required
+            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            which will be used to generate predictions for the dependency tags
+            for the given arcs.
         attended_arcs : ``torch.Tensor``, required.
             A tensor of shape (batch_size, timesteps, timesteps) used to generate
             a distribution over attachements of a given word to all other words.
@@ -244,8 +260,8 @@ class DependencyParser(Model):
         -------
         arc_nll : ``torch.Tensor``, required.
             The negative log likelihood from the arc loss.
-        type_nll : ``torch.Tensor``, required.
-            The negative log likelihood from the arc type loss.
+        tag_nll : ``torch.Tensor``, required.
+            The negative log likelihood from the arc tag loss.
         """
         float_mask = mask.float()
         batch_size, timesteps, _ = attended_arcs.size()
@@ -255,51 +271,50 @@ class DependencyParser(Model):
                                                      mask) * float_mask.unsqueeze(2) * float_mask.unsqueeze(1)
 
         # shape (batch_size, timesteps, num_head_tags)
-        head_type_logits = self._get_head_types(head_type_representation, child_type_representation, head_indices)
-        normalised_head_type_logits = last_dim_log_softmax(head_type_logits,
-                                                           mask.unsqueeze(-1)) * float_mask.unsqueeze(-1)
+        head_tag_logits = self._get_head_tags(head_tag_representation, child_tag_representation, head_indices)
+        normalised_head_tag_logits = last_dim_log_softmax(head_tag_logits,
+                                                          mask.unsqueeze(-1)) * float_mask.unsqueeze(-1)
         # index matrix with shape (timesteps, batch)
         child_index = torch.arange(0, timesteps).view(timesteps, 1).expand(timesteps, batch_size)
         child_index = child_index.type_as(attended_arcs).long()
         # shape (timesteps, batch_size)
         arc_loss = normalised_arc_logits[range_vector, child_index, head_indices.data.t()]
-        type_loss = normalised_head_type_logits[range_vector, child_index, head_tags.data.t()]
+        tag_loss = normalised_head_tag_logits[range_vector, child_index, head_tags.data.t()]
         # We don't care about predictions for the symbolic ROOT token's head,
         # so we remove it from the loss.
         arc_loss = arc_loss[1:, :]
-        type_loss = type_loss[1:, :]
+        tag_loss = tag_loss[1:, :]
 
         # The number of valid positions is equal to the number of unmasked elements minus
         # 1 per sequence in the batch, to account for the symbolic HEAD token.
         valid_positions = mask.sum() - batch_size
 
         arc_nll = -arc_loss.sum() / valid_positions.float()
-        type_nll = -type_loss.sum() / valid_positions.float()
-
-        return arc_nll, type_nll
+        tag_nll = -tag_loss.sum() / valid_positions.float()
+        return arc_nll, tag_nll
 
     def _greedy_decode(self,
-                       head_type_representation: torch.Tensor,
-                       child_type_representation: torch.Tensor,
+                       head_tag_representation: torch.Tensor,
+                       child_tag_representation: torch.Tensor,
                        attended_arcs: torch.Tensor,
                        mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Decodes the head and head type predictions by decoding the unlabeled arcs
-        independently for each word and then again, predicting the head types of
+        Decodes the head and head tag predictions by decoding the unlabeled arcs
+        independently for each word and then again, predicting the head tags of
         these greedily chosen arcs indpendently. Note that this method of decoding
         is not guaranteed to produce trees (i.e. there maybe be multiple roots,
         or cycles when children are attached to their parents).
 
         Parameters
         ----------
-        head_type_representation : ``torch.Tensor``, required.
-            A tensor of shape (batch_size, timesteps, type_representation_dim),
-            which will be used to generate predictions for the label type
-            for given arcs.
-        child_type_representation : ``torch.Tensor``, required
-            A tensor of shape (batch_size, timesteps, type_representation_dim),
-            which will be used to generate predictions for the label type
-            for given arcs.
+        head_tag_representation : ``torch.Tensor``, required.
+            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            which will be used to generate predictions for the dependency tags
+            for the given arcs.
+        child_tag_representation : ``torch.Tensor``, required
+            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            which will be used to generate predictions for the dependency tags
+            for the given arcs.
         attended_arcs : ``torch.Tensor``, required.
             A tensor of shape (batch_size, timesteps, timesteps) used to generate
             a distribution over attachements of a given word to all other words.
@@ -309,9 +324,9 @@ class DependencyParser(Model):
         heads : ``torch.Tensor``
             A tensor of shape (batch_size, timesteps) representing the
             greedily decoded heads of each word.
-        head_types : ``torch.Tensor``
+        head_tags : ``torch.Tensor``
             A tensor of shape (batch_size, timesteps) representing the
-            types of the greedily decoded heads of each word.
+            dependency tags of the greedily decoded heads of each word.
         """
         # Mask the diagonal, because the head of a word can't be itself.
         attended_arcs = attended_arcs + torch.diag(attended_arcs.new(mask.size(1)).fill_(-numpy.inf))
@@ -324,21 +339,21 @@ class DependencyParser(Model):
         # shape (batch_size, timesteps)
         _, heads = attended_arcs.max(dim=2)
 
-        # Given the greedily predicted heads, decode their types.
+        # Given the greedily predicted heads, decode their dependency tags.
         # shape (batch_size, timesteps, num_head_tags)
-        head_type_logits = self._get_head_types(head_type_representation,
-                                                child_type_representation,
-                                                heads)
-        _, head_types = head_type_logits.max(dim=2)
-        return heads, head_types
+        head_tag_logits = self._get_head_tags(head_tag_representation,
+                                              child_tag_representation,
+                                              heads)
+        _, head_tags = head_tag_logits.max(dim=2)
+        return heads, head_tags
 
     def _mst_decode(self,
-                    head_type_representation: torch.Tensor,
-                    child_type_representation: torch.Tensor,
+                    head_tag_representation: torch.Tensor,
+                    child_tag_representation: torch.Tensor,
                     attended_arcs: torch.Tensor,
                     mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Decodes the head and head type predictions using the Edmonds' Algorithm
+        Decodes the head and head tag predictions using the Edmonds' Algorithm
         for finding minimum spanning trees on directed graphs. Nodes in the
         graph are the words in the sentence, and between each pair of nodes,
         there is an edge in each direction, where the weight of the edge corresponds
@@ -347,14 +362,14 @@ class DependencyParser(Model):
 
         Parameters
         ----------
-        head_type_representation : ``torch.Tensor``, required.
-            A tensor of shape (batch_size, timesteps, type_representation_dim),
-            which will be used to generate predictions for the label type
-            for given arcs.
-        child_type_representation : ``torch.Tensor``, required
-            A tensor of shape (batch_size, timesteps, type_representation_dim),
-            which will be used to generate predictions for the label type
-            for given arcs.
+        head_tag_representation : ``torch.Tensor``, required.
+            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            which will be used to generate predictions for the dependency tags
+            for the given arcs.
+        child_tag_representation : ``torch.Tensor``, required
+            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            which will be used to generate predictions for the dependency tags
+            for the given arcs.
         attended_arcs : ``torch.Tensor``, required.
             A tensor of shape (batch_size, timesteps, timesteps) used to generate
             a distribution over attachements of a given word to all other words.
@@ -364,28 +379,28 @@ class DependencyParser(Model):
         heads : ``torch.Tensor``
             A tensor of shape (batch_size, timesteps) representing the
             greedily decoded heads of each word.
-        head_types : ``torch.Tensor``
+        head_tags : ``torch.Tensor``
             A tensor of shape (batch_size, timesteps) representing the
-            types of the greedily decoded heads of each word.
+            dependency tags of the optimally decoded heads of each word.
         """
-        batch_size, timesteps, type_representation_dim = head_type_representation.size()
+        batch_size, timesteps, tag_representation_dim = head_tag_representation.size()
 
         lengths = mask.data.sum(dim=1).long().cpu().numpy()
 
-        expanded_shape = [batch_size, timesteps, timesteps, type_representation_dim]
-        head_type_representation = head_type_representation.unsqueeze(2)
-        head_type_representation = head_type_representation.expand(*expanded_shape).contiguous()
-        child_type_representation = child_type_representation.unsqueeze(1)
-        child_type_representation = child_type_representation.expand(*expanded_shape).contiguous()
+        expanded_shape = [batch_size, timesteps, timesteps, tag_representation_dim]
+        head_tag_representation = head_tag_representation.unsqueeze(2)
+        head_tag_representation = head_tag_representation.expand(*expanded_shape).contiguous()
+        child_tag_representation = child_tag_representation.unsqueeze(1)
+        child_tag_representation = child_tag_representation.expand(*expanded_shape).contiguous()
         # Shape (batch_size, timesteps, timesteps, num_head_tags)
-        pairwise_head_logits = self.type_bilinear(head_type_representation, child_type_representation)
+        pairwise_head_logits = self.tag_bilinear(head_tag_representation, child_tag_representation)
 
-        # Shape (batch, length, length, num_labels)
+        # Shape (batch, num_labels,timesteps, timesteps)
         normalized_pairwise_head_logits = F.log_softmax(pairwise_head_logits, dim=3).permute(0, 3, 1, 2)
 
         # Mask padded tokens, because we only want to consider actual words as heads.
         minus_inf = -1e8
-        minus_mask = (1 - mask.float()) * minus_inf
+        minus_mask = (1 - mask.float()) * minus_inf 
         attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
         # Shape (batch_size, timesteps, timesteps)
@@ -394,47 +409,48 @@ class DependencyParser(Model):
         batch_energy = torch.exp(normalized_arc_logits.unsqueeze(1) + normalized_pairwise_head_logits)
 
         heads = []
-        head_types = []
+        head_tags = []
         for energy, length in zip(batch_energy.detach().cpu().numpy(), lengths):
-            head, head_type = decode_mst(energy, length)
+            head, head_tag = decode_mst(energy, length)
             heads.append(head)
-            head_types.append(head_type)
-        return torch.from_numpy(numpy.stack(heads)), torch.from_numpy(numpy.stack(head_types))
+            head_tags.append(head_tag)
+        return torch.from_numpy(numpy.stack(heads)), torch.from_numpy(numpy.stack(head_tags))
 
 
-    def _get_head_types(self,
-                        head_type_representation: torch.Tensor,
-                        child_type_representation: torch.Tensor,
-                        head_indices: torch.Tensor) -> torch.Tensor:
+    def _get_head_tags(self,
+                       head_tag_representation: torch.Tensor,
+                       child_tag_representation: torch.Tensor,
+                       head_indices: torch.Tensor) -> torch.Tensor:
         """
-        Decodes the head types given the head and child type representations
-        and a tensor of head indices to compute types for. Note that these are
+        Decodes the head tags given the head and child tag representations
+        and a tensor of head indices to compute tags for. Note that these are
         either gold or predicted heads, depending on whether this function is
         being called to compute the loss, or if it's being called during inference.
+
         Parameters
         ----------
-        head_type_representation : ``torch.Tensor``, required.
-            A tensor of shape (batch_size, timesteps, type_representation_dim),
-            which will be used to generate predictions for the label type
-            for given arcs.
-        child_type_representation : ``torch.Tensor``, required
-            A tensor of shape (batch_size, timesteps, type_representation_dim),
-            which will be used to generate predictions for the label type
-            for given arcs.
+        head_tag_representation : ``torch.Tensor``, required.
+            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            which will be used to generate predictions for the dependency tags
+            for the given arcs.
+        child_tag_representation : ``torch.Tensor``, required
+            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            which will be used to generate predictions for the dependency tags
+            for the given arcs.
         head_indices : ``torch.Tensor``, required.
             A tensor of shape (batch_size, timesteps). The indices of the heads
             for every word.
 
         Returns
         -------
-        head_type_logits : ``torch.Tensor``
+        head_tag_logits : ``torch.Tensor``
             A tensor of shape (batch_size, timesteps, num_head_tags),
             representing logits for predicting a distribution over tags
             for each arc.
         """
-        batch_size = head_type_representation.size(0)
+        batch_size = head_tag_representation.size(0)
         # shape (batch_size,)
-        range_vector = get_range_vector(batch_size, get_device_of(head_type_representation))
+        range_vector = get_range_vector(batch_size, get_device_of(head_tag_representation))
 
         # TODO(Mark): This can probably replace the code in the "batch_index_select" function in utils.
 
@@ -450,15 +466,15 @@ class DependencyParser(Model):
         # 3. This results in a tensor of shape (timesteps, batch_size, embedding_dim),
         #    so we need to transpose back to put the batch dimension first.
 
-        # shape (batch_size, timesteps, type_representation_dim)
-        selected_head_type_representations = head_type_representation[range_vector,
-                                                                      head_indices.data.t()].transpose(0, 1)
-        selected_head_type_representations = selected_head_type_representations.contiguous()
+        # shape (batch_size, timesteps, tag_representation_dim)
+        selected_head_tag_representations = head_tag_representation[range_vector,
+                                                                    head_indices.data.t()].transpose(0, 1)
+        selected_head_tag_representations = selected_head_tag_representations.contiguous()
         # shape (batch_size, timesteps, num_head_tags)
-        head_type_logits = self.type_bilinear(selected_head_type_representations,
-                                              child_type_representation)
-        return head_type_logits
+        head_tag_logits = self.tag_bilinear(selected_head_tag_representations,
+                                            child_tag_representation)
+        return head_tag_logits
 
     @overrides
     def get_metrics(self, reset: bool = True) -> Dict[str, float]:
-        return self._attachement_scores.get_metric(reset)
+        return self._attachment_scores.get_metric(reset)

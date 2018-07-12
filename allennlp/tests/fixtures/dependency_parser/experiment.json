@@ -20,7 +20,7 @@
         "num_layers": 1
       },
       "arc_representation_dim": 3,
-      "type_representation_dim": 3
+      "tag_representation_dim": 3
     },
 
     "iterator": {
