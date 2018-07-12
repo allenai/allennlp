@@ -10,13 +10,13 @@ import tempfile
 import subprocess
 import sys
 
-from allennlp.common.params import Params
-
 # This has to happen before we import spacy (even indirectly), because for some crazy reason spacy
 # thought it was a good idea to set the random seed on import...
 random_int = random.randint(0, 2**32)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(os.path.join(__file__, os.pardir), os.pardir))))
+
+from allennlp.common.params import Params
 
 
 def main(param_file: str, args: argparse.Namespace):
@@ -26,6 +26,7 @@ def main(param_file: str, args: argparse.Namespace):
 
     # Reads params and sets environment.
     params = Params.from_file(param_file, overrides)
+    print(params)
     flat_params = params.as_flat_dict()
     env = {}
     for k, v in flat_params.items():
