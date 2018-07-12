@@ -1,4 +1,5 @@
 from typing import List
+import re
 
 from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor, RegexNode
@@ -66,7 +67,7 @@ class AtisWorld():
                 if trigger.lower() in self.utterance.lower():
                     local_strs.append(trigger)
 
-        trigger_dict_list = [atis_tables.AIRLINE_CODES, atis_tables.GROUND_SERVICE, atis_tables.YES_NO]
+        trigger_dict_list = [atis_tables.AIRLINE_CODES, atis_tables.GROUND_SERVICE, atis_tables.YES_NO, atis_tables.MISC_STR]
 
         for trigger_dict in trigger_dict_list:
             for trigger in trigger_dict:
@@ -117,10 +118,10 @@ class SQLVisitor(NodeVisitor):
 
     def add_prod_rule(self, node, children=None):
         if node.expr.name and node.expr.name != 'ws':
-            rule = '{} -> '.format(node.expr.name)
+            lhs = '{} -> '.format(node.expr.name)
 
             if isinstance(node.expr, Literal):
-                rule += '"{}"'.format(node.text)
+                rhs = '["{}"]'.format(node.text)
                 
             else:
                 child_strs = []
@@ -130,11 +131,13 @@ class SQLVisitor(NodeVisitor):
                     if child.expr.name != '':
                         child_strs.append(child.expr.name)
                     else:
-                        child_strs.append(child.expr._as_rhs().replace(" ws", "").replace("ws ", ""))
+                        ws_str = child.expr._as_rhs().lstrip("(").rstrip(")")
+                        curr_child_strs = [tok for tok in re.split(" ws|ws | ws | ", ws_str) if tok]
+                        child_strs.extend(curr_child_strs)
 
-                rule += " , ".join(child_strs) 
+                rhs = "[" + ", ".join(child_strs) + "]"
 
-            # self.prod_acc = [rule.replace(" ws","").replace("ws ","")] + self.prod_acc
+            rule = lhs + rhs
             self.prod_acc = [rule] + self.prod_acc
 
     def visit_stmt(self, node, children):

@@ -45,7 +45,7 @@ SQL_GRAMMAR_STR = """
     value               = (not ws pos_value) / (pos_value)
     pos_value           = ("ALL" ws query) / ("ANY" ws query) / number / boolean / col_ref / string / agg_results / "NULL"
 
-    agg_results         = (ws lparen  ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause rparen ws)
+    agg_results         = (ws lparen  ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause rparen ws) /
                           (ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ws)
 
     boolean             = "true" / "false"
@@ -231,7 +231,7 @@ DAY_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY
 
 CITIES = ['NASHVILLE', 'BOSTON', 'BURBANK', 'BALTIMORE', 'CHICAGO', 'CLEVELAND',
           'CHARLOTTE', 'COLUMBUS', 'CINCINNATI', 'DENVER', 'DALLAS', 'DETROIT',
-          'FORTWORTH', 'HOUSTON', 'WESTCHESTER COUNTY', 'INDIANAPOLIS', 'NEWARK',
+          'FORT WORTH', 'HOUSTON', 'WESTCHESTER COUNTY', 'INDIANAPOLIS', 'NEWARK',
           'LAS VEGAS', 'LOS ANGELES', 'LONG BEACH', 'ATLANTA', 'MEMPHIS', 'MIAMI',
           'KANSAS CITY', 'MILWAUKEE', 'MINNEAPOLIS', 'NEW YORK', 'OAKLAND', 'ONTARIO',
           'ORLANDO', 'PHILADELPHIA', 'PHOENIX', 'PITTSBURGH', 'ST. PAUL', 'SAN DIEGO',
@@ -321,7 +321,7 @@ AIRPORT_CODES = ['ATL', 'NA', 'OS', 'UR', 'WI', 'CLE', 'CLT', 'CMH',
 STATES = ['ARIZONA', 'CALIFORNIA', 'COLORADO', 'DISTRICT OF COLUMBIA',
           'FLORIDA', 'GEORGIA', 'ILLINOIS', 'INDIANA', 'MASSACHUSETTS',
           'MARYLAND', 'MICHIGAN', 'MINNESOTA', 'MISSOURI', 'NORTH CAROLINA',
-          'NEW JERSEY', 'NEVADA', 'NEWYORK', 'OHIO', 'ONTARIO', 'PENNSYLVANIA',
+          'NEW JERSEY', 'NEVADA', 'NEW YORK', 'OHIO', 'ONTARIO', 'PENNSYLVANIA',
           'QUEBEC', 'TENNESSEE', 'TEXAS', 'UTAH', 'WASHINGTON', 'WISCONSIN']
 
 TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
@@ -360,3 +360,5 @@ TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
 
 YES_NO = {'one way': 'NO',
           'economy': 'YES'}
+
+MISC_STR = {"every day" : "DAILY"}

@@ -8,7 +8,7 @@ from allennlp.semparse.contexts.atis_tables import ConversationContext
 class TestAtisWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        test_filename = self.FIXTURES_ROOT / "data" / "atis" / "sample.json"
+        test_filename = self.FIXTURES_ROOT / "data" / "atis" / "short_sample.json"
         self.data = open(test_filename).readlines()
 
     def test_atis_global_actions(self):
@@ -78,18 +78,23 @@ class TestAtisWorld(AllenNlpTestCase):
     def test_simple_sequence(self):
         conv_context = ConversationContext(None)
         world = AtisWorld(conv_context, "give me all flights from boston to philadelphia next week arriving after lunch")
-        action_sequence = world.get_action_sequence("(SELECT DISTINCT city . city_code FROM city WHERE ( city.city_name = 'BOSTON' ) );")
+        action_sequence = world.get_action_sequence("(SELECT DISTINCT city . city_code , city . city_name FROM city WHERE ( city.city_name = 'BOSTON' ) );")
         print(action_sequence)
 
         action_sequence = world.get_action_sequence("( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' ) ) ;")
+        print(action_sequence)
+
+        action_sequence = world.get_action_sequence("( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' ) AND 1 = 1) ;")
         print(action_sequence)
 
         conv_context = ConversationContext(None)
         world = AtisWorld(conv_context, "give me all flights from boston to philadelphia next week arriving after lunch")
 
         action_sequence = world.get_action_sequence(
-        """( SELECT DISTINCT flight.flight_id FROM flight WHERE ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' )) AND ( flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'PHILADELPHIA' )) AND flight.arrival_time > 1400 ) ) ) ;""")
+        """( SELECT DISTINCT flight.flight_id FROM flight WHERE ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' )))) ;""")
         print(action_sequence)
+
+
 
     def test_conjunctions(self):
         conv_context = ConversationContext(None)
@@ -131,7 +136,6 @@ class TestAtisWorld(AllenNlpTestCase):
             print(action_sequence)
 
     def test_atis_parse_coverage(self):
-        print(self.data)
         num_queries = 0
         num_parsed = 0
 
@@ -147,8 +151,8 @@ class TestAtisWorld(AllenNlpTestCase):
                     action_sequence = world.get_action_sequence(interaction_round['sql'])
                     num_parsed += 1
                 except:
-                    print(line)
                     print("Failed to parse, line {}".format(idx))
+                    print("The query was:\n {}".format(interaction_round['sql']))
 
                 conv_context.valid_actions = world.valid_actions
 
