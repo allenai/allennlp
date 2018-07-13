@@ -12,23 +12,23 @@ AROUND_RANGE = 30
 
 SQL_GRAMMAR_STR = """
     stmt                = query ";" ws
-    query               = (ws lparen ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause rparen ws) /
+    query               = (ws "(" ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause ")" ws) /
                           (ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause ws)
                         
     select_results      = col_refs / agg
 
-    agg                 = agg_func ws lparen ws col_ref ws rparen
+    agg                 = agg_func ws "(" ws col_ref ws ")"
     agg_func            = "MIN" / "min" / "MAX" / "max" / "COUNT" / "count"
 
     col_refs            = (col_ref ws "," ws col_refs) / (col_ref)
     table_refs          = (table_name ws "," ws table_refs) / (table_name)
 
-    where_clause        = ("WHERE" ws lparen ws conditions ws rparen ws) / ("WHERE" ws conditions ws)
+    where_clause        = ("WHERE" ws "(" ws conditions ws ")" ws) / ("WHERE" ws conditions ws)
     
     conditions          = (condition ws conj ws conditions) / 
-                          (condition ws conj ws lparen ws conditions ws rparen) /
-                          (lparen ws conditions ws rparen ws conj ws conditions) /
-                          (lparen ws conditions ws rparen) /
+                          (condition ws conj ws "(" ws conditions ws ")") /
+                          ("(" ws conditions ws ")" ws conj ws conditions) /
+                          ("(" ws conditions ws ")") /
                           (not ws conditions ws ) /
                           condition
     condition           = in_clause / ternaryexpr / biexpr
@@ -45,15 +45,13 @@ SQL_GRAMMAR_STR = """
     value               = (not ws pos_value) / (pos_value)
     pos_value           = ("ALL" ws query) / ("ANY" ws query) / number / boolean / col_ref / string / agg_results / "NULL"
 
-    agg_results         = (ws lparen  ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause rparen ws) /
+    agg_results         = (ws "("  ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ")" ws) /
                           (ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ws)
 
     boolean             = "true" / "false"
 
     ws                  = ~"\s*"i
 
-    lparen              = "("
-    rparen              = ")"
     conj                = and / or
     and                 = "AND" ws
     or                  = "OR" ws
@@ -123,6 +121,7 @@ def get_times_from_utterance(utterance: str) -> List[str]:
                 for am_str in re.findall(r"\d+", utterance)]
     oclock_times = [int(oclock_str.rstrip("o'clock")) * HOUR_TO_TWENTY_FOUR
                     for oclock_str in re.findall(r"\d+\so'clock", utterance)]
+    oclock_times = oclock_times + [(oclock_time + TWELVE_TO_TWENTY_FOUR) % HOURS_IN_DAY for oclock_time in oclock_times]
     times = am_times + pm_times + oclock_times
     if 'noon' in utterance:
         times.append(1200)
@@ -219,6 +218,7 @@ MISC_TIME_TRIGGERS = {
         'afternoon': ['1200', '1800'],
         'after': ['1200', '1800'],
         'evening': ['1800', '2200'],
+        'late evening': ['2000', '2200'],
         'lunch': ['1400'],
         'noon': ['1200']
         }

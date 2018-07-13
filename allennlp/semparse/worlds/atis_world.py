@@ -97,12 +97,15 @@ class AtisWorld():
         for non_term, rhs_list in self.get_all_valid_actions().items():
             for rhs in rhs_list:
                 if non_term == 'string':
-                    all_actions.add('{} -> "\'{}\'"'.format(non_term, rhs))
+                    all_actions.add('{} -> ["\'{}\'"]'.format(non_term, rhs))
+
                 elif non_term == 'number' or non_term == 'table_name':
-                    all_actions.add('{} -> "{}"'.format(non_term, rhs))
+                    all_actions.add('{} -> ["{}"]'.format(non_term, rhs))
 
                 else:
-                    all_actions.add("{} -> {}".format(non_term, rhs))
+                    ws_str = rhs.lstrip("(").rstrip(")")
+                    curr_child_strs = [tok for tok in re.split(" ws|ws | ws | ", ws_str) if tok]
+                    all_actions.add("{} -> [{}]".format(non_term, ", ".join(curr_child_strs)))
         return sorted(all_actions)
 
 
