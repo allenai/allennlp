@@ -99,12 +99,12 @@ class AtisWorld():
                 if non_term == 'string':
                     all_actions.add('{} -> ["\'{}\'"]'.format(non_term, rhs))
 
-                elif non_term == 'number' or non_term == 'table_name':
+                elif non_term in ['number', 'asterisk', 'table_name']:
                     all_actions.add('{} -> ["{}"]'.format(non_term, rhs))
 
                 else:
                     ws_str = rhs.lstrip("(").rstrip(")")
-                    curr_child_strs = [tok for tok in re.split(" ws|ws | ws | ", ws_str) if tok]
+                    curr_child_strs = [tok for tok in re.split(" ws |ws | ws", ws_str) if tok]
                     all_actions.add("{} -> [{}]".format(non_term, ", ".join(curr_child_strs)))
         return sorted(all_actions)
 
@@ -138,9 +138,8 @@ class SQLVisitor(NodeVisitor):
                         child_strs.append(child.expr.name)
                     else:
                         ws_str = child.expr._as_rhs().lstrip("(").rstrip(")")
-                        curr_child_strs = [tok for tok in re.split(" ws|ws | ws | ", ws_str) if tok]
+                        curr_child_strs = [tok for tok in re.split(" ws |ws | ws", ws_str) if tok]
                         child_strs.extend(curr_child_strs)
-
                 rhs = "[" + ", ".join(child_strs) + "]"
 
             rule = lhs + rhs

@@ -74,6 +74,13 @@ class TestAtisWorld(AllenNlpTestCase):
         assert '26' in world.valid_actions['number'] 
         assert 'COACH' in world.valid_actions['string']
 
+    def test_atis_debug(self):
+        conv_context = ConversationContext(None)
+        world = AtisWorld(conv_context, "i'd like to find a us air flight from orlando to cleveland that arrives around 10 o'clock in the evening")
+        query = """( SELECT DISTINCT flight.flight_id FROM flight WHERE ( flight.airline_code = 'US' AND ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'ORLANDO' )) AND ( flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'CLEVELAND')) AND ( flight.arrival_time >= 2130 AND flight.arrival_time <= 2230 ) ) ) )   ) ;"""
+        action_sequence = world.get_action_sequence(query)
+        print(action_sequence)
+
 
     def test_simple_sequence(self):
         conv_context = ConversationContext(None)
@@ -153,6 +160,7 @@ class TestAtisWorld(AllenNlpTestCase):
                 except:
                     print("Failed to parse, line {}".format(idx))
                     print("The query was:\n {}".format(interaction_round['sql']))
+                    print("The utterance was:\n {}".format(interaction_round['utterance']))
 
                 conv_context.valid_actions = world.valid_actions
 

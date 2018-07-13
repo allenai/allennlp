@@ -11,8 +11,8 @@ HOURS_IN_DAY = 2400
 AROUND_RANGE = 30
 
 SQL_GRAMMAR_STR = """
-    stmt                = query ";" ws
-    query               = (ws "(" ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause ")" ws) /
+    stmt                = query ws ";" ws
+    query               = (ws "(" ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause ws ")" ws) /
                           (ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause ws)
                         
     select_results      = col_refs / agg
@@ -45,7 +45,7 @@ SQL_GRAMMAR_STR = """
     value               = (not ws pos_value) / (pos_value)
     pos_value           = ("ALL" ws query) / ("ANY" ws query) / number / boolean / col_ref / string / agg_results / "NULL"
 
-    agg_results         = (ws "("  ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ")" ws) /
+    agg_results         = (ws "("  ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ws ")" ws) /
                           (ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ws)
 
     boolean             = "true" / "false"
