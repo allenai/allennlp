@@ -27,7 +27,7 @@ SQL_GRAMMAR_STR = """
     
     conditions          = (condition ws conj ws conditions) / 
                           (condition ws conj ws lparen ws conditions ws rparen) /
-                          (lparen ws conditions ws rparen ws conj ws condition) /
+                          (lparen ws conditions ws rparen ws conj ws conditions) /
                           (lparen ws conditions ws rparen) /
                           (not ws conditions ws ) /
                           condition
@@ -128,7 +128,7 @@ def get_times_from_utterance(utterance: str) -> List[str]:
         times.append(1200)
 
     around_times = []
-    if "around" in utterance:
+    if "around" in utterance or "about" in utterance:
         for time in times:
             around_times.append((time + AROUND_RANGE) % HOURS_IN_DAY)
             around_times.append((time - HOUR_TO_TWENTY_FOUR + AROUND_RANGE) % HOURS_IN_DAY)
@@ -238,6 +238,8 @@ CITIES = ['NASHVILLE', 'BOSTON', 'BURBANK', 'BALTIMORE', 'CHICAGO', 'CLEVELAND',
           'SEATTLE', 'SAN FRANCISCO', 'SAN JOSE', 'SALT LAKE CITY', 'ST. LOUIS',
           'ST. PETERSBURG', 'TACOMA', 'TAMPA', 'WASHINGTON', 'MONTREAL', 'TORONTO']
 
+CITY_CODE_LIST = ['BBNA', 'BBOS', 'BBUR', 'BBWI', 'CCHI', 'CCLE', 'CCLT', 'CCMH', 'CCVG', 'DDEN', 'DDFW', 'DDTT', 'FDFW', 'HHOU', 'HHPN', 'IIND', 'JNYC', 'LLAS', 'LLAX', 'LLGB', 'MATL', 'MMEM', 'MMIA', 'MMKC', 'MMKE', 'MMSP', 'NNYC', 'OOAK', 'OONT', 'OORL', 'PPHL', 'PPHX', 'PPIT', 'SMSP', 'SSAN', 'SSEA', 'SSFO', 'SSJC', 'SSLC', 'SSTL', 'STPA', 'TSEA', 'TTPA', 'WWAS', 'YYMQ', 'YYTO']
+
 FARE_BASIS_CODE = ['B', 'BH', 'BHW', 'BHX', 'BL', 'BLW', 'BLX', 'BN', 'BOW', 'BOX',
                    'BW', 'BX', 'C', 'CN', 'F', 'FN', 'H', 'HH', 'HHW', 'HHX', 'HL', 'HLW', 'HLX',
                    'HOW', 'HOX', 'J', 'K', 'KH', 'KL', 'KN', 'LX', 'M', 'MH', 'ML', 'MOW', 'P',
@@ -245,6 +247,10 @@ FARE_BASIS_CODE = ['B', 'BH', 'BHW', 'BHX', 'BL', 'BLW', 'BLX', 'BN', 'BOW', 'BO
                    'U', 'V', 'VHW', 'VHX', 'VW', 'VX', 'Y', 'YH', 'YL', 'YN', 'YW', 'YX']
 
 CLASS = ['COACH', 'BUSINESS', 'FIRST', 'THRIST', 'STANDARD', 'SHUTTLE']
+
+MEALS = ['BREAKFAST', 'LUNCH', 'SNACK', 'DINNER']
+
+RESTRICT_CODES = ['AP/2', 'AP/6', 'AP/12', 'AP/20', 'AP/21', 'AP/57', 'AP/58', 'AP/60', 'AP/75', 'EX/9', 'EX/13', 'EX/14', 'EX/17', 'EX/19']
 
 AIRLINE_CODE_LIST = ['AR', '3J', 'AC', '9X', 'ZW', 'AS', '7V',
                      'AA', 'TZ', 'HP', 'DH', 'EV', 'BE', 'BA',
@@ -278,6 +284,7 @@ AIRLINE_CODES = {'argentina': 'AR',
                  'czecho': 'OK',
                  'delta': 'DL',
                  'express': '9E',
+                 'eastern': 'EA',
                  'grand': 'QD',
                  'lufthansa': 'LH',
                  'mesaba': 'XJ',
@@ -300,6 +307,9 @@ AIRLINE_CODES = {'argentina': 'AR',
                  'united': 'UA',
                  'us': 'US',
                  'west': 'OE'}
+
+CITY_CODES = {'NASHVILLE': 'BBNA', 'BOSTON': 'BBOS', 'BURBANK': 'BBUR', 'BALTIMORE': 'BBWI', 'CHICAGO': 'CCHI', 'CLEVELAND': 'CCLE', 'CHARLOTTE': 'CCLT', 'COLUMBUS': 'CCMH', 'CINCINNATI': 'CCVG', 'DENVER': 'DDEN', 'DALLAS': 'DDFW', 'DETROIT': 'DDTT', 'FORT WORTH': 'FDFW', 'HOUSTON': 'HHOU', 'WESTCHESTER COUNTY': 'HHPN', 'INDIANAPOLIS': 'IIND', 'NEWARK': 'JNYC', 'LAS VEGAS': 'LLAS', 'LOS ANGELES': 'LLAX', 'LONG BEACH': 'LLGB', 'ATLANTA': 'MATL', 'MEMPHIS': 'MMEM', 'MIAMI': 'MMIA', 'KANSAS CITY': 'MMKC', 'MILWAUKEE': 'MMKE', 'MINNEAPOLIS': 'MMSP', 'NEW YORK': 'NNYC', 'OAKLAND': 'OOAK', 'ONTARIO': 'OONT', 'ORLANDO': 'OORL', 'PHILADELPHIA': 'PPHL', 'PHOENIX': 'PPHX', 'PITTSBURGH': 'PPIT', 'ST. PAUL': 'SMSP', 'SAN DIEGO': 'SSAN', 'SEATTLE': 'SSEA', 'SAN FRANCISCO': 'SSFO', 'SAN JOSE': 'SSJC', 'SALT LAKE CITY': 'SSLC', 'ST. LOUIS': 'SSTL', 'ST. PETERSBURG': 'STPA', 'TACOMA': 'TSEA', 'TAMPA': 'TTPA', 'WASHINGTON': 'WWAS', 'MONTREAL': 'YYMQ', 'TORONTO': 'YYTO'}
+
 
 GROUND_SERVICE = {
         'air taxi': 'AIR TAXI OPERATION',
@@ -355,7 +365,7 @@ TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
           'ground_service': ['city_code', 'airport_code', 'transport_type', 'ground_fare'],
           'month': ['month_number', 'month_name'],
           'restriction': ['restriction_code', 'advance_purchase', 'stopovers', 'saturday_stay_required',
-                          'minimum_say', 'maximum_stay', 'application', 'no_discounts'],
+                          'minimum_stay', 'maximum_stay', 'application', 'no_discounts'],
           'state': ['state_code', 'state_name', 'country_name']}
 
 YES_NO = {'one way': 'NO',

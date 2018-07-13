@@ -37,7 +37,7 @@ class AtisWorld():
         
 
         grammar_str_with_context += "\n    col_ref \t\t = " +  \
-                                    " / ".join(self.valid_actions['col_ref']) + \
+                                    " / ".join(sorted(self.valid_actions['col_ref'], reverse=True)) + \
                                     " / asterisk"
 
         grammar_str_with_context += generate_one_of_str("table_name",
@@ -54,12 +54,14 @@ class AtisWorld():
 
 
     def get_local_strs(self) -> List[str]:
-        local_strs: List[str] = []
+        local_strs: List[str] = [] 
 
         trigger_lists = [atis_tables.CITIES, atis_tables.AIRPORT_CODES,
                          atis_tables.STATES, atis_tables.STATE_CODES,
                          atis_tables.FARE_BASIS_CODE, atis_tables.CLASS,
-                         atis_tables.AIRLINE_CODE_LIST, atis_tables.DAY_OF_WEEK]
+                         atis_tables.AIRLINE_CODE_LIST, atis_tables.DAY_OF_WEEK,
+                         atis_tables.CITY_CODE_LIST, atis_tables.MEALS,
+                         atis_tables.RESTRICT_CODES]
 
 
         for trigger_list in trigger_lists:
@@ -67,13 +69,18 @@ class AtisWorld():
                 if trigger.lower() in self.utterance.lower():
                     local_strs.append(trigger)
 
-        trigger_dict_list = [atis_tables.AIRLINE_CODES, atis_tables.GROUND_SERVICE, atis_tables.YES_NO, atis_tables.MISC_STR]
+        trigger_dict_list = [atis_tables.AIRLINE_CODES,
+                             atis_tables.CITY_CODES,
+                             atis_tables.GROUND_SERVICE,
+                             atis_tables.YES_NO,
+                             atis_tables.MISC_STR]
 
         for trigger_dict in trigger_dict_list:
             for trigger in trigger_dict:
                 if trigger.lower() in self.utterance.lower():
                     local_strs.append(trigger_dict[trigger])
 
+        local_strs.extend(atis_tables.DAY_OF_WEEK)
         return local_strs
 
     def get_action_sequence(self, query: str) -> List[str]:
@@ -96,10 +103,6 @@ class AtisWorld():
 
                 else:
                     all_actions.add("{} -> {}".format(non_term, rhs))
-        '''
-        for opt in atis_tables.OPTIONAL:
-            all_actions.add("{} ->".format(opt))
-        '''
         return sorted(all_actions)
 
 
