@@ -170,7 +170,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         text_field = TextField([], self._token_indexers)
         # This needs to be a dict of empty lists for each token_indexer,
         # for padding reasons in ListField.
-        text_field._indexed_tokens = {name: [] for name in self._indexed_tokens_keys.keys()}
+        text_field._indexed_tokens = {name: [] for name in self._token_indexers.keys()}
         return text_field
 
     @overrides
