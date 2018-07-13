@@ -180,7 +180,7 @@ class CrfTagger(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         metric_dict = self.span_metric.get_metric(reset=reset)
-        if verbose_metrics:
-        return metric_dict
+        if self._verbose_metrics:
+            return metric_dict
         else:
             return {x: y for x, y in metric_dict.items() if "overall" in x}
