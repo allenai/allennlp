@@ -67,7 +67,10 @@ class CategoricalAccuracy(Metric):
         else:
             # prediction is correct if gold label falls on any of the max scores. distribute score by tie_counts
             max_predictions = predictions.max(-1)[0]
-            max_predictions_mask = predictions.eq(max_predictions.unsqueeze(-1).expand_as(predictions))
+            max_predictions_mask = predictions.eq(max_predictions.unsqueeze(-1))
+            # max_predictions_mask is (rows X num_classes) and gold_labels is (batch_size)
+            # ith entry in gold_labels points to index (0-num_classes) for ith row in max_predictions
+            # For each row check if index pointed by gold_label is was 1 or not (among max scored classes)
             correct = max_predictions_mask[torch.arange(gold_labels.numel()).long(), gold_labels].float()
             tie_counts = max_predictions_mask.sum(-1)
             correct /= tie_counts.float()
