@@ -1,9 +1,10 @@
 # pylint: disable=invalid-name,no-self-use
+import argparse
 import os
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.commands.make_vocab import make_vocab_from_params
+from allennlp.commands.make_vocab import MakeVocab, make_vocab_from_args, make_vocab_from_params
 from allennlp.data import Vocabulary
 
 class TestMakeVocab(AllenNlpTestCase):
@@ -141,3 +142,14 @@ class TestMakeVocab(AllenNlpTestCase):
         assert tokens[1] == 'some_weird_token_1'
         assert tokens[2] == 'some_weird_token_2'
         assert len(tokens) == 3
+
+    def test_make_vocab_args(self):
+        parser = argparse.ArgumentParser(description="Testing")
+        subparsers = parser.add_subparsers(title='Commands', metavar='')
+        MakeVocab().add_subparser('make-vocab', subparsers)
+        for serialization_arg in ["-s", "--serialization-dir"]:
+            raw_args = ["make-vocab", "path/to/params", serialization_arg, "serialization_dir"]
+            args = parser.parse_args(raw_args)
+            assert args.func == make_vocab_from_args
+            assert args.param_path == "path/to/params"
+            assert args.serialization_dir == "serialization_dir"
