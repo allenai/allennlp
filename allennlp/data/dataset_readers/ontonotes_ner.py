@@ -14,6 +14,11 @@ from allennlp.data.dataset_readers.dataset_utils import Ontonotes, OntonotesSent
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+def _normalize_word(word: str):
+    if word == "/." or word == "/?":
+        return word[1:]
+    else:
+        return word
 
 @DatasetReader.register("ontonotes_ner")
 class OntonotesNamedEntityRecognition(DatasetReader):
@@ -59,7 +64,7 @@ class OntonotesNamedEntityRecognition(DatasetReader):
             logger.info("Filtering to only include file paths containing the %s domain", self._domain_identifier)
 
         for sentence in self._ontonotes_subset(ontonotes_reader, file_path, self._domain_identifier):
-            tokens = [Token(t) for t in sentence.words]
+            tokens = [Token(_normalize_word(t)) for t in sentence.words]
             yield self.text_to_instance(tokens, sentence.named_entities)
 
     @staticmethod
