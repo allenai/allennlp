@@ -118,3 +118,26 @@ class TestMakeVocab(AllenNlpTestCase):
 
         labels.sort()
         assert labels == ['N', 'V']
+
+    def test_make_vocab_without_extension(self):
+        existing_vocab_path = self.TEST_DIR / 'vocabulary_existing'
+        extended_vocab_path = self.TEST_DIR / 'vocabulary_extended'
+
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace('some_weird_token_1', namespace='tokens')
+        vocab.add_token_to_namespace('some_weird_token_2', namespace='tokens')
+        os.makedirs(existing_vocab_path, exist_ok=True)
+        vocab.save_to_files(existing_vocab_path)
+
+        self.params['vocabulary'] = {}
+        self.params['vocabulary']['directory_path'] = existing_vocab_path
+        self.params['vocabulary']['extend'] = False
+        make_vocab_from_params(self.params, extended_vocab_path)
+
+        with open(extended_vocab_path / 'tokens.txt') as f:
+            tokens = [line.strip() for line in f]
+
+        assert tokens[0] == '@@UNKNOWN@@'
+        assert tokens[1] == 'some_weird_token_1'
+        assert tokens[2] == 'some_weird_token_2'
+        assert len(tokens) == 3
