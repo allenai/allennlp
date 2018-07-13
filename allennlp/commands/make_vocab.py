@@ -17,6 +17,8 @@ each training run.
 
     optional arguments:
     -h, --help            show this help message and exit
+   -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
+                           directory in which to save the vocabulary directory
     -o OVERRIDES, --overrides OVERRIDES
                           a JSON structure used to override the experiment
                           configuration
@@ -47,6 +49,11 @@ class MakeVocab(Subcommand):
                                type=str,
                                help='path to parameter file describing the model and its inputs')
 
+        subparser.add_argument('-s', '--serialization-dir',
+                               required=True,
+                               type=str,
+                               help='directory in which to save the vocabulary directory')
+
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
@@ -63,20 +70,17 @@ def make_vocab_from_args(args: argparse.Namespace):
     """
     parameter_path = args.param_path
     overrides = args.overrides
+    serialization_dir = args.serialization_dir
 
     params = Params.from_file(parameter_path, overrides)
+    vocab_dir = os.path.join(serialization_dir, "vocabulary")
 
-    make_vocab_from_params(params)
+    make_vocab_from_params(params, vocab_dir)
 
-def make_vocab_from_params(params: Params):
+def make_vocab_from_params(params: Params, vocab_dir: str):
     prepare_environment(params)
 
     vocab_params = params.pop("vocabulary", {})
-    vocab_dir = vocab_params.pop('directory_path', None)
-    if vocab_dir is None:
-        raise ConfigurationError("To use `make-vocab` your configuration must contain a value "
-                                 "at vocabulary.directory_path")
-
     os.makedirs(vocab_dir, exist_ok=True)
 
     all_datasets = datasets_from_params(params)
