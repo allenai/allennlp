@@ -965,10 +965,13 @@ class Trainer:
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
         fine_tuning = params.pop("fine-tuning", None)
         optimizer_params = params.pop("optimizer")
-        if fine_tuning == "discriminative" or "freeze" in lr_scheduler_params:
-            # split up parameters in groups based on modules
-            # TODO add splitting of multi-layer modules
-            modules = [m for m in model._modules]
+        if fine_tuning == "discriminative" or \
+                (lr_scheduler_params is not None and "freeze" in lr_scheduler_params):
+            if "parameter_groups" in optimizer_params:
+                modules = [group[0] for group in optimizer_params["parameter_groups"]]
+            else:
+                # split up parameters in groups based on modules
+                modules = [[m] for m in model._modules]
             if fine_tuning == "discriminative":
                 # use a different learning rate for every parameter group
                 assert "lr" in optimizer_params, \
@@ -977,10 +980,10 @@ class Trainer:
                 lr = optimizer_params["lr"]
                 decay_factor = 0.38
                 # use the caret to match module only at the start
-                groups = [[[f"^{m}"], {"lr": lr*decay_factor**i}] for i, m in enumerate(reversed(modules))]
+                groups = [[[f"^{m}" for m in module], {"lr": lr*decay_factor**i}] for i, module in enumerate(reversed(modules))]
             else:
                 # use the default learning rate across all layers
-                groups = [[[f"^{m}"], {}] for m in reversed(modules)]
+                groups = [[[f"^{m}" for m in module], {}] for module in reversed(modules)]
             groups = [g for g in reversed(groups)]  # set original order again
             optimizer_params["parameter_groups"] = groups
 
