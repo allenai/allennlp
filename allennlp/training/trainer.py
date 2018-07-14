@@ -624,23 +624,28 @@ class Trainer:
         Logs all of the train metrics (and validation metrics, if provided) to the console.
         """
         val_metrics = val_metrics or {}
-        dual_message_template = "Training %s : %3f    Validation %s : %3f "
-        message_template = "%s %s : %3f "
+        dual_message_template = "%s |  %8.3f  |  %8.3f"
+        no_val_message_template = "%s |  %8.3f  |  %8s"
+        no_train_message_template = "%s |  %8s  |  %8.3f"
+        header_template = "%s |  %-10s"
 
         metric_names = set(train_metrics.keys())
         if val_metrics:
             metric_names.update(val_metrics.keys())
 
+        name_length = max([len(x) for x in metric_names])
+
+        logger.info(header_template, "Training".rjust(name_length + 13), "Validation")
         for name in metric_names:
             train_metric = train_metrics.get(name)
             val_metric = val_metrics.get(name)
 
             if val_metric is not None and train_metric is not None:
-                logger.info(dual_message_template, name, train_metric, name, val_metric)
+                logger.info(dual_message_template, name.ljust(name_length), train_metric, val_metric)
             elif val_metric is not None:
-                logger.info(message_template, "Validation", name, val_metric)
+                logger.info(no_train_message_template, name.ljust(name_length), "N/A", val_metric)
             elif train_metric is not None:
-                logger.info(message_template, "Training", name, train_metric)
+                logger.info(no_val_message_template, name.ljust(name_length), train_metric, "N/A")
 
     def _validation_loss(self) -> Tuple[float, int]:
         """
