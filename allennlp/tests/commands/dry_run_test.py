@@ -2,10 +2,13 @@
 import argparse
 import os
 
+import pytest
+
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.dry_run import DryRun, dry_run_from_args, dry_run_from_params
 from allennlp.data import Vocabulary
+from allennlp.common.checks import ConfigurationError
 
 class TestDryRun(AllenNlpTestCase):
     def setUp(self):
@@ -38,7 +41,15 @@ class TestDryRun(AllenNlpTestCase):
         })
 
     def test_dry_run_doesnt_overwrite_vocab(self):
-        pass
+        vocab_path = self.TEST_DIR / 'vocabulary'
+        os.mkdir(vocab_path)
+        # Put something in the vocab directory
+        with open(vocab_path / "test.txt", "a+") as open_file:
+            open_file.write("test")
+        # It should raise error if vocab dir is non-empty
+        with pytest.raises(ConfigurationError):
+            dry_run_from_params(self.params, self.TEST_DIR)
+
 
     def test_dry_run_without_vocabulary_key(self):
         dry_run_from_params(self.params, self.TEST_DIR)

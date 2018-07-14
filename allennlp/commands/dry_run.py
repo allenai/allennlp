@@ -86,6 +86,10 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
     os.makedirs(serialization_dir, exist_ok=True)
     vocab_dir = os.path.join(serialization_dir, "vocabulary")
 
+    if os.path.isdir(vocab_dir) and os.listdir(vocab_dir) is not None:
+        raise ConfigurationError("The 'vocabulary' directory in serialization"
+                                 " directory that you provided is non-empty")
+
     all_datasets = datasets_from_params(params)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
 
