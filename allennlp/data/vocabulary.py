@@ -460,6 +460,7 @@ class Vocabulary(Registrable):
         counter = counter or {}
         tokens_to_add = tokens_to_add or {}
 
+        self._retained_counter = counter
         # Make sure vocabulary extension is safe.
         current_namespaces = {*self._token_to_index}
         extension_namespaces = {*counter, *tokens_to_add}
@@ -587,3 +588,33 @@ class Vocabulary(Registrable):
         namespaces = [f"\tNamespace: {name}, Size: {self.get_vocab_size(name)} \n"
                       for name in self._index_to_token]
         return " ".join([base_string, non_padded_namespaces] + namespaces)
+
+    def print_statistics(self, ignore_error: bool = False) -> None:
+        if self._retained_counter:
+            # Caveat: Printed info is only for part of vocabulary generated from instances. If Vocabulary
+            # is constructed by extending saved vocabulary with dataset instances, then directly loaded
+            # portion won't be considered for statistics. This might be confusing for users. But it
+            # it is impossible to consider that portion since we do not save counter information.
+            print("\n\n----Vocabulary Statistics----\n")
+            for namespace in self._retained_counter:
+                tokens_with_counts = list(self._retained_counter[namespace].items())
+                tokens_with_counts.sort(key=lambda x: x[1], reverse=True)
+                print(f"\nTop 10 most frequent tokens in namespace '{namespace}':")
+                for token, freq in tokens_with_counts[:10]:
+                    print(f"\tToken: {token}\t\tFrequency: {freq}")
+                # Now sort by token length, not frequency
+                tokens_with_counts.sort(key=lambda x: len(x[0]), reverse=True)
+
+                print(f"\nTop 10 longest tokens in namespace '{namespace}':")
+                for token, freq in tokens_with_counts[:10]:
+                    print(f"\tToken: {token}\t\tlength: {len(token)}\tFrequency: {freq}")
+
+                print(f"\nTop 10 shortest tokens in namespace '{namespace}':")
+                for token, freq in reversed(tokens_with_counts[-10:]):
+                    print(f"\tToken: {token}\t\tlength: {len(token)}\tFrequency: {freq}")
+        else:
+            # _retained_counter would only be set if instances were used for vocabulary construction.
+            # It is possible to use only directly load the saved vocabulary for which we do not have
+            # the counter to print above statistics.
+            if not ignore_error:
+                raise ConfigurationError("Counter must be retained for printing vocabulary statistics.")
