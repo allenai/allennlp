@@ -50,7 +50,6 @@ class TestDryRun(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             dry_run_from_params(self.params, self.TEST_DIR)
 
-
     def test_dry_run_without_vocabulary_key(self):
         dry_run_from_params(self.params, self.TEST_DIR)
 
