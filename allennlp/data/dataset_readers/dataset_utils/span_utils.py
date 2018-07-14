@@ -99,7 +99,7 @@ def bio_tags_to_spans(tag_sequence: List[str],
         conll_tag = string_tag[2:]
         if bio_tag == "O" or conll_tag in classes_to_ignore:
             # The span has ended.
-            if active_conll_tag:
+            if active_conll_tag is not None:
                 spans.add((active_conll_tag, (span_start, span_end)))
             active_conll_tag = None
             # We don't care about tags we are
@@ -108,7 +108,7 @@ def bio_tags_to_spans(tag_sequence: List[str],
         elif bio_tag == "B":
             # We are entering a new span; reset indices
             # and active tag to new span.
-            if active_conll_tag:
+            if active_conll_tag is not None:
                 spans.add((active_conll_tag, (span_start, span_end)))
             active_conll_tag = conll_tag
             span_start = index
@@ -124,13 +124,13 @@ def bio_tags_to_spans(tag_sequence: List[str],
             # include this span. This is important, because otherwise,
             # a model may get a perfect F1 score whilst still including
             # false positive ill-formed spans.
-            if active_conll_tag:
+            if active_conll_tag is not None:
                 spans.add((active_conll_tag, (span_start, span_end)))
             active_conll_tag = conll_tag
             span_start = index
             span_end = index
     # Last token might have been a part of a valid span.
-    if active_conll_tag:
+    if active_conll_tag is not None:
         spans.add((active_conll_tag, (span_start, span_end)))
     return list(spans)
 
