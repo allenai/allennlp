@@ -455,8 +455,6 @@ class Trainer:
                                          num_epochs=1,
                                          cuda_device=self._iterator_device)
         num_training_batches = self._iterator.get_num_batches(self._train_data)
-        train_generator_tqdm = Tqdm.tqdm(train_generator,
-                                         total=num_training_batches)
         self._last_log = time.time()
         last_save_time = time.time()
 
@@ -468,6 +466,8 @@ class Trainer:
             histogram_parameters = set(self._model.get_parameters_for_histogram_tensorboard_logging())
 
         logger.info("Training")
+        train_generator_tqdm = Tqdm.tqdm(train_generator,
+                                         total=num_training_batches)
         for batch in train_generator_tqdm:
             batches_this_epoch += 1
             self._batch_num_total += 1
