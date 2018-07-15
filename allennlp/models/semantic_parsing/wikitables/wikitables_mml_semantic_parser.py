@@ -3,7 +3,6 @@ from typing import Any, Dict, List
 from overrides import overrides
 import torch
 
-from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
@@ -45,7 +44,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
     max_decoding_steps : ``int``
         When we're decoding with a beam search, what's the maximum number of steps we should take?
         This only applies at evaluation time, not during training. Passed to super class.
-    input_attention : ``Attention``
+    attention : ``Attention``
         We compute an attention over the input question at each step of the decoder, using the
         decoder hidden state as the query.  Passed to WikiTablesDecoderStep.
     training_beam_size : ``int``, optional (default=None)
@@ -81,10 +80,10 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                  action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
                  entity_encoder: Seq2VecEncoder,
-                 mixture_feedforward: FeedForward,
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
-                 input_attention: Attention,
+                 attention: Attention,
+                 mixture_feedforward: FeedForward = None,
                  training_beam_size: int = None,
                  use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
@@ -107,7 +106,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
         self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
         self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                                    action_embedding_dim=action_embedding_dim,
-                                                   input_attention=input_attention,
+                                                   input_attention=attention,
                                                    num_start_types=self._num_start_types,
                                                    num_entity_types=self._num_entity_types,
                                                    mixture_feedforward=mixture_feedforward,
@@ -237,40 +236,3 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                 outputs["question_tokens"] = [x["question_tokens"] for x in metadata]
                 outputs["original_table"] = [x["original_table"] for x in metadata]
             return outputs
-
-    @classmethod
-    def from_params(cls, vocab, params: Params) -> 'WikiTablesMmlSemanticParser':
-        question_embedder = TextFieldEmbedder.from_params(vocab, params.pop("question_embedder"))
-        action_embedding_dim = params.pop_int("action_embedding_dim")
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        entity_encoder = Seq2VecEncoder.from_params(params.pop('entity_encoder'))
-        max_decoding_steps = params.pop_int("max_decoding_steps")
-        mixture_feedforward_type = params.pop('mixture_feedforward', None)
-        if mixture_feedforward_type is not None:
-            mixture_feedforward = FeedForward.from_params(mixture_feedforward_type)
-        else:
-            mixture_feedforward = None
-        decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
-        input_attention = Attention.from_params(params.pop("attention"))
-        training_beam_size = params.pop_int('training_beam_size', None)
-        use_neighbor_similarity_for_linking = params.pop_bool('use_neighbor_similarity_for_linking', False)
-        dropout = params.pop_float('dropout', 0.0)
-        num_linking_features = params.pop_int('num_linking_features', 10)
-        tables_directory = params.pop('tables_directory', '/wikitables/')
-        rule_namespace = params.pop('rule_namespace', 'rule_labels')
-        params.assert_empty(cls.__name__)
-        return cls(vocab,
-                   question_embedder=question_embedder,
-                   action_embedding_dim=action_embedding_dim,
-                   encoder=encoder,
-                   entity_encoder=entity_encoder,
-                   mixture_feedforward=mixture_feedforward,
-                   decoder_beam_search=decoder_beam_search,
-                   max_decoding_steps=max_decoding_steps,
-                   input_attention=input_attention,
-                   training_beam_size=training_beam_size,
-                   use_neighbor_similarity_for_linking=use_neighbor_similarity_for_linking,
-                   dropout=dropout,
-                   num_linking_features=num_linking_features,
-                   tables_directory=tables_directory,
-                   rule_namespace=rule_namespace)

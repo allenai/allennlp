@@ -640,3 +640,34 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'a' in words
         assert 'b' in words
         assert 'c' not in words
+
+    def test_registrability(self):
+
+        @Vocabulary.register('my-vocabulary')
+        class MyVocabulary:
+            @classmethod
+            def from_params(cls, params, instances=None):
+                # pylint: disable=unused-argument
+                return MyVocabulary()
+
+
+        params = Params({'type': 'my-vocabulary'})
+
+        instance = Instance(fields={})
+
+        vocab = Vocabulary.from_params(params=params, instances=[instance])
+
+        assert isinstance(vocab, MyVocabulary)
+
+    def test_max_vocab_size_dict(self):
+        params = Params({
+                "max_vocab_size": {
+                        "tokens": 1,
+                        "characters": 20
+                }
+        })
+
+        vocab = Vocabulary.from_params(params=params, instances=self.dataset)
+        words = vocab.get_index_to_token_vocabulary().values()
+        # Additional 2 tokens are '@@PADDING@@' and '@@UNKNOWN@@' by default
+        assert len(words) == 3

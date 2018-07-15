@@ -32,7 +32,7 @@ class ModelTestCase(AllenNlpTestCase):
             vocab = Vocabulary.from_instances(instances)
         self.vocab = vocab
         self.instances = instances
-        self.model = Model.from_params(self.vocab, params['model'])
+        self.model = Model.from_params(vocab=self.vocab, params=params['model'])
 
         # TODO(joelgrus) get rid of these
         # (a lot of the model tests use them, so they'll have to be changed)
@@ -147,6 +147,10 @@ class ModelTestCase(AllenNlpTestCase):
 
                 if parameter.grad is None:
                     has_zero_or_none_grads[name] = "No gradient computed (i.e parameter.grad is None)"
+
+                elif parameter.grad.is_sparse or parameter.grad.data.is_sparse:
+                    pass
+
                 # Some parameters will only be partially updated,
                 # like embeddings, so we just check that any gradient is non-zero.
                 elif (parameter.grad.cpu() == zeros).all():

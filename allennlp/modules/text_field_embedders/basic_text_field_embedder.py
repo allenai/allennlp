@@ -81,8 +81,10 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             embedded_representations.append(token_vectors)
         return torch.cat(embedded_representations, dim=-1)
 
+    # This is some unusual logic, it needs a custom from_params.
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BasicTextFieldEmbedder':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BasicTextFieldEmbedder':  # type: ignore
+        # pylint: disable=arguments-differ
         embedder_to_indexer_map = params.pop("embedder_to_indexer_map", None)
         if embedder_to_indexer_map is not None:
             embedder_to_indexer_map = embedder_to_indexer_map.as_dict(quiet=True)
@@ -91,7 +93,6 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         keys = list(params.keys())
         for key in keys:
             embedder_params = params.pop(key)
-            token_embedders[key] = TokenEmbedder.from_params(vocab, embedder_params)
-
+            token_embedders[key] = TokenEmbedder.from_params(vocab=vocab, params=embedder_params)
         params.assert_empty(cls.__name__)
         return cls(token_embedders, embedder_to_indexer_map)

@@ -5,7 +5,6 @@ from overrides import overrides
 
 import torch
 
-from allennlp.common import Params
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
@@ -39,7 +38,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         Passed to super-class.
     encoder : ``Seq2SeqEncoder``
         Passed to super-class.
-    input_attention : ``Attention``
+    attention : ``Attention``
         We compute an attention over the input question at each step of the decoder, using the
         decoder hidden state as the query.  Passed to the DecoderStep.
     decoder_beam_search : ``BeamSearch``
@@ -54,7 +53,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                  sentence_embedder: TextFieldEmbedder,
                  action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
-                 input_attention: Attention,
+                 attention: Attention,
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  dropout: float = 0.0) -> None:
@@ -66,7 +65,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         self._decoder_trainer = MaximumMarginalLikelihood()
         self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
                                              action_embedding_dim=action_embedding_dim,
-                                             input_attention=input_attention,
+                                             input_attention=attention,
                                              dropout=dropout)
         self._decoder_beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
@@ -172,23 +171,3 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                 'denotation_accuracy': self._denotation_accuracy.get_metric(reset),
                 'consistency': self._consistency.get_metric(reset)
         }
-
-    @classmethod
-    def from_params(cls, vocab, params: Params) -> 'NlvrDirectSemanticParser':
-        sentence_embedder_params = params.pop("sentence_embedder")
-        sentence_embedder = TextFieldEmbedder.from_params(vocab, sentence_embedder_params)
-        action_embedding_dim = params.pop_int('action_embedding_dim')
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        dropout = params.pop_float('dropout', 0.0)
-        input_attention = Attention.from_params(params.pop("attention"))
-        decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
-        max_decoding_steps = params.pop_int("max_decoding_steps")
-        params.assert_empty(cls.__name__)
-        return cls(vocab,
-                   sentence_embedder=sentence_embedder,
-                   action_embedding_dim=action_embedding_dim,
-                   encoder=encoder,
-                   input_attention=input_attention,
-                   decoder_beam_search=decoder_beam_search,
-                   max_decoding_steps=max_decoding_steps,
-                   dropout=dropout)

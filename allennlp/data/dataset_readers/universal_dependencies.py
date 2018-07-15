@@ -4,7 +4,6 @@ import logging
 from overrides import overrides
 from conllu.parser import parse_line, DEFAULT_FIELDS
 
-from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, SequenceLabelField
@@ -89,11 +88,3 @@ class UniversalDependenciesDatasetReader(DatasetReader):
                                                         tokens,
                                                         label_namespace="head_index_tags")
         return Instance(fields)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'UniversalDependenciesDatasetReader':
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return UniversalDependenciesDatasetReader(token_indexers=token_indexers,
-                                                  lazy=lazy)

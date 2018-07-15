@@ -45,7 +45,8 @@ from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import Params
-from allennlp.common.util import prepare_environment, prepare_global_logging
+from allennlp.common.util import prepare_environment, prepare_global_logging, \
+                                 get_frozen_and_tunable_parameter_names
 from allennlp.data import Vocabulary
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -268,15 +269,24 @@ def train_model(params: Params,
             raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
 
     logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
-    vocab = Vocabulary.from_params(params.pop("vocabulary", {}),
-                                   (instance for key, dataset in all_datasets.items()
-                                    for instance in dataset
-                                    if key in datasets_for_vocab_creation))
+    vocab = Vocabulary.from_params(
+            params.pop("vocabulary", {}),
+            (instance for key, dataset in all_datasets.items()
+             for instance in dataset
+             if key in datasets_for_vocab_creation)
+    )
+
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
-    model = Model.from_params(vocab, params.pop('model'))
+    model = Model.from_params(vocab=vocab, params=params.pop('model'))
     iterator = DataIterator.from_params(params.pop("iterator"))
     iterator.index_with(vocab)
+    validation_iterator_params = params.pop("validation_iterator", None)
+    if validation_iterator_params:
+        validation_iterator = DataIterator.from_params(validation_iterator_params)
+        validation_iterator.index_with(vocab)
+    else:
+        validation_iterator = None
 
     train_data = all_datasets['train']
     validation_data = all_datasets.get('validation')
@@ -284,21 +294,17 @@ def train_model(params: Params,
 
     trainer_params = params.pop("trainer")
     no_grad_regexes = trainer_params.pop("no_grad", ())
-
-    nograd_parameter_names = []
-    grad_parameter_names = []
     for name, parameter in model.named_parameters():
         if any(re.search(regex, name) for regex in no_grad_regexes):
             parameter.requires_grad_(False)
-            nograd_parameter_names.append(name)
-        else:
-            grad_parameter_names.append(name)
 
+    frozen_parameter_names, tunable_parameter_names = \
+                   get_frozen_and_tunable_parameter_names(model)
     logger.info("Following parameters are Frozen  (without gradient):")
-    for name in nograd_parameter_names:
+    for name in frozen_parameter_names:
         logger.info(name)
     logger.info("Following parameters are Tunable (with gradient):")
-    for name in grad_parameter_names:
+    for name in tunable_parameter_names:
         logger.info(name)
 
     trainer = Trainer.from_params(model,
@@ -306,7 +312,8 @@ def train_model(params: Params,
                                   iterator,
                                   train_data,
                                   validation_data,
-                                  trainer_params)
+                                  trainer_params,
+                                  validation_iterator=validation_iterator)
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
     params.assert_empty('base train command')
@@ -332,7 +339,10 @@ def train_model(params: Params,
 
     if test_data and evaluate_on_test:
         logger.info("The model will be evaluated using the best epoch weights.")
-        test_metrics = evaluate(best_model, test_data, iterator, cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
+        test_metrics = evaluate(
+                best_model, test_data, validation_iterator or iterator,
+                cuda_device=trainer._cuda_devices[0] # pylint: disable=protected-access
+        )
         for key, value in test_metrics.items():
             metrics["test_" + key] = value
 

@@ -4,7 +4,6 @@ import logging
 
 from overrides import overrides
 
-from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -161,19 +160,3 @@ class Conll2003DatasetReader(DatasetReader):
             instance_fields['tags'] = SequenceLabelField(coded_chunks, sequence)
 
         return Instance(instance_fields)
-
-
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'Conll2003DatasetReader':
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        tag_label = params.pop('tag_label', None)
-        feature_labels = params.pop('feature_labels', ())
-        lazy = params.pop('lazy', False)
-        coding_scheme = params.pop('coding_scheme', 'IOB1')
-        params.assert_empty(cls.__name__)
-        return Conll2003DatasetReader(token_indexers=token_indexers,
-                                      tag_label=tag_label,
-                                      feature_labels=feature_labels,
-                                      lazy=lazy,
-                                      coding_scheme=coding_scheme)

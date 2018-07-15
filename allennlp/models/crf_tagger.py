@@ -4,7 +4,6 @@ from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear
 
-from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, ConditionalRandomField
@@ -33,6 +32,9 @@ class CrfTagger(Model):
         This is needed to compute the SpanBasedF1Measure metric.
         Unless you did something unusual, the default value should be what you want.
     dropout:  ``float``, optional (detault=``None``)
+    verbose_metrics : ``bool``, optional (default = False)
+        If true, metrics will be returned per label class in addition
+        to the overall statistics.
     constraint_type : ``str``, optional (default=``None``)
         If provided, the CRF will be constrained at decoding time
         to produce valid labels based on the specified type (e.g. "BIO", or "BIOUL").
@@ -51,6 +53,7 @@ class CrfTagger(Model):
                  constraint_type: str = None,
                  include_start_end_transitions: bool = True,
                  dropout: float = None,
+                 verbose_metrics: bool = False,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
@@ -59,6 +62,7 @@ class CrfTagger(Model):
         self.text_field_embedder = text_field_embedder
         self.num_tags = self.vocab.get_vocab_size(label_namespace)
         self.encoder = encoder
+        self._verbose_metrics = verbose_metrics
         if dropout:
             self.dropout = torch.nn.Dropout(dropout)
         else:
@@ -166,7 +170,7 @@ class CrfTagger(Model):
         so we use an ugly nested list comprehension.
         """
         output_dict["tags"] = [
-                [self.vocab.get_token_from_index(tag, namespace="labels")
+                [self.vocab.get_token_from_index(tag, namespace=self.label_namespace)
                  for tag in instance_tags]
                 for instance_tags in output_dict["tags"]
         ]
@@ -176,28 +180,7 @@ class CrfTagger(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         metric_dict = self.span_metric.get_metric(reset=reset)
-        return {x: y for x, y in metric_dict.items() if "overall" in x}
-
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'CrfTagger':
-        embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        label_namespace = params.pop("label_namespace", "labels")
-        constraint_type = params.pop("constraint_type", None)
-        dropout = params.pop("dropout", None)
-        include_start_end_transitions = params.pop("include_start_end_transitions", True)
-        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
-        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
-
-        params.assert_empty(cls.__name__)
-
-        return cls(vocab=vocab,
-                   text_field_embedder=text_field_embedder,
-                   encoder=encoder,
-                   label_namespace=label_namespace,
-                   constraint_type=constraint_type,
-                   dropout=dropout,
-                   include_start_end_transitions=include_start_end_transitions,
-                   initializer=initializer,
-                   regularizer=regularizer)
+        if self._verbose_metrics:
+            return metric_dict
+        else:
+            return {x: y for x, y in metric_dict.items() if "overall" in x}
