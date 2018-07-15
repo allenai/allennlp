@@ -136,6 +136,80 @@ def bio_tags_to_spans(tag_sequence: List[str],
     return list(spans)
 
 
+def iob1_tags_to_spans(tag_sequence: List[str],
+                       classes_to_ignore: List[str] = None) -> List[TypedStringSpan]:
+    """
+    Given a sequence corresponding to IOB1 tags, extracts spans.
+    Spans are inclusive and can be of zero length, representing a single word span.
+    Ill-formed spans are also included (i.e., those where "B-LABEL" is not preceded
+    by "I-LABEL" or "B-LABEL").
+
+    Parameters
+    ----------
+    tag_sequence : List[str], required.
+        The integer class labels for a sequence.
+    classes_to_ignore : List[str], optional (default = None).
+        A list of string class labels `excluding` the bio tag
+        which should be ignored when extracting spans.
+
+    Returns
+    -------
+    spans : List[TypedStringSpan]
+        The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
+        Note that the label `does not` contain any BIO tag prefixes.
+    """
+    classes_to_ignore = classes_to_ignore or []
+    spans = set()
+    span_start = 0
+    span_end = 0
+    active_conll_tag = None
+    for index, string_tag in enumerate(tag_sequence):
+        prev_string_tag = tag_sequence[index-1] if index - 1 > -1 else None
+        prev_bio_tag = prev_string_tag[0]
+        prev_conll_tag = prev_string_tag[2:]
+
+        curr_bio_tag = string_tag[0]
+        curr_conll_tag = string_tag[2:]
+
+        if curr_bio_tag not in ["B", "I", "O"]:
+            raise InvalidTagSequence(tag_sequence)
+        if curr_bio_tag == "O" or conll_tag in classes_to_ignore:
+            # The span has ended.
+            if active_conll_tag is not None:
+                spans.add((active_conll_tag, (span_start, span_end)))
+            active_conll_tag = None
+            # We don't care about tags we are
+            # told to ignore, so we do nothing.
+            continue
+        elif _iob1_start_of_chunk(prev_bio_tag, prev_conll_tag,
+                                  curr_bio_tag, curr_conll_tag):
+            # We are entering a new span; reset indices
+            # and active tag to new span.
+            if active_conll_tag is not None:
+                spans.add((active_conll_tag, (span_start, span_end)))
+            active_conll_tag = conll_tag
+            span_start = index
+            span_end = index
+        else:
+            # bio_tag == "I" and conll_tag == active_conll_tag
+            # We're continuing a span.
+            span_end += 1
+    # Last token might have been a part of a valid span.
+    if active_conll_tag is not None:
+        spans.add((active_conll_tag, (span_start, span_end)))
+    return list(spans)
+
+
+def _iob1_start_of_chunk(prev_bio_tag, prev_conll_tag, curr_bio_tag, curr_conll_tag):
+    if curr_bio_tag == 'B':
+        return True
+    if curr_bio_tag == "I" and prev_bio_tag == "O":
+        return True
+    if curr_bio_tag != 'O' and prev_conll_tag != curr_conll_tag:
+        return True
+    return False
+
+
 def bioul_tags_to_spans(tag_sequence: List[str],
                         classes_to_ignore: List[str] = None) -> List[TypedStringSpan]:
     """
