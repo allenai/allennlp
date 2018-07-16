@@ -34,11 +34,16 @@ class TestPosTagIndexer(AllenNlpTestCase):
         verb_index = vocab.add_token_to_namespace('VERB', namespace='pos_tags')
         cop_index = vocab.add_token_to_namespace('VBZ', namespace='pos_tags')
         none_index = vocab.add_token_to_namespace('NONE', namespace='pos_tags')
+        # Have to add other tokens too, since we're calling `tokens_to_indices` on all of them
+        vocab.add_token_to_namespace('DET', namespace='pos_tags')
+        vocab.add_token_to_namespace('NOUN', namespace='pos_tags')
+        vocab.add_token_to_namespace('PUNCT', namespace='pos_tags')
+
         indexer = PosTagIndexer(coarse_tags=True)
 
         indices = indexer.tokens_to_indices(tokens, vocab, "tokens")
         assert len(indices) == 1
-        assert "tokens" in len(indices)
+        assert "tokens" in indices
         assert indices["tokens"][1] == verb_index
         assert indices["tokens"][-1] == none_index
 
