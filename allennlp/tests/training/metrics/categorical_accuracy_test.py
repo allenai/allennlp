@@ -78,3 +78,40 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
         out_of_range_labels = torch.Tensor([10, 3, 4, 0, 1])
         with pytest.raises(ConfigurationError):
             accuracy(predictions, out_of_range_labels)
+
+    def test_tie_break_categorical_accuracy(self):
+        accuracy = CategoricalAccuracy(tie_break=True)
+        predictions = torch.Tensor([[0.35, 0.25, 0.35, 0.35, 0.35],
+                                    [0.1, 0.6, 0.1, 0.2, 0.2],
+                                    [0.1, 0.0, 0.1, 0.2, 0.2]])
+        # Test without mask:
+        targets = torch.Tensor([2, 1, 4])
+        accuracy(predictions, targets)
+        assert accuracy.get_metric(reset=True) == (0.25 + 1 + 0.5)/3.0
+
+        # # # Test with mask
+        mask = torch.Tensor([1, 0, 1])
+        targets = torch.Tensor([2, 1, 4])
+        accuracy(predictions, targets, mask)
+        assert accuracy.get_metric(reset=True) == (0.25 + 0.5)/2.0
+
+        # # Test tie-break with sequence
+        predictions = torch.Tensor([[[0.35, 0.25, 0.35, 0.35, 0.35],
+                                     [0.1, 0.6, 0.1, 0.2, 0.2],
+                                     [0.1, 0.0, 0.1, 0.2, 0.2]],
+                                    [[0.35, 0.25, 0.35, 0.35, 0.35],
+                                     [0.1, 0.6, 0.1, 0.2, 0.2],
+                                     [0.1, 0.0, 0.1, 0.2, 0.2]]])
+        targets = torch.Tensor([[0, 1, 3],  # 0.25 + 1 + 0.5
+                                [0, 3, 4]]) # 0.25 + 0 + 0.5 = 2.5
+        accuracy(predictions, targets)
+        actual_accuracy = accuracy.get_metric(reset=True)
+        numpy.testing.assert_almost_equal(actual_accuracy, 2.5/6.0)
+
+    def test_top_k_and_tie_break_together_catches_exceptions(self):
+        with pytest.raises(ConfigurationError):
+            CategoricalAccuracy(top_k=2, tie_break=True)
+
+    def test_incorrect_top_k_catches_exceptions(self):
+        with pytest.raises(ConfigurationError):
+            CategoricalAccuracy(top_k=0)

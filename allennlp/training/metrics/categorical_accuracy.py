@@ -12,9 +12,17 @@ class CategoricalAccuracy(Metric):
     """
     Categorical Top-K accuracy. Assumes integer labels, with
     each item to be classified having a single correct class.
+    Tie break enables equal distribution of scores among the
+    classes with same maximum predicted scores.
     """
-    def __init__(self, top_k: int = 1) -> None:
+    def __init__(self, top_k: int = 1, tie_break: bool = False) -> None:
+        if top_k > 1 and tie_break:
+            raise ConfigurationError("Tie break in Categorical Accuracy "
+                                     "can be done only for maximum (top_k = 1)")
+        if top_k <= 0:
+            raise ConfigurationError("top_k passed to Categorical Accuracy must be > 0")
         self._top_k = top_k
+        self._tie_break = tie_break
         self.correct_count = 0.
         self.total_count = 0.
 
@@ -44,18 +52,32 @@ class CategoricalAccuracy(Metric):
             raise ConfigurationError("A gold label passed to Categorical Accuracy contains an id >= {}, "
                                      "the number of classes.".format(num_classes))
 
-        # Top K indexes of the predictions (or fewer, if there aren't K of them).
-        # Special case topk == 1, because it's common and .max() is much faster than .topk().
-        if self._top_k == 1:
-            top_k = predictions.max(-1)[1].unsqueeze(-1)
-        else:
-            top_k = predictions.topk(min(self._top_k, predictions.shape[-1]), -1)[1]
+        predictions = predictions.view((-1, num_classes))
+        gold_labels = gold_labels.view(-1).long()
+        if not self._tie_break:
+            # Top K indexes of the predictions (or fewer, if there aren't K of them).
+            # Special case topk == 1, because it's common and .max() is much faster than .topk().
+            if self._top_k == 1:
+                top_k = predictions.max(-1)[1].unsqueeze(-1)
+            else:
+                top_k = predictions.topk(min(self._top_k, predictions.shape[-1]), -1)[1]
 
-        # This is of shape (batch_size, ..., top_k).
-        correct = top_k.eq(gold_labels.long().unsqueeze(-1)).float()
+            # This is of shape (batch_size, ..., top_k).
+            correct = top_k.eq(gold_labels.unsqueeze(-1)).float()
+        else:
+            # prediction is correct if gold label falls on any of the max scores. distribute score by tie_counts
+            max_predictions = predictions.max(-1)[0]
+            max_predictions_mask = predictions.eq(max_predictions.unsqueeze(-1))
+            # max_predictions_mask is (rows X num_classes) and gold_labels is (batch_size)
+            # ith entry in gold_labels points to index (0-num_classes) for ith row in max_predictions
+            # For each row check if index pointed by gold_label is was 1 or not (among max scored classes)
+            correct = max_predictions_mask[torch.arange(gold_labels.numel()).long(), gold_labels].float()
+            tie_counts = max_predictions_mask.sum(-1)
+            correct /= tie_counts.float()
+            correct.unsqueeze_(-1)
 
         if mask is not None:
-            correct *= mask.float().unsqueeze(-1)
+            correct *= mask.view(-1, 1).float()
             self.total_count += mask.sum()
         else:
             self.total_count += gold_labels.numel()
