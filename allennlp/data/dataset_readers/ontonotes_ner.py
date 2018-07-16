@@ -9,7 +9,7 @@ from allennlp.data.fields import Field, TextField, SequenceLabelField, MetadataF
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token
-from allennlp.data.dataset_readers.dataset_utils import Ontonotes, OntonotesSentence
+from allennlp.data.dataset_readers.dataset_utils import Ontonotes, OntonotesSentence, to_bioul
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -40,6 +40,8 @@ class OntonotesNamedEntityRecognition(DatasetReader):
     domain_identifier: ``str``, (default = None)
         A string denoting a sub-domain of the Ontonotes 5.0 dataset to use. If present, only
         conll files under paths containing this domain identifier will be processed.
+    coding_scheme : ``str``, (default = None).
+        The coding scheme to use for the NER labels. Valid options are "BIO" or "BIOUL".
 
     Returns
     -------
@@ -49,10 +51,12 @@ class OntonotesNamedEntityRecognition(DatasetReader):
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  domain_identifier: str = None,
+                 coding_scheme: str = "BIO",
                  lazy: bool = False) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._domain_identifier = domain_identifier
+        self._coding_scheme = coding_scheme
 
     @overrides
     def _read(self, file_path: str):
@@ -92,5 +96,8 @@ class OntonotesNamedEntityRecognition(DatasetReader):
         instance_fields: Dict[str, Field] = {'tokens': sequence}
         instance_fields["metadata"] = MetadataField({"words": [x.text for x in tokens]})
         # Add "tag label" to instance
-        instance_fields['tags'] = SequenceLabelField(ner_tags, sequence)
+        if ner_tags is not None:
+            if self._coding_scheme == "BIOUL":
+                ner_tags = to_bioul(ner_tags, encoding="BIO")
+            instance_fields['tags'] = SequenceLabelField(ner_tags, sequence)
         return Instance(instance_fields)
