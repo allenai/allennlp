@@ -1,4 +1,4 @@
-from typing import Callable, List, Set, Tuple, TypeVar
+from typing import Callable, List, Optional, Set, Tuple, TypeVar
 
 from allennlp.data.dataset_readers.dataset_utils.ontonotes import TypedStringSpan
 from allennlp.data.tokenizers.token import Token
@@ -198,7 +198,10 @@ def iob1_tags_to_spans(tag_sequence: List[str],
     return list(spans)
 
 
-def _iob1_start_of_chunk(prev_bio_tag, prev_conll_tag, curr_bio_tag, curr_conll_tag):
+def _iob1_start_of_chunk(prev_bio_tag: Optional[str],
+                         prev_conll_tag: Optional[str],
+                         curr_bio_tag: str,
+                         curr_conll_tag: str) -> bool:
     if curr_bio_tag == 'B':
         return True
     if curr_bio_tag == "I" and prev_bio_tag == "O":
