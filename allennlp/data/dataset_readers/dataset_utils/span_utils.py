@@ -70,7 +70,8 @@ def bio_tags_to_spans(tag_sequence: List[str],
     Spans are inclusive and can be of zero length, representing a single word span.
     Ill-formed spans are also included (i.e those which do not start with a "B-LABEL"),
     as otherwise it is possible to get a perfect precision score whilst still predicting
-    ill-formed spans in addition to the correct spans.
+    ill-formed spans in addition to the correct spans. This function works properly when
+    the spans are unlabeled (i.e., your labels are simply "B", "I", and "O").
 
     Parameters
     ----------
@@ -141,6 +142,8 @@ def bioul_tags_to_spans(tag_sequence: List[str],
     Given a sequence corresponding to BIOUL tags, extracts spans.
     Spans are inclusive and can be of zero length, representing a single word span.
     Ill-formed spans are not allowed and will raise ``InvalidTagSequence``.
+    This function works properly when the spans are unlabeled (i.e., your labels are
+    simply "B", "I", "O", "U", and "L").
 
     Parameters
     ----------
