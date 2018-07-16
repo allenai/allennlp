@@ -7,7 +7,7 @@ from overrides import overrides
 from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, LabelField, ListField, IndexField, ProductionRuleField, TextField
+from allennlp.data.fields import Field, LabelField, ListField, IndexField, ProductionRuleField, TextField, MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
@@ -147,9 +147,12 @@ class AtisDatasetReader(DatasetReader):
             return None
 
         action_sequence_field = ListField(index_fields)
+        world_field = MetadataField(world)
+
 
         fields = {'utterance' : utterance_field,
                   'actions' : action_field,
+                  'world' : world_field,
                   'target_action_sequence' : action_sequence_field}
 
         return Instance(fields)
