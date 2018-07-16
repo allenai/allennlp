@@ -163,11 +163,9 @@ def iob1_tags_to_spans(tag_sequence: List[str],
     span_start = 0
     span_end = 0
     active_conll_tag = None
+    prev_bio_tag = None
+    prev_conll_tag = None
     for index, string_tag in enumerate(tag_sequence):
-        prev_string_tag = tag_sequence[index-1] if index - 1 > -1 else None
-        prev_bio_tag = prev_string_tag[0] if prev_string_tag is not None else None
-        prev_conll_tag = prev_string_tag[2:] if prev_string_tag is not None else None
-
         curr_bio_tag = string_tag[0]
         curr_conll_tag = string_tag[2:]
 
@@ -178,9 +176,6 @@ def iob1_tags_to_spans(tag_sequence: List[str],
             if active_conll_tag is not None:
                 spans.add((active_conll_tag, (span_start, span_end)))
             active_conll_tag = None
-            # We don't care about tags we are
-            # told to ignore, so we do nothing.
-            continue
         elif _iob1_start_of_chunk(prev_bio_tag, prev_conll_tag,
                                   curr_bio_tag, curr_conll_tag):
             # We are entering a new span; reset indices
@@ -194,6 +189,9 @@ def iob1_tags_to_spans(tag_sequence: List[str],
             # bio_tag == "I" and curr_conll_tag == active_conll_tag
             # We're continuing a span.
             span_end += 1
+
+        prev_bio_tag = string_tag[0]
+        prev_conll_tag = string_tag[2:]
     # Last token might have been a part of a valid span.
     if active_conll_tag is not None:
         spans.add((active_conll_tag, (span_start, span_end)))
