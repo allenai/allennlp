@@ -31,19 +31,6 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         raise NotImplementedError
 
-    @staticmethod
-    def _merge(dicts: List[Dict[str, TokenType]]) -> Dict[str, List[TokenType]]:
-        """
-        Merge a list of dicts into a dict of lists.
-        """
-        indices_dicts: Dict[str, List] = defaultdict(list)
-
-        for indices_dict in dicts:
-            for index_name, indices in indices_dict.items():
-                indices_dicts[index_name].append(indices)
-
-        return indices_dicts
-
     def tokens_to_indices(self,
                           tokens: List[Token],
                           vocabulary: Vocabulary,
