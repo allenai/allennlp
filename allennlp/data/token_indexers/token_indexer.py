@@ -1,4 +1,5 @@
 from typing import Dict, List, TypeVar, Generic
+from collections import defaultdict
 
 from allennlp.common import Registrable
 from allennlp.data.tokenizers.token import Token
@@ -30,18 +31,36 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         raise NotImplementedError
 
-    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> TokenType:
+    @staticmethod
+    def _merge(dicts: List[Dict[str, TokenType]]) -> Dict[str, List[TokenType]]:
         """
-        Takes a string token and converts it into indices.  This could return an ID for the token
-        from the vocabulary, or it could split the token into characters and return a list of
-        IDs for each character from the vocabulary, or something else.
+        Merge a list of dicts into a dict of lists.
+        """
+        indices_dicts: Dict[str, List] = defaultdict(list)
+
+        for indices_dict in dicts:
+            for index_name, indices in indices_dict.items():
+                indices_dicts[index_name].append(indices)
+
+        return indices_dicts
+
+    def tokens_to_indices(self,
+                          tokens: List[Token],
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[TokenType]]:
+        """
+        Takes a list of tokens and converts them to one or more sets of indices.
+        This could be just an ID for each token from the vocabulary.
+        Or it could split each token into characters and return one ID per character.
+        Or (for instance, in the case of byte-pair encoding) there might not be a clean
+        mapping from individual tokens to indices.
         """
         raise NotImplementedError
 
     def get_padding_token(self) -> TokenType:
         """
         When we need to add padding tokens, what should they look like?  This method returns a
-        "blank" token of whatever type is returned by :func:`token_to_indices`.
+        "blank" token of whatever type is returned by :func:`tokens_to_indices`.
         """
         raise NotImplementedError
 

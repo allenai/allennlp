@@ -38,9 +38,13 @@ class DepLabelIndexer(TokenIndexer[int]):
         counter[self.namespace][dep_label] += 1
 
     @overrides
-    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> int:
-        dep_label = token.dep_ or 'NONE'
-        return vocabulary.get_token_index(dep_label, self.namespace)
+    def tokens_to_indices(self,
+                          tokens: List[Token],
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[int]]:
+        dep_labels = [token.dep_ or 'NONE' for token in tokens]
+
+        return {index_name: [vocabulary.get_token_index(dep_label, self.namespace) for dep_label in dep_labels]}
 
     @overrides
     def get_padding_token(self) -> int:

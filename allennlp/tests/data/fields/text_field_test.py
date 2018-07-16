@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 from collections import defaultdict
+from typing import List
 
 import pytest
 import numpy
@@ -193,3 +194,32 @@ class TestTextField(AllenNlpTestCase):
         field = TextField([Token(t) for t in ["A", "sentence"]],
                           {"words": SingleIdTokenIndexer(namespace="words")})
         print(field)
+
+    def test_multi_return_token_indexer(self):
+        # pylint: disable=protected-access
+
+        class MultiReturnTokenIndexer(SingleIdTokenIndexer):
+            def tokens_to_indices(self,
+                                  tokens: List[Token],
+                                  vocabulary: Vocabulary,
+                                  index_name: str):
+                return {
+                        **super().tokens_to_indices(tokens, vocabulary, f"{index_name}-a"),
+                        f"{index_name}-b": [10, 16, 3]
+                }
+
+        words = ["This", "is", "a", "sentence", "."]
+        tokens = [Token(word) for word in words]
+        vocab = Vocabulary()
+        for word in words:
+            vocab.add_token_to_namespace(word, namespace='words')
+
+        field = TextField(tokens,
+                          token_indexers={"words": MultiReturnTokenIndexer("words")})
+        field.index(vocab)
+
+        assert field._indexed_tokens == {
+                # 0 and 1 for PADDING and OOV
+                "words-a": [2, 3, 4, 5, 6],
+                "words-b": [10, 16, 3]
+        }

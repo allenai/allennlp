@@ -2,6 +2,7 @@
 ``KnowledgeGraphField`` is a ``Field`` which stores a knowledge graph representation.
 """
 from typing import Callable, Dict, List, Set
+from collections import defaultdict
 
 import editdistance
 from overrides import overrides
@@ -160,10 +161,13 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
     def index(self, vocab: Vocabulary):
         self._indexed_entity_texts = {}
         for indexer_name, indexer in self._token_indexers.items():
-            indexer_arrays = []
+            indexer_arrays: Dict[str, List] = defaultdict(list)
+
             for entity_text in self.entity_texts:
-                indexer_arrays.append([indexer.token_to_indices(token, vocab) for token in entity_text])
-            self._indexed_entity_texts[indexer_name] = indexer_arrays
+                for index_name, indexed in indexer.tokens_to_indices(entity_text, vocab, indexer_name).items():
+                    indexer_arrays[index_name].append(indexed)
+
+            self._indexed_entity_texts.update(indexer_arrays)
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
