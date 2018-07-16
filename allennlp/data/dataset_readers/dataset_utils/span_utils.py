@@ -1,4 +1,4 @@
-from typing import List, Tuple, Callable, TypeVar
+from typing import Callable, List, Set, Tuple, TypeVar
 
 from allennlp.data.dataset_readers.dataset_utils.ontonotes import TypedStringSpan
 from allennlp.data.tokenizers.token import Token
@@ -87,7 +87,7 @@ def bio_tags_to_spans(tag_sequence: List[str],
         Note that the label `does not` contain any BIO tag prefixes.
     """
     classes_to_ignore = classes_to_ignore or []
-    spans = set()
+    spans: Set[Tuple[str, Tuple[int, int]]] = set()
     span_start = 0
     span_end = 0
     active_conll_tag = None
