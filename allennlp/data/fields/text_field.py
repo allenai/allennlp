@@ -149,7 +149,11 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
             else:
                 desired_num_tokens = num_tokens
 
-            padded_array = indexer.pad_token_sequence(self._indexed_tokens[indexer_name],
+            if isinstance(self._indexed_tokens[indexer_name], dict):
+                indices_to_pad = self._indexed_tokens[indexer_name]
+            else:
+                indices_to_pad = {indexer_name: self._indexed_tokens[indexer_name]}
+            padded_array = indexer.pad_token_sequence(indices_to_pad,
                                                       desired_num_tokens, padding_lengths)
             # We use the key of the indexer to recognise what the tensor corresponds to within the
             # field (i.e. the result of word indexing, or the result of character indexing, for
@@ -158,15 +162,11 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
             # than a LongTensor here, and it's not clear how to signal that.  Maybe we'll need to
             # add a class method to TokenIndexer to tell us the type?  But we can worry about that
             # when there's a compelling use case for it.
-            if isinstance(padded_array, dict):
-                indexer_tensors = {key: torch.LongTensor(array) for key, array in padded_array.items()}
-                if cuda_device > -1:
-                    for key in indexer_tensors.keys():
-                        indexer_tensors[key] = indexer_tensors[key].cuda(cuda_device)
-                tensors.update(indexer_tensors)
-            else:
-                tensor = torch.LongTensor(padded_array)
-                tensors[indexer_name] = tensor if cuda_device == -1 else tensor.cuda(cuda_device)
+            indexer_tensors = {key: torch.LongTensor(array) for key, array in padded_array.items()}
+            if cuda_device > -1:
+                for key in indexer_tensors.keys():
+                    indexer_tensors[key] = indexer_tensors[key].cuda(cuda_device)
+            tensors.update(indexer_tensors)
         return tensors
 
     @overrides
