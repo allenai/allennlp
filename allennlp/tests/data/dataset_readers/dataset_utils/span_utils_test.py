@@ -125,9 +125,19 @@ class SpanUtilsTest(AllenNlpTestCase):
 
     def test_iob1_to_bioul(self):
         tag_sequence = ['I-ORG', 'O', 'I-MISC', 'O']
-        bioul_sequence = span_utils.iob1_to_bioul(tag_sequence)
+        bioul_sequence = span_utils.to_bioul(tag_sequence, encoding="IOB1")
         assert bioul_sequence == ['U-ORG', 'O', 'U-MISC', 'O']
 
         tag_sequence = ['O', 'I-PER', 'B-PER', 'I-PER', 'I-PER', 'B-PER']
-        bioul_sequence = span_utils.iob1_to_bioul(tag_sequence)
+        bioul_sequence = span_utils.to_bioul(tag_sequence, encoding="IOB1")
         assert bioul_sequence == ['O', 'U-PER', 'B-PER', 'I-PER', 'L-PER', 'U-PER']
+
+    def test_bio_to_bioul(self):
+        tag_sequence = ['B-ORG', 'O', 'B-MISC', 'O', 'B-MISC', 'I-MISC', 'I-MISC']
+        bioul_sequence = span_utils.to_bioul(tag_sequence, encoding="BIO")
+        assert bioul_sequence == ['U-ORG', 'O', 'U-MISC', 'O', 'B-MISC', 'I-MISC', 'L-MISC']
+
+        # Encoding in IOB format should throw error with incorrect encoding.
+        with self.assertRaises(span_utils.InvalidTagSequence):
+            tag_sequence = ['O', 'I-PER', 'B-PER', 'I-PER', 'I-PER', 'B-PER']
+            bioul_sequence = span_utils.to_bioul(tag_sequence, encoding="BIO")
