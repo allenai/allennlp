@@ -244,6 +244,14 @@ class TestNnUtil(AllenNlpTestCase):
         expected_mask = (text_field_tensors['list_tokens'].numpy() > 0).astype('int32')
         assert_almost_equal(actual_mask, expected_mask)
 
+    def test_get_text_field_mask_returns_mask_key(self):
+        text_field_tensors = {
+                "tokens": torch.LongTensor([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
+                "mask": torch.LongTensor([[0, 0, 1]])
+                }
+        assert_almost_equal(util.get_text_field_mask(text_field_tensors).numpy(),
+                            [[0, 0, 1]])
+
     def test_last_dim_softmax_does_softmax_on_last_dim(self):
         batch_size = 1
         length_1 = 5
