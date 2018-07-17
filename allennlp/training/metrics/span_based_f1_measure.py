@@ -61,7 +61,7 @@ class SpanBasedF1Measure(Metric):
             Valid options are "BIO", "IOB1", or BIOUL".
         """
         if label_encoding not in ["BIO", "IOB1", "BIOUL"]:
-            raise ConfigurationError("Unknown label encoding - expected 'BIO' or 'BIOUL'.")
+            raise ConfigurationError("Unknown label encoding - expected 'BIO', 'IOB1', 'BIOUL'.")
 
         self._label_encoding = label_encoding
         self._label_vocabulary = vocabulary.get_index_to_token_vocabulary(tag_namespace)
