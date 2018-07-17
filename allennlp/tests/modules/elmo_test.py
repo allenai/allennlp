@@ -337,7 +337,7 @@ class TestElmoTokenRepresentation(ElmoTestCase):
         elmo_token_embedder = _ElmoCharacterEncoder(self.options_file, self.weight_file)
 
         for correct_index, token in [[0, '<S>'], [2, '</S>']]:
-            indices = indexer.token_to_indices([Token(token)], Vocabulary(), "correct")
+            indices = indexer.tokens_to_indices([Token(token)], Vocabulary(), "correct")
             indices = torch.from_numpy(numpy.array(indices["correct"])).view(1, 1, -1)
             embeddings = elmo_token_embedder(indices)['token_embedding']
             assert numpy.allclose(embeddings[0, correct_index, :].data.numpy(), embeddings[0, 1, :].data.numpy())
