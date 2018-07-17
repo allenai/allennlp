@@ -45,19 +45,25 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
                 counter[self._namespace][character.text] += 1
 
     @overrides
-    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> List[int]:
-        indices = []
-        if token.text is None:
-            raise ConfigurationError('TokenCharactersIndexer needs a tokenizer that retains text')
-        for character in self._character_tokenizer.tokenize(token.text):
-            if getattr(character, 'text_id', None) is not None:
-                # `text_id` being set on the token means that we aren't using the vocab, we just
-                # use this id instead.
-                index = character.text_id
-            else:
-                index = vocabulary.get_token_index(character.text, self._namespace)
-            indices.append(index)
-        return indices
+    def tokens_to_indices(self,
+                          tokens: List[Token],
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[List[int]]]:
+        indices: List[List[int]] = []
+        for token in tokens:
+            token_indices: List[int] = []
+            if token.text is None:
+                raise ConfigurationError('TokenCharactersIndexer needs a tokenizer that retains text')
+            for character in self._character_tokenizer.tokenize(token.text):
+                if getattr(character, 'text_id', None) is not None:
+                    # `text_id` being set on the token means that we aren't using the vocab, we just
+                    # use this id instead.
+                    index = character.text_id
+                else:
+                    index = vocabulary.get_token_index(character.text, self._namespace)
+                token_indices.append(index)
+            indices.append(token_indices)
+        return {index_name: indices}
 
     @overrides
     def get_padding_lengths(self, token: List[int]) -> Dict[str, int]:
