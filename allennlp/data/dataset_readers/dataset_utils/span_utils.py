@@ -1,6 +1,9 @@
-from typing import Callable, List, Optional, Set, Tuple, TypeVar
+from typing import Callable, List, Set, Tuple, TypeVar, Optional
+import warnings
+
 
 from allennlp.data.dataset_readers.dataset_utils.ontonotes import TypedStringSpan
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.tokenizers.token import Token
 
 
@@ -256,8 +259,12 @@ def bioul_tags_to_spans(tag_sequence: List[str],
         index += 1
     return [span for span in spans if span[0] not in classes_to_ignore]
 
-
 def iob1_to_bioul(tag_sequence: List[str]) -> List[str]:
+    warnings.warn("iob1_to_bioul has been replaced with 'to_bioul' "
+                  "to allow more encoding options.", FutureWarning)
+    return to_bioul(tag_sequence)
+
+def to_bioul(tag_sequence: List[str], encoding: str = "IOB1") -> List[str]:
     """
     Given a tag sequence encoded with IOB1 labels, recode to BIOUL.
 
@@ -265,16 +272,24 @@ def iob1_to_bioul(tag_sequence: List[str]) -> List[str]:
     a span and B is the beginning of span immediately following another
     span of the same type.
 
+    In the BIO scheme, I is a token inside a span, O is a token outside
+    a span and B is the beginning of a span.
+
     Parameters
     ----------
     tag_sequence : ``List[str]``, required.
         The tag sequence encoded in IOB1, e.g. ["I-PER", "I-PER", "O"].
+    encoding : `str`, optional, (default = ``IOB1``).
+        The encoding type to convert from. Must be either "IOB1" or "BIO".
 
     Returns
     -------
     bioul_sequence: ``List[str]``
         The tag sequence encoded in IOB1, e.g. ["B-PER", "L-PER", "O"].
     """
+
+    if not encoding in {"IOB1", "BIO"}:
+        raise ConfigurationError(f"Invalid encoding {encoding} passed to 'to_bioul'.")
     # pylint: disable=len-as-condition
 
     def replace_label(full_label, new_label):
@@ -329,6 +344,8 @@ def iob1_to_bioul(tag_sequence: List[str]) -> List[str]:
             # otherwise this start a new entity if the type
             # is different
             if len(stack) == 0:
+                if encoding == "BIO":
+                    raise InvalidTagSequence(tag_sequence)
                 stack.append(label)
             else:
                 # check if the previous type is the same as this one
@@ -337,6 +354,8 @@ def iob1_to_bioul(tag_sequence: List[str]) -> List[str]:
                 if this_type == prev_type:
                     stack.append(label)
                 else:
+                    if encoding == "BIO":
+                        raise InvalidTagSequence(tag_sequence)
                     # a new entity
                     process_stack(stack, bioul_sequence)
                     stack.append(label)
