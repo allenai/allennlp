@@ -51,7 +51,6 @@ class TestTrainer(AllenNlpTestCase):
                           validation_dataset=self.instances,
                           num_epochs=2)
         metrics = trainer.train()
-        print("metrics dict: ", metrics)
         assert 'best_validation_loss' in metrics
         assert isinstance(metrics['best_validation_loss'], float)
         assert 'best_validation_accuracy' in metrics
