@@ -4,6 +4,7 @@ from typing import Dict, List, Iterable
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, SequenceLabelField, MetadataField
 from allennlp.data.instance import Instance
@@ -32,6 +33,10 @@ class OntonotesNamedEntityRecognition(DatasetReader):
     tags : ``SequenceLabelField``
         A sequence of BIO tags for the NER classes.
 
+    Note that the "/pt/" directory of the Onotonotes dataset representing annotations
+    on the new and old testaments of the Bible are excluded, because they do not contain
+    NER annotations.
+
     Parameters
     ----------
     token_indexers : ``Dict[str, TokenIndexer]``, optional
@@ -56,6 +61,9 @@ class OntonotesNamedEntityRecognition(DatasetReader):
         super().__init__(lazy)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._domain_identifier = domain_identifier
+        if domain_identifier == "pt":
+            raise ConfigurationError("The Ontonotes 5.0 dataset does not contain annotations for"
+                                     " the old and new testament sections.")
         self._coding_scheme = coding_scheme
 
     @overrides
@@ -81,7 +89,7 @@ class OntonotesNamedEntityRecognition(DatasetReader):
         identifier in the file path are yielded.
         """
         for conll_file in ontonotes_reader.dataset_path_iterator(file_path):
-            if domain_identifier is None or f"/{domain_identifier}/" in conll_file:
+            if domain_identifier is None or f"/{domain_identifier}/" in conll_file and not "/pt/" in conll_file:
                 yield from ontonotes_reader.sentence_iterator(conll_file)
 
     @overrides
