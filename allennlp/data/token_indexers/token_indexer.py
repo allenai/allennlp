@@ -43,16 +43,6 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         raise NotImplementedError
 
-    def tokens_to_indices(
-            self, tokens: List[Token], vocabulary: Vocabulary
-    ) -> Union[List[TokenType], Dict[str, List[TokenType]]]:
-        """
-        Takes a list of tokens and converts it into a list of indices.  We allow to optionally
-        return a single list of strings, or a dict with different indices.
-        """
-        # default implementation just calls token to indices
-        return [self.token_to_indices(token, vocabulary) for token in tokens]
-
     def get_padding_token(self) -> TokenType:
         """
         When we need to add padding tokens, what should they look like?  This method returns a
