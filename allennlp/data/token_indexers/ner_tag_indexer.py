@@ -34,7 +34,10 @@ class NerTagIndexer(TokenIndexer[int]):
         counter[self._namespace][tag] += 1
 
     @overrides
-    def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary, index_name: str) -> Dict[str, List[int]]:
+    def tokens_to_indices(self,
+                          tokens: List[Token],
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[int]]:
         tags = ['NONE' if token.ent_type_ is None else token.ent_type_ for token in tokens]
 
         return {index_name: [vocabulary.get_token_index(tag, self._namespace) for tag in tags]}

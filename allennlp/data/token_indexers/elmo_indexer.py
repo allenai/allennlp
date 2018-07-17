@@ -93,7 +93,10 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
         pass
 
     @overrides
-    def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary, index_name: str) -> Dict[str, List[List[int]]]:
+    def tokens_to_indices(self,
+                          tokens: List[Token],
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[List[int]]]:
         # pylint: disable=unused-argument
         texts = [token.text for token in tokens]
 

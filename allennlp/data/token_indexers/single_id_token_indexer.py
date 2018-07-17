@@ -37,7 +37,10 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
             counter[self.namespace][text] += 1
 
     @overrides
-    def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary, index_name: str) -> Dict[str, List[int]]:
+    def tokens_to_indices(self,
+                          tokens: List[Token],
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[int]]:
         indices: List[int] = []
 
         for token in tokens:

@@ -45,7 +45,10 @@ class PosTagIndexer(TokenIndexer[int]):
         counter[self._namespace][tag] += 1
 
     @overrides
-    def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary, index_name: str) -> Dict[str, List[int]]:
+    def tokens_to_indices(self,
+                          tokens: List[Token],
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[int]]:
         tags: List[str] = []
 
         for token in tokens:
