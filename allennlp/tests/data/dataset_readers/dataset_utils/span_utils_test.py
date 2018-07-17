@@ -45,6 +45,39 @@ class SpanUtilsTest(AllenNlpTestCase):
         spans = span_utils.bio_tags_to_spans(tag_sequence, ["ARG1", "V"])
         assert set(spans) == {("ARG2", (6, 7)), ("ARG2", (9, 9))}
 
+    def test_iob1_tags_to_spans_extracts_correct_spans_without_labels(self):
+        tag_sequence = ["I", "B", "I", "O", "B", "I", "B", "B"]
+        spans = span_utils.iob1_tags_to_spans(tag_sequence)
+        assert set(spans) == {("", (0, 0)), ("", (1, 2)), ("", (4, 5)), ("", (6, 6)), ("", (7, 7))}
+
+        # Check that it raises when we use U- tags for single tokens.
+        tag_sequence = ["O", "B", "I", "O", "B", "I", "U", "U"]
+        with self.assertRaises(span_utils.InvalidTagSequence):
+            spans = span_utils.iob1_tags_to_spans(tag_sequence)
+
+        # Check that invalid IOB1 sequences are also handled as spans.
+        tag_sequence = ["O", "B", "I", "O", "I", "B", "I", "B", "I", "I"]
+        spans = span_utils.iob1_tags_to_spans(tag_sequence)
+        assert set(spans) == {('', (1, 2)), ('', (4, 4)), ('', (5, 6)), ('', (7, 9))}
+
+    def test_iob1_tags_to_spans_extracts_correct_spans(self):
+        tag_sequence = ["I-ARG2", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "B-ARG1", "B-ARG2"]
+        spans = span_utils.iob1_tags_to_spans(tag_sequence)
+        assert set(spans) == {("ARG2", (0, 0)), ("ARG1", (1, 2)), ("ARG2", (4, 5)),
+                              ("ARG1", (6, 6)), ("ARG2", (7, 7))}
+
+        # Check that it raises when we use U- tags for single tokens.
+        tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "U-ARG1", "U-ARG2"]
+        with self.assertRaises(span_utils.InvalidTagSequence):
+            spans = span_utils.iob1_tags_to_spans(tag_sequence)
+
+        # Check that invalid IOB1 sequences are also handled as spans.
+        tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "I-ARG1", "B-ARG2",
+                        "I-ARG2", "B-ARG1", "I-ARG2", "I-ARG2"]
+        spans = span_utils.iob1_tags_to_spans(tag_sequence)
+        assert set(spans) == {("ARG1", (1, 2)), ("ARG1", (4, 4)), ("ARG2", (5, 6)),
+                              ("ARG1", (7, 7)), ("ARG2", (8, 9))}
+
     def test_enumerate_spans_enumerates_all_spans(self):
         tokenizer = SpacyWordSplitter(pos_tags=True)
         sentence = tokenizer.split_words("This is a sentence.")
