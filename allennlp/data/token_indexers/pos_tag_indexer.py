@@ -45,14 +45,23 @@ class PosTagIndexer(TokenIndexer[int]):
         counter[self._namespace][tag] += 1
 
     @overrides
-    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> int:
-        if self._coarse_tags:
-            tag = token.pos_
-        else:
-            tag = token.tag_
-        if tag is None:
-            tag = 'NONE'
-        return vocabulary.get_token_index(tag, self._namespace)
+    def tokens_to_indices(self,
+                          tokens: List[Token],
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[int]]:
+        tags: List[str] = []
+
+        for token in tokens:
+            if self._coarse_tags:
+                tag = token.pos_
+            else:
+                tag = token.tag_
+            if tag is None:
+                tag = 'NONE'
+
+            tags.append(tag)
+
+        return {index_name: [vocabulary.get_token_index(tag, self._namespace) for tag in tags]}
 
     @overrides
     def get_padding_token(self) -> int:

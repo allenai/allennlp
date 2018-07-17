@@ -53,8 +53,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
     def index(self, vocab: Vocabulary):
         token_arrays = {}
         for indexer_name, indexer in self._token_indexers.items():
-            arrays = [indexer.token_to_indices(token, vocab) for token in self.tokens]
-            token_arrays[indexer_name] = arrays
+            token_arrays.update(indexer.tokens_to_indices(self.tokens, vocab, indexer_name))
         self._indexed_tokens = token_arrays
 
     @overrides
