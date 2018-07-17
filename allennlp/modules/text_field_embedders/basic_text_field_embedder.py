@@ -95,6 +95,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         embedder_to_indexer_map = params.pop("embedder_to_indexer_map", None)
         if embedder_to_indexer_map is not None:
             embedder_to_indexer_map = embedder_to_indexer_map.as_dict(quiet=True)
+        allow_unmatched_keys = params.pop_bool("allow_unmatched_keys", False)
 
         token_embedders = {}
         keys = list(params.keys())
@@ -102,4 +103,4 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             embedder_params = params.pop(key)
             token_embedders[key] = TokenEmbedder.from_params(vocab=vocab, params=embedder_params)
         params.assert_empty(cls.__name__)
-        return cls(token_embedders, embedder_to_indexer_map)
+        return cls(token_embedders, embedder_to_indexer_map, allow_unmatched_keys)
