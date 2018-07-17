@@ -725,7 +725,7 @@ class Trainer:
                     # Check validation metric to see if it's the best so far
                     is_best_so_far = self._is_best_so_far(this_epoch_val_metric, validation_metric_per_epoch)
                     if is_best_so_far:
-                        best_epoch_val_metrics = val_metrics
+                        best_epoch_val_metrics = val_metrics.copy()
                     validation_metric_per_epoch.append(this_epoch_val_metric)
                     if self._should_stop_early(validation_metric_per_epoch):
                         logger.info("Ran out of patience.  Stopping training.")
@@ -776,7 +776,7 @@ class Trainer:
                 best_validation_metric = min(validation_metric_per_epoch)
             else:
                 best_validation_metric = max(validation_metric_per_epoch)
-            metrics.update({f"best_validation_{k}": v for k,v in best_epoch_val_metrics.items()})
+            metrics.update({f"best_validation_{k}": v for k, v in best_epoch_val_metrics.items()})
             metrics['best_epoch'] = [i for i, value in enumerate(validation_metric_per_epoch)
                                      if value == best_validation_metric][-1]
         return metrics
