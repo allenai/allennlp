@@ -1,4 +1,4 @@
-from typing import List, Tuple, Callable, TypeVar
+from typing import Callable, List, Set, Tuple, TypeVar
 
 from allennlp.data.dataset_readers.dataset_utils.ontonotes import TypedStringSpan
 from allennlp.data.tokenizers.token import Token
@@ -70,7 +70,8 @@ def bio_tags_to_spans(tag_sequence: List[str],
     Spans are inclusive and can be of zero length, representing a single word span.
     Ill-formed spans are also included (i.e those which do not start with a "B-LABEL"),
     as otherwise it is possible to get a perfect precision score whilst still predicting
-    ill-formed spans in addition to the correct spans.
+    ill-formed spans in addition to the correct spans. This function works properly when
+    the spans are unlabeled (i.e., your labels are simply "B", "I", and "O").
 
     Parameters
     ----------
@@ -87,7 +88,7 @@ def bio_tags_to_spans(tag_sequence: List[str],
         Note that the label `does not` contain any BIO tag prefixes.
     """
     classes_to_ignore = classes_to_ignore or []
-    spans = set()
+    spans: Set[Tuple[str, Tuple[int, int]]] = set()
     span_start = 0
     span_end = 0
     active_conll_tag = None
@@ -99,7 +100,7 @@ def bio_tags_to_spans(tag_sequence: List[str],
         conll_tag = string_tag[2:]
         if bio_tag == "O" or conll_tag in classes_to_ignore:
             # The span has ended.
-            if active_conll_tag:
+            if active_conll_tag is not None:
                 spans.add((active_conll_tag, (span_start, span_end)))
             active_conll_tag = None
             # We don't care about tags we are
@@ -108,7 +109,7 @@ def bio_tags_to_spans(tag_sequence: List[str],
         elif bio_tag == "B":
             # We are entering a new span; reset indices
             # and active tag to new span.
-            if active_conll_tag:
+            if active_conll_tag is not None:
                 spans.add((active_conll_tag, (span_start, span_end)))
             active_conll_tag = conll_tag
             span_start = index
@@ -124,13 +125,13 @@ def bio_tags_to_spans(tag_sequence: List[str],
             # include this span. This is important, because otherwise,
             # a model may get a perfect F1 score whilst still including
             # false positive ill-formed spans.
-            if active_conll_tag:
+            if active_conll_tag is not None:
                 spans.add((active_conll_tag, (span_start, span_end)))
             active_conll_tag = conll_tag
             span_start = index
             span_end = index
     # Last token might have been a part of a valid span.
-    if active_conll_tag:
+    if active_conll_tag is not None:
         spans.add((active_conll_tag, (span_start, span_end)))
     return list(spans)
 
@@ -141,6 +142,8 @@ def bioul_tags_to_spans(tag_sequence: List[str],
     Given a sequence corresponding to BIOUL tags, extracts spans.
     Spans are inclusive and can be of zero length, representing a single word span.
     Ill-formed spans are not allowed and will raise ``InvalidTagSequence``.
+    This function works properly when the spans are unlabeled (i.e., your labels are
+    simply "B", "I", "O", "U", and "L").
 
     Parameters
     ----------

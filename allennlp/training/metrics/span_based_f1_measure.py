@@ -24,7 +24,10 @@ class SpanBasedF1Measure(Metric):
     is not exactly the same as the perl script used to evaluate the CONLL 2005
     data - particularly, it does not consider continuations or reference spans
     as constituents of the original span. However, it is a close proxy, which
-    can be helpful for judging model peformance during training.
+    can be helpful for judging model peformance during training. This metric
+    works properly when the spans are unlabeled (i.e., your labels are
+    simply "B", "I", "O" if using the "BIO" label encoding).
+
     """
     def __init__(self,
                  vocabulary: Vocabulary,

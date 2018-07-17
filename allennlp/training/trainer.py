@@ -500,7 +500,7 @@ class Trainer:
                 for name, param in self._model.named_parameters():
                     param_updates[name].sub_(param.detach().cpu())
                     update_norm = torch.norm(param_updates[name].view(-1, ))
-                    param_norm = torch.norm(param.view(-1, ))
+                    param_norm = torch.norm(param.view(-1, )).cpu()
                     self._tensorboard.add_train_scalar("gradient_update/" + name,
                                                        update_norm / (param_norm + 1e-7),
                                                        batch_num_total)

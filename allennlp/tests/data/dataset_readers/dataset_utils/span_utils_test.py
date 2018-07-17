@@ -24,6 +24,21 @@ class SpanUtilsTest(AllenNlpTestCase):
         assert set(spans) == {("ARG1", (1, 2)), ("ARG2", (5, 6)), ("ARG1", (7, 7)),
                               ("ARG1", (4, 4)), ("ARG2", (8, 9))}
 
+    def test_bio_tags_to_spans_extracts_correct_spans_without_labels(self):
+        tag_sequence = ["O", "B", "I", "O", "B", "I", "B", "B"]
+        spans = span_utils.bio_tags_to_spans(tag_sequence)
+        assert set(spans) == {("", (1, 2)), ("", (4, 5)), ("", (6, 6)), ("", (7, 7))}
+
+        # Check that it raises when we use U- tags for single tokens.
+        tag_sequence = ["O", "B", "I", "O", "B", "I", "U", "U"]
+        with self.assertRaises(span_utils.InvalidTagSequence):
+            spans = span_utils.bio_tags_to_spans(tag_sequence)
+
+        # Check that invalid BIO sequences are also handled as spans.
+        tag_sequence = ["O", "B", "I", "O", "I", "B", "I", "B", "I", "I"]
+        spans = span_utils.bio_tags_to_spans(tag_sequence)
+        assert set(spans) == {('', (1, 2)), ('', (4, 4)), ('', (5, 6)), ('', (7, 9))}
+
     def test_bio_tags_to_spans_ignores_specified_tags(self):
         tag_sequence = ["B-V", "I-V", "O", "B-ARG1", "I-ARG1",
                         "O", "B-ARG2", "I-ARG2", "B-ARG1", "B-ARG2"]
@@ -63,6 +78,15 @@ class SpanUtilsTest(AllenNlpTestCase):
         assert spans == [('PER', (0, 2)), ('PER', (3, 3)), ('LOC', (4, 4))]
 
         tag_sequence = ['B-PER', 'I-PER', 'O']
+        with self.assertRaises(span_utils.InvalidTagSequence):
+            spans = span_utils.bioul_tags_to_spans(tag_sequence)
+
+    def test_bioul_tags_to_spans_without_labels(self):
+        tag_sequence = ['B', 'I', 'L', 'U', 'U', 'O']
+        spans = span_utils.bioul_tags_to_spans(tag_sequence)
+        assert spans == [('', (0, 2)), ('', (3, 3)), ('', (4, 4))]
+
+        tag_sequence = ['B', 'I', 'O']
         with self.assertRaises(span_utils.InvalidTagSequence):
             spans = span_utils.bioul_tags_to_spans(tag_sequence)
 
