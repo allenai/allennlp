@@ -1,4 +1,4 @@
-from typing import Callable, List, Set, Tuple, TypeVar
+from typing import Callable, List, Set, Tuple, TypeVar, Optional
 import warnings
 
 
