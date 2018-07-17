@@ -53,7 +53,14 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
     def index(self, vocab: Vocabulary):
         token_arrays = {}
         for indexer_name, indexer in self._token_indexers.items():
-            token_arrays.update(indexer.tokens_to_indices(self.tokens, vocab, indexer_name))
+            token_indices = indexer.tokens_to_indices(self.tokens, vocab, indexer_name)
+            if len(token_indices) == 1:
+                # just a single key, flatten the name space.
+                token_arrays.update(token_indices)
+            else:
+                # multiple keys, keep the hierarchy.
+                token_arrays[indexer_name] = token_indices
+
         self._indexed_tokens = token_arrays
 
     @overrides
@@ -76,7 +83,6 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         indexer_sequence_lengths = {}
 
         for indexer_name, indexer in self._token_indexers.items():
-            # indexer_lengths will track
             indexer_lengths = {}
 
             if isinstance(self._indexed_tokens[indexer_name], dict):

@@ -24,7 +24,8 @@ class DictReturningTokenIndexer(TokenIndexer[Dict[str, List[int]]]):
     def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> int:
         raise NotImplementedError
 
-    def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary):
+    def tokens_to_indices(self, tokens: List[Token],
+                          vocabulary: Vocabulary, index_name: str) -> Dict[str, List[int]]:
         return {
             "token_ids": [10, 15] + \
                          [vocabulary.get_token_index(token.text, 'words') for token in tokens] + \
@@ -274,8 +275,8 @@ class TestTextField(AllenNlpTestCase):
                           token_indexers={"words": MultiReturnTokenIndexer("words")})
         field.index(vocab)
 
-        assert field._indexed_tokens == {
+        assert field._indexed_tokens == {"words": {
                 # 0 and 1 for PADDING and OOV
                 "words-a": [2, 3, 4, 5, 6],
                 "words-b": [10, 16, 3]
-        }
+        }}
