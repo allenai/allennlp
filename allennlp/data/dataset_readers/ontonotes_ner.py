@@ -89,7 +89,7 @@ class OntonotesNamedEntityRecognition(DatasetReader):
         identifier in the file path are yielded.
         """
         for conll_file in ontonotes_reader.dataset_path_iterator(file_path):
-            if domain_identifier is None or f"/{domain_identifier}/" in conll_file and not "/pt/" in conll_file:
+            if (domain_identifier is None or f"/{domain_identifier}/" in conll_file) and "/pt/" not in conll_file:
                 yield from ontonotes_reader.sentence_iterator(conll_file)
 
     @overrides
