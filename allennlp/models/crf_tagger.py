@@ -32,6 +32,9 @@ class CrfTagger(Model):
         This is needed to compute the SpanBasedF1Measure metric.
         Unless you did something unusual, the default value should be what you want.
     dropout:  ``float``, optional (detault=``None``)
+    verbose_metrics : ``bool``, optional (default = False)
+        If true, metrics will be returned per label class in addition
+        to the overall statistics.
     constraint_type : ``str``, optional (default=``None``)
         If provided, the CRF will be constrained at decoding time
         to produce valid labels based on the specified type (e.g. "BIO", or "BIOUL").
@@ -50,6 +53,7 @@ class CrfTagger(Model):
                  constraint_type: str = None,
                  include_start_end_transitions: bool = True,
                  dropout: float = None,
+                 verbose_metrics: bool = False,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
@@ -58,6 +62,7 @@ class CrfTagger(Model):
         self.text_field_embedder = text_field_embedder
         self.num_tags = self.vocab.get_vocab_size(label_namespace)
         self.encoder = encoder
+        self._verbose_metrics = verbose_metrics
         if dropout:
             self.dropout = torch.nn.Dropout(dropout)
         else:
@@ -175,4 +180,7 @@ class CrfTagger(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         metric_dict = self.span_metric.get_metric(reset=reset)
-        return {x: y for x, y in metric_dict.items() if "overall" in x}
+        if self._verbose_metrics:
+            return metric_dict
+        else:
+            return {x: y for x, y in metric_dict.items() if "overall" in x}
