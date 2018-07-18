@@ -147,8 +147,6 @@ class BiaffineDependencyParser(Model):
         # shape (batch_size, timesteps, tag_representation_dim)
         head_tag_representation = F.elu(self.head_tag_projection(encoded_text))
         child_tag_representation = F.elu(self.child_tag_projection(encoded_text))
-        head_tag_representation = head_tag_representation.contiguous()
-        child_tag_representation = child_tag_representation.contiguous()
         # shape (batch_size, timesteps, timesteps)
         attended_arcs = self.arc_attention(head_arc_representation,
                                            child_arc_representation,
@@ -211,13 +209,13 @@ class BiaffineDependencyParser(Model):
         lengths = get_lengths_from_binary_sequence_mask(output_dict["mask"])
         head_tag_labels = []
         head_indices = []
-        for batch, batch_tag, length in zip(heads, head_tags, lengths):
-            batch = list(batch[1:length])
-            batch_tag = batch_tag[1:length]
+        for instance_heads, instance_tags, length in zip(heads, head_tags, lengths):
+            instance_heads = list(instance_heads[1:length])
+            instance_tags = instance_tags[1:length]
             labels = [self.vocab.get_token_from_index(label, "head_tags")
-                      for label in batch_tag]
+                      for label in instance_tags]
             head_tag_labels.append(labels)
-            head_indices.append(batch)
+            head_indices.append(instance_heads)
 
         output_dict["predicted_dependencies"] = head_tag_labels
         output_dict["predicted_heads"] = head_indices
@@ -395,6 +393,8 @@ class BiaffineDependencyParser(Model):
         # Shape (batch_size, timesteps, timesteps, num_head_tags)
         pairwise_head_logits = self.tag_bilinear(head_tag_representation, child_tag_representation)
 
+        # Note that this log_softmax is over the tag dimension, and we don't consider pairs
+        # of tags which are invalid (e.g are a pair which includes a padded element) anyway below.
         # Shape (batch, num_labels,timesteps, timesteps)
         normalized_pairwise_head_logits = F.log_softmax(pairwise_head_logits, dim=3).permute(0, 3, 1, 2)
 
