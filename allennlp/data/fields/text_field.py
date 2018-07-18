@@ -2,7 +2,7 @@
 A ``TextField`` represents a string of text, the kind that you might want to represent with
 standard word vectors, or pass through an LSTM.
 """
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 import textwrap
 
 from overrides import overrides
@@ -37,7 +37,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
     def __init__(self, tokens: List[Token], token_indexers: Dict[str, TokenIndexer]) -> None:
         self.tokens = tokens
         self._token_indexers = token_indexers
-        self._indexed_tokens: Optional[Dict[str, TokenList]] = None
+        self._indexed_tokens: Optional[Dict[str, Any]] = None
 
         if not all([isinstance(x, (Token, SpacyToken)) for x in tokens]):
             raise ConfigurationError("TextFields must be passed Tokens. "
@@ -51,7 +51,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
 
     @overrides
     def index(self, vocab: Vocabulary):
-        token_arrays = {}
+        token_arrays: Dict[str, Any] = {}
         for indexer_name, indexer in self._token_indexers.items():
             token_indices = indexer.tokens_to_indices(self.tokens, vocab, indexer_name)
             if len(token_indices) == 1:
@@ -89,7 +89,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
                 # (TODO(mp)): allow indexers that return dict to return non-trivial padding lengths
                 if indexer.get_padding_lengths(0) != {}:
                     raise NotImplementedError
-                token_lengths = [{}]
+                token_lengths: List = [{}]
                 for key, val in self._indexed_tokens[indexer_name].items():
                     indexer_sequence_lengths[indexer_name + '_' + key] = len(val)
             else:
@@ -141,7 +141,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
                 # The indexers return different lengths.
                 # Get the desired_num_tokens for this indexer.
                 key_prefix = 'num_tokens-_-' + indexer_name
-                desired_num_tokens = {
+                desired_num_tokens: Any = {
                         key[(len(key_prefix) + 1):]: val
                         for key, val in padding_lengths.items() if key.startswith(key_prefix)
                 }
