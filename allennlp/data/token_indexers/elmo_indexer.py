@@ -121,9 +121,9 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
     @overrides
     def pad_token_sequence(self,
                            tokens: Dict[str, List[List[int]]],
-                           desired_num_tokens: int,
+                           desired_num_tokens: Dict[str, int],
                            padding_lengths: Dict[str, int]) -> Dict[str, List[List[int]]]:
         # pylint: disable=unused-argument
-        return {key: pad_sequence_to_length(val, desired_num_tokens,
+        return {key: pad_sequence_to_length(val, desired_num_tokens[key],
                                             default_value=self._default_value_for_padding)
                 for key, val in tokens.items()}

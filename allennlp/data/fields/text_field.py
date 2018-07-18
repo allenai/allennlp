@@ -141,14 +141,14 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
                 # The indexers return different lengths.
                 # Get the desired_num_tokens for this indexer.
                 key_prefix = 'num_tokens-_-' + indexer_name
-                desired_num_tokens: Any = {
+                desired_num_tokens: Dict[str, int] = {
                         key[(len(key_prefix) + 1):]: val
                         for key, val in padding_lengths.items() if key.startswith(key_prefix)
                 }
                 if len(desired_num_tokens) == 1:
-                    desired_num_tokens = list(desired_num_tokens.values())[0]
+                    desired_num_tokens = {indexer_name: list(desired_num_tokens.values())[0]}
             else:
-                desired_num_tokens = num_tokens
+                desired_num_tokens = {indexer_name: num_tokens}
 
             if isinstance(self._indexed_tokens[indexer_name], dict):
                 indices_to_pad = self._indexed_tokens[indexer_name]

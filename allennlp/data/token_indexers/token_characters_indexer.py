@@ -76,14 +76,15 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
     @overrides
     def pad_token_sequence(self,
                            tokens: Dict[str, List[List[int]]],
-                           desired_num_tokens: int,
+                           desired_num_tokens: Dict[str, int],
                            padding_lengths: Dict[str, int]) -> Dict[str, List[List[int]]]:
         # Pad the tokens.
         # tokens has only one key...
         key = list(tokens.keys())[0]
 
         padded_tokens = pad_sequence_to_length(
-                tokens[key], desired_num_tokens, default_value=self.get_padding_token
+                tokens[key], desired_num_tokens[key],
+                default_value=self.get_padding_token
         )
 
         # Pad the characters within the tokens.

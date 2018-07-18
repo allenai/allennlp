@@ -67,6 +67,7 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
     @overrides
     def pad_token_sequence(self,
                            tokens: Dict[str, List[int]],
-                           desired_num_tokens: int,
+                           desired_num_tokens: Dict[str, int],
                            padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
-        return {key: pad_sequence_to_length(val, desired_num_tokens) for key, val in tokens.items()}
+        return {key: pad_sequence_to_length(val, desired_num_tokens[key])
+                for key, val in tokens.items()}

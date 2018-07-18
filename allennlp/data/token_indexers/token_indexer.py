@@ -61,7 +61,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
 
     def pad_token_sequence(self,
                            tokens: Dict[str, List[TokenType]],
-                           desired_num_tokens: int,
+                           desired_num_tokens: Dict[str, int],
                            padding_lengths: Dict[str, int]) -> Dict[str, List[TokenType]]:
         """
         This method pads a list of tokens to ``desired_num_tokens`` and returns a padded copy of the

@@ -222,7 +222,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             padded_arrays = []
             for padded_entity in padded_entities:
                 padded_array = indexer.pad_token_sequence({'key': padded_entity},
-                                                          desired_num_entity_tokens,
+                                                          {'key': desired_num_entity_tokens},
                                                           padding_lengths)['key']
                 padded_arrays.append(padded_array)
             tensor = torch.LongTensor(padded_arrays)

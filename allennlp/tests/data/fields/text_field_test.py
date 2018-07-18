@@ -14,7 +14,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
 
 
-class DictReturningTokenIndexer(TokenIndexer[Dict[str, List[int]]]):
+class DictReturningTokenIndexer(TokenIndexer):
     """
     A stub TokenIndexer that returns multiple arrays of different lengths.
     """

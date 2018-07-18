@@ -24,7 +24,7 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
     def test_as_array_produces_token_sequence(self):
         indexer = TokenCharactersIndexer("characters")
         padded_tokens = indexer.pad_token_sequence({'k': [[1, 2, 3, 4, 5], [1, 2, 3], [1]]},
-                                                   desired_num_tokens=4,
+                                                   desired_num_tokens={'k': 4},
                                                    padding_lengths={"num_token_characters": 10})
         assert padded_tokens == {'k': [[1, 2, 3, 4, 5, 0, 0, 0, 0, 0],
                                        [1, 2, 3, 0, 0, 0, 0, 0, 0, 0],
