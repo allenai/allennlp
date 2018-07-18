@@ -60,5 +60,6 @@ class BilinearMatrixAttention(MatrixAttention):
 
             matrix_1 = torch.cat([matrix_1, bias1], -1)
             matrix_2 = torch.cat([matrix_2, bias2], -1)
-        intermediate = matrix_1.bmm(self._weight_matrix.unsqueeze(0))
-        return self._activation(intermediate.bmm(matrix_2.transpose(1, 2)) + self._bias)
+        intermediate = torch.matmul(matrix_1.unsqueeze(1), self._weight_matrix.unsqueeze(0))
+        final = torch.matmul(intermediate, matrix_2.unsqueeze(1).transpose(2, 3))
+        return self._activation(final.squeeze(1) + self._bias)

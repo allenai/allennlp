@@ -8,7 +8,7 @@ import numpy
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding
-from allennlp.modules.biaffine_attention import BiaffineAttention
+from allennlp.modules.matrix_attention.bilinear_matrix_attention import BilinearMatrixAttention
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, get_range_vector
@@ -61,7 +61,9 @@ class BiaffineDependencyParser(Model):
         encoder_dim = encoder.get_output_dim()
         self.head_arc_projection = torch.nn.Linear(encoder_dim, arc_representation_dim)
         self.child_arc_projection = torch.nn.Linear(encoder_dim, arc_representation_dim)
-        self.arc_attention = BiaffineAttention(arc_representation_dim, arc_representation_dim, 1)
+        self.arc_attention = BilinearMatrixAttention(arc_representation_dim,
+                                                     arc_representation_dim,
+                                                     use_input_biases=True)
 
         num_labels = self.vocab.get_vocab_size("head_tags")
         self.head_tag_projection = torch.nn.Linear(encoder_dim, tag_representation_dim)
@@ -149,9 +151,7 @@ class BiaffineDependencyParser(Model):
         child_tag_representation = F.elu(self.child_tag_projection(encoded_text))
         # shape (batch_size, timesteps, timesteps)
         attended_arcs = self.arc_attention(head_arc_representation,
-                                           child_arc_representation,
-                                           float_mask,
-                                           float_mask).squeeze(1)
+                                           child_arc_representation)
 
         minus_inf = -1e8
         minus_mask = (1 - float_mask) * minus_inf
