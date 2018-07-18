@@ -21,9 +21,6 @@ class DictReturningTokenIndexer(TokenIndexer):
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         pass
 
-    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> int:
-        raise NotImplementedError
-
     def tokens_to_indices(self, tokens: List[Token],
                           vocabulary: Vocabulary,
                           index_name: str) -> Dict[str, List[int]]: # pylint: disable=unused-argument
