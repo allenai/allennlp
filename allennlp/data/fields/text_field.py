@@ -94,7 +94,8 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
                     indexer_sequence_lengths[indexer_name + '_' + key] = len(val)
             else:
                 # This is a list of dicts, one for each token in the field.
-                token_lengths = [indexer.get_padding_lengths(token) for token in self._indexed_tokens[indexer_name]]
+                token_lengths = [indexer.get_padding_lengths(token)
+                                 for token in self._indexed_tokens[indexer_name]]
                 indexer_sequence_lengths[indexer_name] = len(self._indexed_tokens[indexer_name])
 
             if not token_lengths:
@@ -105,7 +106,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
                 token_lengths = [{}]
             # Iterate over the keys and find the maximum token length.
             # It's fine to iterate over the keys of the first token since all tokens have the same keys.
-            for key in token_lengths[0].keys():
+            for key in token_lengths[0]:
                 indexer_lengths[key] = max(x[key] if key in x else 0 for x in token_lengths)
             lengths.append(indexer_lengths)
 

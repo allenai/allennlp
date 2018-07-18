@@ -25,12 +25,13 @@ class DictReturningTokenIndexer(TokenIndexer[Dict[str, List[int]]]):
         raise NotImplementedError
 
     def tokens_to_indices(self, tokens: List[Token],
-                          vocabulary: Vocabulary, index_name: str) -> Dict[str, List[int]]:
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[int]]: # pylint: disable=unused-argument
         return {
-            "token_ids": [10, 15] + \
+                "token_ids": [10, 15] + \
                          [vocabulary.get_token_index(token.text, 'words') for token in tokens] + \
                          [25],
-            "additional_key": [22, 29]
+                "additional_key": [22, 29]
         }
 
     def get_padding_token(self) -> int:

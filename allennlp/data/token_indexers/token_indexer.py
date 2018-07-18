@@ -1,4 +1,4 @@
-from typing import Dict, List, TypeVar, Generic, Union
+from typing import Dict, List, TypeVar, Generic
 
 from allennlp.common import Registrable
 from allennlp.data.tokenizers.token import Token

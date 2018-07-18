@@ -82,7 +82,9 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         # tokens has only one key...
         key = list(tokens.keys())[0]
 
-        padded_tokens = pad_sequence_to_length(tokens[key], desired_num_tokens, default_value=self.get_padding_token)
+        padded_tokens = pad_sequence_to_length(
+                tokens[key], desired_num_tokens, default_value=self.get_padding_token
+        )
 
         # Pad the characters within the tokens.
         desired_token_length = padding_lengths['num_token_characters']
