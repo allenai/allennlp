@@ -234,16 +234,16 @@ class TestTextField(AllenNlpTestCase):
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
         assert padding_lengths == {
-                'num_tokens-_-field_with_dict_token_ids': 5,
-                'num_tokens-_-field_with_dict_additional_key': 2,
-                'num_tokens-_-words': 2,
-                'num_tokens-_-characters': 2,
+                'token_ids': 5,
+                'additional_key': 2,
+                'words': 2,
+                'characters': 2,
                 'num_token_characters': 8
         }
-        padding_lengths['num_tokens-_-field_with_dict_token_ids'] = 7
-        padding_lengths['num_tokens-_-field_with_dict_additional_key'] = 3
-        padding_lengths['num_tokens-_-words'] = 4
-        padding_lengths['num_tokens-_-characters'] = 4
+        padding_lengths['token_ids'] = 7
+        padding_lengths['additional_key'] = 3
+        padding_lengths['words'] = 4
+        padding_lengths['characters'] = 4
         tensors = field.as_tensor(padding_lengths)
         assert list(tensors['token_ids'].shape) == [7]
         assert list(tensors['additional_key'].shape) == [3]
@@ -273,8 +273,8 @@ class TestTextField(AllenNlpTestCase):
                           token_indexers={"words": MultiReturnTokenIndexer("words")})
         field.index(vocab)
 
-        assert field._indexed_tokens == {"words": {
+        assert field._indexed_tokens == {
                 # 0 and 1 for PADDING and OOV
                 "words-a": [2, 3, 4, 5, 6],
                 "words-b": [10, 16, 3]
-        }}
+        }

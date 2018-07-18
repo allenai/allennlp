@@ -6,6 +6,8 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token
 from allennlp.data.fields import TextField, SpanField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.data import Vocabulary
+
 
 class TestSpanField(AllenNlpTestCase):
     def setUp(self):
@@ -32,7 +34,7 @@ class TestSpanField(AllenNlpTestCase):
 
     def test_empty_span_field_works(self):
         span_field = SpanField(1, 3, self.text)
-        empty_span = span_field.empty_field()
+        empty_span = span_field.empty_field(Vocabulary())
         assert empty_span.span_start == -1
         assert empty_span.span_end == -1
 

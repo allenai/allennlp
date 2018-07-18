@@ -7,6 +7,8 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token
 from allennlp.data.fields import TextField, IndexField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.data import Vocabulary
+
 
 class TestIndexField(AllenNlpTestCase):
     def setUp(self):
@@ -25,7 +27,7 @@ class TestIndexField(AllenNlpTestCase):
 
     def test_index_field_empty_field_works(self):
         index_field = IndexField(4, self.text)
-        empty_index = index_field.empty_field()
+        empty_index = index_field.empty_field(Vocabulary())
         assert empty_index.sequence_index == -1
 
     def test_printing_doesnt_crash(self):

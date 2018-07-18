@@ -6,6 +6,7 @@ import torch
 
 from allennlp.data.fields.field import Field
 from allennlp.data.fields.sequence_field import SequenceField
+from allennlp.data.vocabulary import Vocabulary
 
 
 class SpanField(Field[torch.Tensor]):
@@ -55,8 +56,8 @@ class SpanField(Field[torch.Tensor]):
         return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
 
     @overrides
-    def empty_field(self):
-        return SpanField(-1, -1, self.sequence_field.empty_field())
+    def empty_field(self, vocab: Vocabulary):
+        return SpanField(-1, -1, self.sequence_field.empty_field(vocab))
 
     def __str__(self) -> str:
         return f"SpanField with spans: ({self.span_start}, {self.span_end})."

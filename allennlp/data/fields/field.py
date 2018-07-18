@@ -88,7 +88,7 @@ class Field(Generic[DataArray]):
         """
         raise NotImplementedError
 
-    def empty_field(self) -> 'Field':
+    def empty_field(self, vocab: Vocabulary) -> 'Field':
         """
         So that ``ListField`` can pad the number of fields in a list (e.g., the number of answer
         option ``TextFields``), we need a representation of an empty field of each type.  This
