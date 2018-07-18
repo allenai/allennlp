@@ -68,7 +68,7 @@ class BiaffineDependencyParser(Model):
         self.child_tag_projection = torch.nn.Linear(encoder_dim, tag_representation_dim)
         self.tag_bilinear = torch.nn.modules.Bilinear(tag_representation_dim,
                                                       tag_representation_dim,
-                                                       num_labels)
+                                                      num_labels)
 
         self._pos_tag_embedding = pos_tag_embedding or None
         representation_dim = text_field_embedder.get_output_dim()
@@ -400,7 +400,7 @@ class BiaffineDependencyParser(Model):
 
         # Mask padded tokens, because we only want to consider actual words as heads.
         minus_inf = -1e8
-        minus_mask = (1 - mask.float()) * minus_inf 
+        minus_mask = (1 - mask.float()) * minus_inf
         attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
         # Shape (batch_size, timesteps, timesteps)
