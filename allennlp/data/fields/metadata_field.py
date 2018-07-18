@@ -40,7 +40,7 @@ class MetadataField(Field[DataArray]):
         return self.metadata  # type: ignore
 
     @overrides
-    def empty_field(self, vocab: Vocabulary) -> 'MetadataField':
+    def empty_field(self, vocab: Vocabulary) -> 'MetadataField': # pylint: disable=unused-argument
         return MetadataField(None)
 
     @classmethod

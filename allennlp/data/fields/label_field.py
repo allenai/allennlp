@@ -95,7 +95,7 @@ class LabelField(Field[torch.Tensor]):
         return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
 
     @overrides
-    def empty_field(self, vocab: Vocabulary):
+    def empty_field(self, vocab: Vocabulary): # pylint: disable=unused-argument
         return LabelField(-1, self._label_namespace, skip_indexing=True)
 
     def __str__(self) -> str:

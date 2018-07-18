@@ -43,7 +43,7 @@ class ArrayField(Field[numpy.ndarray]):
         return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
 
     @overrides
-    def empty_field(self, vocab: Vocabulary):  # pylint: disable=no-self-use
+    def empty_field(self, vocab: Vocabulary):  # pylint: disable=no-self-use,unused-argument
         # Pass the padding_value, so that any outer field, e.g., `ListField[ArrayField]` uses the
         # same padding_value in the padded ArrayFields
         return ArrayField(numpy.array([], dtype="float32"), padding_value=self.padding_value)
