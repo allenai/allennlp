@@ -246,5 +246,14 @@ class FromParams:
             return subclass.from_params(params=params, **extras)
         else:
             # This is not a base class, so convert our params and extras into a dict of kwargs.
-            kwargs = create_kwargs(cls, params, **extras)
+
+            if cls.__init__ == object.__init__:
+                # This class does not have an explicit constructor, so don't give it any kwargs.
+                # Without this logic, create_kwargs will look at object.__init__ and see that
+                # it takes *args and **kwargs and look for those.
+                kwargs: Dict[str, Any] = {}
+            else:
+                # This class has a constructor, so create kwargs for it.
+                kwargs = create_kwargs(cls, params, **extras)
+
             return cls(**kwargs)  # type: ignore

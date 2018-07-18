@@ -7,7 +7,7 @@ from overrides import overrides
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.dataset_readers.dataset_utils import iob1_to_bioul
+from allennlp.data.dataset_readers.dataset_utils import to_bioul
 from allennlp.data.fields import TextField, SequenceLabelField, Field, MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
@@ -127,8 +127,8 @@ class Conll2003DatasetReader(DatasetReader):
 
         # Recode the labels if necessary.
         if self.coding_scheme == "BIOUL":
-            coded_chunks = iob1_to_bioul(chunk_tags) if chunk_tags is not None else None
-            coded_ner = iob1_to_bioul(ner_tags) if ner_tags is not None else None
+            coded_chunks = to_bioul(chunk_tags) if chunk_tags is not None else None
+            coded_ner = to_bioul(ner_tags) if ner_tags is not None else None
         else:
             # the default IOB1
             coded_chunks = chunk_tags
