@@ -37,8 +37,8 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
     def __init__(self, tokens: List[Token], token_indexers: Dict[str, TokenIndexer]) -> None:
         self.tokens = tokens
         self._token_indexers = token_indexers
-        self._indexed_tokens: Optional[Dict[str, TokenType]] = None
-        self._indexer_name_to_indexed_token: Optional[Dict[str, str]] = None
+        self._indexed_tokens: Optional[Dict[str, TokenList]] = None
+        self._indexer_name_to_indexed_token: Optional[Dict[str, List[str]]] = None
 
         if not all([isinstance(x, (Token, SpacyToken)) for x in tokens]):
             raise ConfigurationError("TextFields must be passed Tokens. "
@@ -52,8 +52,8 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
 
     @overrides
     def index(self, vocab: Vocabulary):
-        token_arrays: Dict[str, TokenType] = {}
-        indexer_name_to_indexed_token: Dict[str, str] = {}
+        token_arrays: Dict[str, TokenList] = {}
+        indexer_name_to_indexed_token: Dict[str, List[str]] = {}
         for indexer_name, indexer in self._token_indexers.items():
             token_indices = indexer.tokens_to_indices(self.tokens, vocab, indexer_name)
             token_arrays.update(token_indices)

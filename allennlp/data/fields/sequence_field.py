@@ -1,4 +1,5 @@
 from allennlp.data.fields.field import DataArray, Field
+from allennlp.data.vocabulary import Vocabulary
 
 
 class SequenceField(Field[DataArray]):
@@ -12,4 +13,7 @@ class SequenceField(Field[DataArray]):
         """
         How many elements are there in this sequence?
         """
+        raise NotImplementedError
+
+    def empty_field(self, vocab: Vocabulary) -> 'SequenceField':
         raise NotImplementedError
