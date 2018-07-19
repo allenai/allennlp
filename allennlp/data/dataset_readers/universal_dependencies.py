@@ -25,7 +25,9 @@ def lazy_parse(text: str, fields: Tuple = DEFAULT_FIELDS):
 @DatasetReader.register("universal_dependencies")
 class UniversalDependenciesDatasetReader(DatasetReader):
     """
-    Reads a file in the conllu Universal Dependencies format.
+    Reads a file in the conllu Universal Dependencies format. Additionally,
+    in order to make it easy to structure a model as predicting arcs, we add a
+    dummy 'ROOT_HEAD' token to the start of the sequence.
 
     Parameters
     ----------

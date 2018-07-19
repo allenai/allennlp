@@ -20,6 +20,19 @@ from allennlp.training.metrics import AttachmentScores
 @Model.register("biaffine_parser")
 class BiaffineDependencyParser(Model):
     """
+    This dependency parser follows the model of
+    ` Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016)
+    <https://arxiv.org/abs/1611.01734>`_ .
+
+    Word representations are generated using a bidirectional LSTM,
+    followed by separate biaffine classifiers for pairs of words,
+    predicting whether a directed arc exists between the two words
+    and the dependency label the arc should have. Decoding can either
+    be done greedily, or the optimial Minimum Spanning Tree can be
+    decoded using Edmond's algorithm by viewing the dependency tree as
+    a MST on a fully connected graph, where nodes are words and edges
+    are scored dependency arcs.
+
     Parameters
     ----------
     vocab : ``Vocabulary``, required
@@ -468,7 +481,7 @@ class BiaffineDependencyParser(Model):
 
         # shape (batch_size, timesteps, tag_representation_dim)
         selected_head_tag_representations = head_tag_representation[range_vector,
-                                                                    head_indices.data.t()].transpose(0, 1)
+                                                                    head_indices.t()].transpose(0, 1)
         selected_head_tag_representations = selected_head_tag_representations.contiguous()
         # shape (batch_size, timesteps, num_head_tags)
         head_tag_logits = self.tag_bilinear(selected_head_tag_representations,
