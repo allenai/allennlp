@@ -22,6 +22,8 @@ and report any metrics calculated by the model.
     -h, --help            show this help message and exit
     --evaluation-data-file EVALUATION_DATA_FILE
                             path to the file containing the evaluation data
+    --output-file OUTPUT_FILE
+                            path to output file to save metrics
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
     -o OVERRIDES, --overrides OVERRIDES
@@ -33,6 +35,7 @@ and report any metrics calculated by the model.
 from typing import Dict, Any, Iterable
 import argparse
 import logging
+import json
 
 import torch
 
@@ -62,6 +65,9 @@ class Evaluate(Subcommand):
         evaluation_data_file.add_argument('--evaluation-data-file',
                                           type=str,
                                           help='path to the file containing the evaluation data')
+
+        subparser.add_argument('--output-file', type=str, help='path to output file')
+
         subparser.add_argument('--weights-file',
                                type=str,
                                help='a path that overrides which weights file to use')
@@ -148,4 +154,8 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     for key, metric in metrics.items():
         logger.info("%s: %s", key, metric)
 
+    output_file = args.output_file
+    if output_file:
+        with open(output_file, "w") as file:
+            json.dump(metrics, file, indent=4)
     return metrics
