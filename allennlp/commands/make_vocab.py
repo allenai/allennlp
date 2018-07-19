@@ -94,6 +94,9 @@ def make_vocab_from_params(params: Params, serialization_dir: str):
         if dataset not in all_datasets:
             raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
 
+    logger.info("From dataset instances, %s will be considered for vocabulary creation.",
+                ", ".join(datasets_for_vocab_creation))
+
     instances = [instance for key, dataset in all_datasets.items()
                  for instance in dataset
                  if key in datasets_for_vocab_creation]
