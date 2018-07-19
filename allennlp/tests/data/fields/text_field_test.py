@@ -43,6 +43,10 @@ class DictReturningTokenIndexer(TokenIndexer):
                            padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
         return {key: pad_sequence_to_length(val, desired_num_tokens[key]) for key, val in tokens.items()}
 
+    def get_keys(self, index_name: str) -> List[str]:
+        # pylint: disable=unused-argument,no-self-use
+        return ["token_ids", "additional_key"]
+
 
 class TestTextField(AllenNlpTestCase):
     def setUp(self):
@@ -249,32 +253,3 @@ class TestTextField(AllenNlpTestCase):
         assert list(tensors['additional_key'].shape) == [3]
         assert list(tensors['words'].shape) == [4]
         assert list(tensors['characters'].shape) == [4, 8]
-
-    def test_multi_return_token_indexer(self):
-        # pylint: disable=protected-access
-
-        class MultiReturnTokenIndexer(SingleIdTokenIndexer):
-            def tokens_to_indices(self,
-                                  tokens: List[Token],
-                                  vocabulary: Vocabulary,
-                                  index_name: str):
-                return {
-                        **super().tokens_to_indices(tokens, vocabulary, f"{index_name}-a"),
-                        f"{index_name}-b": [10, 16, 3]
-                }
-
-        words = ["This", "is", "a", "sentence", "."]
-        tokens = [Token(word) for word in words]
-        vocab = Vocabulary()
-        for word in words:
-            vocab.add_token_to_namespace(word, namespace='words')
-
-        field = TextField(tokens,
-                          token_indexers={"words": MultiReturnTokenIndexer("words")})
-        field.index(vocab)
-
-        assert field._indexed_tokens == {
-                # 0 and 1 for PADDING and OOV
-                "words-a": [2, 3, 4, 5, 6],
-                "words-b": [10, 16, 3]
-        }

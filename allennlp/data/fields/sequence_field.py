@@ -1,5 +1,4 @@
 from allennlp.data.fields.field import DataArray, Field
-from allennlp.data.vocabulary import Vocabulary
 
 
 class SequenceField(Field[DataArray]):
@@ -15,5 +14,5 @@ class SequenceField(Field[DataArray]):
         """
         raise NotImplementedError
 
-    def empty_field(self, vocab: Vocabulary) -> 'SequenceField':
+    def empty_field(self) -> 'SequenceField':
         raise NotImplementedError

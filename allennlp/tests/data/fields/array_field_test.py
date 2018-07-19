@@ -3,7 +3,6 @@ import numpy
 
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.data.fields import ArrayField, ListField
-from allennlp.data import Vocabulary
 
 
 class TestArrayField(AllenNlpTestCase):
@@ -28,7 +27,7 @@ class TestArrayField(AllenNlpTestCase):
     def test_padding_handles_list_fields(self):
         array1 = ArrayField(numpy.ones([2, 3]))
         array2 = ArrayField(numpy.ones([1, 5]))
-        empty_array = array1.empty_field(Vocabulary())
+        empty_array = array1.empty_field()
         list_field = ListField([array1, array2, empty_array])
 
         returned_tensor = list_field.as_tensor(list_field.get_padding_lengths()).detach().cpu().numpy()
@@ -43,7 +42,7 @@ class TestArrayField(AllenNlpTestCase):
     def test_padding_handles_list_fields_with_padding_values(self):
         array1 = ArrayField(numpy.ones([2, 3]), padding_value=-1)
         array2 = ArrayField(numpy.ones([1, 5]), padding_value=-1)
-        empty_array = array1.empty_field(Vocabulary())
+        empty_array = array1.empty_field()
         list_field = ListField([array1, array2, empty_array])
 
         returned_tensor = list_field.as_tensor(list_field.get_padding_lengths()).detach().cpu().numpy()

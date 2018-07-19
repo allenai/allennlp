@@ -4,7 +4,6 @@ from typing import Any, Dict, List
 from overrides import overrides
 
 from allennlp.data.fields.field import DataArray, Field
-from allennlp.data.vocabulary import Vocabulary
 
 
 class MetadataField(Field[DataArray]):
@@ -40,7 +39,7 @@ class MetadataField(Field[DataArray]):
         return self.metadata  # type: ignore
 
     @overrides
-    def empty_field(self, vocab: Vocabulary) -> 'MetadataField': # pylint: disable=unused-argument
+    def empty_field(self) -> 'MetadataField':
         return MetadataField(None)
 
     @classmethod

@@ -4,7 +4,7 @@ import pytest
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.fields import LabelField
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import Vocabulary
 
 
 class TestLabelField(AllenNlpTestCase):
@@ -35,7 +35,7 @@ class TestLabelField(AllenNlpTestCase):
 
     def test_label_field_empty_field_works(self):
         label = LabelField("test")
-        empty_label = label.empty_field(Vocabulary())
+        empty_label = label.empty_field()
         assert empty_label.label == -1
 
     def test_class_variables_for_namespace_warnings_work_correctly(self):

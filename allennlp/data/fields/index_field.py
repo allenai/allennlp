@@ -6,7 +6,6 @@ import torch
 from allennlp.data.fields.field import Field
 from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.vocabulary import Vocabulary
 
 
 class IndexField(Field[torch.Tensor]):
@@ -49,8 +48,8 @@ class IndexField(Field[torch.Tensor]):
         return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
 
     @overrides
-    def empty_field(self, vocab: Vocabulary):
-        return IndexField(-1, self.sequence_field.empty_field(vocab))
+    def empty_field(self):
+        return IndexField(-1, self.sequence_field.empty_field())
 
     def __str__(self) -> str:
         return f"IndexField with index: {self.sequence_index}."

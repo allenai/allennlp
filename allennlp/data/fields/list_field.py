@@ -68,10 +68,9 @@ class ListField(SequenceField[DataArray]):
     def as_tensor(self,
                   padding_lengths: Dict[str, int],
                   cuda_device: int = -1) -> DataArray:
-        default_value = lambda: self.field_list[0].empty_field(Vocabulary())
         padded_field_list = pad_sequence_to_length(self.field_list,
                                                    padding_lengths['num_fields'],
-                                                   default_value)
+                                                   self.field_list[0].empty_field)
         # Here we're removing the scoping on the padding length keys that we added in
         # `get_padding_lengths`; see the note there for more detail.
         child_padding_lengths = {key.replace('list_', '', 1): value
@@ -82,7 +81,7 @@ class ListField(SequenceField[DataArray]):
         return self.field_list[0].batch_tensors(padded_fields)
 
     @overrides
-    def empty_field(self, vocab: Vocabulary):
+    def empty_field(self):
         # Our "empty" list field will actually have a single field in the list, so that we can
         # correctly construct nested lists.  For example, if we have a type that is
         # `ListField[ListField[LabelField]]`, we need the top-level `ListField` to know to
@@ -90,7 +89,7 @@ class ListField(SequenceField[DataArray]):
         # to know that it's empty objects are `LabelFields`.  Having an "empty" list actually have
         # length one makes this all work out, and we'll always be padding to at least length 1,
         # anyway.
-        return ListField([self.field_list[0].empty_field(vocab)])
+        return ListField([self.field_list[0].empty_field()])
 
     @overrides
     def batch_tensors(self, tensor_list: List[DataArray]) -> DataArray:

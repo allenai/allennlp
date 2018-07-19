@@ -73,3 +73,10 @@ class TokenIndexer(Generic[TokenType], Registrable):
         character-level padding.
         """
         raise NotImplementedError
+
+    def get_keys(self, index_name: str) -> List[str]:
+        """
+        Return a list of the keys this indexer return from ``tokens_to_indices``.
+        """
+        # pylint: disable=no-self-use
+        return [index_name]

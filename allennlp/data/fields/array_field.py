@@ -5,7 +5,6 @@ import torch
 from overrides import overrides
 
 from allennlp.data.fields.field import Field
-from allennlp.data.vocabulary import Vocabulary
 
 
 class ArrayField(Field[numpy.ndarray]):
@@ -43,7 +42,7 @@ class ArrayField(Field[numpy.ndarray]):
         return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
 
     @overrides
-    def empty_field(self, vocab: Vocabulary):  # pylint: disable=no-self-use,unused-argument
+    def empty_field(self):  # pylint: disable=no-self-use
         # Pass the padding_value, so that any outer field, e.g., `ListField[ArrayField]` uses the
         # same padding_value in the padded ArrayFields
         return ArrayField(numpy.array([], dtype="float32"), padding_value=self.padding_value)

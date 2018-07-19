@@ -259,7 +259,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
         return linking_features
 
     @overrides
-    def empty_field(self, vocab: Vocabulary) -> 'KnowledgeGraphField': # pylint: disable=unused-argument
+    def empty_field(self) -> 'KnowledgeGraphField':
         return KnowledgeGraphField(KnowledgeGraph(set(), {}), [], self._token_indexers)
 
     @overrides

@@ -32,11 +32,11 @@ class TestListField(AllenNlpTestCase):
         self.field3 = TextField([Token(t) for t in ["this", "is", "another", "sentence"]],
                                 self.word_indexer)
 
-        self.empty_text_field = self.field1.empty_field(self.vocab)
+        self.empty_text_field = self.field1.empty_field()
         self.index_field = IndexField(1, self.field1)
-        self.empty_index_field = self.index_field.empty_field(self.vocab)
+        self.empty_index_field = self.index_field.empty_field()
         self.sequence_label_field = SequenceLabelField([1, 1, 0, 1], self.field1)
-        self.empty_sequence_label_field = self.sequence_label_field.empty_field(self.vocab)
+        self.empty_sequence_label_field = self.sequence_label_field.empty_field()
 
         super(TestListField, self).setUp()
 
@@ -86,7 +86,7 @@ class TestListField(AllenNlpTestCase):
     def test_nested_list_fields_are_padded_correctly(self):
         nested_field1 = ListField([LabelField(c) for c in ['a', 'b', 'c', 'd', 'e']])
         nested_field2 = ListField([LabelField(c) for c in ['f', 'g', 'h', 'i', 'j', 'k']])
-        list_field = ListField([nested_field1.empty_field(self.vocab), nested_field1, nested_field2])
+        list_field = ListField([nested_field1.empty_field(), nested_field1, nested_field2])
         list_field.index(self.vocab)
         padding_lengths = list_field.get_padding_lengths()
         assert padding_lengths == {'num_fields': 3, 'list_num_fields': 6}
@@ -153,7 +153,7 @@ class TestListField(AllenNlpTestCase):
         self.field2._token_indexers = self.words_and_characters_indexers
         self.field3._token_indexers = self.words_and_characters_indexers
 
-        list_field = ListField([self.field1.empty_field(self.vocab), self.field1, self.field2])
+        list_field = ListField([self.field1.empty_field(), self.field1, self.field2])
         list_field.index(self.vocab)
         padding_lengths = list_field.get_padding_lengths()
         tensor_dict = list_field.as_tensor(padding_lengths)

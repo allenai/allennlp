@@ -153,10 +153,16 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         return tensors
 
     @overrides
-    def empty_field(self, vocab: Vocabulary):
+    def empty_field(self):
         # pylint: disable=protected-access
         text_field = TextField([], self._token_indexers)
-        text_field.index(vocab)
+        text_field._indexed_tokens = {}
+        text_field._indexer_name_to_indexed_token = {}
+        for indexer_name, indexer in self._token_indexers.items():
+            array_keys = indexer.get_keys(indexer_name)
+            for key in array_keys:
+                text_field._indexed_tokens[key] = []
+            text_field._indexer_name_to_indexed_token[indexer_name] = array_keys
         return text_field
 
     @overrides
