@@ -162,10 +162,12 @@ class Batch(Iterable):
         # Make sure if has been indexed first
         sequence_field_lengths: Dict[str, List] = defaultdict(list)
         for instance in self.instances:
+            if not instance.indexed:
+                raise ConfigurationError("Instances must be indexed with vocabulary "
+                                         "before asking to print dataset statistics.")
             for field, field_padding_lengths in instance.get_padding_lengths().items():
                 for key, value in field_padding_lengths.items():
                     sequence_field_lengths[f"{field}.{key}"].append(value)
-
 
         print("\n\n----Dataset Statistics----\n")
         for name, lengths in sequence_field_lengths.items():
