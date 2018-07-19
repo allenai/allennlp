@@ -93,12 +93,17 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
         pass
 
     @overrides
-    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> List[int]:
+    def tokens_to_indices(self,
+                          tokens: List[Token],
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[List[int]]]:
         # pylint: disable=unused-argument
-        if token.text is None:
+        texts = [token.text for token in tokens]
+
+        if any(text is None for text in texts):
             raise ConfigurationError('ELMoTokenCharactersIndexer needs a tokenizer '
                                      'that retains text')
-        return ELMoCharacterMapper.convert_word_to_char_ids(token.text)
+        return {index_name: [ELMoCharacterMapper.convert_word_to_char_ids(text) for text in texts]}
 
     @overrides
     def get_padding_lengths(self, token: List[int]) -> Dict[str, int]:

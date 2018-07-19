@@ -21,7 +21,7 @@ class TestNerTagIndexer(AllenNlpTestCase):
             indexer.count_vocab_items(token, counter)
         assert counter["ner_tags"] == {'PERSON': 2, 'ORG': 1, 'NONE': 6}
 
-    def test_token_to_indices_uses_ner_tags(self):
+    def test_tokens_to_indices_uses_ner_tags(self):
         tokens = self.tokenizer.split_words("Larry Page is CEO of Google.")
         tokens = [t for t in tokens] + [Token("</S>")]
         vocab = Vocabulary()
@@ -29,8 +29,8 @@ class TestNerTagIndexer(AllenNlpTestCase):
         none_index = vocab.add_token_to_namespace('NONE', namespace='ner_tags')
         vocab.add_token_to_namespace('ORG', namespace='ner_tags')
         indexer = NerTagIndexer()
-        assert indexer.token_to_indices(tokens[1], vocab) == person_index
-        assert indexer.token_to_indices(tokens[-1], vocab) == none_index
+        assert indexer.tokens_to_indices([tokens[1]], vocab, "tokens1") == {"tokens1": [person_index]}
+        assert indexer.tokens_to_indices([tokens[-1]], vocab, "tokens-1") == {"tokens-1": [none_index]}
 
     def test_padding_functions(self):
         indexer = NerTagIndexer()
