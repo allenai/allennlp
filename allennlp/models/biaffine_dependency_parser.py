@@ -289,8 +289,8 @@ class BiaffineDependencyParser(Model):
         timestep_index = get_range_vector(timesteps, get_device_of(attended_arcs))
         child_index = timestep_index.view(timesteps, 1).expand(timesteps, batch_size).long()
         # shape (timesteps, batch_size)
-        arc_loss = normalised_arc_logits[range_vector, child_index, head_indices.data.t()]
-        tag_loss = normalised_head_tag_logits[range_vector, child_index, head_tags.data.t()]
+        arc_loss = normalised_arc_logits[range_vector, child_index, head_indices.t()]
+        tag_loss = normalised_head_tag_logits[range_vector, child_index, head_tags.t()]
         # We don't care about predictions for the symbolic ROOT token's head,
         # so we remove it from the loss.
         arc_loss = arc_loss[1:, :]
