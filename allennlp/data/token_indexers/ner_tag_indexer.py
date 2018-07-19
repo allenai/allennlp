@@ -52,7 +52,8 @@ class NerTagIndexer(TokenIndexer[int]):
 
     @overrides
     def pad_token_sequence(self,
-                           tokens: List[int],
-                           desired_num_tokens: int,
-                           padding_lengths: Dict[str, int]) -> List[int]:  # pylint: disable=unused-argument
-        return pad_sequence_to_length(tokens, desired_num_tokens)
+                           tokens: Dict[str, List[int]],
+                           desired_num_tokens: Dict[str, int],
+                           padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
+        return {key: pad_sequence_to_length(val, desired_num_tokens[key])
+                for key, val in tokens.items()}
