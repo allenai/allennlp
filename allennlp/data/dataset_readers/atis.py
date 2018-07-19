@@ -17,8 +17,6 @@ from allennlp.semparse.contexts.atis_tables import ConversationContext
 from allennlp.semparse.worlds.atis_world import AtisWorld 
 from allennlp.semparse.worlds.world import ParsingError
 
-
-
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def lazy_parse(text: str):
@@ -34,13 +32,11 @@ class AtisDatasetReader(DatasetReader):
                  target_token_indexers: Dict[str, TokenIndexer] = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False,
-                 output_tokens: bool = True,
                  tokenizer: Tokenizer = None
                  ) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
-        self.output_tokens = output_tokens
 
         self._source_token_indexers = source_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._target_token_indexers = target_token_indexers or self._source_token_indexers
@@ -53,57 +49,29 @@ class AtisDatasetReader(DatasetReader):
 
         with open(file_path) as atis_file:
             logger.info("Reading ATIS instances from dataset at : %s", file_path)
-            
-            if self.output_tokens:
-                for interaction in lazy_parse(atis_file.read()):
-                    conv_context = ConversationContext(interaction['interaction'])
-                    for interaction_round in conv_context.interaction:
-                        nl_key = 'utterance'
-                        if nl_key not in interaction_round:
-                            nl_key = 'nl_with_dates'
+           
+            for interaction in lazy_parse(atis_file.read()):
+                conv_context = ConversationContext(interaction['interaction'])
+                for interaction_round in conv_context.interaction:
+                    nl_key = 'utterance'
+                    if nl_key not in interaction_round:
+                        nl_key = 'nl_with_dates'
 
-                        instance = self.text_to_instance_output_tokens(interaction_round[nl_key], interaction_round['sql'])
-                        yield instance
+                    world = AtisWorld(conv_context, interaction_round[nl_key])
+                    action_sequence = []
+                    try:
+                        conv_context.valid_actions = world.valid_actions
+                        action_sequence = world.get_action_sequence(interaction_round['sql'])
+                        
+                    except: 
+                        print('parsing error')
+                        continue
 
-            else:
-                for interaction in lazy_parse(atis_file.read()):
-                    conv_context = ConversationContext(interaction['interaction'])
-                    for interaction_round in conv_context.interaction:
-                        nl_key = 'utterance'
-                        if nl_key not in interaction_round:
-                            nl_key = 'nl_with_dates'
-
-                        world = AtisWorld(conv_context, interaction_round[nl_key])
-                        action_sequence = []
-                        try:
-                            action_sequence = world.get_action_sequence(interaction_round['sql'])
-                            conv_context.valid_actions = world.valid_actions
-                            
-                        except: 
-                            print('parsing error')
-                            continue
-
-                        print('yield instance')
-                        instance = self.text_to_instance(interaction_round[nl_key], action_sequence, world)
-                        if not instance:
-                            continue
-                        yield instance
-
-    def text_to_instance_output_tokens(self, # type: ignore
-                                       utterance: str,
-                                       sql: str) -> Instance:
-
-        tokenized_utterance = self._tokenizer.tokenize(utterance.lower())
-        utterance_field = TextField(tokenized_utterance, self._source_token_indexers)
-
-        tokenized_sql = self._tokenizer.tokenize(sql)
-        sql_field = TextField(tokenized_sql, self._target_token_indexers)
-        
-        fields = {'source_tokens': utterance_field,
-                  'target_tokens': sql_field}
-
-        return Instance(fields) 
-
+                    print('yield instance')
+                    instance = self.text_to_instance(interaction_round[nl_key], action_sequence, world)
+                    if not instance:
+                        continue
+                    yield instance
 
     @overrides
     def text_to_instance(self,  # type: ignore
@@ -128,6 +96,7 @@ class AtisDatasetReader(DatasetReader):
         production_rule_fields: List[Field] = []
 
         for production_rule in world.all_possible_actions():
+            print(production_rule)
             lhs, _ = production_rule.split(' ->')
             is_global_rule = not lhs in ['number', 'string'] 
             field = ProductionRuleField(production_rule, is_global_rule)
@@ -136,7 +105,7 @@ class AtisDatasetReader(DatasetReader):
         action_field = ListField(production_rule_fields)
         
         action_map = {action.rule.replace(" ws", "").replace("ws ", "") : i for i, action in enumerate(action_field.field_list)}  # type: ignore
-        index_fields : List[IndexField] = []
+        index_fields : List[Field] = []
 
         for production_rule in action_sequence:
             index_fields.append(IndexField(action_map[production_rule], action_field))
@@ -145,16 +114,19 @@ class AtisDatasetReader(DatasetReader):
 
         if not action_sequence:
             return None
+        
 
-        action_sequence_field = ListField(index_fields)
+        action_sequence_field = [ListField(index_fields)]
+
         world_field = MetadataField(world)
-
 
         fields = {'utterance' : utterance_field,
                   'actions' : action_field,
                   'world' : world_field,
-                  'target_action_sequence' : action_sequence_field}
+                  'target_action_sequence' : ListField(action_sequence_field)}
 
+        print('dsr action field', world.all_possible_actions())
+        print('dsr valid actions', world.get_valid_actions())
         return Instance(fields)
 
 
@@ -162,7 +134,6 @@ class AtisDatasetReader(DatasetReader):
     def from_params(cls, params: Params) -> 'AtisDatasetReader':
         token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
         lazy = params.pop('lazy', False)
-        output_tokens = params.pop('output_tokens')
         
         source_indexers_type = params.pop('source_token_indexers', None)
         if source_indexers_type is None:
@@ -179,5 +150,4 @@ class AtisDatasetReader(DatasetReader):
         return AtisDatasetReader(source_token_indexers=source_token_indexers,
                                  target_token_indexers=target_token_indexers,
                                  token_indexers=token_indexers,
-                                 lazy=lazy,
-                                 output_tokens=output_tokens)
+                                 lazy=lazy)
