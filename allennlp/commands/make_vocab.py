@@ -84,7 +84,7 @@ def make_vocab_from_params(params: Params, serialization_dir: str):
     vocab_dir = os.path.join(serialization_dir, "vocabulary")
 
     if os.path.isdir(vocab_dir) and os.listdir(vocab_dir) is not None:
-        raise ConfigurationError("The 'vocabulary' directory in the provided"
+        raise ConfigurationError("The 'vocabulary' directory in the provided "
                                  "serialization directory is non-empty")
 
     all_datasets = datasets_from_params(params)

@@ -87,7 +87,7 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
     vocab_dir = os.path.join(serialization_dir, "vocabulary")
 
     if os.path.isdir(vocab_dir) and os.listdir(vocab_dir) is not None:
-        raise ConfigurationError("The 'vocabulary' directory in the provided"
+        raise ConfigurationError("The 'vocabulary' directory in the provided "
                                  "serialization directory is non-empty")
 
     all_datasets = datasets_from_params(params)
@@ -105,7 +105,7 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
     dataset = Batch(instances)
     dataset.index_instances(vocab)
     dataset.print_statistics()
-    vocab.print_statistics(ignore_error=True)
+    vocab.print_statistics()
 
     logger.info(f"writing the vocabulary to {vocab_dir}.")
     vocab.save_to_files(vocab_dir)

@@ -214,6 +214,7 @@ class Vocabulary(Registrable):
         self._index_to_token = _IndexToTokenDefaultDict(self._non_padded_namespaces,
                                                         self._padding_token,
                                                         self._oov_token)
+        self._retained_counter = None
         # Made an empty vocabulary, now extend it.
         self._extend(counter,
                      min_count,
@@ -589,13 +590,13 @@ class Vocabulary(Registrable):
                       for name in self._index_to_token]
         return " ".join([base_string, non_padded_namespaces] + namespaces)
 
-    def print_statistics(self, ignore_error: bool = False) -> None:
+    def print_statistics(self) -> None:
         if self._retained_counter:
-            # Caveat: Printed info is only for part of vocabulary generated from instances. If Vocabulary
-            # is constructed by extending saved vocabulary with dataset instances, then directly loaded
-            # portion won't be considered for statistics. This might be confusing for users. But it
-            # it is impossible to consider that portion since we do not save counter information.
+            logger.info("Printed vocabulary statistics are only for the part of the vocabulary generated " \
+                        "from instances. If vocabulary is constructed by extending saved vocabulary with " \
+                        "dataset instances, the directly loaded portion won't be considered here.")
             print("\n\n----Vocabulary Statistics----\n")
+            # Since we don't saved counter info, it is impossible to consider pre-saved portion.
             for namespace in self._retained_counter:
                 tokens_with_counts = list(self._retained_counter[namespace].items())
                 tokens_with_counts.sort(key=lambda x: x[1], reverse=True)
@@ -613,8 +614,6 @@ class Vocabulary(Registrable):
                 for token, freq in reversed(tokens_with_counts[-10:]):
                     print(f"\tToken: {token}\t\tlength: {len(token)}\tFrequency: {freq}")
         else:
-            # _retained_counter would only be set if instances were used for vocabulary construction.
-            # It is possible to use only directly load the saved vocabulary for which we do not have
-            # the counter to print above statistics.
-            if not ignore_error:
-                raise ConfigurationError("Counter must be retained for printing vocabulary statistics.")
+            # _retained_counter would be set only if instances were used for vocabulary construction.
+            logger.info("Vocabulary statistics cannot be printed since " \
+                        "dataset instances were not used for its construction.")

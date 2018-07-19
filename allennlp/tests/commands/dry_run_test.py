@@ -153,9 +153,3 @@ class TestDryRun(AllenNlpTestCase):
             assert args.func == dry_run_from_args
             assert args.param_path == "path/to/params"
             assert args.serialization_dir == "serialization_dir"
-
-    def test_dataset_statistics_printing(self):
-        pass
-
-    def test_vocabulary_statistics_printing(self):
-        pass
