@@ -24,6 +24,8 @@ and report any metrics calculated by the model.
                             path to the file containing the evaluation data
     --output-file OUTPUT_FILE
                             path to output file to save metrics
+    --weights-file WEIGHTS_FILE
+                            a path that overrides which weights file to use
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
     -o OVERRIDES, --overrides OVERRIDES
