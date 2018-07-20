@@ -255,7 +255,7 @@ def train_model(params: Params,
     create_serialization_dir(params, serialization_dir, recover)
     prepare_global_logging(serialization_dir, file_friendly_logging)
 
-    check_for_gpu(params.params.get('trainer').get('cuda_device', -1))
+    check_for_gpu(params.get('trainer').get('cuda_device', -1))
 
     serialization_params = deepcopy(params).as_dict(quiet=True)
     with open(os.path.join(serialization_dir, CONFIG_NAME), "w") as param_file:
