@@ -75,15 +75,21 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
 
     @overrides
     def pad_token_sequence(self,
-                           tokens: List[List[int]],
-                           desired_num_tokens: int,
-                           padding_lengths: Dict[str, int]) -> List[List[int]]:
+                           tokens: Dict[str, List[List[int]]],
+                           desired_num_tokens: Dict[str, int],
+                           padding_lengths: Dict[str, int]) -> Dict[str, List[List[int]]]:
         # Pad the tokens.
-        padded_tokens = pad_sequence_to_length(tokens, desired_num_tokens, default_value=self.get_padding_token)
+        # tokens has only one key...
+        key = list(tokens.keys())[0]
+
+        padded_tokens = pad_sequence_to_length(
+                tokens[key], desired_num_tokens[key],
+                default_value=self.get_padding_token
+        )
 
         # Pad the characters within the tokens.
         desired_token_length = padding_lengths['num_token_characters']
-        longest_token: List[int] = max(tokens, key=len, default=[])
+        longest_token: List[int] = max(tokens[key], key=len, default=[])
         padding_value = 0
         if desired_token_length > len(longest_token):
             # Since we want to pad to greater than the longest token, we add a
@@ -95,4 +101,4 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
             # Removes the "dummy token".
             padded_tokens.pop()
         # Truncates all the tokens to the desired length, and return the result.
-        return [list(token[:desired_token_length]) for token in padded_tokens]
+        return {key: [list(token[:desired_token_length]) for token in padded_tokens]}

@@ -306,10 +306,11 @@ class TestElmoTokenRepresentation(ElmoTestCase):
         # There are 457 tokens. Reshape into 10 batches of 50 tokens.
         sentences = []
         for k in range(10):
+            char_indices = indices["elmo"][(k * 50):((k + 1) * 50)]
             sentences.append(
                     indexer.pad_token_sequence(
-                            indices["elmo"][(k * 50):((k + 1) * 50)], desired_num_tokens=50, padding_lengths={}
-                    )
+                            {'key': char_indices}, desired_num_tokens={'key': 50}, padding_lengths={}
+                    )['key']
             )
         batch = torch.from_numpy(numpy.array(sentences))
 
