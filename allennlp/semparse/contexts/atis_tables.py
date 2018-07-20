@@ -83,6 +83,9 @@ class ConversationContext():
         self.valid_actions = self.initialize_valid_actions()
 
     def initialize_valid_actions(self) -> Dict[str, List[str]]:
+        """
+        Initialize the conversation context with global actions, these are valid for all contexts
+        """
         valid_actions: Dict[str, List[str]] = defaultdict(set)
 
         for key in self.grammar:
@@ -121,7 +124,8 @@ def get_times_from_utterance(utterance: str) -> List[str]:
                 for am_str in re.findall(r"\d+", utterance)]
     oclock_times = [int(oclock_str.rstrip("o'clock")) * HOUR_TO_TWENTY_FOUR
                     for oclock_str in re.findall(r"\d+\so'clock", utterance)]
-    oclock_times = oclock_times + [(oclock_time + TWELVE_TO_TWENTY_FOUR) % HOURS_IN_DAY for oclock_time in oclock_times]
+    oclock_times = oclock_times + [(oclock_time + TWELVE_TO_TWENTY_FOUR) % HOURS_IN_DAY \
+                                   for oclock_time in oclock_times]
     times = am_times + pm_times + oclock_times
     if 'noon' in utterance:
         times.append(1200)
@@ -135,7 +139,6 @@ def get_times_from_utterance(utterance: str) -> List[str]:
     times += around_times
 
     return [str(time) for time in times]
-
 
 
 def get_nums_from_utterance(utterance: str) -> List[str]:
@@ -163,6 +166,103 @@ def get_nums_from_utterance(utterance: str) -> List[str]:
         if day in DAY_NUMBERS:
             nums.append(str(DAY_NUMBERS[day]))
     return sorted(nums, reverse=True)
+
+AIRLINE_CODES = {'argentina': 'AR',
+                 'alliance': '3J',
+                 'canada': 'AC',
+                 'ontario': 'GX',
+                 'wisconson': 'ZW',
+                 'alaska': 'AS',
+                 'alpha': '7V',
+                 'american': 'AA',
+                 'american trans': 'TZ',
+                 'america west': 'HP',
+                 'atlantic': 'DH',
+                 'atlantic.': 'EV',
+                 'braniff.': 'BE',
+                 'british': 'BA',
+                 'business': 'HQ',
+                 'canadian': 'CP',
+                 'carnival': 'KW',
+                 'christman': 'SX',
+                 'colgan': '9L',
+                 'comair': 'OH',
+                 'continental': 'CO',
+                 'czecho': 'OK',
+                 'delta': 'DL',
+                 'express': '9E',
+                 'eastern': 'EA',
+                 'grand': 'QD',
+                 'lufthansa': 'LH',
+                 'mesaba': 'XJ',
+                 'mgm': 'MG',
+                 'midwest': 'YX',
+                 'nation': 'NX',
+                 'northeast': '2V',
+                 'northwest': 'NW',
+                 'ontario express': '9X',
+                 'precision': 'RP',
+                 'royal': 'AT',
+                 'sabena': 'SN',
+                 'sky': 'OO',
+                 'south': 'WN',
+                 'thai': 'TG',
+                 'tower': 'FF',
+                 'states': '9N',
+                 'twa': 'TW',
+                 'world': 'RZ',
+                 'united': 'UA',
+                 'us': 'US',
+                 'west': 'OE'}
+
+CITY_CODES = {'ATLANTA': 'MATL',
+              'BALTIMORE': 'BBWI',
+              'BOSTON': 'BBOS',
+              'BURBANK': 'BBUR',
+              'CHARLOTTE': 'CCLT',
+              'CHICAGO': 'CCHI',
+              'CINCINNATI': 'CCVG',
+              'CLEVELAND': 'CCLE',
+              'COLUMBUS': 'CCMH',
+              'DALLAS': 'DDFW',
+              'DENVER': 'DDEN',
+              'DETROIT': 'DDTT',
+              'FORT WORTH': 'FDFW',
+              'HOUSTON': 'HHOU',
+              'INDIANAPOLIS': 'IIND',
+              'KANSAS CITY': 'MMKC',
+              'LAS VEGAS': 'LLAS',
+              'LONG BEACH': 'LLGB',
+              'LOS ANGELES': 'LLAX',
+              'MEMPHIS': 'MMEM',
+              'MIAMI': 'MMIA',
+              'MILWAUKEE': 'MMKE',
+              'MINNEAPOLIS': 'MMSP',
+              'MONTREAL': 'YYMQ',
+              'NASHVILLE': 'BBNA',
+              'NEW YORK': 'NNYC',
+              'NEWARK': 'JNYC',
+              'OAKLAND': 'OOAK',
+              'ONTARIO': 'OONT',
+              'ORLANDO': 'OORL',
+              'PHILADELPHIA': 'PPHL',
+              'PHOENIX': 'PPHX',
+              'PITTSBURGH': 'PPIT',
+              'SALT LAKE CITY': 'SSLC',
+              'SAN DIEGO': 'SSAN',
+              'SAN FRANCISCO': 'SSFO',
+              'SAN JOSE': 'SSJC',
+              'SEATTLE': 'SSEA',
+              'ST. LOUIS': 'SSTL',
+              'ST. PAUL': 'SMSP',
+              'ST. PETERSBURG': 'STPA',
+              'TACOMA': 'TSEA',
+              'TAMPA': 'TTPA',
+              'TORONTO': 'YYTO',
+              'WASHINGTON': 'WWAS',
+              'WESTCHESTER COUNTY': 'HHPN'}
+
+
 
 
 MONTH_NUMBERS = {
@@ -213,104 +313,6 @@ DAY_NUMBERS = {
         'thirtieth': 30,
         'thirty first': 31}
 
-MISC_TIME_TRIGGERS = {
-        'morning': ['0', '1200'],
-        'afternoon': ['1200', '1800'],
-        'after': ['1200', '1800'],
-        'evening': ['1800', '2200'],
-        'late evening': ['2000', '2200'],
-        'lunch': ['1400'],
-        'noon': ['1200']
-        }
-
-STATE_CODES = ['TN', 'MA', 'CA', 'MD', 'IL', 'OH', 'NC', 'CO', 'TX', 'MI', 'NY',
-               'IN', 'NJ', 'NV', 'GA', 'FL', 'MO', 'WI', 'MN', 'PA', 'AZ', 'WA',
-               'UT', 'DC', 'PQ', 'ON']
-
-DAY_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
-
-CITIES = ['NASHVILLE', 'BOSTON', 'BURBANK', 'BALTIMORE', 'CHICAGO', 'CLEVELAND',
-          'CHARLOTTE', 'COLUMBUS', 'CINCINNATI', 'DENVER', 'DALLAS', 'DETROIT',
-          'FORT WORTH', 'HOUSTON', 'WESTCHESTER COUNTY', 'INDIANAPOLIS', 'NEWARK',
-          'LAS VEGAS', 'LOS ANGELES', 'LONG BEACH', 'ATLANTA', 'MEMPHIS', 'MIAMI',
-          'KANSAS CITY', 'MILWAUKEE', 'MINNEAPOLIS', 'NEW YORK', 'OAKLAND', 'ONTARIO',
-          'ORLANDO', 'PHILADELPHIA', 'PHOENIX', 'PITTSBURGH', 'ST. PAUL', 'SAN DIEGO',
-          'SEATTLE', 'SAN FRANCISCO', 'SAN JOSE', 'SALT LAKE CITY', 'ST. LOUIS',
-          'ST. PETERSBURG', 'TACOMA', 'TAMPA', 'WASHINGTON', 'MONTREAL', 'TORONTO']
-
-CITY_CODE_LIST = ['BBNA', 'BBOS', 'BBUR', 'BBWI', 'CCHI', 'CCLE', 'CCLT', 'CCMH', 'CCVG', 'DDEN', 'DDFW', 'DDTT', 'FDFW', 'HHOU', 'HHPN', 'IIND', 'JNYC', 'LLAS', 'LLAX', 'LLGB', 'MATL', 'MMEM', 'MMIA', 'MMKC', 'MMKE', 'MMSP', 'NNYC', 'OOAK', 'OONT', 'OORL', 'PPHL', 'PPHX', 'PPIT', 'SMSP', 'SSAN', 'SSEA', 'SSFO', 'SSJC', 'SSLC', 'SSTL', 'STPA', 'TSEA', 'TTPA', 'WWAS', 'YYMQ', 'YYTO']
-
-FARE_BASIS_CODE = ['B', 'BH', 'BHW', 'BHX', 'BL', 'BLW', 'BLX', 'BN', 'BOW', 'BOX',
-                   'BW', 'BX', 'C', 'CN', 'F', 'FN', 'H', 'HH', 'HHW', 'HHX', 'HL', 'HLW', 'HLX',
-                   'HOW', 'HOX', 'J', 'K', 'KH', 'KL', 'KN', 'LX', 'M', 'MH', 'ML', 'MOW', 'P',
-                   'Q', 'QH', 'QHW', 'QHX', 'QLW', 'QLX', 'QO', 'QOW', 'QOX', 'QW', 'QX', 'S',
-                   'U', 'V', 'VHW', 'VHX', 'VW', 'VX', 'Y', 'YH', 'YL', 'YN', 'YW', 'YX']
-
-CLASS = ['COACH', 'BUSINESS', 'FIRST', 'THRIST', 'STANDARD', 'SHUTTLE']
-
-MEALS = ['BREAKFAST', 'LUNCH', 'SNACK', 'DINNER']
-
-RESTRICT_CODES = ['AP/2', 'AP/6', 'AP/12', 'AP/20', 'AP/21', 'AP/57', 'AP/58', 'AP/60', 'AP/75', 'EX/9', 'EX/13', 'EX/14', 'EX/17', 'EX/19']
-
-AIRLINE_CODE_LIST = ['AR', '3J', 'AC', '9X', 'ZW', 'AS', '7V',
-                     'AA', 'TZ', 'HP', 'DH', 'EV', 'BE', 'BA',
-                     'HQ', 'CP', 'KW', 'SX', '9L', 'OH', 'CO',
-                     'OK', 'DL', '9E', 'QD', 'LH', 'XJ', 'MG',
-                     'YX', 'NX', '2V', 'NW', 'RP', 'AT', 'SN',
-                     'OO', 'WN', 'TG', 'FF', '9N', 'TW', 'RZ',
-                     'UA', 'US', 'OE']
-
-AIRLINE_CODES = {'argentina': 'AR',
-                 'alliance': '3J',
-                 'canada': 'AC',
-                 'ontario': 'GX',
-                 'wisconson': 'ZW',
-                 'alaska': 'AS',
-                 'alpha': '7V',
-                 'american': 'AA',
-                 'american trans': 'TZ',
-                 'america west': 'HP',
-                 'atlantic': 'DH',
-                 'atlantic.': 'EV',
-                 'braniff.': 'BE',
-                 'british': 'BA',
-                 'business': 'HQ',
-                 'canadian': 'CP',
-                 'carnival': 'KW',
-                 'christman': 'SX',
-                 'colgan': '9L',
-                 'comair': 'OH',
-                 'continental': 'CO',
-                 'czecho': 'OK',
-                 'delta': 'DL',
-                 'express': '9E',
-                 'eastern': 'EA',
-                 'grand': 'QD',
-                 'lufthansa': 'LH',
-                 'mesaba': 'XJ',
-                 'mgm': 'MG',
-                 'midwest': 'YX',
-                 'nation': 'NX',
-                 'northeast': '2V',
-                 'northwest': 'NW',
-                 'ontario express': '9X',
-                 'precision': 'RP',
-                 'royal': 'AT',
-                 'sabena': 'SN',
-                 'sky': 'OO',
-                 'south': 'WN',
-                 'thai': 'TG',
-                 'tower': 'FF',
-                 'states': '9N',
-                 'twa': 'TW',
-                 'world': 'RZ',
-                 'united': 'UA',
-                 'us': 'US',
-                 'west': 'OE'}
-
-CITY_CODES = {'NASHVILLE': 'BBNA', 'BOSTON': 'BBOS', 'BURBANK': 'BBUR', 'BALTIMORE': 'BBWI', 'CHICAGO': 'CCHI', 'CLEVELAND': 'CCLE', 'CHARLOTTE': 'CCLT', 'COLUMBUS': 'CCMH', 'CINCINNATI': 'CCVG', 'DENVER': 'DDEN', 'DALLAS': 'DDFW', 'DETROIT': 'DDTT', 'FORT WORTH': 'FDFW', 'HOUSTON': 'HHOU', 'WESTCHESTER COUNTY': 'HHPN', 'INDIANAPOLIS': 'IIND', 'NEWARK': 'JNYC', 'LAS VEGAS': 'LLAS', 'LOS ANGELES': 'LLAX', 'LONG BEACH': 'LLGB', 'ATLANTA': 'MATL', 'MEMPHIS': 'MMEM', 'MIAMI': 'MMIA', 'KANSAS CITY': 'MMKC', 'MILWAUKEE': 'MMKE', 'MINNEAPOLIS': 'MMSP', 'NEW YORK': 'NNYC', 'OAKLAND': 'OOAK', 'ONTARIO': 'OONT', 'ORLANDO': 'OORL', 'PHILADELPHIA': 'PPHL', 'PHOENIX': 'PPHX', 'PITTSBURGH': 'PPIT', 'ST. PAUL': 'SMSP', 'SAN DIEGO': 'SSAN', 'SEATTLE': 'SSEA', 'SAN FRANCISCO': 'SSFO', 'SAN JOSE': 'SSJC', 'SALT LAKE CITY': 'SSLC', 'ST. LOUIS': 'SSTL', 'ST. PETERSBURG': 'STPA', 'TACOMA': 'TSEA', 'TAMPA': 'TTPA', 'WASHINGTON': 'WWAS', 'MONTREAL': 'YYMQ', 'TORONTO': 'YYTO'}
-
-
 GROUND_SERVICE = {
         'air taxi': 'AIR TAXI OPERATION',
         'limo': 'LIMOUSINE',
@@ -319,20 +321,16 @@ GROUND_SERVICE = {
         'car': 'RENTAL CAR',
         'taxi': 'TAXI'}
 
+MISC_STR = {"every day" : "DAILY"}
 
-AIRPORT_CODES = ['ATL', 'NA', 'OS', 'UR', 'WI', 'CLE', 'CLT', 'CMH',
-                 'CVG', 'DAL', 'DCA', 'DEN', 'DET', 'DFW', 'DTW',
-                 'EWR', 'HOU', 'HPN', 'IAD', 'IAH', 'IND', 'JFK',
-                 'LAS', 'LAX', 'LGA', 'LG', 'MCI', 'MCO', 'MDW', 'MEM',
-                 'MIA', 'MKE', 'MSP', 'OAK', 'ONT', 'ORD', 'PHL', 'PHX',
-                 'PIE', 'PIT', 'SAN', 'SEA', 'SFO', 'SJC', 'SLC',
-                 'STL', 'TPA', 'YKZ', 'YMX', 'YTZ', 'YUL', 'YYZ']
+MISC_TIME_TRIGGERS = {'morning': ['0', '1200'],
+                      'afternoon': ['1200', '1800'],
+                      'after': ['1200', '1800'],
+                      'evening': ['1800', '2200'],
+                      'late evening': ['2000', '2200'],
+                      'lunch': ['1400'],
+                      'noon': ['1200']}
 
-STATES = ['ARIZONA', 'CALIFORNIA', 'COLORADO', 'DISTRICT OF COLUMBIA',
-          'FLORIDA', 'GEORGIA', 'ILLINOIS', 'INDIANA', 'MASSACHUSETTS',
-          'MARYLAND', 'MICHIGAN', 'MINNESOTA', 'MISSOURI', 'NORTH CAROLINA',
-          'NEW JERSEY', 'NEVADA', 'NEW YORK', 'OHIO', 'ONTARIO', 'PENNSYLVANIA',
-          'QUEBEC', 'TENNESSEE', 'TEXAS', 'UTAH', 'WASHINGTON', 'WISCONSIN']
 
 TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
                        'manufacturer', 'basic_type', 'propulsion',
@@ -368,7 +366,64 @@ TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
                           'minimum_stay', 'maximum_stay', 'application', 'no_discounts'],
           'state': ['state_code', 'state_name', 'country_name']}
 
+
+
 YES_NO = {'one way': 'NO',
           'economy': 'YES'}
 
-MISC_STR = {"every day" : "DAILY"}
+
+AIRPORT_CODES = ['ATL', 'NA', 'OS', 'UR', 'WI', 'CLE', 'CLT', 'CMH',
+                 'CVG', 'DAL', 'DCA', 'DEN', 'DET', 'DFW', 'DTW',
+                 'EWR', 'HOU', 'HPN', 'IAD', 'IAH', 'IND', 'JFK',
+                 'LAS', 'LAX', 'LGA', 'LG', 'MCI', 'MCO', 'MDW', 'MEM',
+                 'MIA', 'MKE', 'MSP', 'OAK', 'ONT', 'ORD', 'PHL', 'PHX',
+                 'PIE', 'PIT', 'SAN', 'SEA', 'SFO', 'SJC', 'SLC',
+                 'STL', 'TPA', 'YKZ', 'YMX', 'YTZ', 'YUL', 'YYZ']
+
+AIRLINE_CODE_LIST = ['AR', '3J', 'AC', '9X', 'ZW', 'AS', '7V',
+                     'AA', 'TZ', 'HP', 'DH', 'EV', 'BE', 'BA',
+                     'HQ', 'CP', 'KW', 'SX', '9L', 'OH', 'CO',
+                     'OK', 'DL', '9E', 'QD', 'LH', 'XJ', 'MG',
+                     'YX', 'NX', '2V', 'NW', 'RP', 'AT', 'SN',
+                     'OO', 'WN', 'TG', 'FF', '9N', 'TW', 'RZ',
+                     'UA', 'US', 'OE']
+
+CITIES = ['NASHVILLE', 'BOSTON', 'BURBANK', 'BALTIMORE', 'CHICAGO', 'CLEVELAND',
+          'CHARLOTTE', 'COLUMBUS', 'CINCINNATI', 'DENVER', 'DALLAS', 'DETROIT',
+          'FORT WORTH', 'HOUSTON', 'WESTCHESTER COUNTY', 'INDIANAPOLIS', 'NEWARK',
+          'LAS VEGAS', 'LOS ANGELES', 'LONG BEACH', 'ATLANTA', 'MEMPHIS', 'MIAMI',
+          'KANSAS CITY', 'MILWAUKEE', 'MINNEAPOLIS', 'NEW YORK', 'OAKLAND', 'ONTARIO',
+          'ORLANDO', 'PHILADELPHIA', 'PHOENIX', 'PITTSBURGH', 'ST. PAUL', 'SAN DIEGO',
+          'SEATTLE', 'SAN FRANCISCO', 'SAN JOSE', 'SALT LAKE CITY', 'ST. LOUIS',
+          'ST. PETERSBURG', 'TACOMA', 'TAMPA', 'WASHINGTON', 'MONTREAL', 'TORONTO']
+
+CITY_CODE_LIST = ['BBNA', 'BBOS', 'BBUR', 'BBWI', 'CCHI', 'CCLE', 'CCLT', 'CCMH', 'CCVG', 'DDEN',
+                  'DDFW', 'DDTT', 'FDFW', 'HHOU', 'HHPN', 'IIND', 'JNYC', 'LLAS', 'LLAX', 'LLGB',
+                  'MATL', 'MMEM', 'MMIA', 'MMKC', 'MMKE', 'MMSP', 'NNYC', 'OOAK', 'OONT', 'OORL',
+                  'PPHL', 'PPHX', 'PPIT', 'SMSP', 'SSAN', 'SSEA', 'SSFO', 'SSJC', 'SSLC', 'SSTL',
+                  'STPA', 'TSEA', 'TTPA', 'WWAS', 'YYMQ', 'YYTO']
+
+CLASS = ['COACH', 'BUSINESS', 'FIRST', 'THRIST', 'STANDARD', 'SHUTTLE']
+
+DAY_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
+
+FARE_BASIS_CODE = ['B', 'BH', 'BHW', 'BHX', 'BL', 'BLW', 'BLX', 'BN', 'BOW', 'BOX',
+                   'BW', 'BX', 'C', 'CN', 'F', 'FN', 'H', 'HH', 'HHW', 'HHX', 'HL', 'HLW', 'HLX',
+                   'HOW', 'HOX', 'J', 'K', 'KH', 'KL', 'KN', 'LX', 'M', 'MH', 'ML', 'MOW', 'P',
+                   'Q', 'QH', 'QHW', 'QHX', 'QLW', 'QLX', 'QO', 'QOW', 'QOX', 'QW', 'QX', 'S',
+                   'U', 'V', 'VHW', 'VHX', 'VW', 'VX', 'Y', 'YH', 'YL', 'YN', 'YW', 'YX']
+
+MEALS = ['BREAKFAST', 'LUNCH', 'SNACK', 'DINNER']
+
+RESTRICT_CODES = ['AP/2', 'AP/6', 'AP/12', 'AP/20', 'AP/21', 'AP/57', 'AP/58', 'AP/60',
+                  'AP/75', 'EX/9', 'EX/13', 'EX/14', 'EX/17', 'EX/19']
+
+STATES = ['ARIZONA', 'CALIFORNIA', 'COLORADO', 'DISTRICT OF COLUMBIA',
+          'FLORIDA', 'GEORGIA', 'ILLINOIS', 'INDIANA', 'MASSACHUSETTS',
+          'MARYLAND', 'MICHIGAN', 'MINNESOTA', 'MISSOURI', 'NORTH CAROLINA',
+          'NEW JERSEY', 'NEVADA', 'NEW YORK', 'OHIO', 'ONTARIO', 'PENNSYLVANIA',
+          'QUEBEC', 'TENNESSEE', 'TEXAS', 'UTAH', 'WASHINGTON', 'WISCONSIN']
+
+STATE_CODES = ['TN', 'MA', 'CA', 'MD', 'IL', 'OH', 'NC', 'CO', 'TX', 'MI', 'NY',
+               'IN', 'NJ', 'NV', 'GA', 'FL', 'MO', 'WI', 'MN', 'PA', 'AZ', 'WA',
+               'UT', 'DC', 'PQ', 'ON']
