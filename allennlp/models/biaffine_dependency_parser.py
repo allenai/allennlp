@@ -3,11 +3,12 @@ from typing import Dict, Optional, Tuple
 from overrides import overrides
 import torch
 import torch.nn.functional as F
+from torch.nn.modules import Dropout
 import numpy
 
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data import Vocabulary
-from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding
+from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding, InputVariationalDropout
 from allennlp.modules.matrix_attention.bilinear_matrix_attention import BilinearMatrixAttention
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
@@ -51,6 +52,10 @@ class BiaffineDependencyParser(Model):
     use_mst_decoding_for_validation : ``bool``, optional (default = True).
         Whether to use Edmond's algorithm to find the optimal minimum spanning tree during validation.
         If false, decoding is greedy.
+    dropout : ``float``, optional, (default = 0.0)
+        The variational dropout applied to the output of the encoder and MLP layers.
+    input_dropout : ``float``, optional, (default = 0.0)
+        The dropout applied to the embedded text input.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
@@ -63,6 +68,8 @@ class BiaffineDependencyParser(Model):
                  arc_representation_dim: int,
                  pos_tag_embedding: Embedding = None,
                  use_mst_decoding_for_validation: bool = True,
+                 dropout: float = 0.0,
+                 input_dropout: float = 0.0,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(BiaffineDependencyParser, self).__init__(vocab, regularizer)
@@ -86,6 +93,8 @@ class BiaffineDependencyParser(Model):
                                                       num_labels)
 
         self._pos_tag_embedding = pos_tag_embedding or None
+        self._dropout = InputVariationalDropout(dropout)
+        self._input_dropout = Dropout(input_dropout)
         representation_dim = text_field_embedder.get_output_dim()
         if pos_tag_embedding is not None:
             representation_dim += pos_tag_embedding.get_output_dim()
@@ -153,15 +162,17 @@ class BiaffineDependencyParser(Model):
 
         mask = get_text_field_mask(words)
         float_mask = mask.float()
+        embedded_text_input = self._input_dropout(embedded_text_input)
         encoded_text = self.encoder(embedded_text_input, mask)
+        encoded_text = self._dropout(encoded_text)
 
         # shape (batch_size, sequence_length, arc_representation_dim)
-        head_arc_representation = F.elu(self.head_arc_projection(encoded_text))
-        child_arc_representation = F.elu(self.child_arc_projection(encoded_text))
+        head_arc_representation = self._dropout(F.elu(self.head_arc_projection(encoded_text)))
+        child_arc_representation = self._dropout(F.elu(self.child_arc_projection(encoded_text)))
 
         # shape (batch_size, sequence_length, tag_representation_dim)
-        head_tag_representation = F.elu(self.head_tag_projection(encoded_text))
-        child_tag_representation = F.elu(self.child_tag_projection(encoded_text))
+        head_tag_representation = self._dropout(F.elu(self.head_tag_projection(encoded_text)))
+        child_tag_representation = self._dropout(F.elu(self.child_tag_projection(encoded_text)))
         # shape (batch_size, sequence_length, sequence_length)
         attended_arcs = self.arc_attention(head_arc_representation,
                                            child_arc_representation)
