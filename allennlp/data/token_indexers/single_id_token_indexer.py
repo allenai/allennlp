@@ -37,17 +37,24 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
             counter[self.namespace][text] += 1
 
     @overrides
-    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> int:
-        if getattr(token, 'text_id', None) is not None:
-            # `text_id` being set on the token means that we aren't using the vocab, we just use
-            # this id instead.
-            index = token.text_id
-        else:
-            text = token.text
-            if self.lowercase_tokens:
-                text = text.lower()
-            index = vocabulary.get_token_index(text, self.namespace)
-        return index
+    def tokens_to_indices(self,
+                          tokens: List[Token],
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[int]]:
+        indices: List[int] = []
+
+        for token in tokens:
+            if getattr(token, 'text_id', None) is not None:
+                # `text_id` being set on the token means that we aren't using the vocab, we just use
+                # this id instead.
+                indices.append(token.text_id)
+            else:
+                text = token.text
+                if self.lowercase_tokens:
+                    text = text.lower()
+                indices.append(vocabulary.get_token_index(text, self.namespace))
+
+        return {index_name: indices}
 
     @overrides
     def get_padding_token(self) -> int:
@@ -59,7 +66,8 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
 
     @overrides
     def pad_token_sequence(self,
-                           tokens: List[int],
-                           desired_num_tokens: int,
-                           padding_lengths: Dict[str, int]) -> List[int]:  # pylint: disable=unused-argument
-        return pad_sequence_to_length(tokens, desired_num_tokens)
+                           tokens: Dict[str, List[int]],
+                           desired_num_tokens: Dict[str, int],
+                           padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
+        return {key: pad_sequence_to_length(val, desired_num_tokens[key])
+                for key, val in tokens.items()}

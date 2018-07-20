@@ -38,6 +38,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         self.tokens = tokens
         self._token_indexers = token_indexers
         self._indexed_tokens: Optional[Dict[str, TokenList]] = None
+        self._indexer_name_to_indexed_token: Optional[Dict[str, List[str]]] = None
 
         if not all([isinstance(x, (Token, SpacyToken)) for x in tokens]):
             raise ConfigurationError("TextFields must be passed Tokens. "
@@ -51,11 +52,14 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
 
     @overrides
     def index(self, vocab: Vocabulary):
-        token_arrays = {}
+        token_arrays: Dict[str, TokenList] = {}
+        indexer_name_to_indexed_token: Dict[str, List[str]] = {}
         for indexer_name, indexer in self._token_indexers.items():
-            arrays = [indexer.token_to_indices(token, vocab) for token in self.tokens]
-            token_arrays[indexer_name] = arrays
+            token_indices = indexer.tokens_to_indices(self.tokens, vocab, indexer_name)
+            token_arrays.update(token_indices)
+            indexer_name_to_indexed_token[indexer_name] = list(token_indices.keys())
         self._indexed_tokens = token_arrays
+        self._indexer_name_to_indexed_token = indexer_name_to_indexed_token
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
@@ -71,11 +75,16 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         if self._indexed_tokens is None:
             raise ConfigurationError("You must call .index(vocabulary) on a "
                                      "field before determining padding lengths.")
+
+        # Each indexer can return a different sequence length, and for indexers that return
+        # multiple arrays each can have a different length.  We'll keep track of them here.
         for indexer_name, indexer in self._token_indexers.items():
             indexer_lengths = {}
 
-            # This is a list of dicts, one for each token in the field.
-            token_lengths = [indexer.get_padding_lengths(token) for token in self._indexed_tokens[indexer_name]]
+            for indexed_tokens_key in self._indexer_name_to_indexed_token[indexer_name]:
+                # This is a list of dicts, one for each token in the field.
+                token_lengths = [indexer.get_padding_lengths(token)
+                                 for token in self._indexed_tokens[indexed_tokens_key]]
             if not token_lengths:
                 # This is a padding edge case and occurs when we want to pad a ListField of
                 # TextFields. In order to pad the list field, we need to be able to have an
@@ -84,11 +93,20 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
                 token_lengths = [{}]
             # Iterate over the keys and find the maximum token length.
             # It's fine to iterate over the keys of the first token since all tokens have the same keys.
-            for key in token_lengths[0].keys():
+            for key in token_lengths[0]:
                 indexer_lengths[key] = max(x[key] if key in x else 0 for x in token_lengths)
             lengths.append(indexer_lengths)
-        any_indexed_token_key = list(self._indexed_tokens.keys())[0]
-        padding_lengths = {'num_tokens': len(self._indexed_tokens[any_indexed_token_key])}
+
+        indexer_sequence_lengths = {key: len(val) for key, val in self._indexed_tokens.items()}
+        # Get the padding lengths for sequence lengths.
+        if len(set(indexer_sequence_lengths.values())) == 1:
+            # This is the default case where all indexers return the same length.
+            # Keep the existing 'num_tokens' key for backward compatibility with existing config files.
+            padding_lengths = {'num_tokens': list(indexer_sequence_lengths.values())[0]}
+        else:
+            # The indexers return different lengths.
+            padding_lengths = indexer_sequence_lengths
+
         # Get all keys which have been used for padding for each indexer and take the max if there are duplicates.
         padding_keys = {key for d in lengths for key in d.keys()}
         for padding_key in padding_keys:
@@ -104,9 +122,21 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
                   padding_lengths: Dict[str, int],
                   cuda_device: int = -1) -> Dict[str, torch.Tensor]:
         tensors = {}
-        desired_num_tokens = padding_lengths['num_tokens']
+        num_tokens = padding_lengths.get('num_tokens')
         for indexer_name, indexer in self._token_indexers.items():
-            padded_array = indexer.pad_token_sequence(self._indexed_tokens[indexer_name],
+            if num_tokens is None:
+                # The indexers return different lengths.
+                # Get the desired_num_tokens for this indexer.
+                desired_num_tokens = {
+                        indexed_tokens_key: padding_lengths[indexed_tokens_key]
+                        for indexed_tokens_key in self._indexer_name_to_indexed_token[indexer_name]
+                }
+            else:
+                desired_num_tokens = {indexer_name: num_tokens}
+
+            indices_to_pad = {indexed_tokens_key: self._indexed_tokens[indexed_tokens_key]
+                              for indexed_tokens_key in self._indexer_name_to_indexed_token[indexer_name]}
+            padded_array = indexer.pad_token_sequence(indices_to_pad,
                                                       desired_num_tokens, padding_lengths)
             # We use the key of the indexer to recognise what the tensor corresponds to within the
             # field (i.e. the result of word indexing, or the result of character indexing, for
@@ -115,17 +145,24 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
             # than a LongTensor here, and it's not clear how to signal that.  Maybe we'll need to
             # add a class method to TokenIndexer to tell us the type?  But we can worry about that
             # when there's a compelling use case for it.
-            tensor = torch.LongTensor(padded_array)
-            tensors[indexer_name] = tensor if cuda_device == -1 else tensor.cuda(cuda_device)
+            indexer_tensors = {key: torch.LongTensor(array) for key, array in padded_array.items()}
+            if cuda_device > -1:
+                for key in indexer_tensors.keys():
+                    indexer_tensors[key] = indexer_tensors[key].cuda(cuda_device)
+            tensors.update(indexer_tensors)
         return tensors
 
     @overrides
     def empty_field(self):
         # pylint: disable=protected-access
         text_field = TextField([], self._token_indexers)
-        # This needs to be a dict of empty lists for each token_indexer,
-        # for padding reasons in ListField.
-        text_field._indexed_tokens = {name: [] for name in self._token_indexers.keys()}
+        text_field._indexed_tokens = {}
+        text_field._indexer_name_to_indexed_token = {}
+        for indexer_name, indexer in self._token_indexers.items():
+            array_keys = indexer.get_keys(indexer_name)
+            for key in array_keys:
+                text_field._indexed_tokens[key] = []
+            text_field._indexer_name_to_indexed_token[indexer_name] = array_keys
         return text_field
 
     @overrides

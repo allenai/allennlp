@@ -26,21 +26,19 @@ a model.
     --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
-from typing import Dict, List
-from collections import defaultdict
 import argparse
 import logging
 import os
-
-import numpy
+import re
 
 from allennlp.commands.train import datasets_from_params
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
-from allennlp.common.util import prepare_environment
-from allennlp.data.vocabulary import DEFAULT_NON_PADDED_NAMESPACES
-from allennlp.data import Vocabulary, Instance
+from allennlp.common.util import prepare_environment, get_frozen_and_tunable_parameter_names
+from allennlp.data import Vocabulary
+from allennlp.data.dataset import Batch
+from allennlp.models import Model
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -87,14 +85,12 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
     prepare_environment(params)
 
     vocab_params = params.pop("vocabulary", {})
-    vocab_dir = vocab_params.pop('directory_path', None)
-
-    if vocab_dir is not None:
-        logger.info("Found a vocabulary.directory_path parameter in your config. "
-                    "Also saving the vocab we create to that location.")
-        os.makedirs(vocab_dir, exist_ok=True)
-
     os.makedirs(serialization_dir, exist_ok=True)
+    vocab_dir = os.path.join(serialization_dir, "vocabulary")
+
+    if os.path.isdir(vocab_dir) and os.listdir(vocab_dir) is not None:
+        raise ConfigurationError("The 'vocabulary' directory in the provided "
+                                 "serialization directory is non-empty")
 
     all_datasets = datasets_from_params(params)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
@@ -103,100 +99,34 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
         if dataset not in all_datasets:
             raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
 
-    logger.info("Creating a vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
+    logger.info("From dataset instances, %s will be considered for vocabulary creation.",
+                ", ".join(datasets_for_vocab_creation))
 
     instances = [instance for key, dataset in all_datasets.items()
                  for instance in dataset
                  if key in datasets_for_vocab_creation]
 
-    vocabulary = verbosely_create_vocabulary(vocab_params, instances)
+    vocab = Vocabulary.from_params(vocab_params, instances)
+    dataset = Batch(instances)
+    dataset.index_instances(vocab)
+    dataset.print_statistics()
+    vocab.print_statistics()
 
-    logger.info(f"writing the vocabulary to {serialization_dir}.")
-    vocabulary.save_to_files(os.path.join(serialization_dir, "vocabulary"))
-    if vocab_dir is not None and os.path.exists(vocab_dir) and os.listdir(vocab_dir) is not None:
-        logger.info(f"You passed a vocabulary.directory_path in your config which already exists "
-                    f"and is non-empty. Refusing to overwrite - we saved it to {serialization_dir} instead.")
-    elif vocab_dir is not None:
-        logger.info(f"You passed a vocabulary.directory_path in your config which was empty. Also "
-                    f"writing the vocabulary to {vocab_dir}.")
-        vocabulary.save_to_files(vocab_dir)
+    logger.info(f"writing the vocabulary to {vocab_dir}.")
+    vocab.save_to_files(vocab_dir)
 
+    model = Model.from_params(vocab=vocab, params=params.pop('model'))
+    trainer_params = params.pop("trainer")
+    no_grad_regexes = trainer_params.pop("no_grad", ())
+    for name, parameter in model.named_parameters():
+        if any(re.search(regex, name) for regex in no_grad_regexes):
+            parameter.requires_grad_(False)
 
-def verbosely_create_vocabulary(vocab_params: Params, instances: List[Instance]) -> Vocabulary:
-    """
-    Given a parameter config specifying a vocabulary and a list of instances, this function
-    creates a Vocabulary from the instances. Additionally, it logs corpus statistics, prints
-    a random selection of instances and prints vocabulary sizes and namespaces.
-
-    Parameters
-    ----------
-    vocab_params : ``Params``, required
-        The parameters for the Vocabulary we create.
-    instances : ``List[Instance]``, required.
-        The instances to build the vocabulary from.
-
-    Returns
-    -------
-    The created Vocabulary.
-    """
-    # This is exactly the code in Vocabulary.from_params,
-    # but we want to retain access to the counter we use to
-    # index the data so we can compute statistics about the corpus.
-    min_count = vocab_params.pop("min_count", None)
-    max_vocab_size = vocab_params.pop_int("max_vocab_size", None)
-    non_padded_namespaces = vocab_params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
-    pretrained_files = vocab_params.pop("pretrained_files", {})
-    only_include_pretrained_words = vocab_params.pop_bool("only_include_pretrained_words", False)
-    vocab_params.assert_empty("Vocabulary - from dataset")
-
-    logger.info("Fitting token dictionary from dataset.")
-    namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
-    sequence_field_lengths: Dict[str, List] = defaultdict(list)
-
-    for instance in instances:
-        instance.count_vocab_items(namespace_token_counts)
-    vocabulary = Vocabulary(counter=namespace_token_counts,
-                            min_count=min_count,
-                            max_vocab_size=max_vocab_size,
-                            non_padded_namespaces=non_padded_namespaces,
-                            pretrained_files=pretrained_files,
-                            only_include_pretrained_words=only_include_pretrained_words)
-
-    for instance in instances:
-        instance.index_fields(vocabulary)
-        for field, field_padding_lengths in instance.get_padding_lengths().items():
-            for key, value in field_padding_lengths.items():
-                sequence_field_lengths[f"{field}.{key}"].append(value)
-
-    print("\n\n----Dataset Statistics----\n")
-    for name, lengths in sequence_field_lengths.items():
-        print(f"Statistics for {name}:")
-        print(f"\tLengths: Mean: {numpy.mean(lengths)}, Standard Dev: {numpy.std(lengths)}, "
-              f"Max: {numpy.max(lengths)}, Min: {numpy.min(lengths)}")
-
-    print("\n10 Random instances: ")
-    for i in list(numpy.random.randint(len(instances), size=10)):
-        print(f"Instance {i}:")
-        print(f"\t{instances[i]}")
-
-    print("\n\n----Vocabulary Statistics----\n")
-    print(vocabulary)
-
-    for namespace in namespace_token_counts:
-        tokens_with_counts = list(namespace_token_counts[namespace].items())
-        tokens_with_counts.sort(key=lambda x: x[1], reverse=True)
-        print(f"\nTop 10 most frequent tokens in namespace '{namespace}':")
-        for token, freq in tokens_with_counts[:10]:
-            print(f"\tToken: {token}\t\tFrequency: {freq}")
-        # Now sort by token length, not frequency
-        tokens_with_counts.sort(key=lambda x: len(x[0]), reverse=True)
-
-        print(f"\nTop 10 longest tokens in namespace '{namespace}':")
-        for token, freq in tokens_with_counts[:10]:
-            print(f"\tToken: {token}\t\tlength: {len(token)}\tFrequency: {freq}")
-
-        print(f"\nTop 10 shortest tokens in namespace '{namespace}':")
-        for token, freq in reversed(tokens_with_counts[-10:]):
-            print(f"\tToken: {token}\t\tlength: {len(token)}\tFrequency: {freq}")
-
-    return vocabulary
+    frozen_parameter_names, tunable_parameter_names = \
+                   get_frozen_and_tunable_parameter_names(model)
+    logger.info("Following parameters are Frozen  (without gradient):")
+    for name in frozen_parameter_names:
+        logger.info(name)
+    logger.info("Following parameters are Tunable (with gradient):")
+    for name in tunable_parameter_names:
+        logger.info(name)
