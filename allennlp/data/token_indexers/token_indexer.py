@@ -60,9 +60,9 @@ class TokenIndexer(Generic[TokenType], Registrable):
         raise NotImplementedError
 
     def pad_token_sequence(self,
-                           tokens: List[TokenType],
-                           desired_num_tokens: int,
-                           padding_lengths: Dict[str, int]) -> List[TokenType]:
+                           tokens: Dict[str, List[TokenType]],
+                           desired_num_tokens: Dict[str, int],
+                           padding_lengths: Dict[str, int]) -> Dict[str, List[TokenType]]:
         """
         This method pads a list of tokens to ``desired_num_tokens`` and returns a padded copy of the
         input tokens.  If the input token list is longer than ``desired_num_tokens`` then it will be
@@ -73,3 +73,10 @@ class TokenIndexer(Generic[TokenType], Registrable):
         character-level padding.
         """
         raise NotImplementedError
+
+    def get_keys(self, index_name: str) -> List[str]:
+        """
+        Return a list of the keys this indexer return from ``tokens_to_indices``.
+        """
+        # pylint: disable=no-self-use
+        return [index_name]
