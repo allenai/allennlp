@@ -1,0 +1,44 @@
+{
+    "dataset_reader":{
+        "type":"universal_dependencies"
+    },
+    "train_data_path": "allennlp/tests/fixtures/data/dependencies.conllu",
+    "validation_data_path": "allennlp/tests/fixtures/data/dependencies.conllu",
+    "model": {
+      "type": "biaffine_parser",
+      "text_field_embedder": {
+        "tokens": {
+          "type": "embedding",
+          "embedding_dim": 2,
+          "trainable": true
+        }
+      },
+      "encoder": {
+        "type": "lstm",
+        "input_size": 2,
+        "hidden_size": 4,
+        "num_layers": 1
+      },
+      "arc_representation_dim": 3,
+      "tag_representation_dim": 3
+    },
+
+    "iterator": {
+      "type": "bucket",
+      "sorting_keys": [["words", "num_tokens"]],
+      "padding_noise": 0.0,
+      "batch_size" : 5
+    },
+    "trainer": {
+      "num_epochs": 1,
+      "grad_norm": 1.0,
+      "patience": 500,
+      "cuda_device": -1,
+      "optimizer": {
+        "type": "adadelta",
+        "lr": 0.000001,
+        "rho": 0.95
+      }
+    }
+  }
+
