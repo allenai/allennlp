@@ -111,7 +111,7 @@ class BiaffineDependencyParser(Model):
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
             tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is: ``{"tokens":
-            Tensor(batch_size, num_tokens)}``. This dictionary will have the same keys as were used
+            Tensor(batch_size, sequence_length)}``. This dictionary will have the same keys as were used
             for the ``TokenIndexers`` when you created the ``TextField`` representing your
             sequence.  The dictionary is designed to be passed directly to a ``TextFieldEmbedder``,
             which knows how to combine different word representations into a single vector per
@@ -120,10 +120,10 @@ class BiaffineDependencyParser(Model):
             The output of a ``SequenceLabelField`` containing POS tags.
         head_tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of integer gold class labels for the arcs
-            in the dependency parse. Has shape ``(batch_size, num_tokens)``.
+            in the dependency parse. Has shape ``(batch_size, sequence_length)``.
         head_indices : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of integer indices denoting the parent of every
-            word in the dependency parse. Has shape ``(batch_size, num_tokens)``.
+            word in the dependency parse. Has shape ``(batch_size, sequence_length)``.
 
         Returns
         -------
@@ -137,10 +137,10 @@ class BiaffineDependencyParser(Model):
             tags for the gold arcs.
         heads : ``torch.FloatTensor``
             The predicted head indices for each word. A tensor
-            of shape (batch_size, timesteps).
+            of shape (batch_size, sequence_length).
         head_types : ``torch.FloatTensor``
             The predicted head types for each arc. A tensor
-            of shape (batch_size, timesteps).
+            of shape (batch_size, sequence_length).
         mask : ``torch.LongTensor``
             A mask denoting the padded elements in the batch.
         """
@@ -155,14 +155,14 @@ class BiaffineDependencyParser(Model):
         float_mask = mask.float()
         encoded_text = self.encoder(embedded_text_input, mask)
 
-        # shape (batch_size, timesteps, arc_representation_dim)
+        # shape (batch_size, sequence_length, arc_representation_dim)
         head_arc_representation = F.elu(self.head_arc_projection(encoded_text))
         child_arc_representation = F.elu(self.child_arc_projection(encoded_text))
 
-        # shape (batch_size, timesteps, tag_representation_dim)
+        # shape (batch_size, sequence_length, tag_representation_dim)
         head_tag_representation = F.elu(self.head_tag_projection(encoded_text))
         child_tag_representation = F.elu(self.child_tag_projection(encoded_text))
-        # shape (batch_size, timesteps, timesteps)
+        # shape (batch_size, sequence_length, sequence_length)
         attended_arcs = self.arc_attention(head_arc_representation,
                                            child_arc_representation)
 
@@ -247,21 +247,21 @@ class BiaffineDependencyParser(Model):
         Parameters
         ----------
         head_tag_representation : ``torch.Tensor``, required.
-            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            A tensor of shape (batch_size, sequence_length, tag_representation_dim),
             which will be used to generate predictions for the dependency tags
             for the given arcs.
         child_tag_representation : ``torch.Tensor``, required
-            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            A tensor of shape (batch_size, sequence_length, tag_representation_dim),
             which will be used to generate predictions for the dependency tags
             for the given arcs.
         attended_arcs : ``torch.Tensor``, required.
-            A tensor of shape (batch_size, timesteps, timesteps) used to generate
+            A tensor of shape (batch_size, sequence_length, sequence_length) used to generate
             a distribution over attachements of a given word to all other words.
         head_indices : ``torch.Tensor``, required.
-            A tensor of shape (batch_size, timesteps).
+            A tensor of shape (batch_size, sequence_length).
             The indices of the heads for every word.
         head_tags : ``torch.Tensor``, required.
-            A tensor of shape (batch_size, timesteps).
+            A tensor of shape (batch_size, sequence_length).
             The dependency labels of the heads for every word.
         mask : ``torch.Tensor``, required.
             A mask of shape (batch_size, sequence_length), denoting unpadded
@@ -275,26 +275,27 @@ class BiaffineDependencyParser(Model):
             The negative log likelihood from the arc tag loss.
         """
         float_mask = mask.float()
-        batch_size, timesteps, _ = attended_arcs.size()
-        range_vector = get_range_vector(batch_size, get_device_of(attended_arcs))
-        # shape (batch_size, timesteps, timesteps)
+        batch_size, sequence_length, _ = attended_arcs.size()
+        # shape (batch_size, 1)
+        range_vector = get_range_vector(batch_size, get_device_of(attended_arcs)).unsqueeze(1)
+        # shape (batch_size, sequence_length, sequence_length)
         normalised_arc_logits = last_dim_log_softmax(attended_arcs,
                                                      mask) * float_mask.unsqueeze(2) * float_mask.unsqueeze(1)
 
-        # shape (batch_size, timesteps, num_head_tags)
+        # shape (batch_size, sequence_length, num_head_tags)
         head_tag_logits = self._get_head_tags(head_tag_representation, child_tag_representation, head_indices)
         normalised_head_tag_logits = last_dim_log_softmax(head_tag_logits,
                                                           mask.unsqueeze(-1)) * float_mask.unsqueeze(-1)
-        # index matrix with shape (timesteps, batch)
-        timestep_index = get_range_vector(timesteps, get_device_of(attended_arcs))
-        child_index = timestep_index.view(timesteps, 1).expand(timesteps, batch_size).long()
-        # shape (timesteps, batch_size)
-        arc_loss = normalised_arc_logits[range_vector, child_index, head_indices.t()]
-        tag_loss = normalised_head_tag_logits[range_vector, child_index, head_tags.t()]
+        # index matrix with shape (batch, sequence_length)
+        timestep_index = get_range_vector(sequence_length, get_device_of(attended_arcs))
+        child_index = timestep_index.view(1, sequence_length).expand(batch_size, sequence_length).long()
+        # shape (batch_size, sequence_length)
+        arc_loss = normalised_arc_logits[range_vector, child_index, head_indices]
+        tag_loss = normalised_head_tag_logits[range_vector, child_index, head_tags]
         # We don't care about predictions for the symbolic ROOT token's head,
         # so we remove it from the loss.
-        arc_loss = arc_loss[1:, :]
-        tag_loss = tag_loss[1:, :]
+        arc_loss = arc_loss[:, 1:]
+        tag_loss = tag_loss[:, 1:]
 
         # The number of valid positions is equal to the number of unmasked elements minus
         # 1 per sequence in the batch, to account for the symbolic HEAD token.
@@ -319,24 +320,24 @@ class BiaffineDependencyParser(Model):
         Parameters
         ----------
         head_tag_representation : ``torch.Tensor``, required.
-            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            A tensor of shape (batch_size, sequence_length, tag_representation_dim),
             which will be used to generate predictions for the dependency tags
             for the given arcs.
         child_tag_representation : ``torch.Tensor``, required
-            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            A tensor of shape (batch_size, sequence_length, tag_representation_dim),
             which will be used to generate predictions for the dependency tags
             for the given arcs.
         attended_arcs : ``torch.Tensor``, required.
-            A tensor of shape (batch_size, timesteps, timesteps) used to generate
+            A tensor of shape (batch_size, sequence_length, sequence_length) used to generate
             a distribution over attachements of a given word to all other words.
 
         Returns
         -------
         heads : ``torch.Tensor``
-            A tensor of shape (batch_size, timesteps) representing the
+            A tensor of shape (batch_size, sequence_length) representing the
             greedily decoded heads of each word.
         head_tags : ``torch.Tensor``
-            A tensor of shape (batch_size, timesteps) representing the
+            A tensor of shape (batch_size, sequence_length) representing the
             dependency tags of the greedily decoded heads of each word.
         """
         # Mask the diagonal, because the head of a word can't be itself.
@@ -347,11 +348,11 @@ class BiaffineDependencyParser(Model):
             attended_arcs.masked_fill_(minus_mask, -numpy.inf)
 
         # Compute the heads greedily.
-        # shape (batch_size, timesteps)
+        # shape (batch_size, sequence_length)
         _, heads = attended_arcs.max(dim=2)
 
         # Given the greedily predicted heads, decode their dependency tags.
-        # shape (batch_size, timesteps, num_head_tags)
+        # shape (batch_size, sequence_length, num_head_tags)
         head_tag_logits = self._get_head_tags(head_tag_representation,
                                               child_tag_representation,
                                               heads)
@@ -374,41 +375,41 @@ class BiaffineDependencyParser(Model):
         Parameters
         ----------
         head_tag_representation : ``torch.Tensor``, required.
-            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            A tensor of shape (batch_size, sequence_length, tag_representation_dim),
             which will be used to generate predictions for the dependency tags
             for the given arcs.
         child_tag_representation : ``torch.Tensor``, required
-            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            A tensor of shape (batch_size, sequence_length, tag_representation_dim),
             which will be used to generate predictions for the dependency tags
             for the given arcs.
         attended_arcs : ``torch.Tensor``, required.
-            A tensor of shape (batch_size, timesteps, timesteps) used to generate
+            A tensor of shape (batch_size, sequence_length, sequence_length) used to generate
             a distribution over attachements of a given word to all other words.
 
         Returns
         -------
         heads : ``torch.Tensor``
-            A tensor of shape (batch_size, timesteps) representing the
+            A tensor of shape (batch_size, sequence_length) representing the
             greedily decoded heads of each word.
         head_tags : ``torch.Tensor``
-            A tensor of shape (batch_size, timesteps) representing the
+            A tensor of shape (batch_size, sequence_length) representing the
             dependency tags of the optimally decoded heads of each word.
         """
-        batch_size, timesteps, tag_representation_dim = head_tag_representation.size()
+        batch_size, sequence_length, tag_representation_dim = head_tag_representation.size()
 
         lengths = mask.data.sum(dim=1).long().cpu().numpy()
 
-        expanded_shape = [batch_size, timesteps, timesteps, tag_representation_dim]
+        expanded_shape = [batch_size, sequence_length, sequence_length, tag_representation_dim]
         head_tag_representation = head_tag_representation.unsqueeze(2)
         head_tag_representation = head_tag_representation.expand(*expanded_shape).contiguous()
         child_tag_representation = child_tag_representation.unsqueeze(1)
         child_tag_representation = child_tag_representation.expand(*expanded_shape).contiguous()
-        # Shape (batch_size, timesteps, timesteps, num_head_tags)
+        # Shape (batch_size, sequence_length, sequence_length, num_head_tags)
         pairwise_head_logits = self.tag_bilinear(head_tag_representation, child_tag_representation)
 
         # Note that this log_softmax is over the tag dimension, and we don't consider pairs
         # of tags which are invalid (e.g are a pair which includes a padded element) anyway below.
-        # Shape (batch, num_labels,timesteps, timesteps)
+        # Shape (batch, num_labels,sequence_length, sequence_length)
         normalized_pairwise_head_logits = F.log_softmax(pairwise_head_logits, dim=3).permute(0, 3, 1, 2)
 
         # Mask padded tokens, because we only want to consider actual words as heads.
@@ -416,9 +417,9 @@ class BiaffineDependencyParser(Model):
         minus_mask = (1 - mask.float()) * minus_inf
         attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
-        # Shape (batch_size, timesteps, timesteps)
+        # Shape (batch_size, sequence_length, sequence_length)
         normalized_arc_logits = F.log_softmax(attended_arcs, dim=2)
-        # Shape (batch_size, num_head_tags, timesteps, timesteps)
+        # Shape (batch_size, num_head_tags, sequence_length, sequence_length)
         batch_energy = torch.exp(normalized_arc_logits.unsqueeze(1) + normalized_pairwise_head_logits)
 
         heads = []
@@ -443,47 +444,38 @@ class BiaffineDependencyParser(Model):
         Parameters
         ----------
         head_tag_representation : ``torch.Tensor``, required.
-            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            A tensor of shape (batch_size, sequence_length, tag_representation_dim),
             which will be used to generate predictions for the dependency tags
             for the given arcs.
         child_tag_representation : ``torch.Tensor``, required
-            A tensor of shape (batch_size, timesteps, tag_representation_dim),
+            A tensor of shape (batch_size, sequence_length, tag_representation_dim),
             which will be used to generate predictions for the dependency tags
             for the given arcs.
         head_indices : ``torch.Tensor``, required.
-            A tensor of shape (batch_size, timesteps). The indices of the heads
+            A tensor of shape (batch_size, sequence_length). The indices of the heads
             for every word.
 
         Returns
         -------
         head_tag_logits : ``torch.Tensor``
-            A tensor of shape (batch_size, timesteps, num_head_tags),
+            A tensor of shape (batch_size, sequence_length, num_head_tags),
             representing logits for predicting a distribution over tags
             for each arc.
         """
         batch_size = head_tag_representation.size(0)
         # shape (batch_size,)
-        range_vector = get_range_vector(batch_size, get_device_of(head_tag_representation))
+        range_vector = get_range_vector(batch_size, get_device_of(head_tag_representation)).unsqueeze(1)
 
-        # TODO(Mark): This can probably replace the code in the "batch_index_select" function in utils.
+        # This next statement is quite a complex piece of indexing, which you really
+        # need to read the docs to understand. See here:
+        # https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#advanced-indexing
+        # In effect, we are selecting the indices corresponding to the heads of each word from the
+        # sequence length dimension for each element in the batch.
 
-        # This next statement is quite a complex piece of indexing. What we are doing here is:
-
-        # 1. Indexing in to the batch dimension with an index vector.
-        #    Imagine that this momentarily creates a batch_size number of
-        #    (timesteps, embedding_dim) shaped tensors.
-        # 2. Indexing into the timesteps dimension with the releveant indexes which we
-        #    require for this batch element. Because we already created a 'virtual'
-        #    (timesteps, embedding_dim) shaped tensor _for this batch element_, we
-        #    need to transpose the indices to match the first dimension's shape.
-        # 3. This results in a tensor of shape (timesteps, batch_size, embedding_dim),
-        #    so we need to transpose back to put the batch dimension first.
-
-        # shape (batch_size, timesteps, tag_representation_dim)
-        selected_head_tag_representations = head_tag_representation[range_vector,
-                                                                    head_indices.t()].transpose(0, 1)
+        # shape (batch_size, sequence_length, tag_representation_dim)
+        selected_head_tag_representations = head_tag_representation[range_vector, head_indices]
         selected_head_tag_representations = selected_head_tag_representations.contiguous()
-        # shape (batch_size, timesteps, num_head_tags)
+        # shape (batch_size, sequence_length, num_head_tags)
         head_tag_logits = self.tag_bilinear(selected_head_tag_representations,
                                             child_tag_representation)
         return head_tag_logits
