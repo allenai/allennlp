@@ -107,7 +107,7 @@ class BiaffineDependencyParser(Model):
 
         self.use_mst_decoding_for_validation = use_mst_decoding_for_validation
 
-        tags = self.vocab.get_token_to_index_vocabulary("head_tags")
+        tags = self.vocab.get_token_to_index_vocabulary("pos")
         tag_indices = {tag: index for tag, index in tags.items() if tag in POS_TO_IGNORE}
         self._pos_to_ignore = set(tag_indices.keys())
         logger.info(f"Found POS tags correspoding to the following punctuation : {tag_indices}. "

@@ -49,11 +49,11 @@ class UniversalDependenciesDatasetReader(DatasetReader):
             logger.info("Reading UD instances from conllu dataset at: %s", file_path)
 
             for annotation in  lazy_parse(conllu_file.read()):
-
-                yield self.text_to_instance(
-                        [x["form"] for x in annotation],
-                        [x["upostag"] for x in annotation],
-                        [x["deps"][0] for x in annotation])
+                heads = [x["head"] for x in annotation]
+                tags = [x["deprel"] for x in annotation]
+                words = [x["form"] for x in annotation]
+                pos_tags = [x["upostag"] for x in annotation]
+                yield self.text_to_instance(words, pos_tags, list(zip(tags, heads)))
 
     @overrides
     def text_to_instance(self,  # type: ignore
