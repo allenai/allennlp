@@ -4,7 +4,6 @@ from overrides import overrides
 import torch
 
 from allennlp.training.metrics.metric import Metric
-from allennlp.data import Vocabulary
 
 
 @Metric.register("attachment_scores")
@@ -29,7 +28,7 @@ class AttachmentScores(Metric):
         self._total_words = 0.
         self._total_sentences = 0.
 
-        self._ignore_classes: List[str] = ignore_classes or []
+        self._ignore_classes: List[int] = ignore_classes or []
 
     def __call__(self, # type: ignore
                  predicted_indices: torch.Tensor,
