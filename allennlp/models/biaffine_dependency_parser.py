@@ -1,4 +1,5 @@
 from typing import Dict, Optional, Tuple
+import logging
 
 from overrides import overrides
 import torch
@@ -16,6 +17,8 @@ from allennlp.nn.util import get_text_field_mask, get_range_vector
 from allennlp.nn.util import get_device_of, last_dim_log_softmax, get_lengths_from_binary_sequence_mask
 from allennlp.nn.decoding.chu_liu_edmonds import decode_mst
 from allennlp.training.metrics import AttachmentScores
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 POS_TO_IGNORE = {'``', "''", ':', ',', '.', 'PU', 'PUNCT'}
 
@@ -105,9 +108,10 @@ class BiaffineDependencyParser(Model):
         self.use_mst_decoding_for_validation = use_mst_decoding_for_validation
 
         tags = self.vocab.get_token_to_index_vocabulary("head_tags")
-        tag_indices = [tags.get(tag) for tag in POS_TO_IGNORE]
-        self._pos_to_ignore = {tag_index for tag_index in tag_indices
-                               if tag_index is not None}
+        tag_indices = {tag: index for tag, index in tags.items() if tag in POS_TO_IGNORE}
+        self._pos_to_ignore = set(tag_indices.keys())
+        logger.info(f"Found POS tags correspoding to the following punctuation : {tag_indices}. "
+                    "Ignoring words with these POS tags for evaluation.")
 
         self._attachment_scores = AttachmentScores()
         initializer(self)
