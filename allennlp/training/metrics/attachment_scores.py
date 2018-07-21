@@ -1,9 +1,10 @@
-from typing import Optional
+from typing import Optional, List
 
 from overrides import overrides
 import torch
 
 from allennlp.training.metrics.metric import Metric
+from allennlp.data import Vocabulary
 
 
 @Metric.register("attachment_scores")
@@ -15,13 +16,16 @@ class AttachmentScores(Metric):
     to this metric is the sampled predictions, not the distribution
     itself.
     """
-    def __init__(self) -> None:
+    def __init__(self,
+                 ignore_classes: List[int] = None) -> None:
         self._labeled_correct = 0.
         self._unlabeled_correct = 0.
         self._exact_labeled_correct = 0.
         self._exact_unlabeled_correct = 0.
         self._total_words = 0.
         self._total_sentences = 0.
+
+        self._ignore_classes: List[str] = ignore_classes
 
     def __call__(self, # type: ignore
                  predicted_indices: torch.Tensor,
@@ -52,6 +56,14 @@ class AttachmentScores(Metric):
         predicted_labels = predicted_labels.long()
         gold_indices = gold_indices.long()
         gold_labels = gold_labels.long()
+
+        # Multiply by a mask donoting locations of
+        # gold labels which we should ignore.
+        for label in self._ignore_classes:
+            
+            label_mask = gold_indices.eq(label)
+
+            mask = mask * (1 - label_mask).long()
 
         correct_indices = predicted_indices.eq(gold_indices).long() * mask
         unlabeled_exact_match = (correct_indices + (1 - mask)).prod(dim=-1)
