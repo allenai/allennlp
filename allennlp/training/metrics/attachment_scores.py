@@ -15,9 +15,13 @@ class AttachmentScores(Metric):
     for both labeled and unlabeled trees. Note that the input
     to this metric is the sampled predictions, not the distribution
     itself.
+
+    Parameters
+    ----------
+    ignore_classes : ``List[int]``, optional (default = None)
+        A list of label ids to ignore when computing metrics.
     """
-    def __init__(self,
-                 ignore_classes: List[int] = None) -> None:
+    def __init__(self, ignore_classes: List[int] = None) -> None:
         self._labeled_correct = 0.
         self._unlabeled_correct = 0.
         self._exact_labeled_correct = 0.
@@ -25,7 +29,7 @@ class AttachmentScores(Metric):
         self._total_words = 0.
         self._total_sentences = 0.
 
-        self._ignore_classes: List[str] = ignore_classes
+        self._ignore_classes: List[str] = ignore_classes or []
 
     def __call__(self, # type: ignore
                  predicted_indices: torch.Tensor,
@@ -60,9 +64,7 @@ class AttachmentScores(Metric):
         # Multiply by a mask donoting locations of
         # gold labels which we should ignore.
         for label in self._ignore_classes:
-            
-            label_mask = gold_indices.eq(label)
-
+            label_mask = gold_labels.eq(label)
             mask = mask * (1 - label_mask).long()
 
         correct_indices = predicted_indices.eq(gold_indices).long() * mask
