@@ -17,6 +17,7 @@ from allennlp.nn.util import get_device_of, last_dim_log_softmax, get_lengths_fr
 from allennlp.nn.decoding.chu_liu_edmonds import decode_mst
 from allennlp.training.metrics import AttachmentScores
 
+POS_TO_IGNORE = {'``', "''", ':', ',', '.', 'PU', 'PUNCT'}
 
 @Model.register("biaffine_parser")
 class BiaffineDependencyParser(Model):
@@ -61,7 +62,8 @@ class BiaffineDependencyParser(Model):
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
-    def __init__(self, vocab: Vocabulary,
+    def __init__(self,
+                 vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
                  tag_representation_dim: int,
@@ -75,7 +77,6 @@ class BiaffineDependencyParser(Model):
         super(BiaffineDependencyParser, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
-        self.num_classes = self.vocab.get_vocab_size("labels")
         self.encoder = encoder
 
         encoder_dim = encoder.get_output_dim()
@@ -103,13 +104,18 @@ class BiaffineDependencyParser(Model):
 
         self.use_mst_decoding_for_validation = use_mst_decoding_for_validation
 
+        tags = self.vocab.get_token_to_index_vocabulary("head_tags")
+        tag_indices = [tags.get(tag) for tag in POS_TO_IGNORE]
+        self._pos_to_ignore = {tag_index for tag_index in tag_indices
+                               if tag_index is not None}
+
         self._attachment_scores = AttachmentScores()
         initializer(self)
 
     @overrides
     def forward(self,  # type: ignore
                 words: Dict[str, torch.LongTensor],
-                pos_tags: torch.LongTensor = None,
+                pos_tags: torch.LongTensor,
                 head_tags: torch.LongTensor = None,
                 head_indices: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
@@ -125,8 +131,11 @@ class BiaffineDependencyParser(Model):
             sequence.  The dictionary is designed to be passed directly to a ``TextFieldEmbedder``,
             which knows how to combine different word representations into a single vector per
             token in your input.
-        pos_tags : ``torch.LongTensor``, optional (default = None)
+        pos_tags : ``torch.LongTensor``, required.
             The output of a ``SequenceLabelField`` containing POS tags.
+            POS tags are required regardless of whether they are used in the model,
+            because they are used to filter the evaluation metric to only consider
+            heads of words which are not punctuation.
         head_tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of integer gold class labels for the arcs
             in the dependency parse. Has shape ``(batch_size, sequence_length)``.
@@ -201,6 +210,7 @@ class BiaffineDependencyParser(Model):
                                                     mask=mask)
             loss = arc_nll + tag_nll
 
+            evaluation_mask = self._get_mask_for_eval(mask, pos_tags)
             # We calculate attatchment scores for the whole sentence
             # but excluding the symbolic ROOT token at the start,
             # which is why we start from the second element in the sequence.
@@ -208,7 +218,7 @@ class BiaffineDependencyParser(Model):
                                     predicted_head_tags[:, 1:],
                                     head_indices[:, 1:],
                                     head_tags[:, 1:],
-                                    mask[:, 1:])
+                                    evaluation_mask[:, 1:])
         else:
             arc_nll = None
             tag_nll = None
@@ -490,6 +500,32 @@ class BiaffineDependencyParser(Model):
         head_tag_logits = self.tag_bilinear(selected_head_tag_representations,
                                             child_tag_representation)
         return head_tag_logits
+
+    def _get_mask_for_eval(self,
+                           mask: torch.LongTensor,
+                           pos_tags: torch.LongTensor) -> torch.LongTensor:
+        """
+        Dependency evaluation excludes words are punctuation.
+        Here, we create a new mask to exclude word indices which
+        have a "punctuation-like" part of speech tag.
+
+        Parameters
+        ----------
+        mask : ``torch.LongTensor``, required.
+            The original mask.
+        pos_tags : ``torch.LongTensor``, required.
+            The pos tags for the sequence.
+
+        Returns
+        -------
+        A new mask, where any indices equal to labels
+        we should be ignoring are masked.
+        """
+        new_mask = mask.detach()
+        for label in self._pos_to_ignore:
+            label_mask = pos_tags.eq(label).long()
+            new_mask = new_mask * (1 - label_mask)
+        return new_mask
 
     @overrides
     def get_metrics(self, reset: bool = True) -> Dict[str, float]:

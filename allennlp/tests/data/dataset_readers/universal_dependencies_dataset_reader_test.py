@@ -7,7 +7,7 @@ class TestUniversalDependenciesDatasetReader(AllenNlpTestCase):
     data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "dependencies.conllu"
 
     def test_read_from_file(self):
-        reader = UniversalDependenciesDatasetReader(use_pos_tags=True)
+        reader = UniversalDependenciesDatasetReader()
         instances = list(reader.read(str(self.data_path)))
 
         instance = instances[0]
