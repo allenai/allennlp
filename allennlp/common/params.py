@@ -354,6 +354,49 @@ class Params(MutableMapping):
 
         return Params(param_dict)
 
+    def to_file(self, params_file: str):
+        with open(params_file) as file:
+            json.dump(file, self.as_ordered_dict(), indent=4)
+
+    def as_ordered_dict(self, preference_orders: List[List[str]] = None):
+        """
+        Returns Ordered Dict of Params from list of partial order preferences.
+
+        Parameters
+        ----------
+        preference_orders: List[List[str]], optional
+            ``preference_orders`` is list of partial preference orders. ["A", "B", "C"] means
+            "A" > "B" > "C". For multiple preference_orders first will be considered first.
+            Keys not found, will have last but alphabetical preference. Default Preferences:
+            ``[["dataset_reader", "iterator", "model", "train_data_path", "validation_data_path",
+                "test_data_path", "trainer", "vocabulary", "seeds"], ["type"]]``
+        """
+        params_dict = self.as_dict(quiet=True)
+        if not preference_orders:
+            preference_orders = []
+            preference_orders.append(["dataset_reader", "iterator", "model",
+                                      "train_data_path", "validation_data_path", "test_data_path",
+                                      "trainer", "vocabulary", "seeds"])
+            preference_orders.append(["type"])
+
+        def preference_ranks(key):
+            '''returns list of all preference scores'''
+            return [order.index(key) if key in order else len(order)
+                    for order in preference_orders]
+
+        def order_func(key):
+            '''returns list of all preference scores with default alphabetic score'''
+            return preference_ranks(key) + [key]
+
+        def _order_dict(dictionary, order_func):
+            '''Recursively orders dictionary according to scoring order_func'''
+            result = {}
+            for key, val in sorted(dictionary.items(), key=lambda item: order_func(item[0])):
+                result[key] = _order_dict(val, order_func) if isinstance(val, dict) else val
+            return result
+
+        return _order_dict(params_dict, order_func)
+
 
 def pop_choice(params: Dict[str, Any],
                key: str,

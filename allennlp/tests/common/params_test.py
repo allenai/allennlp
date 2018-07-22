@@ -277,3 +277,19 @@ class TestParams(AllenNlpTestCase):
                 "a.b.filename": my_file,
                 "a.b.c.c_file": my_other_file
         }
+
+    def test_as_ordered_dict(self):
+        # keyD > keyC > keyE; keyDA > keyDB; Next all other keys alphabetically
+        preference_orders = [["keyD", "keyC", "keyE"], ["keyDA", "keyDB"]]
+        params = Params({"keyC": "valC", "keyB": "valB", "keyA": "valA", "keyE": "valE",
+                         "keyD": {"keyDB": "valDB", "keyDA": "valDA"}})
+        ordered_params_dict = params.as_ordered_dict(preference_orders)
+        ordered_params_dict_str = json.dumps(ordered_params_dict)
+        expected_dict_str = json.dumps(({'keyD': {'keyDA': 'valDA', 'keyDB': 'valDB'},
+                                         'keyC': 'valC', 'keyE': 'valE',
+                                         'keyA': 'valA', 'keyB': 'valB'}))
+        assert ordered_params_dict_str == expected_dict_str
+
+    def test_to_file(self):
+        # TODO(harsh) Add this test
+        pass
