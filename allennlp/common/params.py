@@ -354,9 +354,9 @@ class Params(MutableMapping):
 
         return Params(param_dict)
 
-    def to_file(self, params_file: str):
-        with open(params_file) as file:
-            json.dump(file, self.as_ordered_dict(), indent=4)
+    def to_file(self, params_file: str, preference_orders: List[List[str]] = None):
+        with open(params_file, "w") as handle:
+            json.dump(self.as_ordered_dict(preference_orders), handle, indent=4)
 
     def as_ordered_dict(self, preference_orders: List[List[str]] = None):
         """
