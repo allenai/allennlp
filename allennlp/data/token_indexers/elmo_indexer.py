@@ -93,12 +93,17 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
         pass
 
     @overrides
-    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> List[int]:
+    def tokens_to_indices(self,
+                          tokens: List[Token],
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[List[int]]]:
         # pylint: disable=unused-argument
-        if token.text is None:
+        texts = [token.text for token in tokens]
+
+        if any(text is None for text in texts):
             raise ConfigurationError('ELMoTokenCharactersIndexer needs a tokenizer '
                                      'that retains text')
-        return ELMoCharacterMapper.convert_word_to_char_ids(token.text)
+        return {index_name: [ELMoCharacterMapper.convert_word_to_char_ids(text) for text in texts]}
 
     @overrides
     def get_padding_lengths(self, token: List[int]) -> Dict[str, int]:
@@ -115,9 +120,10 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
 
     @overrides
     def pad_token_sequence(self,
-                           tokens: List[List[int]],
-                           desired_num_tokens: int,
-                           padding_lengths: Dict[str, int]) -> List[List[int]]:
+                           tokens: Dict[str, List[List[int]]],
+                           desired_num_tokens: Dict[str, int],
+                           padding_lengths: Dict[str, int]) -> Dict[str, List[List[int]]]:
         # pylint: disable=unused-argument
-        return pad_sequence_to_length(tokens, desired_num_tokens,
-                                      default_value=self._default_value_for_padding)
+        return {key: pad_sequence_to_length(val, desired_num_tokens[key],
+                                            default_value=self._default_value_for_padding)
+                for key, val in tokens.items()}

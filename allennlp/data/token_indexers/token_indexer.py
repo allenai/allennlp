@@ -30,18 +30,23 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         raise NotImplementedError
 
-    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> TokenType:
+    def tokens_to_indices(self,
+                          tokens: List[Token],
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[TokenType]]:
         """
-        Takes a string token and converts it into indices.  This could return an ID for the token
-        from the vocabulary, or it could split the token into characters and return a list of
-        IDs for each character from the vocabulary, or something else.
+        Takes a list of tokens and converts them to one or more sets of indices.
+        This could be just an ID for each token from the vocabulary.
+        Or it could split each token into characters and return one ID per character.
+        Or (for instance, in the case of byte-pair encoding) there might not be a clean
+        mapping from individual tokens to indices.
         """
         raise NotImplementedError
 
     def get_padding_token(self) -> TokenType:
         """
         When we need to add padding tokens, what should they look like?  This method returns a
-        "blank" token of whatever type is returned by :func:`token_to_indices`.
+        "blank" token of whatever type is returned by :func:`tokens_to_indices`.
         """
         raise NotImplementedError
 
@@ -55,9 +60,9 @@ class TokenIndexer(Generic[TokenType], Registrable):
         raise NotImplementedError
 
     def pad_token_sequence(self,
-                           tokens: List[TokenType],
-                           desired_num_tokens: int,
-                           padding_lengths: Dict[str, int]) -> List[TokenType]:
+                           tokens: Dict[str, List[TokenType]],
+                           desired_num_tokens: Dict[str, int],
+                           padding_lengths: Dict[str, int]) -> Dict[str, List[TokenType]]:
         """
         This method pads a list of tokens to ``desired_num_tokens`` and returns a padded copy of the
         input tokens.  If the input token list is longer than ``desired_num_tokens`` then it will be
@@ -68,3 +73,10 @@ class TokenIndexer(Generic[TokenType], Registrable):
         character-level padding.
         """
         raise NotImplementedError
+
+    def get_keys(self, index_name: str) -> List[str]:
+        """
+        Return a list of the keys this indexer return from ``tokens_to_indices``.
+        """
+        # pylint: disable=no-self-use
+        return [index_name]
