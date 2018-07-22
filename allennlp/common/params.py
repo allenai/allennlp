@@ -5,7 +5,7 @@ logging and validation.
 """
 
 from typing import Any, Dict, List
-from collections import MutableMapping
+from collections import MutableMapping, OrderedDict
 import copy
 import json
 import logging
@@ -354,11 +354,11 @@ class Params(MutableMapping):
 
         return Params(param_dict)
 
-    def to_file(self, params_file: str, preference_orders: List[List[str]] = None):
+    def to_file(self, params_file: str, preference_orders: List[List[str]] = None) -> None:
         with open(params_file, "w") as handle:
             json.dump(self.as_ordered_dict(preference_orders), handle, indent=4)
 
-    def as_ordered_dict(self, preference_orders: List[List[str]] = None):
+    def as_ordered_dict(self, preference_orders: List[List[str]] = None) -> OrderedDict:
         """
         Returns Ordered Dict of Params from list of partial order preferences.
 
@@ -379,24 +379,21 @@ class Params(MutableMapping):
                                       "trainer", "vocabulary"])
             preference_orders.append(["type"])
 
-        def preference_ranks(key):
-            '''returns list of all preference scores'''
-            return [order.index(key) if key in order else len(order)
-                    for order in preference_orders]
-
         def order_func(key):
-            '''returns list of all preference scores with default alphabetic score'''
-            return preference_ranks(key) + [key]
+            # Makes a tuple to use for ordering.  The tuple is an index into each of the `preference_orders`,
+            # followed by the key itself.  This gives us integer sorting if you have a key in one of the
+            # `preference_orders`, followed by alphabetical ordering if not.
+            order_tuple = [order.index(key) if key in order else len(order) for order in preference_orders]
+            return order_tuple + [key]
 
-        def _order_dict(dictionary, order_func):
-            '''Recursively orders dictionary according to scoring order_func'''
-            result = {}
+        def order_dict(dictionary, order_func):
+            # Recursively orders dictionary according to scoring order_func
+            result = OrderedDict()
             for key, val in sorted(dictionary.items(), key=lambda item: order_func(item[0])):
-                result[key] = _order_dict(val, order_func) if isinstance(val, dict) else val
+                result[key] = order_dict(val, order_func) if isinstance(val, dict) else val
             return result
 
-        return _order_dict(params_dict, order_func)
-
+        return order_dict(params_dict, order_func)
 
 def pop_choice(params: Dict[str, Any],
                key: str,
