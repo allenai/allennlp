@@ -36,7 +36,6 @@ import argparse
 import json
 import logging
 import os
-from copy import deepcopy
 import re
 
 import torch

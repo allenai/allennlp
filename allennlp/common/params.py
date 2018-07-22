@@ -369,14 +369,14 @@ class Params(MutableMapping):
             "A" > "B" > "C". For multiple preference_orders first will be considered first.
             Keys not found, will have last but alphabetical preference. Default Preferences:
             ``[["dataset_reader", "iterator", "model", "train_data_path", "validation_data_path",
-                "test_data_path", "trainer", "vocabulary", "seeds"], ["type"]]``
+            "test_data_path", "trainer", "vocabulary"], ["type"]]``
         """
         params_dict = self.as_dict(quiet=True)
         if not preference_orders:
             preference_orders = []
             preference_orders.append(["dataset_reader", "iterator", "model",
                                       "train_data_path", "validation_data_path", "test_data_path",
-                                      "trainer", "vocabulary", "seeds"])
+                                      "trainer", "vocabulary"])
             preference_orders.append(["type"])
 
         def preference_ranks(key):
