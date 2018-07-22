@@ -395,6 +395,7 @@ class Params(MutableMapping):
 
         return order_dict(params_dict, order_func)
 
+
 def pop_choice(params: Dict[str, Any],
                key: str,
                choices: List[Any],
