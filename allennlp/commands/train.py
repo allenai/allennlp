@@ -257,9 +257,7 @@ def train_model(params: Params,
 
     check_for_gpu(params.get('trainer').get('cuda_device', -1))
 
-    serialization_params = deepcopy(params).as_dict(quiet=True)
-    with open(os.path.join(serialization_dir, CONFIG_NAME), "w") as param_file:
-        json.dump(serialization_params, param_file, indent=4)
+    params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
     all_datasets = datasets_from_params(params)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
