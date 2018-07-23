@@ -109,7 +109,7 @@ class BiaffineDependencyParser(Model):
 
         tags = self.vocab.get_token_to_index_vocabulary("pos")
         tag_indices = {tag: index for tag, index in tags.items() if tag in POS_TO_IGNORE}
-        self._pos_to_ignore = set(tag_indices.keys())
+        self._pos_to_ignore = set(tag_indices.values())
         logger.info(f"Found POS tags correspoding to the following punctuation : {tag_indices}. "
                     "Ignoring words with these POS tags for evaluation.")
 
