@@ -25,10 +25,8 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
     Constraints for Semi-Structured Tables
     <https://www.semanticscholar.org/paper/Neural-Semantic-Parsing-with-Type-Constraints-for-Krishnamurthy-Dasigi/8c6f58ed0ebf379858c0bbe02c53ee51b3eb398a>`_,
     by Jayant Krishnamurthy, Pradeep Dasigi, and Matt Gardner (EMNLP 2017).
-
     WORK STILL IN PROGRESS.  We'll iteratively improve it until we've reproduced the performance of
     the original parser.
-
     Parameters
     ----------
     vocab : ``Vocabulary``
@@ -48,6 +46,9 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
     input_attention : ``Attention``
         We compute an attention over the input question at each step of the decoder, using the
         decoder hidden state as the query.  Passed to WikiTablesDecoderStep.
+    add_action_bias : ``bool``, optional (default=True)
+        If ``True``, we will learn a bias weight for each action that gets used when predicting
+        that action, in addition to its embedding.  Passed to super class.
     training_beam_size : ``int``, optional (default=None)
         If given, we will use a constrained beam search of this size during training, so that we
         use only the top ``training_beam_size`` action sequences according to the model in the MML
@@ -85,6 +86,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  input_attention: Attention,
+                 add_action_bias: bool = True,
                  training_beam_size: int = None,
                  use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
@@ -98,6 +100,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                          encoder=encoder,
                          entity_encoder=entity_encoder,
                          max_decoding_steps=max_decoding_steps,
+                         add_action_bias=add_action_bias,
                          use_neighbor_similarity_for_linking=use_similarity,
                          dropout=dropout,
                          num_linking_features=num_linking_features,
@@ -109,7 +112,8 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                                                    action_embedding_dim=action_embedding_dim,
                                                    input_attention=input_attention,
                                                    num_start_types=self._num_start_types,
-                                                   num_entity_types=self._num_entity_types,
+                                                   predict_start_type_separately=True,
+                                                   add_action_bias=self._add_action_bias,
                                                    mixture_feedforward=mixture_feedforward,
                                                    dropout=dropout)
 
@@ -127,7 +131,6 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
         encode the question. Then we set up the initial state for the decoder, and pass that
         state off to either a DecoderTrainer, if we're training, or a BeamSearch for inference,
         if we're not.
-
         Parameters
         ----------
         question : Dict[str, torch.LongTensor]
