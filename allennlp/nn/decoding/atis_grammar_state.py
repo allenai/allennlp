@@ -1,6 +1,45 @@
+from copy import deepcopy
+from typing import Callable, Dict, List, Tuple
+
+import torch
+
 from allennlp.nn.decoding import GrammarState
 
+def is_nonterminal(token: str):
+    print(token)
+    if token[0] == '"' and token[-1] == '"':
+        return False
+    return True
+
+
 class AtisGrammarState(GrammarState):
+    def get_valid_actions(self) -> Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]:
+        """
+        Returns the valid actions in the current grammar state.  See the class docstring for a
+        description of what we're returning here.
+        """
+        actions = self._valid_actions[self._nonterminal_stack[-1]]
+        print('get valid actions for: ', self._nonterminal_stack[-1])
+
+        '''
+        context_actions = []
+        for type_, variable in self._lambda_stacks:
+            if self._nonterminal_stack[-1] == type_:
+                production_string = f"{type_} -> {variable}"
+                context_actions.append(self._context_actions[production_string])
+        if context_actions:
+            input_tensor, output_tensor, action_ids = actions['global']
+            new_inputs = [input_tensor] + [x[0] for x in context_actions]
+            input_tensor = torch.cat(new_inputs, dim=0)
+            new_outputs = [output_tensor] + [x[1] for x in context_actions]
+            output_tensor = torch.cat(new_outputs, dim=0)
+            new_action_ids = action_ids + [x[2] for x in context_actions]
+            actions['global'] = (input_tensor, output_tensor, new_action_ids)
+        '''
+
+        return actions
+
+
     def take_action(self, production_rule: str) -> 'GrammarState':
             """
             Takes an action in the current grammar state, returning a new grammar state with whatever
