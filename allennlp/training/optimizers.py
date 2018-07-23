@@ -168,6 +168,7 @@ class DenseSparseAdam(torch.optim.Optimizer):
     def step(self, closure=None):
         """
         Performs a single optimization step.
+
         Parameters
         ----------
         closure : ``callable``, optional.
