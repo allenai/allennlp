@@ -131,7 +131,14 @@ Registrable._registry[Optimizer] = {   # pylint: disable=protected-access
 
 @Optimizer.register('dense_sparse_adam')
 class DenseSparseAdam(torch.optim.Optimizer):
-    """Implements Adam algorithm with dense & sparse gradients.
+    # pylint: disable=protected-access,cell-var-from-loop
+    # pylint: disable=unneeded-not,misplaced-comparison-constant
+    # pylint: disable=len-as-condition,invalid-name,anomalous-backslash-in-string
+    """
+    NOTE: This class has been copied verbatim from the separate Dense and
+    Sparse versions of Adam in Pytorch.
+
+    Implements Adam algorithm with dense & sparse gradients.
     It has been proposed in `Adam: A Method for Stochastic Optimization`_.
     Arguments:
         params (iterable): iterable of parameters to optimize or dicts defining
