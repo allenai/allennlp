@@ -51,10 +51,6 @@ class AtisSemanticParser(Model):
     add_action_bias : ``bool``, optional (default=True)
         If ``True``, we will learn a bias weight for each action that gets used when predicting
         that action, in addition to its embedding.
-    use_neighbor_similarity_for_linking : ``bool``, optional (default=False)
-        If ``True``, we will compute a max similarity between a utterance token and the `neighbors`
-        of an entity as a component of the linking scores.  This is meant to capture the same kind
-        of information as the ``related_column`` feature.
     dropout : ``float``, optional (default=0)
         If greater than 0, we will apply dropout with this probability after all encoders (pytorch
         LSTMs do not apply dropout to their last layer).
@@ -133,9 +129,8 @@ class AtisSemanticParser(Model):
         self._num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
         self._num_start_types = 1  # TODO(mattg): get this in a more principled way somehow? Only one type in SQL
         self._embedding_dim = utterance_embedder.get_output_dim()
-        # self._entity_type_encoder_embedding = Embedding(self._num_entity_types, self._embedding_dim)
+        self._entity_type_encoder_embedding = Embedding(self._num_entity_types, self._embedding_dim)
         self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
-        # self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
         
         '''
         if num_linking_features > 0:
@@ -193,40 +188,27 @@ class AtisSemanticParser(Model):
         num_utterance_tokens = embedded_utterance.size(1)
         batch_size = embedded_utterance.size(0) 
 
+        # Assumed to have shape ``(num_entities, num_utterance_tokens)`` (i.e., there is no batch
+        num_utterance_tokens = embedded_utterance.size(1) 
+        
+        num_entities = 0
+        for w in world:
+            num_entities = max(len(w['string']) + len(w['number']), num_entities)
+        
+        # entity_types: one-hot tensor with shape (batch_size, num_entities, num_types)
+        # Actually, I think entity_types might be of shape (batch_size, num_entities)
+        entity_types, entity_type_dict = self._get_type_vector(world, num_entities)
+        entity_type_embeddings = self._entity_type_encoder_embedding(entity_types)
+        entity_embeddings = torch.nn.functional.tanh(entity_type_embeddings)
+        
+        # We can deal with this by what triggered what
+        linking_score = torch.ones((num_entities, num_utterance_tokens), dtype=torch.float, requires_grad=True) 
+        linking_scores = torch.ones((batch_size, num_entities, num_utterance_tokens), dtype=torch.float, requires_grad=True) 
+
+
         '''
         # (batch_size, num_entities, embedding_dim)
         encoded_table = self._entity_encoder(embedded_table, table_mask)
-        # (batch_size, num_entities, num_neighbors)
-        neighbor_indices = self._get_neighbor_indices(world, num_entities, encoded_table)
-
-        # Neighbor_indices is padded with -1 since 0 is a potential neighbor index.
-        # Thus, the absolute value needs to be taken in the index_select, and 1 needs to
-        # be added for the mask since that method expects 0 for padding.
-        # (batch_size, num_entities, num_neighbors, embedding_dim)
-        embedded_neighbors = util.batched_index_select(encoded_table, torch.abs(neighbor_indices))
-
-        neighbor_mask = util.get_text_field_mask({'ignored': neighbor_indices + 1},
-                                                 num_wrapping_dims=1).float()
-
-        # Encoder initialized to easily obtain a masked average.
-        neighbor_encoder = TimeDistributed(BagOfEmbeddingsEncoder(self._embedding_dim, averaged=True))
-        # (batch_size, num_entities, embedding_dim)
-        embedded_neighbors = neighbor_encoder(embedded_neighbors, neighbor_mask)
-
-        # entity_types: one-hot tensor with shape (batch_size, num_entities, num_types)
-        # entity_type_dict: Dict[int, int], mapping flattened_entity_index -> type_index
-        # These encode the same information, but for efficiency reasons later it's nice
-        # to have one version as a tensor and one that's accessible on the cpu.
-        entity_types, entity_type_dict = self._get_type_vector(world, num_entities, encoded_table)
-        '''
-
-        # entity_type_embeddings = self._entity_type_encoder_embedding(entity_types)
-
-        '''
-        projected_neighbor_embeddings = self._neighbor_params(embedded_neighbors.float())
-        # (batch_size, num_entities, embedding_dim)
-        entity_embeddings = torch.nn.functional.tanh(entity_type_embeddings + projected_neighbor_embeddings)
-
 
         # Compute entity and utterance word similarity.  We tried using cosine distance here, but
         # because this similarity is the main mechanism that the model can use to push apart logit
@@ -250,37 +232,11 @@ class AtisSemanticParser(Model):
 
         linking_scores = utterance_entity_similarity_max_score
 
-        if self._use_neighbor_similarity_for_linking:
-            # The linking score is computed as a linear projection of two terms. The first is the
-            # maximum similarity score over the entity's words and the utterance token. The second
-            # is the maximum similarity over the words in the entity's neighbors and the utterance
-            # token.
-            #
-            # The second term, projected_utterance_neighbor_similarity, is useful when a column
-            # needs to be selected. For example, the utterance token might have no similarity with
-            # the column name, but is similar with the cells in the column.
-            #
-            # Note that projected_utterance_neighbor_similarity is intended to capture the same
-            # information as the related_column feature.
-            #
-            # Also note that this block needs to be _before_ the `linking_params` block, because
-            # we're overwriting `linking_scores`, not adding to it.
-
-            # (batch_size, num_entities, num_neighbors, num_utterance_tokens)
-            utterance_neighbor_similarity = util.batched_index_select(utterance_entity_similarity_max_score,
-                                                                     torch.abs(neighbor_indices))
-            # (batch_size, num_entities, num_utterance_tokens)
-            utterance_neighbor_similarity_max_score, _ = torch.max(utterance_neighbor_similarity, 2)
-            projected_utterance_entity_similarity = self._utterance_entity_params(
-                    utterance_entity_similarity_max_score.unsqueeze(-1)).squeeze(-1)
-            projected_utterance_neighbor_similarity = self._utterance_neighbor_params(
-                    utterance_neighbor_similarity_max_score.unsqueeze(-1)).squeeze(-1)
-            linking_scores = projected_utterance_entity_similarity + projected_utterance_neighbor_similarity
-
         feature_scores = None
         if self._linking_params is not None:
             feature_scores = self._linking_params(linking_features).squeeze(3)
             linking_scores = linking_scores + feature_scores
+        '''
 
         # (batch_size, num_utterance_tokens, num_entities)
         linking_probabilities = self._get_linking_probabilities(world, linking_scores.transpose(1, 2),
@@ -288,12 +244,9 @@ class AtisSemanticParser(Model):
 
         # (batch_size, num_utterance_tokens, embedding_dim)
         link_embedding = util.weighted_sum(entity_embeddings, linking_probabilities)
-        '''
 
-        # encoder_input = torch.cat([link_embedding, embedded_utterance], 2)
-
-        # TODO actually calculate the linking, just make dims work for now
-        encoder_input = torch.cat([embedded_utterance, embedded_utterance], 2)
+        encoder_input = torch.cat([link_embedding, embedded_utterance], 2)
+        encoder_input = torch.cat([link_embedding, embedded_utterance], 2)
 
         # (batch_size, utterance_length, encoder_output_dim)
         encoder_outputs = self._dropout(self._encoder(encoder_input, utterance_mask))
@@ -323,25 +276,11 @@ class AtisSemanticParser(Model):
                                               encoder_output_list,
                                               utterance_mask_list))
 
-        # Assumed to have shape ``(num_entities, num_utterance_tokens)`` (i.e., there is no batch
-        num_utterance_tokens = embedded_utterance.size(1) 
-        
-        num_entities = 0
-        for w in world:
-            num_entities = max(len(w['string']) + len(w['number']), num_entities)
-
-        linking_score = torch.ones((num_entities, num_utterance_tokens), dtype=torch.float, requires_grad=True) 
-
-        # entity_types: one-hot tensor with shape (batch_size, num_entities, num_types)
-        num_types = 2
-        entity_types = torch.zeros((batch_size, num_entities), dtype=torch.long, requires_grad=True) 
-
-        # entity_type_embeddings = self._entity_type_encoder_embedding(entity_types)
 
 
         initial_grammar_state = [self._create_grammar_state(world[i],
                                                             actions[i],
-                                                            linking_score, # TODO actually make a linking score
+                                                            linking_scores[i], # TODO actually make a linking score
                                                             entity_types[i])
                                      for i in range(batch_size)]
         
@@ -360,9 +299,10 @@ class AtisSemanticParser(Model):
         
         return {"initial_state": initial_state} 
 
-    def _get_type_vector(worlds: List[AtisWorld],
+    def _get_type_vector(self,
+                         worlds: List[Dict[str, List[str]]],
                          num_entities: int,
-                         tensor: torch.Tensor) -> Tuple[torch.LongTensor, Dict[int, int]]:
+                         tensor: torch.Tensor=None) -> Tuple[torch.LongTensor, Dict[int, int]]:
         """
         Produces the one hot encoding for each entity's type. In addition,
         a map from a flattened entity index to type is returned to combine
@@ -383,18 +323,21 @@ class AtisSemanticParser(Model):
         """
         entity_types = {}
         batch_types = []
+
+        print('worlds', type(worlds[0]))
+
         for batch_index, world in enumerate(worlds):
             types = []
-            for entity_index, entity in enumerate(world.table_graph.entities):
+
+            entities = [('number', num) for num in world['number']] + [('string', string) for string in world['string']]
+            print(entities)
+
+            for entity_index, entity in enumerate(entities):
                 # We need numbers to be first, then cells, then parts, then row, because our
                 # entities are going to be sorted.  We do a split by type and then a merge later,
                 # and it relies on this sorting.
-                if entity.startswith('fb:cell'):
+                if entity[0] == 'number':
                     entity_type = 1
-                elif entity.startswith('fb:part'):
-                    entity_type = 2
-                elif entity.startswith('fb:row'):
-                    entity_type = 3
                 else:
                     entity_type = 0
                 types.append(entity_type)
@@ -404,9 +347,16 @@ class AtisSemanticParser(Model):
                 # linking scores are stored.
                 flattened_entity_index = batch_index * num_entities + entity_index
                 entity_types[flattened_entity_index] = entity_type
+
+
             padded = pad_sequence_to_length(types, num_entities, lambda: 0)
             batch_types.append(padded)
-        return tensor.new_tensor(batch_types, dtype=torch.long), entity_types
+
+        # print('batch types', batch_types.size())
+        print('batch types', torch.tensor(batch_types, dtype=torch.long).size())
+        print('batch types', batch_types) 
+        return torch.tensor(batch_types, dtype=torch.long), entity_types
+        # return tensor.new_tensor(batch_types, dtype=torch.long), entity_types
  
 
     def _get_linking_probabilities(self,
@@ -450,7 +400,9 @@ class AtisSemanticParser(Model):
                 # This index of 0 is for the null entity for each type, representing the case where a
                 # word doesn't link to any entity.
                 entity_indices = [0]
-                entities = world.table_graph.entities
+                # entities = world.table_graph.entities
+                entities = world['number'] + world['string']
+
                 for entity_index, _ in enumerate(entities):
                     if entity_type_dict[batch_index * num_entities + entity_index] == type_index:
                         entity_indices.append(entity_index)
@@ -717,12 +669,8 @@ class AtisSemanticParser(Model):
            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
            sequence_length)``.
         """
-        # initial_info = self._get_initial_state_and_scores(utterance, table, world, actions)
         initial_info = self._get_initial_state_and_scores(utterance, world, actions)
         initial_state = initial_info["initial_state"]
-        # linking_scores = initial_info["linking_scores"]
-        # feature_scores = initial_info["feature_scores"]
-        # similarity_scores = initial_info["similarity_scores"]
         batch_size = list(utterance.values())[0].size(0)
         
         if target_action_sequence is not None:
@@ -760,12 +708,7 @@ class AtisSemanticParser(Model):
             outputs['best_action_sequence'] = []
             outputs['debug_info'] = []
             outputs['entities'] = []
-            # outputs['linking_scores'] = linking_scores
-            '''
-            if feature_scores is not None:
-                outputs['feature_scores'] = feature_scores
-            '''
-            # outputs['similarity_scores'] = similarity_scores
+
             outputs['logical_form'] = []
             for i in range(batch_size):
                 # Decoding may not have terminated with any completed logical forms, if `num_steps`
@@ -832,7 +775,6 @@ class AtisSemanticParser(Model):
                    max_decoding_steps=max_decoding_steps,
                    input_attention=input_attention,
                    training_beam_size=training_beam_size,
-                   use_neighbor_similarity_for_linking=use_neighbor_similarity_for_linking,
                    dropout=dropout,
                    num_linking_features=num_linking_features,
                    tables_directory=tables_directory,
