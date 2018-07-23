@@ -140,6 +140,7 @@ class DenseSparseAdam(torch.optim.Optimizer):
 
     Implements Adam algorithm with dense & sparse gradients.
     It has been proposed in Adam: A Method for Stochastic Optimization.
+
     Parameters
     ----------
     params : ``iterable``
