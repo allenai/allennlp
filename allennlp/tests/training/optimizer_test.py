@@ -105,4 +105,3 @@ class TestDenseSparseAdam(AllenNlpTestCase):
         iterator = BasicIterator(2)
         iterator.index_with(self.vocab)
         Trainer(self.model, optimizer, iterator, self.instances).train()
-                
