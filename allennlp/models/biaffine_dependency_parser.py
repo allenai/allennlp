@@ -443,7 +443,7 @@ class BiaffineDependencyParser(Model):
         attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
         # Shape (batch_size, sequence_length, sequence_length)
-        normalized_arc_logits = F.log_softmax(attended_arcs, dim=2).transpose(0, 1)
+        normalized_arc_logits = F.log_softmax(attended_arcs, dim=2).transpose(1, 2)
         # Shape (batch_size, num_head_tags, sequence_length, sequence_length)
         batch_energy = torch.exp(normalized_arc_logits.unsqueeze(1) + normalized_pairwise_head_logits)
 
