@@ -140,13 +140,17 @@ class DenseSparseAdam(torch.optim.Optimizer):
 
     Implements Adam algorithm with dense & sparse gradients.
     It has been proposed in Adam: A Method for Stochastic Optimization.
-    Arguments:
-    params (iterable): iterable of parameters to optimize or dicts defining parameter groups
-    lr (float, optional): learning rate (default: 1e-3)
-    betas (Tuple[float, float], optional): coefficients used for computing
-    running averages of gradient and its square (default: (0.9, 0.999))
-    eps (float, optional): term added to the denominator to improve
-    numerical stability (default: 1e-8)
+    Parameters
+    ----------
+    params : ``iterable``
+        iterable of parameters to optimize or dicts defining parameter groups
+    lr : ``float``, optional (default: 1e-3)
+        The learning rate.
+    betas : ``Tuple[float, float]``, optional (default: (0.9, 0.999))
+        coefficients used for computing running averages of gradient
+        and its square.
+    eps : ``float``, optional, (default: 1e-8)
+        A term added to the denominator to improve numerical stability.
     """
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8):
         if not 0.0 <= lr:
@@ -161,10 +165,12 @@ class DenseSparseAdam(torch.optim.Optimizer):
         super(DenseSparseAdam, self).__init__(params, defaults)
 
     def step(self, closure=None):
-        """Performs a single optimization step.
-        Arguments:
-            closure (callable, optional): A closure that reevaluates the model
-                and returns the loss.
+        """
+        Performs a single optimization step.
+        Parameters
+        ----------
+        closure : ``callable``, optional.
+            A closure that reevaluates the model and returns the loss.
         """
         loss = None
         if closure is not None:
