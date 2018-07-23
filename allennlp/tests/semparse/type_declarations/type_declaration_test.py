@@ -7,7 +7,6 @@ from allennlp.semparse.type_declarations.type_declaration import (
         ComplexType,
         NamedBasicType,
         UnaryOpType,
-        HierarchalNamedBasicType
         )
 from allennlp.semparse.type_declarations import wikitables_type_declaration as wt_types
 from allennlp.semparse.type_declarations.wikitables_type_declaration import (
@@ -17,13 +16,6 @@ from allennlp.semparse.type_declarations.wikitables_type_declaration import (
 
 
 class TestTypeDeclaration(AllenNlpTestCase):
-    def test_hierarchal_conflict_on_names(self):
-        type_a = NamedBasicType("A")
-        type_b = NamedBasicType("B")
-        type_c = HierarchalNamedBasicType("C", ["B"])
-        assert type_c.resolve(type_b) is not None
-        assert type_c.resolve(type_a) is None
-
     def test_basic_types_conflict_on_names(self):
         type_a = NamedBasicType("A")
         type_b = NamedBasicType("B")
