@@ -1,16 +1,51 @@
 # pylint: disable=no-self-use,invalid-name
 from collections import defaultdict
-from typing import List
+from typing import Dict, List
 
 import pytest
 import numpy
 
 from allennlp.data import Token, Vocabulary
 from allennlp.data.fields import TextField
-from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
+from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer, TokenIndexer
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import pad_sequence_to_length
+
+
+class DictReturningTokenIndexer(TokenIndexer):
+    """
+    A stub TokenIndexer that returns multiple arrays of different lengths.
+    """
+    def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
+        pass
+
+    def tokens_to_indices(self, tokens: List[Token],
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[int]]: # pylint: disable=unused-argument
+        return {
+                "token_ids": [10, 15] + \
+                         [vocabulary.get_token_index(token.text, 'words') for token in tokens] + \
+                         [25],
+                "additional_key": [22, 29]
+        }
+
+    def get_padding_token(self) -> int:
+        return 0
+
+    def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument
+        return {}
+
+    def pad_token_sequence(self,
+                           tokens: Dict[str, List[int]],
+                           desired_num_tokens: Dict[str, int],
+                           padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
+        return {key: pad_sequence_to_length(val, desired_num_tokens[key]) for key, val in tokens.items()}
+
+    def get_keys(self, index_name: str) -> List[str]:
+        # pylint: disable=unused-argument,no-self-use
+        return ["token_ids", "additional_key"]
 
 
 class TestTextField(AllenNlpTestCase):
@@ -195,31 +230,26 @@ class TestTextField(AllenNlpTestCase):
                           {"words": SingleIdTokenIndexer(namespace="words")})
         print(field)
 
-    def test_multi_return_token_indexer(self):
-        # pylint: disable=protected-access
-
-        class MultiReturnTokenIndexer(SingleIdTokenIndexer):
-            def tokens_to_indices(self,
-                                  tokens: List[Token],
-                                  vocabulary: Vocabulary,
-                                  index_name: str):
-                return {
-                        **super().tokens_to_indices(tokens, vocabulary, f"{index_name}-a"),
-                        f"{index_name}-b": [10, 16, 3]
-                }
-
-        words = ["This", "is", "a", "sentence", "."]
-        tokens = [Token(word) for word in words]
-        vocab = Vocabulary()
-        for word in words:
-            vocab.add_token_to_namespace(word, namespace='words')
-
-        field = TextField(tokens,
-                          token_indexers={"words": MultiReturnTokenIndexer("words")})
-        field.index(vocab)
-
-        assert field._indexed_tokens == {
-                # 0 and 1 for PADDING and OOV
-                "words-a": [2, 3, 4, 5, 6],
-                "words-b": [10, 16, 3]
+    def test_token_embedder_returns_dict(self):
+        field = TextField([Token(t) for t in ["A", "sentence"]],
+                          token_indexers={"field_with_dict": DictReturningTokenIndexer(),
+                                          "words": SingleIdTokenIndexer("words"),
+                                          "characters": TokenCharactersIndexer("characters")})
+        field.index(self.vocab)
+        padding_lengths = field.get_padding_lengths()
+        assert padding_lengths == {
+                'token_ids': 5,
+                'additional_key': 2,
+                'words': 2,
+                'characters': 2,
+                'num_token_characters': 8
         }
+        padding_lengths['token_ids'] = 7
+        padding_lengths['additional_key'] = 3
+        padding_lengths['words'] = 4
+        padding_lengths['characters'] = 4
+        tensors = field.as_tensor(padding_lengths)
+        assert list(tensors['token_ids'].shape) == [7]
+        assert list(tensors['additional_key'].shape) == [3]
+        assert list(tensors['words'].shape) == [4]
+        assert list(tensors['characters'].shape) == [4, 8]

@@ -221,9 +221,9 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                                                           default_value=lambda: [])
             padded_arrays = []
             for padded_entity in padded_entities:
-                padded_array = indexer.pad_token_sequence(padded_entity,
-                                                          desired_num_entity_tokens,
-                                                          padding_lengths)
+                padded_array = indexer.pad_token_sequence({'key': padded_entity},
+                                                          {'key': desired_num_entity_tokens},
+                                                          padding_lengths)['key']
                 padded_arrays.append(padded_array)
             tensor = torch.LongTensor(padded_arrays)
             tensors[indexer_name] = tensor if cuda_device == -1 else tensor.cuda(cuda_device)

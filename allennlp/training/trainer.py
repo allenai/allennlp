@@ -706,6 +706,7 @@ class Trainer:
 
         train_metrics: Dict[str, float] = {}
         val_metrics: Dict[str, float] = {}
+        best_epoch_val_metrics: Dict[str, float] = {}
         epochs_trained = 0
         training_start_time = time.time()
         for epoch in range(epoch_counter, self._num_epochs):
@@ -723,7 +724,8 @@ class Trainer:
 
                     # Check validation metric to see if it's the best so far
                     is_best_so_far = self._is_best_so_far(this_epoch_val_metric, validation_metric_per_epoch)
-
+                    if is_best_so_far:
+                        best_epoch_val_metrics = val_metrics.copy()
                     validation_metric_per_epoch.append(this_epoch_val_metric)
                     if self._should_stop_early(validation_metric_per_epoch):
                         logger.info("Ran out of patience.  Stopping training.")
@@ -733,6 +735,7 @@ class Trainer:
                 # No validation set, so just assume it's the best so far.
                 is_best_so_far = True
                 val_metrics = {}
+                best_epoch_val_metrics = {}
                 this_epoch_val_metric = None
 
             self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
@@ -773,7 +776,7 @@ class Trainer:
                 best_validation_metric = min(validation_metric_per_epoch)
             else:
                 best_validation_metric = max(validation_metric_per_epoch)
-            metrics[f"best_validation_{self._validation_metric}"] = best_validation_metric
+            metrics.update({f"best_validation_{k}": v for k, v in best_epoch_val_metrics.items()})
             metrics['best_epoch'] = [i for i, value in enumerate(validation_metric_per_epoch)
                                      if value == best_validation_metric][-1]
         return metrics
