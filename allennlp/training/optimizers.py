@@ -139,17 +139,15 @@ class DenseSparseAdam(torch.optim.Optimizer):
     Sparse versions of Adam in Pytorch.
 
     Implements Adam algorithm with dense & sparse gradients.
-    It has been proposed in `Adam: A Method for Stochastic Optimization`_.
+    It has been proposed in Adam: A Method for Stochastic Optimization.
     Arguments:
-        params (iterable): iterable of parameters to optimize or dicts defining
-            parameter groups
-        lr (float, optional): learning rate (default: 1e-3)
-        betas (Tuple[float, float], optional): coefficients used for computing
-            running averages of gradient and its square (default: (0.9, 0.999))
-        eps (float, optional): term added to the denominator to improve
-            numerical stability (default: 1e-8)
-    .. _Adam\: A Method for Stochastic Optimization:
-        https://arxiv.org/abs/1412.6980
+    params (iterable): iterable of parameters to optimize or dicts defining
+        parameter groups
+    lr (float, optional): learning rate (default: 1e-3)
+    betas (Tuple[float, float], optional): coefficients used for computing
+        running averages of gradient and its square (default: (0.9, 0.999))
+    eps (float, optional): term added to the denominator to improve
+        numerical stability (default: 1e-8)
     """
 
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8):
