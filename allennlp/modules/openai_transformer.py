@@ -1,23 +1,26 @@
 """
 An implementation of the OpenAI Transformer Language Model.
 
-Mostly just a slightly modified version of https://github.com/huggingface/pytorch-openai-transformer-lm
+Mostly just a slightly modified version of
+https://github.com/huggingface/pytorch-openai-transformer-lm
 so thanks to them!
 """
 
 # pylint: disable=invalid-name,arguments-differ
 from typing import NamedTuple, List
 import copy
+import io
 import json
 import logging
 import math
-import os
 import re
+import tarfile
 
 import numpy as np
 import torch
 from torch.nn import Parameter
 
+from allennlp.common.file_utils import cached_path
 from allennlp.modules.layer_norm import LayerNorm
 
 logger = logging.getLogger(__name__)
@@ -259,18 +262,31 @@ class OpenaiTransformer(torch.nn.Module):
             return all_layers
 
     def load_weights(self,
-                     weights_path: str,
+                     transformer_model_path: str,
                      n_ctx: int = -1,
                      n_special: int = -1,
                      n_transfer: int = 12,
                      n_embd: int = 768) -> None:
 
-        logger.info(f"loading weights from {weights_path}")
+        logger.info(f"loading weights from {transformer_model_path}")
+        # if `file_path` is a URL, redirect to the cache
+        transformer_model_path = cached_path(transformer_model_path)
 
         names = _PARAMETER_NAMES
-        shapes = json.load(open(os.path.join(weights_path, 'params_shapes.json')))
+
+        with tarfile.open(transformer_model_path) as tmp:
+            shapes = json.load(tmp.extractfile('model/params_shapes.json'))
+
+            # numpy can't read from a tarfile directly, so we need a workaround
+            # https://github.com/numpy/numpy/issues/7989#issuecomment-341656702
+            init_params: List[np.ndarray] = []
+            for n in range(10):
+                array_file = io.BytesIO()
+                array_file.write(tmp.extractfile(f'model/params_{n}.npy').read())
+                array_file.seek(0)
+                init_params.append(np.load(array_file))
+
         offsets = np.cumsum([np.prod(shape) for shape in shapes])
-        init_params = [np.load(os.path.join(weights_path, f'params_{n}.npy')) for n in range(10)]
         init_params = np.split(np.concatenate(init_params, 0), offsets)[:-1]
         init_params = [param.reshape(shape) for param, shape in zip(init_params, shapes)]
         if n_ctx > 0:

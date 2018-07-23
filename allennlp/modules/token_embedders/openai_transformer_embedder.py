@@ -15,14 +15,14 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
         Path to the serialized OpenAI transformer model.
     """
     def __init__(self,
-                 weights_path: str,
-                 num_output_representations: int,
+                 transformer_model_path: str,
+                 num_output_representations: int = 1,
                  do_layer_norm: bool = False,
                  requires_grad: bool = False) -> None:
         super().__init__()
 
         self._transformer = OpenaiTransformer(requires_grad=requires_grad)
-        self._transformer.load_weights(weights_path)
+        self._transformer.load_weights(transformer_model_path)
         self._num_output_representations = num_output_representations
         self._do_layer_norm = do_layer_norm
 
@@ -36,7 +36,7 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
         """
         The last dimension of the output, not the shape.
         """
-        return self._transformer.embed.num_embeddings
+        return self._transformer.embed.embedding_dim
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         """
@@ -70,7 +70,7 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
 
         mixes = [scalar_mix(layer_activations, mask) for scalar_mix in self._scalar_mixes]
 
-        if len(mixes) == 1:
-            return mixes[0]   # (batch_size, timesteps, embedding_dim)
-        else:
-            return torch.stack(mixes, dim=1)  # (batch_size, num_output_representations, timesteps, embedding_dim)
+        return {
+                'transformer_representations': mixes,
+                'mask': mask
+        }

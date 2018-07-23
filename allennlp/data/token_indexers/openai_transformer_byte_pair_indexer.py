@@ -1,8 +1,10 @@
 from typing import Dict, List
 import json
+import tarfile
 
 from overrides import overrides
 
+from allennlp.common.file_utils import cached_path
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
@@ -18,15 +20,20 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[List[int]]):
     """
     # pylint: disable=no-self-use
     def __init__(self,
-                 encoder_path: str,
-                 bpe_path: str) -> None:
-        with open(encoder_path) as encoder_file:
-            self.encoder = json.load(encoder_file)
-        self.decoder = {word_id: word for word, word_id in self.encoder.items()}
+                 transformer_model_path: str) -> None:
 
-        with open(bpe_path) as bpe_file:
+        # if `file_path` is a URL, redirect to the cache
+        transformer_model_path = cached_path(transformer_model_path)
+
+        with tarfile.open(transformer_model_path) as tmp:
+            encoder_info = tmp.extractfile('model/encoder_bpe_40000.json')
+            self.encoder = json.load(encoder_info)
+
+            bpe_info = tmp.extractfile('model/vocab_40000.bpe')
             # First line is "version", last line is blank
-            lines = bpe_file.read().split('\n')[1:-1]
+            lines = bpe_info.read().decode('utf-8').split('\n')[1:-1]
+
+        self.decoder = {word_id: word for word, word_id in self.encoder.items()}
 
         # Convert "b1 b2" -> (b1, b2)
         pairs = [tuple(line.split()) for line in lines]
