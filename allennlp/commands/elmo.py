@@ -184,7 +184,9 @@ class ElmoEmbedder():
         layer_activations = bilm_output['activations']
         mask_with_bos_eos = bilm_output['mask']
 
-        # without_bos_eos is a 3 element list of pairs of (batch_size, num_timesteps, dim) tensors.
+        # without_bos_eos is a 3 element list of (activation, mask) tensor pairs,
+        # each with size (batch_size, num_timesteps, dim and (batch_size, num_timesteps)
+        # respectively.
         without_bos_eos = [remove_sentence_boundaries(layer, mask_with_bos_eos)
                            for layer in layer_activations]
         # Converts a list of pairs (activation, mask) tensors to a single tensor of activations.

@@ -26,15 +26,25 @@ class BilinearMatrixAttention(MatrixAttention):
     activation : ``Activation``, optional (default=linear (i.e. no activation))
         An activation function applied after the ``X W Y^T + b`` calculation.  Default is no
         activation.
+    use_input_biases : ``bool``, optional (default = False)
+        If True, we add biases to the inputs such that the final computation
+        is equivelent to the original bilinear matrix multiplication plus a
+        projection of both inputs.
     """
     def __init__(self,
                  matrix_1_dim: int,
                  matrix_2_dim: int,
-                 activation: Activation = None) -> None:
+                 activation: Activation = None,
+                 use_input_biases: bool = False) -> None:
         super().__init__()
+        if use_input_biases:
+            matrix_1_dim += 1
+            matrix_2_dim += 1
         self._weight_matrix = Parameter(torch.Tensor(matrix_1_dim, matrix_2_dim))
+
         self._bias = Parameter(torch.Tensor(1))
         self._activation = activation or Activation.by_name('linear')()
+        self._use_input_biases = use_input_biases
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -43,5 +53,13 @@ class BilinearMatrixAttention(MatrixAttention):
 
     @overrides
     def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
-        intermediate = matrix_1.bmm(self._weight_matrix.unsqueeze(0))
-        return self._activation(intermediate.bmm(matrix_2.transpose(1, 2)) + self._bias)
+
+        if self._use_input_biases:
+            bias1 = matrix_1.new_ones(matrix_1.size()[:-1] + (1,))
+            bias2 = matrix_2.new_ones(matrix_2.size()[:-1] + (1,))
+
+            matrix_1 = torch.cat([matrix_1, bias1], -1)
+            matrix_2 = torch.cat([matrix_2, bias2], -1)
+        intermediate = torch.matmul(matrix_1.unsqueeze(1), self._weight_matrix.unsqueeze(0))
+        final = torch.matmul(intermediate, matrix_2.unsqueeze(1).transpose(2, 3))
+        return self._activation(final.squeeze(1) + self._bias)
