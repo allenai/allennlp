@@ -36,7 +36,7 @@ if __name__ == "__main__":
                         all_matches.add(MatchTuple(source=str(markdown_file), name=name, link=link))
 
     with Pool(processes=10) as pool:
-        results = map(url_ok, [match for match in list(all_matches)])
+        results = pool.map(url_ok, [match for match in list(all_matches)])
     unreachable_results = [result for result in results if not result[1]]
 
     if unreachable_results:
