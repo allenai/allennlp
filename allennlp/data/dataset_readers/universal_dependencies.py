@@ -1,4 +1,5 @@
 from typing import Dict, Tuple, List
+from collections import OrderedDict
 import logging
 
 from overrides import overrides
@@ -49,6 +50,10 @@ class UniversalDependenciesDatasetReader(DatasetReader):
             logger.info("Reading UD instances from conllu dataset at: %s", file_path)
 
             for annotation in  lazy_parse(conllu_file.read()):
+                # Conllu annotations can have implicit word references that have been
+                # filled in automatically and have no head, so we remove them.
+                annotation = [x for x in annotation if x["id"] is not None]
+
                 heads = [x["head"] for x in annotation]
                 tags = [x["deprel"] for x in annotation]
                 words = [x["form"] for x in annotation]
