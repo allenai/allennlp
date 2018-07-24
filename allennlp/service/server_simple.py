@@ -78,8 +78,8 @@ def make_app(predictor: Predictor,
             logger.error("app directory %s does not exist, aborting", static_dir)
             sys.exit(-1)
     elif static_dir is None and field_names is None:
-        logger.info("Neither build_dir nor field_names passed. Demo won't rended on "
-                    "this port. You must use nodejs + react app to interact with server.")
+        print("Neither build_dir nor field_names passed. Demo won't render on this port.\n"
+              "You must use nodejs + react app to interact with the server.")
 
     app = Flask(__name__)  # pylint: disable=invalid-name
 
