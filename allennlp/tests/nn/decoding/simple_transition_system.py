@@ -42,7 +42,7 @@ class SimpleDecoderState(DecoderState['SimpleDecoderState']):
 class SimpleDecoderStep(DecoderStep[SimpleDecoderState]):
     def __init__(self,
                  valid_actions: Set[int] = None,
-                 include_value_in_score: bool = False):
+                 include_value_in_score: bool = False) -> None:
         # The default allowed actions are adding 1 or 2 to the last element.
         self._valid_actions = valid_actions or {1, 2}
         # If True, we will add a small multiple of the action take to the score, to encourage

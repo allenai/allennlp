@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Any
 
 import numpy
 from overrides import overrides
@@ -6,7 +6,6 @@ import torch
 from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
-from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
@@ -62,7 +61,8 @@ class SimpleTagger(Model):
     @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
-                tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                tags: torch.LongTensor = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -79,6 +79,8 @@ class SimpleTagger(Model):
         tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of integer gold class labels of shape
             ``(batch_size, num_tokens)``.
+        metadata : ``List[Dict[str, Any]]``, optional, (default = None)
+            metadata containg the original words in the sentence to be tagged under a 'words' key.
 
         Returns
         -------
@@ -112,6 +114,8 @@ class SimpleTagger(Model):
                 metric(logits, tags, mask.float())
             output_dict["loss"] = loss
 
+        if metadata is not None:
+            output_dict["words"] = [x["words"] for x in metadata]
         return output_dict
 
     @overrides
@@ -138,18 +142,3 @@ class SimpleTagger(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
-
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'SimpleTagger':
-        embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-
-        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
-        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
-        params.assert_empty(cls.__name__)
-        return cls(vocab=vocab,
-                   text_field_embedder=text_field_embedder,
-                   encoder=encoder,
-                   initializer=initializer,
-                   regularizer=regularizer)

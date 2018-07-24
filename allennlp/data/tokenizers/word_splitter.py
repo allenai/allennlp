@@ -4,7 +4,7 @@ from typing import List
 from overrides import overrides
 import spacy
 
-from allennlp.common import Params, Registrable
+from allennlp.common import Registrable
 from allennlp.common.util import get_spacy_model
 from allennlp.data.tokenizers.token import Token
 
@@ -32,11 +32,6 @@ class WordSplitter(Registrable):
         Splits ``sentence`` into a list of :class:`Token` objects.
         """
         raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'WordSplitter':
-        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
-        return cls.by_name(choice).from_params(params)
 
 
 @WordSplitter.register('simple')
@@ -100,11 +95,6 @@ class SimpleWordSplitter(WordSplitter):
     def _can_split(self, token: str):
         return token and token.lower() not in self.special_cases
 
-    @classmethod
-    def from_params(cls, params: Params) -> 'WordSplitter':
-        params.assert_empty(cls.__name__)
-        return cls()
-
 
 @WordSplitter.register('letters_digits')
 class LettersDigitsWordSplitter(WordSplitter):
@@ -118,11 +108,6 @@ class LettersDigitsWordSplitter(WordSplitter):
         tokens = [Token(m.group(), idx=m.start())
                   for m in re.finditer(r'[^\W\d_]+|\d+|\S', sentence)]
         return tokens
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'WordSplitter':
-        params.assert_empty(cls.__name__)
-        return cls()
 
 
 @WordSplitter.register('just_spaces')
@@ -140,11 +125,6 @@ class JustSpacesWordSplitter(WordSplitter):
     def split_words(self, sentence: str) -> List[Token]:
         return [Token(t) for t in sentence.split()]
 
-    @classmethod
-    def from_params(cls, params: Params) -> 'WordSplitter':
-        params.assert_empty(cls.__name__)
-        return cls()
-
 
 @WordSplitter.register('nltk')
 class NltkWordSplitter(WordSplitter):
@@ -161,10 +141,6 @@ class NltkWordSplitter(WordSplitter):
         from nltk.tokenize import word_tokenize
         return [Token(t) for t in word_tokenize(sentence.lower())]
 
-    @classmethod
-    def from_params(cls, params: Params) -> 'WordSplitter':
-        params.assert_empty(cls.__name__)
-        return cls()
 
 def _remove_spaces(tokens: List[spacy.tokens.Token]) -> List[spacy.tokens.Token]:
     return [token for token in tokens if not token.is_space]
@@ -191,12 +167,3 @@ class SpacyWordSplitter(WordSplitter):
     def split_words(self, sentence: str) -> List[Token]:
         # This works because our Token class matches spacy's.
         return _remove_spaces(self.spacy(sentence))
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'WordSplitter':
-        language = params.pop('language', 'en_core_web_sm')
-        pos_tags = params.pop_bool('pos_tags', False)
-        parse = params.pop_bool('parse', False)
-        ner = params.pop_bool('ner', False)
-        params.assert_empty(cls.__name__)
-        return cls(language, pos_tags, parse, ner)

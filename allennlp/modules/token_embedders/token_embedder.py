@@ -1,7 +1,6 @@
 import torch
 
-from allennlp.common import Params, Registrable
-from allennlp.data import Vocabulary
+from allennlp.common import Registrable
 
 class TokenEmbedder(torch.nn.Module, Registrable):
     """
@@ -25,8 +24,3 @@ class TokenEmbedder(torch.nn.Module, Registrable):
         token.  This is `not` the shape of the returned tensor, but the last element of that shape.
         """
         raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'TokenEmbedder':
-        choice = params.pop_choice('type', cls.list_available())
-        return cls.by_name(choice).from_params(vocab, params)

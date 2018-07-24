@@ -6,6 +6,7 @@ Typically you might create a configuration file specifying the model and
 training parameters and then use :mod:`~allennlp.commands.train`
 rather than instantiating a ``Trainer`` yourself.
 """
+# pylint: disable=too-many-lines
 
 import logging
 import os
@@ -111,9 +112,18 @@ class TensorboardWriter:
         self._train_log = train_log
         self._validation_log = validation_log
 
+    @staticmethod
+    def _item(value: Any):
+        if hasattr(value, 'item'):
+            val = value.item()
+        else:
+            val = value
+        return val
+
     def add_train_scalar(self, name: str, value: float, global_step: int) -> None:
+        # get the scalar
         if self._train_log is not None:
-            self._train_log.add_scalar(name, value, global_step)
+            self._train_log.add_scalar(name, self._item(value), global_step)
 
     def add_train_histogram(self, name: str, values: torch.Tensor, global_step: int) -> None:
         if self._train_log is not None:
@@ -122,8 +132,9 @@ class TensorboardWriter:
                 self._train_log.add_histogram(name, values_to_write, global_step)
 
     def add_validation_scalar(self, name: str, value: float, global_step: int) -> None:
+
         if self._validation_log is not None:
-            self._validation_log.add_scalar(name, value, global_step)
+            self._validation_log.add_scalar(name, self._item(value), global_step)
 
 
 def time_to_str(timestamp: int) -> str:
@@ -154,9 +165,10 @@ class Trainer:
                  validation_dataset: Optional[Iterable[Instance]] = None,
                  patience: Optional[int] = None,
                  validation_metric: str = "-loss",
+                 validation_iterator: DataIterator = None,
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
-                 num_serialized_models_to_keep: int = None,
+                 num_serialized_models_to_keep: int = 20,
                  keep_serialized_model_every_num_seconds: int = None,
                  model_save_interval: float = None,
                  cuda_device: Union[int, List] = -1,
@@ -190,13 +202,17 @@ class Trainer:
             and whether to serialize an ``is_best`` model each epoch. The metric name
             must be prepended with either "+" or "-", which specifies whether the metric
             is an increasing or decreasing function.
+        validation_iterator : ``DataIterator``, optional (default=None)
+            An iterator to use for the validation set.  If ``None``, then
+            use the training `iterator`.
         num_epochs : int, optional (default = 20)
             Number of training epochs.
         serialization_dir : str, optional (default=None)
             Path to directory for saving and loading model files. Models will not be saved if
             this parameter is not passed.
-        num_serialized_models_to_keep : ``int``, optional (default=None)
-            Number of previous model checkpoints to retain.  Default is to keep all checkpoints.
+        num_serialized_models_to_keep : ``int``, optional (default=20)
+            Number of previous model checkpoints to retain.  Default is to keep 20 checkpoints.
+            A value of None or -1 means all checkpoints will be kept.
         keep_serialized_model_every_num_seconds : ``int``, optional (default=None)
             If num_serialized_models_to_keep is not None, then occasionally it's useful to
             save models at a given interval in addition to the last num_serialized_models_to_keep.
@@ -241,6 +257,7 @@ class Trainer:
         """
         self._model = model
         self._iterator = iterator
+        self._validation_iterator = validation_iterator
         self._optimizer = optimizer
         self._train_data = train_dataset
         self._validation_data = validation_dataset
@@ -309,6 +326,7 @@ class Trainer:
             self._tensorboard = TensorboardWriter(train_log, validation_log)
         else:
             self._tensorboard = TensorboardWriter()
+        self._warned_tqdm_ignores_underscores = False
 
     def _enable_gradient_clipping(self) -> None:
         if self._grad_clipping is not None:
@@ -384,7 +402,7 @@ class Trainer:
 
         # Only the 'loss' is needed.
         # a (num_gpu, ) tensor with loss on each GPU
-        losses = gather([output['loss'] for output in outputs], used_device_ids[0], 0)
+        losses = gather([output['loss'].unsqueeze(0) for output in outputs], used_device_ids[0], 0)
         return {'loss': losses.mean()}
 
     def _batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
@@ -437,8 +455,6 @@ class Trainer:
                                          num_epochs=1,
                                          cuda_device=self._iterator_device)
         num_training_batches = self._iterator.get_num_batches(self._train_data)
-        train_generator_tqdm = Tqdm.tqdm(train_generator,
-                                         total=num_training_batches)
         self._last_log = time.time()
         last_save_time = time.time()
 
@@ -450,6 +466,8 @@ class Trainer:
             histogram_parameters = set(self._model.get_parameters_for_histogram_tensorboard_logging())
 
         logger.info("Training")
+        train_generator_tqdm = Tqdm.tqdm(train_generator,
+                                         total=num_training_batches)
         for batch in train_generator_tqdm:
             batches_this_epoch += 1
             self._batch_num_total += 1
@@ -482,7 +500,7 @@ class Trainer:
                 for name, param in self._model.named_parameters():
                     param_updates[name].sub_(param.detach().cpu())
                     update_norm = torch.norm(param_updates[name].view(-1, ))
-                    param_norm = torch.norm(param.view(-1, ))
+                    param_norm = torch.norm(param.view(-1, )).cpu()
                     self._tensorboard.add_train_scalar("gradient_update/" + name,
                                                        update_norm / (param_norm + 1e-7),
                                                        batch_num_total)
@@ -551,12 +569,18 @@ class Trainer:
                     grad_data = param.grad.data._values()
                 else:
                     grad_data = param.grad.data
-                self._tensorboard.add_train_scalar("gradient_mean/" + name,
-                                                   grad_data.mean(),
-                                                   epoch)
-                self._tensorboard.add_train_scalar("gradient_std/" + name,
-                                                   grad_data.std(),
-                                                   epoch)
+
+                # skip empty gradients
+                if torch.prod(torch.tensor(grad_data.shape)).item() > 0: # pylint: disable=not-callable
+                    self._tensorboard.add_train_scalar("gradient_mean/" + name,
+                                                       grad_data.mean(),
+                                                       epoch)
+                    self._tensorboard.add_train_scalar("gradient_std/" + name,
+                                                       grad_data.std(),
+                                                       epoch)
+                else:
+                    # no gradient for a parameter with sparse gradients
+                    logger.info("No gradient for %s, skipping tensorboard logging.", name)
         # norm of gradients
         if batch_grad_norm is not None:
             self._tensorboard.add_train_scalar("gradient_norm",
@@ -600,23 +624,28 @@ class Trainer:
         Logs all of the train metrics (and validation metrics, if provided) to the console.
         """
         val_metrics = val_metrics or {}
-        dual_message_template = "Training %s : %3f    Validation %s : %3f "
-        message_template = "%s %s : %3f "
+        dual_message_template = "%s |  %8.3f  |  %8.3f"
+        no_val_message_template = "%s |  %8.3f  |  %8s"
+        no_train_message_template = "%s |  %8s  |  %8.3f"
+        header_template = "%s |  %-10s"
 
         metric_names = set(train_metrics.keys())
         if val_metrics:
             metric_names.update(val_metrics.keys())
 
+        name_length = max([len(x) for x in metric_names])
+
+        logger.info(header_template, "Training".rjust(name_length + 13), "Validation")
         for name in metric_names:
             train_metric = train_metrics.get(name)
             val_metric = val_metrics.get(name)
 
             if val_metric is not None and train_metric is not None:
-                logger.info(dual_message_template, name, train_metric, name, val_metric)
+                logger.info(dual_message_template, name.ljust(name_length), train_metric, val_metric)
             elif val_metric is not None:
-                logger.info(message_template, "Validation", name, val_metric)
+                logger.info(no_train_message_template, name.ljust(name_length), "N/A", val_metric)
             elif train_metric is not None:
-                logger.info(message_template, "Training", name, train_metric)
+                logger.info(no_val_message_template, name.ljust(name_length), train_metric, "N/A")
 
     def _validation_loss(self) -> Tuple[float, int]:
         """
@@ -626,10 +655,15 @@ class Trainer:
 
         self._model.eval()
 
-        val_generator = self._iterator(self._validation_data,
-                                       num_epochs=1,
-                                       cuda_device=self._iterator_device)
-        num_validation_batches = self._iterator.get_num_batches(self._validation_data)
+        if self._validation_iterator is not None:
+            val_iterator = self._validation_iterator
+        else:
+            val_iterator = self._iterator
+
+        val_generator = val_iterator(self._validation_data,
+                                     num_epochs=1,
+                                     cuda_device=self._iterator_device)
+        num_validation_batches = val_iterator.get_num_batches(self._validation_data)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
         batches_this_epoch = 0
@@ -672,6 +706,7 @@ class Trainer:
 
         train_metrics: Dict[str, float] = {}
         val_metrics: Dict[str, float] = {}
+        best_epoch_val_metrics: Dict[str, float] = {}
         epochs_trained = 0
         training_start_time = time.time()
         for epoch in range(epoch_counter, self._num_epochs):
@@ -689,7 +724,8 @@ class Trainer:
 
                     # Check validation metric to see if it's the best so far
                     is_best_so_far = self._is_best_so_far(this_epoch_val_metric, validation_metric_per_epoch)
-
+                    if is_best_so_far:
+                        best_epoch_val_metrics = val_metrics.copy()
                     validation_metric_per_epoch.append(this_epoch_val_metric)
                     if self._should_stop_early(validation_metric_per_epoch):
                         logger.info("Ran out of patience.  Stopping training.")
@@ -699,6 +735,7 @@ class Trainer:
                 # No validation set, so just assume it's the best so far.
                 is_best_so_far = True
                 val_metrics = {}
+                best_epoch_val_metrics = {}
                 this_epoch_val_metric = None
 
             self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
@@ -739,7 +776,7 @@ class Trainer:
                 best_validation_metric = min(validation_metric_per_epoch)
             else:
                 best_validation_metric = max(validation_metric_per_epoch)
-            metrics[f"best_validation_{self._validation_metric}"] = best_validation_metric
+            metrics.update({f"best_validation_{k}": v for k, v in best_epoch_val_metrics.items()})
             metrics['best_epoch'] = [i for i, value in enumerate(validation_metric_per_epoch)
                                      if value == best_validation_metric][-1]
         return metrics
@@ -755,8 +792,13 @@ class Trainer:
             return this_epoch_val_metric > max(validation_metric_per_epoch)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
-        # pylint: disable=no-self-use
-        return ', '.join(["%s: %.4f" % (name, value) for name, value in metrics.items()]) + " ||"
+        if (not self._warned_tqdm_ignores_underscores and
+                    any(metric_name.startswith("_") for metric_name in metrics)):
+            logger.warning("Metrics with names beginning with \"_\" will "
+                           "not be logged to the tqdm progress bar.")
+            self._warned_tqdm_ignores_underscores = True
+        return ', '.join(["%s: %.4f" % (name, value) for name, value in
+                          metrics.items() if not name.startswith("_")]) + " ||"
 
     def _save_checkpoint(self,
                          epoch: Union[int, str],
@@ -793,7 +835,7 @@ class Trainer:
                             "Copying weights to '%s/best.th'.", self._serialization_dir)
                 shutil.copyfile(model_path, os.path.join(self._serialization_dir, "best.th"))
 
-            if self._num_serialized_models_to_keep:
+            if self._num_serialized_models_to_keep and self._num_serialized_models_to_keep >= 0:
                 self._serialized_paths.append([time.time(), model_path, training_path])
                 if len(self._serialized_paths) > self._num_serialized_models_to_keep:
                     paths_to_remove = self._serialized_paths.pop(0)
@@ -812,30 +854,16 @@ class Trainer:
                         for fname in paths_to_remove[1:]:
                             os.remove(fname)
 
-    def _restore_checkpoint(self) -> Tuple[int, List[float]]:
+    def find_latest_checkpoint(self) -> Tuple[str, str]:
         """
-        Restores a model from a serialization_dir to the last saved checkpoint.
-        This includes an epoch count and optimizer state, which is serialized separately
-        from  model parameters. This function should only be used to continue training -
-        if you wish to load a model for inference/load parts of a model into a new
-        computation graph, you should use the native Pytorch functions:
-        `` model.load_state_dict(torch.load("/path/to/model/weights.th"))``
-
-        If ``self._serialization_dir`` does not exist or does not contain any checkpointed weights,
-        this function will do nothing and return 0.
-
-        Returns
-        -------
-        epoch: int
-            The epoch at which to resume training, which should be one after the epoch
-            in the saved training state.
+        Return the location of the latest model and training state files.
+        If there isn't a valid checkpoint then return None.
         """
         have_checkpoint = (self._serialization_dir is not None and
                            any("model_state_epoch_" in x for x in os.listdir(self._serialization_dir)))
 
         if not have_checkpoint:
-            # No checkpoint to restore, start at 0
-            return 0, []
+            return None
 
         serialization_files = os.listdir(self._serialization_dir)
         model_checkpoints = [x for x in serialization_files if "model_state_epoch" in x]
@@ -866,6 +894,34 @@ class Trainer:
                                   "model_state_epoch_{}.th".format(epoch_to_load))
         training_state_path = os.path.join(self._serialization_dir,
                                            "training_state_epoch_{}.th".format(epoch_to_load))
+
+        return (model_path, training_state_path)
+
+    def _restore_checkpoint(self) -> Tuple[int, List[float]]:
+        """
+        Restores a model from a serialization_dir to the last saved checkpoint.
+        This includes an epoch count and optimizer state, which is serialized separately
+        from  model parameters. This function should only be used to continue training -
+        if you wish to load a model for inference/load parts of a model into a new
+        computation graph, you should use the native Pytorch functions:
+        `` model.load_state_dict(torch.load("/path/to/model/weights.th"))``
+
+        If ``self._serialization_dir`` does not exist or does not contain any checkpointed weights,
+        this function will do nothing and return 0.
+
+        Returns
+        -------
+        epoch: int
+            The epoch at which to resume training, which should be one after the epoch
+            in the saved training state.
+        """
+        latest_checkpoint = self.find_latest_checkpoint()
+
+        if latest_checkpoint is None:
+            # No checkpoint to restore, start at 0
+            return 0, []
+
+        model_path, training_state_path = latest_checkpoint
 
         # Load the parameters onto CPU, then transfer to GPU.
         # This avoids potential OOM on GPU for large models that
@@ -899,6 +955,7 @@ class Trainer:
 
         return epoch_to_return, val_metric_per_epoch
 
+    # Requires custom from_params.
     @classmethod
     def from_params(cls,
                     model: Model,
@@ -906,7 +963,8 @@ class Trainer:
                     iterator: DataIterator,
                     train_data: Iterable[Instance],
                     validation_data: Optional[Iterable[Instance]],
-                    params: Params) -> 'Trainer':
+                    params: Params,
+                    validation_iterator: DataIterator = None) -> 'Trainer':
 
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
@@ -926,7 +984,7 @@ class Trainer:
         else:
             scheduler = None
 
-        num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", None)
+        num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", 20)
         keep_serialized_model_every_num_seconds = params.pop_int(
                 "keep_serialized_model_every_num_seconds", None)
         model_save_interval = params.pop_float("model_save_interval", None)
@@ -938,6 +996,7 @@ class Trainer:
                        train_data, validation_data,
                        patience=patience,
                        validation_metric=validation_metric,
+                       validation_iterator=validation_iterator,
                        num_epochs=num_epochs,
                        serialization_dir=serialization_dir,
                        cuda_device=cuda_device,

@@ -1,13 +1,14 @@
 # pylint: disable=no-self-use, invalid-name
+import json
 import logging
 import math
 
 import numpy
 import pytest
-import pyhocon
 import torch
+import _jsonnet
 
-from allennlp.nn import InitializerApplicator
+from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.nn.initializers import block_orthogonal, uniform_unit_scaling
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
@@ -22,6 +23,9 @@ class TestInitializers(AllenNlpTestCase):
         super(TestInitializers, self).tearDown()
         logging.getLogger('allennlp.nn.initializers').disabled = True
 
+    def test_from_params_string(self):
+        Initializer.from_params(params="eye")
+
     def test_regex_matches_are_initialized_correctly(self):
         class Net(torch.nn.Module):
             def __init__(self):
@@ -33,14 +37,13 @@ class TestInitializers(AllenNlpTestCase):
             def forward(self, inputs):  # pylint: disable=arguments-differ
                 pass
 
-        # pyhocon does funny things if there's a . in a key.  This test makes sure that we
-        # handle these kinds of regexes correctly.
+        # Make sure we handle regexes properly
         json_params = """{"initializer": [
         ["conv", {"type": "constant", "val": 5}],
         ["funky_na.*bi", {"type": "constant", "val": 7}]
         ]}
         """
-        params = Params(pyhocon.ConfigFactory.parse_string(json_params))
+        params = Params(json.loads(_jsonnet.evaluate_snippet("", json_params)))
         initializers = InitializerApplicator.from_params(params['initializer'])
         model = Net()
         initializers(model)
@@ -81,3 +84,41 @@ class TestInitializers(AllenNlpTestCase):
         uniform_unit_scaling(tensor, "relu")
         assert tensor.data.max() < math.sqrt(3/10) * 1.43
         assert tensor.data.min() > -math.sqrt(3/10) * 1.43
+
+    def test_regex_match_prevention_prevents_and_overrides(self):
+
+        class Net(torch.nn.Module):
+            def __init__(self):
+                super(Net, self).__init__()
+                self.linear_1 = torch.nn.Linear(5, 10)
+                self.linear_2 = torch.nn.Linear(10, 5)
+                # typical actual usage: modules loaded from allenlp.model.load(..)
+                self.linear_3_transfer = torch.nn.Linear(5, 10)
+                self.linear_4_transfer = torch.nn.Linear(10, 5)
+                self.pretrained_conv = torch.nn.Conv1d(5, 5, 5)
+            def forward(self, inputs):  # pylint: disable=arguments-differ
+                pass
+
+        json_params = """{"initializer": [
+        [".*linear.*", {"type": "constant", "val": 10}],
+        [".*conv.*", {"type": "constant", "val": 10}],
+        [".*_transfer.*", "prevent"],
+        [".*pretrained.*",{"type": "prevent"}]
+        ]}
+        """
+        params = Params(json.loads(_jsonnet.evaluate_snippet("", json_params)))
+        initializers = InitializerApplicator.from_params(params['initializer'])
+        model = Net()
+        initializers(model)
+
+        for module in [model.linear_1, model.linear_2]:
+            for parameter in module.parameters():
+                assert torch.equal(parameter.data, torch.ones(parameter.size())*10)
+
+        transfered_modules = [model.linear_3_transfer,
+                              model.linear_4_transfer,
+                              model.pretrained_conv]
+
+        for module in transfered_modules:
+            for parameter in module.parameters():
+                assert not torch.equal(parameter.data, torch.ones(parameter.size())*10)

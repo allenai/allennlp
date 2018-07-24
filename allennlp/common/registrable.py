@@ -3,16 +3,18 @@
 any base class with a named registry for its subclasses and a decorator
 for registering them.
 """
-
 from collections import defaultdict
 from typing import TypeVar, Type, Dict, List
+import logging
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.from_params import FromParams
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 T = TypeVar('T')
 
-
-class Registrable:
+class Registrable(FromParams):
     """
     Any class that inherits from ``Registrable`` gains access to a named registry for its
     subclasses. To register them, just decorate them with the classmethod
@@ -33,7 +35,6 @@ class Registrable:
     module in which they reside (as this causes any import of either the abstract class or
     a subclass to load all other subclasses and the abstract class).
     """
-
     _registry: Dict[Type, Dict[str, Type]] = defaultdict(dict)
     default_implementation: str = None
 
@@ -52,6 +53,7 @@ class Registrable:
 
     @classmethod
     def by_name(cls: Type[T], name: str) -> Type[T]:
+        logger.info(f"instantiating registered subclass {name} of {cls}")
         if name not in Registrable._registry[cls]:
             raise ConfigurationError("%s is not a registered name for %s" % (name, cls.__name__))
         return Registrable._registry[cls].get(name)
