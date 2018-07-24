@@ -4,7 +4,7 @@ valid actions and the grammar
 """
 
 from collections import defaultdict
-from typing import List, Dict
+from typing import List, Dict, Set
 import re
 
 from parsimonious.expressions import Sequence, OneOf, Literal
@@ -90,7 +90,7 @@ class ConversationContext():
     It initializes the global actions that are valid for every interaction. For each utterance,
     local actions are added and are valid for future utterances in the same interaction.
     """
-    def __init__(self, interaction: List[Dict[str, str]] = None):
+    def __init__(self, interaction: List[Dict[str, str]] = None) -> None:
         self.interaction: List[Dict[str, str]] = interaction
         self.base_sql_def: str = SQL_GRAMMAR_STR
         self.grammar: Grammar = Grammar(SQL_GRAMMAR_STR)
@@ -102,15 +102,15 @@ class ConversationContext():
         valid for all contexts. The keys represent the nonterminals in the
         grammar and the values are the productions for that nonterminal.
         """
-        valid_actions: Dict[str, List[str]] = defaultdict(set)
+        valid_actions: Dict[str, Set[str]] = defaultdict(set)
 
         for key in self.grammar:
             rhs = self.grammar[key]
             if isinstance(rhs, Sequence):
-                valid_actions[key].add(" ".join(rhs._unicode_members()))
+                valid_actions[key].add(" ".join(rhs._unicode_members())) # pylint: disable=protected-access
 
             elif isinstance(rhs, OneOf):
-                for option in rhs._unicode_members():
+                for option in rhs._unicode_members(): # pylint: disable=protected-access
                     valid_actions[key].add(option)
 
             elif isinstance(rhs, Literal):
