@@ -224,7 +224,6 @@ class OpenaiTransformer(torch.nn.Module):
         self.config = config
         self.vocab_size = vocab_size
         self.n_ctx = n_ctx
-        self.requires_grad = requires_grad
 
         self.embed = torch.nn.Embedding(vocab_size, config.num_embeddings)
         self.drop = torch.nn.Dropout(config.embedding_dropout_probability)
@@ -238,28 +237,27 @@ class OpenaiTransformer(torch.nn.Module):
 
         torch.nn.init.normal_(self.embed.weight, std=0.02)
 
+        for parameter in self.parameters():
+            parameter.requires_grad = requires_grad
+
     def forward(self, x: torch.Tensor) -> List[torch.Tensor]:
         #x = x.view(-1, x.size(2), x.size(3))
 
-        with torch.set_grad_enabled(self.training and self.requires_grad):
-            # x is (batch_size, sequence_length) tensor of byte-pair ids
-            print("x", x.size())
+        # x is (batch_size, sequence_length) tensor of byte-pair ids
 
-            # e is (batch_size, sequence_length, 2, num_embeddings) tensor of embeddings
-            e = self.embed(x)
+        # e is (batch_size, sequence_length, 2, num_embeddings) tensor of embeddings
+        e = self.embed(x)
 
-            print("e", e.size())
+        # h is (batch_size, sequence_length, num_embeddinggs)
+        h = e.sum(dim=2)
 
-            # h is (batch_size, sequence_length, num_embeddinggs)
-            h = e.sum(dim=2)
+        all_layers = [h]
+        for block in self.h:
+            h = block(h)
+            all_layers.append(h)
 
-            all_layers = [h]
-            for block in self.h:
-                h = block(h)
-                all_layers.append(h)
-
-            # result is list of (batch_size, sequence_length, num_embeddings)
-            return all_layers
+        # result is list of (batch_size, sequence_length, num_embeddings)
+        return all_layers
 
     def load_weights(self,
                      transformer_model_path: str,

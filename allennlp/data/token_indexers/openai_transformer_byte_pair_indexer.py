@@ -20,7 +20,8 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[List[int]]):
     """
     # pylint: disable=no-self-use
     def __init__(self,
-                 transformer_model_path: str) -> None:
+                 transformer_model_path: str,
+                 n_ctx: int = 512) -> None:
 
         # if `file_path` is a URL, redirect to the cache
         transformer_model_path = cached_path(transformer_model_path)
@@ -41,6 +42,7 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[List[int]]):
         self.bpe_ranks = {pair: idx for idx, pair in enumerate(pairs)}
 
         self.cache: Dict[str, List[int]] = {}
+        self.n_ctx = n_ctx
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -54,7 +56,7 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[List[int]]):
             text = token.text
 
         if text in self.cache:
-            return text
+            return self.cache[text]
 
         # Split into letters, but add a `</w>` to the last
         word = [c for c in text[:-1]]
@@ -133,9 +135,19 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[List[int]]):
             offsets.append(offset)
             text_tokens.extend(bpe_tokens)
 
+        num_tokens = len(text_tokens)
+        if num_tokens < self.n_ctx:
+            text_tokens.extend(0 for _ in range(self.n_ctx - num_tokens))
+        else:
+            text_tokens = text_tokens[:self.n_ctx]
+
         return {
-                f"{index_name}-text_tokens": text_tokens,
-                f"{index_name}-offsets": offsets
+                index_name: text_tokens,
+                f"{index_name}-offsets": offsets,
+                # add mask here according to the original tokens,
+                # because calling util.get_text_field_mask on the
+                # "byte pair" tokens will produce the wrong shape
+                "mask": [1 for _ in tokens]
         }
 
     @overrides
