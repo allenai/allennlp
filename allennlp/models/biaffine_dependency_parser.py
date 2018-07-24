@@ -20,7 +20,7 @@ from allennlp.training.metrics import AttachmentScores
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-POS_TO_IGNORE = {'``', "''", ':', ',', '.', 'PU', 'PUNCT'}
+POS_TO_IGNORE = {'``', "''", ':', ',', '.', 'PU', 'PUNCT', 'SYM'}
 
 @Model.register("biaffine_parser")
 class BiaffineDependencyParser(Model):
