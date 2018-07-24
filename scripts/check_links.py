@@ -29,13 +29,13 @@ if __name__ == "__main__":
         with open(markdown_file) as handle:
             for line in handle.readlines():
                 matches = url_regex.findall(line)
-                for match in matches:
-                    if 'localhost' not in match[1]:
-                        all_matches.add(MatchTuple(source=markdown_file, name=match[0], link=match[1]))
+                for name, link in matches:
+                    if 'localhost' not in link:
+                        all_matches.add(MatchTuple(source=markdown_file, name=name, link=link))
 
     with Pool(processes=10) as pool:
-        RESULTS = pool.map(url_ok, [match for match in list(all_matches)])
-    unreachable_results = [result for result in RESULTS if not result[1]]
+        results = map(url_ok, [match for match in list(all_matches)])
+    unreachable_results = [result for result in results if not result[1]]
 
     if unreachable_results:
         print("UnReachable Links:")
