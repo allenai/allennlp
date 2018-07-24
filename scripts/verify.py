@@ -38,7 +38,7 @@ def main(checks):
             print("check docs passed")
 
         if "check-links" in checks:
-            print("LinksValidity (check):", flush=True)
+            print("Checking links in Markdown files:", flush=True)
             run("./scripts/check_links.py", shell=True, check=True)
             print("check links passed")
 
