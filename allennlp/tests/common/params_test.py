@@ -3,6 +3,7 @@ import json
 import os
 import re
 import tempfile
+from collections import OrderedDict
 
 import pytest
 
@@ -277,3 +278,28 @@ class TestParams(AllenNlpTestCase):
                 "a.b.filename": my_file,
                 "a.b.c.c_file": my_other_file
         }
+
+    def test_as_ordered_dict(self):
+        # keyD > keyC > keyE; keyDA > keyDB; Next all other keys alphabetically
+        preference_orders = [["keyD", "keyC", "keyE"], ["keyDA", "keyDB"]]
+        params = Params({"keyC": "valC", "keyB": "valB", "keyA": "valA", "keyE": "valE",
+                         "keyD": {"keyDB": "valDB", "keyDA": "valDA"}})
+        ordered_params_dict = params.as_ordered_dict(preference_orders)
+        expected_ordered_params_dict = OrderedDict({'keyD': {'keyDA': 'valDA', 'keyDB': 'valDB'},
+                                                    'keyC': 'valC', 'keyE': 'valE',
+                                                    'keyA': 'valA', 'keyB': 'valB'})
+        assert json.dumps(ordered_params_dict) == json.dumps(expected_ordered_params_dict)
+
+    def test_to_file(self):
+        # Test to_file works with or without preference orders
+        params_dict = {"keyA": "valA", "keyB": "valB"}
+        expected_ordered_params_dict = OrderedDict({"keyB": "valB", "keyA": "valA"})
+        params = Params(params_dict)
+        file_path = self.TEST_DIR / 'config.jsonnet'
+        # check with preference orders
+        params.to_file(file_path, [["keyB", "keyA"]])
+        with open(file_path, "r") as handle:
+            ordered_params_dict = OrderedDict(json.load(handle))
+        assert json.dumps(expected_ordered_params_dict) == json.dumps(ordered_params_dict)
+        # check without preference orders doesn't give error
+        params.to_file(file_path)
