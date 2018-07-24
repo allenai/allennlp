@@ -1,9 +1,12 @@
 import json
+import pprint
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.atis_world import AtisWorld
 
 from allennlp.semparse.contexts.atis_tables import ConversationContext
+# from allennlp.semparse.worlds.world import ParsingError
+from parsimonious.exceptions import ParseError
 
 class TestAtisWorld(AllenNlpTestCase):
     def setUp(self):
@@ -12,126 +15,439 @@ class TestAtisWorld(AllenNlpTestCase):
         self.data = open(test_filename).readlines()
 
     def test_atis_global_actions(self):
-        conv_context = ConversationContext(None)
+        conv_context = ConversationContext()
         valid_actions = conv_context.valid_actions
-
-        assert set(valid_actions.keys()) == {'stmt',
-                                             'query',
-                                             'select_results',
-                                             'agg',
+        
+        # Make sure that the global rules have the expected nonterminals
+        assert set(valid_actions.keys()) == {'agg',
                                              'agg_func',
-                                             'col_refs',
-                                             'table_refs',
-                                             'where_clause',
-                                             'condition_paren',
-                                             'condition_paren2',
-                                             'condition_paren3',
-                                             'condition',
-                                             'in_clause',
+                                             'agg_results',
+                                             'and',
+                                             'asterisk',
                                              'biexpr',
                                              'binaryop',
+                                             'boolean',
+                                             'col_ref',
+                                             'col_refs',
+                                             'condition',
+                                             'conditions',
+                                             'conj',
+                                             'distinct',
+                                             'in_clause',
+                                             'not',
+                                             'number',
+                                             'or',
+                                             'pos_value',
+                                             'query',
+                                             'select_results',
+                                             'stmt',
+                                             'string',
+                                             'table_name',
+                                             'table_ref',
+                                             'table_refs',
                                              'ternaryexpr',
                                              'value',
-                                             'pos_value',
-                                             'agg_results',
-                                             'boolean',
-                                             'lparen',
-                                             'rparen',
-                                             'conj',
-                                             'and',
-                                             'or',
-                                             'not',
-                                             'asterisk',
-                                             'col_ref',
-                                             'table_ref',
-                                             'table_name',
-                                             'number',
-                                             'string'}
+                                             'where_clause'}
 
+        # Strings and numbers are added locally so they should be initialized to empty sets when
+        # we first construct a context
         assert set(valid_actions['string']) == set()
+        assert set(valid_actions['number']) == set()
         
+        # Check that valid actions for a nonterminal has the correct production rule
         assert set(valid_actions['query']) == \
-                set(['ws lparen? ws "SELECT" ws "DISTINCT"? ws select_results ws "FROM" ws table_refs ws where_clause rparen? ws'])
+                {'(ws "(" ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause ws ")" ws)',
+                 '(ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause ws)'}
         
 
     def test_atis_local_actions(self):
-        conv_context = ConversationContext(None)
+        # Check if the triggers activate correcty
+        conv_context = ConversationContext()
         world = AtisWorld(conv_context, "show me the flights from denver at 12 o'clock")
         assert '1200' in world.valid_actions['number']
         assert 'DENVER' in world.valid_actions['string']
+        assert 'DEN' in world.valid_actions['string']
         conv_context.valid_actions = world.valid_actions
 
         world = AtisWorld(conv_context, "show me the delta or united flights in afternoon")
+        # Valid local actions from previous utterance should still be valid
+        assert '1200' in world.valid_actions['number']
+        assert 'DENVER' in world.valid_actions['string']
+        assert 'DEN' in world.valid_actions['string']
+
+        # New triggers should be activated 
         assert '1800' in world.valid_actions['number'] 
         assert 'DL' in world.valid_actions['string']
         assert 'UA' in world.valid_actions['string']
         conv_context.valid_actions = world.valid_actions
- 
+        
         world = AtisWorld(conv_context, "i would like one coach reservation for \
                           may ninth from pittsburgh to atlanta leaving \
                           pittsburgh before 10 o'clock in morning 1991 \
                           august twenty sixth")
         assert '26' in world.valid_actions['number'] 
+        assert '1000' in world.valid_actions['number'] 
+        assert '1991' in world.valid_actions['number'] 
+        assert '5' in world.valid_actions['number'] 
         assert 'COACH' in world.valid_actions['string']
+        assert 'ATLANTA' in world.valid_actions['string']
+        assert 'ATL' in world.valid_actions['string']
+        assert 'PITTSBURGH' in world.valid_actions['string']
+        assert 'PIT' in world.valid_actions['string']
 
-    def test_atis_debug(self):
-        conv_context = ConversationContext(None)
-        world = AtisWorld(conv_context, "i'd like to find a us air flight from orlando to cleveland that arrives around 10 o'clock in the evening")
-        query = """( SELECT DISTINCT flight.flight_id FROM flight WHERE ( flight.airline_code = 'US' AND ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'ORLANDO' )) AND ( flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'CLEVELAND')) AND ( flight.arrival_time >= 2130 AND flight.arrival_time <= 2230 ) ) ) )   ) ;"""
-        action_sequence = world.get_action_sequence(query)
-        print(action_sequence)
-
-
-    def test_simple_sequence(self):
-        conv_context = ConversationContext(None)
+    def test_atis_simple_action_sequence(self):
+        conv_context = ConversationContext()
         world = AtisWorld(conv_context, "give me all flights from boston to philadelphia next week arriving after lunch")
         action_sequence = world.get_action_sequence("(SELECT DISTINCT city . city_code , city . city_name FROM city WHERE ( city.city_name = 'BOSTON' ) );")
-        print(action_sequence)
+        assert action_sequence == ['stmt -> [query, ";"]',
+                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                   'where_clause, ")"]',
+                                   'where_clause -> ["WHERE", "(", conditions, ")"]',
+                                   'conditions -> [condition]',
+                                   'condition -> [biexpr]',
+                                   'biexpr -> [col_ref, binaryop, value]',
+                                   'value -> [pos_value]',
+                                   'pos_value -> [string]',
+                                   'string -> ["\'BOSTON\'"]',
+                                   'binaryop -> ["="]',
+                                   'col_ref -> ["city", ".", "city_name"]',
+                                   'table_refs -> [table_name]',
+                                   'table_name -> ["city"]',
+                                   'select_results -> [col_refs]',
+                                   'col_refs -> [col_ref, ",", col_refs]',
+                                   'col_refs -> [col_ref]',
+                                   'col_ref -> ["city", ".", "city_name"]',
+                                   'col_ref -> ["city", ".", "city_code"]',
+                                   'distinct -> ["DISTINCT"]']
 
         action_sequence = world.get_action_sequence("( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' ) ) ;")
-        print(action_sequence)
+        assert action_sequence == ['stmt -> [query, ";"]',
+                                  'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, where_clause, ")"]',
+                                  'where_clause -> ["WHERE", conditions]',
+                                   'conditions -> [condition]',
+                                   'condition -> [in_clause]',
+                                   'in_clause -> [col_ref, "IN", query]',
+                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                   'where_clause, ")"]',
+                                   'where_clause -> ["WHERE", conditions]',
+                                   'conditions -> [condition]',
+                                   'condition -> [biexpr]',
+                                   'biexpr -> [col_ref, binaryop, value]',
+                                   'value -> [pos_value]',
+                                   'pos_value -> [string]',
+                                   'string -> ["\'BOSTON\'"]',
+                                   'binaryop -> ["="]',
+                                   'col_ref -> ["city", ".", "city_name"]',
+                                   'table_refs -> [table_name]',
+                                   'table_name -> ["city"]',
+                                   'select_results -> [col_refs]',
+                                   'col_refs -> [col_ref]',
+                                   'col_ref -> ["city", ".", "city_code"]',
+                                   'distinct -> [""]',
+                                   'col_ref -> ["airport_service", ".", "city_code"]',
+                                   'table_refs -> [table_name]',
+                                   'table_name -> ["airport_service"]',
+                                   'select_results -> [col_refs]',
+                                   'col_refs -> [col_ref]',
+                                   'col_ref -> ["airport_service", ".", "airport_code"]',
+                                   'distinct -> [""]']
 
         action_sequence = world.get_action_sequence("( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' ) AND 1 = 1) ;")
-        print(action_sequence)
+        assert action_sequence == ['stmt -> [query, ";"]',
+                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                   'where_clause, ")"]',
+                                   'where_clause -> ["WHERE", conditions]',
+                                   'conditions -> [condition, conj, conditions]',
+                                   'conditions -> [condition]',
+                                   'condition -> [biexpr]',
+                                   'biexpr -> [value, binaryop, value]',
+                                   'value -> [pos_value]',
+                                   'pos_value -> [number]',
+                                   'number -> ["1"]',
+                                   'binaryop -> ["="]',
+                                   'value -> [pos_value]',
+                                   'pos_value -> [number]',
+                                   'number -> ["1"]',
+                                   'conj -> [and]',
+                                   'and -> ["AND"]',
+                                   'condition -> [in_clause]',
+                                   'in_clause -> [col_ref, "IN", query]',
+                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                   'where_clause, ")"]',
+                                   'where_clause -> ["WHERE", conditions]',
+                                   'conditions -> [condition]',
+                                   'condition -> [biexpr]',
+                                   'biexpr -> [col_ref, binaryop, value]',
+                                   'value -> [pos_value]',
+                                   'pos_value -> [string]',
+                                   'string -> ["\'BOSTON\'"]',
+                                   'binaryop -> ["="]',
+                                   'col_ref -> ["city", ".", "city_name"]',
+                                   'table_refs -> [table_name]',
+                                   'table_name -> ["city"]',
+                                   'select_results -> [col_refs]',
+                                   'col_refs -> [col_ref]',
+                                   'col_ref -> ["city", ".", "city_code"]',
+                                   'distinct -> [""]',
+                                   'col_ref -> ["airport_service", ".", "city_code"]',
+                                   'table_refs -> [table_name]',
+                                   'table_name -> ["airport_service"]',
+                                   'select_results -> [col_refs]',
+                                   'col_refs -> [col_ref]',
+                                   'col_ref -> ["airport_service", ".", "airport_code"]',
+                                   'distinct -> [""]']
 
-        conv_context = ConversationContext(None)
         world = AtisWorld(conv_context, "give me all flights from boston to philadelphia next week arriving after lunch")
-
         action_sequence = world.get_action_sequence(
         """( SELECT DISTINCT flight.flight_id FROM flight WHERE ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' )))) ;""")
-        print(action_sequence)
-
-
-
-    def test_conjunctions(self):
-        conv_context = ConversationContext(None)
-        world = AtisWorld(conv_context, "give me all flights from boston to philadelphia next week arriving after lunch")
-
-        action_sequence = world.get_action_sequence(
-        """flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' )) AND ( flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'PHILADELPHIA' )) AND flight.arrival_time > 1400 ) """)
-        print(action_sequence)
-
+        assert action_sequence == ['stmt -> [query, ";"]',
+                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                    'where_clause, ")"]',
+                                    'where_clause -> ["WHERE", "(", conditions, ")"]',
+                                    'conditions -> [condition]',
+                                    'condition -> [in_clause]',
+                                    'in_clause -> [col_ref, "IN", query]',
+                                    'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                    'where_clause, ")"]',
+                                    'where_clause -> ["WHERE", conditions]',
+                                    'conditions -> [condition]',
+                                    'condition -> [in_clause]',
+                                    'in_clause -> [col_ref, "IN", query]',
+                                    'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                    'where_clause, ")"]',
+                                    'where_clause -> ["WHERE", conditions]',
+                                    'conditions -> [condition]',
+                                    'condition -> [biexpr]',
+                                    'biexpr -> [col_ref, binaryop, value]',
+                                    'value -> [pos_value]',
+                                    'pos_value -> [string]',
+                                    'string -> ["\'BOSTON\'"]',
+                                    'binaryop -> ["="]',
+                                    'col_ref -> ["city", ".", "city_name"]',
+                                    'table_refs -> [table_name]',
+                                    'table_name -> ["city"]',
+                                    'select_results -> [col_refs]',
+                                    'col_refs -> [col_ref]',
+                                    'col_ref -> ["city", ".", "city_code"]',
+                                    'distinct -> [""]',
+                                    'col_ref -> ["airport_service", ".", "city_code"]',
+                                    'table_refs -> [table_name]',
+                                    'table_name -> ["airport_service"]',
+                                    'select_results -> [col_refs]',
+                                    'col_refs -> [col_ref]',
+                                    'col_ref -> ["airport_service", ".", "airport_code"]',
+                                    'distinct -> [""]',
+                                    'col_ref -> ["flight", ".", "from_airport"]',
+                                    'table_refs -> [table_name]',
+                                    'table_name -> ["flight"]',
+                                    'select_results -> [col_refs]',
+                                    'col_refs -> [col_ref]',
+                                    'col_ref -> ["flight", ".", "flight_id"]',
+                                    'distinct -> ["DISTINCT"]']
 
        
-    def test_atis_action_sequence(self):
-
-        conv_context = ConversationContext(None)
-        world = AtisWorld(conv_context, "give me all flights from boston to philadelphia next week arriving after lunch")
-        action_sequence = world.get_action_sequence("(SELECT DISTINCT city . city_code FROM city WHERE city.city_name = 'BOSTON');")
-        print(action_sequence)
-        action_sequence = world.get_action_sequence("( SELECT DISTINCT flight.flight_id FROM flight WHERE ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' ) ) ) );")
-        print(action_sequence)
-        
-        conv_context = ConversationContext(None)
-        world = AtisWorld(conv_context, "give me all flights from boston to philadelphia next week arriving after lunch")
-
-        action_sequence = world.get_action_sequence(
-        """( SELECT DISTINCT flight.flight_id FROM flight WHERE ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' )) AND ( flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'PHILADELPHIA' )) AND flight.arrival_time > 1400 ) ) ) ;""")
-
+    def test_atis_long_action_sequence(self):
+        conv_context = ConversationContext()
         world = AtisWorld(conv_context, "what is the earliest flight in morning 1993 june fourth from boston to pittsburgh")
         action_sequence = world.get_action_sequence(
         """( SELECT DISTINCT flight.flight_id FROM flight WHERE ( flight.departure_time = ( SELECT MIN ( flight.departure_time ) FROM flight WHERE ( flight.departure_time BETWEEN 0 AND 1200 AND ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' )) AND flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'PITTSBURGH' )) ) ) ) AND ( flight.departure_time BETWEEN 0 AND 1200 AND ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'BOSTON' )) AND flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'PITTSBURGH' )) ) ) )   ) ;""")
-    
+        assert action_sequence == ['stmt -> [query, ";"]',
+                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                   'where_clause, ")"]',
+                                   'where_clause -> ["WHERE", "(", conditions, ")"]',
+                                   'conditions -> [condition, conj, conditions]',
+                                   'conditions -> ["(", conditions, ")"]',
+                                   'conditions -> [condition, conj, conditions]',
+                                   'conditions -> ["(", conditions, ")"]',
+                                   'conditions -> [condition, conj, conditions]',
+                                   'conditions -> [condition]',
+                                   'condition -> [in_clause]',
+                                   'in_clause -> [col_ref, "IN", query]',
+                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                   'where_clause, ")"]',
+                                   'where_clause -> ["WHERE", conditions]',
+                                   'conditions -> [condition]',
+                                   'condition -> [in_clause]',
+                                   'in_clause -> [col_ref, "IN", query]',
+                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                   'where_clause, ")"]',
+                                   'where_clause -> ["WHERE", conditions]',
+                                   'conditions -> [condition]',
+                                   'condition -> [biexpr]',
+                                   'biexpr -> [col_ref, binaryop, value]',
+                                   'value -> [pos_value]',
+                                   'pos_value -> [string]',
+                                   'string -> ["\'PITTSBURGH\'"]',
+                                   'binaryop -> ["="]',
+                                   'col_ref -> ["city", ".", "city_name"]',
+                                   'table_refs -> [table_name]',
+                                   'table_name -> ["city"]',
+                                   'select_results -> [col_refs]',
+                                   'col_refs -> [col_ref]',
+                                   'col_ref -> ["city", ".", "city_code"]',
+                                   'distinct -> [""]',
+                                   'col_ref -> ["airport_service", ".", "city_code"]',
+                                   'table_refs -> [table_name]',
+                                   'table_name -> ["airport_service"]',
+                                   'select_results -> [col_refs]',
+                                   'col_refs -> [col_ref]',
+                                   'col_ref -> ["airport_service", ".", "airport_code"]',
+                                   'distinct -> [""]',
+                                   'col_ref -> ["flight", ".", "to_airport"]',
+                                   'conj -> [and]',
+                                   'and -> ["AND"]',
+                                   'condition -> [in_clause]',
+                                   'in_clause -> [col_ref, "IN", query]',
+                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                   'where_clause, ")"]',
+                                   'where_clause -> ["WHERE", conditions]',
+                                   'conditions -> [condition]',
+                                   'condition -> [in_clause]',
+                                   'in_clause -> [col_ref, "IN", query]',
+                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                   'where_clause, ")"]',
+                                   'where_clause -> ["WHERE", conditions]',
+                                   'conditions -> [condition]',
+                                   'condition -> [biexpr]',
+                                   'biexpr -> [col_ref, binaryop, value]',
+                                   'value -> [pos_value]',
+                                   'pos_value -> [string]',
+                                   'string -> ["\'BOSTON\'"]',
+                                   'binaryop -> ["="]',
+                                   'col_ref -> ["city", ".", "city_name"]',
+                                   'table_refs -> [table_name]',
+                                   'table_name -> ["city"]',
+                                   'select_results -> [col_refs]',
+                                   'col_refs -> [col_ref]',
+                                   'col_ref -> ["city", ".", "city_code"]',
+                                   'distinct -> [""]',
+                                   'col_ref -> ["airport_service", ".", "city_code"]',
+                                   'table_refs -> [table_name]',
+                                   'table_name -> ["airport_service"]',
+                                   'select_results -> [col_refs]',
+                                   'col_refs -> [col_ref]',
+                                   'col_ref -> ["airport_service", ".", "airport_code"]',
+                                   'distinct -> [""]',
+                                   'col_ref -> ["flight", ".", "from_airport"]',
+                                   'conj -> [and]',
+                                   'and -> ["AND"]',
+                                   'condition -> [ternaryexpr]',
+                                   'ternaryexpr -> [col_ref, "BETWEEN", value, and value]',
+                                   'value -> [pos_value]',
+                                   'pos_value -> [number]',
+                                   'number -> ["1200"]',
+                                   'and -> ["AND"]',
+                                   'value -> [pos_value]',
+                                   'pos_value -> [number]',
+                                   'number -> ["0"]',
+                                   'col_ref -> ["flight", ".", "departure_time"]',
+                                   'conj -> [and]',
+                                   'and -> ["AND"]',
+                                   'condition -> [biexpr]',
+                                   'biexpr -> [col_ref, binaryop, value]',
+                                   'value -> [pos_value]',
+                                   'pos_value -> [agg_results]',
+                                   'agg_results -> ["(", "SELECT", distinct, agg, "FROM", table_name, '
+                                   'where_clause, ")"]',
+                                   'where_clause -> ["WHERE", "(", conditions, ")"]',
+                                   'conditions -> [condition, conj, conditions]',
+                                   'conditions -> ["(", conditions, ")"]',
+                                   'conditions -> [condition, conj, conditions]',
+                                   'conditions -> [condition]',
+                                   'condition -> [in_clause]',
+                                   'in_clause -> [col_ref, "IN", query]',
+                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                   'where_clause, ")"]',
+                                   'where_clause -> ["WHERE", conditions]',
+                                   'conditions -> [condition]',
+                                   'condition -> [in_clause]',
+                                   'in_clause -> [col_ref, "IN", query]',
+                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                   'where_clause, ")"]',
+                                   'where_clause -> ["WHERE", conditions]',
+                                   'conditions -> [condition]',
+                                   'condition -> [biexpr]',
+                                   'biexpr -> [col_ref, binaryop, value]',
+                                   'value -> [pos_value]',
+                                   'pos_value -> [string]',
+                                   'string -> ["\'PITTSBURGH\'"]',
+                                   'binaryop -> ["="]',
+                                   'col_ref -> ["city", ".", "city_name"]',
+                                   'table_refs -> [table_name]',
+                                   'table_name -> ["city"]',
+                                   'select_results -> [col_refs]',
+                                   'col_refs -> [col_ref]',
+                                   'col_ref -> ["city", ".", "city_code"]',
+                                   'distinct -> [""]',
+                                   'col_ref -> ["airport_service", ".", "city_code"]',
+                                   'table_refs -> [table_name]',
+                                   'table_name -> ["airport_service"]',
+                                   'select_results -> [col_refs]',
+                                   'col_refs -> [col_ref]',
+                                   'col_ref -> ["airport_service", ".", "airport_code"]',
+                                   'distinct -> [""]',
+                                   'col_ref -> ["flight", ".", "to_airport"]',
+                                   'conj -> [and]',
+                                   'and -> ["AND"]',
+                                   'condition -> [in_clause]',
+                                   'in_clause -> [col_ref, "IN", query]',
+                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                   'where_clause, ")"]',
+                                   'where_clause -> ["WHERE", conditions]',
+                                   'conditions -> [condition]',
+                                   'condition -> [in_clause]',
+                                   'in_clause -> [col_ref, "IN", query]',
+                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                                   'where_clause, ")"]',
+                                   'where_clause -> ["WHERE", conditions]',
+                                   'conditions -> [condition]',
+                                   'condition -> [biexpr]',
+                                   'biexpr -> [col_ref, binaryop, value]',
+                                   'value -> [pos_value]',
+                                   'pos_value -> [string]',
+                                   'string -> ["\'BOSTON\'"]',
+                                   'binaryop -> ["="]',
+                                   'col_ref -> ["city", ".", "city_name"]',
+                                   'table_refs -> [table_name]',
+                                   'table_name -> ["city"]',
+                                   'select_results -> [col_refs]',
+                                   'col_refs -> [col_ref]',
+                                   'col_ref -> ["city", ".", "city_code"]',
+                                   'distinct -> [""]',
+                                   'col_ref -> ["airport_service", ".", "city_code"]',
+                                   'table_refs -> [table_name]',
+                                   'table_name -> ["airport_service"]',
+                                   'select_results -> [col_refs]',
+                                   'col_refs -> [col_ref]',
+                                   'col_ref -> ["airport_service", ".", "airport_code"]',
+                                   'distinct -> [""]',
+                                   'col_ref -> ["flight", ".", "from_airport"]',
+                                   'conj -> [and]',
+                                   'and -> ["AND"]',
+                                   'condition -> [ternaryexpr]',
+                                   'ternaryexpr -> [col_ref, "BETWEEN", value, and value]',
+                                   'value -> [pos_value]',
+                                   'pos_value -> [number]',
+                                   'number -> ["1200"]',
+                                   'and -> ["AND"]',
+                                   'value -> [pos_value]',
+                                   'pos_value -> [number]',
+                                   'number -> ["0"]',
+                                   'col_ref -> ["flight", ".", "departure_time"]',
+                                   'table_name -> ["flight"]',
+                                   'agg -> [agg_func, "(", col_ref, ")"]',
+                                   'col_ref -> ["flight", ".", "departure_time"]',
+                                   'agg_func -> ["MIN"]',
+                                   'distinct -> [""]',
+                                   'binaryop -> ["="]',
+                                   'col_ref -> ["flight", ".", "departure_time"]',
+                                   'table_refs -> [table_name]',
+                                   'table_name -> ["flight"]',
+                                   'select_results -> [col_refs]',
+                                   'col_refs -> [col_ref]',
+                                   'col_ref -> ["flight", ".", "flight_id"]',
+                                   'distinct -> ["DISTINCT"]']
+                        
     def test_atis_from_json(self):
         line = json.loads(self.data[0])
         conv_context = ConversationContext(line['interaction'])
@@ -140,29 +456,24 @@ class TestAtisWorld(AllenNlpTestCase):
             world = AtisWorld(conv_context, interaction_round['utterance'])
             action_sequence = world.get_action_sequence(interaction_round['sql'])
             conv_context.valid_actions = world.valid_actions
-            print(action_sequence)
 
     def test_atis_parse_coverage(self):
+        # Check that most (at least 90%) of the queries can be parsed
         num_queries = 0
         num_parsed = 0
 
         for idx, line in enumerate(self.data):
-            jline = json.loads(line)
-            conv_context = ConversationContext(jline['interaction'])
+            convo = json.loads(line)
+            conv_context = ConversationContext(convo['interaction'])
 
             for interaction_round in conv_context.interaction:
+                num_queries += 1
                 world = AtisWorld(conv_context, interaction_round['utterance'])
-
                 try:
-                    num_queries += 1
                     action_sequence = world.get_action_sequence(interaction_round['sql'])
                     num_parsed += 1
-                except:
-                    print("Failed to parse, line {}".format(idx))
-                    print("The query was:\n {}".format(interaction_round['sql']))
-                    print("The utterance was:\n {}".format(interaction_round['utterance']))
-
+                except ParseError as error:
+                   continue
                 conv_context.valid_actions = world.valid_actions
-
-        print("Parsed {} out of {}, coverage: {}".format(num_parsed, num_queries, num_parsed/num_queries))
+        assert num_parsed/num_queries >= 0.90
 

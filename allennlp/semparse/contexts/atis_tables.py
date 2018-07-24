@@ -10,6 +10,17 @@ HOUR_TO_TWENTY_FOUR = 100
 HOURS_IN_DAY = 2400
 AROUND_RANGE = 30
 
+"""
+This is the base definition of the SQL grammar written in a simplified sort of EBNF notation. The notation 
+here is of the form:
+
+    nonterminal = productions
+
+The first element is the starting symbol. We initialize ``col_ref``, ``table_ref``, ``table_name``, ``number``, 
+``string`` to empty productions first, we will fill in  ``col_ref``, ``table_ref``, ``table_name`` based on the
+dataset and ``number`` and ``string`` based on the utterances
+"""
+
 SQL_GRAMMAR_STR = """
     stmt                = query ws ";" ws
     query               = (ws "(" ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause ws ")" ws) /
@@ -67,24 +78,23 @@ SQL_GRAMMAR_STR = """
 
 """
 
-
-OPTIONAL = ['lparen', 'rparen', '(lparen ws)', '(ws rparen)', 'not', 'ws', 'asterisk']
-
 class ConversationContext():
     """
     A ``ConversationContext`` represents the interaction in which an utterance occurs.
     It initializes the global actions that are valid for every interaction. For each utterance,
     local actions are added and are valid for future utterances in the same interaction.
     """
-    def __init__(self, interaction: List[Dict[str, str]]):
-        self.interaction = interaction
-        self.base_sql_def = SQL_GRAMMAR_STR
-        self.grammar = Grammar(SQL_GRAMMAR_STR)
-        self.valid_actions = self.initialize_valid_actions()
+    def __init__(self, interaction: List[Dict[str, str]] = None):
+        self.interaction: List[Dict[str, str]] = interaction
+        self.base_sql_def: str = SQL_GRAMMAR_STR
+        self.grammar: Grammar = Grammar(SQL_GRAMMAR_STR)
+        self.valid_actions: Dict[str, List[str]] = self.initialize_valid_actions()
 
     def initialize_valid_actions(self) -> Dict[str, List[str]]:
         """
-        Initialize the conversation context with global actions, these are valid for all contexts
+        Initialize the conversation context with global actions, these are valid for all contexts.
+        The keys represent the nonterminals in the grammar and the values are the productions for that
+        nonterminal.
         """
         valid_actions: Dict[str, List[str]] = defaultdict(set)
 
@@ -262,56 +272,50 @@ CITY_CODES = {'ATLANTA': 'MATL',
               'WASHINGTON': 'WWAS',
               'WESTCHESTER COUNTY': 'HHPN'}
 
+MONTH_NUMBERS = {'january': 1,
+                 'february': 2,
+                 'march': 3,
+                 'april': 4,
+                 'may': 5,
+                 'june': 6,
+                 'july': 7,
+                 'august': 8,
+                 'september': 9,
+                 'october': 10,
+                 'november': 11,
+                 'december': 12}
 
-
-
-MONTH_NUMBERS = {
-        'january': 1,
-        'february': 2,
-        'march': 3,
-        'april': 4,
-        'may': 5,
-        'june': 6,
-        'july': 7,
-        'august': 8,
-        'september': 9,
-        'october': 10,
-        'november': 11,
-        'december': 12,
-        }
-
-DAY_NUMBERS = {
-        'first': 1,
-        'second': 2,
-        'third': 3,
-        'fourth': 4,
-        'fifth': 5,
-        'sixth': 6,
-        'seventh': 7,
-        'eighth': 8,
-        'ninth': 9,
-        'tenth': 10,
-        'eleventh': 11,
-        'twelfth': 12,
-        'thirteenth': 13,
-        'fourteenth': 14,
-        'fifteenth': 15,
-        'sixteenth': 16,
-        'seventeenth': 17,
-        'eighteenth': 18,
-        'nineteenth': 19,
-        'twentieth': 20,
-        'twenty first': 21,
-        'twenty second': 22,
-        'twenty third': 23,
-        'twenty fourth': 24,
-        'twenty fifth': 25,
-        'twenty sixth': 26,
-        'twenty seventh': 27,
-        'twenty eighth': 28,
-        'twenty ninth': 29,
-        'thirtieth': 30,
-        'thirty first': 31}
+DAY_NUMBERS = {'first': 1,
+               'second': 2,
+               'third': 3,
+               'fourth': 4,
+               'fifth': 5,
+               'sixth': 6,
+               'seventh': 7,
+               'eighth': 8,
+               'ninth': 9,
+               'tenth': 10,
+               'eleventh': 11,
+               'twelfth': 12,
+               'thirteenth': 13,
+               'fourteenth': 14,
+               'fifteenth': 15,
+               'sixteenth': 16,
+               'seventeenth': 17,
+               'eighteenth': 18,
+               'nineteenth': 19,
+               'twentieth': 20,
+               'twenty first': 21,
+               'twenty second': 22,
+               'twenty third': 23,
+               'twenty fourth': 24,
+               'twenty fifth': 25,
+               'twenty sixth': 26,
+               'twenty seventh': 27,
+               'twenty eighth': 28,
+               'twenty ninth': 29,
+               'thirtieth': 30,
+               'thirty first': 31}
 
 GROUND_SERVICE = {
         'air taxi': 'AIR TAXI OPERATION',
@@ -330,7 +334,6 @@ MISC_TIME_TRIGGERS = {'morning': ['0', '1200'],
                       'late evening': ['2000', '2200'],
                       'lunch': ['1400'],
                       'noon': ['1200']}
-
 
 TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
                        'manufacturer', 'basic_type', 'propulsion',
@@ -366,11 +369,8 @@ TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
                           'minimum_stay', 'maximum_stay', 'application', 'no_discounts'],
           'state': ['state_code', 'state_name', 'country_name']}
 
-
-
 YES_NO = {'one way': 'NO',
           'economy': 'YES'}
-
 
 AIRPORT_CODES = ['ATL', 'NA', 'OS', 'UR', 'WI', 'CLE', 'CLT', 'CMH',
                  'CVG', 'DAL', 'DCA', 'DEN', 'DET', 'DFW', 'DTW',
