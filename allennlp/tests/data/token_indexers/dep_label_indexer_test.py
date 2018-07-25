@@ -23,15 +23,15 @@ class TestDepLabelIndexer(AllenNlpTestCase):
         assert counter["dep_labels"] == {"ROOT": 1, "nsubj": 1,
                                          "det": 1, "NONE": 2, "attr": 1, "punct": 1}
 
-    def test_token_to_indices_uses_pos_tags(self):
+    def test_tokens_to_indices_uses_pos_tags(self):
         tokens = self.tokenizer.split_words("This is a sentence.")
         tokens = [t for t in tokens] + [Token("</S>")]
         vocab = Vocabulary()
         root_index = vocab.add_token_to_namespace('ROOT', namespace='dep_labels')
         none_index = vocab.add_token_to_namespace('NONE', namespace='dep_labels')
         indexer = DepLabelIndexer()
-        assert indexer.token_to_indices(tokens[1], vocab) == root_index
-        assert indexer.token_to_indices(tokens[-1], vocab) == none_index
+        assert indexer.tokens_to_indices([tokens[1]], vocab, "tokens1") == {"tokens1": [root_index]}
+        assert indexer.tokens_to_indices([tokens[-1]], vocab, "tokens-1") == {"tokens-1": [none_index]}
 
     def test_padding_functions(self):
         indexer = DepLabelIndexer()
@@ -40,5 +40,5 @@ class TestDepLabelIndexer(AllenNlpTestCase):
 
     def test_as_array_produces_token_sequence(self):
         indexer = DepLabelIndexer()
-        padded_tokens = indexer.pad_token_sequence([1, 2, 3, 4, 5], 10, {})
-        assert padded_tokens == [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]
+        padded_tokens = indexer.pad_token_sequence({'key': [1, 2, 3, 4, 5]}, {'key': 10}, {})
+        assert padded_tokens == {'key': [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]}

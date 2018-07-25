@@ -455,8 +455,6 @@ class Trainer:
                                          num_epochs=1,
                                          cuda_device=self._iterator_device)
         num_training_batches = self._iterator.get_num_batches(self._train_data)
-        train_generator_tqdm = Tqdm.tqdm(train_generator,
-                                         total=num_training_batches)
         self._last_log = time.time()
         last_save_time = time.time()
 
@@ -468,6 +466,8 @@ class Trainer:
             histogram_parameters = set(self._model.get_parameters_for_histogram_tensorboard_logging())
 
         logger.info("Training")
+        train_generator_tqdm = Tqdm.tqdm(train_generator,
+                                         total=num_training_batches)
         for batch in train_generator_tqdm:
             batches_this_epoch += 1
             self._batch_num_total += 1
@@ -500,7 +500,7 @@ class Trainer:
                 for name, param in self._model.named_parameters():
                     param_updates[name].sub_(param.detach().cpu())
                     update_norm = torch.norm(param_updates[name].view(-1, ))
-                    param_norm = torch.norm(param.view(-1, ))
+                    param_norm = torch.norm(param.view(-1, )).cpu()
                     self._tensorboard.add_train_scalar("gradient_update/" + name,
                                                        update_norm / (param_norm + 1e-7),
                                                        batch_num_total)
@@ -624,23 +624,28 @@ class Trainer:
         Logs all of the train metrics (and validation metrics, if provided) to the console.
         """
         val_metrics = val_metrics or {}
-        dual_message_template = "Training %s : %3f    Validation %s : %3f "
-        message_template = "%s %s : %3f "
+        dual_message_template = "%s |  %8.3f  |  %8.3f"
+        no_val_message_template = "%s |  %8.3f  |  %8s"
+        no_train_message_template = "%s |  %8s  |  %8.3f"
+        header_template = "%s |  %-10s"
 
         metric_names = set(train_metrics.keys())
         if val_metrics:
             metric_names.update(val_metrics.keys())
 
+        name_length = max([len(x) for x in metric_names])
+
+        logger.info(header_template, "Training".rjust(name_length + 13), "Validation")
         for name in metric_names:
             train_metric = train_metrics.get(name)
             val_metric = val_metrics.get(name)
 
             if val_metric is not None and train_metric is not None:
-                logger.info(dual_message_template, name, train_metric, name, val_metric)
+                logger.info(dual_message_template, name.ljust(name_length), train_metric, val_metric)
             elif val_metric is not None:
-                logger.info(message_template, "Validation", name, val_metric)
+                logger.info(no_train_message_template, name.ljust(name_length), "N/A", val_metric)
             elif train_metric is not None:
-                logger.info(message_template, "Training", name, train_metric)
+                logger.info(no_val_message_template, name.ljust(name_length), train_metric, "N/A")
 
     def _validation_loss(self) -> Tuple[float, int]:
         """
@@ -701,6 +706,7 @@ class Trainer:
 
         train_metrics: Dict[str, float] = {}
         val_metrics: Dict[str, float] = {}
+        best_epoch_val_metrics: Dict[str, float] = {}
         epochs_trained = 0
         training_start_time = time.time()
         for epoch in range(epoch_counter, self._num_epochs):
@@ -718,7 +724,8 @@ class Trainer:
 
                     # Check validation metric to see if it's the best so far
                     is_best_so_far = self._is_best_so_far(this_epoch_val_metric, validation_metric_per_epoch)
-
+                    if is_best_so_far:
+                        best_epoch_val_metrics = val_metrics.copy()
                     validation_metric_per_epoch.append(this_epoch_val_metric)
                     if self._should_stop_early(validation_metric_per_epoch):
                         logger.info("Ran out of patience.  Stopping training.")
@@ -728,6 +735,7 @@ class Trainer:
                 # No validation set, so just assume it's the best so far.
                 is_best_so_far = True
                 val_metrics = {}
+                best_epoch_val_metrics = {}
                 this_epoch_val_metric = None
 
             self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
@@ -768,7 +776,7 @@ class Trainer:
                 best_validation_metric = min(validation_metric_per_epoch)
             else:
                 best_validation_metric = max(validation_metric_per_epoch)
-            metrics[f"best_validation_{self._validation_metric}"] = best_validation_metric
+            metrics.update({f"best_validation_{k}": v for k, v in best_epoch_val_metrics.items()})
             metrics['best_epoch'] = [i for i, value in enumerate(validation_metric_per_epoch)
                                      if value == best_validation_metric][-1]
         return metrics

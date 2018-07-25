@@ -233,7 +233,7 @@ def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
 
 class _ElmoCharacterEncoder(torch.nn.Module):
     """
-    Compute context sensitive token representation using pretrained biLM.
+    Compute context insensitive token representation using pretrained biLM.
 
     This embedder has input character ids of size (batch_size, sequence_length, 50)
     and returns (batch_size, sequence_length + 2, embedding_dim), where embedding_dim

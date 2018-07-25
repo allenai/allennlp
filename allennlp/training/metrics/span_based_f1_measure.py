@@ -10,6 +10,7 @@ from allennlp.training.metrics.metric import Metric
 from allennlp.data.dataset_readers.dataset_utils.span_utils import (
         bio_tags_to_spans,
         bioul_tags_to_spans,
+        iob1_tags_to_spans,
         TypedStringSpan
 )
 
@@ -24,7 +25,10 @@ class SpanBasedF1Measure(Metric):
     is not exactly the same as the perl script used to evaluate the CONLL 2005
     data - particularly, it does not consider continuations or reference spans
     as constituents of the original span. However, it is a close proxy, which
-    can be helpful for judging model peformance during training.
+    can be helpful for judging model peformance during training. This metric
+    works properly when the spans are unlabeled (i.e., your labels are
+    simply "B", "I", "O" if using the "BIO" label encoding).
+
     """
     def __init__(self,
                  vocabulary: Vocabulary,
@@ -54,10 +58,10 @@ class SpanBasedF1Measure(Metric):
             spans in a BIO tagging scheme which are typically not included.
         label_encoding : ``str``, optional (default = "BIO")
             The encoding used to specify label span endpoints in the sequence.
-            Valid options are "BIO" or "BIOUL".
+            Valid options are "BIO", "IOB1", or BIOUL".
         """
-        if label_encoding not in ["BIO", "BIOUL"]:
-            raise ConfigurationError("Unknown label encoding - expected 'BIO' or 'BIOUL'.")
+        if label_encoding not in ["BIO", "IOB1", "BIOUL"]:
+            raise ConfigurationError("Unknown label encoding - expected 'BIO', 'IOB1', 'BIOUL'.")
 
         self._label_encoding = label_encoding
         self._label_vocabulary = vocabulary.get_index_to_token_vocabulary(tag_namespace)
@@ -133,6 +137,9 @@ class SpanBasedF1Measure(Metric):
             if self._label_encoding == "BIO":
                 predicted_spans = bio_tags_to_spans(predicted_string_labels, self._ignore_classes)
                 gold_spans = bio_tags_to_spans(gold_string_labels, self._ignore_classes)
+            elif self._label_encoding == "IOB1":
+                predicted_spans = iob1_tags_to_spans(predicted_string_labels, self._ignore_classes)
+                gold_spans = iob1_tags_to_spans(gold_string_labels, self._ignore_classes)
             elif self._label_encoding == "BIOUL":
                 predicted_spans = bioul_tags_to_spans(predicted_string_labels, self._ignore_classes)
                 gold_spans = bioul_tags_to_spans(gold_string_labels, self._ignore_classes)
