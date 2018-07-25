@@ -1,7 +1,7 @@
 import os
 import pathlib
 from subprocess import run
-from typing import Tuple
+from typing import List
 import shutil
 
 from overrides import overrides
@@ -47,41 +47,38 @@ class WikiTablesParserPredictor(Predictor):
             run(f'mv wikitables-grow.grammar {grammar_path}', shell=True)
 
     @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+    def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
         Expects JSON that looks like ``{"question": "...", "table": "..."}``.
         """
         question_text = json_dict["question"]
-        table_text = json_dict["table"]
-        cells = []
-        for row_index, line in enumerate(table_text.split('\n')):
-            line = line.rstrip('\n')
-            if row_index == 0:
-                columns = line.split('\t')
-            else:
-                cells.append(line.split('\t'))
+        table_rows = json_dict["table"].split('\n')
+
         # pylint: disable=protected-access
         tokenized_question = self._dataset_reader._tokenizer.tokenize(question_text.lower())  # type: ignore
         # pylint: enable=protected-access
-        table_json = {"question": tokenized_question, "columns": columns, "cells": cells}
         instance = self._dataset_reader.text_to_instance(question_text,  # type: ignore
-                                                         table_json,
+                                                         table_rows,
                                                          tokenized_question=tokenized_question)
-        extra_info = {'question_tokens': tokenized_question}
-        return instance, extra_info
+        return instance
 
     @overrides
-    def predict_json(self, inputs: JsonDict) -> JsonDict:
-        instance, return_dict = self._json_to_instance(inputs)
+    def predict_instance(self, instance: Instance) -> JsonDict:
         outputs = self._model.forward_on_instance(instance)
         outputs['answer'] = self._execute_logical_form_on_table(outputs['logical_form'],
-                                                                inputs['table'])
+                                                                outputs['original_table'])
+        return sanitize(outputs)
 
-        return_dict.update(outputs)
-        return sanitize(return_dict)
+
+    def predict_batch_instance(self, instances: List[Instance]) -> List[JsonDict]:
+        outputs = self._model.forward_on_instances(instances)
+        for output in outputs:
+            output['answer'] = self._execute_logical_form_on_table(output['logical_form'],
+                                                                   output['original_table'])
+        return sanitize(outputs)
 
     @staticmethod
-    def _execute_logical_form_on_table(logical_form, table):
+    def _execute_logical_form_on_table(logical_form: str, table: str):
         """
         The parameters are written out to files which the jar file reads and then executes the
         logical form.

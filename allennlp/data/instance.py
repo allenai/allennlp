@@ -1,4 +1,4 @@
-from typing import Dict, Mapping
+from typing import Dict, MutableMapping
 
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.vocabulary import Vocabulary
@@ -22,9 +22,19 @@ class Instance:
     fields : ``Dict[str, Field]``
         The ``Field`` objects that will be used to produce data arrays for this instance.
     """
-    def __init__(self, fields: Mapping[str, Field]) -> None:
+    def __init__(self, fields: MutableMapping[str, Field]) -> None:
         self.fields = fields
         self.indexed = False
+
+    def add_field(self, field_name: str, field: Field, vocab: Vocabulary = None) -> None:
+        """
+        Add the field to the existing fields mapping.
+        If we have already indexed the Instance, then we also index `field`, so
+        it is necessary to supply the vocab.
+        """
+        self.fields[field_name] = field
+        if self.indexed:
+            field.index(vocab)
 
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         """

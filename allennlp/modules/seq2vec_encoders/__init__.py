@@ -61,6 +61,7 @@ class _Seq2VecWrapper:
     def __call__(self, **kwargs) -> PytorchSeq2VecWrapper:
         return self.from_params(Params(kwargs))
 
+    # Logic requires custom from_params
     def from_params(self, params: Params) -> PytorchSeq2VecWrapper:
         if not params.pop('batch_first', True):
             raise ConfigurationError("Our encoder semantics assumes batch is always first!")

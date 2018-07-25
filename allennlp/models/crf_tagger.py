@@ -1,13 +1,13 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Any
 
 from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear
 
-from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
-from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, ConditionalRandomField
+from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
+from allennlp.modules import ConditionalRandomField, FeedForward
 from allennlp.modules.conditional_random_field import allowed_transitions
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
@@ -32,7 +32,12 @@ class CrfTagger(Model):
     label_namespace : ``str``, optional (default=``labels``)
         This is needed to compute the SpanBasedF1Measure metric.
         Unless you did something unusual, the default value should be what you want.
+    feedforward : ``FeedForward``, optional, (default = None).
+        An optional feedforward layer to apply after the encoder.
     dropout:  ``float``, optional (detault=``None``)
+    verbose_metrics : ``bool``, optional (default = False)
+        If true, metrics will be returned per label class in addition
+        to the overall statistics.
     constraint_type : ``str``, optional (default=``None``)
         If provided, the CRF will be constrained at decoding time
         to produce valid labels based on the specified type (e.g. "BIO", or "BIOUL").
@@ -49,8 +54,10 @@ class CrfTagger(Model):
                  encoder: Seq2SeqEncoder,
                  label_namespace: str = "labels",
                  constraint_type: str = None,
+                 feedforward: FeedForward = None,
                  include_start_end_transitions: bool = True,
                  dropout: float = None,
+                 verbose_metrics: bool = False,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
@@ -59,11 +66,18 @@ class CrfTagger(Model):
         self.text_field_embedder = text_field_embedder
         self.num_tags = self.vocab.get_vocab_size(label_namespace)
         self.encoder = encoder
+        self._verbose_metrics = verbose_metrics
         if dropout:
             self.dropout = torch.nn.Dropout(dropout)
         else:
             self.dropout = None
-        self.tag_projection_layer = TimeDistributed(Linear(self.encoder.get_output_dim(),
+        self._feedforward = feedforward
+
+        if feedforward is not None:
+            output_dim = feedforward.get_output_dim()
+        else:
+            output_dim = self.encoder.get_output_dim()
+        self.tag_projection_layer = TimeDistributed(Linear(output_dim,
                                                            self.num_tags))
 
         if constraint_type is not None:
@@ -81,14 +95,19 @@ class CrfTagger(Model):
                                               tag_namespace=label_namespace,
                                               label_encoding=constraint_type or "BIO")
 
+
         check_dimensions_match(text_field_embedder.get_output_dim(), encoder.get_input_dim(),
                                "text field embedding dim", "encoder input dim")
+        if feedforward is not None:
+            check_dimensions_match(encoder.get_output_dim(), feedforward.get_input_dim(),
+                                   "encoder output dim", "feedforward input dim")
         initializer(self)
 
     @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
-                tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                tags: torch.LongTensor = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -105,6 +124,8 @@ class CrfTagger(Model):
         tags : ``torch.LongTensor``, optional (default = ``None``)
             A torch tensor representing the sequence of integer gold class labels of shape
             ``(batch_size, num_tokens)``.
+        metadata : ``List[Dict[str, Any]]``, optional, (default = None)
+            metadata containg the original words in the sentence to be tagged under a 'words' key.
 
         Returns
         -------
@@ -130,6 +151,9 @@ class CrfTagger(Model):
         if self.dropout:
             encoded_text = self.dropout(encoded_text)
 
+        if self._feedforward is not None:
+            encoded_text = self._feedforward(encoded_text)
+
         logits = self.tag_projection_layer(encoded_text)
         best_paths = self.crf.viterbi_tags(logits, mask)
 
@@ -151,7 +175,8 @@ class CrfTagger(Model):
                     class_probabilities[i, j, tag_id] = 1
 
             self.span_metric(class_probabilities, tags, mask)
-
+        if metadata is not None:
+            output["words"] = [x["words"] for x in metadata]
         return output
 
     @overrides
@@ -162,7 +187,7 @@ class CrfTagger(Model):
         so we use an ugly nested list comprehension.
         """
         output_dict["tags"] = [
-                [self.vocab.get_token_from_index(tag, namespace="labels")
+                [self.vocab.get_token_from_index(tag, namespace=self.label_namespace)
                  for tag in instance_tags]
                 for instance_tags in output_dict["tags"]
         ]
@@ -172,28 +197,7 @@ class CrfTagger(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         metric_dict = self.span_metric.get_metric(reset=reset)
-        return {x: y for x, y in metric_dict.items() if "overall" in x}
-
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'CrfTagger':
-        embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        label_namespace = params.pop("label_namespace", "labels")
-        constraint_type = params.pop("constraint_type", None)
-        dropout = params.pop("dropout", None)
-        include_start_end_transitions = params.pop("include_start_end_transitions", True)
-        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
-        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
-
-        params.assert_empty(cls.__name__)
-
-        return cls(vocab=vocab,
-                   text_field_embedder=text_field_embedder,
-                   encoder=encoder,
-                   label_namespace=label_namespace,
-                   constraint_type=constraint_type,
-                   dropout=dropout,
-                   include_start_end_transitions=include_start_end_transitions,
-                   initializer=initializer,
-                   regularizer=regularizer)
+        if self._verbose_metrics:
+            return metric_dict
+        else:
+            return {x: y for x, y in metric_dict.items() if "overall" in x}

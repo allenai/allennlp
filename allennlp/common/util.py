@@ -344,3 +344,13 @@ def is_lazy(iterable: Iterable[A]) -> bool:
     which here just means it's not a list.
     """
     return not isinstance(iterable, list)
+
+def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
+    frozen_parameter_names = []
+    tunable_parameter_names = []
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            frozen_parameter_names.append(name)
+        else:
+            tunable_parameter_names.append(name)
+    return [frozen_parameter_names, tunable_parameter_names]

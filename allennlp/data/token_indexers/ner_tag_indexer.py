@@ -4,7 +4,6 @@ from typing import Dict, List
 from overrides import overrides
 
 from allennlp.common.util import pad_sequence_to_length
-from allennlp.common import Params
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
@@ -35,11 +34,13 @@ class NerTagIndexer(TokenIndexer[int]):
         counter[self._namespace][tag] += 1
 
     @overrides
-    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> int:
-        tag = token.ent_type_
-        if tag is None:
-            tag = 'NONE'
-        return vocabulary.get_token_index(tag, self._namespace)
+    def tokens_to_indices(self,
+                          tokens: List[Token],
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[int]]:
+        tags = ['NONE' if token.ent_type_ is None else token.ent_type_ for token in tokens]
+
+        return {index_name: [vocabulary.get_token_index(tag, self._namespace) for tag in tags]}
 
     @overrides
     def get_padding_token(self) -> int:
@@ -51,13 +52,8 @@ class NerTagIndexer(TokenIndexer[int]):
 
     @overrides
     def pad_token_sequence(self,
-                           tokens: List[int],
-                           desired_num_tokens: int,
-                           padding_lengths: Dict[str, int]) -> List[int]:  # pylint: disable=unused-argument
-        return pad_sequence_to_length(tokens, desired_num_tokens)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'NerTagIndexer':
-        namespace = params.pop('namespace', 'ner_tags')
-        params.assert_empty(cls.__name__)
-        return cls(namespace=namespace)
+                           tokens: Dict[str, List[int]],
+                           desired_num_tokens: Dict[str, int],
+                           padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
+        return {key: pad_sequence_to_length(val, desired_num_tokens[key])
+                for key, val in tokens.items()}

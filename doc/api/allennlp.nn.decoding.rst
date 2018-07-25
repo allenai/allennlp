@@ -41,6 +41,11 @@ allennlp.nn.decoding
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.nn.decoding.chu_liu_edmonds
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.nn.decoding.util
    :members:
    :undoc-members:

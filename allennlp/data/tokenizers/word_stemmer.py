@@ -1,7 +1,7 @@
 from nltk.stem import PorterStemmer as NltkPorterStemmer
 from overrides import overrides
 
-from allennlp.common import Params, Registrable
+from allennlp.common import Registrable
 from allennlp.data.tokenizers.token import Token
 
 
@@ -22,12 +22,6 @@ class WordStemmer(Registrable):
         Returns a new ``Token`` with ``word.text`` replaced by a stemmed word.
         """
         raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'WordStemmer':
-        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
-        params.assert_empty('WordStemmer')
-        return cls.by_name(choice)()
 
 
 @WordStemmer.register('pass_through')

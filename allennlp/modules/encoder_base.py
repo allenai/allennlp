@@ -104,10 +104,10 @@ class _EncoderBase(torch.nn.Module):
             if hidden_state is None:
                 initial_states = hidden_state
             elif isinstance(hidden_state, tuple):
-                initial_states = [state.index_select(1, sorting_indices)[:, :num_valid, :]
+                initial_states = [state.index_select(1, sorting_indices)[:, :num_valid, :].contiguous()
                                   for state in hidden_state]
             else:
-                initial_states = hidden_state.index_select(1, sorting_indices)[:, :num_valid, :]
+                initial_states = hidden_state.index_select(1, sorting_indices)[:, :num_valid, :].contiguous()
 
         else:
             initial_states = self._get_initial_states(batch_size, num_valid, sorting_indices)
