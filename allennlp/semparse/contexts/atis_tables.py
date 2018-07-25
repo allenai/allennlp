@@ -1,5 +1,10 @@
+"""
+A ``ConversationContext`` represents the context in which an utterance appears by with the
+valid actions and the grammar
+"""
+
 from collections import defaultdict
-from typing import List, Dict
+from typing import List, Dict, Set
 import re
 
 from parsimonious.expressions import Sequence, OneOf, Literal
@@ -11,17 +16,18 @@ HOURS_IN_DAY = 2400
 AROUND_RANGE = 30
 
 """
-This is the base definition of the SQL grammar written in a simplified sort of EBNF notation. The notation 
-here is of the form:
+This is the base definition of the SQL grammar written in a simplified sort of
+EBNF notation. The notation here is of the form:
 
     nonterminal = productions
 
-The first element is the starting symbol. We initialize ``col_ref``, ``table_ref``, ``table_name``, ``number``, 
-``string`` to empty productions first, we will fill in  ``col_ref``, ``table_ref``, ``table_name`` based on the
-dataset and ``number`` and ``string`` based on the utterances
+The first element is the starting symbol. We initialize ``col_ref``, ``table_ref``,
+``table_name``, ``number``, ``string`` to empty productions first, we will fill in
+``col_ref``, ``table_ref``, ``table_name`` based on the dataset and ``number`` and
+``string`` based on the utterances
 """
 
-SQL_GRAMMAR_STR = """
+SQL_GRAMMAR_STR = r"""
     stmt                = query ws ";" ws
     query               = (ws "(" ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause ws ")" ws) /
                           (ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause ws)
@@ -84,7 +90,7 @@ class ConversationContext():
     It initializes the global actions that are valid for every interaction. For each utterance,
     local actions are added and are valid for future utterances in the same interaction.
     """
-    def __init__(self, interaction: List[Dict[str, str]] = None):
+    def __init__(self, interaction: List[Dict[str, str]] = None) -> None:
         self.interaction: List[Dict[str, str]] = interaction
         self.base_sql_def: str = SQL_GRAMMAR_STR
         self.grammar: Grammar = Grammar(SQL_GRAMMAR_STR)
@@ -92,19 +98,19 @@ class ConversationContext():
 
     def initialize_valid_actions(self) -> Dict[str, List[str]]:
         """
-        Initialize the conversation context with global actions, these are valid for all contexts.
-        The keys represent the nonterminals in the grammar and the values are the productions for that
-        nonterminal.
+        Initialize the conversation context with global actions, these are
+        valid for all contexts. The keys represent the nonterminals in the
+        grammar and the values are the productions for that nonterminal.
         """
-        valid_actions: Dict[str, List[str]] = defaultdict(set)
+        valid_actions: Dict[str, Set[str]] = defaultdict(set)
 
         for key in self.grammar:
             rhs = self.grammar[key]
             if isinstance(rhs, Sequence):
-                valid_actions[key].add(" ".join(rhs._unicode_members()))
+                valid_actions[key].add(" ".join(rhs._unicode_members())) # pylint: disable=protected-access
 
             elif isinstance(rhs, OneOf):
-                for option in rhs._unicode_members():
+                for option in rhs._unicode_members(): # pylint: disable=protected-access
                     valid_actions[key].add(option)
 
             elif isinstance(rhs, Literal):
@@ -317,13 +323,12 @@ DAY_NUMBERS = {'first': 1,
                'thirtieth': 30,
                'thirty first': 31}
 
-GROUND_SERVICE = {
-        'air taxi': 'AIR TAXI OPERATION',
-        'limo': 'LIMOUSINE',
-        'rapid': 'RAPID TRANSIT',
-        'rental': 'RENTAL CAR',
-        'car': 'RENTAL CAR',
-        'taxi': 'TAXI'}
+GROUND_SERVICE = {'air taxi': 'AIR TAXI OPERATION',
+                  'limo': 'LIMOUSINE',
+                  'rapid': 'RAPID TRANSIT',
+                  'rental': 'RENTAL CAR',
+                  'car': 'RENTAL CAR',
+                  'taxi': 'TAXI'}
 
 MISC_STR = {"every day" : "DAILY"}
 
@@ -349,8 +354,9 @@ TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
           'date_day': ['month_number', 'day_number', 'year', 'day_name'],
           'days': ['days_code', 'day_name'],
           'equipment_sequence': ['aircraft_code_sequence', 'aircraft_code'],
-          'fare': ['fare_id', 'from_airport', 'to_airport', 'fare_basis_code', 'fare_airline',
-                   'restriction_code', 'one_direction_cost', 'round_trip_cost', 'round_trip_required'],
+          'fare': ['fare_id', 'from_airport', 'to_airport', 'fare_basis_code',
+                   'fare_airline', 'restriction_code', 'one_direction_cost',
+                   'round_trip_cost', 'round_trip_required'],
           'fare_basis': ['fare_basis_code', 'booking_class', 'class_type', 'premium', 'economy',
                          'discounted', 'night', 'season', 'basis_days'],
           'flight': ['flight_id', 'flight_days', 'from_airport', 'to_airport', 'departure_time',
@@ -359,14 +365,16 @@ TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
                      'dual_carrier', 'time_elapsed'],
           'flight_fare': ['flight_id', 'fare_id'],
           'flight_leg': ['flight_id', 'leg_number', 'leg_flight'],
-          'flight_stop': ['flight_id', 'stop_number', 'stop_days', 'stop_airport', 'arrival_time',
-                          'arrival_airline', 'arrival_flight_number', 'departure_time', 'departure_airline',
-                          'departure_flight_number', 'stop_time'],
+          'flight_stop': ['flight_id', 'stop_number', 'stop_days', 'stop_airport',
+                          'arrival_time', 'arrival_airline', 'arrival_flight_number',
+                          'departure_time', 'departure_airline', 'departure_flight_number',
+                          'stop_time'],
           'food_service': ['meal_code', 'meal_number', 'compartment', 'meal_description'],
           'ground_service': ['city_code', 'airport_code', 'transport_type', 'ground_fare'],
           'month': ['month_number', 'month_name'],
-          'restriction': ['restriction_code', 'advance_purchase', 'stopovers', 'saturday_stay_required',
-                          'minimum_stay', 'maximum_stay', 'application', 'no_discounts'],
+          'restriction': ['restriction_code', 'advance_purchase', 'stopovers',
+                          'saturday_stay_required', 'minimum_stay', 'maximum_stay',
+                          'application', 'no_discounts'],
           'state': ['state_code', 'state_name', 'country_name']}
 
 YES_NO = {'one way': 'NO',

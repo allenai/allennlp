@@ -4,8 +4,8 @@ import torch
 import torch.nn.init
 import torch.optim.lr_scheduler
 
-from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.registrable import Registrable
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
@@ -67,7 +67,6 @@ class TestRegistrable(AllenNlpTestCase):
         assert DatasetReader.by_name('squad').__name__ == 'SquadReader'
 
     def test_registry_has_builtin_iterators(self):
-        assert DataIterator.by_name('adaptive').__name__ == 'AdaptiveIterator'
         assert DataIterator.by_name('basic').__name__ == 'BasicIterator'
         assert DataIterator.by_name('bucket').__name__ == 'BucketIterator'
 

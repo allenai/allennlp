@@ -1,6 +1,6 @@
 import torch
 
-from allennlp.common import Params, Registrable
+from allennlp.common import Registrable
 
 class SimilarityFunction(torch.nn.Module, Registrable):
     """
@@ -28,8 +28,3 @@ class SimilarityFunction(torch.nn.Module, Registrable):
         and returns a tensor with one less dimension, such as ``(batch_size, length_1, length_2)``.
         """
         raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'SimilarityFunction':
-        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
-        return cls.by_name(choice).from_params(params)

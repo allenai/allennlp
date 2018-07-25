@@ -142,7 +142,7 @@ class SQLVisitor(NodeVisitor):
                 nonterminal = ...
         """
         self.prod_acc: List[str] = []
-        self.grammar: str = grammar
+        self.grammar: Grammar = grammar
 
         for nonterm in self.grammar.keys():
             if nonterm != 'stmt':
@@ -151,7 +151,7 @@ class SQLVisitor(NodeVisitor):
     def generic_visit(self, node: Node, visited_children) -> None:
         self.add_prod_rule(node)
 
-    def add_prod_rule(self, node: Node, children=None) -> None:
+    def add_prod_rule(self, node: Node, children=None) -> None: # pylint: disable=unused-argument
         """
         For each node, we accumulate the rules that generated its children in a list
         """
@@ -169,7 +169,7 @@ class SQLVisitor(NodeVisitor):
                     if child.expr.name != '':
                         child_strs.append(child.expr.name)
                     else:
-                        ws_str = child.expr._as_rhs().lstrip("(").rstrip(")")
+                        ws_str = child.expr._as_rhs().lstrip("(").rstrip(")") # pylint: disable=protected-access
                         curr_child_strs = [tok for tok in re.split(" ws |ws | ws", ws_str) if tok]
                         child_strs.extend(curr_child_strs)
                 rhs = "[" + ", ".join(child_strs) + "]"
@@ -177,7 +177,7 @@ class SQLVisitor(NodeVisitor):
             rule = lhs + rhs
             self.prod_acc = [rule] + self.prod_acc
 
-    def visit_stmt(self, node: Node, children=None) -> List[str]:
+    def visit_stmt(self, node: Node, children=None) -> List[str]: # pylint: disable=unused-argument
         """
         The top level is a statement, so return the productions that we have accumulated
         """

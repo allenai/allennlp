@@ -18,6 +18,7 @@ allennlp.training.metrics
 * :ref:`SpanBasedF1Measure<span-based-f1-measure>`
 * :ref:`SquadEmAndF1<squad-em-and-f1>`
 * :ref:`WikiTablesAccuracy<wikitables-accuracy>`
+* :ref:`AttachmentScores<attachment-scores>`
 
 
 .. _metric:
@@ -88,6 +89,12 @@ allennlp.training.metrics
 
 .. _wikitables-accuracy:
 .. automodule:: allennlp.training.metrics.wikitables_accuracy
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _attachment-scores:
+.. automodule:: allennlp.training.metrics.attachment_scores
    :members:
    :undoc-members:
    :show-inheritance:

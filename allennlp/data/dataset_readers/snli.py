@@ -4,10 +4,9 @@ import logging
 
 from overrides import overrides
 
-from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, TextField, LabelField
+from allennlp.data.fields import Field, TextField, LabelField, MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
@@ -21,7 +20,8 @@ class SnliReader(DatasetReader):
     Reads a file from the Stanford Natural Language Inference (SNLI) dataset.  This data is
     formatted as jsonl, one json-formatted instance per line.  The keys in the data are
     "gold_label", "sentence1", and "sentence2".  We convert these keys into fields named "label",
-    "premise" and "hypothesis".
+    "premise" and "hypothesis", along with a metadata field containing the tokenized strings of the
+    premise and hypothesis.
 
     Parameters
     ----------
@@ -73,14 +73,8 @@ class SnliReader(DatasetReader):
         fields['hypothesis'] = TextField(hypothesis_tokens, self._token_indexers)
         if label:
             fields['label'] = LabelField(label)
-        return Instance(fields)
 
-    @classmethod
-    def from_params(cls, params: Params) -> 'SnliReader':
-        tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return SnliReader(tokenizer=tokenizer,
-                          token_indexers=token_indexers,
-                          lazy=lazy)
+        metadata = {"premise_tokens": [x.text for x in premise_tokens],
+                    "hypothesis_tokens": [x.text for x in hypothesis_tokens]}
+        fields["metadata"] = MetadataField(metadata)
+        return Instance(fields)

@@ -34,8 +34,8 @@ class TestTokenCharactersEncoder(AllenNlpTestCase):
                         "output_dim": 3
                         }
                 })
-        self.encoder = TokenCharactersEncoder.from_params(self.vocab, deepcopy(params))
-        self.embedding = Embedding.from_params(self.vocab, params["embedding"])
+        self.encoder = TokenCharactersEncoder.from_params(vocab=self.vocab, params=deepcopy(params))
+        self.embedding = Embedding.from_params(vocab=self.vocab, params=params["embedding"])
         self.inner_encoder = Seq2VecEncoder.from_params(params["encoder"])
         constant_init = lambda tensor: torch.nn.init.constant_(tensor, 1.)
         initializer = InitializerApplicator([(".*", constant_init)])

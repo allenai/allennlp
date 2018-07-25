@@ -39,6 +39,7 @@ class FeedForward(torch.nn.Module):
                  hidden_dims: Union[int, Sequence[int]],
                  activations: Union[Activation, Sequence[Activation]],
                  dropout: Union[float, Sequence[float]] = 0.0) -> None:
+
         super(FeedForward, self).__init__()
         if not isinstance(hidden_dims, list):
             hidden_dims = [hidden_dims] * num_layers  # type: ignore
@@ -79,6 +80,8 @@ class FeedForward(torch.nn.Module):
             output = dropout(activation(layer(output)))
         return output
 
+    # Requires custom logic around the activations (the automatic `from_params`
+    # method can't currently instatiate types like `Union[Activation, List[Activation]]`)
     @classmethod
     def from_params(cls, params: Params):
         input_dim = params.pop_int('input_dim')
