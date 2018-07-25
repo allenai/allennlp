@@ -12,9 +12,9 @@
     },
     "max_span_width": 10
   },
-  "train_data_path":"${COREF_TRAIN_DATA_PATH}",
-  "validation_data_path": "${COREF_DEV_DATA_PATH}",
-  "test_data_path": "${COREF_TEST_DATA_PATH}",
+  "train_data_path": std.extVar("COREF_TRAIN_DATA_PATH"),
+  "validation_data_path": std.extVar("COREF_DEV_DATA_PATH"),
+  "test_data_path": std.extVar("COREF_TEST_DATA_PATH"),
   "model": {
     "type": "coref",
     "text_field_embedder": {

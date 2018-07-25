@@ -16,9 +16,9 @@
      }
     }
   },
-  "train_data_path": "${NER_TRAIN_DATA_PATH}",
-  "validation_data_path": "${NER_TEST_A_PATH}",
-  "test_data_path": "${NER_TEST_B_PATH}",
+  "train_data_path": std.extVar("NER_TRAIN_DATA_PATH"),
+  "validation_data_path": std.extVar("NER_TEST_A_PATH"),
+  "test_data_path": std.extVar("NER_TEST_B_PATH"),
   "evaluate_on_test": true,
   "model": {
     "type": "crf_tagger",
