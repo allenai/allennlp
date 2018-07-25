@@ -50,8 +50,12 @@ class UniversalDependenciesDatasetReader(DatasetReader):
             logger.info("Reading UD instances from conllu dataset at: %s", file_path)
 
             for annotation in  lazy_parse(conllu_file.read()):
-                # Conllu annotations can have implicit word references that have been
-                # filled in automatically and have no head, so we remove them.
+
+                # CoNLLU annotations sometimes add back in words that have been elided
+                # in the original sentence; we remove these, as we're just predicting
+                # dependencies for the original sentence.
+                # We filter by None here as elided words have a non-integer word id,
+                # and are replaced with None by the conllu python library.
                 annotation = [x for x in annotation if x["id"] is not None]
 
                 heads = [x["head"] for x in annotation]

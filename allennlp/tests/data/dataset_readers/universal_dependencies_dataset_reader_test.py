@@ -47,10 +47,11 @@ class TestUniversalDependenciesDatasetReader(AllenNlpTestCase):
                                               'nmod', 'flat', 'flat', 'punct']
         assert fields["head_indices"].labels == [0, 4, 4, 4, 0, 6, 4, 6, 6, 4]
 
-        # This instance tests specifically for filtering of implicit references.
+        # This instance tests specifically for filtering of elipsis:
+        # http://universaldependencies.org/u/overview/specific-syntax.html#ellipsis
         # The original sentence is:
         # "Over 300 Iraqis are reported dead and 500 [reported] wounded in Fallujah alone."
-        # But the second "reported" has no head, because it is implicitly referenced.
+        # But the second "reported" is elided, and as such isn't included in the syntax tree.
         instance = instances[3]
         fields = instance.fields
         assert [t.text for t in fields["words"].tokens] == ['ROOT_HEAD', 'Over', '300', 'Iraqis', 'are',
