@@ -7,7 +7,8 @@ import torch.nn as nn
 from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, SoftmaxWithNLL
+from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.modules.softmax_with_nlls.softmax_with_nll import SoftmaxWithNLL
 from allennlp.common.checks import check_dimensions_match
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 

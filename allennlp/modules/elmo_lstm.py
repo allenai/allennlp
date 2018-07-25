@@ -82,13 +82,15 @@ class ElmoLstm(_EncoderBase):
                                                    hidden_size,
                                                    cell_size,
                                                    go_forward,
-                                                   recurrent_dropout_probability,
+                                                   # 0.5 if layer_index == 0 else recurrent_dropout_probability,
+                                                   recurrent_dropout_probability, 
                                                    memory_cell_clip_value,
                                                    state_projection_clip_value)
             backward_layer = LstmCellWithProjection(lstm_input_size,
                                                     hidden_size,
                                                     cell_size,
                                                     not go_forward,
+                                                    # 0.5 if layer_index == 0 else recurrent_dropout_probability,
                                                     recurrent_dropout_probability,
                                                     memory_cell_clip_value,
                                                     state_projection_clip_value)
