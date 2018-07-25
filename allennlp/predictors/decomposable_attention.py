@@ -1,7 +1,5 @@
-from typing import Tuple
 
 from overrides import overrides
-from allennlp.data.dataset_readers.snli import SnliReader
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
@@ -33,16 +31,10 @@ class DecomposableAttentionPredictor(Predictor):
         return self.predict_json({"premise" : premise, "hypothesis": hypothesis})
 
     @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+    def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
         Expects JSON that looks like ``{"premise": "...", "hypothesis": "..."}``.
         """
         premise_text = json_dict["premise"]
         hypothesis_text = json_dict["hypothesis"]
-        snli_reader: SnliReader = self._dataset_reader   # type: ignore
-        tokenizer = snli_reader._tokenizer # pylint: disable=protected-access
-
-        return self._dataset_reader.text_to_instance(premise_text, hypothesis_text), {
-                'premise_tokens': [token.text for token in tokenizer.tokenize(premise_text)],
-                'hypothesis_tokens': [token.text for token in tokenizer.tokenize(hypothesis_text)]
-        }
+        return self._dataset_reader.text_to_instance(premise_text, hypothesis_text)

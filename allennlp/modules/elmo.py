@@ -141,9 +141,9 @@ class Elmo(torch.nn.Module):
             original_word_size = word_inputs.size()
             if self._has_cached_vocab and len(original_word_size) > 2:
                 reshaped_word_inputs = word_inputs.view(-1, original_word_size[-1])
-            elif self._has_cached_vocab is not None:
+            elif not self._has_cached_vocab:
                 logger.warning("Word inputs were passed to ELMo but it does not have a cached vocab.")
-                reshaped_word_inputs = word_inputs
+                reshaped_word_inputs = None
             else:
                 reshaped_word_inputs = word_inputs
         else:
@@ -179,6 +179,7 @@ class Elmo(torch.nn.Module):
 
         return {'elmo_representations': elmo_representations, 'mask': mask}
 
+    # The add_to_archive logic here requires a custom from_params.
     @classmethod
     def from_params(cls, params: Params) -> 'Elmo':
         # Add files to archive
@@ -232,7 +233,7 @@ def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
 
 class _ElmoCharacterEncoder(torch.nn.Module):
     """
-    Compute context sensitive token representation using pretrained biLM.
+    Compute context insensitive token representation using pretrained biLM.
 
     This embedder has input character ids of size (batch_size, sequence_length, 50)
     and returns (batch_size, sequence_length + 2, embedding_dim), where embedding_dim

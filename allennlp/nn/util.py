@@ -333,6 +333,8 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
     the mask.  Most frequently this will be a character id tensor, but it could also be a
     featurized representation of each token, etc.
 
+    If the input ``text_field_tensors`` contains the "mask" key, this is returned instead of inferring the mask.
+
     TODO(joelgrus): can we change this?
     NOTE: Our functions for generating masks create torch.LongTensors, because using
     torch.ByteTensors  makes it easy to run into overflow errors
@@ -342,6 +344,9 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
     >>> var_mask = torch.autograd.V(mask)
     >>> var_mask.sum() # equals 4, due to 8 bit precision - the sum overflows.
     """
+    if "mask" in text_field_tensors:
+        return text_field_tensors["mask"]
+
     tensor_dims = [(tensor.dim(), tensor) for tensor in text_field_tensors.values()]
     tensor_dims.sort(key=lambda x: x[0])
 

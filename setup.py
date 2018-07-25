@@ -102,7 +102,7 @@ setup(name='allennlp',
                                       "tests.*", "tests"]),
       install_requires=[
           'torch==0.4.0',
-          'pyhocon==0.3.35',
+          'jsonnet==0.10.0',
           'typing',
           'overrides',
           'nltk',

@@ -2,7 +2,6 @@ from overrides import overrides
 import torch
 
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
-from allennlp.common.params import Params
 
 @Seq2SeqEncoder.register("pass_through")
 class PassThroughEncoder(Seq2SeqEncoder):
@@ -34,9 +33,3 @@ class PassThroughEncoder(Seq2SeqEncoder):
         # pylint: disable=unused-argument
 
         return inputs
-
-    @classmethod
-    def from_params(cls, params: Params) -> "PassThroughEncoder":
-        input_dim = params.pop_int("input_dim")
-        params.assert_empty(cls.__name__)
-        return PassThroughEncoder(input_dim=input_dim)

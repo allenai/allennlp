@@ -106,8 +106,10 @@ class BidafEnsemble(Ensemble):
                 'f1': f1_score,
         }
 
+    # The logic here requires a custom from_params.
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params):
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidafEnsemble':  # type: ignore
+        # pylint: disable=arguments-differ
         if vocab:
             raise ConfigurationError("vocab should be None")
 

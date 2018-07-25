@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use
 from typing import Dict
 
 from overrides import overrides
@@ -37,6 +36,7 @@ class IndexField(Field[torch.Tensor]):
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
+        # pylint: disable=no-self-use
         return {}
 
     @overrides

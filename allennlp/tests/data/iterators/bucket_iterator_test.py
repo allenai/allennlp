@@ -72,3 +72,24 @@ class TestBucketIterator(IteratorTest):
         assert iterator._padding_noise == 0.5
         assert iterator._biggest_batch_first
         assert iterator._batch_size == 100
+
+    def test_bucket_iterator_maximum_samples_per_batch(self):
+        iterator = BucketIterator(
+                batch_size=3, padding_noise=0,
+                sorting_keys=[('text', 'num_tokens')],
+                maximum_samples_per_batch=['num_tokens', 9]
+        )
+        batches = list(iterator._create_batches(self.instances, shuffle=False))
+
+        # ensure all instances are in a batch
+        grouped_instances = [batch.instances for batch in batches]
+        num_instances = sum(len(group) for group in grouped_instances)
+        assert num_instances == len(self.instances)
+
+        # ensure all batches are sufficiently small
+        for batch in batches:
+            batch_sequence_length = max(
+                    [instance.get_padding_lengths()['text']['num_tokens']
+                     for instance in batch.instances]
+            )
+            assert batch_sequence_length * len(batch.instances) <= 9
