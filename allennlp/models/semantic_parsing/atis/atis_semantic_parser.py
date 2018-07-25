@@ -729,7 +729,7 @@ class AtisSemanticParser(Model):
 
     @classmethod
     def from_params(cls, vocab, params: Params) -> 'AtisSemanticParser':
-        utterance_embedder = TextFieldEmbedder.from_params(vocab, params.pop("utterance_embedder"))
+        utterance_embedder = TextFieldEmbedder.from_params(vocab=vocab, params=params.pop("utterance_embedder"))
         action_embedding_dim = params.pop_int("action_embedding_dim")
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
         entity_encoder = Seq2VecEncoder.from_params(params.pop('entity_encoder'))

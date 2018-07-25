@@ -5,7 +5,6 @@ import logging
 from copy import deepcopy
 from overrides import overrides
 
-from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, ListField, IndexField, ProductionRuleField, TextField, MetadataField
@@ -125,25 +124,3 @@ class AtisDatasetReader(DatasetReader):
                   'target_action_sequence' : ListField(action_sequence_field)}
 
         return Instance(fields)
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'AtisDatasetReader':
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        lazy = params.pop('lazy', False)
-
-        source_indexers_type = params.pop('source_token_indexers', None)
-        if source_indexers_type is None:
-            source_token_indexers = None
-        else:
-            source_token_indexers = TokenIndexer.dict_from_params(source_indexers_type)
-        target_indexers_type = params.pop('target_token_indexers', None)
-        if target_indexers_type is None:
-            target_token_indexers = None
-        else:
-            target_token_indexers = TokenIndexer.dict_from_params(target_indexers_type)
-
-        params.assert_empty(cls.__name__)
-        return AtisDatasetReader(source_token_indexers=source_token_indexers,
-                                 target_token_indexers=target_token_indexers,
-                                 token_indexers=token_indexers,
-                                 lazy=lazy)
