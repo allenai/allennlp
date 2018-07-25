@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(os.path.join(__f
 
 from allennlp.common.params import Params
 
+
 def main(param_file: str, args: argparse.Namespace):
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], universal_newlines=True).strip()
     image = f"allennlp/allennlp:{commit}"

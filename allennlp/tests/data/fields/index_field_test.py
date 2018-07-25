@@ -8,6 +8,7 @@ from allennlp.data import Token
 from allennlp.data.fields import TextField, IndexField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
+
 class TestIndexField(AllenNlpTestCase):
     def setUp(self):
         super(TestIndexField, self).setUp()

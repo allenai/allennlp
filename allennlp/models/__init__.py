@@ -7,6 +7,7 @@ from allennlp.models.model import Model
 from allennlp.models.archival import archive_model, load_archive, Archive
 from allennlp.models.biattentive_classification_network import BiattentiveClassificationNetwork
 from allennlp.models.constituency_parser import SpanConstituencyParser
+from allennlp.models.biaffine_dependency_parser import BiaffineDependencyParser
 from allennlp.models.coreference_resolution.coref import CoreferenceResolver
 from allennlp.models.crf_tagger import CrfTagger
 from allennlp.models.decomposable_attention import DecomposableAttention
@@ -18,3 +19,4 @@ from allennlp.models.semantic_parsing.wikitables.wikitables_mml_semantic_parser 
 from allennlp.models.semantic_parsing.wikitables.wikitables_erm_semantic_parser import WikiTablesErmSemanticParser
 from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
 from allennlp.models.simple_tagger import SimpleTagger
+from allennlp.models.esim import ESIM

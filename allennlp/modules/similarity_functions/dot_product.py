@@ -3,7 +3,6 @@ import math
 from overrides import overrides
 import torch
 
-from allennlp.common import Params
 from allennlp.modules.similarity_functions.similarity_function import SimilarityFunction
 
 
@@ -29,9 +28,3 @@ class DotProductSimilarity(SimilarityFunction):
         if self._scale_output:
             result *= math.sqrt(tensor_1.size(-1))
         return result
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'DotProductSimilarity':
-        scale_output = params.pop_bool('scale_output', False)
-        params.assert_empty(cls.__name__)
-        return cls(scale_output=scale_output)

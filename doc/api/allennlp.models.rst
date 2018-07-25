@@ -21,3 +21,5 @@ allennlp.models
   allennlp.models.semantic_parsing
   allennlp.models.semantic_role_labeler
   allennlp.models.simple_tagger
+  allennlp.models.biaffine_dependency_parser
+  allennlp.models.esim

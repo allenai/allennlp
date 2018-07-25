@@ -49,7 +49,7 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
     def test_forward_with_epoch_num_changes_cost_weight(self):
         # Redefining model. We do not want this to change the state of ``self.model``.
         params = Params.from_file(self.param_file)
-        model = Model.from_params(self.vocab, params['model'])
+        model = Model.from_params(vocab=self.vocab, params=params['model'])
         # Initial cost weight, before forward is called.
         assert model._checklist_cost_weight == 0.8
         iterator = EpochTrackingBucketIterator(sorting_keys=[['sentence', 'num_tokens']])

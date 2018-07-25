@@ -1,4 +1,3 @@
-from typing import Tuple
 import json
 
 from overrides import overrides
@@ -11,7 +10,7 @@ from allennlp.predictors.predictor import Predictor
 @Predictor.register('nlvr-parser')
 class NlvrParserPredictor(Predictor):
     @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+    def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         sentence = json_dict['sentence']
         if 'worlds' in json_dict:
             # This is grouped data
@@ -22,7 +21,7 @@ class NlvrParserPredictor(Predictor):
         instance = self._dataset_reader.text_to_instance(sentence=sentence,  # type: ignore
                                                          structured_representations=worlds,
                                                          identifier=identifier)
-        return instance, {}
+        return instance
 
     @overrides
     def dump_line(self, outputs: JsonDict) -> str:  # pylint: disable=no-self-use

@@ -37,12 +37,17 @@ def main(checks):
             run("./scripts/check_docs.py", shell=True, check=True)
             print("check docs passed")
 
+        if "check-links" in checks:
+            print("Checking links in Markdown files:", flush=True)
+            run("./scripts/check_links.py", shell=True, check=True)
+            print("check links passed")
+
     except CalledProcessError:
         # squelch the exception stacktrace
         sys.exit(1)
 
 if __name__ == "__main__":
-    checks = ['pytest', 'pylint', 'mypy', 'build-docs', 'check-docs']
+    checks = ['pytest', 'pylint', 'mypy', 'build-docs', 'check-docs', 'check-links']
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--checks', type=str, required=False, nargs='+', choices=checks)

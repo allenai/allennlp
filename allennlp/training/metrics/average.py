@@ -23,7 +23,7 @@ class Average(Metric):
         value : ``float``
             The value to average.
         """
-        self._total_value += value
+        self._total_value += list(self.unwrap_to_tensors(value))[0]
         self._count += 1
 
     @overrides
