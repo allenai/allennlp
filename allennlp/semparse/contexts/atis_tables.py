@@ -122,7 +122,7 @@ class ConversationContext():
         for table in list(sorted(TABLES.keys(), reverse=True)):
             valid_actions['table_name'].add(table)
             for column in sorted(TABLES[table], reverse=True):
-                valid_actions['col_ref'].add('("{}" ws "." ws "{}")'.format(table, column))
+                valid_actions['col_ref'].add(f'("{table}" ws "." ws "{column}")')
 
         valid_actions['col_ref'].add('asterisk')
         valid_action_strings = {key: sorted(value) for key, value in valid_actions.items()}
@@ -157,31 +157,31 @@ def get_times_from_utterance(utterance: str) -> List[str]:
     return [str(time) for time in times]
 
 
-def get_nums_from_utterance(utterance: str) -> List[str]:
+def get_numbers_from_utterance(utterance: str) -> List[str]:
     """
     Given an utterance, find all the numbers that are in the action space.
     """
-    nums = ['1', '0']
-    nums.extend(re.findall(r'\d+', utterance))
-    nums.extend([str(int(num_str.rstrip('pm')) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR)
+    numbers = []
+    numbers.extend(re.findall(r'\d+', utterance))
+    numbers.extend([str(int(num_str.rstrip('pm')) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR)
                  for num_str in re.findall(r'\d+', utterance)])
 
-    nums.extend(get_times_from_utterance(utterance))
+    numbers.extend(get_times_from_utterance(utterance))
 
     words = utterance.split(' ')
     for word in words:
         if word in MONTH_NUMBERS:
-            nums.append(str(MONTH_NUMBERS[word]))
+            numbers.append(str(MONTH_NUMBERS[word]))
         if word in DAY_NUMBERS:
-            nums.append(str(DAY_NUMBERS[word]))
+            numbers.append(str(DAY_NUMBERS[word]))
         if word in MISC_TIME_TRIGGERS:
-            nums.extend(MISC_TIME_TRIGGERS[word])
+            numbers.extend(MISC_TIME_TRIGGERS[word])
 
     for tens, digits in zip(words, words[1:]):
         day = ' '.join([tens, digits])
         if day in DAY_NUMBERS:
-            nums.append(str(DAY_NUMBERS[day]))
-    return sorted(nums, reverse=True)
+            numbers.append(str(DAY_NUMBERS[day]))
+    return sorted(numbers, reverse=True)
 
 AIRLINE_CODES = {'argentina': 'AR',
                  'alliance': '3J',

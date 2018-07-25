@@ -8,7 +8,7 @@ from parsimonious.expressions import Literal
 from allennlp.semparse.contexts import atis_tables
 
 def generate_one_of_str(nonterminal: str, literals: List[str]) -> str:
-    return  "\n{} \t\t = ".format(nonterminal) + " / ".join(['"{}"'.format(lit) for lit in literals])
+    return  f"\n{nonterminal} \t\t = " + " / ".join([f'"{literal}"' for literal in literals])
 
 class AtisWorld():
     """
@@ -33,10 +33,12 @@ class AtisWorld():
         for local_str in self.get_local_strs():
             if local_str not in valid_actions['string']:
                 valid_actions['string'].append(local_str)
-
-        for local_num in atis_tables.get_nums_from_utterance(self.utterance):
-            if local_num not in valid_actions['number']:
-                valid_actions['number'].append(local_num)
+        
+        numbers = ['0', '1']
+        numbers.extend(atis_tables.get_numbers_from_utterance(self.utterance))
+        for number in numbers: 
+            if number not in valid_actions['number']:
+                valid_actions['number'].append(number)
 
         return valid_actions
 
@@ -59,7 +61,7 @@ class AtisWorld():
                                                         sorted(self.valid_actions['number'],
                                                                reverse=True))
         grammar_str_with_context += generate_one_of_str("string",
-                                                        ["'{}'".format(local_str)
+                                                        [f"'{local_str}'"
                                                          for local_str in
                                                          self.valid_actions['string']])
         return grammar_str_with_context
@@ -98,7 +100,7 @@ class AtisWorld():
 
     def get_action_sequence(self, query: str) -> List[str]:
         grammar_with_context = Grammar(self.get_grammar_str())
-        sql_visitor = SQLVisitor(grammar_with_context)
+        sql_visitor = SqlVisitor(grammar_with_context)
         query = query.split("\n")[0]
         if query:
             action_sequence = sql_visitor.parse(query)
@@ -107,29 +109,29 @@ class AtisWorld():
 
     def all_possible_actions(self) -> List[str]:
         """
-        Return a list of strings representing all possible actions
-        of the form lhs -> [rhs]
+        Return a sorted list of strings representing all possible actions
+        of the form: nonterminal -> [right_hand_side]
         """
         all_actions = set()
-        for non_term, rhs_list in self.valid_actions.items():
-            for rhs in rhs_list:
-                if non_term == 'string':
-                    all_actions.add('{} -> ["\'{}\'"]'.format(non_term, rhs))
+        for nonterminal, right_hand_side_list in self.valid_actions.items():
+            for right_hand_side in right_hand_side_list:
+                if nonterminal== 'string':
+                    all_actions.add(f'{nonterminal} -> ["\'{right_hand_side}\'"]')
 
-                elif non_term in ['number', 'asterisk', 'table_name']:
-                    all_actions.add('{} -> ["{}"]'.format(non_term, rhs))
+                elif nonterminal in ['number', 'asterisk', 'table_name']:
+                    all_actions.add(f'{nonterminal} -> ["{right_hand_side}"]')
 
                 else:
-                    ws_str = rhs.lstrip("(").rstrip(")")
-                    curr_child_strs = [tok for tok in re.split(" ws |ws | ws", ws_str) if tok]
-                    all_actions.add("{} -> [{}]".format(non_term, ", ".join(curr_child_strs)))
+                    right_hand_side = right_hand_side.lstrip("(").rstrip(")")
+                    child_strings = [tok for tok in re.split(" ws |ws | ws", right_hand_side) if tok]
+                    all_actions.add(f"{nonterminal} -> [{', '.join(child_strings)}]")
 
         return sorted(all_actions)
 
 
-class SQLVisitor(NodeVisitor):
+class SqlVisitor(NodeVisitor):
     """
-    ``SQLVisitor`` performs a depths-first traversal of the the AST. It takes the parse tree
+    ``SqlVisitor`` performs a depths-first traversal of the the AST. It takes the parse tree
     and gives us a action sequence that resulted in that parse.
 
     """
@@ -156,10 +158,10 @@ class SQLVisitor(NodeVisitor):
         For each node, we accumulate the rules that generated its children in a list
         """
         if node.expr.name and node.expr.name != 'ws':
-            lhs = '{} -> '.format(node.expr.name)
+            lhs = f'{node.expr.name} -> '
 
             if isinstance(node.expr, Literal):
-                rhs = '["{}"]'.format(node.text)
+                rhs = f'["{node.text}"]'
 
             else:
                 child_strs = []
