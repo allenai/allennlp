@@ -1,5 +1,4 @@
 from typing import Dict, Tuple, List
-from collections import OrderedDict
 import logging
 
 from overrides import overrides
