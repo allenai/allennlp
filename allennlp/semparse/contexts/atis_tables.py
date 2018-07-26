@@ -28,7 +28,7 @@ The first element is the starting symbol. We initialize ``col_ref``, ``table_ref
 """
 
 SQL_GRAMMAR_STR = r"""
-    stmt                = query ws ";" ws
+    statement           = query ws ";" ws
     query               = (ws "(" ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause ws ")" ws) /
                           (ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause ws)
                         

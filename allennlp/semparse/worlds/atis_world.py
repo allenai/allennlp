@@ -1,5 +1,6 @@
 from typing import List, Dict
 import re
+from overrides import overrides
 
 from parsimonious.grammar import Grammar
 from parsimonious.nodes import Node, NodeVisitor
@@ -33,10 +34,10 @@ class AtisWorld():
         for local_str in self.get_local_strs():
             if local_str not in valid_actions['string']:
                 valid_actions['string'].append(local_str)
-        
+
         numbers = ['0', '1']
         numbers.extend(atis_tables.get_numbers_from_utterance(self.utterance))
-        for number in numbers: 
+        for number in numbers:
             if number not in valid_actions['number']:
                 valid_actions['number'].append(number)
 
@@ -114,7 +115,7 @@ class AtisWorld():
         all_actions = set()
         for nonterminal, right_hand_side_list in self.valid_actions.items():
             for right_hand_side in right_hand_side_list:
-                if nonterminal== 'string':
+                if nonterminal == 'string':
                     all_actions.add(f'{nonterminal} -> ["\'{right_hand_side}\'"]')
 
                 elif nonterminal in ['number', 'asterisk', 'table_name']:
@@ -142,45 +143,38 @@ class SqlVisitor(NodeVisitor):
             A string that descrbies the PEG (parsing expression grammar) in the form of:
                 nonterminal = ...
         """
-        self.prod_acc: List[str] = []
+        self.action_sequence: List[str] = []
         self.grammar: Grammar = grammar
 
-        for nonterm in self.grammar.keys():
-            if nonterm != 'stmt':
-                self.__setattr__('visit_' + nonterm, self.add_prod_rule)
+    @overrides
+    def generic_visit(self, node: Node, visited_children: List[None]) -> List[str]: # pylint
+        self.add_action(node)
+        if node.expr.name == 'statement':
+            return self.action_sequence
+        return []
 
-    def generic_visit(self, node: Node, visited_children) -> None:
-        self.add_prod_rule(node)
-
-    def add_prod_rule(self, node: Node, children=None) -> None: # pylint: disable=unused-argument
+    def add_action(self, node: Node) -> None:
         """
         For each node, we accumulate the rules that generated its children in a list
         """
         if node.expr.name and node.expr.name != 'ws':
-            lhs = f'{node.expr.name} -> '
+            nonterminal = f'{node.expr.name} -> '
 
             if isinstance(node.expr, Literal):
-                rhs = f'["{node.text}"]'
+                right_hand_side = f'["{node.text}"]'
 
             else:
-                child_strs = []
+                child_strings = []
                 for child in node.__iter__():
                     if child.expr.name == 'ws':
                         continue
                     if child.expr.name != '':
-                        child_strs.append(child.expr.name)
+                        child_strings.append(child.expr.name)
                     else:
-                        ws_str = child.expr._as_rhs().lstrip("(").rstrip(")") # pylint: disable=protected-access
-                        curr_child_strs = [tok for tok in re.split(" ws |ws | ws", ws_str) if tok]
-                        child_strs.extend(curr_child_strs)
-                rhs = "[" + ", ".join(child_strs) + "]"
+                        child_right_side_string = child.expr._as_rhs().lstrip("(").rstrip(")") # pylint: disable=protected-access
+                        child_right_side_list = [tok for tok in re.split(" ws |ws | ws", child_right_side_string) if tok]
+                        child_strings.extend(child_right_side_list)
+                right_hand_side = "[" + ", ".join(child_strings) + "]"
 
-            rule = lhs + rhs
-            self.prod_acc = [rule] + self.prod_acc
-
-    def visit_stmt(self, node: Node, children=None) -> List[str]: # pylint: disable=unused-argument
-        """
-        The top level is a statement, so return the productions that we have accumulated
-        """
-        self.add_prod_rule(node)
-        return self.prod_acc
+            rule = nonterminal + right_hand_side
+            self.action_sequence = [rule] + self.action_sequence
