@@ -279,7 +279,9 @@ class _ElmoCharacterEncoder(torch.nn.Module):
             self._options = json.load(fin)
         self._weight_file = weight_file
 
-        self.output_dim = self._options['lstm']['projection_dim']
+        # self.output_dim = self._options['lstm']['projection_dim']
+        self.output_dim = 512
+
         self.requires_grad = requires_grad
 
         self._load_weights()
@@ -355,11 +357,14 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         # (batch_size * sequence_length, n_filters)
         token_embedding = torch.cat(convs, dim=-1)
 
+        # final projection  (batch_size * sequence_length, embedding_dim)
+        token_embedding = self._projection(token_embedding)
+
         # apply the highway layers (batch_size * sequence_length, n_filters)
         token_embedding = self._highways(token_embedding)
 
         # final projection  (batch_size * sequence_length, embedding_dim)
-        token_embedding = self._projection(token_embedding)
+        # token_embedding = self._projection(token_embedding)
 
         # reshape to (batch_size, sequence_length, embedding_dim)
         batch_size, sequence_length, _ = character_ids_with_bos_eos.size()
@@ -430,7 +435,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         n_highway = cnn_options['n_highway']
 
         # create the layers, and load the weights
-        self._highways = Highway(n_filters, n_highway, activation=torch.nn.functional.relu)
+        self._highways = Highway(512, n_highway, activation=torch.nn.functional.relu)
         for k in range(n_highway):
             # The AllenNLP highway is one matrix multplication with concatenation of
             # transform and carry weights.
@@ -519,7 +524,7 @@ class _ElmoBiLm(torch.nn.Module):
             options = json.load(fin)
         if not options['lstm'].get('use_skip_connections'):
             raise ConfigurationError('We only support pretrained biLMs with residual connections')
-        self._elmo_lstm = ElmoLstm(input_size=options['lstm']['projection_dim'],
+        self._elmo_lstm = ElmoLstm(input_size=512,
                                    hidden_size=options['lstm']['projection_dim'],
                                    cell_size=options['lstm']['dim'],
                                    num_layers=options['lstm']['n_layers'],
