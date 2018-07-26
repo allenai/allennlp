@@ -46,7 +46,8 @@ SQL_GRAMMAR_STR = r"""
                           (condition ws conj ws "(" ws conditions ws ")") /
                           ("(" ws conditions ws ")" ws conj ws conditions) /
                           ("(" ws conditions ws ")") /
-                          (not ws conditions ws ) /
+                          ("not" ws conditions ws ) /
+                          ("NOT" ws conditions ws ) /
                           condition
     condition           = in_clause / ternaryexpr / biexpr
 
@@ -56,10 +57,11 @@ SQL_GRAMMAR_STR = r"""
     binaryop            = "+" / "-" / "*" / "/" / "=" /
                           ">=" / "<=" / ">" / "<"  / "is" / "IS"
 
-    ternaryexpr         = (col_ref ws not "BETWEEN" ws value ws and value ws) /
-                          (col_ref ws "BETWEEN" ws value ws and value ws)
+    ternaryexpr         = (col_ref ws "not" ws "BETWEEN" ws value ws "AND" ws value ws) /
+                          (col_ref ws "NOT" ws "BETWEEN" ws value ws "AND" ws value ws) /
+                          (col_ref ws "BETWEEN" ws value ws "AND" ws value ws)
 
-    value               = (not ws pos_value) / (pos_value)
+    value               = ("not" ws pos_value) / ("NOT" ws pos_value) /(pos_value)
     pos_value           = ("ALL" ws query) / ("ANY" ws query) / number / boolean / col_ref / string / agg_results / "NULL"
 
     agg_results         = (ws "("  ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ws ")" ws) /
@@ -69,15 +71,10 @@ SQL_GRAMMAR_STR = r"""
 
     ws                  = ~"\s*"i
 
-    conj                = and / or
-    and                 = "AND" ws
-    or                  = "OR" ws
-    not                 = ("NOT" ws ) / ("not" ws)
-    asterisk            = "*"
+    conj                = "AND" / "OR" 
     distinct            = ("DISTINCT") / ("")
 
     col_ref             =  ""
-    table_ref           =  ""
     table_name          =  ""
     number              =  ""
     string              =  ""
@@ -124,7 +121,7 @@ class ConversationContext():
             for column in sorted(TABLES[table], reverse=True):
                 valid_actions['col_ref'].add(f'("{table}" ws "." ws "{column}")')
 
-        valid_actions['col_ref'].add('asterisk')
+        valid_actions['col_ref'].add('"*"')
         valid_action_strings = {key: sorted(value) for key, value in valid_actions.items()}
         return valid_action_strings
 

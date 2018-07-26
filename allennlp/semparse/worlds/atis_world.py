@@ -51,8 +51,7 @@ class AtisWorld():
         grammar_str_with_context = self.conversation_context.base_sql_def
 
         grammar_str_with_context += "\n    col_ref \t\t = " +  \
-                                    " / ".join(sorted(self.valid_actions['col_ref'], reverse=True)) + \
-                                    " / asterisk"
+                                    " / ".join(sorted(self.valid_actions['col_ref'], reverse=True))
 
         grammar_str_with_context += generate_one_of_str("table_name",
                                                         sorted(self.valid_actions["table_name"],
