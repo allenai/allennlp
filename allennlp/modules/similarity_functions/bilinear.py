@@ -30,11 +30,11 @@ class BilinearSimilarity(SimilarityFunction):
     def __init__(self,
                  tensor_1_dim: int,
                  tensor_2_dim: int,
-                 activation: Activation = Activation.by_name('linear')()) -> None:
+                 activation: Activation = None) -> None:
         super(BilinearSimilarity, self).__init__()
         self._weight_matrix = Parameter(torch.Tensor(tensor_1_dim, tensor_2_dim))
         self._bias = Parameter(torch.Tensor(1))
-        self._activation = activation
+        self._activation = activation or Activation.by_name('linear')()
         self.reset_parameters()
 
     def reset_parameters(self):

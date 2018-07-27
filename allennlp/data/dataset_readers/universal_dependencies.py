@@ -25,7 +25,9 @@ def lazy_parse(text: str, fields: Tuple = DEFAULT_FIELDS):
 @DatasetReader.register("universal_dependencies")
 class UniversalDependenciesDatasetReader(DatasetReader):
     """
-    Reads a file in the conllu Universal Dependencies format.
+    Reads a file in the conllu Universal Dependencies format. Additionally,
+    in order to make it easy to structure a model as predicting arcs, we add a
+    dummy 'ROOT_HEAD' token to the start of the sequence.
 
     Parameters
     ----------
@@ -48,10 +50,18 @@ class UniversalDependenciesDatasetReader(DatasetReader):
 
             for annotation in  lazy_parse(conllu_file.read()):
 
-                yield self.text_to_instance(
-                        [x["form"] for x in annotation],
-                        [x["upostag"] for x in annotation],
-                        [x["deps"][0] for x in annotation])
+                # CoNLLU annotations sometimes add back in words that have been elided
+                # in the original sentence; we remove these, as we're just predicting
+                # dependencies for the original sentence.
+                # We filter by None here as elided words have a non-integer word id,
+                # and are replaced with None by the conllu python library.
+                annotation = [x for x in annotation if x["id"] is not None]
+
+                heads = [x["head"] for x in annotation]
+                tags = [x["deprel"] for x in annotation]
+                words = [x["form"] for x in annotation]
+                pos_tags = [x["upostag"] for x in annotation]
+                yield self.text_to_instance(words, pos_tags, list(zip(tags, heads)))
 
     @overrides
     def text_to_instance(self,  # type: ignore
@@ -77,14 +87,20 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         indices as fields.
         """
         fields: Dict[str, Field] = {}
-        tokens = TextField([Token(w) for w in words], self._token_indexers)
+
+        # In order to make it easy to structure a model as predicting arcs, we add a
+        # dummy 'ROOT_HEAD' token to the start of the sequence. This will be masked in the
+        # loss function.
+        tokens = TextField([Token("ROOT_HEAD")] + [Token(w) for w in words], self._token_indexers)
         fields["words"] = tokens
-        fields["pos_tags"] = SequenceLabelField(upos_tags, tokens, label_namespace="pos")
-        fields["head_tags"] = SequenceLabelField([x[0] for x in dependencies],
+        fields["pos_tags"] = SequenceLabelField(["ROOT_POS"] + upos_tags, tokens, label_namespace="pos")
+        # We don't want to expand the label namespace with an additional dummy token, so we'll
+        # always give the 'ROOT_HEAD' token a label of 'root'.
+        fields["head_tags"] = SequenceLabelField(["root"] + [x[0] for x in dependencies],
                                                  tokens,
                                                  label_namespace="head_tags")
         if dependencies is not None:
-            fields["head_indices"] = SequenceLabelField([int(x[1]) for x in dependencies],
+            fields["head_indices"] = SequenceLabelField([0] + [int(x[1]) for x in dependencies],
                                                         tokens,
                                                         label_namespace="head_index_tags")
         return Instance(fields)

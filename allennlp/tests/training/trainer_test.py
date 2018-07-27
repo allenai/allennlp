@@ -53,6 +53,10 @@ class TestTrainer(AllenNlpTestCase):
         metrics = trainer.train()
         assert 'best_validation_loss' in metrics
         assert isinstance(metrics['best_validation_loss'], float)
+        assert 'best_validation_accuracy' in metrics
+        assert isinstance(metrics['best_validation_accuracy'], float)
+        assert 'best_validation_accuracy3' in metrics
+        assert isinstance(metrics['best_validation_accuracy3'], float)
         assert 'best_epoch' in metrics
         assert isinstance(metrics['best_epoch'], int)
 
@@ -67,6 +71,10 @@ class TestTrainer(AllenNlpTestCase):
         metrics = trainer.train()
         assert 'best_validation_loss' in metrics
         assert isinstance(metrics['best_validation_loss'], float)
+        assert 'best_validation_accuracy' in metrics
+        assert isinstance(metrics['best_validation_accuracy'], float)
+        assert 'best_validation_accuracy3' in metrics
+        assert isinstance(metrics['best_validation_accuracy3'], float)
         assert 'best_epoch' in metrics
         assert isinstance(metrics['best_epoch'], int)
 

@@ -44,15 +44,12 @@ class DQA(Model):
     self._phrase_layer = phrase_layer
     self._matrix_attention = TriLinearAttention(200)
 
-    self._merge_atten = TimeDistributed(torch.nn.Linear(200 * 5, 200))
+    self._merge_atten = TimeDistributed(torch.nn.Linear(200 * 4 + 20, 200))
 
     self._residual_encoder = residual_encoder
 
     self._prev_attn_key_1 = torch.nn.Linear(200, 1)
     self._prev_attn_key_2 = torch.nn.Linear(200, 200)
-
-
-
 
     self._self_atten = TriLinearAttention(200)
 
@@ -100,7 +97,7 @@ class DQA(Model):
     _, _, max_ans_len, _ = single_answers['token_characters'].size()
     question = {k: v.view(batch_size * max_qa_count, max_q_len, -1) for k, v in question.items()}
     single_answers = {k: v.view(batch_size * max_qa_count, max_ans_len, -1) for k, v in single_answers.items()}
-
+    print(span_start.size(), span_end.size())
     embedded_question = self._dropout(self._text_field_embedder(question))
     embedded_passage = self._dropout(self._text_field_embedder(passage))
     embedded_answers = self._dropout(self._text_field_embedder(single_answers))
@@ -117,10 +114,9 @@ class DQA(Model):
     encoded_question = self._dropout(self._phrase_layer(
       embedded_question, question_lstm_mask))
     encoded_answers = self._dropout(self._phrase_layer(embedded_answers, answer_lstm_mask))
-    # batch_size, token_len, emb_dim
     encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_lstm_mask))
 
-    ## NEW EDITIONS
+    ## NEW ADITIONS
     # encode previous questions and previous answers.
     # prev_questions : [batch_size * max_qa_count, max_qa_count, max_q_len, embed_dim]
     # prev_answers : [batch_size * max_qa_count, max_qa_count, max_ans_len, embed_dim]
@@ -133,6 +129,9 @@ class DQA(Model):
     prev_questions = Variable(
       torch.zeros([batch_size * max_qa_count, max_qa_count, max_q_len, embed_dim], dtype=torch.float32),
       requires_grad=False).cuda()
+
+    prev_answer_markers = Variable(torch.zeros([batch_size * max_qa_count, passage_length, 20]), requires_grad=False).cuda()
+
     #prev_mask = torch.zeros([batch_size * max_qa_count, max_qa_count, max_q_len, 1]).cuda()
     for i in range(0, batch_size):
       for k in range(0, max_qa_count):
@@ -189,7 +188,7 @@ class DQA(Model):
     prev_qas_weighted_sum = prev_qas_weighted_sum.unsqueeze(1).expand(batch_size * max_qa_count, passage_length, encoding_dim)
     # Shape: (batch_size * max_qa_count, passage_length, encoding_dim * 4)
     final_merged_passage = torch.cat([repeated_encoded_passage,
-                                      passage_question_vectors, prev_qas_weighted_sum,
+                                      passage_question_vectors, prev_answer_markers, # prev_qas_weighted_sum,
                                       repeated_encoded_passage * passage_question_vectors,
                                       repeated_encoded_passage * tiled_question_passage_vector],
                                      dim=-1)
@@ -365,33 +364,3 @@ class DQA(Model):
       best_word_span[b, 2] = int(yn)
 
     return best_word_span
-
-  @classmethod
-  def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidirectionalAttentionFlow':
-    embedder_params = params.pop("text_field_embedder")
-    text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-    phrase_layer = Seq2SeqEncoder.from_params(params.pop("phrase_layer"))
-    residual_encoder = Seq2SeqEncoder.from_params(params.pop("residual_encoder"))
-    span_start_encoder = Seq2SeqEncoder.from_params(params.pop("span_start_encoder"))
-    span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
-    initializer = InitializerApplicator.from_params(params.pop("initializer", []))
-    dropout = params.pop('dropout', 0.2)
-    outfile = params.pop('outfile', None)
-
-    # TODO: Remove the following when fully deprecated
-    evaluation_json_file = params.pop('evaluation_json_file', None)
-    if evaluation_json_file is not None:
-      logger.warning("the 'evaluation_json_file' model parameter is deprecated, please remove")
-
-    mask_lstms = params.pop('mask_lstms', True)
-    params.assert_empty(cls.__name__)
-    return cls(vocab=vocab,
-               text_field_embedder=text_field_embedder,
-               phrase_layer=phrase_layer,
-               residual_encoder=residual_encoder,
-               span_start_encoder=span_start_encoder,
-               span_end_encoder=span_end_encoder,
-               initializer=initializer,
-               dropout=dropout,
-               mask_lstms=mask_lstms,
-               outfile=outfile)

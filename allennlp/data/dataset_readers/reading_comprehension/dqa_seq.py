@@ -133,10 +133,3 @@ class DQASeqReader(DatasetReader):
                                                                followup_list,
                                                                additional_metadata)
 
-    @classmethod
-    def from_params(cls, params: Params) -> 'DQASeqReader':
-        tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return cls(tokenizer=tokenizer, token_indexers=token_indexers, lazy=lazy)
