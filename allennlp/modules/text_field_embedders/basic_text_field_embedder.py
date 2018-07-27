@@ -6,7 +6,6 @@ from overrides import overrides
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.from_params import FromParams
 from allennlp.data import Vocabulary
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
@@ -98,31 +97,37 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         # The original `from_params` for this class was designed in a way that didn't agree
         # with the constructor. The constructor wants a 'token_embedders' parameter that is a
         # `Dict[str, TokenEmbedder]`, but the original `from_params` implementation expected those
-        # key-value pairs to be top-level in the params object. In particular, this caused the automatic
-        # FromParams.from_params implementation to do the wrong thing with config files that were
-        # designed for the (idiosyncratic) old behavior.
+        # key-value pairs to be top-level in the params object.
         #
-        # This updated implementation delegates to the automatic "from_params" method when it can,
-        # but (for now) it continues to support the old way with a `DeprecationWarning`.
-        if 'token_embedders' in params:
-            # Have to use __func__ to unbind the classmethod from `FromParams`
-            # so that we can pass in this class.
-            return FromParams.from_params.__func__(cls, params=params, vocab=vocab)  # type: ignore
-
-        # Warn that the original behavior is deprecated
-        warnings.warn(DeprecationWarning("the token embedders for BasicTextFieldEmbedder should now "
-                                         "be specified as a dict under the 'token_embedders' key, "
-                                         "not as top-level key-value pairs"))
+        # This breaks our 'configuration wizard' and configuration checks. Hence, going forward,
+        # the params need a 'token_embedders' key so that they line up with what the constructor wants.
+        # For now, the old behavior is still supported, but produces a DeprecationWarning.
 
         embedder_to_indexer_map = params.pop("embedder_to_indexer_map", None)
         if embedder_to_indexer_map is not None:
             embedder_to_indexer_map = embedder_to_indexer_map.as_dict(quiet=True)
         allow_unmatched_keys = params.pop_bool("allow_unmatched_keys", False)
 
-        token_embedders = {}
-        keys = list(params.keys())
-        for key in keys:
-            embedder_params = params.pop(key)
-            token_embedders[key] = TokenEmbedder.from_params(vocab=vocab, params=embedder_params)
+        token_embedder_params = params.pop('token_embedders', None)
+
+        if token_embedder_params is not None:
+            # New way: explicitly specified, so use it.
+            token_embedders = {
+                    name: TokenEmbedder.from_params(subparams, vocab=vocab)
+                    for name, subparams in token_embedder_params.items()
+            }
+
+        else:
+            # Warn that the original behavior is deprecated
+            warnings.warn(DeprecationWarning("the token embedders for BasicTextFieldEmbedder should now "
+                                             "be specified as a dict under the 'token_embedders' key, "
+                                             "not as top-level key-value pairs"))
+
+            token_embedders = {}
+            keys = list(params.keys())
+            for key in keys:
+                embedder_params = params.pop(key)
+                token_embedders[key] = TokenEmbedder.from_params(vocab=vocab, params=embedder_params)
+
         params.assert_empty(cls.__name__)
         return cls(token_embedders, embedder_to_indexer_map, allow_unmatched_keys)
