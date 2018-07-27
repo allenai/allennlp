@@ -215,11 +215,12 @@ class TestParams(AllenNlpTestCase):
         for config in configs:
             try:
                 params = Params.from_file(self.PROJECT_ROOT / "training_config" / config)
-                errors = find_errors(params)
-                assert not errors, "validation errors {errors} for config {config}"
 
             except Exception as e:
                 raise AssertionError(f"unable to load params for {config}, because {e}")
+
+            errors = find_errors(params)
+            assert not errors, "validation errors {errors} for config {config}"
 
         for var in forced_variables:
             if os.environ[var] == str(self.TEST_DIR):
