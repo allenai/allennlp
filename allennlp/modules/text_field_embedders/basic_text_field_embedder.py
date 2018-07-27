@@ -107,7 +107,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         if 'token_embedders' in params:
             # Have to use __func__ to unbind the classmethod from `FromParams`
             # so that we can pass in this class.
-            return FromParams.from_params.__func__(cls, params=params, vocab=vocab)
+            return FromParams.from_params.__func__(cls, params=params, vocab=vocab)  # type: ignore
 
         # Warn that the original behavior is deprecated
         warnings.warn(DeprecationWarning("the token embedders for BasicTextFieldEmbedder should now "
