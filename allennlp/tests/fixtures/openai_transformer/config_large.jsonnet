@@ -1,3 +1,4 @@
+// NER model that uses the full transformer.
 {
     "dataset_reader": {
       "type": "conll2003",
@@ -9,7 +10,7 @@
         },
         "openai_transformer": {
             "type": "openai_transformer_byte_pair",
-            "transformer_model_path": "https://s3-us-west-2.amazonaws.com/allennlp/models/openai-transformer-lm-2018.07.23.tar.gz"
+            "model_path": "https://s3-us-west-2.amazonaws.com/allennlp/models/openai-transformer-lm-2018.07.23.tar.gz"
         },
       }
     },
@@ -30,7 +31,10 @@
             },
             "openai_transformer": {
                 "type": "openai_transformer_embedder",
-                "transformer_model_path": "https://s3-us-west-2.amazonaws.com/allennlp/models/openai-transformer-lm-2018.07.23.tar.gz"
+                "transformer": {
+                    "model_path": "https://s3-us-west-2.amazonaws.com/allennlp/models/openai-transformer-lm-2018.07.23.tar.gz"
+                },
+
             }
         },
         "encoder": {

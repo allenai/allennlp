@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 import json
+import tarfile
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token
@@ -10,8 +11,9 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
 
-        self.encoder_path = self.TEST_DIR / 'encoder.json'
-        self.bpe_path = self.TEST_DIR / 'vocab.bpe'
+        encoder_path = self.TEST_DIR / 'encoder.json'
+        bpe_path = self.TEST_DIR / 'vocab.bpe'
+        transformer_model_path = self.TEST_DIR / 'model.tar.gz'
 
         symbols = ["e", "w", "o", "wo", "."]
         byte_pairs = [(sym1, sym2 + end)
@@ -20,16 +22,21 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
                       for end in ('</w>', '')]   # if tie, prefer ending a word
         encoding = {f"{sym1}{sym2}": idx + 1 for idx, (sym1, sym2) in enumerate(byte_pairs)}
 
-        with open(self.encoder_path, 'w') as encoder_file:
+
+        with open(encoder_path, 'w') as encoder_file:
             json.dump(encoding, encoder_file)
 
-        with open(self.bpe_path, 'w') as bpe_file:
+        with open(bpe_path, 'w') as bpe_file:
             bpe_file.write("#version 0.0\n")
             for sym1, sym2 in byte_pairs:
                 bpe_file.write(f"{sym1} {sym2}\n")
             bpe_file.write("\n")
 
-        self.indexer = OpenaiTransformerBytePairIndexer(self.encoder_path, self.bpe_path)
+        with tarfile.open(transformer_model_path, 'w') as tf:
+            tf.add(encoder_path, 'model/encoder_bpe_40000.json')
+            tf.add(bpe_path, 'model/vocab_40000.bpe')
+
+        self.indexer = OpenaiTransformerBytePairIndexer(encoding, byte_pairs)
 
     def test_bpe(self):
 
@@ -56,12 +63,12 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
 
         indices = self.indexer.tokens_to_indices(tokens, None, 'test')
 
-        assert set(indices.keys()) == {"test-text_tokens", "test-offsets"}
+        assert set(indices.keys()) == {"test", "test-offsets", "mask"}
 
-        text_tokens = indices['test-text_tokens']
+        text_tokens = indices['test']
         offsets = indices['test-offsets']
 
-        assert text_tokens == [
+        assert text_tokens[:6] == [
                 self.indexer.encoder.get(symbol, 0)
                 for symbol in ['ew', 'oe</w>'] + ['woe</w>'] + ['ew', 'e</w>'] + ['ee</w>']
         ]
@@ -72,3 +79,4 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
                 4,  # end of third word
                 5,  # end of last word
         ]
+
