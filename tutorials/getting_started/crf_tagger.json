@@ -19,24 +19,26 @@
   "model": {
     "type": "crf_tagger",
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 50,
-        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
-        "trainable": true
-      },
-      "token_characters": {
-        "type": "character_encoding",
-        "embedding": {
-          "embedding_dim": 25
+      "token_embedders": {
+        "tokens": {
+            "type": "embedding",
+            "embedding_dim": 50,
+            "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
+            "trainable": true
         },
-        "encoder": {
-          "type": "gru",
-          "input_size": 25,
-          "hidden_size": 80,
-          "num_layers": 2,
-          "dropout": 0.25,
-          "bidirectional": true
+        "token_characters": {
+            "type": "character_encoding",
+            "embedding": {
+            "embedding_dim": 25
+            },
+            "encoder": {
+            "type": "gru",
+            "input_size": 25,
+            "hidden_size": 80,
+            "num_layers": 2,
+            "dropout": 0.25,
+            "bidirectional": true
+            }
         }
       }
     },

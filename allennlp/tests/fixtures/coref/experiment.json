@@ -20,24 +20,26 @@
   "model": {
     "type": "coref",
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 10,
-        "trainable": false
-      },
-      "token_characters": {
-        "type": "character_encoding",
-        "embedding": {
-          "num_embeddings": 262,
-          "embedding_dim": 8
+      "token_embedders": {
+        "tokens": {
+            "type": "embedding",
+            "embedding_dim": 10,
+            "trainable": false
         },
-        "encoder": {
-          "type": "cnn",
-          "embedding_dim": 8,
-          "num_filters": 10,
-          "ngram_filter_sizes": [5]
-        },
-        "dropout": 0.2
+        "token_characters": {
+            "type": "character_encoding",
+            "embedding": {
+            "num_embeddings": 262,
+            "embedding_dim": 8
+            },
+            "encoder": {
+            "type": "cnn",
+            "embedding_dim": 8,
+            "num_filters": 10,
+            "ngram_filter_sizes": [5]
+            },
+            "dropout": 0.2
+        }
       }
     },
     "context_layer": {

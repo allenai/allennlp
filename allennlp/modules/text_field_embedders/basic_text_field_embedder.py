@@ -1,4 +1,5 @@
 from typing import Dict, List
+import warnings
 
 import torch
 from overrides import overrides
@@ -91,16 +92,42 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
     # This is some unusual logic, it needs a custom from_params.
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BasicTextFieldEmbedder':  # type: ignore
-        # pylint: disable=arguments-differ
+        # pylint: disable=arguments-differ,bad-super-call
+
+        # The original `from_params` for this class was designed in a way that didn't agree
+        # with the constructor. The constructor wants a 'token_embedders' parameter that is a
+        # `Dict[str, TokenEmbedder]`, but the original `from_params` implementation expected those
+        # key-value pairs to be top-level in the params object.
+        #
+        # This breaks our 'configuration wizard' and configuration checks. Hence, going forward,
+        # the params need a 'token_embedders' key so that they line up with what the constructor wants.
+        # For now, the old behavior is still supported, but produces a DeprecationWarning.
+
         embedder_to_indexer_map = params.pop("embedder_to_indexer_map", None)
         if embedder_to_indexer_map is not None:
             embedder_to_indexer_map = embedder_to_indexer_map.as_dict(quiet=True)
         allow_unmatched_keys = params.pop_bool("allow_unmatched_keys", False)
 
-        token_embedders = {}
-        keys = list(params.keys())
-        for key in keys:
-            embedder_params = params.pop(key)
-            token_embedders[key] = TokenEmbedder.from_params(vocab=vocab, params=embedder_params)
+        token_embedder_params = params.pop('token_embedders', None)
+
+        if token_embedder_params is not None:
+            # New way: explicitly specified, so use it.
+            token_embedders = {
+                    name: TokenEmbedder.from_params(subparams, vocab=vocab)
+                    for name, subparams in token_embedder_params.items()
+            }
+
+        else:
+            # Warn that the original behavior is deprecated
+            warnings.warn(DeprecationWarning("the token embedders for BasicTextFieldEmbedder should now "
+                                             "be specified as a dict under the 'token_embedders' key, "
+                                             "not as top-level key-value pairs"))
+
+            token_embedders = {}
+            keys = list(params.keys())
+            for key in keys:
+                embedder_params = params.pop(key)
+                token_embedders[key] = TokenEmbedder.from_params(vocab=vocab, params=embedder_params)
+
         params.assert_empty(cls.__name__)
         return cls(token_embedders, embedder_to_indexer_map, allow_unmatched_keys)
