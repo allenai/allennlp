@@ -1,5 +1,4 @@
 # pylint: disable=no-self-use,invalid-name
-from pytest import approx
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
