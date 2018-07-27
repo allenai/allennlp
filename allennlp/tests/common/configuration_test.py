@@ -1,8 +1,12 @@
 # pylint: disable=no-self-use,invalid-name
+import os
+
 import pytest
 
-from allennlp.common.configuration import configure, Config, BASE_CONFIG
+from allennlp.common.configuration import configure, Config, BASE_CONFIG, find_errors
+from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
+
 
 
 class TestConfiguration(AllenNlpTestCase):
@@ -45,3 +49,22 @@ class TestConfiguration(AllenNlpTestCase):
 
         with pytest.raises(AttributeError):
             configure('allennlp.data.dataset_readers.NonExistentDatasetReader')
+
+    def test_validation(self):
+        new_params = lambda: Params.from_file(self.PROJECT_ROOT / 'allennlp' / 'tests' / 'fixtures' / 'simple_tagger' / 'experiment.json')
+
+        # Works as is
+        params = new_params()
+        assert not find_errors(params)
+
+        # Complains about missing requireds
+        params = new_params()
+        params.pop('model')
+        errors = find_errors(params)
+        assert errors == ['key model is required but was not specified']
+
+        # Complains about wrong types
+        params = new_params()
+        params['trainer']['num_epochs'] = "oops"
+        errors = find_errors(params)
+        assert errors

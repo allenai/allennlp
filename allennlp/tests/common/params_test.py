@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 import pytest
 
+from allennlp.common.configuration import find_errors
 from allennlp.common.params import Params, unflatten, with_fallback, parse_overrides
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -213,7 +214,10 @@ class TestParams(AllenNlpTestCase):
 
         for config in configs:
             try:
-                Params.from_file(self.PROJECT_ROOT / "training_config" / config)
+                params = Params.from_file(self.PROJECT_ROOT / "training_config" / config)
+                errors = find_errors(params)
+                assert not errors, "validation errors {errors} for config {config}"
+
             except Exception as e:
                 raise AssertionError(f"unable to load params for {config}, because {e}")
 
