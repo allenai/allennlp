@@ -38,9 +38,13 @@ class DepLabelIndexer(TokenIndexer[int]):
         counter[self.namespace][dep_label] += 1
 
     @overrides
-    def token_to_indices(self, token: Token, vocabulary: Vocabulary) -> int:
-        dep_label = token.dep_ or 'NONE'
-        return vocabulary.get_token_index(dep_label, self.namespace)
+    def tokens_to_indices(self,
+                          tokens: List[Token],
+                          vocabulary: Vocabulary,
+                          index_name: str) -> Dict[str, List[int]]:
+        dep_labels = [token.dep_ or 'NONE' for token in tokens]
+
+        return {index_name: [vocabulary.get_token_index(dep_label, self.namespace) for dep_label in dep_labels]}
 
     @overrides
     def get_padding_token(self) -> int:
@@ -52,7 +56,8 @@ class DepLabelIndexer(TokenIndexer[int]):
 
     @overrides
     def pad_token_sequence(self,
-                           tokens: List[int],
-                           desired_num_tokens: int,
-                           padding_lengths: Dict[str, int]) -> List[int]:  # pylint: disable=unused-argument
-        return pad_sequence_to_length(tokens, desired_num_tokens)
+                           tokens: Dict[str, List[int]],
+                           desired_num_tokens: Dict[str, int],
+                           padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
+        return {key: pad_sequence_to_length(val, desired_num_tokens[key])
+                for key, val in tokens.items()}

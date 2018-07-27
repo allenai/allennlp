@@ -1,7 +1,7 @@
 {
   "dataset_reader":{"type":"srl"},
-  "train_data_path": "${SRL_TRAIN_DATA_PATH}",
-  "validation_data_path": "${SRL_VALIDATION_DATA_PATH}",
+  "train_data_path": std.extVar("SRL_TRAIN_DATA_PATH"),
+  "validation_data_path": std.extVar("SRL_VALIDATION_DATA_PATH"),
   "model": {
     "type": "srl",
     "text_field_embedder": {
