@@ -12,27 +12,33 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
                 "sentence": "Please could you parse this sentence?",
         }
 
-        archive = load_archive(self.FIXTURES_ROOT / 'biaffine_dependency_parser' / 'serialization' / 'model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / 'biaffine_dependency_parser'
+                               / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'biaffine-dependency-parser')
 
         result = predictor.predict_json(inputs)
 
-        best_span = result.get("best_span")
-        assert best_span is not None
-        assert isinstance(best_span, list)
-        assert len(best_span) == 2
-        assert all(isinstance(x, int) for x in best_span)
-        assert best_span[0] <= best_span[1]
+        print(result)
+        heads = result.get("heads")
+        assert heads is not None
+        assert isinstance(heads, list)
+        assert all(isinstance(x, int) for x in heads)
+        head_tags = result.get("head_tags")
+        assert head_tags is not None
+        assert isinstance(head_tags, list)
+        assert all(isinstance(x, int) for x in head_tags)
 
-        best_span_str = result.get("best_span_str")
-        assert isinstance(best_span_str, str)
-        assert best_span_str != ""
+        predicted_heads = result.get("predicted_heads")
+        assert len(predicted_heads) == len(heads) - 1
 
-        for probs_key in ("span_start_probs", "span_end_probs"):
-            probs = result.get(probs_key)
-            assert probs is not None
-            assert all(isinstance(x, float) for x in probs)
-            assert sum(probs) == approx(1.0)
+        predicted_dependencies = result.get("predicted_dependencies")
+        assert len(predicted_dependencies) == len(head_tags) - 1
+        assert isinstance(predicted_dependencies, list)
+        assert all(isinstance(x, str) for x in predicted_dependencies)
+
+        assert result.get("loss") is not None
+        assert result.get("arc_loss") is not None
+        assert result.get("tag_loss") is not None
 
     def test_batch_prediction(self):
         inputs = [
@@ -44,27 +50,29 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
                 }
         ]
 
-        archive = load_archive(self.FIXTURES_ROOT / 'biaffine_dependency_parser' / 'serialization' / 'model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / 'biaffine_dependency_parser'
+                               / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'biaffine-dependency-parser')
 
         results = predictor.predict_batch_json(inputs)
+        print(results)
         assert len(results) == 2
 
         for result in results:
-            best_span = result.get("best_span")
-            best_span_str = result.get("best_span_str")
-            start_probs = result.get("span_start_probs")
-            end_probs = result.get("span_end_probs")
-            assert best_span is not None
-            assert isinstance(best_span, list)
-            assert len(best_span) == 2
-            assert all(isinstance(x, int) for x in best_span)
-            assert best_span[0] <= best_span[1]
+            sequence_length = sum(result.get("mask")) - 1
+            heads = result.get("heads")
+            assert heads is not None
+            assert isinstance(heads, list)
+            assert all(isinstance(x, int) for x in heads)
+            head_tags = result.get("head_tags")
+            assert head_tags is not None
+            assert isinstance(head_tags, list)
+            assert all(isinstance(x, int) for x in head_tags)
 
-            assert isinstance(best_span_str, str)
-            assert best_span_str != ""
+            predicted_heads = result.get("predicted_heads")
+            assert len(predicted_heads) == sequence_length
 
-            for probs in (start_probs, end_probs):
-                assert probs is not None
-                assert all(isinstance(x, float) for x in probs)
-                assert sum(probs) == approx(1.0)
+            predicted_dependencies = result.get("predicted_dependencies")
+            assert len(predicted_dependencies) == sequence_length
+            assert isinstance(predicted_dependencies, list)
+            assert all(isinstance(x, str) for x in predicted_dependencies)
