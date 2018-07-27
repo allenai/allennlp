@@ -32,6 +32,7 @@ import os
 from allennlp.commands.train import datasets_from_params
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.configuration import find_errors
 from allennlp.common.params import Params
 from allennlp.common.util import prepare_environment
 from allennlp.data import Vocabulary
@@ -77,6 +78,10 @@ def make_vocab_from_args(args: argparse.Namespace):
     make_vocab_from_params(params, serialization_dir)
 
 def make_vocab_from_params(params: Params, serialization_dir: str):
+    errors = find_errors(params)
+    if errors:
+        raise ConfigurationError(f"invalid config: {errors}")
+
     prepare_environment(params)
 
     vocab_params = params.pop("vocabulary", {})

@@ -413,8 +413,6 @@ def _is_valid(key: str, value: Any, annotation: type) -> List[str]:
     origin = getattr(annotation, '__origin__', None)
     args = getattr(annotation, '__args__', ())
 
-    print("is_valid", key, value, annotation)
-
     # No annotation, just hope for the best
     if annotation is None:
         pass
@@ -470,20 +468,26 @@ def _is_valid(key: str, value: Any, annotation: type) -> List[str]:
 
     # For a from params
     elif issubclass(annotation, Registrable):
-        print('registrable')
         typ3 = value.pop('type', getattr(annotation, 'default_implementation', None))
         if not typ3:
             errors.append(f"unspecified type for {annotation} at {key}")
-        subclass_config = _auto_config(annotation.by_name(typ3))
+
+        subclass = annotation.by_name(typ3)
+
+        # These wrapper classes need special treatment
+        if isinstance(subclass, (_Seq2SeqWrapper, _Seq2VecWrapper)):
+            subclass = subclass._module_class
+
+        subclass_config = _auto_config(subclass)
+
         errors.extend(find_errors(value, subclass_config, key))
 
     elif hasattr(annotation, 'from_params'):
-        print('from_params')
         subconfig = _auto_config(annotation)
         errors.extend(find_errors(value, subconfig, key))
 
     else:
-        print(":shrug:")
+        pass
 
     return errors
 
@@ -492,7 +496,6 @@ def find_errors(params: Params, valid_config: Config = BASE_CONFIG, prefix: str 
     Validate the supplied ``Params`` object against the provided ``Config``.
     Return a list of errors, which is empty if the Params are valid.
     """
-    print("find errors", params.as_dict(), valid_config, prefix)
     errors: List[str] = []
     # make a copy
     params = Params(copy.deepcopy(params.as_dict()))
