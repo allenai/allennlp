@@ -19,22 +19,24 @@
   "model": {
     "type": "bidaf",
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 2,
-        "trainable": false
-      },
-      "token_characters": {
-        "type": "character_encoding",
-        "embedding": {
-          "num_embeddings": 260,
-          "embedding_dim": 8
+      "token_embedders": {
+        "tokens": {
+            "type": "embedding",
+            "embedding_dim": 2,
+            "trainable": false
         },
-        "encoder": {
-          "type": "cnn",
-          "embedding_dim": 8,
-          "num_filters": 8,
-          "ngram_filter_sizes": [5]
+        "token_characters": {
+            "type": "character_encoding",
+            "embedding": {
+            "num_embeddings": 260,
+            "embedding_dim": 8
+            },
+            "encoder": {
+            "type": "cnn",
+            "embedding_dim": 8,
+            "num_filters": 8,
+            "ngram_filter_sizes": [5]
+            }
         }
       }
     },

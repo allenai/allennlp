@@ -59,10 +59,10 @@ class TestElmoTokenEmbedder(ModelTestCase):
             files_to_archive = json.loads(fta.read())
 
         assert files_to_archive == {
-                'model.text_field_embedder.elmo.options_file': str(pathlib.Path('allennlp') / 'tests' /
-                                                                   'fixtures' / 'elmo' / 'options.json'),
-                'model.text_field_embedder.elmo.weight_file': str(pathlib.Path('allennlp') / 'tests' /
-                                                                  'fixtures' / 'elmo' / 'lm_weights.hdf5'),
+                'model.text_field_embedder.token_embedders.elmo.options_file':
+                        str(pathlib.Path('allennlp') / 'tests' / 'fixtures' / 'elmo' / 'options.json'),
+                'model.text_field_embedder.token_embedders.elmo.weight_file':
+                        str(pathlib.Path('allennlp') / 'tests' / 'fixtures' / 'elmo' / 'lm_weights.hdf5'),
         }
 
         # Check that the unarchived contents of those files match the original contents.

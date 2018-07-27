@@ -15,11 +15,13 @@
   "model": {
     "type": "bcn",
     "text_field_embedder": {
-      "tokens": {
-        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
-        "type": "embedding",
-        "embedding_dim": 300,
-        "trainable": false
+      "token_embedders": {
+        "tokens": {
+            "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
+            "type": "embedding",
+            "embedding_dim": 300,
+            "trainable": false
+        }
       }
     },
     "embedding_dropout": 0.25,

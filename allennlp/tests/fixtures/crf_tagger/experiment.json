@@ -17,6 +17,7 @@
     "model": {
       "type": "crf_tagger",
       "text_field_embedder": {
+          "token_embedders": {
               "tokens": {
                       "type": "embedding",
                       "embedding_dim": 50
@@ -35,6 +36,7 @@
                   "bidirectional": true
                 }
               }
+          }
       },
       "encoder": {
               "type": "gru",
