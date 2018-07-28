@@ -6,7 +6,7 @@ from parsimonious.grammar import Grammar
 
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
 from allennlp.semparse.contexts.sql_table_context import \
-        SqlTableContext, SqlVisitor, generate_one_of_str, format_action
+        SqlTableContext, SqlVisitor, generate_one_of_string, format_action
 
 from allennlp.data.tokenizers import WordTokenizer
 
@@ -29,7 +29,7 @@ class AtisWorld():
     grammars, it then augments this grammar with the entities that are detected from utterances.
 
     Parameters
-    __________
+    ----------
     utterances: ``List[str]``
         A list of utterances in the interaction, the last element in this list is the
         current utterance that we are interested in.
@@ -54,9 +54,9 @@ class AtisWorld():
         and numbers from the current utterance.
         """
         valid_actions = deepcopy(self.sql_table_context.valid_actions)
-        for local_str in self.get_local_strs():
-            if local_str not in valid_actions['string']:
-                valid_actions['string'].append(format_action('string', local_str))
+        for string in self.get_strings_from_utterance():
+            if string not in valid_actions['string']:
+                valid_actions['string'].append(format_action('string', string))
 
         numbers = ['0', '1']
         for utterance in self.utterances:
@@ -78,16 +78,16 @@ class AtisWorld():
         strings = [string .split(" -> ")[1].lstrip('["').rstrip('"]') for \
                    string in sorted(self.valid_actions['string'], reverse=True)]
 
-        grammar_str_with_context += generate_one_of_str("number", numbers)
-        grammar_str_with_context += generate_one_of_str("string", strings)
+        grammar_str_with_context += generate_one_of_string("number", numbers)
+        grammar_str_with_context += generate_one_of_string("string", strings)
         return grammar_str_with_context
 
 
-    def get_local_strs(self) -> List[str]:
+    def get_strings_from_utterance(self) -> List[str]:
         """
         Based on the current utterance, return a list of valid strings that should be added.
         """
-        local_strs: List[str] = []
+        strings: List[str] = []
         trigger_lists = [CITIES, AIRPORT_CODES,
                          STATES, STATE_CODES,
                          FARE_BASIS_CODE, CLASS,
@@ -106,17 +106,16 @@ class AtisWorld():
         for tokenized_utterance in self.tokenized_utterances:
             if tokenized_utterance:
                 for first_token, second_token in zip(tokenized_utterance, tokenized_utterance[1:]):
-                    local_strs.extend(trigger_dict.get(first_token.text.lower(), []))
+                    strings.extend(trigger_dict.get(first_token.text.lower(), []))
                     bigram = f"{first_token.text} {second_token.text}"
-                    local_strs.extend(trigger_dict.get(bigram.lower(), []))
-                local_strs.extend(trigger_dict.get(tokenized_utterance[-1].text.lower(), []))
+                    strings.extend(trigger_dict.get(bigram.lower(), []))
+                strings.extend(trigger_dict.get(tokenized_utterance[-1].text.lower(), []))
 
-        local_strs.extend(DAY_OF_WEEK)
-        return local_strs
+        strings.extend(DAY_OF_WEEK)
+        return strings
 
     def get_action_sequence(self, query: str) -> List[str]:
         sql_visitor = SqlVisitor(self.grammar_with_context)
-        query = query.split("\n")[0]
         if query:
             action_sequence = sql_visitor.parse(query)
             return action_sequence

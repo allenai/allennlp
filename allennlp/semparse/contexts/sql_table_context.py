@@ -1,8 +1,7 @@
 """
-A ``SqlTableContext`` represents the context in which an utterance appears, with the grammar and
+A ``SqlTableContext`` represents the SQL context in which an utterance appears, with the grammar and
 the valid actions.
 """
-
 import re
 from collections import defaultdict
 from typing import List, Dict, Set
@@ -12,7 +11,6 @@ from overrides import overrides
 from parsimonious.expressions import Sequence, OneOf, Literal
 from parsimonious.nodes import Node, NodeVisitor
 from parsimonious.grammar import Grammar
-
 
 # This is the base definition of the SQL grammar written in a simplified sort of
 # EBNF notation. The notation here is of the form:
@@ -61,7 +59,7 @@ SQL_GRAMMAR_STR = r"""
     string              =  ""
 """
 
-def generate_one_of_str(nonterminal: str, literals: List[str]) -> str:
+def generate_one_of_string(nonterminal: str, literals: List[str]) -> str:
     return  f"\n{nonterminal} \t\t = " + " / ".join([f'"{literal}"' for literal in literals])
 
 def format_action(nonterminal: str, right_hand_side: str) -> str:
@@ -73,7 +71,7 @@ def format_action(nonterminal: str, right_hand_side: str) -> str:
 
     else:
         right_hand_side = right_hand_side.lstrip("(").rstrip(")")
-        child_strings = [tok for tok in re.split(" ws |ws | ws", right_hand_side) if tok]
+        child_strings = [token for token in re.split(" ws |ws | ws", right_hand_side) if token]
         return f"{nonterminal} -> [{', '.join(child_strings)}]"
 
 class SqlTableContext():
@@ -81,13 +79,15 @@ class SqlTableContext():
     A ``SqlTableContext`` represents the interaction in which an utterance occurs.
     It initializes the global actions that are valid for every interaction. For each utterance,
     local actions are added and are valid for future utterances in the same interaction.
-    Parameters
-    __________
-    tables: ``Dict[str, List[str]]``
-        A dictionary representing the SQL tables in the dataset, the keys are the names of the tables
-        and that map to lists of the table's column names.
     """
     def __init__(self, tables: Dict[str, List[str]] = None) -> None:
+        """
+        Parameters
+        ___________
+        tables: ``Dict[str, List[str]]``
+            A dictionary representing the SQL tables in the dataset, the keys are the names of the tables
+            and that map to lists of the table's column names.
+        """
         self.tables = tables
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)
@@ -137,18 +137,17 @@ class SqlTableContext():
             grammar_str += "\n      col_ref \t\t = " + \
                     " / ".join(sorted(column_right_hand_sides, reverse=True))
 
-            grammar_str += generate_one_of_str('table_name', sorted(list(self.tables.keys()), reverse=True))
+            grammar_str += generate_one_of_string('table_name', sorted(list(self.tables.keys()), reverse=True))
 
         return grammar_str
-
 
 class SqlVisitor(NodeVisitor):
     """
     ``SqlVisitor`` performs a depths-first traversal of the the AST. It takes the parse tree
-    and gives us a action sequence that resulted in that parse.
+    and gives us an action sequence that resulted in that parse.
 
     Parameters
-    __________
+    ----------
     grammar : ``Grammar``
         A Grammar object that we use to parse the text.
     """
