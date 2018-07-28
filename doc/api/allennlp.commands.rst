@@ -28,6 +28,8 @@ The included module ``allennlp.run`` is such a script:
                     training utilities.
         test-install
                     Run the unit tests.
+        generate-subexperiments
+                    Generate subexperiment configs form root experiment config.
 
 However, it only knows about the models and classes that are
 included with AllenNLP. Once you start creating custom models,
@@ -45,6 +47,7 @@ calls ``main()``.
     allennlp.commands.elmo
     allennlp.commands.dry_run
     allennlp.commands.test_install
+    allennlp.commands.generate_subexperiments
 
 .. automodule:: allennlp.commands
    :members:
