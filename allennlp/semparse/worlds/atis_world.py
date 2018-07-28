@@ -5,7 +5,8 @@ from collections import defaultdict
 from parsimonious.grammar import Grammar
 
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
-from allennlp.semparse.contexts.sql_table_context import SqlTableContext, SqlVisitor, generate_one_of_str
+from allennlp.semparse.contexts.sql_table_context import \
+        SqlTableContext, SqlVisitor, generate_one_of_str, format_action
 
 from allennlp.data.tokenizers import WordTokenizer
 
@@ -55,14 +56,14 @@ class AtisWorld():
         valid_actions = deepcopy(self.sql_table_context.valid_actions)
         for local_str in self.get_local_strs():
             if local_str not in valid_actions['string']:
-                valid_actions['string'].append(local_str)
+                valid_actions['string'].append(format_action('string', local_str))
 
         numbers = ['0', '1']
         for utterance in self.utterances:
             numbers.extend(get_numbers_from_utterance(utterance))
             for number in numbers:
                 if number not in valid_actions['number']:
-                    valid_actions['number'].append(number)
+                    valid_actions['number'].append(format_action('number', number))
 
         return valid_actions
 
@@ -71,16 +72,14 @@ class AtisWorld():
         Generate a string that can be used to instantiate a ``Grammar`` object. The string is a sequence of
         rules that define the grammar.
         """
-
         grammar_str_with_context = self.sql_table_context.grammar_str
+        numbers = [number.split(" -> ")[1].lstrip('["').rstrip('"]') for \
+                   number in sorted(self.valid_actions['number'], reverse=True)]
+        strings = [string .split(" -> ")[1].lstrip('["').rstrip('"]') for \
+                   string in sorted(self.valid_actions['string'], reverse=True)]
 
-        grammar_str_with_context += generate_one_of_str("number",
-                                                        sorted(self.valid_actions['number'],
-                                                               reverse=True))
-        grammar_str_with_context += generate_one_of_str("string",
-                                                        [f"'{local_str}'"
-                                                         for local_str in
-                                                         self.valid_actions['string']])
+        grammar_str_with_context += generate_one_of_str("number", numbers)
+        grammar_str_with_context += generate_one_of_str("string", strings)
         return grammar_str_with_context
 
 
@@ -129,17 +128,7 @@ class AtisWorld():
         of the form: nonterminal -> [right_hand_side]
         """
         all_actions = set()
-        for nonterminal, right_hand_side_list in self.valid_actions.items():
-            for right_hand_side in right_hand_side_list:
-                if nonterminal == 'string':
-                    all_actions.add(f'{nonterminal} -> ["\'{right_hand_side}\'"]')
-
-                elif nonterminal in ['number', 'asterisk', 'table_name']:
-                    all_actions.add(f'{nonterminal} -> ["{right_hand_side}"]')
-
-                else:
-                    right_hand_side = right_hand_side.lstrip("(").rstrip(")")
-                    child_strings = [tok for tok in re.split(" ws |ws | ws", right_hand_side) if tok]
-                    all_actions.add(f"{nonterminal} -> [{', '.join(child_strings)}]")
-
+        for _, action_list in self.valid_actions.items():
+            for action in action_list:
+                all_actions.add(action)
         return sorted(all_actions)
