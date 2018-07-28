@@ -10,6 +10,7 @@ from allennlp.commands.fine_tune import FineTune
 from allennlp.commands.make_vocab import MakeVocab
 from allennlp.commands.predict import Predict
 from allennlp.commands.dry_run import DryRun
+from allennlp.commands.generate_subexperiments import GenerateSubexperiments
 from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.test_install import TestInstall
 from allennlp.commands.train import Train
@@ -42,7 +43,7 @@ def main(prog: str = None,
             "fine-tune": FineTune(),
             "dry-run": DryRun(),
             "test-install": TestInstall(),
-
+            "generate-subexperiments": GenerateSubexperiments(),
             # Superseded by overrides
             **subcommand_overrides
     }
@@ -51,7 +52,7 @@ def main(prog: str = None,
         subparser = subcommand.add_subparser(name, subparsers)
         # configure doesn't need include-package because it imports
         # whatever classes it needs.
-        if name != "configure":
+        if name not in ["configure", "generate-subexperiments"]:
             subparser.add_argument('--include-package',
                                    type=str,
                                    action='append',
