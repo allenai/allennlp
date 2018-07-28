@@ -1,133 +1,10 @@
-"""
-A ``ConversationContext`` represents the context in which an utterance appears by with the
-valid actions and the grammar
-"""
-
-from collections import defaultdict
-from typing import List, Dict, Set
+from typing import List
 import re
-
-from parsimonious.expressions import Sequence, OneOf, Literal
-from parsimonious.grammar import Grammar
 
 TWELVE_TO_TWENTY_FOUR = 1200
 HOUR_TO_TWENTY_FOUR = 100
 HOURS_IN_DAY = 2400
 AROUND_RANGE = 30
-
-"""
-This is the base definition of the SQL grammar written in a simplified sort of
-EBNF notation. The notation here is of the form:
-
-    nonterminal = productions
-
-The first element is the starting symbol. We initialize ``col_ref``, ``table_ref``,
-``table_name``, ``number``, ``string`` to empty productions first, we will fill in
-``col_ref``, ``table_ref``, ``table_name`` based on the dataset and ``number`` and
-``string`` based on the utterances
-"""
-
-SQL_GRAMMAR_STR = r"""
-    stmt                = query ws ";" ws
-    query               = (ws "(" ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause ws ")" ws) /
-                          (ws "SELECT" ws distinct ws select_results ws "FROM" ws table_refs ws where_clause ws)
-                        
-    select_results      = col_refs / agg
-
-    agg                 = agg_func ws "(" ws col_ref ws ")"
-    agg_func            = "MIN" / "min" / "MAX" / "max" / "COUNT" / "count"
-
-    col_refs            = (col_ref ws "," ws col_refs) / (col_ref)
-    table_refs          = (table_name ws "," ws table_refs) / (table_name)
-
-    where_clause        = ("WHERE" ws "(" ws conditions ws ")" ws) / ("WHERE" ws conditions ws)
-    
-    conditions          = (condition ws conj ws conditions) / 
-                          (condition ws conj ws "(" ws conditions ws ")") /
-                          ("(" ws conditions ws ")" ws conj ws conditions) /
-                          ("(" ws conditions ws ")") /
-                          (not ws conditions ws ) /
-                          condition
-    condition           = in_clause / ternaryexpr / biexpr
-
-    in_clause           = (ws col_ref ws "IN" ws query ws)
-
-    biexpr              = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ( col_ref ws "LIKE" ws string)
-    binaryop            = "+" / "-" / "*" / "/" / "=" /
-                          ">=" / "<=" / ">" / "<"  / "is" / "IS"
-
-    ternaryexpr         = (col_ref ws not "BETWEEN" ws value ws and value ws) /
-                          (col_ref ws "BETWEEN" ws value ws and value ws)
-
-    value               = (not ws pos_value) / (pos_value)
-    pos_value           = ("ALL" ws query) / ("ANY" ws query) / number / boolean / col_ref / string / agg_results / "NULL"
-
-    agg_results         = (ws "("  ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ws ")" ws) /
-                          (ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ws)
-
-    boolean             = "true" / "false"
-
-    ws                  = ~"\s*"i
-
-    conj                = and / or
-    and                 = "AND" ws
-    or                  = "OR" ws
-    not                 = ("NOT" ws ) / ("not" ws)
-    asterisk            = "*"
-    distinct            = ("DISTINCT") / ("")
-
-    col_ref             =  ""
-    table_ref           =  ""
-    table_name          =  ""
-    number              =  ""
-    string              =  ""
-
-"""
-
-class ConversationContext():
-    """
-    A ``ConversationContext`` represents the interaction in which an utterance occurs.
-    It initializes the global actions that are valid for every interaction. For each utterance,
-    local actions are added and are valid for future utterances in the same interaction.
-    """
-    def __init__(self, interaction: List[Dict[str, str]] = None) -> None:
-        self.interaction: List[Dict[str, str]] = interaction
-        self.base_sql_def: str = SQL_GRAMMAR_STR
-        self.grammar: Grammar = Grammar(SQL_GRAMMAR_STR)
-        self.valid_actions: Dict[str, List[str]] = self.initialize_valid_actions()
-
-    def initialize_valid_actions(self) -> Dict[str, List[str]]:
-        """
-        Initialize the conversation context with global actions, these are
-        valid for all contexts. The keys represent the nonterminals in the
-        grammar and the values are the productions for that nonterminal.
-        """
-        valid_actions: Dict[str, Set[str]] = defaultdict(set)
-
-        for key in self.grammar:
-            rhs = self.grammar[key]
-            if isinstance(rhs, Sequence):
-                valid_actions[key].add(" ".join(rhs._unicode_members())) # pylint: disable=protected-access
-
-            elif isinstance(rhs, OneOf):
-                for option in rhs._unicode_members(): # pylint: disable=protected-access
-                    valid_actions[key].add(option)
-
-            elif isinstance(rhs, Literal):
-                if rhs.literal != "":
-                    valid_actions[key].add("%s" % rhs.literal)
-                else:
-                    valid_actions[key] = set()
-
-        for table in list(sorted(TABLES.keys(), reverse=True)):
-            valid_actions['table_name'].add(table)
-            for column in sorted(TABLES[table], reverse=True):
-                valid_actions['col_ref'].add('("{}" ws "." ws "{}")'.format(table, column))
-
-        valid_actions['col_ref'].add('asterisk')
-        valid_action_strings = {key: sorted(value) for key, value in valid_actions.items()}
-        return valid_action_strings
-
 
 def get_times_from_utterance(utterance: str) -> List[str]:
     """
@@ -157,126 +34,125 @@ def get_times_from_utterance(utterance: str) -> List[str]:
     return [str(time) for time in times]
 
 
-def get_nums_from_utterance(utterance: str) -> List[str]:
+def get_numbers_from_utterance(utterance: str) -> List[str]:
     """
     Given an utterance, find all the numbers that are in the action space.
     """
-    nums = ['1', '0']
-    nums.extend(re.findall(r'\d+', utterance))
-    nums.extend([str(int(num_str.rstrip('pm')) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR)
-                 for num_str in re.findall(r'\d+', utterance)])
+    numbers = []
+    numbers.extend(re.findall(r'\d+', utterance))
+    numbers.extend([str(int(num_str.rstrip('pm')) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR)
+                    for num_str in re.findall(r'\d+', utterance)])
 
-    nums.extend(get_times_from_utterance(utterance))
+    numbers.extend(get_times_from_utterance(utterance))
 
     words = utterance.split(' ')
     for word in words:
         if word in MONTH_NUMBERS:
-            nums.append(str(MONTH_NUMBERS[word]))
+            numbers.append(str(MONTH_NUMBERS[word]))
         if word in DAY_NUMBERS:
-            nums.append(str(DAY_NUMBERS[word]))
+            numbers.append(str(DAY_NUMBERS[word]))
         if word in MISC_TIME_TRIGGERS:
-            nums.extend(MISC_TIME_TRIGGERS[word])
+            numbers.extend(MISC_TIME_TRIGGERS[word])
 
     for tens, digits in zip(words, words[1:]):
         day = ' '.join([tens, digits])
         if day in DAY_NUMBERS:
-            nums.append(str(DAY_NUMBERS[day]))
-    return sorted(nums, reverse=True)
+            numbers.append(str(DAY_NUMBERS[day]))
+    return sorted(numbers, reverse=True)
 
-AIRLINE_CODES = {'argentina': 'AR',
-                 'alliance': '3J',
-                 'canada': 'AC',
-                 'ontario': 'GX',
-                 'wisconson': 'ZW',
-                 'alaska': 'AS',
-                 'alpha': '7V',
-                 'american': 'AA',
-                 'american trans': 'TZ',
-                 'america west': 'HP',
-                 'atlantic': 'DH',
-                 'atlantic.': 'EV',
-                 'braniff.': 'BE',
-                 'british': 'BA',
-                 'business': 'HQ',
-                 'canadian': 'CP',
-                 'carnival': 'KW',
-                 'christman': 'SX',
-                 'colgan': '9L',
-                 'comair': 'OH',
-                 'continental': 'CO',
-                 'czecho': 'OK',
-                 'delta': 'DL',
-                 'express': '9E',
-                 'eastern': 'EA',
-                 'grand': 'QD',
-                 'lufthansa': 'LH',
-                 'mesaba': 'XJ',
-                 'mgm': 'MG',
-                 'midwest': 'YX',
-                 'nation': 'NX',
-                 'northeast': '2V',
-                 'northwest': 'NW',
-                 'ontario express': '9X',
-                 'precision': 'RP',
-                 'royal': 'AT',
-                 'sabena': 'SN',
-                 'sky': 'OO',
-                 'south': 'WN',
-                 'thai': 'TG',
-                 'tower': 'FF',
-                 'states': '9N',
-                 'twa': 'TW',
-                 'world': 'RZ',
-                 'united': 'UA',
-                 'us': 'US',
-                 'west': 'OE'}
+AIRLINE_CODES = {'alaska': ['AS'],
+                 'alliance': ['3J'],
+                 'alpha': ['7V'],
+                 'america west': ['HP'],
+                 'american': ['AA'],
+                 'american trans': ['TZ'],
+                 'argentina': ['AR'],
+                 'atlantic': ['DH'],
+                 'atlantic.': ['EV'],
+                 'braniff.': ['BE'],
+                 'british': ['BA'],
+                 'business': ['HQ'],
+                 'canada': ['AC'],
+                 'canadian': ['CP'],
+                 'carnival': ['KW'],
+                 'christman': ['SX'],
+                 'colgan': ['9L'],
+                 'comair': ['OH'],
+                 'continental': ['CO'],
+                 'czecho': ['OK'],
+                 'delta': ['DL'],
+                 'eastern': ['EA'],
+                 'express': ['9E'],
+                 'grand': ['QD'],
+                 'lufthansa': ['LH'],
+                 'mesaba': ['XJ'],
+                 'mgm': ['MG'],
+                 'midwest': ['YX'],
+                 'nation': ['NX'],
+                 'northeast': ['2V'],
+                 'northwest': ['NW'],
+                 'ontario': ['GX'],
+                 'ontario express': ['9X'],
+                 'precision': ['RP'],
+                 'royal': ['AT'],
+                 'sabena': ['SN'],
+                 'sky': ['OO'],
+                 'south': ['WN'],
+                 'states': ['9N'],
+                 'thai': ['TG'],
+                 'tower': ['FF'],
+                 'twa': ['TW'],
+                 'united': ['UA'],
+                 'us': ['US'],
+                 'west': ['OE'],
+                 'wisconson': ['ZW'],
+                 'world': ['RZ']}
 
-CITY_CODES = {'ATLANTA': 'MATL',
-              'BALTIMORE': 'BBWI',
-              'BOSTON': 'BBOS',
-              'BURBANK': 'BBUR',
-              'CHARLOTTE': 'CCLT',
-              'CHICAGO': 'CCHI',
-              'CINCINNATI': 'CCVG',
-              'CLEVELAND': 'CCLE',
-              'COLUMBUS': 'CCMH',
-              'DALLAS': 'DDFW',
-              'DENVER': 'DDEN',
-              'DETROIT': 'DDTT',
-              'FORT WORTH': 'FDFW',
-              'HOUSTON': 'HHOU',
-              'INDIANAPOLIS': 'IIND',
-              'KANSAS CITY': 'MMKC',
-              'LAS VEGAS': 'LLAS',
-              'LONG BEACH': 'LLGB',
-              'LOS ANGELES': 'LLAX',
-              'MEMPHIS': 'MMEM',
-              'MIAMI': 'MMIA',
-              'MILWAUKEE': 'MMKE',
-              'MINNEAPOLIS': 'MMSP',
-              'MONTREAL': 'YYMQ',
-              'NASHVILLE': 'BBNA',
-              'NEW YORK': 'NNYC',
-              'NEWARK': 'JNYC',
-              'OAKLAND': 'OOAK',
-              'ONTARIO': 'OONT',
-              'ORLANDO': 'OORL',
-              'PHILADELPHIA': 'PPHL',
-              'PHOENIX': 'PPHX',
-              'PITTSBURGH': 'PPIT',
-              'SALT LAKE CITY': 'SSLC',
-              'SAN DIEGO': 'SSAN',
-              'SAN FRANCISCO': 'SSFO',
-              'SAN JOSE': 'SSJC',
-              'SEATTLE': 'SSEA',
-              'ST. LOUIS': 'SSTL',
-              'ST. PAUL': 'SMSP',
-              'ST. PETERSBURG': 'STPA',
-              'TACOMA': 'TSEA',
-              'TAMPA': 'TTPA',
-              'TORONTO': 'YYTO',
-              'WASHINGTON': 'WWAS',
-              'WESTCHESTER COUNTY': 'HHPN'}
+CITY_CODES = {'ATLANTA': ['MATL'],
+              'BALTIMORE': ['BBWI'],
+              'BOSTON': ['BBOS'],
+              'BURBANK': ['BBUR'],
+              'CHARLOTTE': ['CCLT'],
+              'CHICAGO': ['CCHI'],
+              'CINCINNATI': ['CCVG'],
+              'CLEVELAND': ['CCLE'],
+              'COLUMBUS': ['CCMH'],
+              'DALLAS': ['DDFW'],
+              'DENVER': ['DDEN'],
+              'DETROIT': ['DDTT'],
+              'FORT WORTH': ['FDFW'],
+              'HOUSTON': ['HHOU'],
+              'KANSAS CITY': ['MMKC'],
+              'LAS VEGAS': ['LLAS'],
+              'LONG BEACH': ['LLGB'],
+              'LOS ANGELES': ['LLAX'],
+              'MEMPHIS': ['MMEM'],
+              'MIAMI': ['MMIA'],
+              'MILWAUKEE': ['MMKE'],
+              'MINNEAPOLIS': ['MMSP'],
+              'MONTREAL': ['YYMQ'],
+              'NASHVILLE': ['BBNA'],
+              'NEW YORK': ['NNYC'],
+              'NEWARK': ['JNYC'],
+              'OAKLAND': ['OOAK'],
+              'ONTARIO': ['OONT'],
+              'ORLANDO': ['OORL'],
+              'PHILADELPHIA': ['PPHL'],
+              'PHOENIX': ['PPHX'],
+              'PITTSBURGH': ['PPIT'],
+              'SALT LAKE CITY': ['SSLC'],
+              'SAN DIEGO': ['SSAN'],
+              'SAN FRANCISCO': ['SSFO'],
+              'SAN JOSE': ['SSJC'],
+              'SEATTLE': ['SSEA'],
+              'ST. LOUIS': ['SSTL'],
+              'ST. PAUL': ['SMSP'],
+              'ST. PETERSBURG': ['STPA'],
+              'TACOMA': ['TSEA'],
+              'TAMPA': ['TTPA'],
+              'TORONTO': ['YYTO'],
+              'WASHINGTON': ['WWAS'],
+              'WESTCHESTER COUNTY': ['HHPN']}
 
 MONTH_NUMBERS = {'january': 1,
                  'february': 2,
@@ -323,14 +199,14 @@ DAY_NUMBERS = {'first': 1,
                'thirtieth': 30,
                'thirty first': 31}
 
-GROUND_SERVICE = {'air taxi': 'AIR TAXI OPERATION',
-                  'limo': 'LIMOUSINE',
-                  'rapid': 'RAPID TRANSIT',
-                  'rental': 'RENTAL CAR',
-                  'car': 'RENTAL CAR',
-                  'taxi': 'TAXI'}
+GROUND_SERVICE = {'air taxi': ['AIR TAXI OPERATION'],
+                  'car': ['RENTAL CAR'],
+                  'limo': ['LIMOUSINE'],
+                  'rapid': ['RAPID TRANSIT'],
+                  'rental': ['RENTAL CAR'],
+                  'taxi': ['TAXI']}
 
-MISC_STR = {"every day" : "DAILY"}
+MISC_STR = {"every day" : ["DAILY"]}
 
 MISC_TIME_TRIGGERS = {'morning': ['0', '1200'],
                       'afternoon': ['1200', '1800'],
@@ -377,8 +253,21 @@ TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
                           'application', 'no_discounts'],
           'state': ['state_code', 'state_name', 'country_name']}
 
-YES_NO = {'one way': 'NO',
-          'economy': 'YES'}
+YES_NO = {'one way': ['NO'],
+          'economy': ['YES']}
+
+CITY_AIRPORT_CODES = {'atlanta' : ['ATL'],
+                      'boston' : ['BOS'],
+                      'baltimore': ['BWI'],
+                      'charlotte': ['CLT'],
+                      'dallas': ['DFW'],
+                      'detroit': ['DTW'],
+                      'la guardia': ['LGA'],
+                      'oakland': ['OAK'],
+                      'philadelphia': ['PHL'],
+                      'pittsburgh': ['PIT'],
+                      'san francisco': ['SFO'],
+                      'toronto': ['YYZ']}
 
 AIRPORT_CODES = ['ATL', 'NA', 'OS', 'UR', 'WI', 'CLE', 'CLT', 'CMH',
                  'CVG', 'DAL', 'DCA', 'DEN', 'DET', 'DFW', 'DTW',

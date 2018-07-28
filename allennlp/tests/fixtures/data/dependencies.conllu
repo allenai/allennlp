@@ -46,3 +46,21 @@
 7	Jo	Jo	PROPN	NNP	Number=Sing	6	flat	6:flat	_
 8	Foley	Foley	PROPN	NNP	Number=Sing	6	flat	6:flat	_
 9	]	]	PUNCT	-RRB-	_	4	punct	4:punct	_
+
+# sent_id = weblog-blogspot.com_healingiraq_20040409053012_ENG_20040409_053012-0022
+# text = Over 300 Iraqis are reported dead and 500 wounded in Fallujah alone.
+1	Over	over	ADV	RB	_	2	advmod	2:advmod	_
+2	300	300	NUM	CD	NumType=Card	3	nummod	3:nummod	_
+3	Iraqis	Iraqis	PROPN	NNPS	Number=Plur	5	nsubj:pass	5:nsubj:pass|6:nsubj:xsubj|8:nsubj:pass	_
+4	are	be	AUX	VBP	Mood=Ind|Tense=Pres|VerbForm=Fin	5	aux:pass	5:aux:pass	_
+5	reported	report	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	0:root	_
+6	dead	dead	ADJ	JJ	Degree=Pos	5	xcomp	5:xcomp	_
+7	and	and	CCONJ	CC	_	8	cc	8:cc|8.1:cc	_
+8	500	500	NUM	CD	NumType=Card	5	conj	5:conj:and|8.1:nsubj:pass|9:nsubj:xsubj	_
+8.1	reported	report	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	_	_	5:conj:and	CopyOf=5
+9	wounded	wounded	ADJ	JJ	Degree=Pos	8	orphan	8.1:xcomp	_
+10	in	in	ADP	IN	_	11	case	11:case	_
+11	Fallujah	Fallujah	PROPN	NNP	Number=Sing	5	obl	5:obl:in	_
+12	alone	alone	ADV	RB	_	11	advmod	11:advmod	SpaceAfter=No
+13	.	.	PUNCT	.	_	5	punct	5:punct	_
+

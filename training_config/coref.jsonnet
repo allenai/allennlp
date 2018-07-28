@@ -12,29 +12,31 @@
     },
     "max_span_width": 10
   },
-  "train_data_path":"${COREF_TRAIN_DATA_PATH}",
-  "validation_data_path": "${COREF_DEV_DATA_PATH}",
-  "test_data_path": "${COREF_TEST_DATA_PATH}",
+  "train_data_path": std.extVar("COREF_TRAIN_DATA_PATH"),
+  "validation_data_path": std.extVar("COREF_DEV_DATA_PATH"),
+  "test_data_path": std.extVar("COREF_TEST_DATA_PATH"),
   "model": {
     "type": "coref",
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
-        "embedding_dim": 300,
-        "trainable": false
-      },
-      "token_characters": {
-        "type": "character_encoding",
-        "embedding": {
-          "num_embeddings": 262,
-          "embedding_dim": 16
+      "token_embedders": {
+        "tokens": {
+            "type": "embedding",
+            "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
+            "embedding_dim": 300,
+            "trainable": false
         },
-        "encoder": {
-          "type": "cnn",
-          "embedding_dim": 16,
-          "num_filters": 100,
-          "ngram_filter_sizes": [5]
+        "token_characters": {
+            "type": "character_encoding",
+            "embedding": {
+            "num_embeddings": 262,
+            "embedding_dim": 16
+            },
+            "encoder": {
+            "type": "cnn",
+            "embedding_dim": 16,
+            "num_filters": 100,
+            "ngram_filter_sizes": [5]
+            }
         }
       }
     },
