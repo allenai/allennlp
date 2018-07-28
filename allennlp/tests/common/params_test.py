@@ -192,12 +192,20 @@ class TestParams(AllenNlpTestCase):
     def test_known_configs(self):
         configs = os.listdir(self.PROJECT_ROOT / "training_config")
 
+        # Our configs use environment variable substitution, and the _jsonnet parser
+        # will fail if we don't pass it correct environment variables.
         forced_variables = [
             # constituency parser
             'PTB_TRAIN_PATH', 'PTB_DEV_PATH', 'PTB_TEST_PATH',
 
             # srl_elmo_5.5B
-            'SRL_TRAIN_DATA_PATH', 'SRL_VALIDATION_DATA_PATH'
+            'SRL_TRAIN_DATA_PATH', 'SRL_VALIDATION_DATA_PATH',
+
+            # coref
+            'COREF_TRAIN_DATA_PATH', 'COREF_DEV_DATA_PATH', 'COREF_TEST_DATA_PATH',
+
+            # ner
+            'NER_TRAIN_DATA_PATH', 'NER_TEST_A_PATH', 'NER_TEST_B_PATH'
         ]
 
         for var in forced_variables:

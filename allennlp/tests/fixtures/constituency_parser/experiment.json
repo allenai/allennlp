@@ -8,10 +8,12 @@
     "model": {
       "type": "constituency_parser",
       "text_field_embedder": {
-        "tokens": {
-          "type": "embedding",
-          "embedding_dim": 2,
-          "trainable": true
+        "token_embedders": {
+          "tokens": {
+            "type": "embedding",
+            "embedding_dim": 2,
+            "trainable": true
+          }
         }
       },
       "encoder": {

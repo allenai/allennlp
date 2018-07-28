@@ -5,11 +5,13 @@
   "model": {
     "type": "srl",
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "pretrained_file": "allennlp/tests/fixtures/embeddings/glove.6B.100d.sample.txt.gz",
-        "embedding_dim": 100,
-        "trainable": true
+      "token_embedders": {
+        "tokens": {
+            "type": "embedding",
+            "pretrained_file": "allennlp/tests/fixtures/embeddings/glove.6B.100d.sample.txt.gz",
+            "embedding_dim": 100,
+            "trainable": true
+        }
       }
     },
     "encoder": {
