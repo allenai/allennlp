@@ -6,7 +6,7 @@ to store the generated subexperiment configs.
 
 .. code-block:: bash
 
-    $ allennlp generate_subexperiments --help
+    $ allennlp generate-subexperiments --help
     usage: allennlp generate-subexperiments [-h]
                                             root_experiment_file generator_file
                                             subexperiments_dir
