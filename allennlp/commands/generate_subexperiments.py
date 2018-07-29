@@ -92,10 +92,6 @@ class Change:
         self.value_tuple = value_tuple
         self.key_name = key_name or "_".join(key_tuple)
         self.value_name = value_name or "_".join(value_tuple)
-        valid_key_name = any(isinstance(self.key_name, _type) for _type in [str, int, bool])
-        valid_value_name = any(isinstance(self.value_name, _type) for _type in [str, int, bool])
-        if not valid_key_name or not valid_value_name:
-            raise ConfigurationError("Value name and Key name must be string / int / bool")
 
     def __str__(self) -> str:
         return "{}={}".format(self.key_name, self.value_name)
