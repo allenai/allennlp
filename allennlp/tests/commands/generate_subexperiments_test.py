@@ -413,6 +413,31 @@ class TestGenerateSubexperiments(AllenNlpTestCase):
                                '6.root_exp_name.glove_dim=300d,bidirectional=false.json'}
         assert expected_file_names == file_names
 
+        # 3. test invalid subexperiments
+        # a. pre_combine_changes should be list
+        generator_config = Params({"pre_combine_changes": {},
+                                   "combine_changes":[],
+                                   "post_combine_changes": []})
+        with pytest.raises(ConfigurationError):
+            SubExperimentsGenerator.from_params(self.root_config, generator_config)
+        # b. combine_changes should be list
+        generator_config = Params({"pre_combine_changes": [],
+                                   "combine_changes": "",
+                                   "post_combine_changes": []})
+        with pytest.raises(ConfigurationError):
+            SubExperimentsGenerator.from_params(self.root_config, generator_config)
+        # d. post_combine_changes should be list
+        generator_config = Params({"pre_combine_changes": [],
+                                   "combine_changes": [],
+                                   "post_combine_changes": 123})
+        with pytest.raises(ConfigurationError):
+            SubExperimentsGenerator.from_params(self.root_config, generator_config)
+        # e. if all are lists, it should be fine
+        generator_config = Params({"pre_combine_changes": [],
+                                   "combine_changes": [],
+                                   "post_combine_changes": []})
+        SubExperimentsGenerator.from_params(self.root_config, generator_config)
+
     def test_generate_subexperiments_args(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title='Commands', metavar='')

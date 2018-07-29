@@ -257,6 +257,8 @@ class SubExperimentsGenerator:
         post_combine_changes = SequenceOfChanges.from_params_list(post_combine_configs)
 
         group_change_configs = generator_config.pop("combine_changes")
+        if not isinstance(group_change_configs, (list, tuple)):
+            raise ConfigurationError("key 'combine_changes' must be a list/tuple")
         to_be_combined_changes = [GroupOfChanges.from_params(group_change_config)
                                   for group_change_config in group_change_configs]
 
