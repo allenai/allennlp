@@ -180,7 +180,7 @@ class BiaffineDependencyParser(Model):
         embedded_text_input = self._input_dropout(embedded_text_input)
         encoded_text = self.encoder(embedded_text_input, mask)
 
-        batch_size, sentence_length, encoding_dim = encoded_text.size()
+        batch_size, _, encoding_dim = encoded_text.size()
 
         head_sentinel = self._head_sentinel.expand(batch_size, 1, encoding_dim)
         # Concatenate the head sentinel onto the sentence representation.
