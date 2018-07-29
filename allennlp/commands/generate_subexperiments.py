@@ -159,15 +159,15 @@ class GroupOfChanges:
         return ','.join([str(change) for change in self.changes])
 
     @classmethod
-    def from_params(cls, change_params: Params) -> 'GroupOfChanges':
-        key_tuple = change_params.pop("key_tuple")
-        value_tuples = change_params.pop("value_tuples")
+    def from_params(cls, changes_params: Params) -> 'GroupOfChanges':
+        key_tuple = changes_params.pop("key_tuple")
+        value_tuples = changes_params.pop("value_tuples")
         default_key_name = "_".join([str(key) for key in key_tuple])
         default_value_names = ["_".join([str(value) for value in value_tuple])
                                for value_tuple in value_tuples]
-        key_name = change_params.pop("key_name", default_key_name)
-        value_names = change_params.pop("value_names", default_value_names)
-        change_params.assert_empty('GroupOfChanges')
+        key_name = changes_params.pop("key_name", default_key_name)
+        value_names = changes_params.pop("value_names", default_value_names)
+        changes_params.assert_empty('GroupOfChanges')
 
         if len(value_tuples) != len(value_names):
             raise ConfigurationError("Number of value tuples '{}' and corresponding "
