@@ -104,7 +104,7 @@ class Change:
         """
         Takes in source_config and executes the change that this instance encodes.
         """
-        define_current_var = 'local current = {} ;'.format(json.dumps(source_config.as_dict()))
+        define_current_var = 'local current = {} ;'.format(json.dumps(source_config.as_dict(quiet=True)))
         overrides_dict = {}
         for key, value in zip(self.key_tuple, self.value_tuple):
             try:
@@ -124,7 +124,7 @@ class Change:
             overrides_dict[key] = value_evaluated
         overrides_dict = parse_overrides(json.dumps(overrides_dict))
         changed_config = with_fallback(preferred=overrides_dict,
-                                       fallback=source_config.as_dict())
+                                       fallback=source_config.as_dict(quiet=True))
         return Params(changed_config)
 
     @classmethod
@@ -135,6 +135,7 @@ class Change:
         default_value_name = "_".join(value_tuple)
         key_name = change_params.pop("key_name", default_key_name)
         value_name = change_params.pop("value_name", default_value_name)
+        change_params.assert_empty('Change')
         return cls(key_tuple=key_tuple, value_tuple=value_tuple,
                    key_name=key_name, value_name=value_name)
 
@@ -166,6 +167,7 @@ class GroupOfChanges:
                                for value_tuple in value_tuples]
         key_name = change_params.pop("key_name", default_key_name)
         value_names = change_params.pop("value_names", default_value_names)
+        change_params.assert_empty('GroupOfChanges')
 
         if len(value_tuples) != len(value_names):
             raise ConfigurationError("Number of value tuples '{}' and corresponding "
@@ -262,6 +264,8 @@ class SubExperimentsGenerator:
         to_be_combined_changes = [GroupOfChanges.from_params(group_change_config)
                                   for group_change_config in group_change_configs]
 
+        generator_config.assert_empty('SubExperimentsGenerator generator_config')
+
         return cls(root_config=root_config,
                    pre_combine_changes=pre_combine_changes,
                    to_be_combined_changes=to_be_combined_changes,
@@ -332,7 +336,6 @@ def generate_subexperiments_from_args(args: argparse.Namespace):
 
     root_config = Params.from_file(args.root_experiment_file)
     generator_config = Params.from_file(args.generator_file)
-    root_experiment_name = os.path.splitext(args.root_experiment_file)[0]
-
+    root_experiment_name = os.path.splitext(os.path.basename(args.root_experiment_file))[0]
     generator = SubExperimentsGenerator.from_params(root_config, generator_config)
     generator.save(args.subexperiments_dir, root_name=root_experiment_name)
