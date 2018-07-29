@@ -49,7 +49,6 @@ class UniversalDependenciesDatasetReader(DatasetReader):
             logger.info("Reading UD instances from conllu dataset at: %s", file_path)
 
             for annotation in  lazy_parse(conllu_file.read()):
-
                 # CoNLLU annotations sometimes add back in words that have been elided
                 # in the original sentence; we remove these, as we're just predicting
                 # dependencies for the original sentence.
@@ -88,19 +87,14 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         """
         fields: Dict[str, Field] = {}
 
-        # In order to make it easy to structure a model as predicting arcs, we add a
-        # dummy 'ROOT_HEAD' token to the start of the sequence. This will be masked in the
-        # loss function.
-        tokens = TextField([Token("ROOT_HEAD")] + [Token(w) for w in words], self._token_indexers)
+        tokens = TextField([Token(w) for w in words], self._token_indexers)
         fields["words"] = tokens
-        fields["pos_tags"] = SequenceLabelField(["ROOT_POS"] + upos_tags, tokens, label_namespace="pos")
-        # We don't want to expand the label namespace with an additional dummy token, so we'll
-        # always give the 'ROOT_HEAD' token a label of 'root'.
-        fields["head_tags"] = SequenceLabelField(["root"] + [x[0] for x in dependencies],
+        fields["pos_tags"] = SequenceLabelField(upos_tags, tokens, label_namespace="pos")
+        fields["head_tags"] = SequenceLabelField([x[0] for x in dependencies],
                                                  tokens,
                                                  label_namespace="head_tags")
         if dependencies is not None:
-            fields["head_indices"] = SequenceLabelField([0] + [int(x[1]) for x in dependencies],
+            fields["head_indices"] = SequenceLabelField([int(x[1]) for x in dependencies],
                                                         tokens,
                                                         label_namespace="head_index_tags")
         return Instance(fields)
