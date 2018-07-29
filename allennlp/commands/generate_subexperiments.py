@@ -197,10 +197,9 @@ class SequenceOfChanges:
     def __str__(self) -> str:
         return ','.join([str(change) for change in self.changes])
 
-    # TODO: should I make execute inplace operation?
     def execute(self, source_config: Params) -> Params:
         """
-            Applies each change in this SequenceOfChanges sequentially.
+        Applies each change in this SequenceOfChanges sequentially.
         """
         updated_config = deepcopy(source_config)
         for change in self.changes:
