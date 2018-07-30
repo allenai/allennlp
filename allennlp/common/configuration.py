@@ -4,6 +4,7 @@ Tools for programmatically generating config files for AllenNLP models.
 # pylint: disable=protected-access,too-many-return-statements
 
 from typing import NamedTuple, Optional, Any, List, TypeVar, Generic, Type, Dict, Union, Sequence, Tuple
+import copy
 import inspect
 import importlib
 import json
@@ -12,7 +13,7 @@ import re
 import torch
 from numpydoc.docscrape import NumpyDocString
 
-from allennlp.common import Registrable, JsonDict
+from allennlp.common import Registrable, JsonDict, Params
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.data.vocabulary import Vocabulary
@@ -397,6 +398,133 @@ BASE_CONFIG: Config = Config([
                    comment="vocabulary options"),
 
 ])
+
+def _is_valid(key: str, value: Any, annotation: type) -> List[str]:
+    """
+    Check whether the supplied ``value`` is a valid configuration
+    (either as a literal value or a Params object)
+    for the specified annotation. Returns a list of error messages,
+    which is empty if the value is valid.
+    """
+    errors: List[str] = []
+
+    annotation = _remove_optional(annotation)
+
+    origin = getattr(annotation, '__origin__', None)
+    args = getattr(annotation, '__args__', ())
+
+    # No annotation, just hope for the best
+    if annotation is None:
+        pass
+
+    # For a string, we just need a string
+    elif annotation == 'str' and not isinstance(value, str):
+        errors.append(f"expected string value at key {key}, got {value}")
+
+    # For an int, we need something that can be an int
+    elif annotation == int:
+        try:
+            int(value)
+        except ValueError:
+            errors.append(f"expected int value at key {key}, got {value}")
+
+    # For a float, we need something that can be a float
+    elif annotation == float:
+        try:
+            float(value)
+        except ValueError:
+            errors.append(f"expected float value at key {key}, got {value}")
+
+    # For a bool, we need something that can be a bool
+    elif annotation == bool:
+        is_bool = isinstance(value, bool)
+        is_bool_string = isinstance(value, str) and value.lower() in ('true', 'false')
+        if not is_bool and not is_bool_string:
+            errors.append(f"expected bool value at key {key}, got {value}")
+
+    # For a list, we validate each individual item
+    elif origin == List:
+        if isinstance(value, list):
+            value_type = args[0]
+            errors.extend(error
+                          for i, item in enumerate(value)
+                          for error in _is_valid(f"{key}[{i}]", item, value_type))
+        else:
+            errors.append(f"expected list value at key {key}, got {value}")
+
+    # For a dict, we validate the values
+    elif origin == Dict:
+        if isinstance(value, dict):
+            value_type = args[1]
+            errors.extend(error
+                          for vkey, vitem in value.items()
+                          for error in _is_valid(f"{key}[{vkey}]", vitem, value_type))
+
+    # For a union type we check that one of the types works
+    elif origin == Union:
+        subcheck_errors = [_is_valid(f"{key} (as {arg})", value, arg) for arg in args]
+        if all(subcheck_errors):
+            errors.extend(error for sce in subcheck_errors for error in sce)
+
+    # For a from params
+    elif issubclass(annotation, Registrable):
+        typ3 = value.pop('type', getattr(annotation, 'default_implementation', None))
+        if not typ3:
+            errors.append(f"unspecified type for {annotation} at {key}")
+
+        subclass = annotation.by_name(typ3)
+
+        # These wrapper classes need special treatment
+        if isinstance(subclass, (_Seq2SeqWrapper, _Seq2VecWrapper)):
+            subclass = subclass._module_class
+
+        subclass_config = _auto_config(subclass)
+
+        errors.extend(find_errors(value, subclass_config, key))
+
+    elif hasattr(annotation, 'from_params'):
+        subconfig = _auto_config(annotation)
+        errors.extend(find_errors(value, subconfig, key))
+
+    else:
+        pass
+
+    return errors
+
+def find_errors(params: Params, valid_config: Config = BASE_CONFIG, prefix: str = '') -> List[str]:
+    """
+    Validate the supplied ``Params`` object against the provided ``Config``.
+    Return a list of errors, which is empty if the Params are valid.
+    """
+    errors: List[str] = []
+    # make a copy
+    params = Params(copy.deepcopy(params.as_dict()))
+
+    specified_keys = set(params.keys())
+
+    for config_item in valid_config.items:
+        name = config_item.name
+        key = f"{prefix}.{name}" if prefix else name
+
+        is_required = config_item.default_value == _NO_DEFAULT
+        annotation = config_item.annotation
+
+        if name not in specified_keys:
+            # Not included in the config, that's ok if it's optional
+            # but is an error if not
+            if is_required:
+                errors.append(f"key {key} is required but was not specified")
+        else:
+            # We got a key for it, so that's good, get rid of it.
+            specified_keys.remove(name)
+            value = params.get(name)
+            errors.extend(_is_valid(key, value, annotation))
+
+    if specified_keys:
+        errors.append(f"extra keys provided for {prefix}: {specified_keys}")
+
+    return errors
+
 
 def _valid_choices(cla55: type) -> Dict[str, str]:
     """

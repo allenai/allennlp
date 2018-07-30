@@ -43,6 +43,7 @@ import torch
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError, check_for_gpu
+from allennlp.common.configuration import find_errors
 from allennlp.common import Params
 from allennlp.common.util import prepare_environment, prepare_global_logging, \
                                  get_frozen_and_tunable_parameter_names
@@ -249,6 +250,10 @@ def train_model(params: Params,
     best_model: ``Model``
         The model with the best epoch weights.
     """
+    errors = find_errors(params)
+    if errors:
+        raise ConfigurationError(f"invalid config: {errors}")
+
     prepare_environment(params)
 
     create_serialization_dir(params, serialization_dir, recover)
