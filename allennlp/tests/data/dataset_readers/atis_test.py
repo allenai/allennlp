@@ -11,27 +11,19 @@ class TestAtisReader(AllenNlpTestCase):
         data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "atis" / "sample.json"
 
         instances = list(reader.read(str(data_path)))
+
         instance = instances[0]
+        valid_strs = set()
+        for prod in instance.fields['actions'].field_list:
+            if prod.rule.startswith('string'):
+                valid_strs.add(prod.rule)
+        assert valid_strs == set(instance.fields['world'].metadata['string'])
         
-        valid_strs = set()
-        for prod in instance.fields['actions'].field_list:
-            lhs, rhs = prod.rule.split(" -> ")
-            if lhs == 'string':
-                valid_str = rhs.lstrip("\'[\"").rstrip("\']\"")
-                valid_strs.add(valid_str)
-
-        assert valid_strs == set(instance.fields['world'].metadata['string'])
-
         instance = instances[1]
-
         valid_strs = set()
         for prod in instance.fields['actions'].field_list:
-            lhs, rhs = prod.rule.split(" -> ")
-            if lhs == 'string':
-                valid_str = rhs.lstrip("\'[\"").rstrip("\']\"")
-                valid_strs.add(valid_str)
+            if prod.rule.startswith('string'):
+                valid_strs.add(prod.rule)
 
         assert valid_strs == set(instance.fields['world'].metadata['string'])
-
-
 

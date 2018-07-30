@@ -38,6 +38,8 @@ def get_numbers_from_utterance(utterance: str) -> List[str]:
     """
     Given an utterance, find all the numbers that are in the action space.
     """
+    linking_scores = []
+
     numbers = []
     numbers.extend(re.findall(r'\d+', utterance))
     numbers.extend([str(int(num_str.rstrip('pm')) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR)
@@ -46,11 +48,21 @@ def get_numbers_from_utterance(utterance: str) -> List[str]:
     numbers.extend(get_times_from_utterance(utterance))
 
     words = utterance.split(' ')
-    for word in words:
+    for idx, word in enumerate(words):
         if word in MONTH_NUMBERS:
             numbers.append(str(MONTH_NUMBERS[word]))
+            print(str(MONTH_NUMBERS[word]))
+            number_entity_score = [0 for i in range(len(words))]
+            number_entity_score[idx] = 1
+            linking_scores.append(number_entity_score)
+
         if word in DAY_NUMBERS:
             numbers.append(str(DAY_NUMBERS[word]))
+            print(str(DAY_NUMBERS[word]))
+            number_entity_score = [0 for i in range(len(words))]
+            number_entity_score[idx] = 1
+            linking_scores.append(number_entity_score)
+
         if word in MISC_TIME_TRIGGERS:
             numbers.extend(MISC_TIME_TRIGGERS[word])
 
@@ -58,7 +70,8 @@ def get_numbers_from_utterance(utterance: str) -> List[str]:
         day = ' '.join([tens, digits])
         if day in DAY_NUMBERS:
             numbers.append(str(DAY_NUMBERS[day]))
-    return sorted(numbers, reverse=True)
+
+    return sorted(numbers, reverse=True), linking_scores
 
 AIRLINE_CODES = {'alaska': ['AS'],
                  'alliance': ['3J'],

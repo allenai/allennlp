@@ -4,6 +4,7 @@ import logging
 
 from copy import deepcopy
 from overrides import overrides
+from parsimonious.exceptions import ParseError
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -13,9 +14,10 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
-from allennlp.semparse.contexts.atis_tables import ConversationContext
 from allennlp.semparse.worlds.atis_world import AtisWorld
 from allennlp.semparse.worlds.world import ParsingError
+from parsimonious.exceptions import ParseError
+
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -52,24 +54,25 @@ class AtisDatasetReader(DatasetReader):
 
         with open(file_path) as atis_file:
             logger.info("Reading ATIS instances from dataset at : %s", file_path)
-            for interaction in lazy_parse(atis_file.read()):
-                conv_context = ConversationContext(interaction['interaction'])
-                for interaction_round in conv_context.interaction:
+            for line in lazy_parse(atis_file.read()):
+                utterances = []
+                for current_idx, current_interaction in enumerate(line['interaction']):
                     nl_key = 'utterance'
-                    if nl_key not in interaction_round:
+                    if nl_key not in current_interaction: 
                         nl_key = 'nl_with_dates'
 
-                    world = AtisWorld(conv_context, interaction_round[nl_key])
-                    action_sequence = []
-                    try:
-                        action_sequence = world.get_action_sequence(interaction_round['sql'])
-                        conv_context.valid_actions = world.valid_actions
+                    utterances.append(current_interaction[nl_key])
+                    world = AtisWorld(utterances)
 
-                    except ParsingError as error:
-                        logger.debug(f'Parsing error: {error.message}')
+                    try:
+                        action_sequence = world.get_action_sequence(current_interaction['sql'])
+                        
+                    except ParseError as error:
+                        # logger.debug(f'Parsing error: {error.message}')
+                        logger.debug(f'Parsing error: ')
                         continue
 
-                    instance = self.text_to_instance(interaction_round[nl_key], action_sequence, world)
+                    instance = self.text_to_instance(current_interaction[nl_key], action_sequence, world)
                     if not instance:
                         continue
                     yield instance
