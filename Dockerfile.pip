@@ -21,8 +21,6 @@ WORKDIR /stage/allennlp
 
 ARG VERSION
 ARG SOURCE_COMMIT
-ENV VERSION=$VERSION
-ENV SOURCE_COMMIT=$SOURCE_COMMIT
 
 # Install the specified version of AllenNLP.
 RUN if [ ! -z "$VERSION" ]; \
@@ -33,5 +31,8 @@ RUN if [ ! -z "$VERSION" ]; \
     fi
 
 LABEL maintainer="allennlp-contact@allenai.org"
+
+ENV VERSION=$VERSION
+ENV SOURCE_COMMIT=$SOURCE_COMMIT
 
 ENTRYPOINT ["allennlp"]

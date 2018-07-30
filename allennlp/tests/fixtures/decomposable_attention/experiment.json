@@ -13,12 +13,14 @@
   "model": {
     "type": "decomposable_attention",
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "projection_dim": 2,
-        "pretrained_file": "allennlp/tests/fixtures/embeddings/glove.6B.300d.sample.txt.gz",
-        "embedding_dim": 300,
-        "trainable": false
+      "token_embedders": {
+        "tokens": {
+            "type": "embedding",
+            "projection_dim": 2,
+            "pretrained_file": "allennlp/tests/fixtures/embeddings/glove.6B.300d.sample.txt.gz",
+            "embedding_dim": 300,
+            "trainable": false
+        }
       }
     },
     "attend_feedforward": {
