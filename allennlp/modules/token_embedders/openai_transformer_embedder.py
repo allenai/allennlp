@@ -1,9 +1,9 @@
-from typing import List
 import torch
 
-from allennlp.modules import ScalarMix
-from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.openai_transformer import OpenaiTransformer
+from allennlp.modules.scalar_mix import ScalarMix
+from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
+from allennlp.nn.util import get_range_vector, get_device_of
 
 
 @TokenEmbedder.register("openai_transformer_embedder")
@@ -17,31 +17,13 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
     ----------
     transformer: ``OpenaiTransformer``, required.
         The ``OpenaiTransformer`` module used for the embeddings.
-    num_output_representations: ``int``, optional (default: 1)
-        How many "scalar mixes" of the embedding layers to return.
-        (Currently only implemented for n = 1.)
-    do_layer_norm: ``bool`` (default: ``False``)
-        Whether the ``ScalarMix``es should use layer norm.
     """
     def __init__(self,
-                 transformer: OpenaiTransformer,
-                 num_output_representations: int = 1,
-                 do_layer_norm: bool = False) -> None:
+                 transformer: OpenaiTransformer) -> None:
         super().__init__()
 
-        if num_output_representations > 1:
-            raise NotImplementedError("more than 1 output representation is not implemented")
-
         self._transformer = transformer
-        self._num_output_representations = num_output_representations
-        self._do_layer_norm = do_layer_norm
-
-        self._scalar_mixes: List[ScalarMix] = []
-
-        for k in range(num_output_representations):
-            scalar_mix = ScalarMix(transformer.num_output_layers, do_layer_norm=do_layer_norm)
-            self.add_module(f'scalar_mix_{k}', scalar_mix)
-            self._scalar_mixes.append(scalar_mix)
+        self._scalar_mix = ScalarMix(transformer.num_output_layers, do_layer_norm=False)
 
     def get_output_dim(self):
         """
@@ -73,38 +55,27 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
         # positional encodings. Here we want the count of just the former.
         vocab_size = self._transformer.vocab_size - self._transformer.n_ctx
 
+        # vocab_size, vocab_size + 1, ...
+        positional_encodings = get_range_vector(num_timesteps, device=get_device_of(inputs)) + vocab_size
+
         # Combine the inputs with positional encodings
-        batch_tensor = torch.zeros((batch_size, num_timesteps, 2), dtype=torch.long)
-        batch_tensor[:, :, 0] = inputs
-        batch_tensor[:, :, 1] = torch.arange(vocab_size, vocab_size + num_timesteps)
+        batch_tensor = torch.stack([
+                inputs,   # (batch_size, num_timesteps)
+                positional_encodings.expand(batch_size, num_timesteps)
+        ], dim=-1)
 
         byte_pairs_mask = inputs != 0
 
         # Embeddings is num_output_layers x (batch_size, num_timesteps, embedding_dim)
         layer_activations = self._transformer(batch_tensor)
 
-        # Output of each scalar_mix is (batch_size, num_timesteps, embedding_dim)
-        mixes = [scalar_mix(layer_activations, byte_pairs_mask) for scalar_mix in self._scalar_mixes]
+        # Output of scalar_mix is (batch_size, num_timesteps, embedding_dim)
+        mix = self._scalar_mix(layer_activations, byte_pairs_mask)
 
         # These embeddings are one per byte-pair, but we want one per original _word_.
-        # Fortunately, we have the ``offsets`` which indicate the last byte-pair for
-        # each original word. Here we just choose that last byte-pair, although you
-        # could imagine doing something more sophisticated.
-        _, max_sequence_length = offsets.size()
-        _, _, embedding_dim = mixes[0].size()
+        # So we choose the embedding corresponding to the last byte pair for each word,
+        # which is captured by the ``offsets`` input.
+        range_vector = get_range_vector(batch_size, device=get_device_of(mix)).unsqueeze(1)
+        last_byte_pair_embeddings = mix[range_vector, offsets]
 
-        # TODO(joelgrus): vectorize?
-        embeddings = [torch.zeros(batch_size, max_sequence_length, embedding_dim) for _ in mixes]
-        for i in range(batch_size):
-            last_offset = -1
-            for j in range(max_sequence_length):
-                offset = offsets[i, j]
-                if offset <= last_offset:
-                    break
-
-                for embedding, mix in zip(embeddings, mixes):
-                    embedding[i, j] = mix[i, offset]
-
-                last_offset = offset
-
-        return embeddings[0]
+        return last_byte_pair_embeddings

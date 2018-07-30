@@ -4,8 +4,8 @@ import tarfile
 
 from overrides import overrides
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.common.params import Params
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
@@ -13,7 +13,7 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer
 
 
 @TokenIndexer.register("openai_transformer_byte_pair")
-class OpenaiTransformerBytePairIndexer(TokenIndexer[List[int]]):
+class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
     """
     This is unlike most of our TokenIndexers in that its
     indexing is not based on a `Vocabulary` but on a fixed
@@ -21,9 +21,40 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[List[int]]):
     """
     # pylint: disable=no-self-use
     def __init__(self,
-                 encoder: Dict[str, int],
-                 byte_pairs: List[Tuple[str, str]],
-                 n_ctx: int = 512) -> None:
+                 encoder: Dict[str, int] = None,
+                 byte_pairs: List[Tuple[str, str]] = None,
+                 n_ctx: int = 512,
+                 model_path: str = None) -> None:
+
+        too_much_information = model_path and (encoder or byte_pairs)
+        too_little_information = not model_path and not (encoder and byte_pairs)
+
+        if too_much_information or too_little_information:
+            raise ConfigurationError("must specify either model path or (encoder + byte_pairs) but not both")
+
+        if model_path:
+            model_path = cached_path(model_path)
+
+            # Load encoder and byte_pairs from tar.gz
+            with tarfile.open(model_path) as tmp:
+                encoder_name = next(m.name for m in tmp.getmembers() if 'encoder_bpe' in m.name)
+                encoder_info = tmp.extractfile(encoder_name)
+
+                if encoder_info:
+                    encoder = json.loads(encoder_info.read())
+                else:
+                    raise ConfigurationError(f"expected encoder_bpe file in archive {model_path}")
+
+                bpe_name = next(m.name for m in tmp.getmembers() if m.name.endswith('.bpe'))
+                bpe_info = tmp.extractfile(bpe_name)
+
+                if bpe_info:
+                    # First line is "version", last line is blank
+                    lines = bpe_info.read().decode('utf-8').split('\n')[1:-1]
+                    # Convert "b1 b2" -> (b1, b2)
+                    byte_pairs = [tuple(line.split()) for line in lines]  # type: ignore
+                else:
+                    raise ConfigurationError(f"expected .bpe file in archive {model_path}")
 
         self.encoder = encoder
         self.decoder = {word_id: word for word, word_id in self.encoder.items()}
@@ -31,30 +62,8 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[List[int]]):
         # Compute ranks
         self.bpe_ranks = {pair: idx for idx, pair in enumerate(byte_pairs)}
 
-        self.cache: Dict[str, List[int]] = {}
+        self.cache: Dict[str, List[str]] = {}
         self.n_ctx = n_ctx
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'OpenaiTransformerBytePairIndexer':
-        """
-        Requires custom from_params logic around getting the encodings out of a tarfile.
-        """
-        model_path = cached_path(params.pop('model_path'))
-        n_ctx = params.pop_int('n_ctx', 512)
-
-        with tarfile.open(model_path) as tmp:
-            encoder_name = next(m.name for m in tmp.getmembers() if 'encoder_bpe' in m.name)
-            encoder_info = tmp.extractfile(encoder_name)
-            encoder = json.load(encoder_info)
-
-            bpe_name = next(m.name for m in tmp.getmembers() if m.name.endswith('.bpe'))
-            bpe_info = tmp.extractfile(bpe_name)
-            # First line is "version", last line is blank
-            lines = bpe_info.read().decode('utf-8').split('\n')[1:-1]
-            # Convert "b1 b2" -> (b1, b2)
-            byte_pairs = [tuple(line.split()) for line in lines]
-
-        return cls(encoder=encoder, byte_pairs=byte_pairs, n_ctx=n_ctx)
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):

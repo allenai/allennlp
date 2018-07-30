@@ -25,6 +25,7 @@ import numpy as np
 import torch
 from torch.nn import Parameter
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.from_params import FromParams
 
@@ -140,7 +141,7 @@ class Attention(torch.nn.Module):
                  nx: int,
                  n_ctx: int,
                  config: TransformerConfig,
-                 scale: bool = False):
+                 scale: bool = False) -> None:
         super().__init__()
         n_state = nx  # in Attention: n_state=768 (nx=n_embd)
         # [switch nx => n_state from Block to Attention to keep identical to TF implem]
@@ -190,7 +191,7 @@ class Attention(torch.nn.Module):
 
 
 class MLP(torch.nn.Module):
-    def __init__(self, n_state: int, config: TransformerConfig):  # in MLP: n_state=3072 (4 * n_embd)
+    def __init__(self, n_state: int, config: TransformerConfig) -> None:  # in MLP: n_state=3072 (4 * n_embd)
         super().__init__()
         self.c_fc = Conv1D(n_state, 1, config.embedding_dim)
         self.c_proj = Conv1D(config.embedding_dim, 1, n_state)
@@ -332,7 +333,11 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
 
         with tarfile.open(transformer_model_path) as tmp:
             num_params_files = len([member for member in tmp.getmembers() if member.name.endswith('.npy')])
-            shapes = json.load(tmp.extractfile('model/params_shapes.json'))
+            shapesfile = tmp.extractfile('model/params_shapes.json')
+            if shapesfile:
+                shapes = json.loads(shapesfile.read())
+            else:
+                raise ConfigurationError("unable to find model/params_shapes.json in the archive")
 
             # numpy can't read from a tarfile directly, so we need a workaround
             # https://github.com/numpy/numpy/issues/7989#issuecomment-341656702
@@ -401,14 +406,14 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
 
         # for each (name, array) pair to transfer over
         for name, ip in zip(names[1:n_transfer], init_params[1:n_transfer]):
-                                      # "model/h0/attn/c_attn/w:0"
-            name = name[6:]           # "h0/attn/c_attn/w:0"
+                                            # "model/h0/attn/c_attn/w:0"
+            name = name[6:]                 # "h0/attn/c_attn/w:0"
             assert name[-2:] == ":0"
-            name = name[:-2]          # "h0/attn/c_attn/w"
-            name = name.split('/')    # ['h0', 'attn', 'c_attn', 'w']
+            name = name[:-2]                # "h0/attn/c_attn/w"
+            name_parts = name.split('/')    # ['h0', 'attn', 'c_attn', 'w']
 
             pointer = self
-            for m_name in name:
+            for m_name in name_parts:
                 if re.fullmatch(r'[A-Za-z]+\d+', m_name):
                     l = re.split(r'(\d+)', m_name)   # ['h', '0', '']
                 else:
