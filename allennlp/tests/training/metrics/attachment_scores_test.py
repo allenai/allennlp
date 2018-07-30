@@ -73,3 +73,16 @@ class AttachmentScoresTest(AllenNlpTestCase):
         # Neither batch element had a perfect labeled or unlabeled EM.
         assert metrics["LEM"] == 0.0
         assert metrics["UEM"] == 0.0
+
+    def test_attachment_scores_can_ignore_labels(self):
+        scorer = AttachmentScores(ignore_classes=[1])
+
+        label_predictions = self.label_predictions
+        # Change the predictions where the gold label is 1;
+        # as we are ignoring 1, we should still get a perfect score.
+        label_predictions[0, 3] = 2
+        scorer(self.predictions, label_predictions,
+               self.gold_indices, self.gold_labels, self.mask)
+
+        for value in scorer.get_metric().values():
+            assert value == 1.0

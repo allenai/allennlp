@@ -17,6 +17,7 @@
     "model": {
       "type": "crf_tagger",
       "text_field_embedder": {
+          "token_embedders": {
               "tokens": {
                 "type": "embedding",
                 "embedding_dim": 50
@@ -25,7 +26,8 @@
                 "type": "elmo_token_embedder",
                 "options_file": "allennlp/tests/fixtures/elmo/options.json",
                 "weight_file": "allennlp/tests/fixtures/elmo/lm_weights.hdf5",
-              },
+              }
+          }
       },
       "encoder": {
               "type": "gru",

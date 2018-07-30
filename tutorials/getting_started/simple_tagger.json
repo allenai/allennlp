@@ -17,24 +17,26 @@
   "model": {
     "type": "simple_tagger",
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 50
-      },
-      "token_characters": {
-        "type": "character_encoding",
-        "embedding": {
-          "embedding_dim": 8
+      "token_embedders": {
+        "tokens": {
+            "type": "embedding",
+            "embedding_dim": 50
         },
-        "encoder": {
-          "type": "cnn",
-          "embedding_dim": 8,
-          "num_filters": 50,
-          "ngram_filter_sizes": [
-            5
-          ]
-        },
-        "dropout": 0.2
+        "token_characters": {
+            "type": "character_encoding",
+            "embedding": {
+            "embedding_dim": 8
+            },
+            "encoder": {
+            "type": "cnn",
+            "embedding_dim": 8,
+            "num_filters": 50,
+            "ngram_filter_sizes": [
+                5
+            ]
+            },
+            "dropout": 0.2
+        }
       }
     },
     "encoder": {

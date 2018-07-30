@@ -6,7 +6,8 @@ from torch.nn.modules.linear import Linear
 
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
-from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, ConditionalRandomField
+from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
+from allennlp.modules import ConditionalRandomField, FeedForward
 from allennlp.modules.conditional_random_field import allowed_transitions
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
@@ -31,6 +32,8 @@ class CrfTagger(Model):
     label_namespace : ``str``, optional (default=``labels``)
         This is needed to compute the SpanBasedF1Measure metric.
         Unless you did something unusual, the default value should be what you want.
+    feedforward : ``FeedForward``, optional, (default = None).
+        An optional feedforward layer to apply after the encoder.
     dropout:  ``float``, optional (detault=``None``)
     verbose_metrics : ``bool``, optional (default = False)
         If true, metrics will be returned per label class in addition
@@ -51,6 +54,7 @@ class CrfTagger(Model):
                  encoder: Seq2SeqEncoder,
                  label_namespace: str = "labels",
                  constraint_type: str = None,
+                 feedforward: FeedForward = None,
                  include_start_end_transitions: bool = True,
                  dropout: float = None,
                  verbose_metrics: bool = False,
@@ -67,7 +71,13 @@ class CrfTagger(Model):
             self.dropout = torch.nn.Dropout(dropout)
         else:
             self.dropout = None
-        self.tag_projection_layer = TimeDistributed(Linear(self.encoder.get_output_dim(),
+        self._feedforward = feedforward
+
+        if feedforward is not None:
+            output_dim = feedforward.get_output_dim()
+        else:
+            output_dim = self.encoder.get_output_dim()
+        self.tag_projection_layer = TimeDistributed(Linear(output_dim,
                                                            self.num_tags))
 
         if constraint_type is not None:
@@ -85,8 +95,12 @@ class CrfTagger(Model):
                                               tag_namespace=label_namespace,
                                               label_encoding=constraint_type or "BIO")
 
+
         check_dimensions_match(text_field_embedder.get_output_dim(), encoder.get_input_dim(),
                                "text field embedding dim", "encoder input dim")
+        if feedforward is not None:
+            check_dimensions_match(encoder.get_output_dim(), feedforward.get_input_dim(),
+                                   "encoder output dim", "feedforward input dim")
         initializer(self)
 
     @overrides
@@ -136,6 +150,9 @@ class CrfTagger(Model):
 
         if self.dropout:
             encoded_text = self.dropout(encoded_text)
+
+        if self._feedforward is not None:
+            encoded_text = self._feedforward(encoded_text)
 
         logits = self.tag_projection_layer(encoded_text)
         best_paths = self.crf.viterbi_tags(logits, mask)

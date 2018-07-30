@@ -17,9 +17,11 @@
   "model": {
     "type": "bcn",
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 10
+      "token_embedders": {
+        "tokens": {
+            "type": "embedding",
+            "embedding_dim": 10
+        }
       }
     },
     "embedding_dropout": 0.2,
