@@ -59,8 +59,9 @@ def _run_test(args: argparse.Namespace):
     logger.info("Running tests at %s", test_dir)
     if args.run_all:
         # TODO(nfliu): remove this when notebooks have been rewritten as markdown.
-        pytest.main([test_dir, '-k', 'not notebooks_test'])
+        pytest.main([test_dir, '--color=no', '-k', 'not notebooks_test'])
     else:
-        pytest.main([test_dir, '-k', 'not sniff_test and not notebooks_test'])
+        pytest.main([test_dir, '--color=no', '-k', 'not sniff_test and not notebooks_test',
+                '-m', 'not java'])
     # Change back to original working directory after running tests
     os.chdir(initial_working_dir)
