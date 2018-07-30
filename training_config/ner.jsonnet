@@ -26,30 +26,32 @@
     "dropout": 0.5,
     "include_start_end_transitions": false,
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 50,
-        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
-        "trainable": true
-      },
-      "elmo":{
-        "type": "elmo_token_embedder",
-       "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-       "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
-        "do_layer_norm": false,
-        "dropout": 0.0
-      },
-      "token_characters": {
-        "type": "character_encoding",
-        "embedding": {
-          "embedding_dim": 16
+      "token_embedders": {
+        "tokens": {
+            "type": "embedding",
+            "embedding_dim": 50,
+            "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
+            "trainable": true
         },
-        "encoder": {
-          "type": "cnn",
-          "embedding_dim": 16,
-          "num_filters": 128,
-          "ngram_filter_sizes": [3],
-          "conv_layer_activation": "relu"
+        "elmo":{
+            "type": "elmo_token_embedder",
+        "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
+        "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
+            "do_layer_norm": false,
+            "dropout": 0.0
+        },
+        "token_characters": {
+            "type": "character_encoding",
+            "embedding": {
+            "embedding_dim": 16
+            },
+            "encoder": {
+            "type": "cnn",
+            "embedding_dim": 16,
+            "num_filters": 128,
+            "ngram_filter_sizes": [3],
+            "conv_layer_activation": "relu"
+            }
         }
       }
     },

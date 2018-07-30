@@ -41,9 +41,8 @@ RUN apt-get install -y -t jessie-backports openjdk-8-jdk
 # Copy select files needed for installing requirements.
 # We only copy what we need here so small changes to the repository does not trigger re-installation of the requirements.
 COPY requirements.txt .
-COPY requirements_test.txt .
 COPY scripts/install_requirements.sh scripts/install_requirements.sh
-RUN INSTALL_TEST_REQUIREMENTS="true" ./scripts/install_requirements.sh
+RUN ./scripts/install_requirements.sh
 
 COPY scripts/ scripts/
 COPY allennlp/ allennlp/
