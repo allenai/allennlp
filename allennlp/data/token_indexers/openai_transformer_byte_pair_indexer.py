@@ -162,13 +162,18 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
         else:
             text_tokens = text_tokens[:self.n_ctx]
 
+        # truncate offsets
+        offsets = [o for o in offsets if o < self.n_ctx]
+
         return {
                 index_name: text_tokens,
                 f"{index_name}-offsets": offsets,
                 # add mask here according to the original tokens,
                 # because calling util.get_text_field_mask on the
                 # "byte pair" tokens will produce the wrong shape
-                "mask": [1 for _ in tokens]
+                "mask": [1 for _ in offsets],
+                # this is a hacky way of capturing how many original tokens there were
+                f"{index_name}-originals": [1 for _ in tokens]
         }
 
     @overrides
