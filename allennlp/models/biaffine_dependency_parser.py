@@ -238,9 +238,13 @@ class BiaffineDependencyParser(Model):
                                     head_tags[:, 1:],
                                     evaluation_mask)
         else:
-            arc_nll = None
-            tag_nll = None
-            loss = None
+            arc_nll, tag_nll = self._construct_loss(head_tag_representation=head_tag_representation,
+                                                    child_tag_representation=child_tag_representation,
+                                                    attended_arcs=attended_arcs,
+                                                    head_indices=predicted_heads.long(),
+                                                    head_tags=predicted_head_tags.long(),
+                                                    mask=mask)
+            loss = arc_nll + tag_nll
 
         output_dict = {
                 "heads": predicted_heads,
