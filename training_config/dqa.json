@@ -71,6 +71,8 @@
       "hidden_size": 100,
       "num_layers": 1
     },
+    "initializer": [
+    ],
     "dropout": 0.2
   },
   "iterator": {

@@ -44,12 +44,13 @@ class DQA(Model):
     self._phrase_layer = phrase_layer
     self._matrix_attention = TriLinearAttention(200)
 
-    self._merge_atten = TimeDistributed(torch.nn.Linear(200 * 4 + 20, 200))
+    self._merge_atten = TimeDistributed(torch.nn.Linear(200 * 4, 200))
 
     self._residual_encoder = residual_encoder
-
-    self._prev_attn_key_1 = torch.nn.Linear(200, 1)
-    self._prev_attn_key_2 = torch.nn.Linear(200, 200)
+    
+    if False:
+      self._prev_attn_key_1 = torch.nn.Linear(200, 1)
+      self._prev_attn_key_2 = torch.nn.Linear(200, 200)
 
     self._self_atten = TriLinearAttention(200)
 
@@ -97,7 +98,7 @@ class DQA(Model):
     _, _, max_ans_len, _ = single_answers['token_characters'].size()
     question = {k: v.view(batch_size * max_qa_count, max_q_len, -1) for k, v in question.items()}
     single_answers = {k: v.view(batch_size * max_qa_count, max_ans_len, -1) for k, v in single_answers.items()}
-    print(span_start.size(), span_end.size())
+    #print(span_start.size(), span_end.size())
     embedded_question = self._dropout(self._text_field_embedder(question))
     embedded_passage = self._dropout(self._text_field_embedder(passage))
     embedded_answers = self._dropout(self._text_field_embedder(single_answers))
@@ -120,28 +121,27 @@ class DQA(Model):
     # encode previous questions and previous answers.
     # prev_questions : [batch_size * max_qa_count, max_qa_count, max_q_len, embed_dim]
     # prev_answers : [batch_size * max_qa_count, max_qa_count, max_ans_len, embed_dim]
-    encoded_questions_ = encoded_question.view(batch_size, max_qa_count, max_q_len, -1)
-    encoded_answers_ = encoded_answers.view(batch_size, max_qa_count, max_ans_len, -1)
-    embed_dim = encoded_answers_.size()[-1]
-    prev_answers = Variable(
-      torch.zeros([batch_size * max_qa_count, max_qa_count, max_ans_len, embed_dim], dtype=torch.float32),
-      requires_grad=False).cuda()
-    prev_questions = Variable(
-      torch.zeros([batch_size * max_qa_count, max_qa_count, max_q_len, embed_dim], dtype=torch.float32),
-      requires_grad=False).cuda()
+    if False:
+      encoded_questions_ = encoded_question.view(batch_size, max_qa_count, max_q_len, -1)
+      encoded_answers_ = encoded_answers.view(batch_size, max_qa_count, max_ans_len, -1)
+      embed_dim = encoded_answers_.size()[-1]
+      prev_answers = Variable(
+        torch.zeros([batch_size * max_qa_count, max_qa_count, max_ans_len, embed_dim], dtype=torch.float32),
+        requires_grad=False).cuda()
+      prev_questions = Variable(
+        torch.zeros([batch_size * max_qa_count, max_qa_count, max_q_len, embed_dim], dtype=torch.float32),
+        requires_grad=False).cuda()
 
-    prev_answer_markers = Variable(torch.zeros([batch_size * max_qa_count, passage_length, 20]), requires_grad=False).cuda()
+      prev_answer_markers = Variable(torch.zeros([batch_size * max_qa_count, passage_length, 20]), requires_grad=False).cuda()
 
-    #prev_mask = torch.zeros([batch_size * max_qa_count, max_qa_count, max_q_len, 1]).cuda()
-    for i in range(0, batch_size):
-      for k in range(0, max_qa_count):
-        for repeat_count in range(0, max_qa_count - k):
-          corr_index = i * (max_qa_count - 1) + max_qa_count - repeat_count
-          if corr_index<batch_size*max_qa_count:
-            prev_answers[corr_index, k, :, :] = encoded_answers_[i, k, :, :]
-            prev_questions[corr_index, k, :, :] = encoded_questions_[i, k, :, :]
-          else:
-            print("WHY HERE?", corr_index, max_qa_count, batch_size)
+      #prev_mask = torch.zeros([batch_size * max_qa_count, max_qa_count, max_q_len, 1]).cuda()
+      for i in range(0, batch_size):
+        for k in range(0, max_qa_count):
+          for repeat_count in range(0, max_qa_count - k):
+            corr_index = i * (max_qa_count - 1) + max_qa_count - repeat_count
+            if corr_index<batch_size*max_qa_count:
+              prev_answers[corr_index, k, :, :] = encoded_answers_[i, k, :, :]
+              prev_questions[corr_index, k, :, :] = encoded_questions_[i, k, :, :]
 
     repeated_encoded_passage = encoded_passage. \
       unsqueeze(1).repeat(1, max_qa_count, 1, 1).view(batch_size * max_qa_count, passage_lstm_mask.size()[1],
@@ -175,20 +175,21 @@ class DQA(Model):
                                                                                 encoding_dim)
 
     # Make an attentive sum of previous question-answer vector, we use the current question vector as the key
-    prev_qas = torch.cat([prev_questions, prev_answers], dim=2)
-    prev_qas_merging_key = self._prev_attn_key_1(prev_qas) # bsz * max_qa_count, max_q_len + max_ans_len, 1
-    prev_qa_merging_attn = util.last_dim_softmax(prev_qas_merging_key).squeeze(-1)# TODO: later change to masked version
-    prev_qa_merged = util.weighted_sum(prev_qas, prev_qa_merging_attn) # bsz, max_qa_count, max_q_len, encoding_dim
-    prev_qas_hat = self._prev_attn_key_2(prev_qa_merged)
-    # Key is question_passage vector.
-    unnormalized_a = torch.sum(torch.mul(prev_qas_hat, question_passage_vector.unsqueeze(1).expand(
-      batch_size*max_qa_count, max_qa_count, 200)), dim=-1)
-    normalized_a = util.last_dim_softmax(unnormalized_a)
-    prev_qas_weighted_sum = util.weighted_sum(prev_qa_merged, normalized_a) # bsz * max_qa_count, encoding_dim
-    prev_qas_weighted_sum = prev_qas_weighted_sum.unsqueeze(1).expand(batch_size * max_qa_count, passage_length, encoding_dim)
+    if False:
+      prev_qas = torch.cat([prev_questions, prev_answers], dim=2)
+      prev_qas_merging_key = self._prev_attn_key_1(prev_qas) # bsz * max_qa_count, max_q_len + max_ans_len, 1
+      prev_qa_merging_attn = util.last_dim_softmax(prev_qas_merging_key).squeeze(-1)# TODO: later change to masked version
+      prev_qa_merged = util.weighted_sum(prev_qas, prev_qa_merging_attn) # bsz, max_qa_count, max_q_len, encoding_dim
+      prev_qas_hat = self._prev_attn_key_2(prev_qa_merged)
+      # Key is question_passage vector.
+      unnormalized_a = torch.sum(torch.mul(prev_qas_hat, question_passage_vector.unsqueeze(1).expand(
+        batch_size*max_qa_count, max_qa_count, 200)), dim=-1)
+      normalized_a = util.last_dim_softmax(unnormalized_a)
+      prev_qas_weighted_sum = util.weighted_sum(prev_qa_merged, normalized_a) # bsz * max_qa_count, encoding_dim
+      prev_qas_weighted_sum = prev_qas_weighted_sum.unsqueeze(1).expand(batch_size * max_qa_count, passage_length, encoding_dim)
     # Shape: (batch_size * max_qa_count, passage_length, encoding_dim * 4)
     final_merged_passage = torch.cat([repeated_encoded_passage,
-                                      passage_question_vectors, prev_answer_markers, # prev_qas_weighted_sum,
+                                      passage_question_vectors, #prev_answer_markers, # prev_qas_weighted_sum,
                                       repeated_encoded_passage * passage_question_vectors,
                                       repeated_encoded_passage * tiled_question_passage_vector],
                                      dim=-1)
