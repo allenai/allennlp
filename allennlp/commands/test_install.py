@@ -52,10 +52,10 @@ def _get_module_root():
 
 def _run_test(args: argparse.Namespace):
     initial_working_dir = os.getcwd()
-    module_root = _get_module_root()
-    logger.info("Changing directory to %s", module_root)
-    os.chdir(module_root)
-    test_dir = os.path.join(module_root, "tests")
+    module_parent = _get_module_root().parent
+    logger.info("Changing directory to %s", module_parent)
+    os.chdir(module_parent)
+    test_dir = os.path.join(module_parent, "allennlp")
     logger.info("Running tests at %s", test_dir)
     if args.run_all:
         # TODO(nfliu): remove this when notebooks have been rewritten as markdown.
