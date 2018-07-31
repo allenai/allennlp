@@ -19,18 +19,20 @@
   "model": {
     "type": "bcn",
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 10
-      },
-      # BCN configs should not have an elmo_token_embedder
-      # in their text_field_embedder
-      "elmo": {
-        "type": "elmo_token_embedder",
-        "options_file": "allennlp/tests/fixtures/elmo/options.json",
-        "weight_file": "allennlp/tests/fixtures/elmo/lm_weights.hdf5",
-        "do_layer_norm": false,
-        "dropout": 0.5
+      "token_embedders": {
+        "tokens": {
+            "type": "embedding",
+            "embedding_dim": 10
+        },
+        # BCN configs should not have an elmo_token_embedder
+        # in their text_field_embedder
+        "elmo": {
+            "type": "elmo_token_embedder",
+            "options_file": "allennlp/tests/fixtures/elmo/options.json",
+            "weight_file": "allennlp/tests/fixtures/elmo/lm_weights.hdf5",
+            "do_layer_norm": false,
+            "dropout": 0.5
+        }
       }
     },
     "embedding_dropout": 0.2,
