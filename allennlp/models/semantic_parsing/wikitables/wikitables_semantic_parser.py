@@ -179,7 +179,7 @@ class WikiTablesSemanticParser(Model):
         entity_type_embeddings = self._type_params(entity_types.float())
         projected_neighbor_embeddings = self._neighbor_params(embedded_neighbors.float())
         # (batch_size, num_entities, embedding_dim)
-        entity_embeddings = torch.nn.functional.tanh(entity_type_embeddings + projected_neighbor_embeddings)
+        entity_embeddings = torch.tanh(entity_type_embeddings + projected_neighbor_embeddings)
 
 
         # Compute entity and question word similarity.  We tried using cosine distance here, but
