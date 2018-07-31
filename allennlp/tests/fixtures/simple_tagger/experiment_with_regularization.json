@@ -5,12 +5,14 @@
     "model": {
       "type": "simple_tagger",
       "text_field_embedder": {
-        "tokens": {
-          "type": "embedding",
-          "projection_dim": 2,
-          "pretrained_file": "allennlp/tests/fixtures/embeddings/glove.6B.100d.sample.txt.gz",
-          "embedding_dim": 100,
-          "trainable": true
+        "token_embedders": {
+            "tokens": {
+            "type": "embedding",
+            "projection_dim": 2,
+            "pretrained_file": "allennlp/tests/fixtures/embeddings/glove.6B.100d.sample.txt.gz",
+            "embedding_dim": 100,
+            "trainable": true
+            }
         }
       },
       "encoder": {

@@ -126,22 +126,6 @@ class JustSpacesWordSplitter(WordSplitter):
         return [Token(t) for t in sentence.split()]
 
 
-@WordSplitter.register('nltk')
-class NltkWordSplitter(WordSplitter):
-    """
-    A ``WordSplitter`` that uses nltk's ``word_tokenize`` method.
-
-    I found that nltk is very slow, so I switched to using my own simple one, which is a good deal
-    faster.  But I'm adding this one back so that there's consistency with older versions of the
-    code, if you really want it.
-    """
-    @overrides
-    def split_words(self, sentence: str) -> List[Token]:
-        # Import is here because it's slow, and by default unnecessary.
-        from nltk.tokenize import word_tokenize
-        return [Token(t) for t in word_tokenize(sentence.lower())]
-
-
 def _remove_spaces(tokens: List[spacy.tokens.Token]) -> List[spacy.tokens.Token]:
     return [token for token in tokens if not token.is_space]
 

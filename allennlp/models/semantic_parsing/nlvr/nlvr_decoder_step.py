@@ -93,7 +93,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         # (group_size, decoder_input_dim)
         decoder_input = self._input_projection_layer(torch.cat([attended_sentence,
                                                                 previous_action_embedding], -1))
-        decoder_input = torch.nn.functional.tanh(decoder_input)
+        decoder_input = torch.tanh(decoder_input)
         hidden_state, memory_cell = self._decoder_cell(decoder_input, (hidden_state, memory_cell))
 
         hidden_state = self._dropout(hidden_state)
@@ -136,7 +136,7 @@ class NlvrDecoderStep(DecoderStep[NlvrDecoderState]):
         action_query = torch.cat([hidden_state, attended_sentence], dim=-1)
         # (group_size, action_embedding_dim)
         predicted_action_embedding = self._output_projection_layer(action_query)
-        predicted_action_embedding = self._dropout(torch.nn.functional.tanh(predicted_action_embedding))
+        predicted_action_embedding = self._dropout(torch.tanh(predicted_action_embedding))
         if state.checklist_state[0] is not None:
             embedding_addition = self._get_predicted_embedding_addition(state)
             addition = embedding_addition * self._checklist_embedding_multiplier
