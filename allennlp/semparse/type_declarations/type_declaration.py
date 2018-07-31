@@ -126,7 +126,6 @@ class NamedBasicType(BasicType):
     def str(self):
         return self._string_rep
 
-
 class PlaceholderType(ComplexType):
     """
     ``PlaceholderType`` is a ``ComplexType`` that involves placeholders, and thus its type
