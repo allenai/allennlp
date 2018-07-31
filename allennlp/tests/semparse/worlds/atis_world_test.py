@@ -52,10 +52,7 @@ class TestAtisWorld(AllenNlpTestCase):
         assert set(valid_actions['agg_func']) == \
                 {'agg_func -> ["COUNT"]',
                  'agg_func -> ["MAX"]',
-                 'agg_func -> ["MIN"]',
-                 'agg_func -> ["count"]',
-                 'agg_func -> ["max"]',
-                 'agg_func -> ["min"]'}
+                 'agg_func -> ["MIN"]'}
         assert set(valid_actions['col_refs']) == \
                 {'col_refs -> [col_ref]', 'col_refs -> [col_ref, ",", col_refs]'}
         assert set(valid_actions['table_refs']) == \
@@ -67,7 +64,6 @@ class TestAtisWorld(AllenNlpTestCase):
                 {'conditions -> ["(", conditions, ")", conj, conditions]',
                  'conditions -> ["(", conditions, ")"]',
                  'conditions -> ["NOT", conditions]',
-                 'conditions -> ["not", conditions]',
                  'conditions -> [condition, conj, "(", conditions, ")"]',
                  'conditions -> [condition, conj, conditions]',
                  'conditions -> [condition]'}
@@ -91,15 +87,12 @@ class TestAtisWorld(AllenNlpTestCase):
                  'binaryop -> ["="]',
                  'binaryop -> [">"]',
                  'binaryop -> [">="]',
-                 'binaryop -> ["IS"]',
-                 'binaryop -> ["is"]'}
+                 'binaryop -> ["IS"]'}
         assert set(valid_actions['ternaryexpr']) == \
                 {'ternaryexpr -> [col_ref, "BETWEEN", value, "AND", value]',
-                 'ternaryexpr -> [col_ref, "NOT", "BETWEEN", value, "AND", value]',
-                 'ternaryexpr -> [col_ref, "not", "BETWEEN", value, "AND", value]'}
+                 'ternaryexpr -> [col_ref, "NOT", "BETWEEN", value, "AND", value]'}
         assert set(valid_actions['value']) == \
                 {'value -> ["NOT", pos_value]',
-                 'value -> ["not", pos_value]',
                  'value -> [pos_value]'}
         assert set(valid_actions['pos_value']) == \
                 {'pos_value -> ["ALL", query]',
@@ -272,9 +265,6 @@ class TestAtisWorld(AllenNlpTestCase):
              'number -> ["1200"]',
              'number -> ["1200"]',
              'number -> ["12"]'}
-
-        print(world.valid_actions['string'])
-
 
         assert set(world.valid_actions['string']) == \
                 {'string -> ["\'DENVER\'"]',
@@ -785,9 +775,6 @@ class TestAtisWorld(AllenNlpTestCase):
              'agg_func -> ["COUNT"]',
              'agg_func -> ["MAX"]',
              'agg_func -> ["MIN"]',
-             'agg_func -> ["count"]',
-             'agg_func -> ["max"]',
-             'agg_func -> ["min"]',
              'agg_results -> ["(", "SELECT", distinct, agg, "FROM", table_name, '
              'where_clause, ")"]',
              'agg_results -> ["SELECT", distinct, agg, "FROM", table_name, where_clause]',
@@ -804,7 +791,6 @@ class TestAtisWorld(AllenNlpTestCase):
              'binaryop -> [">"]',
              'binaryop -> [">="]',
              'binaryop -> ["IS"]',
-             'binaryop -> ["is"]',
              'boolean -> ["false"]',
              'boolean -> ["true"]',
              'col_ref -> ["*"]',
@@ -923,7 +909,6 @@ class TestAtisWorld(AllenNlpTestCase):
              'conditions -> ["(", conditions, ")", conj, conditions]',
              'conditions -> ["(", conditions, ")"]',
              'conditions -> ["NOT", conditions]',
-             'conditions -> ["not", conditions]',
              'conditions -> [condition, conj, "(", conditions, ")"]',
              'conditions -> [condition, conj, conditions]',
              'conditions -> [condition]',
@@ -990,9 +975,7 @@ class TestAtisWorld(AllenNlpTestCase):
              'table_refs -> [table_name]',
              'ternaryexpr -> [col_ref, "BETWEEN", value, "AND", value]',
              'ternaryexpr -> [col_ref, "NOT", "BETWEEN", value, "AND", value]',
-             'ternaryexpr -> [col_ref, "not", "BETWEEN", value, "AND", value]',
              'value -> ["NOT", pos_value]',
-             'value -> ["not", pos_value]',
              'value -> [pos_value]',
              'where_clause -> ["WHERE", "(", conditions, ")"]',
              'where_clause -> ["WHERE", conditions]']

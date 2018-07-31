@@ -1,5 +1,7 @@
-from typing import List
+from typing import List, Dict
 import re
+
+from collections import defaultdict
 
 TWELVE_TO_TWENTY_FOUR = 1200
 HOUR_TO_TWENTY_FOUR = 100
@@ -59,6 +61,19 @@ def get_numbers_from_utterance(utterance: str) -> List[str]:
         if day in DAY_NUMBERS:
             numbers.append(str(DAY_NUMBERS[day]))
     return sorted(numbers, reverse=True)
+
+def get_trigger_dict(trigger_lists: List[List[str]],
+                     trigger_dicts: List[Dict[str, List[str]]]) -> Dict[str, List[str]]:
+    merged_trigger_dict: Dict[str, List[str]] = defaultdict(list)
+    for trigger_list in trigger_lists:
+        for trigger in trigger_list:
+            merged_trigger_dict[trigger.lower()].append(trigger)
+
+    for trigger_dict in trigger_dicts:
+        for key, value in trigger_dict.items():
+            merged_trigger_dict[key.lower()].extend(value)
+
+    return merged_trigger_dict
 
 AIRLINE_CODES = {'alaska': ['AS'],
                  'alliance': ['3J'],
@@ -324,3 +339,19 @@ STATES = ['ARIZONA', 'CALIFORNIA', 'COLORADO', 'DISTRICT OF COLUMBIA',
 STATE_CODES = ['TN', 'MA', 'CA', 'MD', 'IL', 'OH', 'NC', 'CO', 'TX', 'MI', 'NY',
                'IN', 'NJ', 'NV', 'GA', 'FL', 'MO', 'WI', 'MN', 'PA', 'AZ', 'WA',
                'UT', 'DC', 'PQ', 'ON']
+
+TRIGGER_LISTS = [CITIES, AIRPORT_CODES,
+                 STATES, STATE_CODES,
+                 FARE_BASIS_CODE, CLASS,
+                 AIRLINE_CODE_LIST, DAY_OF_WEEK,
+                 CITY_CODE_LIST, MEALS,
+                 RESTRICT_CODES]
+
+TRIGGER_DICTS = [CITY_AIRPORT_CODES,
+                 AIRLINE_CODES,
+                 CITY_CODES,
+                 GROUND_SERVICE,
+                 YES_NO,
+                 MISC_STR]
+
+ATIS_TRIGGER_DICT = get_trigger_dict(TRIGGER_LISTS, TRIGGER_DICTS)

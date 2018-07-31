@@ -1,6 +1,5 @@
 from copy import deepcopy
 from typing import List, Dict
-from collections import defaultdict
 
 from parsimonious.grammar import Grammar
 
@@ -10,18 +9,6 @@ from allennlp.semparse.contexts.sql_table_context import \
 
 from allennlp.data.tokenizers import WordTokenizer
 
-def get_trigger_dict(trigger_lists: List[List[str]],
-                     trigger_dicts: List[Dict[str, List[str]]]) -> Dict[str, List[str]]:
-    merged_trigger_dict: Dict[str, List[str]] = defaultdict(list)
-    for trigger_list in trigger_lists:
-        for trigger in trigger_list:
-            merged_trigger_dict[trigger.lower()].append(trigger)
-
-    for trigger_dict in trigger_dicts:
-        for key, value in trigger_dict.items():
-            merged_trigger_dict[key.lower()].extend(value)
-
-    return merged_trigger_dict
 
 class AtisWorld():
     """
@@ -88,28 +75,14 @@ class AtisWorld():
         Based on the current utterance, return a list of valid strings that should be added.
         """
         strings: List[str] = []
-        trigger_lists = [CITIES, AIRPORT_CODES,
-                         STATES, STATE_CODES,
-                         FARE_BASIS_CODE, CLASS,
-                         AIRLINE_CODE_LIST, DAY_OF_WEEK,
-                         CITY_CODE_LIST, MEALS,
-                         RESTRICT_CODES]
-        trigger_dicts = [CITY_AIRPORT_CODES,
-                         AIRLINE_CODES,
-                         CITY_CODES,
-                         GROUND_SERVICE,
-                         YES_NO,
-                         MISC_STR]
-
-        trigger_dict = get_trigger_dict(trigger_lists, trigger_dicts)
 
         for tokenized_utterance in self.tokenized_utterances:
             if tokenized_utterance:
                 for first_token, second_token in zip(tokenized_utterance, tokenized_utterance[1:]):
-                    strings.extend(trigger_dict.get(first_token.text.lower(), []))
+                    strings.extend(ATIS_TRIGGER_DICT.get(first_token.text.lower(), []))
                     bigram = f"{first_token.text} {second_token.text}"
-                    strings.extend(trigger_dict.get(bigram.lower(), []))
-                strings.extend(trigger_dict.get(tokenized_utterance[-1].text.lower(), []))
+                    strings.extend(ATIS_TRIGGER_DICT.get(bigram.lower(), []))
+                strings.extend(ATIS_TRIGGER_DICT.get(tokenized_utterance[-1].text.lower(), []))
 
         strings.extend(DAY_OF_WEEK)
         return strings

@@ -59,35 +59,40 @@ SQL_GRAMMAR_STR = r"""
     string              =  ""
 """
 
+KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"', '"IN"', '"LIKE"',
+            '"IS"', '"BETWEEN"', '"AND"', '"ALL"', '"ANY"', '"NULL"', '"OR"', '"DISTINCT"']
+
 def generate_one_of_string(nonterminal: str, literals: List[str]) -> str:
     return  f"\n{nonterminal} \t\t = " + " / ".join([f'"{literal}"' for literal in literals])
 
 def format_action(nonterminal: str, right_hand_side: str) -> str:
+    if right_hand_side.upper() in KEYWORDS:
+        right_hand_side = right_hand_side.upper()
+
     if nonterminal == 'string':
         return f'{nonterminal} -> ["\'{right_hand_side}\'"]'
 
-    elif nonterminal in ['number']:
+    elif nonterminal == 'number':
         return f'{nonterminal} -> ["{right_hand_side}"]'
 
     else:
         right_hand_side = right_hand_side.lstrip("(").rstrip(")")
         child_strings = [token for token in re.split(" ws |ws | ws", right_hand_side) if token]
+        child_strings = [tok.upper() if tok.upper() in KEYWORDS else tok for tok in child_strings]
         return f"{nonterminal} -> [{', '.join(child_strings)}]"
 
 class SqlTableContext():
     """
-    A ``SqlTableContext`` represents the interaction in which an utterance occurs.
-    It initializes the global actions that are valid for every interaction. For each utterance,
-    local actions are added and are valid for future utterances in the same interaction.
+    A ``SqlTableContext`` represents the SQL context with grammar of SQL and the valid actions
+    based on the schema of the tables that it represents.
+
+    Parameters
+    ----------
+    tables: ``Dict[str, List[str]]``
+        A dictionary representing the SQL tables in the dataset, the keys are the names of the tables
+        that map to lists of the table's column names.
     """
     def __init__(self, tables: Dict[str, List[str]] = None) -> None:
-        """
-        Parameters
-        ___________
-        tables: ``Dict[str, List[str]]``
-            A dictionary representing the SQL tables in the dataset, the keys are the names of the tables
-            and that map to lists of the table's column names.
-        """
         self.tables = tables
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)
@@ -95,9 +100,10 @@ class SqlTableContext():
 
     def initialize_valid_actions(self) -> Dict[str, List[str]]:
         """
-        Initialize the conversation context with global actions, these are
-        valid for all contexts. The keys represent the nonterminals in the
-        grammar and the values are the productions for that nonterminal.
+        We initialize the valid actions with the global actions. These include the
+        valid actions that result from the grammar and also those that result from
+        the tables provided. The keys represent the nonterminals in the grammar
+        and the values are lists of the valid actions of that nonterminal.
         """
         valid_actions: Dict[str, Set[str]] = defaultdict(set)
 
@@ -107,7 +113,6 @@ class SqlTableContext():
             # Sequence represents a series of expressions that match pieces of the text in order.
             # Eg. A -> B C
             if isinstance(rhs, Sequence):
-                # valid_actions[key].add(" ".join(rhs._unicode_members())) # pylint: disable=protected-access
                 valid_actions[key].add(format_action(key, " ".join(rhs._unicode_members()))) # pylint: disable=protected-access
 
             # OneOf represents a series of expressions, one of which matches the text.
@@ -119,7 +124,6 @@ class SqlTableContext():
             # A string literal, eg. "A"
             elif isinstance(rhs, Literal):
                 if rhs.literal != "":
-                    # valid_actions[key].add("%s" % rhs.literal)
                     valid_actions[key].add(format_action(key, rhs.literal))
                 else:
                     valid_actions[key] = set()
@@ -183,6 +187,8 @@ class SqlVisitor(NodeVisitor):
                         child_right_side_string = child.expr._as_rhs().lstrip("(").rstrip(")") # pylint: disable=protected-access
                         child_right_side_list = [tok for tok in \
                                                  re.split(" ws |ws | ws", child_right_side_string) if tok]
+                        child_right_side_list = [tok.upper() if tok.upper() in KEYWORDS else tok \
+                                                 for tok in child_right_side_list]
                         child_strings.extend(child_right_side_list)
                 right_hand_side = "[" + ", ".join(child_strings) + "]"
 
