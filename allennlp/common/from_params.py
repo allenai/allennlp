@@ -173,7 +173,7 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
 
         # This is special logic for handling types like Dict[str, TokenIndexer], which it creates by
         # instantiating each value from_params and returning the resulting dict.
-        elif origin == Dict and len(args) == 2 and hasattr(args[-1], 'from_params'):
+        elif origin in (Dict, dict) and len(args) == 2 and hasattr(args[-1], 'from_params'):
             value_cls = annotation.__args__[-1]
 
             value_dict = {}
