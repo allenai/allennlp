@@ -1,6 +1,6 @@
 punct
-root
 case
+root
 obl
 compound
 advmod
