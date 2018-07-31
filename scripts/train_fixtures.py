@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 def train_fixture(config_prefix: str) -> None:
     config_file = config_prefix + 'experiment.json'
     serialization_dir = config_prefix + 'serialization'
-    print(config_file)
     # Train model doesn't like it if we have incomplete serialization
     # directories, so remove them if they exist.
     if os.path.exists(serialization_dir):
