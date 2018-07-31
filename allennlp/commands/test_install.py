@@ -52,15 +52,17 @@ def _get_module_root():
 
 def _run_test(args: argparse.Namespace):
     initial_working_dir = os.getcwd()
-    module_root = _get_module_root()
-    logger.info("Changing directory to %s", module_root)
-    os.chdir(module_root)
-    test_dir = os.path.join(module_root, "tests")
+    module_parent = _get_module_root().parent
+    logger.info("Changing directory to %s", module_parent)
+    os.chdir(module_parent)
+    test_dir = os.path.join(module_parent, "allennlp")
     logger.info("Running tests at %s", test_dir)
     if args.run_all:
         # TODO(nfliu): remove this when notebooks have been rewritten as markdown.
-        pytest.main([test_dir, '-k', 'not notebooks_test'])
+        exit_code = pytest.main([test_dir, '--color=no', '-k', 'not notebooks_test'])
     else:
-        pytest.main([test_dir, '-k', 'not sniff_test and not notebooks_test'])
+        exit_code = pytest.main([test_dir, '--color=no', '-k', 'not sniff_test and not notebooks_test',
+                                 '-m', 'not java'])
     # Change back to original working directory after running tests
     os.chdir(initial_working_dir)
+    exit(exit_code)

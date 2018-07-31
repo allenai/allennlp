@@ -1,12 +1,13 @@
 # pylint: disable=no-self-use,invalid-name
 import os
+import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 from allennlp.predictors.wikitables_parser import (SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH)
 
-
+@pytest.mark.java
 class TestWikiTablesParserPredictor(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
