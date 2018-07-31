@@ -17,7 +17,6 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
 
         result = predictor.predict_json(inputs)
 
-        print(result)
         heads = result.get("heads")
         assert heads is not None
         assert isinstance(heads, list)
@@ -54,7 +53,6 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
         predictor = Predictor.from_archive(archive, 'biaffine-dependency-parser')
 
         results = predictor.predict_batch_json(inputs)
-        print(results)
         assert len(results) == 2
 
         for result in results:
