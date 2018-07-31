@@ -99,9 +99,12 @@ class BiaffineDependencyParser(Model):
         self._pos_tag_embedding = pos_tag_embedding or None
         self._dropout = InputVariationalDropout(dropout)
         self._input_dropout = Dropout(input_dropout)
+        self._head_sentinel = torch.nn.Parameter(torch.randn([1, 1, encoder.get_output_dim()]))
+
         representation_dim = text_field_embedder.get_output_dim()
         if pos_tag_embedding is not None:
             representation_dim += pos_tag_embedding.get_output_dim()
+
         check_dimensions_match(representation_dim, encoder.get_input_dim(),
                                "text field embedding dim", "encoder input dim")
 
@@ -174,9 +177,20 @@ class BiaffineDependencyParser(Model):
             raise ConfigurationError("Model uses a POS embedding, but no POS tags were passed.")
 
         mask = get_text_field_mask(words)
-        float_mask = mask.float()
         embedded_text_input = self._input_dropout(embedded_text_input)
         encoded_text = self.encoder(embedded_text_input, mask)
+
+        batch_size, _, encoding_dim = encoded_text.size()
+
+        head_sentinel = self._head_sentinel.expand(batch_size, 1, encoding_dim)
+        # Concatenate the head sentinel onto the sentence representation.
+        encoded_text = torch.cat([head_sentinel, encoded_text], 1)
+        mask = torch.cat([mask.new_ones(batch_size, 1), mask], 1)
+        if head_indices is not None:
+            head_indices = torch.cat([head_indices.new_zeros(batch_size, 1), head_indices], 1)
+        if head_tags is not None:
+            head_tags = torch.cat([head_tags.new_zeros(batch_size, 1), head_tags], 1)
+        float_mask = mask.float()
         encoded_text = self._dropout(encoded_text)
 
         # shape (batch_size, sequence_length, arc_representation_dim)
@@ -214,7 +228,7 @@ class BiaffineDependencyParser(Model):
                                                     mask=mask)
             loss = arc_nll + tag_nll
 
-            evaluation_mask = self._get_mask_for_eval(mask, pos_tags)
+            evaluation_mask = self._get_mask_for_eval(mask[:, 1:], pos_tags)
             # We calculate attatchment scores for the whole sentence
             # but excluding the symbolic ROOT token at the start,
             # which is why we start from the second element in the sequence.
@@ -222,7 +236,7 @@ class BiaffineDependencyParser(Model):
                                     predicted_head_tags[:, 1:],
                                     head_indices[:, 1:],
                                     head_tags[:, 1:],
-                                    evaluation_mask[:, 1:])
+                                    evaluation_mask)
         else:
             arc_nll = None
             tag_nll = None
