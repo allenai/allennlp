@@ -38,7 +38,9 @@ def get_times_from_utterance(utterance: str) -> List[str]:
     return [str(time) for time in times]
 
 def get_date_from_utterance(tokenized_utterance: List[Token],
-                            year: int = 1993, month: int = None, day: int = None) -> datetime:
+                            year: int = 1993,
+                            month: int = None,
+                            day: int = None) -> datetime:
     """
     When the year is not explicitly mentioned in the utterance, the query assumes that
     it is 1993 so we do the same here. If there is no mention of the month or day then

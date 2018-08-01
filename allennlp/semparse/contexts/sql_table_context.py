@@ -15,10 +15,11 @@ from parsimonious.grammar import Grammar
 # This is the base definition of the SQL grammar written in a simplified sort of
 # EBNF notation. The notation here is of the form:
 #    nonterminal = right hand side
-# The first element is the starting symbol. We initialize ``col_ref``, ``table_ref``,
-# ``table_name``, ``number``, ``string`` to empty productions first. We will fill in
-# ``col_ref``, ``table_name`` based on the dataset and ``number`` and ``string`` based
-# on the utterances.
+# Rules that differ only in capitalization of keywords are mapped to the same action by
+# the ``SqlVisitor``.  The nonterminal of the first rule is the starting symbol.
+# In addition to the grammar here, we add ``col_ref``, ``table_name`` based on the tables
+# that ``SqlTableContext`` is initialized with. ``number`` and ``string`` are initialized to
+# be empty and later on updated based on the utterances.
 
 SQL_GRAMMAR_STR = r"""
     statement           = query ws ";" ws
@@ -149,8 +150,13 @@ class SqlTableContext():
 
 class SqlVisitor(NodeVisitor):
     """
-    ``SqlVisitor`` performs a depths-first traversal of the the AST. It takes the parse tree
-    and gives us an action sequence that resulted in that parse.
+    ``SqlVisitor`` performs a depth-first traversal of the the AST. It takes the parse tree
+    and gives us an action sequence that resulted in that parse. Since the visitor has mutable
+    state, we define a new ``SqlVisitor`` for each query. To get the action sequence, we create
+    a ``SqlVisitor`` and call parse on it, which returns a list of actions. Ex.
+
+        sql_visitor = SqlVisitor(grammar_string)
+        action_sequence = sql_visitor.parse(query)
 
     Parameters
     ----------

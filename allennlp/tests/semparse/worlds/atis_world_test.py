@@ -10,7 +10,7 @@ class TestAtisWorld(AllenNlpTestCase):
         self.data = open(test_filename).readlines()
 
     def test_atis_global_actions(self): # pylint: disable=no-self-use
-        world = AtisWorld([""])
+        world = AtisWorld([])
         valid_actions = world.valid_actions
 
         assert set(valid_actions.keys()) == {'agg',
@@ -44,7 +44,6 @@ class TestAtisWorld(AllenNlpTestCase):
                  'where_clause, ")"]',
                  'query -> ["SELECT", distinct, select_results, "FROM", table_refs, '
                  'where_clause]'}
-
         assert set(valid_actions['select_results']) == \
                 {'select_results -> [agg]', 'select_results -> [col_refs]'}
         assert set(valid_actions['agg']) == \
@@ -113,8 +112,7 @@ class TestAtisWorld(AllenNlpTestCase):
                 {'conj -> ["OR"]', 'conj -> ["AND"]'}
         assert set(valid_actions['distinct']) == \
                {'distinct -> [""]', 'distinct -> ["DISTINCT"]'}
-        assert set(valid_actions['number']) == \
-                {'number -> ["1"]', 'number -> ["0"]'}
+        assert set(valid_actions['number']) == set()
         assert set(valid_actions['string']) == set()
         assert set(valid_actions['col_ref']) == \
                 {'col_ref -> ["*"]',
@@ -256,7 +254,6 @@ class TestAtisWorld(AllenNlpTestCase):
              'number -> ["1"]',
              'number -> ["2400"]',
              'number -> ["1200"]',
-             'number -> ["1200"]',
              'number -> ["12"]'}
 
         assert set(world.valid_actions['string']) == \
@@ -271,19 +268,8 @@ class TestAtisWorld(AllenNlpTestCase):
                 {'number -> ["0"]',
                  'number -> ["1"]',
                  'number -> ["2400"]',
-                 'number -> ["1200"]',
-                 'number -> ["1200"]',
                  'number -> ["12"]',
-                 'number -> ["0"]',
-                 'number -> ["0"]',
-                 'number -> ["1"]',
-                 'number -> ["2400"]',
-                 'number -> ["1200"]',
-                 'number -> ["1200"]',
-                 'number -> ["12"]',
-                 'number -> ["0"]',
                  'number -> ["1800"]',
-                 'number -> ["1200"]',
                  'number -> ["1200"]'}
 
         assert set(world.valid_actions['string']) == \
@@ -308,15 +294,12 @@ class TestAtisWorld(AllenNlpTestCase):
                  'number -> ["5"]',
                  'number -> ["26"]',
                  'number -> ["2200"]',
-                 'number -> ["2200"]',
                  'number -> ["200300"]',
                  'number -> ["199100"]',
                  'number -> ["1991"]',
                  'number -> ["1200"]',
                  'number -> ["1000"]',
-                 'number -> ["1000"]',
-                 'number -> ["10"]',
-                 'number -> ["0"]'}
+                 'number -> ["10"]'}
 
         assert set(world.valid_actions['string']) == \
                 {'string -> ["\'COACH\'"]',
@@ -326,9 +309,6 @@ class TestAtisWorld(AllenNlpTestCase):
                  'string -> ["\'ATLANTA\'"]',
                  'string -> ["\'ATL\'"]',
                  'string -> ["\'MATL\'"]',
-                 'string -> ["\'PITTSBURGH\'"]',
-                 'string -> ["\'PIT\'"]',
-                 'string -> ["\'PPIT\'"]',
                  'string -> ["\'IN\'"]',
                  'string -> ["\'MONDAY\'"]'}
 

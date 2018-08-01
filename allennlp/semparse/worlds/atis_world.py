@@ -29,7 +29,7 @@ class AtisWorld():
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]
         self.valid_actions: Dict[str, List[str]] = self.init_all_valid_actions()
         self.grammar_str: str = self.get_grammar_str()
-        self.grammar_with_context = Grammar(self.grammar_str)
+        self.grammar_with_context: Grammar = Grammar(self.grammar_str)
 
     def get_valid_actions(self) -> Dict[str, List[str]]:
         return self.valid_actions
@@ -79,15 +79,14 @@ class AtisWorld():
         strings: List[str] = []
 
         for tokenized_utterance in self.tokenized_utterances:
-            if tokenized_utterance:
-                for first_token, second_token in zip(tokenized_utterance, tokenized_utterance[1:]):
-                    strings.extend(ATIS_TRIGGER_DICT.get(first_token.text.lower(), []))
-                    bigram = f"{first_token.text} {second_token.text}".lower()
-                    strings.extend(ATIS_TRIGGER_DICT.get(bigram, []))
-                strings.extend(ATIS_TRIGGER_DICT.get(tokenized_utterance[-1].text.lower(), []))
-                date = get_date_from_utterance(tokenized_utterance)
-                if date:
-                    strings.extend(DAY_OF_WEEK_INDEX.get(date.weekday(), []))
+            for first_token, second_token in zip(tokenized_utterance, tokenized_utterance[1:]):
+                strings.extend(ATIS_TRIGGER_DICT.get(first_token.text.lower(), []))
+                bigram = f"{first_token.text} {second_token.text}".lower()
+                strings.extend(ATIS_TRIGGER_DICT.get(bigram, []))
+            strings.extend(ATIS_TRIGGER_DICT.get(tokenized_utterance[-1].text.lower(), []))
+            date = get_date_from_utterance(tokenized_utterance)
+            if date:
+                strings.extend(DAY_OF_WEEK_INDEX.get(date.weekday(), []))
 
         return strings
 
