@@ -94,32 +94,24 @@ class BiaffineDependencyParser(Model):
 
         encoder_dim = encoder.get_output_dim()
 
-        if arc_feedforward is not None:
-            self.head_arc_feedforward = arc_feedforward
-            self.child_arc_feedforward = copy.deepcopy(arc_feedforward)
-        else:
-            self.head_arc_feedforward = FeedForward(encoder_dim, 1,
+        self.head_arc_feedforward = arc_feedforward or \
+                                        FeedForward(encoder_dim, 1,
                                                     arc_representation_dim,
                                                     Activation.by_name("elu")())
-            self.child_arc_feedforward = FeedForward(encoder_dim, 1,
-                                                     arc_representation_dim,
-                                                     Activation.by_name("elu")())
+        self.child_arc_feedforward = copy.deepcopy(self.head_arc_feedforward)
+
         self.arc_attention = BilinearMatrixAttention(arc_representation_dim,
                                                      arc_representation_dim,
                                                      use_input_biases=True)
 
         num_labels = self.vocab.get_vocab_size("head_tags")
 
-        if tag_feedforward is not None:
-            self.head_tag_feedforward = tag_feedforward
-            self.child_tag_feedforward = copy.deepcopy(tag_feedforward)
-        else:
-            self.head_tag_feedforward = FeedForward(encoder_dim, 1,
+        self.head_tag_feedforward = tag_feedforward or \
+                                        FeedForward(encoder_dim, 1,
                                                     tag_representation_dim,
                                                     Activation.by_name("elu")())
-            self.child_tag_feedforward = FeedForward(encoder_dim, 1,
-                                                     tag_representation_dim,
-                                                     Activation.by_name("elu")())
+        self.child_tag_feedforward = copy.deepcopy(self.head_tag_feedforward)
+
         self.tag_bilinear = torch.nn.modules.Bilinear(tag_representation_dim,
                                                       tag_representation_dim,
                                                       num_labels)
