@@ -116,6 +116,7 @@ class Event2Mind(Model):
         source_mask = get_text_field_mask(source_tokens)
         encoder_outputs = self._encoder(embedded_input, source_mask)
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
+        output_dict = {}
 
         if target_tokens:
             targets = target_tokens["tokens"]
@@ -126,6 +127,40 @@ class Event2Mind(Model):
         else:
             num_decoding_steps = self._max_decoding_steps
 
+        # Perform greedy search so we can get the loss.
+        if target_tokens is not None:
+            decoder_hidden = final_encoder_output
+            last_predictions = None
+            step_logits = []
+            step_probabilities = []
+            step_predictions = []
+            for timestep in range(num_decoding_steps):
+                # See https://github.com/allenai/allennlp/issues/1134.
+                # TODO(brendanr): Grok this.
+                input_choices = targets[:, timestep]
+                decoder_input = self._target_embedder(input_choices)
+                decoder_hidden = self._decoder_cell(decoder_input, decoder_hidden)
+                # (batch_size, num_classes)
+                output_projections = self._output_projection_layer(decoder_hidden)
+                # list of (batch_size, 1, num_classes)
+                step_logits.append(output_projections.unsqueeze(1))
+                class_probabilities = F.softmax(output_projections, dim=-1)
+                _, predicted_classes = torch.max(class_probabilities, 1)
+                step_probabilities.append(class_probabilities.unsqueeze(1))
+                last_predictions = predicted_classes
+                # (batch_size, 1)
+                step_predictions.append(last_predictions.unsqueeze(1))
+            # step_logits is a list containing tensors of shape (batch_size, 1, num_classes)
+            # This is (batch_size, num_decoding_steps, num_classes)
+            logits = torch.cat(step_logits, 1)
+            class_probabilities = torch.cat(step_probabilities, 1)
+            # TODO(brendanr): Stop producing this at all?
+            #output_dict["predictions"] = torch.cat(step_predictions, 1)
+            target_mask = get_text_field_mask(target_tokens)
+            loss = self._get_loss(logits, targets, target_mask)
+            output_dict["loss"] = loss
+
+        # Perform beam search
         if not self.training:
             # (batch_size, k, num_decoding_steps)
             all_top_k_predictions = self.beam_search(
@@ -143,58 +178,11 @@ class Event2Mind(Model):
                         relevant_targets,
                         relevant_mask
                 )
+            output_dict["top_k_predictions"] = all_top_k_predictions
             # TODO(brendanr): Verify that the best prediction is in fact first.
-            all_predictions = all_top_k_predictions[:, 0, :]
-            # TODO(brendanr): How do we calculate loss here. Can we? Should we just compute loss the normal
-            # way, but have a different prediction with beam search?
-            output_dict = {
-                "predictions": all_predictions,
-                "top_k_predictions": all_top_k_predictions
-            }
-            return output_dict
-        else:
-            decoder_hidden = final_encoder_output
-            last_predictions = None
-            step_logits = []
-            step_probabilities = []
-            step_predictions = []
-            for timestep in range(num_decoding_steps):
-                # See https://github.com/allenai/allennlp/issues/1134.
-                # TODO(brendanr): Grok this.
-                if target_tokens is not None:
-                    input_choices = targets[:, timestep]
-                else:
-                    if timestep == 0:
-                        # For the first timestep, when we do not have targets, we input start symbols.
-                        # (batch_size,)
-                        input_choices = source_mask.new_full((batch_size,), fill_value=self._start_index)
-                    else:
-                        input_choices = last_predictions
-                decoder_input = self._target_embedder(input_choices)
-                decoder_hidden = self._decoder_cell(decoder_input, decoder_hidden)
-                # (batch_size, num_classes)
-                output_projections = self._output_projection_layer(decoder_hidden)
-                # list of (batch_size, 1, num_classes)
-                step_logits.append(output_projections.unsqueeze(1))
-                class_probabilities = F.softmax(output_projections, dim=-1)
-                _, predicted_classes = torch.max(class_probabilities, 1)
-                step_probabilities.append(class_probabilities.unsqueeze(1))
-                last_predictions = predicted_classes
-                # (batch_size, 1)
-                step_predictions.append(last_predictions.unsqueeze(1))
-            # step_logits is a list containing tensors of shape (batch_size, 1, num_classes)
-            # This is (batch_size, num_decoding_steps, num_classes)
-            logits = torch.cat(step_logits, 1)
-            class_probabilities = torch.cat(step_probabilities, 1)
-            all_predictions = torch.cat(step_predictions, 1)
-            output_dict = {"logits": logits,
-                           "class_probabilities": class_probabilities,
-                           "predictions": all_predictions}
-            if target_tokens:
-                target_mask = get_text_field_mask(target_tokens)
-                loss = self._get_loss(logits, targets, target_mask)
-                output_dict["loss"] = loss
-            return output_dict
+            output_dict["predictions"] = all_top_k_predictions[:, 0, :]
+
+        return output_dict
 
     def beam_search(self,
                     final_encoder_output: torch.LongTensor,
