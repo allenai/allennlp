@@ -87,7 +87,6 @@ class AtisWorld():
                 strings.extend(ATIS_TRIGGER_DICT.get(tokenized_utterance[-1].text.lower(), []))
                 date = get_date_from_utterance(tokenized_utterance)
                 if date:
-                    print(DAY_OF_WEEK_INDEX.get(date.weekday(), []))
                     strings.extend(DAY_OF_WEEK_INDEX.get(date.weekday(), []))
 
         return strings
