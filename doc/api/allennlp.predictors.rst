@@ -13,6 +13,7 @@ allennlp.predictors
 * :ref:`SentenceTaggerPredictor<sentence-tagger>`
 * :ref:`CorefPredictor<coreference-resolution>`
 * :ref:`ConstituencyParserPredictor<constituency-parser>`
+* :ref:`BiaffineDependencyParserPredictor<biaffine-dependency-parser>`
 * :ref:`SimpleSeq2SeqPredictor<simple-seq2seq>`
 * :ref:`WikiTablesParserPredictor<wikitables-parser>`
 * :ref:`NlvrParserPredictor<nlvr-parser>`
@@ -73,6 +74,12 @@ allennlp.predictors
 
 .. _nlvr-parser:
 .. automodule:: allennlp.predictors.nlvr_parser
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _biaffine-dependency-parser:
+.. automodule:: allennlp.predictors.biaffine_dependency_parser
    :members:
    :undoc-members:
    :show-inheritance:

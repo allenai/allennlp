@@ -1,5 +1,9 @@
-from typing import List
+from typing import List, Dict
+from datetime import datetime
 import re
+
+from collections import defaultdict
+from allennlp.data.tokenizers import Token
 
 TWELVE_TO_TWENTY_FOUR = 1200
 HOUR_TO_TWENTY_FOUR = 100
@@ -33,6 +37,33 @@ def get_times_from_utterance(utterance: str) -> List[str]:
 
     return [str(time) for time in times]
 
+def get_date_from_utterance(tokenized_utterance: List[Token],
+                            year: int = 1993,
+                            month: int = None,
+                            day: int = None) -> datetime:
+    """
+    When the year is not explicitly mentioned in the utterance, the query assumes that
+    it is 1993 so we do the same here. If there is no mention of the month or day then
+    we do not return any dates from the utterance.
+    """
+    utterance = ' '.join([token.text for token in tokenized_utterance])
+    year_result = re.findall(r'199[0-4]', utterance)
+    if year_result:
+        year = int(year_result[0])
+
+    for token in tokenized_utterance:
+        if token.text in MONTH_NUMBERS:
+            month = MONTH_NUMBERS[token.text]
+        if token.text in DAY_NUMBERS:
+            day = DAY_NUMBERS[token.text]
+
+    for tens, digits in zip(tokenized_utterance, tokenized_utterance[1:]):
+        bigram = ' '.join([tens.text, digits.text])
+        if bigram in DAY_NUMBERS:
+            day = DAY_NUMBERS[bigram]
+    if month and day:
+        return datetime(year, month, day)
+    return None
 
 def get_numbers_from_utterance(utterance: str) -> List[str]:
     """
@@ -72,6 +103,19 @@ def get_numbers_from_utterance(utterance: str) -> List[str]:
             numbers.append(str(DAY_NUMBERS[day]))
 
     return sorted(numbers, reverse=True), linking_scores
+
+def get_trigger_dict(trigger_lists: List[List[str]],
+                     trigger_dicts: List[Dict[str, List[str]]]) -> Dict[str, List[str]]:
+    merged_trigger_dict: Dict[str, List[str]] = defaultdict(list)
+    for trigger_list in trigger_lists:
+        for trigger in trigger_list:
+            merged_trigger_dict[trigger.lower()].append(trigger)
+
+    for trigger_dict in trigger_dicts:
+        for key, value in trigger_dict.items():
+            merged_trigger_dict[key.lower()].extend(value)
+
+    return merged_trigger_dict
 
 AIRLINE_CODES = {'alaska': ['AS'],
                  'alliance': ['3J'],
@@ -266,6 +310,8 @@ TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
                           'application', 'no_discounts'],
           'state': ['state_code', 'state_name', 'country_name']}
 
+DAY_OF_WEEK_DICT = {'weekdays' : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']}
+
 YES_NO = {'one way': ['NO'],
           'economy': ['YES']}
 
@@ -337,3 +383,22 @@ STATES = ['ARIZONA', 'CALIFORNIA', 'COLORADO', 'DISTRICT OF COLUMBIA',
 STATE_CODES = ['TN', 'MA', 'CA', 'MD', 'IL', 'OH', 'NC', 'CO', 'TX', 'MI', 'NY',
                'IN', 'NJ', 'NV', 'GA', 'FL', 'MO', 'WI', 'MN', 'PA', 'AZ', 'WA',
                'UT', 'DC', 'PQ', 'ON']
+
+DAY_OF_WEEK_INDEX = {idx : [day] for idx, day in enumerate(DAY_OF_WEEK)}
+
+TRIGGER_LISTS = [CITIES, AIRPORT_CODES,
+                 STATES, STATE_CODES,
+                 FARE_BASIS_CODE, CLASS,
+                 AIRLINE_CODE_LIST, DAY_OF_WEEK,
+                 CITY_CODE_LIST, MEALS,
+                 RESTRICT_CODES]
+
+TRIGGER_DICTS = [CITY_AIRPORT_CODES,
+                 AIRLINE_CODES,
+                 CITY_CODES,
+                 GROUND_SERVICE,
+                 DAY_OF_WEEK_DICT,
+                 YES_NO,
+                 MISC_STR]
+
+ATIS_TRIGGER_DICT = get_trigger_dict(TRIGGER_LISTS, TRIGGER_DICTS)

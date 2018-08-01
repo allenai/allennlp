@@ -10,7 +10,7 @@ class TestAtisWorld(AllenNlpTestCase):
         self.data = open(test_filename).readlines()
 
     def test_atis_global_actions(self): # pylint: disable=no-self-use
-        world = AtisWorld([""])
+        world = AtisWorld([])
         valid_actions = world.valid_actions
 
         assert set(valid_actions.keys()) == {'agg',
@@ -44,7 +44,6 @@ class TestAtisWorld(AllenNlpTestCase):
                  'where_clause, ")"]',
                  'query -> ["SELECT", distinct, select_results, "FROM", table_refs, '
                  'where_clause]'}
-
         assert set(valid_actions['select_results']) == \
                 {'select_results -> [agg]', 'select_results -> [col_refs]'}
         assert set(valid_actions['agg']) == \
@@ -52,10 +51,7 @@ class TestAtisWorld(AllenNlpTestCase):
         assert set(valid_actions['agg_func']) == \
                 {'agg_func -> ["COUNT"]',
                  'agg_func -> ["MAX"]',
-                 'agg_func -> ["MIN"]',
-                 'agg_func -> ["count"]',
-                 'agg_func -> ["max"]',
-                 'agg_func -> ["min"]'}
+                 'agg_func -> ["MIN"]'}
         assert set(valid_actions['col_refs']) == \
                 {'col_refs -> [col_ref]', 'col_refs -> [col_ref, ",", col_refs]'}
         assert set(valid_actions['table_refs']) == \
@@ -67,7 +63,6 @@ class TestAtisWorld(AllenNlpTestCase):
                 {'conditions -> ["(", conditions, ")", conj, conditions]',
                  'conditions -> ["(", conditions, ")"]',
                  'conditions -> ["NOT", conditions]',
-                 'conditions -> ["not", conditions]',
                  'conditions -> [condition, conj, "(", conditions, ")"]',
                  'conditions -> [condition, conj, conditions]',
                  'conditions -> [condition]'}
@@ -91,15 +86,12 @@ class TestAtisWorld(AllenNlpTestCase):
                  'binaryop -> ["="]',
                  'binaryop -> [">"]',
                  'binaryop -> [">="]',
-                 'binaryop -> ["IS"]',
-                 'binaryop -> ["is"]'}
+                 'binaryop -> ["IS"]'}
         assert set(valid_actions['ternaryexpr']) == \
                 {'ternaryexpr -> [col_ref, "BETWEEN", value, "AND", value]',
-                 'ternaryexpr -> [col_ref, "NOT", "BETWEEN", value, "AND", value]',
-                 'ternaryexpr -> [col_ref, "not", "BETWEEN", value, "AND", value]'}
+                 'ternaryexpr -> [col_ref, "NOT", "BETWEEN", value, "AND", value]'}
         assert set(valid_actions['value']) == \
                 {'value -> ["NOT", pos_value]',
-                 'value -> ["not", pos_value]',
                  'value -> [pos_value]'}
         assert set(valid_actions['pos_value']) == \
                 {'pos_value -> ["ALL", query]',
@@ -120,16 +112,8 @@ class TestAtisWorld(AllenNlpTestCase):
                 {'conj -> ["OR"]', 'conj -> ["AND"]'}
         assert set(valid_actions['distinct']) == \
                {'distinct -> [""]', 'distinct -> ["DISTINCT"]'}
-        assert set(valid_actions['number']) == \
-                {'number -> ["1"]', 'number -> ["0"]'}
-        assert set(valid_actions['string']) == \
-                {'string -> ["\'FRIDAY\'"]',
-                 'string -> ["\'MONDAY\'"]',
-                 'string -> ["\'SATURDAY\'"]',
-                 'string -> ["\'SUNDAY\'"]',
-                 'string -> ["\'THURSDAY\'"]',
-                 'string -> ["\'TUESDAY\'"]',
-                 'string -> ["\'WEDNESDAY\'"]'}
+        assert set(valid_actions['number']) == set()
+        assert set(valid_actions['string']) == set()
         assert set(valid_actions['col_ref']) == \
                 {'col_ref -> ["*"]',
                  'col_ref -> ["aircraft", ".", "aircraft_code"]',
@@ -270,23 +254,12 @@ class TestAtisWorld(AllenNlpTestCase):
              'number -> ["1"]',
              'number -> ["2400"]',
              'number -> ["1200"]',
-             'number -> ["1200"]',
              'number -> ["12"]'}
-
-        print(world.valid_actions['string'])
-
 
         assert set(world.valid_actions['string']) == \
                 {'string -> ["\'DENVER\'"]',
                  'string -> ["\'DDEN\'"]',
-                 'string -> ["\'AT\'"]',
-                 'string -> ["\'MONDAY\'"]',
-                 'string -> ["\'TUESDAY\'"]',
-                 'string -> ["\'WEDNESDAY\'"]',
-                 'string -> ["\'THURSDAY\'"]',
-                 'string -> ["\'FRIDAY\'"]',
-                 'string -> ["\'SATURDAY\'"]',
-                 'string -> ["\'SUNDAY\'"]'}
+                 'string -> ["\'AT\'"]'}
 
         world = AtisWorld(["show me the flights from denver at 12 o'clock",
                            "show me the delta or united flights in afternoon"])
@@ -295,19 +268,8 @@ class TestAtisWorld(AllenNlpTestCase):
                 {'number -> ["0"]',
                  'number -> ["1"]',
                  'number -> ["2400"]',
-                 'number -> ["1200"]',
-                 'number -> ["1200"]',
                  'number -> ["12"]',
-                 'number -> ["0"]',
-                 'number -> ["0"]',
-                 'number -> ["1"]',
-                 'number -> ["2400"]',
-                 'number -> ["1200"]',
-                 'number -> ["1200"]',
-                 'number -> ["12"]',
-                 'number -> ["0"]',
                  'number -> ["1800"]',
-                 'number -> ["1200"]',
                  'number -> ["1200"]'}
 
         assert set(world.valid_actions['string']) == \
@@ -316,14 +278,7 @@ class TestAtisWorld(AllenNlpTestCase):
                  'string -> ["\'AT\'"]',
                  'string -> ["\'DL\'"]',
                  'string -> ["\'UA\'"]',
-                 'string -> ["\'IN\'"]',
-                 'string -> ["\'MONDAY\'"]',
-                 'string -> ["\'TUESDAY\'"]',
-                 'string -> ["\'WEDNESDAY\'"]',
-                 'string -> ["\'THURSDAY\'"]',
-                 'string -> ["\'FRIDAY\'"]',
-                 'string -> ["\'SATURDAY\'"]',
-                 'string -> ["\'SUNDAY\'"]'}
+                 'string -> ["\'IN\'"]'}
 
         world = AtisWorld(["i would like one coach reservation for \
                           may ninth from pittsburgh to atlanta leaving \
@@ -339,15 +294,12 @@ class TestAtisWorld(AllenNlpTestCase):
                  'number -> ["5"]',
                  'number -> ["26"]',
                  'number -> ["2200"]',
-                 'number -> ["2200"]',
                  'number -> ["200300"]',
                  'number -> ["199100"]',
                  'number -> ["1991"]',
                  'number -> ["1200"]',
                  'number -> ["1000"]',
-                 'number -> ["1000"]',
-                 'number -> ["10"]',
-                 'number -> ["0"]'}
+                 'number -> ["10"]'}
 
         assert set(world.valid_actions['string']) == \
                 {'string -> ["\'COACH\'"]',
@@ -357,17 +309,8 @@ class TestAtisWorld(AllenNlpTestCase):
                  'string -> ["\'ATLANTA\'"]',
                  'string -> ["\'ATL\'"]',
                  'string -> ["\'MATL\'"]',
-                 'string -> ["\'PITTSBURGH\'"]',
-                 'string -> ["\'PIT\'"]',
-                 'string -> ["\'PPIT\'"]',
                  'string -> ["\'IN\'"]',
-                 'string -> ["\'MONDAY\'"]',
-                 'string -> ["\'TUESDAY\'"]',
-                 'string -> ["\'WEDNESDAY\'"]',
-                 'string -> ["\'THURSDAY\'"]',
-                 'string -> ["\'FRIDAY\'"]',
-                 'string -> ["\'SATURDAY\'"]',
-                 'string -> ["\'SUNDAY\'"]'}
+                 'string -> ["\'MONDAY\'"]'}
 
 
     def test_atis_simple_action_sequence(self): # pylint: disable=no-self-use
@@ -785,9 +728,6 @@ class TestAtisWorld(AllenNlpTestCase):
              'agg_func -> ["COUNT"]',
              'agg_func -> ["MAX"]',
              'agg_func -> ["MIN"]',
-             'agg_func -> ["count"]',
-             'agg_func -> ["max"]',
-             'agg_func -> ["min"]',
              'agg_results -> ["(", "SELECT", distinct, agg, "FROM", table_name, '
              'where_clause, ")"]',
              'agg_results -> ["SELECT", distinct, agg, "FROM", table_name, where_clause]',
@@ -804,7 +744,6 @@ class TestAtisWorld(AllenNlpTestCase):
              'binaryop -> [">"]',
              'binaryop -> [">="]',
              'binaryop -> ["IS"]',
-             'binaryop -> ["is"]',
              'boolean -> ["false"]',
              'boolean -> ["true"]',
              'col_ref -> ["*"]',
@@ -923,7 +862,6 @@ class TestAtisWorld(AllenNlpTestCase):
              'conditions -> ["(", conditions, ")", conj, conditions]',
              'conditions -> ["(", conditions, ")"]',
              'conditions -> ["NOT", conditions]',
-             'conditions -> ["not", conditions]',
              'conditions -> [condition, conj, "(", conditions, ")"]',
              'conditions -> [condition, conj, conditions]',
              'conditions -> [condition]',
@@ -955,17 +893,10 @@ class TestAtisWorld(AllenNlpTestCase):
              'string -> ["\'BBOS\'"]',
              'string -> ["\'BOS\'"]',
              'string -> ["\'BOSTON\'"]',
-             'string -> ["\'FRIDAY\'"]',
              'string -> ["\'LUNCH\'"]',
-             'string -> ["\'MONDAY\'"]',
              'string -> ["\'PHILADELPHIA\'"]',
              'string -> ["\'PHL\'"]',
              'string -> ["\'PPHL\'"]',
-             'string -> ["\'SATURDAY\'"]',
-             'string -> ["\'SUNDAY\'"]',
-             'string -> ["\'THURSDAY\'"]',
-             'string -> ["\'TUESDAY\'"]',
-             'string -> ["\'WEDNESDAY\'"]',
              'table_name -> ["aircraft"]',
              'table_name -> ["airline"]',
              'table_name -> ["airport"]',
@@ -990,9 +921,7 @@ class TestAtisWorld(AllenNlpTestCase):
              'table_refs -> [table_name]',
              'ternaryexpr -> [col_ref, "BETWEEN", value, "AND", value]',
              'ternaryexpr -> [col_ref, "NOT", "BETWEEN", value, "AND", value]',
-             'ternaryexpr -> [col_ref, "not", "BETWEEN", value, "AND", value]',
              'value -> ["NOT", pos_value]',
-             'value -> ["not", pos_value]',
              'value -> [pos_value]',
              'where_clause -> ["WHERE", "(", conditions, ")"]',
              'where_clause -> ["WHERE", conditions]']
