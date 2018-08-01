@@ -3,6 +3,7 @@ import logging
 import os
 import pathlib
 import shutil
+import tempfile
 from unittest import TestCase
 
 from allennlp.common.checks import log_pytorch_version_info
@@ -31,9 +32,7 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
         logging.getLogger('urllib3.connectionpool').disabled = True
         log_pytorch_version_info()
 
-        self.TEST_DIR = pathlib.Path("/tmp/allennlp_tests/")
-
-        os.makedirs(self.TEST_DIR, exist_ok=True)
+        self.TEST_DIR = pathlib.Path(tempfile.mkdtemp())
 
     def tearDown(self):
         shutil.rmtree(self.TEST_DIR)

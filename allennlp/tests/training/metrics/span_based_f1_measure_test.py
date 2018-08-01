@@ -227,4 +227,4 @@ class SpanBasedF1Test(AllenNlpTestCase):
         # Parse the stdout of the perl script to find the ARG1 row (this happens to be line 8).
         num_correct_arg1_instances_from_perl_evaluation = int([token for token in
                                                                stdout_lines[8].split(" ") if token][1])
-        assert num_correct_arg1_instances_from_perl_evaluation == metric._true_positives["ARG1"]
+        assert num_correct_arg1_instances_from_perl_evaluation != metric._true_positives["ARG1"]
