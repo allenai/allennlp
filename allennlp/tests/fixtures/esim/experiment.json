@@ -14,12 +14,14 @@
     "type": "esim",
     "dropout": 0.5,
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "pretrained_file": "allennlp/tests/fixtures/embeddings/glove.6B.300d.sample.txt.gz",
-        "embedding_dim": 300,
-        "trainable": false,
-        "projection_dim": 10,
+      "token_embedders": {
+        "tokens": {
+            "type": "embedding",
+            "pretrained_file": "allennlp/tests/fixtures/embeddings/glove.6B.300d.sample.txt.gz",
+            "embedding_dim": 300,
+            "trainable": false,
+            "projection_dim": 10,
+        }
       }
     },
     "encoder": {

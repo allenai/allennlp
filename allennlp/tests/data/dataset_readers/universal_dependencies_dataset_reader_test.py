@@ -46,3 +46,20 @@ class TestUniversalDependenciesDatasetReader(AllenNlpTestCase):
         assert fields["head_tags"].labels == ['root', 'punct', 'case', 'compound', 'root', 'case',
                                               'nmod', 'flat', 'flat', 'punct']
         assert fields["head_indices"].labels == [0, 4, 4, 4, 0, 6, 4, 6, 6, 4]
+
+        # This instance tests specifically for filtering of elipsis:
+        # http://universaldependencies.org/u/overview/specific-syntax.html#ellipsis
+        # The original sentence is:
+        # "Over 300 Iraqis are reported dead and 500 [reported] wounded in Fallujah alone."
+        # But the second "reported" is elided, and as such isn't included in the syntax tree.
+        instance = instances[3]
+        fields = instance.fields
+        assert [t.text for t in fields["words"].tokens] == ['ROOT_HEAD', 'Over', '300', 'Iraqis', 'are',
+                                                            'reported', 'dead', 'and', '500', 'wounded',
+                                                            'in', 'Fallujah', 'alone', '.']
+        assert fields["pos_tags"].labels == ['ROOT_POS', 'ADV', 'NUM', 'PROPN', 'AUX', 'VERB', 'ADJ',
+                                             'CCONJ', 'NUM', 'ADJ', 'ADP', 'PROPN', 'ADV', 'PUNCT']
+        assert fields["head_tags"].labels == ['root', 'advmod', 'nummod', 'nsubj:pass', 'aux:pass',
+                                              'root', 'xcomp', 'cc', 'conj', 'orphan', 'case', 'obl',
+                                              'advmod', 'punct']
+        assert fields["head_indices"].labels == [0, 2, 3, 5, 5, 0, 5, 8, 5, 8, 11, 5, 11, 5]

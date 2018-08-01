@@ -14,13 +14,15 @@
     "model": {
       "type": "constituency_parser",
       "text_field_embedder": {
-        "elmo": {
-            "type": "elmo_token_embedder",
-            "dropout": 0.2,
-            "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-            "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
-            "do_layer_norm": false
-          }
+        "token_embedders": {
+            "elmo": {
+                "type": "elmo_token_embedder",
+                "dropout": 0.2,
+                "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
+                "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
+                "do_layer_norm": false
+            }
+        }
       },
       "pos_tag_embedding":{
         "embedding_dim": 50,
