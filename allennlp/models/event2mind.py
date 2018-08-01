@@ -119,6 +119,10 @@ class Event2Mind(Model):
         output_dict = {}
 
         if target_tokens:
+            # TODO(brendanr): Something about this is suspicious. As in will we
+            # maybe have difficulty learning to output the end symbol? Maybe
+            # it's fine since this will make num_decoding_steps the length of
+            # the longest sequence and most targets will be shorter? Still...
             targets = target_tokens["tokens"]
             target_sequence_length = targets.size()[1]
             # The last input from the target is either padding or the end symbol. Either way, we
@@ -160,10 +164,10 @@ class Event2Mind(Model):
             loss = self._get_loss(logits, targets, target_mask)
             output_dict["loss"] = loss
 
-        # Perform beam search
+        # Perform beam search to obtain the predictions.
         if not self.training:
             # (batch_size, k, num_decoding_steps)
-            all_top_k_predictions = self.beam_search(
+            (all_top_k_predictions, log_probabilities) = self.beam_search(
                     final_encoder_output, 10, num_decoding_steps, batch_size, source_mask
             )
 
@@ -179,6 +183,7 @@ class Event2Mind(Model):
                         relevant_mask
                 )
             output_dict["top_k_predictions"] = all_top_k_predictions
+            output_dict["top_k_log_probabilities"] = log_probabilities
             # TODO(brendanr): Verify that the best prediction is in fact first.
             output_dict["predictions"] = all_top_k_predictions[:, 0, :]
 
@@ -189,7 +194,7 @@ class Event2Mind(Model):
                     k: int,
                     num_decoding_steps: int,
                     batch_size: int,
-                    source_mask) -> torch.Tensor:
+                    source_mask) -> (torch.Tensor, torch.Tensor):
         # List of (batchsize, k) tensors. One for each time step. Does not
         # include the start symbols, which are implicit.
         predictions = []
@@ -226,7 +231,7 @@ class Event2Mind(Model):
         # Log probability tensor that mandates that the end token is selected.
         num_classes = self.vocab.get_vocab_size(self._target_namespace)
         # TODO(brendanr): Fix the .cuda. That probably won't work if someone tries to use the cpu, right?
-        log_probs_after_end = torch.full((batch_size * k, num_classes), float("-inf")).cuda()
+        log_probs_after_end = torch.full((batch_size * k, num_classes), float("-inf"))#.cuda()
         log_probs_after_end[:, self._end_index] = 0.0
 
         for timestep in range(num_decoding_steps - 1):
@@ -294,7 +299,7 @@ class Event2Mind(Model):
         # We don't add the start tokens here. They are implicit.
 
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
-        return all_predictions
+        return (all_predictions, log_probabilities[-1])
 
     @staticmethod
     def _get_loss(logits: torch.LongTensor,
