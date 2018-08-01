@@ -63,7 +63,9 @@ KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"
             '"IS"', '"BETWEEN"', '"AND"', '"ALL"', '"ANY"', '"NULL"', '"OR"', '"DISTINCT"']
 
 def generate_one_of_string(nonterminal: str, literals: List[str]) -> str:
-    return  f"\n{nonterminal} \t\t = " + " / ".join([f'"{literal}"' for literal in literals])
+    if literals:
+        return  f"\n{nonterminal} \t\t = " + " / ".join([f'"{literal}"' for literal in literals])
+    return  f'\n{nonterminal} \t\t = ""'
 
 def format_action(nonterminal: str, right_hand_side: str) -> str:
     if right_hand_side.upper() in KEYWORDS:

@@ -115,14 +115,7 @@ class TestAtisWorld(AllenNlpTestCase):
                {'distinct -> [""]', 'distinct -> ["DISTINCT"]'}
         assert set(valid_actions['number']) == \
                 {'number -> ["1"]', 'number -> ["0"]'}
-        assert set(valid_actions['string']) == \
-                {'string -> ["\'FRIDAY\'"]',
-                 'string -> ["\'MONDAY\'"]',
-                 'string -> ["\'SATURDAY\'"]',
-                 'string -> ["\'SUNDAY\'"]',
-                 'string -> ["\'THURSDAY\'"]',
-                 'string -> ["\'TUESDAY\'"]',
-                 'string -> ["\'WEDNESDAY\'"]'}
+        assert set(valid_actions['string']) == set()
         assert set(valid_actions['col_ref']) == \
                 {'col_ref -> ["*"]',
                  'col_ref -> ["aircraft", ".", "aircraft_code"]',
@@ -269,14 +262,7 @@ class TestAtisWorld(AllenNlpTestCase):
         assert set(world.valid_actions['string']) == \
                 {'string -> ["\'DENVER\'"]',
                  'string -> ["\'DDEN\'"]',
-                 'string -> ["\'AT\'"]',
-                 'string -> ["\'MONDAY\'"]',
-                 'string -> ["\'TUESDAY\'"]',
-                 'string -> ["\'WEDNESDAY\'"]',
-                 'string -> ["\'THURSDAY\'"]',
-                 'string -> ["\'FRIDAY\'"]',
-                 'string -> ["\'SATURDAY\'"]',
-                 'string -> ["\'SUNDAY\'"]'}
+                 'string -> ["\'AT\'"]'}
 
         world = AtisWorld(["show me the flights from denver at 12 o'clock",
                            "show me the delta or united flights in afternoon"])
@@ -306,14 +292,7 @@ class TestAtisWorld(AllenNlpTestCase):
                  'string -> ["\'AT\'"]',
                  'string -> ["\'DL\'"]',
                  'string -> ["\'UA\'"]',
-                 'string -> ["\'IN\'"]',
-                 'string -> ["\'MONDAY\'"]',
-                 'string -> ["\'TUESDAY\'"]',
-                 'string -> ["\'WEDNESDAY\'"]',
-                 'string -> ["\'THURSDAY\'"]',
-                 'string -> ["\'FRIDAY\'"]',
-                 'string -> ["\'SATURDAY\'"]',
-                 'string -> ["\'SUNDAY\'"]'}
+                 'string -> ["\'IN\'"]'}
 
         world = AtisWorld(["i would like one coach reservation for \
                           may ninth from pittsburgh to atlanta leaving \
@@ -351,13 +330,7 @@ class TestAtisWorld(AllenNlpTestCase):
                  'string -> ["\'PIT\'"]',
                  'string -> ["\'PPIT\'"]',
                  'string -> ["\'IN\'"]',
-                 'string -> ["\'MONDAY\'"]',
-                 'string -> ["\'TUESDAY\'"]',
-                 'string -> ["\'WEDNESDAY\'"]',
-                 'string -> ["\'THURSDAY\'"]',
-                 'string -> ["\'FRIDAY\'"]',
-                 'string -> ["\'SATURDAY\'"]',
-                 'string -> ["\'SUNDAY\'"]'}
+                 'string -> ["\'MONDAY\'"]'}
 
 
     def test_atis_simple_action_sequence(self): # pylint: disable=no-self-use
@@ -940,17 +913,10 @@ class TestAtisWorld(AllenNlpTestCase):
              'string -> ["\'BBOS\'"]',
              'string -> ["\'BOS\'"]',
              'string -> ["\'BOSTON\'"]',
-             'string -> ["\'FRIDAY\'"]',
              'string -> ["\'LUNCH\'"]',
-             'string -> ["\'MONDAY\'"]',
              'string -> ["\'PHILADELPHIA\'"]',
              'string -> ["\'PHL\'"]',
              'string -> ["\'PPHL\'"]',
-             'string -> ["\'SATURDAY\'"]',
-             'string -> ["\'SUNDAY\'"]',
-             'string -> ["\'THURSDAY\'"]',
-             'string -> ["\'TUESDAY\'"]',
-             'string -> ["\'WEDNESDAY\'"]',
              'table_name -> ["aircraft"]',
              'table_name -> ["airline"]',
              'table_name -> ["airport"]',
@@ -979,3 +945,4 @@ class TestAtisWorld(AllenNlpTestCase):
              'value -> [pos_value]',
              'where_clause -> ["WHERE", "(", conditions, ")"]',
              'where_clause -> ["WHERE", conditions]']
+

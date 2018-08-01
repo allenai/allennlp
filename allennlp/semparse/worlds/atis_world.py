@@ -42,15 +42,17 @@ class AtisWorld():
         """
         valid_actions = deepcopy(self.sql_table_context.valid_actions)
         for string in self.get_strings_from_utterance():
-            if string not in valid_actions['string']:
-                valid_actions['string'].append(format_action('string', string))
+            action = format_action('string', string)
+            if action not in valid_actions['string']:
+                valid_actions['string'].append(action)
 
         numbers = ['0', '1']
         for utterance in self.utterances:
             numbers.extend(get_numbers_from_utterance(utterance))
             for number in numbers:
-                if number not in valid_actions['number']:
-                    valid_actions['number'].append(format_action('number', number))
+                action = format_action('number', number)
+                if action not in valid_actions['number']:
+                    valid_actions['number'].append(action)
 
         return valid_actions
 
@@ -80,11 +82,14 @@ class AtisWorld():
             if tokenized_utterance:
                 for first_token, second_token in zip(tokenized_utterance, tokenized_utterance[1:]):
                     strings.extend(ATIS_TRIGGER_DICT.get(first_token.text.lower(), []))
-                    bigram = f"{first_token.text} {second_token.text}"
-                    strings.extend(ATIS_TRIGGER_DICT.get(bigram.lower(), []))
+                    bigram = f"{first_token.text} {second_token.text}".lower()
+                    strings.extend(ATIS_TRIGGER_DICT.get(bigram, []))
                 strings.extend(ATIS_TRIGGER_DICT.get(tokenized_utterance[-1].text.lower(), []))
+                date = get_date_from_utterance(tokenized_utterance)
+                if date:
+                    print(DAY_OF_WEEK_INDEX.get(date.weekday(), []))
+                    strings.extend(DAY_OF_WEEK_INDEX.get(date.weekday(), []))
 
-        strings.extend(DAY_OF_WEEK)
         return strings
 
     def get_action_sequence(self, query: str) -> List[str]:
