@@ -230,8 +230,10 @@ class Event2Mind(Model):
 
         # Log probability tensor that mandates that the end token is selected.
         num_classes = self.vocab.get_vocab_size(self._target_namespace)
-        # TODO(brendanr): Fix the .cuda. That probably won't work if someone tries to use the cpu, right?
-        log_probs_after_end = torch.full((batch_size * k, num_classes), float("-inf"))#.cuda()
+        log_probs_after_end = start_class_log_probabilities.new_full(
+            (batch_size * k, num_classes),
+            float("-inf")
+        )
         log_probs_after_end[:, self._end_index] = 0.0
 
         for timestep in range(num_decoding_steps - 1):
