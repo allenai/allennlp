@@ -945,4 +945,3 @@ class TestAtisWorld(AllenNlpTestCase):
              'value -> [pos_value]',
              'where_clause -> ["WHERE", "(", conditions, ")"]',
              'where_clause -> ["WHERE", conditions]']
-
