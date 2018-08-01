@@ -157,13 +157,15 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
             text_tokens.extend(bpe_tokens)
 
         num_tokens = len(text_tokens)
-        if num_tokens < self.n_ctx:
-            text_tokens.extend(0 for _ in range(self.n_ctx - num_tokens))
-        else:
-            text_tokens = text_tokens[:self.n_ctx]
 
-        # truncate offsets
-        offsets = [o for o in offsets if o < self.n_ctx]
+        # If there's too many tokens, that's going to cause problems.
+        if num_tokens > self.n_ctx:
+            raise RuntimeError(f"The transformer model has a maximum sequence length of {self.n_ctx} "
+                               f"but your byte pair encoded sequence has length {num_tokens}. "
+                               f"The offending text input is {tokens}.")
+
+        # If there's too few tokens, just pad with zeros.
+        text_tokens.extend(0 for _ in range(self.n_ctx - num_tokens))
 
         return {
                 index_name: text_tokens,
@@ -171,9 +173,7 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
                 # add mask here according to the original tokens,
                 # because calling util.get_text_field_mask on the
                 # "byte pair" tokens will produce the wrong shape
-                "mask": [1 for _ in offsets],
-                # this is a hacky way of capturing how many original tokens there were
-                f"{index_name}-originals": [1 for _ in tokens]
+                "mask": [1 for _ in offsets]
         }
 
     @overrides

@@ -2,6 +2,8 @@
 import json
 import tarfile
 
+import pytest
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token
 from allennlp.data.token_indexers import OpenaiTransformerBytePairIndexer
@@ -80,3 +82,8 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
                 5,  # end of last word
         ]
 
+    def test_raises_with_too_long_sentence(self):
+        tokens = [Token('a') for _ in range(513)]
+
+        with pytest.raises(RuntimeError):
+            self.indexer.tokens_to_indices(tokens, None, 'should-fail')
