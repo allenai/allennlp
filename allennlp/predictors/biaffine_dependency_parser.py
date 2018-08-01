@@ -1,7 +1,7 @@
-
+from typing import Dict, Any, List
 from overrides import overrides
 
-from allennlp.common.util import JsonDict
+from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
@@ -31,6 +31,16 @@ class BiaffineDependencyParserPredictor(Predictor):
         """
         return self.predict_json({"sentence" : sentence})
 
+    def predict_instance(self, instance: Instance) -> JsonDict:
+        outputs = self._model.forward_on_instance(instance)
+
+        words = outputs["words"]
+        pos = outputs["pos"]
+        heads = outputs["predicted_heads"]
+        tags = outputs["predicted_dependencies"]
+        outputs["hierplane_tree"] = self.build_hierplane_tree(words, heads, tags, pos)
+        return sanitize(outputs)
+
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
@@ -40,3 +50,58 @@ class BiaffineDependencyParserPredictor(Predictor):
         sentence_text = [token.text for token in spacy_tokens]
         pos_tags = [token.tag_ for token in spacy_tokens]
         return self._dataset_reader.text_to_instance(sentence_text, pos_tags)
+
+    @overrides
+    def predict_batch_instance(self, instances: List[Instance]) -> List[JsonDict]:
+        outputs = self._model.forward_on_instances(instances)
+        for output in outputs:
+            words = outputs["words"]
+            pos = outputs["pos"]
+            heads = outputs["predicted_heads"]
+            tags = outputs["predicted_dependencies"]
+            output["hierplane_tree"] = self.build_hierplane_tree(words, heads, tags, pos)
+        return sanitize(outputs)
+
+    def build_hierplane_tree(self,
+                             words: List[str],
+                             heads: List[str],
+                             tags: List[str],
+                             pos: List[str]) -> Dict[str, Any]:
+        """
+        Returns
+        -------
+        A JSON dictionary render-able by Hierplane for the given tree.
+        """
+
+        def node_constuctor(words, heads, tags, pos, index: int):
+            children = []
+            for next_index, child in enumerate(heads):
+                if child == index + 1:
+                    children.append(node_constuctor(words, heads, tags, pos, next_index))
+
+            # These are the icons which show up in the bottom right
+            # corner of the node. We can add anything here,
+            # but for brevity we'll just add NER and a few
+            # other things.
+            attributes = [pos[index]]
+
+            hierplane_node = {
+                    "word": words[index],
+                    # The type of the node - all nodes with the same
+                    # type have a unified colour.
+                    "nodeType": tags[index],
+                    # Attributes of the node, eg PERSON or "email".
+                    "attributes": attributes,
+                    # The link between  the node and it's parent.
+                    "link": tags[index],
+            }
+            if children:
+                hierplane_node["children"] = children
+            return hierplane_node
+
+        root_index = heads.index(0)
+        hierplane_tree = {
+                "text": " ".join(words),
+                "root": node_constuctor(words, heads, tags, pos, root_index)
+        }
+        return hierplane_tree
