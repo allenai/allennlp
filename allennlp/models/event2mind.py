@@ -147,7 +147,10 @@ class Event2Mind(Model):
             all_predictions = all_top_k_predictions[:, 0, :]
             # TODO(brendanr): How do we calculate loss here. Can we? Should we just compute loss the normal
             # way, but have a different prediction with beam search?
-            output_dict = {"predictions": all_predictions}
+            output_dict = {
+                "predictions": all_predictions,
+                "top_k_predictions": all_top_k_predictions
+            }
             return output_dict
         else:
             decoder_hidden = final_encoder_output
@@ -232,16 +235,33 @@ class Event2Mind(Model):
             unsqueeze(1).expand(batch_size, k, self._decoder_output_dim).\
             reshape(batch_size * k, self._decoder_output_dim)
 
+        # Log probability tensor that mandates that the end token is selected.
+        num_classes = self.vocab.get_vocab_size(self._target_namespace)
+        log_probs_after_end = torch.full((batch_size * k, num_classes), float("-inf"))
+        log_probs_after_end[:, self._end_index] = 0.0
+
         for timestep in range(num_decoding_steps - 1):
-            decoder_input = self._target_embedder(predictions[-1].reshape(batch_size * k))
+            # (batch_size * k,)
+            last_predictions = predictions[-1].reshape(batch_size * k)
+            decoder_input = self._target_embedder(last_predictions)
             # reshape(batch_size * k, self._decoder_output_dim)
             decoder_hidden = self._decoder_cell(decoder_input, decoder_hidden)
             # (batch_size * k, num_classes)
             output_projections = self._output_projection_layer(decoder_hidden)
 
+            # (batch_size * k, num_classes)
             class_log_probabilities = F.log_softmax(output_projections, dim=-1)
+
+            # (batch_size * k, num_classes)
+            last_predictions_expanded = last_predictions.unsqueeze(-1).expand(batch_size * k, num_classes)
+            cleaned_log_probabilities = torch.where(
+                last_predictions_expanded == self._end_index,
+                log_probs_after_end,
+                class_log_probabilities
+            )
+
             # (batch_size * k, k), (batch_size * k, k)
-            top_log_probabilities, predicted_classes = class_log_probabilities.topk(k)
+            top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(k)
             # TODO(brendanr): Account for predicted_class == end_symbol explicitly?
             # TODO(brendanr): Normalize for length?
             # (batch_size * k, k)
@@ -329,11 +349,13 @@ class Event2Mind(Model):
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
         """
+        print(output_dict)
         predicted_indices = output_dict["predictions"]
         if not isinstance(predicted_indices, numpy.ndarray):
             predicted_indices = predicted_indices.detach().cpu().numpy()
         all_predicted_tokens = []
         for indices in predicted_indices:
+            print(indices)
             indices = list(indices)
             # Collect indices till the first end_symbol
             if self._end_index in indices:
