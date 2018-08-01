@@ -335,7 +335,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         # run convolutions
         cnn_options = self._options['char_cnn']
         if cnn_options['activation'] == 'tanh':
-            activation = torch.nn.functional.tanh
+            activation = torch.tanh
         elif cnn_options['activation'] == 'relu':
             activation = torch.nn.functional.relu
         else:
