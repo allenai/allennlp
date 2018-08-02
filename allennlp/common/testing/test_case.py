@@ -3,6 +3,7 @@ import logging
 import os
 import pathlib
 import shutil
+import tempfile
 from unittest import TestCase
 
 from allennlp.common.checks import log_pytorch_version_info
@@ -31,9 +32,24 @@ class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
         logging.getLogger('urllib3.connectionpool').disabled = True
         log_pytorch_version_info()
 
-        self.TEST_DIR = pathlib.Path("/tmp/allennlp_tests/")
-
-        os.makedirs(self.TEST_DIR, exist_ok=True)
+        self.TEST_DIR = pathlib.Path(tempfile.mkdtemp())
+        print(f"\nZZZ CREATED TEST_DIR {self.TEST_DIR}")
 
     def tearDown(self):
-        shutil.rmtree(self.TEST_DIR)
+        import psutil
+        print(f"ZZZ TEARING DOWN {self.__class__.__name__} {psutil.Process()}")
+        print("ZZZ OPEN FILES: " + str(sum([len(p.open_files()) for p in psutil.Process().children()])))
+        for child in psutil.Process().children():
+            print(f"ZZZ {child}")
+            print(f"ZZZ  " + ", ".join([x.path for x in child.open_files()]))
+        try:
+            shutil.rmtree(self.TEST_DIR)
+        except Exception as e:
+            print("ZZZ {e.__class__.__name__}")
+            import traceback
+            import sys
+            traceback.print_exc(file=sys.stdout)
+        if self.TEST_DIR.exists():
+            print(f"\nZZZ DELETED {self.TEST_DIR} but it still exists ({self.__class__.__name__}).")
+        else:
+            print(f"\nZZZ DELETED {self.TEST_DIR} successfully. ({self.__class__.__name__})")
