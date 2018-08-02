@@ -18,6 +18,7 @@ allennlp.modules
    allennlp.modules.feedforward
    allennlp.modules.highway
    allennlp.modules.matrix_attention
+   allennlp.modules.openai_transformer
    allennlp.modules.seq2seq_encoders
    allennlp.modules.seq2vec_encoders
    allennlp.modules.span_extractors
