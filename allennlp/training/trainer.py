@@ -974,6 +974,7 @@ class Trainer:
 
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
+        shuffle = params.pop_bool("shuffle", True)
         num_epochs = params.pop_int("num_epochs", 20)
         cuda_device = params.pop_int("cuda_device", -1)
         grad_norm = params.pop_float("grad_norm", None)
@@ -1003,6 +1004,7 @@ class Trainer:
                        patience=patience,
                        validation_metric=validation_metric,
                        validation_iterator=validation_iterator,
+                       shuffle=shuffle,
                        num_epochs=num_epochs,
                        serialization_dir=serialization_dir,
                        cuda_device=cuda_device,
