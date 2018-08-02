@@ -31,16 +31,6 @@ class BiaffineDependencyParserPredictor(Predictor):
         """
         return self.predict_json({"sentence" : sentence})
 
-    def predict_instance(self, instance: Instance) -> JsonDict:
-        outputs = self._model.forward_on_instance(instance)
-
-        words = outputs["words"]
-        pos = outputs["pos"]
-        heads = outputs["predicted_heads"]
-        tags = outputs["predicted_dependencies"]
-        outputs["hierplane_tree"] = self.build_hierplane_tree(words, heads, tags, pos)
-        return sanitize(outputs)
-
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
@@ -51,6 +41,17 @@ class BiaffineDependencyParserPredictor(Predictor):
         pos_tags = [token.tag_ for token in spacy_tokens]
         return self._dataset_reader.text_to_instance(sentence_text, pos_tags)
 
+
+    def predict_instance(self, instance: Instance) -> JsonDict:
+        outputs = self._model.forward_on_instance(instance)
+
+        words = outputs["words"]
+        pos = outputs["pos"]
+        heads = outputs["predicted_heads"]
+        tags = outputs["predicted_dependencies"]
+        outputs["hierplane_tree"] = self._build_hierplane_tree(words, heads, tags, pos)
+        return sanitize(outputs)
+
     @overrides
     def predict_batch_instance(self, instances: List[Instance]) -> List[JsonDict]:
         outputs = self._model.forward_on_instances(instances)
@@ -59,14 +60,14 @@ class BiaffineDependencyParserPredictor(Predictor):
             pos = outputs["pos"]
             heads = outputs["predicted_heads"]
             tags = outputs["predicted_dependencies"]
-            output["hierplane_tree"] = self.build_hierplane_tree(words, heads, tags, pos)
+            output["hierplane_tree"] = self._build_hierplane_tree(words, heads, tags, pos)
         return sanitize(outputs)
 
-    def build_hierplane_tree(self,
-                             words: List[str],
-                             heads: List[str],
-                             tags: List[str],
-                             pos: List[str]) -> Dict[str, Any]:
+    @staticmethod
+    def _build_hierplane_tree(words: List[str],
+                              heads: List[str],
+                              tags: List[str],
+                              pos: List[str]) -> Dict[str, Any]:
         """
         Returns
         -------
