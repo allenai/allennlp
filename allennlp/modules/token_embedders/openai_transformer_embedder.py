@@ -11,7 +11,9 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
     """
     Takes a byte-pair representation of a batch of sentences
     (as produced by the ``OpenaiTransformerBytePairIndexer``)
-    and generates the corresponding contextual embeddings.
+    and generates a `ScalarMix` of the corresponding contextual embeddings.
+
+
 
     Parameters
     ----------

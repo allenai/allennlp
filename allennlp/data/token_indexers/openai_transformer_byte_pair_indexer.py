@@ -15,6 +15,9 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer
 @TokenIndexer.register("openai_transformer_byte_pair")
 class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
     """
+    Generates the indices for the byte-pair encoding used by
+    the OpenAI transformer language model: https://blog.openai.com/language-unsupervised/
+
     This is unlike most of our TokenIndexers in that its
     indexing is not based on a `Vocabulary` but on a fixed
     set of mappings that are loaded by the constructor.
