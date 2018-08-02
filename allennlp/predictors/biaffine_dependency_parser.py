@@ -75,8 +75,8 @@ class BiaffineDependencyParserPredictor(Predictor):
         """
 
         parents_to_children: Dict[int, List[int]] = {}
-        for i in range(1, len(heads) + 1):
-            parents_to_children[i] = [child for child in heads if child == i]
+        for i in range(len(heads)):
+            parents_to_children[i] = [child for child in heads if child == i + 1]
 
         def node_constuctor(index: int):
             children = []
