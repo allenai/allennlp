@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 from overrides import overrides
 
 from allennlp.common.util import JsonDict, sanitize
@@ -73,6 +73,14 @@ class BiaffineDependencyParserPredictor(Predictor):
         -------
         A JSON dictionary render-able by Hierplane for the given tree.
         """
+
+        words_to_cumulative_indices: Dict[Tuple[int, int]] = {}
+        cumulative_index = 0
+        for word in words:
+            word_length = len(word) + 1
+            words_to_cumulative_indices[word] = (cumulative_index, cumulative_index + word_length)
+            cumulative_index += word_length
+
         def node_constuctor(index: int):
             children = []
             for next_index, child in enumerate(heads):
@@ -82,6 +90,7 @@ class BiaffineDependencyParserPredictor(Predictor):
             # These are the icons which show up in the bottom right
             # corner of the node.
             attributes = [pos[index]]
+            start, end = words_to_cumulative_indices[words[index]]
 
             hierplane_node = {
                     "word": words[index],
@@ -92,6 +101,7 @@ class BiaffineDependencyParserPredictor(Predictor):
                     "attributes": attributes,
                     # The link between  the node and it's parent.
                     "link": tags[index],
+                    "spans": [{"start": start, "end": end}]
             }
             if children:
                 hierplane_node["children"] = children
