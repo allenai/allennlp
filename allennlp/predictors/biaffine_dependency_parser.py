@@ -65,7 +65,7 @@ class BiaffineDependencyParserPredictor(Predictor):
 
     @staticmethod
     def _build_hierplane_tree(words: List[str],
-                              heads: List[str],
+                              heads: List[int],
                               tags: List[str],
                               pos: List[str]) -> Dict[str, Any]:
         """
