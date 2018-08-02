@@ -73,15 +73,11 @@ class BiaffineDependencyParserPredictor(Predictor):
         -------
         A JSON dictionary render-able by Hierplane for the given tree.
         """
-
-        parents_to_children: Dict[int, List[int]] = {}
-        for i in range(len(heads)):
-            parents_to_children[i] = [child for child in heads if child == i + 1]
-
         def node_constuctor(index: int):
             children = []
-            for child in parents_to_children[index]:
-                children.append(node_constuctor(child))
+            for next_index, child in enumerate(heads):
+                if child == index + 1:
+                    children.append(node_constuctor(next_index))
 
             # These are the icons which show up in the bottom right
             # corner of the node.
