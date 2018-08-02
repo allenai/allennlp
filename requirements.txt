@@ -51,6 +51,9 @@ gevent==1.3.5
 # Used by semantic parsing code to strip diacritics from unicode strings.
 unidecode
 
+# Used by semantic parsing code to parse SQL
+parsimonious==0.8.0
+
 #### LIBRARIES USED IN SCRIPTS ####
 # Used for downloading datasets over HTTP
 requests>=2.18

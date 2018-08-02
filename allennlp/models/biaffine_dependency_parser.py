@@ -1,5 +1,6 @@
 from typing import Dict, Optional, Tuple
 import logging
+import copy
 
 from overrides import overrides
 import torch
@@ -11,8 +12,9 @@ from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding, InputVariationalDropout
 from allennlp.modules.matrix_attention.bilinear_matrix_attention import BilinearMatrixAttention
+from allennlp.modules import FeedForward
 from allennlp.models.model import Model
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.nn import InitializerApplicator, RegularizerApplicator, Activation
 from allennlp.nn.util import get_text_field_mask, get_range_vector
 from allennlp.nn.util import get_device_of, last_dim_log_softmax, get_lengths_from_binary_sequence_mask
 from allennlp.nn.decoding.chu_liu_edmonds import decode_mst
@@ -51,6 +53,12 @@ class BiaffineDependencyParser(Model):
         The dimension of the MLPs used for dependency tag prediction.
     arc_representation_dim : ``int``, required.
         The dimension of the MLPs used for head arc prediction.
+    tag_feedforward : ``FeedForward``, optional, (default = None).
+        The feedforward network used to produce tag representations.
+        By default, a 1 layer feedforward network with an elu activation is used.
+    arc_feedforward : ``FeedForward``, optional, (default = None).
+        The feedforward network used to produce arc representations.
+        By default, a 1 layer feedforward network with an elu activation is used.
     pos_tag_embedding : ``Embedding``, optional.
         Used to embed the ``pos_tags`` ``SequenceLabelField`` we get as input to the model.
     use_mst_decoding_for_validation : ``bool``, optional (default = True).
@@ -71,6 +79,8 @@ class BiaffineDependencyParser(Model):
                  encoder: Seq2SeqEncoder,
                  tag_representation_dim: int,
                  arc_representation_dim: int,
+                 tag_feedforward: FeedForward = None,
+                 arc_feedforward: FeedForward = None,
                  pos_tag_embedding: Embedding = None,
                  use_mst_decoding_for_validation: bool = True,
                  dropout: float = 0.0,
@@ -83,15 +93,25 @@ class BiaffineDependencyParser(Model):
         self.encoder = encoder
 
         encoder_dim = encoder.get_output_dim()
-        self.head_arc_projection = torch.nn.Linear(encoder_dim, arc_representation_dim)
-        self.child_arc_projection = torch.nn.Linear(encoder_dim, arc_representation_dim)
+
+        self.head_arc_feedforward = arc_feedforward or \
+                                        FeedForward(encoder_dim, 1,
+                                                    arc_representation_dim,
+                                                    Activation.by_name("elu")())
+        self.child_arc_feedforward = copy.deepcopy(self.head_arc_feedforward)
+
         self.arc_attention = BilinearMatrixAttention(arc_representation_dim,
                                                      arc_representation_dim,
                                                      use_input_biases=True)
 
         num_labels = self.vocab.get_vocab_size("head_tags")
-        self.head_tag_projection = torch.nn.Linear(encoder_dim, tag_representation_dim)
-        self.child_tag_projection = torch.nn.Linear(encoder_dim, tag_representation_dim)
+
+        self.head_tag_feedforward = tag_feedforward or \
+                                        FeedForward(encoder_dim, 1,
+                                                    tag_representation_dim,
+                                                    Activation.by_name("elu")())
+        self.child_tag_feedforward = copy.deepcopy(self.head_tag_feedforward)
+
         self.tag_bilinear = torch.nn.modules.Bilinear(tag_representation_dim,
                                                       tag_representation_dim,
                                                       num_labels)
@@ -107,6 +127,11 @@ class BiaffineDependencyParser(Model):
 
         check_dimensions_match(representation_dim, encoder.get_input_dim(),
                                "text field embedding dim", "encoder input dim")
+
+        check_dimensions_match(tag_representation_dim, self.head_tag_feedforward.get_output_dim(),
+                               "tag representation dim", "tag feedforward output dim")
+        check_dimensions_match(arc_representation_dim, self.head_arc_feedforward.get_output_dim(),
+                               "arc representation dim", "arc feedforward output dim")
 
         self.use_mst_decoding_for_validation = use_mst_decoding_for_validation
 
@@ -194,12 +219,12 @@ class BiaffineDependencyParser(Model):
         encoded_text = self._dropout(encoded_text)
 
         # shape (batch_size, sequence_length, arc_representation_dim)
-        head_arc_representation = self._dropout(F.elu(self.head_arc_projection(encoded_text)))
-        child_arc_representation = self._dropout(F.elu(self.child_arc_projection(encoded_text)))
+        head_arc_representation = self._dropout(self.head_arc_feedforward(encoded_text))
+        child_arc_representation = self._dropout(self.child_arc_feedforward(encoded_text))
 
         # shape (batch_size, sequence_length, tag_representation_dim)
-        head_tag_representation = self._dropout(F.elu(self.head_tag_projection(encoded_text)))
-        child_tag_representation = self._dropout(F.elu(self.child_tag_projection(encoded_text)))
+        head_tag_representation = self._dropout(self.head_tag_feedforward(encoded_text))
+        child_tag_representation = self._dropout(self.child_tag_feedforward(encoded_text))
         # shape (batch_size, sequence_length, sequence_length)
         attended_arcs = self.arc_attention(head_arc_representation,
                                            child_arc_representation)
