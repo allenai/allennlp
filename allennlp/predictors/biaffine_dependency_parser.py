@@ -56,10 +56,10 @@ class BiaffineDependencyParserPredictor(Predictor):
     def predict_batch_instance(self, instances: List[Instance]) -> List[JsonDict]:
         outputs = self._model.forward_on_instances(instances)
         for output in outputs:
-            words = outputs["words"]
-            pos = outputs["pos"]
-            heads = outputs["predicted_heads"]
-            tags = outputs["predicted_dependencies"]
+            words = output["words"]
+            pos = output["pos"]
+            heads = output["predicted_heads"]
+            tags = output["predicted_dependencies"]
             output["hierplane_tree"] = self._build_hierplane_tree(words, heads, tags, pos)
         return sanitize(outputs)
 
@@ -73,7 +73,6 @@ class BiaffineDependencyParserPredictor(Predictor):
         -------
         A JSON dictionary render-able by Hierplane for the given tree.
         """
-
         def node_constuctor(words, heads, tags, pos, index: int):
             children = []
             for next_index, child in enumerate(heads):
@@ -81,9 +80,7 @@ class BiaffineDependencyParserPredictor(Predictor):
                     children.append(node_constuctor(words, heads, tags, pos, next_index))
 
             # These are the icons which show up in the bottom right
-            # corner of the node. We can add anything here,
-            # but for brevity we'll just add NER and a few
-            # other things.
+            # corner of the node.
             attributes = [pos[index]]
 
             hierplane_node = {
@@ -91,7 +88,7 @@ class BiaffineDependencyParserPredictor(Predictor):
                     # The type of the node - all nodes with the same
                     # type have a unified colour.
                     "nodeType": tags[index],
-                    # Attributes of the node, eg PERSON or "email".
+                    # Attributes of the node.
                     "attributes": attributes,
                     # The link between  the node and it's parent.
                     "link": tags[index],
@@ -99,7 +96,8 @@ class BiaffineDependencyParserPredictor(Predictor):
             if children:
                 hierplane_node["children"] = children
             return hierplane_node
-
+        # We are guaranteed that there is a single word pointing to
+        # the root index, so we can find it just by searching for 0 in the list.
         root_index = heads.index(0)
         hierplane_tree = {
                 "text": " ".join(words),
