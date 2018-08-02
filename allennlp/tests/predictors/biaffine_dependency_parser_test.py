@@ -37,7 +37,23 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
         assert result.get("loss") is not None
         assert result.get("arc_loss") is not None
         assert result.get("tag_loss") is not None
-
+        assert result.get("hierplane_tree") == {
+                'text': 'Please could you parse this sentence ?',
+                'root': {
+                        'word': 'Please',
+                        'nodeType': 'det',
+                        'attributes': ['UH'],
+                        'link': 'det',
+                        'children': [
+                                {'word': 'could', 'nodeType': 'nummod', 'attributes': ['MD'], 'link': 'nummod'},
+                                {'word': 'could', 'nodeType': 'nummod', 'attributes': ['MD'], 'link': 'nummod'},
+                                {'word': 'could', 'nodeType': 'nummod', 'attributes': ['MD'], 'link': 'nummod'},
+                                {'word': 'could', 'nodeType': 'nummod', 'attributes': ['MD'], 'link': 'nummod'},
+                                {'word': 'could', 'nodeType': 'nummod', 'attributes': ['MD'], 'link': 'nummod'},
+                                {'word': 'could', 'nodeType': 'nummod', 'attributes': ['MD'], 'link': 'nummod'}
+                                ]
+                        }
+                }
     def test_batch_prediction(self):
         inputs = [
                 {
