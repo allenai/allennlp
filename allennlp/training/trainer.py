@@ -166,6 +166,7 @@ class Trainer:
                  patience: Optional[int] = None,
                  validation_metric: str = "-loss",
                  validation_iterator: DataIterator = None,
+                 shuffle: bool = True,
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
                  num_serialized_models_to_keep: int = 20,
@@ -205,6 +206,8 @@ class Trainer:
         validation_iterator : ``DataIterator``, optional (default=None)
             An iterator to use for the validation set.  If ``None``, then
             use the training `iterator`.
+        shuffle: ``bool``, optional (default=True)
+            Whether to shuffle the instances in the iterator or not.
         num_epochs : int, optional (default = 20)
             Number of training epochs.
         serialization_dir : str, optional (default=None)
@@ -258,6 +261,7 @@ class Trainer:
         self._model = model
         self._iterator = iterator
         self._validation_iterator = validation_iterator
+        self._shuffle = shuffle
         self._optimizer = optimizer
         self._train_data = train_dataset
         self._validation_data = validation_dataset
@@ -453,6 +457,7 @@ class Trainer:
         # Get tqdm for the training batches
         train_generator = self._iterator(self._train_data,
                                          num_epochs=1,
+                                         shuffle=self._shuffle,
                                          cuda_device=self._iterator_device)
         num_training_batches = self._iterator.get_num_batches(self._train_data)
         self._last_log = time.time()
@@ -662,6 +667,7 @@ class Trainer:
 
         val_generator = val_iterator(self._validation_data,
                                      num_epochs=1,
+                                     shuffle=self._shuffle,
                                      cuda_device=self._iterator_device)
         num_validation_batches = val_iterator.get_num_batches(self._validation_data)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
