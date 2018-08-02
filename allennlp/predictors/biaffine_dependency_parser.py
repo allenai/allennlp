@@ -1,4 +1,5 @@
 from typing import Dict, Any, List, Tuple
+
 from overrides import overrides
 
 from allennlp.common.util import JsonDict, sanitize
@@ -7,6 +8,72 @@ from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
+# POS tags have a unified colour.
+NODE_TYPE_TO_STYLE = {}
+
+NODE_TYPE_TO_STYLE["root"] = ["color5", "strong"]
+NODE_TYPE_TO_STYLE["dep"] = ["color5", "strong"]
+
+# Arguments
+NODE_TYPE_TO_STYLE["nsubj"] = ["color1"]
+NODE_TYPE_TO_STYLE["nsubjpass"] = ["color1"]
+NODE_TYPE_TO_STYLE["csubj"] = ["color1"]
+NODE_TYPE_TO_STYLE["csubjpass"] = ["color1"]
+
+# Complements
+NODE_TYPE_TO_STYLE["pobj"] = ["color2"]
+NODE_TYPE_TO_STYLE["dobj"] = ["color2"]
+NODE_TYPE_TO_STYLE["iobj"] = ["color2"]
+NODE_TYPE_TO_STYLE["mark"] = ["color2"]
+NODE_TYPE_TO_STYLE["pcomp"] = ["color2"]
+NODE_TYPE_TO_STYLE["xcomp"] = ["color2"]
+NODE_TYPE_TO_STYLE["ccomp"] = ["color2"]
+NODE_TYPE_TO_STYLE["acomp"] = ["color2"]
+
+# Modifiers
+NODE_TYPE_TO_STYLE["aux"] = ["color3"]
+NODE_TYPE_TO_STYLE["cop"] = ["color3"]
+NODE_TYPE_TO_STYLE["det"] = ["color3"]
+NODE_TYPE_TO_STYLE["conj"] = ["color3"]
+NODE_TYPE_TO_STYLE["cc"] = ["color3"]
+NODE_TYPE_TO_STYLE["prep"] = ["color3"]
+NODE_TYPE_TO_STYLE["number"] = ["color3"]
+NODE_TYPE_TO_STYLE["possesive"] = ["color3"]
+NODE_TYPE_TO_STYLE["poss"] = ["color3"]
+NODE_TYPE_TO_STYLE["discourse"] = ["color3"]
+NODE_TYPE_TO_STYLE["expletive"] = ["color3"]
+NODE_TYPE_TO_STYLE["prt"] = ["color3"]
+NODE_TYPE_TO_STYLE["advcl"] = ["color3"]
+
+NODE_TYPE_TO_STYLE["mod"] = ["color4"]
+NODE_TYPE_TO_STYLE["amod"] = ["color4"]
+NODE_TYPE_TO_STYLE["tmod"] = ["color4"]
+NODE_TYPE_TO_STYLE["quantmod"] = ["color4"]
+NODE_TYPE_TO_STYLE["npadvmod"] = ["color4"]
+NODE_TYPE_TO_STYLE["infmod"] = ["color4"]
+NODE_TYPE_TO_STYLE["advmod"] = ["color4"]
+NODE_TYPE_TO_STYLE["appos"] = ["color4"]
+NODE_TYPE_TO_STYLE["nn"] = ["color4"]
+
+NODE_TYPE_TO_STYLE["neg"] = ["color0"]
+NODE_TYPE_TO_STYLE["punct"] = ["color0"]
+
+
+LINK_TO_POSITION = {}
+# Put subjects on the left
+LINK_TO_POSITION["nsubj"] = "left"
+LINK_TO_POSITION["nsubjpass"] = "left"
+LINK_TO_POSITION["csubj"] = "left"
+LINK_TO_POSITION["csubjpass"] = "left"
+
+# Put arguments and some clauses on the right
+LINK_TO_POSITION["pobj"] = "right"
+LINK_TO_POSITION["dobj"] = "right"
+LINK_TO_POSITION["iobj"] = "right"
+LINK_TO_POSITION["pcomp"] = "right"
+LINK_TO_POSITION["xcomp"] = "right"
+LINK_TO_POSITION["ccomp"] = "right"
+LINK_TO_POSITION["acomp"] = "right"
 
 @Predictor.register('biaffine-dependency-parser')
 class BiaffineDependencyParserPredictor(Predictor):
@@ -74,11 +141,11 @@ class BiaffineDependencyParserPredictor(Predictor):
         A JSON dictionary render-able by Hierplane for the given tree.
         """
 
-        words_to_cumulative_indices: Dict[Tuple[int, int]] = {}
+        word_index_to_cumulative_indices: Dict[int, Tuple[int, int]] = {}
         cumulative_index = 0
-        for word in words:
+        for i, word in enumerate(words):
             word_length = len(word) + 1
-            words_to_cumulative_indices[word] = (cumulative_index, cumulative_index + word_length)
+            word_index_to_cumulative_indices[i] = (cumulative_index, cumulative_index + word_length)
             cumulative_index += word_length
 
         def node_constuctor(index: int):
@@ -90,7 +157,7 @@ class BiaffineDependencyParserPredictor(Predictor):
             # These are the icons which show up in the bottom right
             # corner of the node.
             attributes = [pos[index]]
-            start, end = words_to_cumulative_indices[words[index]]
+            start, end = word_index_to_cumulative_indices[index]
 
             hierplane_node = {
                     "word": words[index],
@@ -111,6 +178,8 @@ class BiaffineDependencyParserPredictor(Predictor):
         root_index = heads.index(0)
         hierplane_tree = {
                 "text": " ".join(words),
-                "root": node_constuctor(root_index)
+                "root": node_constuctor(root_index),
+                "nodeTypeToStyle": NODE_TYPE_TO_STYLE,
+                "linkToPosition": LINK_TO_POSITION
         }
         return hierplane_tree
