@@ -90,10 +90,12 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         tokens = TextField([Token(w) for w in words], self._token_indexers)
         fields["words"] = tokens
         fields["pos_tags"] = SequenceLabelField(upos_tags, tokens, label_namespace="pos")
-        fields["head_tags"] = SequenceLabelField([x[0] for x in dependencies],
-                                                 tokens,
-                                                 label_namespace="head_tags")
         if dependencies is not None:
+            # We don't want to expand the label namespace with an additional dummy token, so we'll
+            # always give the 'ROOT_HEAD' token a label of 'root'.
+            fields["head_tags"] = SequenceLabelField([x[0] for x in dependencies],
+                                                     tokens,
+                                                     label_namespace="head_tags")
             fields["head_indices"] = SequenceLabelField([int(x[1]) for x in dependencies],
                                                         tokens,
                                                         label_namespace="head_index_tags")

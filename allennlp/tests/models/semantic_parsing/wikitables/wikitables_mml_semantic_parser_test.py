@@ -1,6 +1,7 @@
 # pylint: disable=invalid-name,no-self-use,protected-access
 from collections import namedtuple
 import os
+import pytest
 
 from flaky import flaky
 from numpy.testing import assert_almost_equal
@@ -11,6 +12,7 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.models import Model, WikiTablesMmlSemanticParser
 from allennlp.training.metrics.wikitables_accuracy import SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH
 
+@pytest.mark.java
 class WikiTablesMmlSemanticParserTest(ModelTestCase):
     def setUp(self):
         self.should_remove_sempre_abbreviations = not os.path.exists(SEMPRE_ABBREVIATIONS_PATH)

@@ -191,7 +191,8 @@ class TestEncoderBase(AllenNlpTestCase):
         # A transposition will make the tensors non-contiguous, start them off at the wrong shape
         # and transpose them into the right shape.
         encoder_base = _EncoderBase(stateful=False)
-        initial_states = (torch.randn(5, 6, 7).t(), torch.randn(5, 6, 7).t())
+        initial_states = (torch.randn(5, 6, 7).permute(1, 0, 2),
+                          torch.randn(5, 6, 7).permute(1, 0, 2))
         assert not initial_states[0].is_contiguous() and not initial_states[1].is_contiguous()
         assert initial_states[0].size() == torch.Size([6, 5, 7])
         assert initial_states[1].size() == torch.Size([6, 5, 7])

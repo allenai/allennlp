@@ -6,7 +6,7 @@ class BiaffineDependencyParserTest(ModelTestCase):
 
     def setUp(self):
         super(BiaffineDependencyParserTest, self).setUp()
-        self.set_up_model(self.FIXTURES_ROOT / "dependency_parser" / "experiment.json",
+        self.set_up_model(self.FIXTURES_ROOT / "biaffine_dependency_parser" / "experiment.json",
                           self.FIXTURES_ROOT / "data" / "dependencies.conllu")
 
     def test_dependency_parser_can_save_and_load(self):
