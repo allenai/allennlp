@@ -1,5 +1,8 @@
+import numpy
+import pprint as pp 
+
 from copy import deepcopy
-from typing import List, Dict
+from typing import List, Dict, Tuple, Set
 
 from parsimonious.grammar import Grammar
 
@@ -27,34 +30,74 @@ class AtisWorld():
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]
-        self.valid_actions: Dict[str, List[str]] = self.init_all_valid_actions()
+        valid_actions, linking_scores = self.init_all_valid_actions()
+        self.valid_actions: Dict[str, List[str]] = valid_actions 
+
+        # This is shape (number_entities, number_utterance_tokens)
+        self.linking_scores: numpy.ndarray = linking_scores
+        print(linking_scores)
         self.grammar_str: str = self.get_grammar_str()
         self.grammar_with_context: Grammar = Grammar(self.grammar_str)
 
     def get_valid_actions(self) -> Dict[str, List[str]]:
         return self.valid_actions
 
-    def init_all_valid_actions(self) -> Dict[str, List[str]]:
+    def init_all_valid_actions(self) -> Tuple[Dict[str, List[str]], numpy.ndarray]:
         """
-        We initialize the world's valid actions with that of the context. This means that the strings
-        and numbers that were valid earlier in the interaction are also valid. We then add new valid strings
-        and numbers from the current utterance.
+        We initialize the valid actions with the global actions. We then iterate through the
+        utterances up to and including the current utterance and add the valid strings.
         """
+        linking_scores = []
+
         valid_actions = deepcopy(self.sql_table_context.valid_actions)
-        for string in self.get_strings_from_utterance():
+        strings: Set[str] = set()
+        for tokenized_utterance in self.tokenized_utterances:
+            string_linking_dict = self.get_strings_from_utterance(tokenized_utterance)
+            strings = strings.union(set(string_linking_dict.keys()))
+
+        strings_list: List[str] = sorted(strings, reverse=True)
+
+        string_linking_scores = []
+        for string in strings_list:
+            entity_linking = [0 for i in range(len(tokenized_utterance))]
+            if string in string_linking_dict:
+                for idx in string_linking_dict[string]:
+                    entity_linking[idx] = 1
+            string_linking_scores.append(entity_linking)
+
+        linking_scores.extend(string_linking_scores)
+
+        for string in strings_list: 
             action = format_action('string', string)
             if action not in valid_actions['string']:
                 valid_actions['string'].append(action)
 
-        numbers = ['0', '1']
-        for utterance in self.utterances:
-            numbers.extend(get_numbers_from_utterance(utterance))
-            for number in numbers:
-                action = format_action('number', number)
-                if action not in valid_actions['number']:
-                    valid_actions['number'].append(action)
+        
+        numbers = {'0', '1'}
+        number_linking_dict: Dict[str, List[int]] = {}
+        num_tokens = 0
 
-        return valid_actions
+        for idx, (utterance, tokenized_utterance) in enumerate(zip(self.utterances, self.tokenized_utterances)):
+            number_linking_dict = get_numbers_from_utterance(utterance, tokenized_utterance)
+            numbers = numbers.union(set(number_linking_dict.keys()))
+            num_tokens = len(tokenized_utterance)
+        numbers_list: List[str] = sorted(numbers, reverse=True)
+
+        # We construct the linking scores here.
+        number_linking_scores = []
+        for number in sorted(numbers_list, reverse=True):
+            entity_linking = [0 for i in range(num_tokens)]
+            if number in number_linking_dict:
+                for idx in number_linking_dict[number]:
+                    entity_linking[idx] = 1
+            number_linking_scores.append(entity_linking)
+        
+        linking_scores.extend(number_linking_scores)
+        for number in list(numbers_list):
+            action = format_action('number', number)
+            valid_actions['number'].append(action)
+        
+        return valid_actions, numpy.array(linking_scores)
 
     def get_grammar_str(self) -> str:
         """
@@ -72,23 +115,30 @@ class AtisWorld():
         return grammar_str_with_context
 
 
-    def get_strings_from_utterance(self) -> List[str]:
+    def get_strings_from_utterance(self, tokenized_utterance) -> Dict[str, List[int]]:
         """
         Based on the current utterance, return a list of valid strings that should be added.
         """
-        strings: List[str] = []
+        string_linking_scores: Dict[str, List[int]] = defaultdict(list)
+        
+        for idx, (first_token, second_token) in enumerate(zip(tokenized_utterance, tokenized_utterance[1:])):
+            for string in ATIS_TRIGGER_DICT.get(first_token.text.lower(), []):
+                string_linking_scores[string].append(idx)
 
-        for tokenized_utterance in self.tokenized_utterances:
-            for first_token, second_token in zip(tokenized_utterance, tokenized_utterance[1:]):
-                strings.extend(ATIS_TRIGGER_DICT.get(first_token.text.lower(), []))
-                bigram = f"{first_token.text} {second_token.text}".lower()
-                strings.extend(ATIS_TRIGGER_DICT.get(bigram, []))
-            strings.extend(ATIS_TRIGGER_DICT.get(tokenized_utterance[-1].text.lower(), []))
-            date = get_date_from_utterance(tokenized_utterance)
-            if date:
-                strings.extend(DAY_OF_WEEK_INDEX.get(date.weekday(), []))
+            bigram = f"{first_token.text} {second_token.text}".lower()
+            for string in ATIS_TRIGGER_DICT.get(bigram, []): 
+                string_linking_scores[string].extend([idx, idx + 1])
+        
+        if tokenized_utterance[-1].text.lower() in ATIS_TRIGGER_DICT:
+            for string in ATIS_TRIGGER_DICT[tokenized_utterance[-1].text.lower()]:
+                string_linking_scores[string].append(len(tokenized_utterance)-1)
 
-        return strings
+        date = get_date_from_utterance(tokenized_utterance)
+        if date:
+            for day in DAY_OF_WEEK_INDEX[date.weekday()]:
+                string_linking_scores[day] = []
+
+        return string_linking_scores
 
     def get_action_sequence(self, query: str) -> List[str]:
         sql_visitor = SqlVisitor(self.grammar_with_context)
@@ -107,3 +157,11 @@ class AtisWorld():
             for action in action_list:
                 all_actions.add(action)
         return sorted(all_actions)
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return (self.valid_actions == other.valid_actions and  
+                   numpy.array_equal(self.linking_scores, other.linking_scores) and
+                   self.utterances ==  other.utterances and
+                   self.grammar_str == other.grammar_str)
+        return False  
