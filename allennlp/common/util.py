@@ -8,10 +8,15 @@ import importlib
 import logging
 import pkgutil
 import random
-import resource
 import subprocess
 import sys
 import os
+
+try:
+    import resource
+except ImportError:
+    # resource doesn't exist on Windows systems
+    resource = None
 
 import torch
 import numpy
@@ -283,7 +288,7 @@ def peak_memory_mb() -> float:
 
     Only works on OSX and Linux, returns 0.0 otherwise.
     """
-    if sys.platform not in ('linux', 'darwin'):
+    if resource is None or sys.platform not in ('linux', 'darwin'):
         return 0.0
 
     # TODO(joelgrus): For whatever, our pinned version 0.521 of mypy does not like
