@@ -110,7 +110,9 @@ class Event2Mind(Model):
            target tokens are also represented as a ``TextField``.
         """
         # (batch_size, input_sequence_length, encoder_output_dim)
+        # TODO(brendanr): Revisit dropout.
         #embedded_input = self._embedding_dropout(self._source_embedder(source_tokens))
+        # TODO(brendanr): Hack the embeddings here like initWEmb in modeling/utils/preprocess.py?
         embedded_input = self._source_embedder(source_tokens)
         batch_size, _, _ = embedded_input.size()
         source_mask = get_text_field_mask(source_tokens)
@@ -335,6 +337,20 @@ class Event2Mind(Model):
         loss = sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask)
         return loss
 
+    def decode_all(self, predicted_indices: torch.Tensor):
+        if not isinstance(predicted_indices, numpy.ndarray):
+            predicted_indices = predicted_indices.detach().cpu().numpy()
+        all_predicted_tokens = []
+        for indices in predicted_indices:
+            indices = list(indices)
+            # Collect indices till the first end_symbol
+            if self._end_index in indices:
+                indices = indices[:indices.index(self._end_index)]
+            predicted_tokens = [self.vocab.get_token_from_index(x, namespace=self._target_namespace)
+                                for x in indices]
+            all_predicted_tokens.append(predicted_tokens)
+        return all_predicted_tokens
+
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
@@ -345,21 +361,11 @@ class Event2Mind(Model):
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
         """
-        print(output_dict)
         predicted_indices = output_dict["predictions"]
-        if not isinstance(predicted_indices, numpy.ndarray):
-            predicted_indices = predicted_indices.detach().cpu().numpy()
-        all_predicted_tokens = []
-        for indices in predicted_indices:
-            print(indices)
-            indices = list(indices)
-            # Collect indices till the first end_symbol
-            if self._end_index in indices:
-                indices = indices[:indices.index(self._end_index)]
-            predicted_tokens = [self.vocab.get_token_from_index(x, namespace=self._target_namespace)
-                                for x in indices]
-            all_predicted_tokens.append(predicted_tokens)
-        output_dict["predicted_tokens"] = all_predicted_tokens
+        output_dict["predicted_tokens"] = self.decode_all(predicted_indices)
+        top_k_predicted_indices = output_dict["top_k_predictions"][0]
+        # TODO(brendanr): Figure out why this needs to be wrapped in an extra list.
+        output_dict["top_k_predicted_tokens"] = [self.decode_all(top_k_predicted_indices)]
         return output_dict
 
     @overrides
