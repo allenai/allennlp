@@ -12,16 +12,21 @@ AROUND_RANGE = 30
 
 APPROX_WORDS = ['about', 'around', 'approximately']
 
-def get_approx_times(times: List[int]) -> List[int]:
-    around_times = []
+def get_approximate_times(times: List[int]) -> List[int]:
+    """
+    Given a list of times that follow a word such as ``about``,
+    we return a list of times that could appear in the query as a result
+    of this. For example if ``about 7pm`` appears in the utterance, then
+    we also want to add ``1830`` and ``1930``.
+    """
+    approximate_times = []
     for time in times:
-        around_times.append((time + AROUND_RANGE) % HOURS_IN_DAY)
-        around_times.append((time - HOUR_TO_TWENTY_FOUR + AROUND_RANGE) % HOURS_IN_DAY)
-    return around_times
+        approximate_times.append((time + AROUND_RANGE) % HOURS_IN_DAY)
+        approximate_times.append((time - HOUR_TO_TWENTY_FOUR + AROUND_RANGE) % HOURS_IN_DAY)
+    return approximate_times
 
 def get_regex_match(regex: str,
                     utterance: str,
-                    tokenized_utterance: List[Token],
                     char_offset_to_token_index: Dict[int, int],
                     map_match_to_query_value: Callable[[str], List[int]],
                     approx_indices: List[int]) -> Dict[str, List[int]]:
@@ -35,40 +40,48 @@ def get_regex_match(regex: str,
     number_regex = re.compile(regex)
     for match in number_regex.finditer(utterance):
         query_values = map_match_to_query_value(match.group())
-
         # If the time appears after a word like ``about`` then we also add
-        # the times that mark the start and end of the allowed range. 
-        approx_times = []
+        # the times that mark the start and end of the allowed range.
+        approximate_times = []
         if char_offset_to_token_index.get(match.start(), 0) - 1 in approx_indices:
-            approx_times.extend(get_approx_times(query_values))
-
-        query_values.extend(approx_times)
+            approximate_times.extend(get_approximate_times(query_values))
+        query_values.extend(approximate_times)
         for query_value in query_values:
             if match.start() in char_offset_to_token_index:
                 linking_scores_dict[str(query_value)].append(char_offset_to_token_index[match.start()])
-    return linking_scores_dict 
+    return linking_scores_dict
 
 def get_times_from_utterance(utterance: str,
-                             tokenized_utterance: List[Token],
                              char_offset_to_token_index: Dict[int, int],
                              approx_indices: List[int]) -> Dict[str, List[int]]:
     """
-    Given an utterance, get the numbers that correspond to times and convert time
-    for example: convert ``7pm`` to 1900
+    Given an utterance, we get the numbers that correspond to times and convert time
+    for example: convert ``7pm`` to ``1900``.
     """
 
-    pm_linking_dict = get_regex_match(r'\d+pm', utterance, tokenized_utterance,
-            char_offset_to_token_index,
-            lambda match : [int(match.rstrip('pm')) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR], approx_indices)
+    pm_linking_dict = get_regex_match(r'\d+pm',
+                                      utterance,
+                                      char_offset_to_token_index,
+                                      lambda match: [int(match.rstrip('pm')) \
+                                                      * HOUR_TO_TWENTY_FOUR + \
+                                                      TWELVE_TO_TWENTY_FOUR],
+                                      approx_indices)
 
-    am_linking_dict =  get_regex_match(r'\d+am', utterance, tokenized_utterance,
-            char_offset_to_token_index,
-            lambda match : [int(match.rstrip('am')) * HOUR_TO_TWENTY_FOUR], approx_indices)
+    am_linking_dict = get_regex_match(r'\d+am',
+                                      utterance,
+                                      char_offset_to_token_index,
+                                      lambda match: [int(match.rstrip('am')) \
+                                                      * HOUR_TO_TWENTY_FOUR],
+                                      approx_indices)
 
-    oclock_linking_dict =  get_regex_match(r"\d+\so'clock", utterance, tokenized_utterance,
-            char_offset_to_token_index,
-            lambda match : [int(match.rstrip("o'clock")) * HOUR_TO_TWENTY_FOUR,
-                            (int(match.rstrip("o'clock")) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR) % HOURS_IN_DAY], approx_indices)
+    oclock_linking_dict = get_regex_match(r"\d+\so'clock",
+                                          utterance,
+                                          char_offset_to_token_index,
+                                          lambda match: [int(match.rstrip("o'clock")) \
+                                                         * HOUR_TO_TWENTY_FOUR,
+                                                         (int(match.rstrip("o'clock")) * HOUR_TO_TWENTY_FOUR + \
+                                                          TWELVE_TO_TWENTY_FOUR) % HOURS_IN_DAY],
+                                          approx_indices)
 
     times_linking_dict: Dict[str, List[int]] = defaultdict(list)
     linking_dicts = [pm_linking_dict, am_linking_dict, oclock_linking_dict]
@@ -76,9 +89,9 @@ def get_times_from_utterance(utterance: str,
     # Merge each of these into one dict
     for linking_dict in linking_dicts:
         for key, value in linking_dict.items():
-            times_linking_dict[key].extend(linking_dict.get(key, []))
+            times_linking_dict[key].extend(value)
 
-    return times_linking_dict 
+    return times_linking_dict
 
 def get_date_from_utterance(tokenized_utterance: List[Token],
                             year: int = 1993,
@@ -110,7 +123,9 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
 
 def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     """
-    Given an utterance, find all the numbers that are in the action space.
+    Given an utterance, this function finds all the numbers that are in the action space. Since we need to
+    keep track of linking scores, we represent the numbers as a dictionary, where the keys are the string
+    representation of the number and the values are lists of the token indices that triggers that number.
     """
 
     # When we use a regex to find numbers or strings, we need a mapping from
@@ -121,18 +136,18 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
     # We want to look up later for each time whether it appears after a word
     # such as "about" or "approximately".
     approx_indices = [idx for idx, token in enumerate(tokenized_utterance) if token.text in APPROX_WORDS]
-    
-    number_linking_dict = get_regex_match(r'\d+', utterance, tokenized_utterance,
-            char_offset_to_token_index,
-            lambda match : [int(match)], approx_indices)
+    number_linking_dict = get_regex_match(r'\d+',
+                                          utterance,
+                                          char_offset_to_token_index,
+                                          lambda match: [int(match)],
+                                          approx_indices)
 
     times_linking_dict = get_times_from_utterance(utterance,
-                             tokenized_utterance,
-                             char_offset_to_token_index,
-                             approx_indices)
+                                                  char_offset_to_token_index,
+                                                  approx_indices)
 
     for key, value in times_linking_dict.items():
-        number_linking_dict[key].extend(times_linking_dict.get(key, []))
+        number_linking_dict[key].extend(value)
 
     for idx, token in enumerate(tokenized_utterance):
         if token.text in MONTH_NUMBERS:
@@ -142,14 +157,13 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
         if token.text in MISC_TIME_TRIGGERS:
             for time in MISC_TIME_TRIGGERS[token.text]:
                 number_linking_dict[time].append(idx)
-            
     for tens, digits in zip(tokenized_utterance, tokenized_utterance[1:]):
         bigram = ' '.join([tens.text, digits.text])
         if bigram in DAY_NUMBERS:
-            number_linking_dict[str(DAY_NUMBERS[bigram])].append(idx)
+            number_linking_dict[str(DAY_NUMBERS[bigram])].append(len(tokenized_utterance) - 1)
 
     return number_linking_dict
-    
+
 def get_trigger_dict(trigger_lists: List[List[str]],
                      trigger_dicts: List[Dict[str, List[str]]]) -> Dict[str, List[str]]:
     merged_trigger_dict: Dict[str, List[str]] = defaultdict(list)

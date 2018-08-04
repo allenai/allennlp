@@ -2,22 +2,19 @@ import json
 from typing import Dict, List
 import logging
 
-from copy import deepcopy
 from overrides import overrides
 from parsimonious.exceptions import ParseError
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, ArrayField, ListField, IndexField, ProductionRuleField, TextField, MetadataField
+from allennlp.data.fields import Field, ArrayField, ListField, IndexField, \
+        ProductionRuleField, TextField, MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
 from allennlp.semparse.worlds.atis_world import AtisWorld
-from allennlp.semparse.worlds.world import ParsingError
-from parsimonious.exceptions import ParseError
-
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -56,9 +53,9 @@ class AtisDatasetReader(DatasetReader):
             logger.info("Reading ATIS instances from dataset at : %s", file_path)
             for line in lazy_parse(atis_file.read()):
                 utterances = []
-                for current_idx, current_interaction in enumerate(line['interaction']):
+                for current_interaction in line['interaction']:
                     nl_key = 'utterance'
-                    if nl_key not in current_interaction: 
+                    if nl_key not in current_interaction:
                         nl_key = 'nl_with_dates'
 
                     utterances.append(current_interaction[nl_key])
@@ -66,10 +63,8 @@ class AtisDatasetReader(DatasetReader):
 
                     try:
                         action_sequence = world.get_action_sequence(current_interaction['sql'])
-                        
-                    except ParseError as error:
-                        # logger.debug(f'Parsing error: {error.message}')
-                        logger.debug(f'Parsing error: ')
+                    except ParseError:
+                        logger.debug(f'Parsing error')
                         continue
 
                     instance = self.text_to_instance(current_interaction[nl_key], action_sequence, world)
@@ -117,16 +112,14 @@ class AtisDatasetReader(DatasetReader):
         if not action_sequence:
             return None
 
-        action_sequence_field = ListField(index_fields)
+        action_sequence_field: List[Field] = []
+        action_sequence_field.append(ListField(index_fields))
 
         world_field = MetadataField(world)
-        
-
         fields = {'utterance' : utterance_field,
                   'actions' : action_field,
                   'world' : world_field,
-                  'target_action_sequence' : action_sequence_field, 
-                  'linking_scores' : ArrayField(world.linking_scores)
-                  }
+                  'target_action_sequence' : ListField(action_sequence_field), 
+                  'linking_scores' : ArrayField(world.linking_scores)}
 
         return Instance(fields)

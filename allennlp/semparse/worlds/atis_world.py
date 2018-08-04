@@ -1,8 +1,6 @@
-import numpy
-import pprint as pp 
-
 from copy import deepcopy
 from typing import List, Dict, Tuple, Set
+import numpy
 
 from parsimonious.grammar import Grammar
 
@@ -31,7 +29,7 @@ class AtisWorld():
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]
         valid_actions, linking_scores = self.init_all_valid_actions()
-        self.valid_actions: Dict[str, List[str]] = valid_actions 
+        self.valid_actions: Dict[str, List[str]] = valid_actions
 
         # This is shape (number_entities, number_utterance_tokens)
         self.linking_scores: numpy.ndarray = linking_scores
@@ -67,12 +65,11 @@ class AtisWorld():
 
         linking_scores.extend(string_linking_scores)
 
-        for string in strings_list: 
+        for string in strings_list:
             action = format_action('string', string)
             if action not in valid_actions['string']:
                 valid_actions['string'].append(action)
 
-        
         numbers = {'0', '1'}
         number_linking_dict: Dict[str, List[int]] = {}
         num_tokens = 0
@@ -91,12 +88,10 @@ class AtisWorld():
                 for idx in number_linking_dict[number]:
                     entity_linking[idx] = 1
             number_linking_scores.append(entity_linking)
-        
         linking_scores.extend(number_linking_scores)
         for number in list(numbers_list):
             action = format_action('number', number)
             valid_actions['number'].append(action)
-        
         return valid_actions, numpy.array(linking_scores)
 
     def get_grammar_str(self) -> str:
@@ -120,15 +115,14 @@ class AtisWorld():
         Based on the current utterance, return a list of valid strings that should be added.
         """
         string_linking_scores: Dict[str, List[int]] = defaultdict(list)
-        
         for idx, (first_token, second_token) in enumerate(zip(tokenized_utterance, tokenized_utterance[1:])):
             for string in ATIS_TRIGGER_DICT.get(first_token.text.lower(), []):
                 string_linking_scores[string].append(idx)
 
             bigram = f"{first_token.text} {second_token.text}".lower()
-            for string in ATIS_TRIGGER_DICT.get(bigram, []): 
+            for string in ATIS_TRIGGER_DICT.get(bigram, []):
                 string_linking_scores[string].extend([idx, idx + 1])
-        
+
         if tokenized_utterance[-1].text.lower() in ATIS_TRIGGER_DICT:
             for string in ATIS_TRIGGER_DICT[tokenized_utterance[-1].text.lower()]:
                 string_linking_scores[string].append(len(tokenized_utterance)-1)
@@ -160,8 +154,8 @@ class AtisWorld():
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
-            return (self.valid_actions == other.valid_actions and  
-                   numpy.array_equal(self.linking_scores, other.linking_scores) and
-                   self.utterances ==  other.utterances and
-                   self.grammar_str == other.grammar_str)
-        return False  
+            return (self.valid_actions == other.valid_actions and
+                    numpy.array_equal(self.linking_scores, other.linking_scores) and
+                    self.utterances == other.utterances and
+                    self.grammar_str == other.grammar_str)
+        return False
