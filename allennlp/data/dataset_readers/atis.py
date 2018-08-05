@@ -103,7 +103,7 @@ class AtisDatasetReader(DatasetReader):
 
         action_field = ListField(production_rule_fields)
         action_map = {action.rule.replace(" ws", "").replace("ws ", "") : i # type: ignore
-                      for i, action in enumerate(action_field.field_list)}  
+                      for i, action in enumerate(action_field.field_list)}
         index_fields: List[Field] = []
 
         for production_rule in action_sequence:
@@ -119,7 +119,7 @@ class AtisDatasetReader(DatasetReader):
         fields = {'utterance' : utterance_field,
                   'actions' : action_field,
                   'world' : world_field,
-                  'target_action_sequence' : ListField(action_sequence_field), 
+                  'target_action_sequence' : ListField(action_sequence_field),
                   'linking_scores' : ArrayField(world.linking_scores)}
 
         return Instance(fields)
