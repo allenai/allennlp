@@ -365,33 +365,3 @@ class BidafPlusSelfAttentionBits(Model):
             best_word_span[b,2] = int(yn)
 
         return best_word_span
-
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidirectionalAttentionFlow':
-        embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-        phrase_layer = Seq2SeqEncoder.from_params(params.pop("phrase_layer"))
-        residual_encoder = Seq2SeqEncoder.from_params(params.pop("residual_encoder"))
-        span_start_encoder = Seq2SeqEncoder.from_params(params.pop("span_start_encoder"))
-        span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
-        initializer = InitializerApplicator.from_params(params.pop("initializer", []))
-        dropout = params.pop('dropout', 0.2)
-        outfile = params.pop('outfile', None)
-
-        # TODO: Remove the following when fully deprecated
-        evaluation_json_file = params.pop('evaluation_json_file', None)
-        if evaluation_json_file is not None:
-            logger.warning("the 'evaluation_json_file' model parameter is deprecated, please remove")
-
-        mask_lstms = params.pop('mask_lstms', True)
-        params.assert_empty(cls.__name__)
-        return cls(vocab=vocab,
-                   text_field_embedder=text_field_embedder,
-                   phrase_layer=phrase_layer,
-                   residual_encoder=residual_encoder,
-                   span_start_encoder=span_start_encoder,
-                   span_end_encoder=span_end_encoder,
-                   initializer=initializer,
-                   dropout=dropout,
-                   mask_lstms=mask_lstms,
-                   outfile = outfile)
