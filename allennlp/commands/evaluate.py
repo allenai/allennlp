@@ -94,7 +94,10 @@ def evaluate(model: Model,
     with torch.no_grad():
         model.eval()
 
-        iterator = data_iterator(instances, num_epochs=1, cuda_device=cuda_device)
+        iterator = data_iterator(instances,
+                                 num_epochs=1,
+                                 shuffle=False,
+                                 cuda_device=cuda_device)
         logger.info("Iterating over dataset")
         generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
         for batch in generator_tqdm:
