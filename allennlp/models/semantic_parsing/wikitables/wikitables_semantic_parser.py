@@ -101,10 +101,8 @@ class WikiTablesSemanticParser(Model):
         self._action_padding_index = -1  # the padding value used by IndexField
         num_actions = vocab.get_vocab_size(self._rule_namespace)
         if self._add_action_bias:
-            input_action_dim = action_embedding_dim + 1
-        else:
-            input_action_dim = action_embedding_dim
-        self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=input_action_dim)
+            self._action_biases = Embedding(num_embeddings=num_actions, embedding_dim=1)
+        self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
         self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
 
 
@@ -573,6 +571,9 @@ class WikiTablesSemanticParser(Model):
             global_action_tensors, global_action_ids = zip(*global_actions)
             global_action_tensor = torch.cat(global_action_tensors, dim=0)
             global_input_embeddings = self._action_embedder(global_action_tensor)
+            if self._add_action_bias:
+                global_action_biases = self._action_biases(global_action_tensor)
+                global_input_embeddings = torch.cat([global_input_embeddings, global_action_biases], dim=-1)
             global_output_embeddings = self._output_action_embedder(global_action_tensor)
             translated_valid_actions[key]['global'] = (global_input_embeddings,
                                                        global_output_embeddings,
@@ -596,6 +597,9 @@ class WikiTablesSemanticParser(Model):
         for action_id, action in enumerate(possible_actions):
             if action[0].endswith(" -> x"):
                 input_embedding = self._action_embedder(action[2])
+                if self._add_action_bias:
+                    input_bias = self._action_biases(action[2])
+                    input_embedding = torch.cat([input_embedding, input_bias], dim=-1)
                 output_embedding = self._output_action_embedder(action[2])
                 context_actions[action[0]] = (input_embedding, output_embedding, action_id)
 
