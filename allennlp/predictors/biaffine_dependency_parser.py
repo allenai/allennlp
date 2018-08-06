@@ -108,7 +108,7 @@ class BiaffineDependencyParserPredictor(Predictor):
         pos_tags = [token.tag_ for token in spacy_tokens]
         return self._dataset_reader.text_to_instance(sentence_text, pos_tags)
 
-
+    @overrides
     def predict_instance(self, instance: Instance) -> JsonDict:
         outputs = self._model.forward_on_instance(instance)
 
