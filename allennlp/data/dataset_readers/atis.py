@@ -54,9 +54,7 @@ class AtisDatasetReader(DatasetReader):
             for line in lazy_parse(atis_file.read()):
                 utterances = []
                 for current_interaction in line['interaction']:
-                    nl_key = 'utterance'
-                    if nl_key not in current_interaction:
-                        nl_key = 'nl_with_dates'
+                    nl_key = 'utterance' if 'utterance' in current_interaction else 'nl_with_dates'
 
                     utterances.append(current_interaction[nl_key])
                     world = AtisWorld(utterances)
@@ -87,8 +85,7 @@ class AtisDatasetReader(DatasetReader):
         action_sequence: ``List[str]``, required.
             List of actions for the utterance
         world: ``AtisWorld``
-            The world in which this utterance appears in, we take the valid actions
-            from the world and save it as a MetadataField in the instance.
+            The world in which this utterance appears in, we store this in a MetadataField.
         """
         tokenized_utterance = self._tokenizer.tokenize(utterance.lower())
         utterance_field = TextField(tokenized_utterance, self._token_indexers)

@@ -54,7 +54,7 @@ class AtisWorld():
         valid_actions, linking_scores = self.init_all_valid_actions()
         self.valid_actions: Dict[str, List[str]] = valid_actions
 
-        # This is shape (number_entities, number_utterance_tokens)
+        # This has shape (number_entities, number_utterance_tokens).
         self.linking_scores: numpy.ndarray = linking_scores
         self.grammar_str: str = self.get_grammar_str()
         self.grammar_with_context: Grammar = Grammar(self.grammar_str)
@@ -70,7 +70,8 @@ class AtisWorld():
 
         valid_actions = deepcopy(self.sql_table_context.valid_actions)
         linking_scores = []
-        current_tokenized_utterance = self.tokenized_utterances[-1]
+        current_tokenized_utterance = [] if not self.tokenized_utterances \
+                else self.tokenized_utterances[-1]
 
         strings: Set[str] = set()
         for tokenized_utterance in self.tokenized_utterances:
