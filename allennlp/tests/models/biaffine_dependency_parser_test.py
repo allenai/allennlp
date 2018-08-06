@@ -29,4 +29,5 @@ class BiaffineDependencyParserTest(ModelTestCase):
 
         assert set(decode_output_dict.keys()) == set(['heads', 'head_tags', 'arc_loss',
                                                       'tag_loss', 'loss', 'mask',
-                                                      'predicted_dependencies', 'predicted_heads'])
+                                                      'predicted_dependencies', 'predicted_heads',
+                                                      'words', 'pos'])

@@ -38,6 +38,31 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
         assert result.get("arc_loss") is not None
         assert result.get("tag_loss") is not None
 
+        # pylint: disable=line-too-long,bad-continuation
+        assert result.get("hierplane_tree") == {
+                'text': 'Please could you parse this sentence ?',
+                'root': {
+                        'word': 'Please', 'nodeType': 'det', 'attributes': ['UH'], 'link': 'det', 'spans': [{'start': 0, 'end': 7}],
+                        'children': [
+                                {'word': 'could', 'nodeType': 'nummod', 'attributes': ['MD'], 'link': 'nummod', 'spans': [{'start': 7, 'end': 13}]},
+                                {'word': 'you', 'nodeType': 'nummod', 'attributes': ['PRP'], 'link': 'nummod', 'spans': [{'start': 13, 'end': 17}]},
+                                {'word': 'parse', 'nodeType': 'nummod', 'attributes': ['VB'], 'link': 'nummod', 'spans': [{'start': 17, 'end': 23}]},
+                                {'word': 'this', 'nodeType': 'nummod', 'attributes': ['DT'], 'link': 'nummod', 'spans': [{'start': 23, 'end': 28}]},
+                                {'word': 'sentence', 'nodeType': 'nummod', 'attributes': ['NN'], 'link': 'nummod', 'spans': [{'start': 28, 'end': 37}]},
+                                {'word': '?', 'nodeType': 'nummod', 'attributes': ['.'], 'link': 'nummod', 'spans': [{'start': 37, 'end': 39}]}]},
+                                'nodeTypeToStyle': {'root': ['color5', 'strong'], 'dep': ['color5', 'strong'], 'nsubj': ['color1'], 'nsubjpass': ['color1'],
+                                                    'csubj': ['color1'], 'csubjpass': ['color1'], 'pobj': ['color2'], 'dobj': ['color2'],
+                                                    'iobj': ['color2'], 'mark': ['color2'], 'pcomp': ['color2'], 'xcomp': ['color2'],
+                                                    'ccomp': ['color2'], 'acomp': ['color2'], 'aux': ['color3'], 'cop': ['color3'], 'det': ['color3'],
+                                                    'conj': ['color3'], 'cc': ['color3'], 'prep': ['color3'], 'number': ['color3'],
+                                                    'possesive': ['color3'], 'poss': ['color3'], 'discourse': ['color3'], 'expletive': ['color3'],
+                                                    'prt': ['color3'], 'advcl': ['color3'], 'mod': ['color4'], 'amod': ['color4'], 'tmod': ['color4'],
+                                                    'quantmod': ['color4'], 'npadvmod': ['color4'], 'infmod': ['color4'], 'advmod': ['color4'], 'appos': ['color4'],
+                                                    'nn': ['color4'], 'neg': ['color0'], 'punct': ['color0']},
+                                'linkToPosition': {'nsubj': 'left', 'nsubjpass': 'left', 'csubj': 'left', 'csubjpass': 'left',
+                                                   'pobj': 'right', 'dobj': 'right', 'iobj': 'right', 'pcomp': 'right', 'xcomp': 'right',
+                                                   'ccomp': 'right', 'acomp': 'right'}}
+        # pylint: enable=line-too-long,bad-continuation
     def test_batch_prediction(self):
         inputs = [
                 {
