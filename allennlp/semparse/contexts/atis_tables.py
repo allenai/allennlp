@@ -134,7 +134,8 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
 
     # We want to look up later for each time whether it appears after a word
     # such as "about" or "approximately".
-    indices_approximate_words = [idx for idx, token in enumerate(tokenized_utterance) if token.text in APPROX_WORDS]
+    indices_approximate_words = [idx for idx, token in enumerate(tokenized_utterance) \
+            if token.text in APPROX_WORDS]
     number_linking_dict = get_regex_match(r'\d+',
                                           utterance,
                                           char_offset_to_token_index,
