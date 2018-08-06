@@ -49,7 +49,6 @@ class UniversalDependenciesDatasetReader(DatasetReader):
             logger.info("Reading UD instances from conllu dataset at: %s", file_path)
 
             for annotation in  lazy_parse(conllu_file.read()):
-                print(annotation)
                 # CoNLLU annotations sometimes add back in words that have been elided
                 # in the original sentence; we remove these, as we're just predicting
                 # dependencies for the original sentence.
@@ -58,7 +57,6 @@ class UniversalDependenciesDatasetReader(DatasetReader):
                 annotation = [x for x in annotation if x["head"] is not None]
 
                 heads = [x["head"] for x in annotation]
-                print(heads)
                 tags = [x["deprel"] for x in annotation]
                 words = [x["form"] for x in annotation]
                 pos_tags = [x["upostag"] for x in annotation]
