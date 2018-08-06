@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Any, List
 import logging
 import copy
 
@@ -148,6 +148,7 @@ class BiaffineDependencyParser(Model):
     def forward(self,  # type: ignore
                 words: Dict[str, torch.LongTensor],
                 pos_tags: torch.LongTensor,
+                metadata: List[Dict[str, Any]],
                 head_tags: torch.LongTensor = None,
                 head_indices: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
@@ -277,7 +278,9 @@ class BiaffineDependencyParser(Model):
                 "arc_loss": arc_nll,
                 "tag_loss": tag_nll,
                 "loss": loss,
-                "mask": mask
+                "mask": mask,
+                "words": [meta["words"] for meta in metadata],
+                "pos": [meta["pos"] for meta in metadata]
                 }
 
         return output_dict

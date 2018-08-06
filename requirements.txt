@@ -83,7 +83,7 @@ flaky
 responses>=0.7
 
 # Reads Universal Dependencies files.
-conllu
+conllu==1.0
 
 #### TESTING-RELATED PACKAGES ####
 
