@@ -272,11 +272,14 @@ def import_submodules(package_name: str) -> None:
     """
     importlib.invalidate_caches()
 
+    # Import at top level
     module = importlib.import_module(package_name)
     path = getattr(module, '__path__', '')
 
+    # walk_packages only finds immediate children, so need to recurse.
     for _, name, _ in pkgutil.walk_packages(path):
-        importlib.import_module(package_name + '.' + name)
+        subpackage = f"{package_name}.{name}"
+        import_submodules(subpackage)
 
 
 def peak_memory_mb() -> float:
