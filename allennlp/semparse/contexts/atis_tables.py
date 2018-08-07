@@ -11,49 +11,6 @@ HOURS_IN_DAY = 2400
 AROUND_RANGE = 30
 
 APPROX_WORDS = ['about', 'around', 'approximately']
-
-def get_approximate_times(times: List[int]) -> List[int]:
-    """
-    Given a list of times that follow a word such as ``about``,
-    we return a list of times that could appear in the query as a result
-    of this. For example if ``about 7pm`` appears in the utterance, then
-    we also want to add ``1830`` and ``1930``.
-    
-    """
-    approximate_times = []
-    for time in times:
-        approximate_times.append((time + AROUND_RANGE) % HOURS_IN_DAY)
-        # The number system is not base 10 here, there are 60 minutes
-        # in an hour, so we can't simply add time - AROUND_RANGE.
-        approximate_times.append((time - HOUR_TO_TWENTY_FOUR + AROUND_RANGE) % HOURS_IN_DAY)
-    return approximate_times
-
-def get_regex_match(regex: str,
-                    utterance: str,
-                    char_offset_to_token_index: Dict[int, int],
-                    map_match_to_query_value: Callable[[str], List[int]],
-                    indices_of_approximate_words: Set[int]) -> Dict[str, List[int]]:
-    """
-    Given a regex, we want to find the matches in the utterance and then convert
-    these to the values that appear in the query and token indices they correspond to.
-    ``map_match_to_query_value`` is a function that converts the regex matches to the
-    values that appear in the query.
-    """
-    linking_scores_dict: Dict[str, List[int]] = defaultdict(list)
-    number_regex = re.compile(regex)
-    for match in number_regex.finditer(utterance):
-        query_values = map_match_to_query_value(match.group())
-        # If the time appears after a word like ``about`` then we also add
-        # the times that mark the start and end of the allowed range.
-        approximate_times = []
-        if char_offset_to_token_index.get(match.start(), 0) - 1 in indices_of_approximate_words:
-            approximate_times.extend(get_approximate_times(query_values))
-        query_values.extend(approximate_times)
-        for query_value in query_values:
-            if match.start() in char_offset_to_token_index:
-                linking_scores_dict[str(query_value)].append(char_offset_to_token_index[match.start()])
-    return linking_scores_dict
-
 def get_times_from_utterance(utterance: str,
                              char_offset_to_token_index: Dict[int, int],
                              indices_of_approximate_words: Set[int]) -> Dict[str, List[int]]:
@@ -62,7 +19,7 @@ def get_times_from_utterance(utterance: str,
     values that may appear in the query. For example: convert ``7pm`` to ``1900``.
     """
 
-    pm_linking_dict = get_regex_match(r'\d+pm',
+    pm_linking_dict = _time_regex_match(r'\d+pm',
                                       utterance,
                                       char_offset_to_token_index,
                                       lambda match: [int(match.rstrip('pm'))
@@ -70,14 +27,14 @@ def get_times_from_utterance(utterance: str,
                                                       TWELVE_TO_TWENTY_FOUR],
                                       indices_of_approximate_words)
 
-    am_linking_dict = get_regex_match(r'\d+am',
+    am_linking_dict = _time_regex_match(r'\d+am',
                                       utterance,
                                       char_offset_to_token_index,
                                       lambda match: [int(match.rstrip('am'))
                                                       * HOUR_TO_TWENTY_FOUR],
                                       indices_of_approximate_words)
 
-    oclock_linking_dict = get_regex_match(r"\d+\so'clock",
+    oclock_linking_dict = _time_regex_match(r"\d+\so'clock",
                                           utterance,
                                           char_offset_to_token_index,
                                           lambda match: [int(match.rstrip("o'clock"))
@@ -139,7 +96,7 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
     # such as "about" or "approximately".
     indices_of_approximate_words = {idx for idx, token in enumerate(tokenized_utterance)
             if token.text in APPROX_WORDS}
-    number_linking_dict = get_regex_match(r'\d+',
+    number_linking_dict = _time_regex_match(r'\d+',
                                           utterance,
                                           char_offset_to_token_index,
                                           lambda match: [int(match)],
@@ -166,6 +123,57 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
             number_linking_dict[str(DAY_NUMBERS[bigram])].append(len(tokenized_utterance) - 1)
 
     return number_linking_dict
+
+def get_approximate_times(times: List[int]) -> List[int]:
+    """
+    Given a list of times that follow a word such as ``about``,
+    we return a list of times that could appear in the query as a result
+    of this. For example if ``about 7pm`` appears in the utterance, then
+    we also want to add ``1830`` and ``1930``.
+    
+    """
+    approximate_times = []
+    for time in times:
+        approximate_times.append((time + AROUND_RANGE) % HOURS_IN_DAY)
+        # The number system is not base 10 here, there are 60 minutes
+        # in an hour, so we can't simply add time - AROUND_RANGE.
+        approximate_times.append((time - HOUR_TO_TWENTY_FOUR + AROUND_RANGE) % HOURS_IN_DAY)
+    return approximate_times
+
+def _time_regex_match(regex: str,
+                      utterance: str,
+                      char_offset_to_token_index: Dict[int, int],
+                      map_match_to_query_value: Callable[[str], List[int]],
+                      indices_of_approximate_words: Set[int]) -> Dict[str, List[int]]:
+    """
+    Given a regex for matching times in the utterance, we want to convert the matches
+    to the values that appear in the query and token indices they correspond to.
+
+    ``char_offset_to_token_index`` is a dictionary that maps from the character offset to
+    the token index, we use this to look up what token a regex match corresponds to.
+    ``indices_of_approximate_words`` are the token indices of the words such as ``about`` or
+    ``approximately``. We use this to check if a regex match is preceded by one of these words.
+    If it is, we also want to add the times that define this approximate time range.
+
+    ``map_match_to_query_value`` is a function that converts the regex matches to the
+    values that appear in the query. For example, we may pass in a regex such as ``\d+pm``
+    that matches times such as ``7pm``. ``map_match_to_query_value`` would be a function that
+    takes ``7pm`` as input and returns ``1900``.
+    """
+    linking_scores_dict: Dict[str, List[int]] = defaultdict(list)
+    number_regex = re.compile(regex)
+    for match in number_regex.finditer(utterance):
+        query_values = map_match_to_query_value(match.group())
+        # If the time appears after a word like ``about`` then we also add
+        # the times that mark the start and end of the allowed range.
+        approximate_times = []
+        if char_offset_to_token_index.get(match.start(), 0) - 1 in indices_of_approximate_words:
+            approximate_times.extend(get_approximate_times(query_values))
+        query_values.extend(approximate_times)
+        if match.start() in char_offset_to_token_index:
+            for query_value in query_values:
+                linking_scores_dict[str(query_value)].append(char_offset_to_token_index[match.start()])
+    return linking_scores_dict
 
 def get_trigger_dict(trigger_lists: List[List[str]],
                      trigger_dicts: List[Dict[str, List[str]]]) -> Dict[str, List[str]]:

@@ -16,13 +16,13 @@ def get_strings_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, Li
     that map to lists of the token indices that they are linked to.
     """
     string_linking_scores: Dict[str, List[int]] = defaultdict(list)
-    for idx, (first_token, second_token) in enumerate(zip(tokenized_utterance, tokenized_utterance[1:])):
+    for index, (first_token, second_token) in enumerate(zip(tokenized_utterance, tokenized_utterance[1:])):
         for string in ATIS_TRIGGER_DICT.get(first_token.text.lower(), []):
-            string_linking_scores[string].append(idx)
+            string_linking_scores[string].append(index)
 
         bigram = f"{first_token.text} {second_token.text}".lower()
         for string in ATIS_TRIGGER_DICT.get(bigram, []):
-            string_linking_scores[string].extend([idx, idx + 1])
+            string_linking_scores[string].extend([index, index + 1])
 
     if tokenized_utterance[-1].text.lower() in ATIS_TRIGGER_DICT:
         for string in ATIS_TRIGGER_DICT[tokenized_utterance[-1].text.lower()]:
@@ -79,15 +79,23 @@ class AtisWorld():
             string_linking_dict = get_strings_from_utterance(tokenized_utterance)
             strings.update(string_linking_dict.keys())
 
+        # We want to sort things in reverse here to be consistent with the grammar.
+        # The parser is greedy which means that if we have a rule that has
+        # multiple options for the right hand side, the first one that succeeds is
+        # the one that is used. For example, if ``1400`` appears in the query, and
+        # both ``1400`` and ``1`` are valid numbers, then we want to try to match
+        # ``1400`` first. Otherwise, ``1`` will succeed but nothing will match ``400``.
+        # The same applies for strings here.
         strings_list: List[str] = sorted(strings, reverse=True)
 
         # We construct the linking scores for strings from the ``string_linking_dict`` here.
         string_linking_scores = []
         for string in strings_list:
-            entity_linking = [0 for i in range(len(current_tokenized_utterance))]
-            if string in string_linking_dict:
-                for idx in string_linking_dict[string]:
-                    entity_linking[idx] = 1
+            entity_linking = [0 for token in current_tokenized_utterance]
+            # string_linking_dict has the strings and linking scores from the last utterance.
+            # If the string is not in the last utterance, then the linking scores will be all 0.  
+            for token_index in string_linking_dict.get(string, []):
+                    entity_linking[token_index] = 1
             string_linking_scores.append(entity_linking)
         linking_scores.extend(string_linking_scores)
 
@@ -99,18 +107,19 @@ class AtisWorld():
         numbers = {'0', '1'}
         number_linking_dict: Dict[str, List[int]] = {}
 
-        for idx, (utterance, tokenized_utterance) in enumerate(zip(self.utterances, self.tokenized_utterances)):
+        for utterance, tokenized_utterance in zip(self.utterances, self.tokenized_utterances):
             number_linking_dict = get_numbers_from_utterance(utterance, tokenized_utterance)
             numbers.update(number_linking_dict.keys())
         numbers_list: List[str] = sorted(numbers, reverse=True)
 
         # We construct the linking scores for numbers from the ``number_linking_dict`` here.
         number_linking_scores = []
-        for number in sorted(numbers_list, reverse=True):
-            entity_linking = [0 for i in range(len(current_tokenized_utterance))]
-            if number in number_linking_dict:
-                for idx in number_linking_dict[number]:
-                    entity_linking[idx] = 1
+        for number in numbers_list:
+            entity_linking = [0 for token in current_tokenized_utterance]
+            # number_linking_scores has the numbers and linking scores from the last utterance.
+            # If the number is not in the last utterance, then the linking scores will be all 0.  
+            for token_index in number_linking_dict.get(number, []):
+                entity_linking[token_index] = 1
             number_linking_scores.append(entity_linking)
         linking_scores.extend(number_linking_scores)
 

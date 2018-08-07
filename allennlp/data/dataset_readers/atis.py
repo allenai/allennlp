@@ -27,11 +27,11 @@ def _lazy_parse(text: str):
 class AtisDatasetReader(DatasetReader):
     """
     This ``DatasetReader`` takes json files and converts them into ``Instances`` for the
-    ``AtisSemanticParser``. 
+    ``AtisSemanticParser``.
 
     Each line in the file is a JSON object that represent an interaction in the ATIS dataset
     that has the following keys and values:
-        id: The original filepath in the LDC corpus 
+        id: The original filepath in the LDC corpus
         interaction: A list where each element represents a turn in the interaction
             utterance: Natural language input
             sql: A list of SQL queries that the utterance maps to, it could be multiple SQL queries
@@ -45,23 +45,22 @@ class AtisDatasetReader(DatasetReader):
 
     Parameters
     ----------
-    world: ``AtisWorld``
-        The world in which this utterance appears in, we store this in a MetadataField.
-    TODO: Figure what token indexing we need here
-
+    token_indexers : ``Dict[str, TokenIndexer]``, optional
+        Token indexers for the utterances. Will default to ``{"tokens": SingleIdTokenIndexer()}``.
+    lazy : ``bool`` (optional, default=False)
+        Passed to ``DatasetReader``.  If this is ``True``, training will start sooner, but will
+        take longer per batch.
+    tokenizer : ``Tokenizer``, optional
+        Tokenizer to use for the utterances. Will default to ``WordTokenizer()`` with Spacy's tagger
+        enabled.
     """
     def __init__(self,
-                 source_token_indexers: Dict[str, TokenIndexer] = None,
-                 target_token_indexers: Dict[str, TokenIndexer] = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False,
                  tokenizer: Tokenizer = None) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
-
-        self._source_token_indexers = source_token_indexers or {"tokens": SingleIdTokenIndexer()}
-        self._target_token_indexers = target_token_indexers or self._source_token_indexers
 
 
     @overrides
@@ -75,24 +74,16 @@ class AtisDatasetReader(DatasetReader):
                 utterances = []
                 for current_interaction in line['interaction']:
                     utterances.append(current_interaction['utterance'])
-                    world = AtisWorld(utterances)
-
-                    try:
-                        action_sequence = world.get_action_sequence(current_interaction['sql'])
-                    except ParseError:
-                        logger.debug(f'Parsing error')
-                        continue
-
-                    instance = self.text_to_instance(current_interaction['utterance'], action_sequence, world)
+                    instance = self.text_to_instance(utterances, current_interaction['sql'])
+                    # If we can't
                     if not instance:
                         continue
                     yield instance
 
     @overrides
     def text_to_instance(self,  # type: ignore
-                         utterance: str,
-                         action_sequence: List[str],
-                         world: AtisWorld) -> Instance:
+                         utterances: List[str],
+                         sql_query: str = None) -> Instance:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -104,6 +95,19 @@ class AtisDatasetReader(DatasetReader):
         world: ``AtisWorld``
             The world in which this utterance appears in, we store this in a MetadataField.
         """
+        utterance = utterances[-1]
+        action_sequence = []
+
+        world = AtisWorld(utterances)
+
+        try:
+            action_sequence = world.get_action_sequence(sql_query)
+        except ParseError:
+            logger.debug(f'Parsing error')
+
+        if not action_sequence:
+            return None
+
         tokenized_utterance = self._tokenizer.tokenize(utterance.lower())
         utterance_field = TextField(tokenized_utterance, self._token_indexers)
 
@@ -112,19 +116,18 @@ class AtisDatasetReader(DatasetReader):
         for production_rule in world.all_possible_actions():
             lhs, _ = production_rule.split(' ->')
             is_global_rule = not lhs in ['number', 'string']
+            # The whitespaces are not semantically meaningful, so we filter them out.
+            production_rule = ' '.join([token for token in production_rule.split(' ') if token != 'ws'])
             field = ProductionRuleField(production_rule, is_global_rule)
             production_rule_fields.append(field)
 
         action_field = ListField(production_rule_fields)
-        action_map = {action.rule.replace(" ws", "").replace("ws ", "") : i # type: ignore
+        action_map = {action.rule: i # type: ignore
                       for i, action in enumerate(action_field.field_list)}
         index_fields: List[Field] = []
 
         for production_rule in action_sequence:
             index_fields.append(IndexField(action_map[production_rule], action_field))
-
-        if not action_sequence:
-            return None
 
         action_sequence_field: List[Field] = []
         action_sequence_field.append(ListField(index_fields))
