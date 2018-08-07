@@ -77,7 +77,7 @@ class AtisWorld():
         strings: Set[str] = set()
         for tokenized_utterance in self.tokenized_utterances:
             string_linking_dict = get_strings_from_utterance(tokenized_utterance)
-            strings = strings.union(set(string_linking_dict.keys()))
+            strings.update(string_linking_dict.keys())
 
         strings_list: List[str] = sorted(strings, reverse=True)
 
@@ -101,7 +101,7 @@ class AtisWorld():
 
         for idx, (utterance, tokenized_utterance) in enumerate(zip(self.utterances, self.tokenized_utterances)):
             number_linking_dict = get_numbers_from_utterance(utterance, tokenized_utterance)
-            numbers = numbers.union(set(number_linking_dict.keys()))
+            numbers.update(number_linking_dict.keys())
         numbers_list: List[str] = sorted(numbers, reverse=True)
 
         # We construct the linking scores for numbers from the ``number_linking_dict`` here.
