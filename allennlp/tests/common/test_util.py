@@ -69,7 +69,6 @@ class TestCommonUtils(AllenNlpTestCase):
 
         sys.path.remove(str(self.TEST_DIR))
 
-        assert False
 
     def test_get_frozen_and_tunable_parameter_names(self):
         model = torch.nn.Sequential(OrderedDict([
