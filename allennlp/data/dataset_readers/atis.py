@@ -18,7 +18,7 @@ from allennlp.semparse.worlds.atis_world import AtisWorld
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-def lazy_parse(text: str):
+def _lazy_parse(text: str):
     for interaction in text.split("\n"):
         if interaction:
             yield json.loads(interaction)
@@ -27,15 +27,35 @@ def lazy_parse(text: str):
 class AtisDatasetReader(DatasetReader):
     """
     This ``DatasetReader`` takes json files and converts them into ``Instances`` for the
-    ``AtisSemanticParser``.
+    ``AtisSemanticParser``. 
+
+    Each line in the file is a JSON object that represent an interaction in the ATIS dataset
+    that has the following keys and values:
+        id: The original filepath in the LDC corpus 
+        interaction: A list where each element represents a turn in the interaction
+            utterance: Natural language input
+            sql: A list of SQL queries that the utterance maps to, it could be multiple SQL queries
+                or none at all.
+        scenario: A code that refers to the scenario that served as the prompt for this interaction
+        ut_date: Date of the interaction
+        zc09_path: Path that was used in the original paper `Learning Context-Dependent Mappings from
+        Sentences to Logical Form
+        <https://www.semanticscholar.org/paper/Learning-Context-Dependent-Mappings-from-Sentences-Zettlemoyer-Collins/44a8fcee0741139fa15862dc4b6ce1e11444878f>'_ by Zettlemoyer and Collins (ACL/IJCNLP 2009)
+
+
+    Parameters
+    ----------
+    world: ``AtisWorld``
+        The world in which this utterance appears in, we store this in a MetadataField.
+    TODO: Figure what token indexing we need here
+
     """
     def __init__(self,
                  source_token_indexers: Dict[str, TokenIndexer] = None,
                  target_token_indexers: Dict[str, TokenIndexer] = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False,
-                 tokenizer: Tokenizer = None
-                ) -> None:
+                 tokenizer: Tokenizer = None) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
@@ -51,12 +71,10 @@ class AtisDatasetReader(DatasetReader):
 
         with open(file_path) as atis_file:
             logger.info("Reading ATIS instances from dataset at : %s", file_path)
-            for line in lazy_parse(atis_file.read()):
+            for line in _lazy_parse(atis_file.read()):
                 utterances = []
                 for current_interaction in line['interaction']:
-                    nl_key = 'utterance' if 'utterance' in current_interaction else 'nl_with_dates'
-
-                    utterances.append(current_interaction[nl_key])
+                    utterances.append(current_interaction['utterance'])
                     world = AtisWorld(utterances)
 
                     try:
@@ -65,7 +83,7 @@ class AtisDatasetReader(DatasetReader):
                         logger.debug(f'Parsing error')
                         continue
 
-                    instance = self.text_to_instance(current_interaction[nl_key], action_sequence, world)
+                    instance = self.text_to_instance(current_interaction['utterance'], action_sequence, world)
                     if not instance:
                         continue
                     yield instance
@@ -74,8 +92,7 @@ class AtisDatasetReader(DatasetReader):
     def text_to_instance(self,  # type: ignore
                          utterance: str,
                          action_sequence: List[str],
-                         world: AtisWorld
-                        ) -> Instance:
+                         world: AtisWorld) -> Instance:
         # pylint: disable=arguments-differ
         """
         Parameters

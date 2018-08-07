@@ -8,11 +8,12 @@ from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-
 from allennlp.semparse.contexts.sql_table_context import \
         SqlTableContext, SqlVisitor, generate_one_of_string, format_action
 
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers import Token, WordTokenizer
 
-def get_strings_from_utterance(tokenized_utterance) -> Dict[str, List[int]]:
+def get_strings_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     """
-    Based on the current utterance, return a list of valid strings that should be added.
+    Based on the current utterance, return a dictionary where the keys are the strings in the utterance
+    that map to lists of the token indices that they are linked to.
     """
     string_linking_scores: Dict[str, List[int]] = defaultdict(list)
     for idx, (first_token, second_token) in enumerate(zip(tokenized_utterance, tokenized_utterance[1:])):
@@ -54,7 +55,7 @@ class AtisWorld():
         valid_actions, linking_scores = self.init_all_valid_actions()
         self.valid_actions: Dict[str, List[str]] = valid_actions
 
-        # This has shape (number_entities, number_utterance_tokens).
+        # This has shape (num_entities, num_utterance_tokens).
         self.linking_scores: numpy.ndarray = linking_scores
         self.grammar_str: str = self.get_grammar_str()
         self.grammar_with_context: Grammar = Grammar(self.grammar_str)
