@@ -78,10 +78,15 @@ Create a Python 3.6 virtual environment, and install the necessary requirements 
   INSTALL_TEST_REQUIREMENTS=true scripts/install_requirements.sh
   ```
 
-Changing the flag to false if you don't want to be able to run tests.
+Changing the flag to false if you don't want to be able to run
+tests. Once the requirements have been installed, run:
 
-Note that if you use the source installation, you won't be able to use the `allennlp`
-command but rather you'll need to run `./bin/allennlp`.
+  ```bash
+  pip install --editable .
+  ```
+
+To install the AllenNLP library in `editable` mode into your
+environment.
 
 You can test your installation with `./scripts/verify.py`.
 
