@@ -118,7 +118,7 @@ class Elmo(Subcommand):
                 help='The path to the ELMo weight file.')
         subparser.add_argument('--batch-size', type=int, default=DEFAULT_BATCH_SIZE, help='The batch size to use.')
         subparser.add_argument('--file-friendly-logging', default=False, action='store_true',
-                help='outputs tqdm status on separate lines and slows tqdm refresh rate.')
+                               help='outputs tqdm status on separate lines and slows tqdm refresh rate.')
         subparser.add_argument('--cuda-device', type=int, default=-1, help='The cuda_device to run on.')
         subparser.add_argument(
                 '--forget-sentences',
