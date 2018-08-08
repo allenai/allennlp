@@ -5,11 +5,13 @@ from allennlp.data.dataset_readers import QuoraParaphraseDatasetReader
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
 
+
 class TestQuoraParaphraseReader():
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file(self, lazy):
         reader = QuoraParaphraseDatasetReader(lazy=lazy)
-        instances = reader.read("(%s)#%s" % (str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'quora_paraphrase.zip'), 'test.tsv'))
+        zip_file_name = str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'quora_paraphrase.zip')
+        instances = reader.read("(%s)#%s" % (zip_file_name, 'test.tsv'))
         instances = ensure_list(instances)
 
         instance1 = {"premise": "What should I do to avoid sleeping in class ?".split(),

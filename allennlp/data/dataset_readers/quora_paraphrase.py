@@ -55,7 +55,7 @@ class QuoraParaphraseDatasetReader(DatasetReader):
     def _read(self, file_path):
         logger.info("Reading instances from lines in file at: %s", file_path)
         file_name, member = parse_file_uri(file_path)
-        
+
         if member is None:
             with open(cached_path(file_path), "r") as data_file:
                 tsvin = csv.reader(data_file, delimiter='\t')
@@ -83,4 +83,3 @@ class QuoraParaphraseDatasetReader(DatasetReader):
             fields['label'] = LabelField(label)
 
         return Instance(fields)
-

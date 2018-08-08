@@ -4,37 +4,36 @@ Paper according to https://arxiv.org/pdf/1702.03814
 Implementation according to https://github.com/zhiguowang/BiMPM/
 """
 
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Any
 
-import numpy
 from overrides import overrides
 import torch
-import torch.nn.functional as F
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
-from allennlp.modules import FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, MatchingLayer
+from allennlp.modules import FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn import util
 from allennlp.training.metrics import CategoricalAccuracy
+
+from allennlp.modules.bimpm_matching import BiMPMMatching
 
 
 @Model.register("bimpm")
 class BiMPM(Model):
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
-                 word_matcher: MatchingLayer,
+                 word_matcher: BiMPMMatching,
                  encoder1: Seq2SeqEncoder,
-                 matcher_fw1: MatchingLayer,
-                 matcher_bw1: MatchingLayer,
+                 matcher_fw1: BiMPMMatching,
+                 matcher_bw1: BiMPMMatching,
                  encoder2: Seq2SeqEncoder,
-                 matcher_fw2: MatchingLayer,
-                 matcher_bw2: MatchingLayer,
+                 matcher_fw2: BiMPMMatching,
+                 matcher_bw2: BiMPMMatching,
                  aggregator: Seq2VecEncoder,
                  classifier_feedforward: FeedForward,
                  dropout: float = 0.1,
-                 num_perspective: int = 20,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(BiMPM, self).__init__(vocab, regularizer)
@@ -65,9 +64,7 @@ class BiMPM(Model):
 
         self.dropout = torch.nn.Dropout(dropout)
 
-        self.metrics = {
-            "accuracy": CategoricalAccuracy()
-        }
+        self.metrics = {"accuracy": CategoricalAccuracy()}
 
         self.loss = torch.nn.CrossEntropyLoss()
 
@@ -77,7 +74,10 @@ class BiMPM(Model):
     def forward(self,  # type: ignore
                 premise: Dict[str, torch.LongTensor],
                 hypothesis: Dict[str, torch.LongTensor],
-                label: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                label: torch.LongTensor = None,
+                metadata: List[Dict[str, Any]] = None  # pylint:disable=unused-argument
+               ) -> Dict[str, torch.Tensor]:
+        # pylint: disable=arguments-differ
 
         mask_p = util.get_text_field_mask(premise)
         mask_h = util.get_text_field_mask(hypothesis)
@@ -101,8 +101,10 @@ class BiMPM(Model):
         encoded_h2 = self.dropout(self.encoder2(encoded_h1, mask_h))
 
         mv_word_p2h, mv_word_h2p = self.word_matcher(embedded_p, mask_p, embedded_h, mask_h)
-        mv_p_fw1, mv_h_fw1, mv_p_bw1, mv_h_bw1 = match_fw_bw(self.matcher_fw1, self.matcher_bw1, encoded_p1, encoded_h1)
-        mv_p_fw2, mv_h_fw2, mv_p_bw2, mv_h_bw2 = match_fw_bw(self.matcher_fw2, self.matcher_bw2, encoded_p2, encoded_h2)
+        mv_p_fw1, mv_h_fw1, mv_p_bw1, mv_h_bw1 = \
+            match_fw_bw(self.matcher_fw1, self.matcher_bw1, encoded_p1, encoded_h1)
+        mv_p_fw2, mv_h_fw2, mv_p_bw2, mv_h_bw2 = \
+            match_fw_bw(self.matcher_fw2, self.matcher_bw2, encoded_p2, encoded_h2)
 
         mv_p = self.dropout(torch.cat(mv_word_p2h + mv_p_fw1 + mv_p_bw1 + mv_p_fw2 + mv_p_bw2, dim=2))
         mv_h = self.dropout(torch.cat(mv_word_h2p + mv_h_fw1 + mv_h_bw1 + mv_h_fw2 + mv_h_bw2, dim=2))
@@ -122,22 +124,5 @@ class BiMPM(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        """
-        Does a simple argmax over the class probabilities, converts indices to string labels, and
-        adds a ``"label"`` key to the dictionary with the result.
-        """
-        class_probabilities = F.softmax(output_dict['logits'], dim=-1)
-        output_dict['class_probabilities'] = class_probabilities
-
-        predictions = class_probabilities.cpu().data.numpy()
-        argmax_indices = numpy.argmax(predictions, axis=-1)
-        labels = [self.vocab.get_token_from_index(x, namespace="labels")
-                  for x in argmax_indices]
-        output_dict['label'] = labels
-        return output_dict
-
-    @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
-
