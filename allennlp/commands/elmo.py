@@ -57,6 +57,7 @@ https://arxiv.org/abs/1802.05365
 import argparse
 import json
 import logging
+import os
 from typing import IO, List, Iterable, Tuple
 import warnings
 
@@ -116,6 +117,8 @@ class Elmo(Subcommand):
                 default=DEFAULT_WEIGHT_FILE,
                 help='The path to the ELMo weight file.')
         subparser.add_argument('--batch-size', type=int, default=DEFAULT_BATCH_SIZE, help='The batch size to use.')
+        subparser.add_argument('--file-friendly-logging', default=False, action='store_true',
+                help='outputs tqdm status on separate lines and slows tqdm refresh rate.')
         subparser.add_argument('--cuda-device', type=int, default=-1, help='The cuda_device to run on.')
         subparser.add_argument(
                 '--forget-sentences',
@@ -369,6 +372,8 @@ def elmo_command(args):
         output_format = "top"
     elif args.average:
         output_format = "average"
+
+    prepare_global_logging(os.path.realpath(os.path.dirname(args.output_file)), args.file_friendly_logging)
 
     with torch.no_grad():
         elmo_embedder.embed_file(
