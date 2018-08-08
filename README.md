@@ -86,7 +86,9 @@ tests. Once the requirements have been installed, run:
   ```
 
 To install the AllenNLP library in `editable` mode into your
-environment.
+environment.  This will make `allennlp` available on your 
+system but it will use the sources from the local clone you
+made of the source repository.
 
 You can test your installation with `./scripts/verify.py`.
 
