@@ -98,7 +98,11 @@ class GrammarState:
             new_outputs = [output_tensor] + [x[1] for x in context_actions]
             output_tensor = torch.cat(new_outputs, dim=0)
             new_action_ids = action_ids + [x[2] for x in context_actions]
-            actions['global'] = (input_tensor, output_tensor, new_action_ids)
+            # We can't just reassign to actions['global'], because that would modify the state of
+            # self._valid_actions.  Instead, we need to construct a new actions dictionary.
+            new_actions = {**actions}
+            new_actions['global'] = (input_tensor, output_tensor, new_action_ids)
+            actions = new_actions
         return actions
 
     def take_action(self, production_rule: str) -> 'GrammarState':
