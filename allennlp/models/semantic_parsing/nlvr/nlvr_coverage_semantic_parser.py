@@ -9,12 +9,13 @@ import torch
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.nn import Activation
 from allennlp.nn.decoding import DecoderTrainer, ChecklistState
 from allennlp.nn.decoding.decoder_trainers import ExpectedRiskMinimization
 from allennlp.models.archival import load_archive, Archive
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.nlvr.nlvr_decoder_state import NlvrDecoderState
-from allennlp.models.semantic_parsing.nlvr.nlvr_decoder_step import NlvrDecoderStep
+from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
+from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
 from allennlp.models.semantic_parsing.nlvr.nlvr_semantic_parser import NlvrSemanticParser
 from allennlp.semparse.worlds import NlvrWorld
 from allennlp.training.metrics import Average
@@ -95,7 +96,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                                          encoder=encoder,
                                                          dropout=dropout)
         self._agenda_coverage = Average()
-        self._decoder_trainer: DecoderTrainer[Callable[[NlvrDecoderState], torch.Tensor]] = \
+        self._decoder_trainer: DecoderTrainer[Callable[[WikiTablesDecoderState], torch.Tensor]] = \
                 ExpectedRiskMinimization(beam_size=beam_size,
                                          normalize_by_length=normalize_beam_score_by_length,
                                          max_decoding_steps=max_decoding_steps,
@@ -103,11 +104,14 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
 
         # Instantiating an empty NlvrWorld just to get the number of terminals.
         self._terminal_productions = set(NlvrWorld([]).terminal_productions.values())
-        self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
-                                             action_embedding_dim=action_embedding_dim,
-                                             input_attention=attention,
-                                             dropout=dropout,
-                                             use_coverage=True)
+        self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
+                                                   action_embedding_dim=action_embedding_dim,
+                                                   input_attention=attention,
+                                                   num_start_types=1,
+                                                   activation=Activation.by_name('tanh')(),
+                                                   predict_start_type_separately=False,
+                                                   add_action_bias=False,
+                                                   dropout=dropout)
         self._checklist_cost_weight = checklist_cost_weight
         self._dynamic_cost_wait_epochs = None
         self._dynamic_cost_rate = None
@@ -200,7 +204,6 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                     logger.info("Checklist cost weight is now %f", self._checklist_cost_weight)
                 self._last_epoch_in_forward = instance_epoch_num
         batch_size = len(worlds)
-        action_embeddings, action_indices = self._embed_actions(actions)
 
         initial_rnn_state = self._get_initial_rnn_state(sentence)
         initial_score_list = [next(iter(sentence.values())).new_zeros(1, dtype=torch.float)
@@ -222,17 +225,15 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                                            checklist_target=checklist_target,
                                                            checklist_mask=checklist_mask,
                                                            checklist=initial_checklist))
-        initial_state = NlvrDecoderState(batch_indices=list(range(batch_size)),
-                                         action_history=[[] for _ in range(batch_size)],
-                                         score=initial_score_list,
-                                         rnn_state=initial_rnn_state,
-                                         grammar_state=initial_grammar_state,
-                                         action_embeddings=action_embeddings,
-                                         action_indices=action_indices,
-                                         possible_actions=actions,
-                                         worlds=worlds,
-                                         label_strings=label_strings,
-                                         checklist_state=initial_checklist_states)
+        initial_state = WikiTablesDecoderState(batch_indices=list(range(batch_size)),
+                                               action_history=[[] for _ in range(batch_size)],
+                                               score=initial_score_list,
+                                               rnn_state=initial_rnn_state,
+                                               grammar_state=initial_grammar_state,
+                                               possible_actions=actions,
+                                               world=worlds,
+                                               example_lisp_string=label_strings,
+                                               checklist_state=initial_checklist_states)
 
         agenda_data = [agenda_[:, 0].cpu().data for agenda_ in agenda_list]
         outputs = self._decoder_trainer.decode(initial_state,
@@ -347,7 +348,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                 'agenda_coverage': self._agenda_coverage.get_metric(reset)
         }
 
-    def _get_state_cost(self, state: NlvrDecoderState) -> torch.Tensor:
+    def _get_state_cost(self, state: WikiTablesDecoderState) -> torch.Tensor:
         """
         Return the costs a finished state. Since it is a finished state, the group size will be 1,
         and hence we'll return just one cost.
@@ -367,9 +368,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         checklist_cost = self._checklist_cost_weight * checklist_cost
         # TODO (pradeep): The denotation based cost below is strict. May be define a cost based on
         # how many worlds the logical form is correct in?
-        # label_strings being None happens when we are testing. We do not care about the cost then.
-        # TODO (pradeep): Make this cleaner.
-        if state.label_strings is None or all(self._check_state_denotations(state)):
+        # example_lisp_string being None happens when we are testing. We do not care about the cost
+        # then.  TODO (pradeep): Make this cleaner.
+        if state.example_lisp_string is None or all(self._check_state_denotations(state)):
             cost = checklist_cost
         else:
             cost = checklist_cost + (1 - self._checklist_cost_weight) * denotation_cost

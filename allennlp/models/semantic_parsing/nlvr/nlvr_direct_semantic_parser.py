@@ -12,8 +12,8 @@ from allennlp.nn import Activation
 from allennlp.nn.decoding import BeamSearch
 from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
 from allennlp.models.semantic_parsing.nlvr.nlvr_semantic_parser import NlvrSemanticParser
+from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
 from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
 from allennlp.semparse.worlds import NlvrWorld
 

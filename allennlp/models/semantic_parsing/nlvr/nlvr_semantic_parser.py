@@ -188,7 +188,7 @@ class NlvrSemanticParser(Model):
             # All actions in NLVR are global actions.
             global_actions = [(possible_actions[index][2], index) for index in action_indices]
 
-            # Then we get the ebmedded representations of the global actions.
+            # Then we get the embedded representations of the global actions.
             global_action_tensors, global_action_ids = zip(*global_actions)
             global_action_tensor = torch.cat(global_action_tensors, dim=0)
             global_input_embeddings = self._action_embedder(global_action_tensor)
@@ -231,7 +231,7 @@ class NlvrSemanticParser(Model):
         assert state.is_finished(), "Cannot compute denotations for unfinished states!"
         # Since this is a finished state, its group size must be 1.
         batch_index = state.batch_indices[0]
-        worlds = state.worlds[batch_index]
+        worlds = state.world[batch_index]
         instance_label_strings = state.example_lisp_string[batch_index]
         history = state.action_history[0]
         all_actions = state.possible_actions[0]
