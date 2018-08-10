@@ -1,6 +1,6 @@
 {
   "dataset_reader": {
-    "type": "dqaseq",
+    "type": "dqa",
     "prev_a": 3,
     "lazy": true,
     "token_indexers": {

@@ -85,7 +85,7 @@ class DQA(Model):
     self._merge_atten = TimeDistributed(torch.nn.Linear(200 * 4, 200))
 
     self._residual_encoder = residual_encoder
-    self._marker_lin = torch.nn.Embedding(prev_a * 4 + 1, 50)    
+    self._marker_lin = torch.nn.Embedding((prev_a * 4 * 3) + 1, 50)    
     self._self_atten = TriLinearAttention(200)
 
     self._followup_lin = torch.nn.Linear(200, 3)
@@ -273,15 +273,12 @@ class DQA(Model):
         v.append(max(best_span[i][1] * 3 + i * passage_length * 3 + 1, 0))
         v.append(max(best_span[i][1] * 3 + i * passage_length * 3 + 2, 0))
       predicted_end = Variable(torch.LongTensor(v).cuda())
-      # ALL OF THESE NEEDS A MASK NOW. UPDATE IS BASED ON THE GOLD END SPAN (PROBLEMATIC?)
+
       _yesno = span_yesno_logits.view(-1).index_select(0, gt_end).view(-1, 3)
       _followup = span_followup_logits.view(-1).index_select(0, gt_end).view(-1, 3)
       loss += nll_loss(F.log_softmax(_yesno, dim=-1), yesno_list.view(-1), ignore_index=-1)
       loss += nll_loss(F.log_softmax(_followup, dim=-1), followup_list.view(-1), ignore_index=-1)
-      """
-      self._span_gt_yesno_accuracy(_yesno, yesno_list.view(-1))
-      self._span_gt_followup_accuracy(_followup, followup_list.view(-1))
-      """
+      
       _yesno = span_yesno_logits.view(-1).index_select(0, predicted_end).view(-1, 3)
       output_dict['yesno'] = _yesno.data.cpu().numpy().reshape(batch_size, -1, 3)
       _followup = span_followup_logits.view(-1).index_select(0, predicted_end).view(-1, 3)

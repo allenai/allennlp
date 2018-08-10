@@ -214,15 +214,16 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)
 
-def make_reading_comprehension_instance_dqaseq(question_list_tokens: List[List[Token]],
-                                               passage_tokens: List[Token],
-                                               token_indexers: Dict[str, TokenIndexer],
-                                               passage_text: str,
-                                               token_span_lists: List[List[Tuple[int, int]]] = None,
-                                               yesno_list: List[int] = None,
-                                               followup_list: List[int] = None,
-                                               additional_metadata: Dict[str, Any] = None,
-                                               prev_a: int = 0) -> Instance:
+def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Token]],
+                                           passage_tokens: List[Token],
+                                           token_indexers: Dict[str, TokenIndexer],
+                                           passage_text: str,
+                                           token_span_lists: List[List[Tuple[int, int]]] = None,
+                                           yesno_list: List[int] = None,
+                                           followup_list: List[int] = None,
+                                           additional_metadata: Dict[str, Any] = None,
+                                           prev_a: int = 0,
+                                           add_prev_q_followup = False) -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
     in a reading comprehension model.
@@ -269,10 +270,15 @@ def make_reading_comprehension_instance_dqaseq(question_list_tokens: List[List[T
                 'question_tokens': [[token.text for token in q] for q in question_list_tokens],
                 'passage_tokens': [token.text for token in passage_tokens],
                 }
-    
     p1_answer_marker_list = []
     p2_answer_marker_list = []
     p3_answer_marker_list = []
+    def get_tag(i, i_name, followup, add_prev_q_followup):
+      if add_prev_q_followup:
+        return "<{0:d}_{1:s}_{2:s}>".format(i, i_name, followup)
+      else:
+        return "<{0:d}_{1:s}>".format(i, i_name)
+
     if token_span_lists:
       span_start_list=[]
       span_end_list=[]
@@ -286,28 +292,28 @@ def make_reading_comprehension_instance_dqaseq(question_list_tokens: List[List[T
         p3_tags = ["O"] * len(passage_tokens)
         if i > 0 and prev_a > 0:
           if p1_span_start == p1_span_end:
-            p1_tags[p1_span_start] = "<p1>"
+            p1_tags[p1_span_start] = get_tag(1, "", followup_list[i-1], add_prev_q_followup)
           else:
-            p1_tags[p1_span_start] = "<p1_start>"
-            p1_tags[p1_span_end] = "<p1_end>"
+            p1_tags[p1_span_start] = get_tag(1, "start", followup_list[i-1], add_prev_q_followup)
+            p1_tags[p1_span_end] =  get_tag(1, "end", followup_list[i-1], add_prev_q_followup)
             for pi in range(p1_span_start + 1, p1_span_end):
-              p1_tags[pi] = "<p1_in>"
+              p1_tags[pi] =  get_tag(1, "in", followup_list[i-1], add_prev_q_followup)
           if i >1 and prev_a >1:
             if p1_span_start == p1_span_end:
-              p1_tags[p2_span_start] = "<p2>"
+              p1_tags[p2_span_start] =  get_tag(2, "", followup_list[i-2], add_prev_q_followup)
             else:
-              p2_tags[p2_span_start] = "<p2_start>"
-              p2_tags[p2_span_end] = "<p2_end>"
+              p2_tags[p2_span_start] = get_tag(2, "start", followup_list[i-2], add_prev_q_followup)
+              p2_tags[p2_span_end] = get_tag(2, "end", followup_list[i-2], add_prev_q_followup)
               for pi in range(p2_span_start+1,p2_span_end):
-                p2_tags[pi] = "<p2_in>"
+                p2_tags[pi] = get_tag(2, "in", followup_list[i-2], add_prev_q_followup)
             if i>2 and prev_a>2:
               if p3_span_start == p3_span_end:
-                p3_tags[p3_span_start] = "<p3>"
+                p3_tags[p3_span_start] = get_tag(3, "", followup_list[i-3], add_prev_q_followup)
               else:
-                p3_tags[p3_span_start] = "<p3_start>"
-                p3_tags[p3_span_end] = "<p3_end>"
+                p3_tags[p3_span_start] = get_tag(3, "", followup_list[i-3], add_prev_q_followup)
+                p3_tags[p3_span_end] = get_tag(3, "", followup_list[i-3], add_prev_q_followup)
               for pi in range(p3_span_start+1, p3_span_end):
-                p3_tags[pi] = "<p3_in>"
+                p3_tags[pi] = get_tag(3, "", followup_list[i-3], add_prev_q_followup)
             p3_span_start = p2_span_start
             p3_span_end = p2_span_end
           p2_span_start = p1_span_start
@@ -326,7 +332,6 @@ def make_reading_comprehension_instance_dqaseq(question_list_tokens: List[List[T
           total = [tags+":"+token.text for tags, token in zip(p1_tags, passage_tokens)]
           print(' '.join(total))
           """
-          #print(p2_tags)
       fields['span_start'] = ListField(span_start_list)
       fields['span_end'] = ListField(span_end_list)
       if prev_a>0:
@@ -335,96 +340,9 @@ def make_reading_comprehension_instance_dqaseq(question_list_tokens: List[List[T
           fields['p2_answer_marker'] = ListField(p2_answer_marker_list)
           if prev_a>2:
             fields['p3_answer_marker'] = ListField(p3_answer_marker_list)
-
       fields['yesno_list'] = ListField([LabelField(yesno, label_namespace="yesno_labels") for yesno in yesno_list])
       fields['followup_list'] = ListField([LabelField(followup, label_namespace="followup_labels") for followup in followup_list])
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)
-
-def make_reading_comprehension_instance_dqa(question_tokens: List[Token],
-                                        passage_tokens: List[Token],
-                                        token_indexers: Dict[str, TokenIndexer],
-                                        passage_text: str,
-                                        token_spans: List[Tuple[int, int]] = None,
-                                        answer_texts: List[str] = None,
-                                        yesno: int = None,
-                                        followup: int = None,
-                                        additional_metadata: Dict[str, Any] = None) -> Instance:
-    """
-    Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
-    in a reading comprehension model.
-
-    Creates an ``Instance`` with at least these fields: ``question`` and ``passage``, both
-    ``TextFields``; and ``metadata``, a ``MetadataField``.  Additionally, if both ``answer_texts``
-    and ``char_span_starts`` are given, the ``Instance`` has ``span_start`` and ``span_end``
-    fields, which are both ``IndexFields``.
-
-    Parameters
-    ----------
-    question_tokens : ``List[Token]``
-        An already-tokenized question.
-    passage_tokens : ``List[Token]``
-        An already-tokenized passage that contains the answer to the given question.
-    token_indexers : ``Dict[str, TokenIndexer]``
-        Determines how the question and passage ``TextFields`` will be converted into tensors that
-        get input to a model.  See :class:`TokenIndexer`.
-    passage_text : ``str``
-        The original passage text.  We need this so that we can recover the actual span from the
-        original passage that the model predicts as the answer to the question.  This is used in
-        official evaluation scripts.
-    token_spans : ``List[Tuple[int, int]]``, optional
-        Indices into ``passage_tokens`` to use as the answer to the question for training.  This is
-        a list because there might be several possible correct answer spans in the passage.
-        Currently, we just select the most frequent span in this list (i.e., SQuAD has multiple
-        annotations on the dev set; this will select the span that the most annotators gave as
-        correct).
-    answer_texts : ``List[str]``, optional
-        All valid answer strings for the given question.  In SQuAD, e.g., the training set has
-        exactly one answer per question, but the dev and test sets have several.  TriviaQA has many
-        possible answers, which are the aliases for the known correct entity.  This is put into the
-        metadata for use with official evaluation scripts, but not used anywhere else.
-    additional_metadata : ``Dict[str, Any]``, optional
-        The constructed ``metadata`` field will by default contain ``original_passage``,
-        ``token_offsets``, ``question_tokens``, ``passage_tokens``, and ``answer_texts`` keys.  If
-        you want any other metadata to be associated with each instance, you can pass that in here.
-        This dictionary will get added to the ``metadata`` dictionary we already construct.
-    """
-    additional_metadata = additional_metadata or {}
-    fields: Dict[str, Field] = {}
-    passage_offsets = [(token.idx, token.idx + len(token.text)) for token in passage_tokens]
-
-    # This is separate so we can reference it later with a known type.
-    passage_field = TextField(passage_tokens, token_indexers)
-    fields['passage'] = passage_field
-    fields['question'] = TextField(question_tokens, token_indexers)
-    metadata = {
-            'original_passage': passage_text,
-            'token_offsets': passage_offsets,
-            'question_tokens': [token.text for token in question_tokens],
-            'passage_tokens': [token.text for token in passage_tokens],
-            }
-    if answer_texts:
-        metadata['answer_texts'] = answer_texts
-
-    if token_spans:
-        # There may be multiple answer annotations, so we pick the one that occurs the most.  This
-        # only matters on the SQuAD dev set, and it means our computed metrics ("start_acc",
-        # "end_acc", and "span_acc") aren't quite the same as the official metrics, which look at
-        # all of the annotations.  This is why we have a separate official SQuAD metric calculation
-        # (the "em" and "f1" metrics use the official script).
-        candidate_answers: Counter = Counter()
-        for span_start, span_end in token_spans:
-            candidate_answers[(span_start, span_end)] += 1
-        span_start, span_end = candidate_answers.most_common(1)[0][0]
-
-        fields['span_start'] = IndexField(span_start, passage_field)
-        fields['span_end'] = IndexField(span_end, passage_field)
-        fields['yesno'] = IndexField(yesno, None)
-        fields['followup'] = IndexField(followup, None)
-
-    metadata.update(additional_metadata)
-    fields['metadata'] = MetadataField(metadata)
-    return Instance(fields)
-
 

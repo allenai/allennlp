@@ -43,7 +43,7 @@ class DQAPredictor(Predictor):
         metadata["instance_id"] = [qa['id'] for qa in qas]
         question_text_list = [qa["question"].strip().replace("\n", "") for qa in qas]
         answer_texts_list = [[answer['text'] for answer in qa['answers']] for qa in qas]
-        metadata["answer_text_lists"] = answer_texts_list
+        metadata["answer_texts_list"] = answer_texts_list
         metadata["question"] = question_text_list
 
         span_starts_list = [[answer['answer_start'] for answer in qa['answers']] for qa in qas]
@@ -54,13 +54,12 @@ class DQAPredictor(Predictor):
         yesno_list = [str(qa['yesno']) for qa in qas]
         followup_list = [str(qa['followup']) for qa in qas]
         instance = self._dataset_reader.text_to_instance(question_text_list,
-                                         paragraph,
-                                         span_starts_list,
-                                         span_ends_list,
-                                         answer_texts_list,
-                                         tokenized_paragraph,
-                                         yesno_list,
-                                         followup_list,
-                                         metadata)
+                                                         paragraph,
+                                                         span_starts_list,
+                                                         span_ends_list,
+                                                         tokenized_paragraph,
+                                                         yesno_list,
+                                                         followup_list,
+                                                         metadata)
         return instance
 
