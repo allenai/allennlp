@@ -81,7 +81,7 @@ def cached_path(url_or_filename: Union[str, Path], cache_dir: str = None) -> str
     if parsed.scheme in ('http', 'https'):
         # URL, so get it from the cache (downloading if necessary)
         return get_from_cache(url_or_filename, cache_dir)
-    elif parsed.scheme == '' and os.path.exists(url_or_filename):
+    elif os.path.exists(url_or_filename):
         # File, and it exists.
         return url_or_filename
     elif parsed.scheme == '':
