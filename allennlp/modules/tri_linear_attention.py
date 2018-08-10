@@ -25,7 +25,6 @@ class TriLinearAttention(torch.nn.Module):
         self._x_weights.data.uniform_(-std, std)
         self._dot_weights.data.uniform_(-std, std)
 
-
     @overrides
     def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
         batch_dim = matrix_1.size(0)

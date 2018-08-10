@@ -1,8 +1,8 @@
 {
   "dataset_reader": {
     "type": "dqaseq",
-    "lazy": true,
     "prev_a": 0,
+    "lazy": true,
     "token_indexers": {
       "token_characters": {
         "type": "characters",
@@ -17,8 +17,8 @@
      }
     }
   },
-  "train_data_path": "/home/eunsol/Data/dqa/seqTrain_5000.json",
-  "validation_data_path": "/home/eunsol/Data/dqa/seqval.json",
+  "train_data_path": "/home/eunsol/Data/dqa/simple/train_seq_5000.json",
+  "validation_data_path": "/home/eunsol/Data/dqa/simple/val_seq_5000.json",
   "model": {
     "type": "dqa",
     "prev_a": 0,
@@ -79,8 +79,8 @@
   },
   "iterator": {
     "type": "bucket",
-    "sorting_keys": [["question", "num_fields"], ["passage", "num_tokens"]],
-    "batch_size": 7,
+    "sorting_keys": [["question", "num_fields"],["passage", "num_tokens"]],
+    "batch_size": 8,
     "max_instances_in_memory": 1000
   },
   "trainer": {

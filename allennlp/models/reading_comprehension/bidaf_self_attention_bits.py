@@ -37,6 +37,7 @@ class BidafPlusSelfAttentionBits(Model):
           self.write_out = True
           self.outfile = outfile
           print("appending output to {}".format(outfile))
+
         else:
           self.write_out = False
           self.outfile = None
@@ -49,7 +50,6 @@ class BidafPlusSelfAttentionBits(Model):
         self._residual_encoder = residual_encoder
         self._self_atten = TriLinearAttention(200)
 
-        self._followup_lin = torch.nn.Linear(200, 4)
         self._merge_self_atten = TimeDistributed(torch.nn.Linear(200 * 3, 200))
 
         self._span_start_encoder = span_start_encoder
@@ -58,7 +58,7 @@ class BidafPlusSelfAttentionBits(Model):
         self._span_start_predictor = TimeDistributed(torch.nn.Linear(200, 1))
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(200, 1))
         self._span_yesno_predictor = TimeDistributed(torch.nn.Linear(200, 3))
-        self._span_followup_predictor = TimeDistributed(self._followup_lin)
+        self._span_followup_predictor = TimeDistributed(torch.nn.Linear(200, 3))
 
         initializer(self)
 
@@ -89,7 +89,6 @@ class BidafPlusSelfAttentionBits(Model):
                 span_end: torch.IntTensor = None,
                 yesno: torch.IntTensor = None,
                 followup: torch.IntTensor = None,
-                prev_followup: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
@@ -152,7 +151,6 @@ class BidafPlusSelfAttentionBits(Model):
         encoded_question = self._dropout(self._phrase_layer(embedded_question, question_lstm_mask))
         encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_lstm_mask))
         encoding_dim = encoded_question.size(-1)
-        #prev_followup_emb = self._followup_emb(prev_followup)
 
 
         # Shape: (batch_size, passage_length, question_length)
@@ -177,7 +175,6 @@ class BidafPlusSelfAttentionBits(Model):
         tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(batch_size,
                                                                                     passage_length,
                                                                                     encoding_dim)
-        #tiled_prev_followup = prev_followup_emb.expand(batch_size, passage_length, 200)
         # Shape: (batch_size, passage_length, encoding_dim * 4)
         final_merged_passage = torch.cat([encoded_passage,
                                           passage_question_vectors,
@@ -187,9 +184,12 @@ class BidafPlusSelfAttentionBits(Model):
 
         final_merged_passage = F.relu(self._merge_atten(final_merged_passage))
 
+	# TODO: one flow operation
+
         residual_layer = self._dropout(self._residual_encoder(self._dropout(final_merged_passage), passage_mask))
         self_atten_matrix = self._self_atten(residual_layer, residual_layer)
-
+	
+	# 
         mask = passage_mask.resize(batch_size, passage_length, 1) * passage_mask.resize(batch_size, 1, passage_length)
 
         # torch.eye does not have a gpu implementation, so we are forced to use the cpu one and .cuda()

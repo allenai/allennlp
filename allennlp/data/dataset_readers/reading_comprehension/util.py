@@ -7,7 +7,7 @@ import logging
 import string
 from typing import Any, Dict, List, Tuple
 
-from allennlp.data.fields import Field, TextField, IndexField, MetadataField, LabelField, ListField
+from allennlp.data.fields import Field, TextField, IndexField, MetadataField, LabelField, ListField, SequenceLabelField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.tokenizers import Token
@@ -214,17 +214,15 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)
 
-def make_reading_comprehension_instance_dqaseq(
-                                        question_list_tokens: List[List[Token]],
-                                        passage_tokens: List[Token],
-                                        token_indexers: Dict[str, TokenIndexer],
-                                        passage_text: str,
-                                        token_span_lists: List[List[Tuple[int, int]]] = None,
-                                        answer_texts: List[str] = None,
-                                        single_answer_list_tokens: List[List[Token]]=None,
-                                        yesno_list: List[int] = None,
-                                        followup_list: List[int] = None,
-                                        additional_metadata: Dict[str, Any] = None) -> Instance:
+def make_reading_comprehension_instance_dqaseq(question_list_tokens: List[List[Token]],
+                                               passage_tokens: List[Token],
+                                               token_indexers: Dict[str, TokenIndexer],
+                                               passage_text: str,
+                                               token_span_lists: List[List[Tuple[int, int]]] = None,
+                                               yesno_list: List[int] = None,
+                                               followup_list: List[int] = None,
+                                               additional_metadata: Dict[str, Any] = None,
+                                               prev_a: int = 0) -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
     in a reading comprehension model.
@@ -236,7 +234,7 @@ def make_reading_comprehension_instance_dqaseq(
 
     Parameters
     ----------
-    question_tokens : ``List[Token]``
+    question_tokens : ``List[List[Token]]``
         An already-tokenized question.
     passage_tokens : ``List[Token]``
         An already-tokenized passage that contains the answer to the given question.
@@ -247,17 +245,12 @@ def make_reading_comprehension_instance_dqaseq(
         The original passage text.  We need this so that we can recover the actual span from the
         original passage that the model predicts as the answer to the question.  This is used in
         official evaluation scripts.
-    token_spans : ``List[Tuple[int, int]]``, optional
+    token_spans : ``List[List[Tuple[int, int]]]``, optional
         Indices into ``passage_tokens`` to use as the answer to the question for training.  This is
         a list because there might be several possible correct answer spans in the passage.
         Currently, we just select the most frequent span in this list (i.e., SQuAD has multiple
         annotations on the dev set; this will select the span that the most annotators gave as
         correct).
-    answer_texts : ``List[str]``, optional
-        All valid answer strings for the given question.  In SQuAD, e.g., the training set has
-        exactly one answer per question, but the dev and test sets have several.  TriviaQA has many
-        possible answers, which are the aliases for the known correct entity.  This is put into the
-        metadata for use with official evaluation scripts, but not used anywhere else.
     additional_metadata : ``Dict[str, Any]``, optional
         The constructed ``metadata`` field will by default contain ``original_passage``,
         ``token_offsets``, ``question_tokens``, ``passage_tokens``, and ``answer_texts`` keys.  If
@@ -267,35 +260,83 @@ def make_reading_comprehension_instance_dqaseq(
     additional_metadata = additional_metadata or {}
     fields: Dict[str, Field] = {}
     passage_offsets = [(token.idx, token.idx + len(token.text)) for token in passage_tokens]
-
     # This is separate so we can reference it later with a known type.
     passage_field = TextField(passage_tokens, token_indexers)
     fields['passage'] = passage_field
     fields['question'] = ListField([TextField(q_tokens, token_indexers) for q_tokens in question_list_tokens])
-    fields['single_answers'] = ListField([TextField(a_tokens, token_indexers) for a_tokens in single_answer_list_tokens])
-    metadata = {
-            'original_passage': passage_text,
-            'token_offsets': passage_offsets,
-            'question_tokens': [[token.text for token in q] for q in question_list_tokens],
-            'passage_tokens': [token.text for token in passage_tokens],
-            }
-    if answer_texts:
-        metadata['answer_texts'] = ListField(answer_texts)
-
+    metadata = {'original_passage': passage_text,
+                'token_offsets': passage_offsets,
+                'question_tokens': [[token.text for token in q] for q in question_list_tokens],
+                'passage_tokens': [token.text for token in passage_tokens],
+                }
+    
+    p1_answer_marker_list = []
+    p2_answer_marker_list = []
+    p3_answer_marker_list = []
     if token_span_lists:
-
       span_start_list=[]
       span_end_list=[]
-      for doc_qs_spans in token_span_lists:
+      for i, doc_qs_spans in enumerate(token_span_lists):
         candidate_answers: Counter = Counter()
-        for span_start, span_end in doc_qs_spans:
-            candidate_answers[(span_start, span_end)] += 1
-        span_start, span_end = candidate_answers.most_common(1)[0][0]
+        span_start, span_end = doc_qs_spans[-1] # Last one is the original answer
         span_start_list.append(IndexField(span_start, passage_field))
         span_end_list.append(IndexField(span_end, passage_field))
+        p1_tags = ["O"] * len(passage_tokens)
+        p2_tags = ["O"] * len(passage_tokens)
+        p3_tags = ["O"] * len(passage_tokens)
+        if i > 0 and prev_a > 0:
+          if p1_span_start == p1_span_end:
+            p1_tags[p1_span_start] = "<p1>"
+          else:
+            p1_tags[p1_span_start] = "<p1_start>"
+            p1_tags[p1_span_end] = "<p1_end>"
+            for pi in range(p1_span_start + 1, p1_span_end):
+              p1_tags[pi] = "<p1_in>"
+          if i >1 and prev_a >1:
+            if p1_span_start == p1_span_end:
+              p1_tags[p2_span_start] = "<p2>"
+            else:
+              p2_tags[p2_span_start] = "<p2_start>"
+              p2_tags[p2_span_end] = "<p2_end>"
+              for pi in range(p2_span_start+1,p2_span_end):
+                p2_tags[pi] = "<p2_in>"
+            if i>2 and prev_a>2:
+              if p3_span_start == p3_span_end:
+                p3_tags[p3_span_start] = "<p3>"
+              else:
+                p3_tags[p3_span_start] = "<p3_start>"
+                p3_tags[p3_span_end] = "<p3_end>"
+              for pi in range(p3_span_start+1, p3_span_end):
+                p3_tags[pi] = "<p3_in>"
+            p3_span_start = p2_span_start
+            p3_span_end = p2_span_end
+          p2_span_start = p1_span_start
+          p2_span_end = p1_span_end
+        p1_span_start = span_start
+        p1_span_end = span_end
+        if prev_a > 2:
+          p3_answer_marker_list.append(SequenceLabelField(p3_tags, passage_field, label_namespace="answer_tags"))
+        if prev_a > 1:
+          p2_answer_marker_list.append(SequenceLabelField(p2_tags, passage_field, label_namespace="answer_tags"))
+        if prev_a > 0:
+          p1_answer_marker_list.append(SequenceLabelField(p1_tags, passage_field, label_namespace="answer_tags"))
+          """
+          print("___ "+str(i)+"___")
+          print(token_span_lists[i])
+          total = [tags+":"+token.text for tags, token in zip(p1_tags, passage_tokens)]
+          print(' '.join(total))
+          """
+          #print(p2_tags)
       fields['span_start'] = ListField(span_start_list)
       fields['span_end'] = ListField(span_end_list)
-      fields['yesno_list'] =ListField([LabelField(yesno, label_namespace="yesno_labels") for yesno in yesno_list])
+      if prev_a>0:
+        fields['p1_answer_marker'] = ListField(p1_answer_marker_list)
+        if prev_a>1:
+          fields['p2_answer_marker'] = ListField(p2_answer_marker_list)
+          if prev_a>2:
+            fields['p3_answer_marker'] = ListField(p3_answer_marker_list)
+
+      fields['yesno_list'] = ListField([LabelField(yesno, label_namespace="yesno_labels") for yesno in yesno_list])
       fields['followup_list'] = ListField([LabelField(followup, label_namespace="followup_labels") for followup in followup_list])
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
@@ -309,7 +350,6 @@ def make_reading_comprehension_instance_dqa(question_tokens: List[Token],
                                         answer_texts: List[str] = None,
                                         yesno: int = None,
                                         followup: int = None,
-                                        prev_followup: int = None,
                                         additional_metadata: Dict[str, Any] = None) -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
@@ -382,8 +422,9 @@ def make_reading_comprehension_instance_dqa(question_tokens: List[Token],
         fields['span_end'] = IndexField(span_end, passage_field)
         fields['yesno'] = IndexField(yesno, None)
         fields['followup'] = IndexField(followup, None)
-        fields['prev_followup'] = IndexField(prev_followup, None)
 
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)
+
+

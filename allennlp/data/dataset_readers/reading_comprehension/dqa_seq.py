@@ -19,14 +19,12 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @DatasetReader.register("dqaseq")
 class DQASeqReader(DatasetReader):
     """
-    Reads a JSON-formatted SQuAD file and returns a ``Dataset`` where the ``Instances`` have four
+    Reads a JSON-formatted QUAC file and returns a ``Dataset`` where the ``Instances`` have four
     fields: ``question``, a ``TextField``, ``passage``, another ``TextField``, and ``span_start``
     and ``span_end``, both ``IndexFields`` into the ``passage`` ``TextField``.  We also add a
     ``MetadataField`` that stores the instance's ID, the original passage text, gold answer strings,
     and token offsets into the original passage, accessible as ``metadata['id']``,
-    ``metadata['original_passage']``, ``metadata['answer_texts']`` and
-    ``metadata['token_offsets']``.  This is so that we can more easily use the official SQuAD
-    evaluation script to get metrics.
+    ``metadata['original_passage']``, ``metadata['answer_text_lists'] and ``metadata['token_offsets']``.  
 
     Parameters
     ----------
@@ -36,14 +34,18 @@ class DQASeqReader(DatasetReader):
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         We similarly use this for both the question and the passage.  See :class:`TokenIndexer`.
         Default is ``{"tokens": SingleIdTokenIndexer()}``.
+    prev_a : Integer, optional 
+        How many previous questions to consider.
     """
     def __init__(self,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
-                 lazy: bool = False) -> None:
+                 lazy: bool = False,
+                 prev_a: int = 0) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._prev_a = prev_a
 
     @overrides
     def _read(self, file_path: str):
@@ -64,10 +66,8 @@ class DQASeqReader(DatasetReader):
                 metadata["instance_id"] = [qa['id'] for qa in qas]
                 question_text_list = [qa["question"].strip().replace("\n", "") for qa in qas]
                 answer_texts_list = [[answer['text'] for answer in qa['answers']] for qa in qas]
-                metadata["answer_text_lists"] = answer_texts_list
                 metadata["question"] = question_text_list
-
-                single_answer_texts_list = [qa['answers'][0]['text'] for qa in qas]
+                metadata['answer_texts_list'] = answer_texts_list
                 span_starts_list = [[answer['answer_start'] for answer in qa['answers']] for qa in qas]
                 span_ends_list = []
                 for st_list, an_list in zip(span_starts_list, answer_texts_list):
@@ -79,14 +79,10 @@ class DQASeqReader(DatasetReader):
                                                  paragraph,
                                                  span_starts_list,
                                                  span_ends_list,
-                                                 answer_texts_list,
-                                                 single_answer_texts_list,
                                                  tokenized_paragraph,
                                                  yesno_list,
                                                  followup_list,
                                                  metadata)
-
-
                 yield instance
 
     @overrides
@@ -95,8 +91,6 @@ class DQASeqReader(DatasetReader):
                          passage_text: str,
                          start_span_list: List[List[int]] = None,
                          end_span_list: List[List[int]] = None,
-                         answer_texts_list: List[List[str]] = None,
-                         single_answer_texts_list: List[str] = None,
                          passage_tokens: List[Token] = None,
                          yesno_list: List[int] = None,
                          followup_list: List[int] = None,
@@ -121,15 +115,12 @@ class DQASeqReader(DatasetReader):
               token_spans.append((span_start, span_end))
           answer_token_span_list.append(token_spans)
         question_list_tokens = [self._tokenizer.tokenize(q) for q in question_text_list]
-        single_answer_list_tokens = [self._tokenizer.tokenize(q) for q in single_answer_texts_list]
         return util.make_reading_comprehension_instance_dqaseq(question_list_tokens,
                                                                passage_tokens,
                                                                self._token_indexers,
                                                                passage_text,
                                                                answer_token_span_list,
-                                                               answer_texts_list,
-                                                               single_answer_list_tokens,
                                                                yesno_list,
                                                                followup_list,
-                                                               additional_metadata)
-
+                                                               additional_metadata,
+                                                               self._prev_a)

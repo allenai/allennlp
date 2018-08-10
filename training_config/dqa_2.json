@@ -1,8 +1,8 @@
 {
   "dataset_reader": {
     "type": "dqaseq",
+    "prev_a": 2,
     "lazy": true,
-    "prev_a": 0,
     "token_indexers": {
       "token_characters": {
         "type": "characters",
@@ -21,7 +21,7 @@
   "validation_data_path": "/home/eunsol/Data/dqa/seqval.json",
   "model": {
     "type": "dqa",
-    "prev_a": 0,
+    "prev_a": 2,
     "text_field_embedder": {
       "token_characters": {
         "type": "character_encoding",
@@ -48,7 +48,7 @@
     "phrase_layer": {
       "type": "gru",
       "bidirectional": true,
-      "input_size": 1124,
+      "input_size": 1224,
       "hidden_size": 100,
       "num_layers": 1
     },
@@ -79,8 +79,8 @@
   },
   "iterator": {
     "type": "bucket",
-    "sorting_keys": [["question", "num_fields"], ["passage", "num_tokens"]],
-    "batch_size": 7,
+    "sorting_keys": [["passage", "num_tokens"]],
+    "batch_size": 8,
     "max_instances_in_memory": 1000
   },
   "trainer": {
