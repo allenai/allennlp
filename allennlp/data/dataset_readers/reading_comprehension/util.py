@@ -223,7 +223,7 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
                                            followup_list: List[int] = None,
                                            additional_metadata: Dict[str, Any] = None,
                                            prev_a: int = 0,
-                                           add_prev_q_followup = False) -> Instance:
+                                           add_prev_q_followup: bool = False) -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
     in a reading comprehension model.
@@ -288,7 +288,6 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
         for pi in range(s_start + p_count, s_end):
           tags[p_count][pi] =  get_tag(p_count, "in", followup_tag)
 
-    print("+++NEW DIALOG+++")
     if token_span_lists:
       span_start_list=[]
       span_end_list=[]
@@ -317,17 +316,18 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
           p2_answer_marker_list.append(SequenceLabelField(p_tags[2], passage_field, label_namespace="answer_tags"))
         if prev_a > 0:
           p1_answer_marker_list.append(SequenceLabelField(p_tags[1], passage_field, label_namespace="answer_tags"))
-        print("====")
-        print("___ "+str(q_i)+"___")
-        print(str(q_i)+"th answer")
-        print(token_span_lists[q_i])
-        p1 = [tags+":"+token.text for tags, token in zip(p_tags[1], passage_tokens) if tags != 'O']
-        p2 = [tags+":"+token.text for tags, token in zip(p_tags[2], passage_tokens) if tags != 'O']
-        p3 = [tags+":"+token.text for tags, token in zip(p_tags[3], passage_tokens) if tags != 'O']
-        print('PREV1'+' '.join(p1))
-        print('PREV2'+' '.join(p2))
-        print('PREV3' +' '.join(p3))
-        print("====")
+        if False:
+          print("====")
+          print("___ "+str(q_i)+"___")
+          print(str(q_i)+"th answer")
+          print(token_span_lists[q_i])
+          p1 = [tags+":"+token.text for tags, token in zip(p_tags[1], passage_tokens) if tags != 'O']
+          p2 = [tags+":"+token.text for tags, token in zip(p_tags[2], passage_tokens) if tags != 'O']
+          p3 = [tags+":"+token.text for tags, token in zip(p_tags[3], passage_tokens) if tags != 'O']
+          print('PREV1'+' '.join(p1))
+          print('PREV2'+' '.join(p2))
+          print('PREV3' +' '.join(p3))
+          print("====")
       fields['span_start'] = ListField(span_start_list)
       fields['span_end'] = ListField(span_end_list)
       if prev_a>0:

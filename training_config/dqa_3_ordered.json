@@ -50,7 +50,7 @@
     "phrase_layer": {
       "type": "gru",
       "bidirectional": true,
-      "input_size": 1127,
+      "input_size": 1154,
       "hidden_size": 100,
       "num_layers": 1
     },

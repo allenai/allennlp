@@ -76,7 +76,9 @@ class DQA(Model):
     self._merge_atten = TimeDistributed(torch.nn.Linear(200 * 4, 200))
 
     self._residual_encoder = residual_encoder
-    self._marker_lin = torch.nn.Embedding((prev_a * 4 * 3) + 1, 50)    
+    self._prev_ans_marker = torch.nn.Embedding((prev_a * 4 * 3) + 1, 10)
+    self._question_num_marker = torch.nn.Embedding(12, 10 * prev_a)
+    
     self._self_atten = TriLinearAttention(200)
 
     self._followup_lin = torch.nn.Linear(200, 3)
@@ -138,20 +140,21 @@ class DQA(Model):
     
 
     if self._prev_a > 0:
-      embedded_question = torch.cat([embedded_question, torch.zeros(batch_size * max_qa_count, max_q_len, self._prev_a).cuda()], dim=-1)
+      question_num_marker = self._question_num_marker(torch.Tensor(list(range(0, max_qa_count))* batch_size).cuda().long()).unsqueeze(1).repeat(1, max_q_len, 1)
+      embedded_question = torch.cat([embedded_question, question_num_marker], dim=-1)
       repeated_embedded_passage = embedded_passage. \
       		unsqueeze(1).repeat(1, max_qa_count, 1, 1).view(batch_size * max_qa_count, passage_lstm_mask.size()[1], -1)  # batch_size * max_qa_count, passage_length, word_embed_dim
       p1_answer_marker = p1_answer_marker.view(batch_size * max_qa_count, passage_length)
-      p1_answer_marker_emb = self._marker_lin(p1_answer_marker)
-      repeated_embedded_passage = torch.cat([repeated_embedded_passage, p1_answer_marker], dim=-1)
+      p1_answer_marker_emb = self._prev_ans_marker(p1_answer_marker)
+      repeated_embedded_passage = torch.cat([repeated_embedded_passage, p1_answer_marker_emb], dim=-1)
       if self._prev_a > 1:
         p2_answer_marker = p2_answer_marker.view(batch_size * max_qa_count, passage_length)
-        p2_answer_marker_emb = self._marker_lin(p2_answer_marker)
-        repeated_embedded_passage = torch.cat([repeated_embedded_passage, p2_answer_marker], dim=-1)
+        p2_answer_marker_emb = self._prev_ans_marker(p2_answer_marker)
+        repeated_embedded_passage = torch.cat([repeated_embedded_passage, p2_answer_marker_emb], dim=-1)
         if self._prev_a > 2:
           p3_answer_marker = p3_answer_marker.view(batch_size * max_qa_count, passage_length)
-          p3_answer_marker_emb = self._marker_lin(p3_answer_marker)
-          repeated_embedded_passage = torch.cat([repeated_embedded_passage, p3_answer_marker], dim=-1)
+          p3_answer_marker_emb = self._prev_ans_marker(p3_answer_marker)
+          repeated_embedded_passage = torch.cat([repeated_embedded_passage, p3_answer_marker_emb], dim=-1)
       repeated_passage_lstm_mask = passage_lstm_mask.unsqueeze(1).repeat(1, max_qa_count, 1, 1).view(batch_size * max_qa_count, passage_lstm_mask.size()[1])
       repeated_encoded_passage = self._dropout(self._phrase_layer(repeated_embedded_passage, repeated_passage_lstm_mask))
     else:

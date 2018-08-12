@@ -19,8 +19,8 @@
      }
     }
   },
-  "train_data_path": "/home/eunsol/Data/dqa/simple/train_seq_final.json",
-  "validation_data_path": "/home/eunsol/Data/dqa/simple/val_seq_final.json",
+  "train_data_path": "/home/eunsol/Data/dqa/simple/train_seq_5000.json",
+  "validation_data_path": "/home/eunsol/Data/dqa/simple/val_seq_5000.json",
   "model": {
     "type": "dqa",
     "prev_a": 1,
@@ -50,7 +50,7 @@
     "phrase_layer": {
       "type": "gru",
       "bidirectional": true,
-      "input_size": 1174,
+      "input_size": 1134,
       "hidden_size": 100,
       "num_layers": 1
     },
@@ -82,7 +82,7 @@
   "iterator": {
     "type": "bucket",
     "sorting_keys": [ ["passage", "num_tokens"]],
-    "batch_size": 3,
+    "batch_size": 8,
     "max_instances_in_memory": 1000
   },
   "trainer": {
