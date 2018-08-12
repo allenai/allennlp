@@ -67,17 +67,8 @@ class DQA(Model):
                initializer: InitializerApplicator,
                dropout: float = 0.2,
                prev_a: int = 0,
-               mask_lstms: bool = True,
-               outfile: str = None) -> None:
+               mask_lstms: bool = True) -> None:
     super(DQA, self).__init__(vocab)
-    outfile = None
-    if outfile is not None:
-      self.write_out = True
-      self.outfile = outfile
-      print("appending output to {}".format(outfile))
-    else:
-      self.write_out = False
-      self.outfile = None
     self._prev_a = prev_a
     self._text_field_embedder = text_field_embedder
     self._phrase_layer = phrase_layer
@@ -147,19 +138,19 @@ class DQA(Model):
     
 
     if self._prev_a > 0:
-      embedded_question = torch.cat([embedded_question, torch.zeros(batch_size * max_qa_count, max_q_len, 50 * self._prev_a).cuda()], dim=-1)
+      embedded_question = torch.cat([embedded_question, torch.zeros(batch_size * max_qa_count, max_q_len, self._prev_a).cuda()], dim=-1)
       repeated_embedded_passage = embedded_passage. \
       		unsqueeze(1).repeat(1, max_qa_count, 1, 1).view(batch_size * max_qa_count, passage_lstm_mask.size()[1], -1)  # batch_size * max_qa_count, passage_length, word_embed_dim
       p1_answer_marker = p1_answer_marker.view(batch_size * max_qa_count, passage_length)
       p1_answer_marker_emb = self._marker_lin(p1_answer_marker)
-      repeated_embedded_passage = torch.cat([repeated_embedded_passage, p1_answer_marker_emb], dim=-1)
+      repeated_embedded_passage = torch.cat([repeated_embedded_passage, p1_answer_marker], dim=-1)
       if self._prev_a > 1:
         p2_answer_marker = p2_answer_marker.view(batch_size * max_qa_count, passage_length)
-        p2_answer_marker = self._marker_lin(p2_answer_marker)
+        p2_answer_marker_emb = self._marker_lin(p2_answer_marker)
         repeated_embedded_passage = torch.cat([repeated_embedded_passage, p2_answer_marker], dim=-1)
         if self._prev_a > 2:
           p3_answer_marker = p3_answer_marker.view(batch_size * max_qa_count, passage_length)
-          p3_answer_marker = self._marker_lin(p3_answer_marker)
+          p3_answer_marker_emb = self._marker_lin(p3_answer_marker)
           repeated_embedded_passage = torch.cat([repeated_embedded_passage, p3_answer_marker], dim=-1)
       repeated_passage_lstm_mask = passage_lstm_mask.unsqueeze(1).repeat(1, max_qa_count, 1, 1).view(batch_size * max_qa_count, passage_lstm_mask.size()[1])
       repeated_encoded_passage = self._dropout(self._phrase_layer(repeated_embedded_passage, repeated_passage_lstm_mask))
@@ -289,8 +280,6 @@ class DQA(Model):
 
     # Evaluation code
     if metadata is not None:
-      if self.outfile is not None:
-        f = open(self.outfile, "a")
       best_span_cpu = best_span.data.cpu().numpy()
       output_dict['best_span_str'] = []
       output_dict['qid'] = []
@@ -327,14 +316,9 @@ class DQA(Model):
           yesno.append(yesno_tag)
           self._official_em(100 * exact_match)
           self._official_f1(100 * f1_score)
-        if self.outfile is not None:
-          f.write(json.dumps({"qid":output_q_list, "aid":output_aid_list, "best_span_str": output_bspan_list, 
-                            "yesno": yesno})+"\n")
         output_dict['qid'].append(output_q_list)
         output_dict['aid'].append(output_aid_list)
         output_dict['best_span_str'].append(output_bspan_list)
-    if self.outfile is not None:
-      f.close()
     return output_dict
 
   @overrides
@@ -386,6 +370,8 @@ class DQA(Model):
           val1 = span_start_logits[b, j]
         val2 = span_end_logits[b, j]
         if val1 + val2 > max_span_log_prob[b]:
+          if j - span_start_argmax[b] > 30:
+            continue 
           best_word_span[b, 0] = span_start_argmax[b]
           best_word_span[b, 1] = j
           max_span_log_prob[b] = val1 + val2

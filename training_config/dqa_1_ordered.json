@@ -82,7 +82,7 @@
   "iterator": {
     "type": "bucket",
     "sorting_keys": [ ["passage", "num_tokens"]],
-    "batch_size": 4,
+    "batch_size": 3,
     "max_instances_in_memory": 1000
   },
   "trainer": {

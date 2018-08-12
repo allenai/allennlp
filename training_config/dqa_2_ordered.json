@@ -3,6 +3,8 @@
     "type": "dqa",
     "prev_a": 2,
     "lazy": true,
+    "add_query": true,
+    "prev_q_followup": true,
     "token_indexers": {
       "token_characters": {
         "type": "characters",
@@ -48,7 +50,7 @@
     "phrase_layer": {
       "type": "gru",
       "bidirectional": true,
-      "input_size": 1224,
+      "input_size": 1126,
       "hidden_size": 100,
       "num_layers": 1
     },

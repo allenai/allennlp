@@ -125,9 +125,9 @@ class DQAReader(DatasetReader):
               if q_idx == 1 or self._prev_a == 1:
                 added_question_text_list.append(question_text_list[q_idx-1]+"|||"+q)
               elif q_idx == 2 or self._prev_a == 2:
-                added_question_text_list.append(qquestion_text_list[q_idx-2]+"|-|"+question_text_list[q_idx-1]+"|||"+q)
+                added_question_text_list.append(question_text_list[q_idx-2]+"|-|"+question_text_list[q_idx-1]+"|||"+q)
               elif self._prev_a == 3:
-                added_question_text_list.append(qquestion_text_list[q_idx-3] +"||" + qquestion_text_list[q_idx-2]+"|-|"+question_text_list[q_idx-1]+"|||"+q)
+                added_question_text_list.append(question_text_list[q_idx-3] +"||" + question_text_list[q_idx-2]+"|-|"+question_text_list[q_idx-1]+"|||"+q)
           question_text_list = added_question_text_list
         question_list_tokens = [self._tokenizer.tokenize(q) for q in question_text_list]
         return util.make_reading_comprehension_instance_dqa(question_list_tokens,

@@ -273,47 +273,38 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
     p1_answer_marker_list = []
     p2_answer_marker_list = []
     p3_answer_marker_list = []
-    def get_tag(i, i_name, followup, add_prev_q_followup):
+    def get_tag(i, i_name, followup):
       if add_prev_q_followup:
         return "<{0:d}_{1:s}_{2:s}>".format(i, i_name, followup)
       else:
         return "<{0:d}_{1:s}>".format(i, i_name)
 
+    def mark_tag(s_start, s_end, tags, p_count, followup_tag):
+      if s_start == s_end:
+        tags[p_count][s_start] = get_tag(p_count, "", followup_tag)
+      else:
+        tags[p_count][s_start] = get_tag(p_count, "start", followup_tag)
+        tags[p_count][s_end] =  get_tag(p_count, "end", followup_tag)
+        for pi in range(s_start + p_count, s_end):
+          tags[p_count][pi] =  get_tag(p_count, "in", followup_tag)
+
+    print("+++NEW DIALOG+++")
     if token_span_lists:
       span_start_list=[]
       span_end_list=[]
-      for i, doc_qs_spans in enumerate(token_span_lists):
+      # Looping each <<answers>>. 
+      for q_i, doc_qs_spans in enumerate(token_span_lists):
         candidate_answers: Counter = Counter()
         span_start, span_end = doc_qs_spans[-1] # Last one is the original answer
         span_start_list.append(IndexField(span_start, passage_field))
         span_end_list.append(IndexField(span_end, passage_field))
-        p1_tags = ["O"] * len(passage_tokens)
-        p2_tags = ["O"] * len(passage_tokens)
-        p3_tags = ["O"] * len(passage_tokens)
-        if i > 0 and prev_a > 0:
-          if p1_span_start == p1_span_end:
-            p1_tags[p1_span_start] = get_tag(1, "", followup_list[i-1], add_prev_q_followup)
-          else:
-            p1_tags[p1_span_start] = get_tag(1, "start", followup_list[i-1], add_prev_q_followup)
-            p1_tags[p1_span_end] =  get_tag(1, "end", followup_list[i-1], add_prev_q_followup)
-            for pi in range(p1_span_start + 1, p1_span_end):
-              p1_tags[pi] =  get_tag(1, "in", followup_list[i-1], add_prev_q_followup)
-          if i >1 and prev_a >1:
-            if p1_span_start == p1_span_end:
-              p1_tags[p2_span_start] =  get_tag(2, "", followup_list[i-2], add_prev_q_followup)
-            else:
-              p2_tags[p2_span_start] = get_tag(2, "start", followup_list[i-2], add_prev_q_followup)
-              p2_tags[p2_span_end] = get_tag(2, "end", followup_list[i-2], add_prev_q_followup)
-              for pi in range(p2_span_start+1,p2_span_end):
-                p2_tags[pi] = get_tag(2, "in", followup_list[i-2], add_prev_q_followup)
-            if i>2 and prev_a>2:
-              if p3_span_start == p3_span_end:
-                p3_tags[p3_span_start] = get_tag(3, "", followup_list[i-3], add_prev_q_followup)
-              else:
-                p3_tags[p3_span_start] = get_tag(3, "", followup_list[i-3], add_prev_q_followup)
-                p3_tags[p3_span_end] = get_tag(3, "", followup_list[i-3], add_prev_q_followup)
-              for pi in range(p3_span_start+1, p3_span_end):
-                p3_tags[pi] = get_tag(3, "", followup_list[i-3], add_prev_q_followup)
+        p_tags = [[], ["O"] * len(passage_tokens), ["O"] * len(passage_tokens), ["O"] * len(passage_tokens)]
+        if q_i > 0 and prev_a > 0:
+          mark_tag(p1_span_start, p1_span_end, p_tags, 1, followup_list[q_i-1])
+          if q_i > 1 and prev_a >1:
+            mark_tag(p2_span_start, p2_span_end, p_tags, 2, followup_list[q_i-2])
+            if q_i > 2 and prev_a > 2:
+              mark_tag(p3_span_start, p3_span_end, p_tags,3, followup_list[q_i-3])
             p3_span_start = p2_span_start
             p3_span_end = p2_span_end
           p2_span_start = p1_span_start
@@ -321,17 +312,22 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
         p1_span_start = span_start
         p1_span_end = span_end
         if prev_a > 2:
-          p3_answer_marker_list.append(SequenceLabelField(p3_tags, passage_field, label_namespace="answer_tags"))
+          p3_answer_marker_list.append(SequenceLabelField(p_tags[3], passage_field, label_namespace="answer_tags"))
         if prev_a > 1:
-          p2_answer_marker_list.append(SequenceLabelField(p2_tags, passage_field, label_namespace="answer_tags"))
+          p2_answer_marker_list.append(SequenceLabelField(p_tags[2], passage_field, label_namespace="answer_tags"))
         if prev_a > 0:
-          p1_answer_marker_list.append(SequenceLabelField(p1_tags, passage_field, label_namespace="answer_tags"))
-          """
-          print("___ "+str(i)+"___")
-          print(token_span_lists[i])
-          total = [tags+":"+token.text for tags, token in zip(p1_tags, passage_tokens)]
-          print(' '.join(total))
-          """
+          p1_answer_marker_list.append(SequenceLabelField(p_tags[1], passage_field, label_namespace="answer_tags"))
+        print("====")
+        print("___ "+str(q_i)+"___")
+        print(str(q_i)+"th answer")
+        print(token_span_lists[q_i])
+        p1 = [tags+":"+token.text for tags, token in zip(p_tags[1], passage_tokens) if tags != 'O']
+        p2 = [tags+":"+token.text for tags, token in zip(p_tags[2], passage_tokens) if tags != 'O']
+        p3 = [tags+":"+token.text for tags, token in zip(p_tags[3], passage_tokens) if tags != 'O']
+        print('PREV1'+' '.join(p1))
+        print('PREV2'+' '.join(p2))
+        print('PREV3' +' '.join(p3))
+        print("====")
       fields['span_start'] = ListField(span_start_list)
       fields['span_end'] = ListField(span_end_list)
       if prev_a>0:
