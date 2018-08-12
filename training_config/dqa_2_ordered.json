@@ -3,7 +3,7 @@
     "type": "dqa",
     "prev_a": 2,
     "lazy": true,
-    "add_query": true,
+    "add_query": false,
     "prev_q_followup": true,
     "token_indexers": {
       "token_characters": {
@@ -20,7 +20,7 @@
     }
   },
   "train_data_path": "/home/eunsol/Data/dqa/simple/train_seq_5000.json",
-  "validation_data_path": "/home/eunsol/Data/dqa/simple/val_seq_5000.json",
+  "validation_data_path": "/home/eunsol/Data/dqa/simple/val_seq_final.json",
   "model": {
     "type": "dqa",
     "prev_a": 2,
@@ -77,12 +77,18 @@
     },
     "initializer": [
     ],
-    "dropout": 0.2
+    "dropout": 0.3
   },
   "iterator": {
     "type": "bucket",
     "sorting_keys": [["question", "num_fields"], ["passage", "num_tokens"]],
-    "batch_size": 8,
+    "batch_size": 10,
+    "max_instances_in_memory": 1000
+  },
+  "validation_iterator": {
+    "type": "bucket",
+    "sorting_keys": [["question", "num_fields"], ["passage", "num_tokens"]],
+    "batch_size": 3,
     "max_instances_in_memory": 1000
   },
   "trainer": {
