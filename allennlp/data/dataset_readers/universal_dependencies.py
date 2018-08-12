@@ -54,7 +54,7 @@ class UniversalDependenciesDatasetReader(DatasetReader):
                 # dependencies for the original sentence.
                 # We filter by None here as elided words have a non-integer word id,
                 # and are replaced with None by the conllu python library.
-                annotation = [x for x in annotation if x["head"] is not None]
+                annotation = [x for x in annotation if x["id"] is not None]
 
                 heads = [x["head"] for x in annotation]
                 tags = [x["deprel"] for x in annotation]
