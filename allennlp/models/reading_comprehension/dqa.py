@@ -306,6 +306,7 @@ class DQA(Model):
           output_q_list.append(iid)
           output_aid_list.append(aid)
           if answer_texts:
+            #for i in range(0, len(answer_texts)):
             exact_match = squad_eval.metric_max_over_ground_truths(
               squad_eval.exact_match_score,
               best_span_string,
@@ -314,6 +315,7 @@ class DQA(Model):
               squad_eval.f1_score,
               best_span_string,
               answer_texts)
+             
           argmax_index = np.argmax(output_dict['yesno'][i, currcount, :])
           yesno_tag = self.vocab.get_token_from_index(argmax_index, namespace="yesno_labels")
           yesno.append(yesno_tag)
