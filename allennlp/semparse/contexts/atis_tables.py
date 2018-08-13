@@ -85,7 +85,6 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
     keep track of linking scores, we represent the numbers as a dictionary, where the keys are the string
     representation of the number and the values are lists of the token indices that triggers that number.
     """
-
     # When we use a regex to find numbers or strings, we need a mapping from
     # the character to which token triggered it.
     char_offset_to_token_index = {token.idx : token_index
@@ -115,14 +114,10 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
     for key, value in times_linking_dict.items():
         number_linking_dict[key].extend(value)
 
-    for idx, token in enumerate(tokenized_utterance):
-        if token.text in MONTH_NUMBERS:
-            number_linking_dict[str(MONTH_NUMBERS[token.text])].append(idx)
-        if token.text in DAY_NUMBERS:
-            number_linking_dict[str(DAY_NUMBERS[token.text])].append(idx)
-        if token.text in MISC_TIME_TRIGGERS:
-            for time in MISC_TIME_TRIGGERS[token.text]:
-                number_linking_dict[time].append(idx)
+    for index, token in enumerate(tokenized_utterance):
+        for number in NUMBER_TRIGGER_DICT.get(token.text, []):
+            number_linking_dict[number].append(index)
+
     for tens, digits in zip(tokenized_utterance, tokenized_utterance[1:]):
         bigram = ' '.join([tens.text, digits.text])
         if bigram in DAY_NUMBERS:
@@ -202,6 +197,9 @@ def get_trigger_dict(trigger_lists: List[List[str]],
             merged_trigger_dict[key.lower()].extend(value)
 
     return merged_trigger_dict
+
+def convert_to_string_list_value_dict(trigger_dict: Dict[str, int]) -> Dict[str, List[str]]:
+    return { key: [str(value)] for key, value in trigger_dict.items() }
 
 AIRLINE_CODES = {'alaska': ['AS'],
                  'alliance': ['3J'],
@@ -488,3 +486,7 @@ TRIGGER_DICTS = [CITY_AIRPORT_CODES,
                  MISC_STR]
 
 ATIS_TRIGGER_DICT = get_trigger_dict(TRIGGER_LISTS, TRIGGER_DICTS)
+
+NUMBER_TRIGGER_DICT: Dict[str, List[str]] = get_trigger_dict([], [convert_to_string_list_value_dict(MONTH_NUMBERS),
+                                            convert_to_string_list_value_dict(DAY_NUMBERS),
+                                            MISC_TIME_TRIGGERS])
