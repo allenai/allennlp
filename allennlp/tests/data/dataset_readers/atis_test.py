@@ -30,9 +30,9 @@ class TestAtisReader(AllenNlpTestCase):
         # Check that the strings in the actions field has the same actions
         # as the strings in the world.
         valid_strs = set()
-        for prod in instance.fields['actions'].field_list:
-            if prod.rule.startswith('string'):
-                valid_strs.add(prod.rule)
+        for action in instance.fields['actions'].field_list:
+            if action.rule.startswith('string'):
+                valid_strs.add(action.rule)
 
         world = instance.fields['world'].metadata
         assert valid_strs == set(world.valid_actions['string'])

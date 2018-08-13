@@ -255,7 +255,7 @@ class TestAtisWorld(AllenNlpTestCase):
             {'number -> ["0"]',
              'number -> ["1"]',
              'number -> ["1200"]',
-             'number -> ["12"]'}
+             'number -> ["2400"]'}
 
         assert set(world.valid_actions['string']) == \
                 {'string -> ["\'DENVER\'"]',
@@ -268,9 +268,9 @@ class TestAtisWorld(AllenNlpTestCase):
         assert set(world.valid_actions['number']) == \
                 {'number -> ["0"]',
                  'number -> ["1"]',
-                 'number -> ["12"]',
                  'number -> ["1800"]',
-                 'number -> ["1200"]'}
+                 'number -> ["1200"]',
+                 'number -> ["2400"]'}
 
         assert set(world.valid_actions['string']) == \
                 {'string -> ["\'DENVER\'"]',
@@ -296,8 +296,7 @@ class TestAtisWorld(AllenNlpTestCase):
                  'number -> ["2200"]',
                  'number -> ["1991"]',
                  'number -> ["1200"]',
-                 'number -> ["1000"]',
-                 'number -> ["10"]'}
+                 'number -> ["1000"]'}
 
         assert set(world.valid_actions['string']) == \
                 {'string -> ["\'COACH\'"]',

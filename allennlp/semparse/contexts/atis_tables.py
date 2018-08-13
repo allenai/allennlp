@@ -11,6 +11,8 @@ HOURS_IN_DAY = 2400
 AROUND_RANGE = 30
 
 APPROX_WORDS = ['about', 'around', 'approximately']
+WORDS_PRECEDING_TIME = ['at', 'between', 'to', 'before', 'after']
+
 def get_times_from_utterance(utterance: str,
                              char_offset_to_token_index: Dict[int, int],
                              indices_of_approximate_words: Set[int]) -> Dict[str, List[int]]:
@@ -37,10 +39,7 @@ def get_times_from_utterance(utterance: str,
     oclock_linking_dict = _time_regex_match(r"\d+\so'clock",
                                           utterance,
                                           char_offset_to_token_index,
-                                          lambda match: [int(match.rstrip("o'clock"))
-                                                         * HOUR_TO_TWENTY_FOUR,
-                                                         (int(match.rstrip("o'clock")) * HOUR_TO_TWENTY_FOUR +
-                                                          TWELVE_TO_TWENTY_FOUR) % HOURS_IN_DAY],
+                                          lambda match: digit_to_query_time(match.rstrip("o'clock")),
                                           indices_of_approximate_words)
 
     times_linking_dict: Dict[str, List[int]] = defaultdict(list)
@@ -89,18 +88,25 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
 
     # When we use a regex to find numbers or strings, we need a mapping from
     # the character to which token triggered it.
-    char_offset_to_token_index = {token.idx : token_idx 
-                                  for token_idx, token in enumerate(tokenized_utterance)}
+    char_offset_to_token_index = {token.idx : token_index
+                                  for token_index, token in enumerate(tokenized_utterance)}
 
     # We want to look up later for each time whether it appears after a word
     # such as "about" or "approximately".
-    indices_of_approximate_words = {idx for idx, token in enumerate(tokenized_utterance)
+    indices_of_approximate_words = {index for index, token in enumerate(tokenized_utterance)
             if token.text in APPROX_WORDS}
-    number_linking_dict = _time_regex_match(r'\d+',
-                                          utterance,
-                                          char_offset_to_token_index,
-                                          lambda match: [int(match)],
-                                          indices_of_approximate_words)
+
+    indices_of_words_preceding_time = {index for index, token in enumerate(tokenized_utterance)
+            if token.text in WORDS_PRECEDING_TIME}
+
+    number_linking_dict = defaultdict(list)
+    for token_index, token in enumerate(tokenized_utterance):
+        if token.text.isdigit():
+            if token_index - 1 in indices_of_words_preceding_time: 
+                for time in digit_to_query_time(token.text):
+                    number_linking_dict[str(time)].append(token_index)
+            else:
+                number_linking_dict[token.text].append(token_index)
 
     times_linking_dict = get_times_from_utterance(utterance,
                                                   char_offset_to_token_index,
@@ -123,6 +129,15 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
             number_linking_dict[str(DAY_NUMBERS[bigram])].append(len(tokenized_utterance) - 1)
 
     return number_linking_dict
+
+def digit_to_query_time(digit: str) -> List[int]:
+    """
+    Given a digit in the utterance, return a list of the times that it corresponds to.
+    """
+    if int(digit) % 12 == 0:
+        return [0, 1200, 2400]
+    return [int(digit) * HOUR_TO_TWENTY_FOUR,
+            (int(digit) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR) % HOURS_IN_DAY]
 
 def get_approximate_times(times: List[int]) -> List[int]:
     """
