@@ -99,7 +99,7 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
     indices_of_words_preceding_time = {index for index, token in enumerate(tokenized_utterance)
             if token.text in WORDS_PRECEDING_TIME}
 
-    number_linking_dict = defaultdict(list)
+    number_linking_dict: Dict[str, List[int]] = defaultdict(list)
     for token_index, token in enumerate(tokenized_utterance):
         if token.text.isdigit():
             if token_index - 1 in indices_of_words_preceding_time: 

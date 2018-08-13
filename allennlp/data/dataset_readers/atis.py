@@ -96,7 +96,7 @@ class AtisDatasetReader(DatasetReader):
             The world in which this utterance appears in, we store this in a MetadataField.
         """
         utterance = utterances[-1]
-        action_sequence = []
+        action_sequence: List[str] = []
 
         world = AtisWorld(utterances)
 
