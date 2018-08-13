@@ -93,9 +93,9 @@ class AtisWorld():
         for string in strings_list:
             entity_linking = [0 for token in current_tokenized_utterance]
             # string_linking_dict has the strings and linking scores from the last utterance.
-            # If the string is not in the last utterance, then the linking scores will be all 0.  
+            # If the string is not in the last utterance, then the linking scores will be all 0.
             for token_index in string_linking_dict.get(string, []):
-                    entity_linking[token_index] = 1
+                entity_linking[token_index] = 1
             string_linking_scores.append(entity_linking)
         linking_scores.extend(string_linking_scores)
 
@@ -117,7 +117,7 @@ class AtisWorld():
         for number in numbers_list:
             entity_linking = [0 for token in current_tokenized_utterance]
             # number_linking_scores has the numbers and linking scores from the last utterance.
-            # If the number is not in the last utterance, then the linking scores will be all 0.  
+            # If the number is not in the last utterance, then the linking scores will be all 0.
             for token_index in number_linking_dict.get(number, []):
                 entity_linking[token_index] = 1
             number_linking_scores.append(entity_linking)

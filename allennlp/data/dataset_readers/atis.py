@@ -25,23 +25,29 @@ def _lazy_parse(text: str):
 
 @DatasetReader.register("atis")
 class AtisDatasetReader(DatasetReader):
+    # pylint: disable=line-too-long
     """
     This ``DatasetReader`` takes json files and converts them into ``Instances`` for the
     ``AtisSemanticParser``.
 
     Each line in the file is a JSON object that represent an interaction in the ATIS dataset
     that has the following keys and values:
-        id: The original filepath in the LDC corpus
-        interaction: A list where each element represents a turn in the interaction
-            utterance: Natural language input
-            sql: A list of SQL queries that the utterance maps to, it could be multiple SQL queries
-                or none at all.
-        scenario: A code that refers to the scenario that served as the prompt for this interaction
-        ut_date: Date of the interaction
-        zc09_path: Path that was used in the original paper `Learning Context-Dependent Mappings from
-        Sentences to Logical Form
-        <https://www.semanticscholar.org/paper/Learning-Context-Dependent-Mappings-from-Sentences-Zettlemoyer-Collins/44a8fcee0741139fa15862dc4b6ce1e11444878f>'_ by Zettlemoyer and Collins (ACL/IJCNLP 2009)
+    ```
+    "id": The original filepath in the LDC corpus
+    "interaction": <list where each element represents a turn in the interaction>
+    "scenario": A code that refers to the scenario that served as the prompt for this interaction
+    "ut_date": Date of the interaction
+    "zc09_path": Path that was used in the original paper `Learning Context-Dependent Mappings from
+    Sentences to Logical Form
+    <https://www.semanticscholar.org/paper/Learning-Context-Dependent-Mappings-from-Sentences-Zettlemoyer-Collins/44a8fcee0741139fa15862dc4b6ce1e11444878f>'_ by Zettlemoyer and Collins (ACL/IJCNLP 2009)
+    ```
 
+    Each element in the ``interaction`` list has the following keys and values:
+    ```
+    "utterance": Natural language input
+    "sql": A list of SQL queries that the utterance maps to, it could be multiple SQL queries
+    or none at all.
+    ```
 
     Parameters
     ----------
