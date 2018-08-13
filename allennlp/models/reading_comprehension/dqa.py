@@ -103,7 +103,6 @@ class DQA(Model):
     self._span_gt_followup_accuracy = CategoricalAccuracy()
 
     self._span_accuracy = BooleanAccuracy()
-    self._official_em = Average()
     self._official_f1 = Average()
     if dropout > 0:
       self._dropout = VariationalDropout(p=dropout)
@@ -138,7 +137,6 @@ class DQA(Model):
     question_lstm_mask = question_mask if self._mask_lstms else None
     passage_lstm_mask = passage_mask if self._mask_lstms else None
     
-
     if self._prev_a > 0:
       question_num_marker = self._question_num_marker(torch.Tensor(list(range(0, max_qa_count))* batch_size).cuda().long()).unsqueeze(1).repeat(1, max_q_len, 1)
       embedded_question = torch.cat([embedded_question, question_num_marker], dim=-1)
@@ -239,14 +237,8 @@ class DQA(Model):
 
     best_span = self._get_best_span(span_start_logits, span_end_logits, span_yesno_logits, span_followup_logits)
 
-    output_dict = {"span_start_logits": span_start_logits,
-                   "span_start_probs": span_start_probs,
-                   "span_end_logits": span_end_logits,
-                   "span_end_probs": span_end_probs,
-                   "span_yesno_logits": span_yesno_logits,
-                   "span_followup_logits": span_followup_logits,
-                   "best_span": best_span}
-
+    output_dict = {}
+    # Compute the loss.
     if span_start is not None:
       loss = nll_loss(util.masked_log_softmax(span_start_logits, passage_mask), span_start.view(-1), ignore_index=-1)
       self._span_start_accuracy(span_start_logits, span_start.view(-1), mask=qa_mask)
@@ -261,6 +253,7 @@ class DQA(Model):
         v.append(max(span_end[i] * 3 + i * passage_length * 3 + 1, 0))
         v.append(max(span_end[i] * 3 + i * passage_length * 3 + 2, 0))
       gt_end = Variable(torch.LongTensor(v).cuda())
+
       v = []
       for i in range(0, batch_size * max_qa_count):
         v.append(max(best_span[i][1] * 3 + i * passage_length * 3, 0))
@@ -274,27 +267,24 @@ class DQA(Model):
       loss += nll_loss(F.log_softmax(_followup, dim=-1), followup_list.view(-1), ignore_index=-1)
       
       _yesno = span_yesno_logits.view(-1).index_select(0, predicted_end).view(-1, 3)
-      output_dict['yesno'] = _yesno.data.cpu().numpy().reshape(batch_size, -1, 3)
+      output_dict['yesno'] = _yesno.view(batch_size, -1, 3)#data.cpu().numpy().reshape(batch_size, -1, 3)
       _followup = span_followup_logits.view(-1).index_select(0, predicted_end).view(-1, 3)
       self._span_yesno_accuracy(_yesno, yesno_list.view(-1), mask=qa_mask)
       self._span_followup_accuracy(_followup, followup_list.view(-1), mask=qa_mask)
-      # add a select for the right span
       output_dict["loss"] = loss
-
-    # Evaluation code
-    if metadata is not None:
-      best_span_cpu = best_span.data.cpu().numpy()
       output_dict['best_span_str'] = []
       output_dict['qid'] = []
       output_dict['aid'] = []
+
+      # Eval
+      best_span_cpu = best_span.detach().cpu().numpy()
       for i in range(batch_size):
         passage_str = metadata[i]['original_passage']
         offsets = metadata[i]['token_offsets']
-        exact_match = f1_score = 0
+        f1_score = 0
         output_bspan_list = []
         output_q_list = []
         output_aid_list = []
-        yesno=[]
         for currcount, (iid, answer_texts) in enumerate(
                 zip(metadata[i]["instance_id"], metadata[i]["answer_texts_list"])):
           (aid, _) = iid.split("_q#")
@@ -306,37 +296,35 @@ class DQA(Model):
           output_q_list.append(iid)
           output_aid_list.append(aid)
           if answer_texts:
-            #for i in range(0, len(answer_texts)):
-            exact_match = squad_eval.metric_max_over_ground_truths(
-              squad_eval.exact_match_score,
-              best_span_string,
-              answer_texts)
-            f1_score = squad_eval.metric_max_over_ground_truths(
+            if len(answer_texts) > 1:
+              t_f1 = []
+              for ai in range(len(answer_texts)):
+                idxes = list(range(len(answer_texts)))
+                idxes.pop(ai)
+                refs = [answer_texts[z] for z in idxes]
+                t_f1.append(squad_eval.metric_max_over_ground_truths(
+                  squad_eval.f1_score,
+                  best_span_string,
+                  refs))
+              f1_score = 1.0 * sum(t_f1)/len(t_f1)
+            else:
+              f1_score = squad_eval.metric_max_over_ground_truths(
               squad_eval.f1_score,
               best_span_string,
               answer_texts)
-             
-          argmax_index = np.argmax(output_dict['yesno'][i, currcount, :])
-          yesno_tag = self.vocab.get_token_from_index(argmax_index, namespace="yesno_labels")
-          yesno.append(yesno_tag)
-          self._official_em(100 * exact_match)
           self._official_f1(100 * f1_score)
         output_dict['qid'].append(output_q_list)
         output_dict['aid'].append(output_aid_list)
         output_dict['best_span_str'].append(output_bspan_list)
-    return output_dict
+    return output_dict 
 
   @overrides
   def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, Any]:
-    print_dict = {} 
-    key_to_print = ['qid', 'aid', 'qtest', 'best_span_str']
-    for k, v in output_dict.items():
-      if k in key_to_print:
-        print_dict[k] = v
-    argmax_indices = np.argmax(output_dict['yesno'], axis=-1)
+    yes_no_cpu = output_dict.pop('yesno').detach().cpu().numpy()
+    argmax_indices = np.argmax(yes_no_cpu, axis=-1)
     yesno_tags = [[self.vocab.get_token_from_index(x, namespace="yesno_labels") for x in argm_list] for argm_list in argmax_indices]
-    print_dict['yesno']  = yesno_tags
-    return print_dict
+    output_dict['yesno']  = yesno_tags
+    return output_dict
 
   def get_metrics(self, reset: bool = False) -> Dict[str, float]:
     return {
@@ -345,9 +333,6 @@ class DQA(Model):
       'span_acc': self._span_accuracy.get_metric(reset),
       'yesno': self._span_yesno_accuracy.get_metric(reset),
       'followup': self._span_followup_accuracy.get_metric(reset),
-      #'gt_yesno': self._span_gt_yesno_accuracy.get_metric(reset),
-      #'gt_followup': self._span_gt_followup_accuracy.get_metric(reset),
-      'em': self._official_em.get_metric(reset),
       'f1': self._official_f1.get_metric(reset),
     }
 

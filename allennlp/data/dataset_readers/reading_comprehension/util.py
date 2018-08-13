@@ -342,3 +342,20 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)
 
+def handle_cannot(refs):
+  """
+  Process a list of reference answers. If equal or more than half of the answers are "CANNOTANSWER", take it as gold. Otherwise, return answers that are not "CANNOTANSWER". 
+  """
+  num_cannot = 0
+  num_spans = 0
+  for ref in refs:
+    if ref == 'CANNOTANSWER':
+        num_cannot += 1
+    else:
+        num_spans += 1
+  if num_cannot >= num_spans:
+    refs = ['CANNOTANSWER']
+  else:
+    refs = [x for x in refs if x != 'CANNOTANSWER']
+  return refs
+

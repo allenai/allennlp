@@ -130,6 +130,7 @@ class DQAReader(DatasetReader):
                 added_question_text_list.append(question_text_list[q_idx-3] +"||" + question_text_list[q_idx-2]+"|-|"+question_text_list[q_idx-1]+"|||"+q)
           question_text_list = added_question_text_list
         question_list_tokens = [self._tokenizer.tokenize(q) for q in question_text_list]
+        additional_metadata['answer_texts_list'] = [util.handle_cannot(ans_list) for ans_list in additional_metadata['answer_texts_list']]
         return util.make_reading_comprehension_instance_dqa(question_list_tokens,
                                                             passage_tokens,
                                                             self._token_indexers,

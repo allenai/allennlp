@@ -1,7 +1,8 @@
 {
   "dataset_reader": {
-    "type": "dqaseq",
+    "type": "dqa",
     "lazy": true,
+    "prev_a":1,
     "token_indexers": {
       "token_characters": {
         "type": "characters",
@@ -16,10 +17,12 @@
      }
     }
   },
-  "train_data_path": "/home/eunsol/Data/dqa/data/seqval.json",
-  "validation_data_path": "/home/eunsol/Data/dqa/data/seqval.json",
+  "train_data_path": "/home/eunsol/Data/dqa/simple/val_seq_final.json",
+  "validation_data_path": "/home/eunsol/Data/dqa/simple/val_seq_final.json",
   "model": {
     "type": "dqa",
+    "prev_a":1,
+    "initializer":[],
     "text_field_embedder": {
       "token_characters": {
         "type": "character_encoding",
@@ -46,7 +49,7 @@
     "phrase_layer": {
       "type": "gru",
       "bidirectional": true,
-      "input_size": 1124,
+      "input_size": 1134,
       "hidden_size": 100,
       "num_layers": 1
     },
