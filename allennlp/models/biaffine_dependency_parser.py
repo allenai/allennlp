@@ -496,9 +496,10 @@ class BiaffineDependencyParser(Model):
         heads = []
         head_tags = []
         for energy, length in zip(batch_energy.detach().cpu().numpy(), lengths):
-            head, head_tag = decode_mst(energy, length)
-            heads.append(head)
-            head_tags.append(head_tag)
+            head, head_tag = decode_mst(energy[:, 1:, 1:], length - 1)
+            head[:length - 1] += 1
+            heads.append(numpy.concatenate([[0], head]))
+            head_tags.append(numpy.concatenate([[0], head_tag]))
         return torch.from_numpy(numpy.stack(heads)), torch.from_numpy(numpy.stack(head_tags))
 
 
