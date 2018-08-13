@@ -490,16 +490,22 @@ class BiaffineDependencyParser(Model):
 
         # Shape (batch_size, sequence_length, sequence_length)
         normalized_arc_logits = F.log_softmax(attended_arcs, dim=2).transpose(1, 2)
+
+        # Although we need to include the root node so that the MST includes it,
+        # we do not want any outgoing edges from the root to any other node.
+        # Here, we enforce this by setting the scores for all ROOT -> word
+        # edges to be very negative.
+        normalized_arc_logits[:, :, 0] = -1e8
+
         # Shape (batch_size, num_head_tags, sequence_length, sequence_length)
         batch_energy = torch.exp(normalized_arc_logits.unsqueeze(1) + normalized_pairwise_head_logits)
 
         heads = []
         head_tags = []
         for energy, length in zip(batch_energy.detach().cpu().numpy(), lengths):
-            head, head_tag = decode_mst(energy[:, 1:, 1:], length - 1)
-            head[:length - 1] += 1
-            heads.append(numpy.concatenate([[0], head]))
-            head_tags.append(numpy.concatenate([[0], head_tag]))
+            head, head_tag = decode_mst(energy, length)
+            heads.append(head)
+            head_tags.append(head_tag)
         return torch.from_numpy(numpy.stack(heads)), torch.from_numpy(numpy.stack(head_tags))
 
 
