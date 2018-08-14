@@ -43,7 +43,7 @@ class DQAReader(DatasetReader):
                  lazy: bool = False,
                  prev_a: int = 0,
                  add_query: bool = False,
-                 prev_q_followup: bool =False) -> None:
+                 prev_q_followup: bool = False) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
@@ -130,6 +130,7 @@ class DQAReader(DatasetReader):
                 added_question_text_list.append(question_text_list[q_idx-3] +"||" + question_text_list[q_idx-2]+"|-|"+question_text_list[q_idx-1]+"|||"+q)
           question_text_list = added_question_text_list
         question_list_tokens = [self._tokenizer.tokenize(q) for q in question_text_list]
+        # Map answer texts to "CANNOTANSWER" if more than half of them marked as so.
         additional_metadata['answer_texts_list'] = [util.handle_cannot(ans_list) for ans_list in additional_metadata['answer_texts_list']]
         return util.make_reading_comprehension_instance_dqa(question_list_tokens,
                                                             passage_tokens,

@@ -215,15 +215,15 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     return Instance(fields)
 
 def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Token]],
-                                           passage_tokens: List[Token],
-                                           token_indexers: Dict[str, TokenIndexer],
-                                           passage_text: str,
-                                           token_span_lists: List[List[Tuple[int, int]]] = None,
-                                           yesno_list: List[int] = None,
-                                           followup_list: List[int] = None,
-                                           additional_metadata: Dict[str, Any] = None,
-                                           prev_a: int = 0,
-                                           add_prev_q_followup: bool = False) -> Instance:
+                                            passage_tokens: List[Token],
+                                            token_indexers: Dict[str, TokenIndexer],
+                                            passage_text: str,
+                                            token_span_lists: List[List[Tuple[int, int]]] = None,
+                                            yesno_list: List[int] = None,
+                                            followup_list: List[int] = None,
+                                            additional_metadata: Dict[str, Any] = None,
+                                            prev_a: int = 0,
+                                            add_prev_q_followup: bool = False) -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
     in a reading comprehension model.
@@ -235,7 +235,7 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
 
     Parameters
     ----------
-    question_tokens : ``List[List[Token]]``
+    question_list_tokens : ``List[List[Token]]``
         An already-tokenized question.
     passage_tokens : ``List[Token]``
         An already-tokenized passage that contains the answer to the given question.
@@ -246,12 +246,16 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
         The original passage text.  We need this so that we can recover the actual span from the
         original passage that the model predicts as the answer to the question.  This is used in
         official evaluation scripts.
-    token_spans : ``List[List[Tuple[int, int]]]``, optional
+    token_spans_lists : ``List[List[Tuple[int, int]]]``, optional
         Indices into ``passage_tokens`` to use as the answer to the question for training.  This is
         a list because there might be several possible correct answer spans in the passage.
         Currently, we just select the most frequent span in this list (i.e., SQuAD has multiple
         annotations on the dev set; this will select the span that the most annotators gave as
         correct).
+    yesno_list : List[int]
+    followup_list : List[int]
+    prev_a : int
+    add_prev_q_followup : boolean
     additional_metadata : ``Dict[str, Any]``, optional
         The constructed ``metadata`` field will by default contain ``original_passage``,
         ``token_offsets``, ``question_tokens``, ``passage_tokens``, and ``answer_texts`` keys.  If
@@ -273,6 +277,7 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
     p1_answer_marker_list = []
     p2_answer_marker_list = []
     p3_answer_marker_list = []
+
     def get_tag(i, i_name, followup):
       if add_prev_q_followup:
         return "<{0:d}_{1:s}_{2:s}>".format(i, i_name, followup)
@@ -316,25 +321,13 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
           p2_answer_marker_list.append(SequenceLabelField(p_tags[2], passage_field, label_namespace="answer_tags"))
         if prev_a > 0:
           p1_answer_marker_list.append(SequenceLabelField(p_tags[1], passage_field, label_namespace="answer_tags"))
-        if False:
-          print("====")
-          print("___ "+str(q_i)+"___")
-          print(str(q_i)+"th answer")
-          print(token_span_lists[q_i])
-          p1 = [tags+":" if tags != 'O' else ' '+token.text for tags, token in zip(p_tags[1], passage_tokens)]
-          p2 = [tags+":" if tags != 'O' else ' '+token.text for tags, token in zip(p_tags[2], passage_tokens)]
-          p3 = [tags+":" if tags != 'O' else ' '+token.text for tags, token in zip(p_tags[3], passage_tokens)]
-          print('PREV1'+' '.join(p1))
-          print('PREV2'+' '.join(p2))
-          print('PREV3' +' '.join(p3))
-          print("====")
       fields['span_start'] = ListField(span_start_list)
       fields['span_end'] = ListField(span_end_list)
-      if prev_a>0:
+      if prev_a > 0:
         fields['p1_answer_marker'] = ListField(p1_answer_marker_list)
-        if prev_a>1:
+        if prev_a > 1:
           fields['p2_answer_marker'] = ListField(p2_answer_marker_list)
-          if prev_a>2:
+          if prev_a > 2:
             fields['p3_answer_marker'] = ListField(p3_answer_marker_list)
       fields['yesno_list'] = ListField([LabelField(yesno, label_namespace="yesno_labels") for yesno in yesno_list])
       fields['followup_list'] = ListField([LabelField(followup, label_namespace="followup_labels") for followup in followup_list])
@@ -343,19 +336,19 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
     return Instance(fields)
 
 def handle_cannot(refs):
-  """
-  Process a list of reference answers. If equal or more than half of the answers are "CANNOTANSWER", take it as gold. Otherwise, return answers that are not "CANNOTANSWER". 
-  """
-  num_cannot = 0
-  num_spans = 0
-  for ref in refs:
-    if ref == 'CANNOTANSWER':
-        num_cannot += 1
+    """
+    Process a list of reference answers. If equal or more than half of the answers are "CANNOTANSWER", take it as gold. Otherwise, return answers that are not "CANNOTANSWER". 
+    """
+    num_cannot = 0
+    num_spans = 0
+    for ref in refs:
+      if ref == 'CANNOTANSWER':
+          num_cannot += 1
+      else:
+          num_spans += 1
+    if num_cannot >= num_spans:
+      refs = ['CANNOTANSWER']
     else:
-        num_spans += 1
-  if num_cannot >= num_spans:
-    refs = ['CANNOTANSWER']
-  else:
-    refs = [x for x in refs if x != 'CANNOTANSWER']
-  return refs
+      refs = [x for x in refs if x != 'CANNOTANSWER']
+    return refs
 

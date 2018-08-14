@@ -23,15 +23,8 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @Model.register("dqa")
 class DQA(Model):
   """
-  This class implements modified version of Bidirectional Attention Flow model as used in 
+  This class implements modified version of BiDAF (with self attention and residual layer, from Clark and Gardner ACL 17 paper) model as used in 
   Question Answering in Context (EMNLP 2018) Paper.
-  <>
-
-  The basic layout is pretty simple: encode words as a combination of word embeddings and a
-  character-level encoder, pass the word representations through a bi-LSTM/GRU, use a matrix of
-  attentions to put question information into the passage word representations (this is the only
-  part that is at all non-standard), pass this through another few layers of bi-LSTMs/GRUs, and
-  do a softmax over span start and span end.
 
   Parameters
   ----------
@@ -178,14 +171,11 @@ class DQA(Model):
                                                    -1e7)
 
     passage_mask = passage_mask.unsqueeze(1).repeat(1, max_qa_count, 1).view(batch_size * max_qa_count, -1)
-    # Shape: (batch_size, passage_length)
     question_passage_similarity = masked_similarity.max(dim=-1)[0].squeeze(-1)
-    # Shape: (batch_size, passage_length)
     question_passage_attention = util.last_dim_softmax(question_passage_similarity,
                                                        passage_mask)
     # Shape: (batch_size * max_qa_count, encoding_dim)
     question_passage_vector = util.weighted_sum(repeated_encoded_passage, question_passage_attention)
-    # Shape: (batch_size, passage_length, encoding_dim)
     tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(batch_size * max_qa_count,
                                                                                 passage_length,
                                                                                 encoding_dim)
