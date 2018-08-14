@@ -14,7 +14,7 @@ class ConllCorefScores(Metric):
         self.scorers = [Scorer(m) for m in (Scorer.muc, Scorer.b_cubed, Scorer.ceafe)]
 
     @overrides
-    def __call__(self,
+    def __call__(self,  # type: ignore
                  top_spans: torch.Tensor,
                  antecedent_indices: torch.Tensor,
                  predicted_antecedents: torch.Tensor,
@@ -73,9 +73,9 @@ class ConllCorefScores(Metric):
     @staticmethod
     def get_predicted_clusters(top_spans: torch.Tensor,
                                antecedent_indices: torch.Tensor,
-                               predicted_antecedents: torch.Tensor) -> Tuple[List[Tuple[Tuple[int, int]]],
+                               predicted_antecedents: torch.Tensor) -> Tuple[List[Tuple[Tuple[int, int], ...]],
                                                                              Dict[Tuple[int, int],
-                                                                                  Tuple[Tuple[int, int]]]]:
+                                                                                  Tuple[Tuple[int, int], ...]]]:
         # Pytorch 0.4 introduced scalar tensors, so our calls to tuple() and such below don't
         # actually give ints unless we convert to numpy first.  So we do that here.
         top_spans = top_spans.numpy()  # (num_spans, 2)
@@ -92,7 +92,7 @@ class ConllCorefScores(Metric):
             predicted_index = antecedent_indices[i, predicted_antecedent]
             # Must be a previous span.
             assert i > predicted_index
-            antecedent_span = tuple(top_spans[predicted_index])
+            antecedent_span: Tuple[int, int] = tuple(top_spans[predicted_index])  # type: ignore
 
             # Check if we've seen the span before.
             if antecedent_span in predicted_clusters_to_ids.keys():
@@ -103,18 +103,19 @@ class ConllCorefScores(Metric):
                 clusters.append([antecedent_span])
                 predicted_clusters_to_ids[antecedent_span] = predicted_cluster_id
 
-            mention = tuple(top_spans[i])
+            mention: Tuple[int, int] = tuple(top_spans[i])  # type: ignore
             clusters[predicted_cluster_id].append(mention)
             predicted_clusters_to_ids[mention] = predicted_cluster_id
 
         # finalise the spans and clusters.
-        clusters = [tuple(cluster) for cluster in clusters]
+        final_clusters = [tuple(cluster) for cluster in clusters]
         # Return a mapping of each mention to the cluster containing it.
-        predicted_clusters_to_ids: Dict[Tuple[int, int], Tuple[Tuple[int, int]]] = \
-            {mention: clusters[cluster_id] for mention, cluster_id
-             in predicted_clusters_to_ids.items()}
+        mention_to_cluster: Dict[Tuple[int, int], Tuple[Tuple[int, int], ...]] = {
+                mention: final_clusters[cluster_id]
+                for mention, cluster_id in predicted_clusters_to_ids.items()
+                }
 
-        return clusters, predicted_clusters_to_ids
+        return final_clusters, mention_to_cluster
 
 
 class Scorer:
