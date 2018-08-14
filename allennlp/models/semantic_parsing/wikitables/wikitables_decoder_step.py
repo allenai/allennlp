@@ -115,19 +115,26 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             # ignore max_actions on our first step, assuming there aren't that many start types.
             return self._take_first_step(state, allowed_actions)
 
-        # This method is long and involved, but because of some closures we construct, it's better
-        # to keep it one method than to separate it out into several.  We'll at least group it into
-        # sections; here's a brief outline of the sections: We'll (1) construct the input to the
-        # decoder and update the decoder's hidden state.  Then we'll (2) use this new hidden state
-        # (and maybe other information) to predict an action.  Finally, we will (3) construct new
-        # states for the next step.  Each new state corresponds to one valid action that can be
-        # taken from the current state, and they are ordered by their probability of being
-        # selected.
+        # Taking a step in the decoder consists of three main parts.  First, we'll construct the
+        # input to the decoder and update the decoder's hidden state.  Second, we'll use this new
+        # hidden state (and maybe other information) to predict an action.  Finally, we will
+        # construct new states for the next step.  Each new state corresponds to one valid action
+        # that can be taken from the current state, and they are ordered by their probability of
+        # being selected.
 
-        #########################
-        # 1: Updating the decoder
-        #########################
+        updated_state = self._update_decoder_state(state)
+        batch_results = self._compute_action_probabilities(state,
+                                                           updated_state['attention_weights'],
+                                                           updated_state['predicted_action_embeddings'])
+        new_states = self._construct_next_states(state,
+                                                 updated_state,
+                                                 batch_results,
+                                                 max_actions,
+                                                 allowed_actions)
 
+        return new_states
+
+    def _update_decoder_state(self, state: WikiTablesDecoderState) -> Dict[str, torch.Tensor]:
         # For updating the decoder, we're doing a bunch of tensor operations that can be batched
         # without much difficulty.  So, we take all group elements and batch their tensors together
         # before doing these decoder operations.
@@ -164,11 +171,18 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
             # to the `.mm` below just so we only do it once for the whole group.
             ones = predicted_action_embeddings.new([[1] for _ in range(group_size)])
             predicted_action_embeddings = torch.cat([predicted_action_embeddings, ones], dim=-1)
+        return {
+                'hidden_state': hidden_state,
+                'memory_cell': memory_cell,
+                'attended_question': attended_question,
+                'attention_weights': attention_weights,
+                'predicted_action_embeddings': predicted_action_embeddings,
+                }
 
-        ################################
-        # 2: Predicting the next actions
-        ################################
-
+    def _compute_action_probabilities(self,
+                                      state: WikiTablesDecoderState,
+                                      attention_weights: torch.Tensor,
+                                      predicted_action_embeddings: torch.Tensor) -> Dict[int, List[Tuple]]:
         # In this section we take our predicted action embedding and compare it to the available
         # actions in our current state (which might be different for each group element).  For
         # computing action scores, we'll forget about doing batched / grouped computation, as it
@@ -176,11 +190,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # doing here.  This means we don't need any action masks, as we'll only get the right
         # lengths for what we're computing.
 
-        # TODO(mattg): Maybe this section could reasonably be pulled out into its own method...
-
+        group_size = len(state.batch_indices)
         actions = state.get_valid_actions()
 
-        batch_results = defaultdict(list)
+        batch_results: Dict[int, List[Tuple[int, torch.Tensor, torch.Tensor, List[int]]]] = defaultdict(list)
         for group_index in range(group_size):
             instance_actions = actions[group_index]
             predicted_action_embedding = predicted_action_embeddings[group_index]
@@ -230,74 +243,49 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                                                     log_probs,
                                                                     output_action_embeddings,
                                                                     instance_action_ids))
+        return batch_results
 
-        ############################
-        # 3: Constructing new states
-        ############################
-
+    def _construct_next_states(self,
+                               state: WikiTablesDecoderState,
+                               updated_rnn_state: Dict[str, torch.Tensor],
+                               batch_action_probs: Dict[int, Tuple],
+                               max_actions: int,
+                               allowed_actions: List[Set[int]]):
         # We'll yield a bunch of states here that all have a `group_size` of 1, so that the
         # learning algorithm can decide how many of these it wants to keep, and it can just regroup
         # them later, as that's a really easy operation.
         #
         # We first define a `make_state` method, as in the logic that follows we want to create
         # states in a couple of different branches, and we don't want to duplicate the
-        # state-creation logic.  This method creates a closure using the variables computed above,
-        # so it doesn't make sense to pull it out of here.
+        # state-creation logic.  This method creates a closure using variables from the method, so
+        # it doesn't make sense to pull it out of here.
 
         # Each group index here might get accessed multiple times, and doing the slicing operation
         # each time is more expensive than doing it once upfront.  These three lines give about a
         # 10% speedup in training time.
-        hidden_state = [x.squeeze(0) for x in hidden_state.split(1, 0)]
-        memory_cell = [x.squeeze(0) for x in memory_cell.split(1, 0)]
-        attended_question = [x.squeeze(0) for x in attended_question.split(1, 0)]
+        hidden_state = [x.squeeze(0) for x in updated_rnn_state['hidden_state'].split(0, 0)]
+        memory_cell = [x.squeeze(0) for x in updated_rnn_state['memory_cell'].split(0, 0)]
+        attended_question = [x.squeeze(0) for x in updated_rnn_state['attended_question'].split(1, 0)]
 
         def make_state(group_index: int,
                        action: int,
                        new_score: torch.Tensor,
                        action_embedding: torch.Tensor) -> WikiTablesDecoderState:
-            batch_index = state.batch_indices[group_index]
-            new_action_history = state.action_history[group_index] + [action]
-            production_rule = state.possible_actions[batch_index][action][0]
-            new_grammar_state = state.grammar_state[group_index].take_action(production_rule)
-            if state.checklist_state[0] is not None:
-                new_checklist_state = [state.checklist_state[group_index].update(action)]
-            else:
-                new_checklist_state = None
-            if state.debug_info is not None:
-                considered_actions = []
-                for i, log_probs, _, actions in batch_results[batch_index]:
-                    if i == group_index:
-                        considered_actions = actions
-                        probabilities = log_probs.exp().cpu()
-                debug_info = {
-                        'considered_actions': considered_actions,
-                        'question_attention': attention_weights[group_index],
-                        'probabilities': probabilities,
-                        }
-                new_debug_info = [state.debug_info[group_index] + [debug_info]]
-            else:
-                new_debug_info = None
-
             new_rnn_state = RnnState(hidden_state[group_index],
                                      memory_cell[group_index],
                                      action_embedding,
                                      attended_question[group_index],
                                      state.rnn_state[group_index].encoder_outputs,
                                      state.rnn_state[group_index].encoder_output_mask)
-            new_state = WikiTablesDecoderState(batch_indices=[batch_index],
-                                               action_history=[new_action_history],
-                                               score=[new_score],
-                                               rnn_state=[new_rnn_state],
-                                               grammar_state=[new_grammar_state],
-                                               possible_actions=state.possible_actions,
-                                               world=state.world,
-                                               example_lisp_string=state.example_lisp_string,
-                                               checklist_state=new_checklist_state,
-                                               debug_info=new_debug_info)
-            return new_state
+            return state.new_state_from_group_index(group_index,
+                                                    action,
+                                                    new_score,
+                                                    new_rnn_state,
+                                                    batch_action_probs,
+                                                    updated_rnn_state['attention_weights'])
 
         new_states = []
-        for batch_index, results in batch_results.items():
+        for batch_index, results in batch_action_probs.items():
             if allowed_actions and not max_actions:
                 # If we're given a set of allowed actions, and we're not just keeping the top k of
                 # them, we don't need to do any sorting, so we can speed things up quite a bit.

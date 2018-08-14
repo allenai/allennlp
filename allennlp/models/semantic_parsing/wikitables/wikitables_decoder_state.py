@@ -66,6 +66,47 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         self.checklist_state = checklist_state or [None for _ in batch_indices]
         self.debug_info = debug_info
 
+    def new_state_from_group_index(self,
+                                   group_index: int,
+                                   action: int,
+                                   new_score: torch.Tensor,
+                                   new_rnn_state: RnnState,
+                                   decoder_debug_info: Dict[int, Tuple] = None,
+                                   attention_weights: torch.Tensor = None) -> 'WikiTablesDecoderState':
+        batch_index = self.batch_indices[group_index]
+        new_action_history = self.action_history[group_index] + [action]
+        production_rule = self.possible_actions[batch_index][action][0]
+        new_grammar_state = self.grammar_state[group_index].take_action(production_rule)
+        if self.checklist_state[0] is not None:
+            new_checklist_state = [self.checklist_state[group_index].update(action)]
+        else:
+            new_checklist_state = None
+        if self.debug_info is not None:
+            considered_actions = []
+            for i, log_probs, _, actions in decoder_debug_info[batch_index]:
+                if i == group_index:
+                    considered_actions = actions
+                    probabilities = log_probs.exp().cpu()
+            debug_info = {
+                    'considered_actions': considered_actions,
+                    'question_attention': attention_weights[group_index],
+                    'probabilities': probabilities,
+                    }
+            new_debug_info = [self.debug_info[group_index] + [debug_info]]
+        else:
+            new_debug_info = None
+        new_state = WikiTablesDecoderState(batch_indices=[batch_index],
+                                           action_history=[new_action_history],
+                                           score=[new_score],
+                                           rnn_state=[new_rnn_state],
+                                           grammar_state=[new_grammar_state],
+                                           possible_actions=self.possible_actions,
+                                           world=self.world,
+                                           example_lisp_string=self.example_lisp_string,
+                                           checklist_state=new_checklist_state,
+                                           debug_info=new_debug_info)
+        return new_state
+
     def print_action_history(self, group_index: int = None) -> None:
         scores = self.score if group_index is None else [self.score[group_index]]
         batch_indices = self.batch_indices if group_index is None else [self.batch_indices[group_index]]
@@ -74,7 +115,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
             print('  ', score.detach().cpu().numpy()[0],
                   [self.possible_actions[batch_index][action][0] for action in action_history])
 
-    def get_valid_actions(self) -> List[List[int]]:
+    def get_valid_actions(self) -> List[Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]]:
         """
         Returns a list of valid actions for each element of the group.
         """

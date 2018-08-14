@@ -178,7 +178,8 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, num_entities, embedding_dim)
         embedded_neighbors = neighbor_encoder(embedded_neighbors, neighbor_mask)
 
-        # entity_types: one-hot tensor with shape (batch_size, num_entities, num_types)
+        # entity_types: tensor with shape (batch_size, num_entities), where each entry is the
+        # entity's type id.
         # entity_type_dict: Dict[int, int], mapping flattened_entity_index -> type_index
         # These encode the same information, but for efficiency reasons later it's nice
         # to have one version as a tensor and one that's accessible on the cpu.
@@ -350,8 +351,8 @@ class WikiTablesSemanticParser(Model):
                          num_entities: int,
                          tensor: torch.Tensor) -> Tuple[torch.LongTensor, Dict[int, int]]:
         """
-        Produces the one hot encoding for each entity's type. In addition,
-        a map from a flattened entity index to type is returned to combine
+        Produces a tensor with shape ``(batch_size, num_entities)`` that encodes each entity's
+        type. In addition, a map from a flattened entity index to type is returned to combine
         entity type operations into one method.
 
         Parameters
@@ -363,7 +364,7 @@ class WikiTablesSemanticParser(Model):
 
         Returns
         -------
-        A ``torch.LongTensor`` with shape ``(batch_size, num_entities, num_types)``.
+        A ``torch.LongTensor`` with shape ``(batch_size, num_entities)``.
         entity_types : ``Dict[int, int]``
             This is a mapping from ((batch_index * num_entities) + entity_index) to entity type id.
         """
@@ -551,7 +552,7 @@ class WikiTablesSemanticParser(Model):
             entity_map[entity] = entity_index
 
         valid_actions = world.get_valid_actions()
-        translated_valid_actions = {}
+        translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
         for key, action_strings in valid_actions.items():
             translated_valid_actions[key] = {}
             # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid
@@ -584,8 +585,11 @@ class WikiTablesSemanticParser(Model):
                 linked_rules, linked_action_ids = zip(*linked_actions)
                 entities = [rule.split(' -> ')[1] for rule in linked_rules]
                 entity_ids = [entity_map[entity] for entity in entities]
+                # (num_linked_actions, num_question_tokens)
                 entity_linking_scores = linking_scores[entity_ids]
+                # (num_linked_actions,)
                 entity_type_tensor = entity_types[entity_ids]
+                # (num_linked_actions, entity_type_embedding_dim)
                 entity_type_embeddings = self._entity_type_decoder_embedding(entity_type_tensor)
                 translated_valid_actions[key]['linked'] = (entity_linking_scores,
                                                            entity_type_embeddings,
