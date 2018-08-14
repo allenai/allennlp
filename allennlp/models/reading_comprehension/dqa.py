@@ -121,22 +121,10 @@ class DQA(Model):
               yesno_list: torch.IntTensor = None,
               followup_list: torch.IntTensor = None,
               metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-    if False:
-      print("======")
-      print('== Q =')
-      print(question['elmo'].detach().cpu().numpy()[0,:,:])
-      print('== P =')
-      print(passage['elmo'].detach().cpu().numpy()[0,:,:])
-      print('P1-ans')
-      print(p1_answer_marker.detach().cpu().numpy()[0,:,:])
-      print(metadata)
-      # batch_size , max_qa_count
-      print(span_start)
-      print("==")
-
-
     qa_mask = (1 - torch.eq(followup_list, -1)).view(-1)  # not all dialog has the same number of QA pairs. 
     batch_size, max_qa_count, max_q_len, max_word_len = question['token_characters'].size()
+    _, _, elmo_max_q_len, _ = question['elmo'].size()
+    assert elmo_max_q_len == max_q_len
     question = {k: v.view(batch_size * max_qa_count, max_q_len, -1) for k, v in question.items()}
     
     embedded_question = self._dropout(self._text_field_embedder(question))
@@ -152,7 +140,6 @@ class DQA(Model):
     if self._prev_a > 0:
       question_num_ind = torch.Tensor(list(range(0, max_qa_count))* batch_size).cuda().long().reshape(-1, 1).repeat(1, max_q_len)
       question_num_marker_emb = self._question_num_marker(question_num_ind)
-      #print(question_num_marker_emb.detach().cpu().numpy()[0,:,:])
       embedded_question = torch.cat([embedded_question, question_num_marker_emb], dim=-1)
       repeated_embedded_passage = embedded_passage. \
       		unsqueeze(1).repeat(1, max_qa_count, 1, 1).view(batch_size * max_qa_count, passage_lstm_mask.size()[1], -1)  # batch_size * max_qa_count, passage_length, word_embed_dim
@@ -328,7 +315,6 @@ class DQA(Model):
         output_dict['qid'].append(output_q_list)
         output_dict['aid'].append(output_aid_list)
         output_dict['best_span_str'].append(output_bspan_list)
-    #print(json.dumps(output_dict)+"\n")
     output_dict["loss"] = loss
     output_dict['yesno'] = _yesno.view(batch_size, -1, 3).detach().cpu().numpy()
     return output_dict 
