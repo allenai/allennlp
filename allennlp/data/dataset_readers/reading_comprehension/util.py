@@ -316,7 +316,7 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
           p2_answer_marker_list.append(SequenceLabelField(p_tags[2], passage_field, label_namespace="answer_tags"))
         if prev_a > 0:
           p1_answer_marker_list.append(SequenceLabelField(p_tags[1], passage_field, label_namespace="answer_tags"))
-        if True:
+        if False:
           print("====")
           print("___ "+str(q_i)+"___")
           print(str(q_i)+"th answer")
