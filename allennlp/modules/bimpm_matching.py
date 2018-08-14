@@ -19,11 +19,24 @@ def masked_max(vector: torch.Tensor,
                keepdim: bool = False,
                min_val: float = -1e7) -> torch.Tensor:
     """
-    :param vector: vector to calculate max, assume unmasked parts are already zeros
-    :param mask: mask of the vector, vector and mask must be broadcastable
-    :param dim: the dimension to calculate max
-    :param keepdim: whether to keep dimension
-    :param min_val: minimal value for paddings
+    To calculate max along certain dimensions on masked values
+
+    Parameters
+    ----------
+    vector : ``torch.Tensor``
+        The vector to calculate max, assume unmasked parts are already zeros
+    mask : ``torch.Tensor``
+        The mask of the vector. It must be broadcastable with vector.
+    dim : ``int``
+        the dimension to calculate max
+    keepdim : ``bool``
+        Whether to keep dimension
+    min_val : ``float``
+        The minimal value for paddings
+
+    Returns
+    -------
+    A ``torch.Tensor`` of including the maximum values.
     """
     replaced_vector = vector + (1.0 - mask) * min_val
     max_value, _ = replaced_vector.max(dim=dim, keepdim=keepdim)
@@ -36,11 +49,24 @@ def masked_mean(vector: torch.Tensor,
                 keepdim: bool = False,
                 eps: float = 1e-8) -> torch.Tensor:
     """
-    :param vector: vector to calculate mean, assume unmasked parts are already zeros
-    :param mask: mask of the vector, vector and mask must be broadcastable
-    :param dim: the dimension to calculate mean
-    :param keepdim: whether to keep dimension
-    :param eps: small value to avoid division by zero
+    To calculate mean along certain dimensions on masked values
+
+    Parameters
+    ----------
+    vector : ``torch.Tensor``
+        The vector to calculate mean, assume unmasked parts are already zeros
+    mask : ``torch.Tensor``
+        The mask of the vector. It must be broadcastable with vector.
+    dim : ``int``
+        the dimension to calculate mean
+    keepdim : ``bool``
+        Whether to keep dimension
+    eps : ``float``
+        A small value to avoid zero division problem.
+
+    Returns
+    -------
+    A ``torch.Tensor`` of including the mean values.
     """
     value_sum = torch.sum(vector, dim=dim, keepdim=keepdim)
     value_count = torch.sum(mask, dim=dim, keepdim=keepdim)
@@ -54,10 +80,20 @@ def mpm(vector1: torch.Tensor,
     Calculate multi-perspective cosine matching between time-steps of vectors
     of the same length.
 
-    :param vector1: (batch, seq_len, hidden_size)
-    :param vector2: (batch, seq_len or 1, hidden_size)
-    :param weight: (num_perspective, hidden_size)
-    :return: (batch, seq_len, 1), (batch, seq_len, num_perspective)
+    Parameters
+    ----------
+    vector1 : ``torch.Tensor``
+        A tensor of shape ``(batch, seq_len, hidden_size)``
+    vector2 : ``torch.Tensor``
+        A tensor of shape ``(batch, seq_len or 1, hidden_size)``
+    weight : ``torch.Tensor``
+        A tensor of shape ``(num_perspective, hidden_size)``
+
+    Returns
+    -------
+    A tuple of two tensors consisting multi-perspective matching results.
+    The first one is of the shape (batch, seq_len, 1), the second one is of shape
+    (batch, seq_len, num_perspective)
     """
     assert vector1.size(0) == vector2.size(0)
     assert weight.size(1) == vector1.size(2) == vector1.size(2)
@@ -85,13 +121,22 @@ def mpm_pairwise(vector1: torch.Tensor,
     Calculate multi-perspective cosine matching between each time step of
     one vector and each time step of another vector.
 
-    :param vector1: (batch, seq_len1, hidden_size)
-    :param vector2: (batch, seq_len2, hidden_size)
-    :param weight: (num_perspective, hidden_size)
-    :param eps: small value to avoid division by zero
-    :return: (batch, seq_len1, seq_len2, num_perspective)
-    """
+    Parameters
+    ----------
+    vector1 : ``torch.Tensor``
+        A tensor of shape ``(batch, seq_len1, hidden_size)``
+    vector2 : ``torch.Tensor``
+        A tensor of shape ``(batch, seq_len2, hidden_size)``
+    weight : ``torch.Tensor``
+        A tensor of shape ``(num_perspective, hidden_size)``
+    eps : ``float`` optional, (default = 1e-8)
+        A small value to avoid zero division problem
 
+    Returns
+    -------
+    A tensor of shape (batch, seq_len1, seq_len2, num_perspective) consisting
+    multi-perspective matching resultsof the shape
+    """
     num_perspective = weight.size(0)
 
     # (1, num_perspective, 1, hidden_size)
@@ -114,6 +159,33 @@ def mpm_pairwise(vector1: torch.Tensor,
 
 
 class BiMPMMatching(nn.Module, FromParams):
+    """
+    This ``Module`` implements the matching layer of BiMPM model described in `Bilateral
+    Multi-Perspective Matching for Natural Language Sentences <https://arxiv.org/abs/1702.03814>`_
+    by Zhiguo Wang et al., 2017.
+    Also please refer to the `TensorFlow implementation <https://github.com/zhiguowang/BiMPM/>`_ and
+    `PyTorch implementation <https://github.com/galsang/BIMPM-pytorch>`_.
+
+    Parameters
+    ----------
+    is_forward : ``bool``, required
+        Whether the matching is for forward sequence or backward sequence
+    hidden_dim : ``int``, optional (default = 100)
+        The hidden dimension of the representations
+    num_perspective : ``int``, optional (default = 20)
+        The number of perspective for matching
+    share_weight_between_directions : ``bool``, optional (default = True)
+        If True, share weight between premise to hypothesis and hypothesisto premise,
+        useful for non-symmetric tasks
+    wo_full_match : ``bool``, optional (default = False)
+        If True, exclude full match
+    wo_maxpool_match : ``bool``, optional (default = False)
+        If True, exclude max_pool match
+    wo_attentive_match : ``bool``, optional (default = False)
+        If True, exclude attentive match
+    wo_max_attentive_match : ``bool``, optional (default = False)
+        If True, exclude max attentive match
+    """
     def __init__(self,
                  is_forward: bool,
                  hidden_dim: int = 100,
@@ -170,23 +242,28 @@ class BiMPMMatching(nn.Module, FromParams):
                 mask_h: torch.Tensor) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
         # pylint: disable=arguments-differ
         """
-        Given the representations of two sentences from BiLSTM, apply four bilateral
-        matching functions between premise and hypothesis in one direction
+        Given the forward (or backward) representations of premise and hypothesis, apply four bilateral
+        matching functions between premise and hypothesis in one direction.
 
         Parameters
         ----------
-        :param context_p: Tensor of shape (batch_size, seq_len, context_rnn_hidden_dim)
-            representing premise as encoded by the forward and backward layer of a BiLSTM.
-        :param mask_p: Binary Tensor of shape (batch_size, seq_len), indicating which
+        context_p : ``torch.Tensor``
+            Tensor of shape (batch_size, seq_len1, hidden_dim) representing the encoding of premise.
+        mask_p : ``torch.Tensor``
+            Binary Tensor of shape (batch_size, seq_len1), indicating which
             positions in premise are padding (0) and which are not (1).
-        :param context_h: Tensor of shape (batch_size, seq_len, context_rnn_hidden_dim)
-            representing hypothesis as encoded by the forward and backward layer of a BiLSTM.
-        :param mask_h: Binary Tensor of shape (batch_size, seq_len), indicating which
+        context_h : ``torch.Tensor``
+            Tensor of shape (batch_size, seq_len2, hidden_dim) representing the encoding of hypothesis.
+        mask_h : ``torch.Tensor``
+            Binary Tensor of shape (batch_size, seq_len2), indicating which
             positions in hypothesis are padding (0) and which are not (1).
-        :return (mv_p, mv_h): Matching vectors for premise and hypothesis, each of shape
-            (batch, seq_len, num_perspective * num_matching)
-        """
 
+        Returns
+        -------
+        A tuple of matching vectors for premise and hypothesis (mv_p, mv_h). Each of which is a list of
+        matching vectors of shape (batch, seq_len, num_perspective or 1)
+
+        """
         assert (not mask_h.requires_grad) and (not mask_p.requires_grad)
         assert context_p.size(-1) == context_h.size(-1) == self.hidden_dim
 
