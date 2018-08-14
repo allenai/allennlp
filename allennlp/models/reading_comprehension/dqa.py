@@ -16,7 +16,7 @@ from allennlp.modules.tri_linear_attention import TriLinearAttention
 from allennlp.modules.variational_dropout import VariationalDropout
 from allennlp.nn import InitializerApplicator, util
 from allennlp.training.metrics import Average, BooleanAccuracy, CategoricalAccuracy
-
+np.set_printoptions(threshold=np.nan)
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -113,7 +113,6 @@ class DQA(Model):
   def forward(self,  # type: ignore
               question: Dict[str, torch.LongTensor],
               passage: Dict[str, torch.LongTensor],
-              answer_texts: Dict[str, torch.LongTensor] = None,
               span_start: torch.IntTensor = None,
               span_end: torch.IntTensor = None,
               p1_answer_marker: torch.IntTensor = None,
@@ -122,7 +121,19 @@ class DQA(Model):
               yesno_list: torch.IntTensor = None,
               followup_list: torch.IntTensor = None,
               metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-    
+    print("======")
+    print('== Q =')
+    print(question['elmo'].detach().cpu().numpy()[0,:,:])
+    print('== P =')
+    print(passage['elmo'].detach().cpu().numpy()[0,:,:])
+    print('P1-ans')
+    print(p1_answer_marker.detach().cpu().numpy()[0,:,:])
+    print(metadata)
+    # batch_size , max_qa_count
+    print(span_start)
+    print("==")
+
+
     qa_mask = (1 - torch.eq(followup_list, -1)).view(-1)  # not all dialog has the same number of QA pairs. 
     batch_size, max_qa_count, max_q_len, max_word_len = question['token_characters'].size()
     question = {k: v.view(batch_size * max_qa_count, max_q_len, -1) for k, v in question.items()}
@@ -133,13 +144,16 @@ class DQA(Model):
 
     question_mask = util.get_text_field_mask(question).float()
     passage_mask = util.get_text_field_mask(passage).float()
-
+  
     question_lstm_mask = question_mask if self._mask_lstms else None
     passage_lstm_mask = passage_mask if self._mask_lstms else None
     
     if self._prev_a > 0:
-      question_num_marker = self._question_num_marker(torch.Tensor(list(range(0, max_qa_count))* batch_size).cuda().long()).unsqueeze(1).repeat(1, max_q_len, 1)
-      embedded_question = torch.cat([embedded_question, question_num_marker], dim=-1)
+      question_num_ind = torch.Tensor(list(range(0, max_qa_count))* batch_size).cuda().long().reshape(-1, 1).repeat(1, max_q_len)
+      question_num_marker_emb = self._question_num_marker(question_num_ind)
+      print(question_num_marker_emb.detach().cpu().numpy()[0,:,:])
+      exit()
+      embedded_question = torch.cat([embedded_question, question_num_marker_emb], dim=-1)
       repeated_embedded_passage = embedded_passage. \
       		unsqueeze(1).repeat(1, max_qa_count, 1, 1).view(batch_size * max_qa_count, passage_lstm_mask.size()[1], -1)  # batch_size * max_qa_count, passage_length, word_embed_dim
       p1_answer_marker = p1_answer_marker.view(batch_size * max_qa_count, passage_length)
@@ -245,7 +259,7 @@ class DQA(Model):
       loss += nll_loss(util.masked_log_softmax(span_end_logits, passage_mask), span_end.view(-1), ignore_index=-1)
       self._span_end_accuracy(span_end_logits, span_end.view(-1), mask=qa_mask)
       self._span_accuracy(best_span[:, 0:2], torch.stack([span_start, span_end], -1).view(batch_size * max_qa_count, 2), mask=qa_mask.unsqueeze(1).expand(-1, 2).long())
-      # add a select for the right span
+      # add a select for the right span to compute loss
       v = []
       span_end = span_end.view(-1).squeeze().data.cpu().numpy()
       for i in range(0, batch_size * max_qa_count):
@@ -267,11 +281,9 @@ class DQA(Model):
       loss += nll_loss(F.log_softmax(_followup, dim=-1), followup_list.view(-1), ignore_index=-1)
       
       _yesno = span_yesno_logits.view(-1).index_select(0, predicted_end).view(-1, 3)
-      output_dict['yesno'] = _yesno.view(batch_size, -1, 3)#data.cpu().numpy().reshape(batch_size, -1, 3)
       _followup = span_followup_logits.view(-1).index_select(0, predicted_end).view(-1, 3)
       self._span_yesno_accuracy(_yesno, yesno_list.view(-1), mask=qa_mask)
       self._span_followup_accuracy(_followup, followup_list.view(-1), mask=qa_mask)
-      output_dict["loss"] = loss
       output_dict['best_span_str'] = []
       output_dict['qid'] = []
       output_dict['aid'] = []
@@ -316,11 +328,14 @@ class DQA(Model):
         output_dict['qid'].append(output_q_list)
         output_dict['aid'].append(output_aid_list)
         output_dict['best_span_str'].append(output_bspan_list)
+    #print(json.dumps(output_dict)+"\n")
+    output_dict["loss"] = loss
+    output_dict['yesno'] = _yesno.view(batch_size, -1, 3).detach().cpu().numpy()
     return output_dict 
 
   @overrides
   def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, Any]:
-    yes_no_cpu = output_dict.pop('yesno').detach().cpu().numpy()
+    yes_no_cpu = output_dict.pop('yesno')
     argmax_indices = np.argmax(yes_no_cpu, axis=-1)
     yesno_tags = [[self.vocab.get_token_from_index(x, namespace="yesno_labels") for x in argm_list] for argm_list in argmax_indices]
     output_dict['yesno']  = yesno_tags

@@ -285,7 +285,7 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
       else:
         tags[p_count][s_start] = get_tag(p_count, "start", followup_tag)
         tags[p_count][s_end] =  get_tag(p_count, "end", followup_tag)
-        for pi in range(s_start + p_count, s_end):
+        for pi in range(s_start + 1, s_end):
           tags[p_count][pi] =  get_tag(p_count, "in", followup_tag)
 
     if token_span_lists:
@@ -316,14 +316,14 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
           p2_answer_marker_list.append(SequenceLabelField(p_tags[2], passage_field, label_namespace="answer_tags"))
         if prev_a > 0:
           p1_answer_marker_list.append(SequenceLabelField(p_tags[1], passage_field, label_namespace="answer_tags"))
-        if False:
+        if True:
           print("====")
           print("___ "+str(q_i)+"___")
           print(str(q_i)+"th answer")
           print(token_span_lists[q_i])
-          p1 = [tags+":"+token.text for tags, token in zip(p_tags[1], passage_tokens) if tags != 'O']
-          p2 = [tags+":"+token.text for tags, token in zip(p_tags[2], passage_tokens) if tags != 'O']
-          p3 = [tags+":"+token.text for tags, token in zip(p_tags[3], passage_tokens) if tags != 'O']
+          p1 = [tags+":" if tags != 'O' else ' '+token.text for tags, token in zip(p_tags[1], passage_tokens)]
+          p2 = [tags+":" if tags != 'O' else ' '+token.text for tags, token in zip(p_tags[2], passage_tokens)]
+          p3 = [tags+":" if tags != 'O' else ' '+token.text for tags, token in zip(p_tags[3], passage_tokens)]
           print('PREV1'+' '.join(p1))
           print('PREV2'+' '.join(p2))
           print('PREV3' +' '.join(p3))
