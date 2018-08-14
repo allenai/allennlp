@@ -1,7 +1,5 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
 import torch
-import pytest
-import numpy
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.metrics import ConllCorefScores
