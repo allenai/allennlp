@@ -490,6 +490,8 @@ class Trainer:
 
             batch_grad_norm = self._rescale_gradients()
 
+            # This does nothing if batch_num_total is None or you are using an
+            # LRScheduler which doesn't update per batch.
             if self._learning_rate_scheduler:
                 self._learning_rate_scheduler.step_batch(batch_num_total)
 
