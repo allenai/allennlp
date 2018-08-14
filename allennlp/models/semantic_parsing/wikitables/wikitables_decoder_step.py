@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 from overrides import overrides
 
@@ -124,6 +124,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
 
         updated_state = self._update_decoder_state(state)
         batch_results = self._compute_action_probabilities(state,
+                                                           updated_state['hidden_state'],
                                                            updated_state['attention_weights'],
                                                            updated_state['predicted_action_embeddings'])
         new_states = self._construct_next_states(state,
@@ -181,8 +182,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
 
     def _compute_action_probabilities(self,
                                       state: WikiTablesDecoderState,
+                                      hidden_state: torch.Tensor,
                                       attention_weights: torch.Tensor,
-                                      predicted_action_embeddings: torch.Tensor) -> Dict[int, List[Tuple]]:
+                                      predicted_action_embeddings: torch.Tensor
+                                      ) -> Dict[int, List[Tuple[int, Any, Any, List[int]]]]:
         # In this section we take our predicted action embedding and compare it to the available
         # actions in our current state (which might be different for each group element).  For
         # computing action scores, we'll forget about doing batched / grouped computation, as it
@@ -248,7 +251,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
     def _construct_next_states(self,
                                state: WikiTablesDecoderState,
                                updated_rnn_state: Dict[str, torch.Tensor],
-                               batch_action_probs: Dict[int, Tuple],
+                               batch_action_probs: Dict[int, List[Tuple[int, Any, Any, List[int]]]],
                                max_actions: int,
                                allowed_actions: List[Set[int]]):
         # We'll yield a bunch of states here that all have a `group_size` of 1, so that the
@@ -297,7 +300,7 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # In this case, we need to sort the actions.  We'll do that on CPU, as it's easier,
                 # and our action list is on the CPU, anyway.
                 group_indices = []
-                group_log_probs = []
+                group_log_probs: List[torch.Tensor] = []
                 group_action_embeddings = []
                 group_actions = []
                 for group_index, log_probs, action_embeddings, actions in results:

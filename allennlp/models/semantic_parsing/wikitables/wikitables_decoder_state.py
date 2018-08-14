@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import torch
 
@@ -71,7 +71,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
                                    action: int,
                                    new_score: torch.Tensor,
                                    new_rnn_state: RnnState,
-                                   decoder_debug_info: Dict[int, Tuple] = None,
+                                   decoder_debug_info: Dict[int, List[Tuple[int, Any, Any, List[int]]]] = None,
                                    attention_weights: torch.Tensor = None) -> 'WikiTablesDecoderState':
         batch_index = self.batch_indices[group_index]
         new_action_history = self.action_history[group_index] + [action]
@@ -82,7 +82,7 @@ class WikiTablesDecoderState(DecoderState['WikiTablesDecoderState']):
         else:
             new_checklist_state = None
         if self.debug_info is not None:
-            considered_actions = []
+            considered_actions: List[int] = []
             for i, log_probs, _, actions in decoder_debug_info[batch_index]:
                 if i == group_index:
                     considered_actions = actions
