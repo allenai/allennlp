@@ -116,8 +116,13 @@ class Event2Mind(Model):
         source_mask = get_text_field_mask(source_tokens)
         encoder_outputs = self._encoder(embedded_input, source_mask)
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
+        output_dict = {}
 
         if target_tokens:
+            # TODO(brendanr): Something about this is suspicious. As in will we
+            # maybe have difficulty learning to output the end symbol? Maybe
+            # it's fine since this will make num_decoding_steps the length of
+            # the longest sequence and most targets will be shorter? Still...
             targets = target_tokens["tokens"]
             target_sequence_length = targets.size()[1]
             # The last input from the target is either padding or the end symbol. Either way, we
@@ -126,65 +131,62 @@ class Event2Mind(Model):
         else:
             num_decoding_steps = self._max_decoding_steps
 
-        # TODO(brendanr): Do this without target_tokens too?
-        if target_tokens and not self.training:
-            # (batch_size, k, num_decoding_steps)
-            all_top_k_predictions = self.beam_search(
-                    final_encoder_output, 10, num_decoding_steps, batch_size, source_mask
-            )
-
-            target_mask = get_text_field_mask(target_tokens)
-            # See comment in _get_loss.
-            # TODO(brendanr): Do we need contiguous here?
-            relevant_targets = targets[:, 1:].contiguous()
-            relevant_mask = target_mask[:, 1:].contiguous()
-            self._target_accuracy(
-                    all_top_k_predictions,
-                    relevant_targets,
-                    relevant_mask
-            )
-
-        decoder_hidden = final_encoder_output
-        last_predictions = None
-        step_logits = []
-        step_probabilities = []
-        step_predictions = []
-        for timestep in range(num_decoding_steps):
-            # See https://github.com/allenai/allennlp/issues/1134.
-            # TODO(brendanr): Grok this.
-            if target_tokens is not None:
+        # Perform greedy search so we can get the loss.
+        if target_tokens is not None:
+            decoder_hidden = final_encoder_output
+            last_predictions = None
+            step_logits = []
+            step_probabilities = []
+            step_predictions = []
+            for timestep in range(num_decoding_steps):
+                # See https://github.com/allenai/allennlp/issues/1134.
+                # TODO(brendanr): Grok this.
                 input_choices = targets[:, timestep]
-            else:
-                if timestep == 0:
-                    # For the first timestep, when we do not have targets, we input start symbols.
-                    # (batch_size,)
-                    input_choices = source_mask.new_full((batch_size,), fill_value=self._start_index)
-                else:
-                    input_choices = last_predictions
-            decoder_input = self._target_embedder(input_choices)
-            decoder_hidden = self._decoder_cell(decoder_input, decoder_hidden)
-            # (batch_size, num_classes)
-            output_projections = self._output_projection_layer(decoder_hidden)
-            # list of (batch_size, 1, num_classes)
-            step_logits.append(output_projections.unsqueeze(1))
-            class_probabilities = F.softmax(output_projections, dim=-1)
-            _, predicted_classes = torch.max(class_probabilities, 1)
-            step_probabilities.append(class_probabilities.unsqueeze(1))
-            last_predictions = predicted_classes
-            # (batch_size, 1)
-            step_predictions.append(last_predictions.unsqueeze(1))
-        # step_logits is a list containing tensors of shape (batch_size, 1, num_classes)
-        # This is (batch_size, num_decoding_steps, num_classes)
-        logits = torch.cat(step_logits, 1)
-        class_probabilities = torch.cat(step_probabilities, 1)
-        all_predictions = torch.cat(step_predictions, 1)
-        output_dict = {"logits": logits,
-                       "class_probabilities": class_probabilities,
-                       "predictions": all_predictions}
-        if target_tokens:
+                decoder_input = self._target_embedder(input_choices)
+                decoder_hidden = self._decoder_cell(decoder_input, decoder_hidden)
+                # (batch_size, num_classes)
+                output_projections = self._output_projection_layer(decoder_hidden)
+                # list of (batch_size, 1, num_classes)
+                step_logits.append(output_projections.unsqueeze(1))
+                class_probabilities = F.softmax(output_projections, dim=-1)
+                _, predicted_classes = torch.max(class_probabilities, 1)
+                step_probabilities.append(class_probabilities.unsqueeze(1))
+                last_predictions = predicted_classes
+                # (batch_size, 1)
+                step_predictions.append(last_predictions.unsqueeze(1))
+            # step_logits is a list containing tensors of shape (batch_size, 1, num_classes)
+            # This is (batch_size, num_decoding_steps, num_classes)
+            logits = torch.cat(step_logits, 1)
+            class_probabilities = torch.cat(step_probabilities, 1)
+            # TODO(brendanr): Stop producing this at all?
+            #output_dict["predictions"] = torch.cat(step_predictions, 1)
             target_mask = get_text_field_mask(target_tokens)
             loss = self._get_loss(logits, targets, target_mask)
             output_dict["loss"] = loss
+
+        # Perform beam search to obtain the predictions.
+        if not self.training:
+            # (batch_size, k, num_decoding_steps)
+            (all_top_k_predictions, log_probabilities) = self.beam_search(
+                    final_encoder_output, 10, num_decoding_steps, batch_size, source_mask
+            )
+
+            if target_tokens:
+                target_mask = get_text_field_mask(target_tokens)
+                # See comment in _get_loss.
+                # TODO(brendanr): Do we need contiguous here?
+                relevant_targets = targets[:, 1:].contiguous()
+                relevant_mask = target_mask[:, 1:].contiguous()
+                self._target_accuracy(
+                        all_top_k_predictions,
+                        relevant_targets,
+                        relevant_mask
+                )
+            output_dict["top_k_predictions"] = all_top_k_predictions
+            output_dict["top_k_log_probabilities"] = log_probabilities
+            # TODO(brendanr): Verify that the best prediction is in fact first.
+            output_dict["predictions"] = all_top_k_predictions[:, 0, :]
+
         return output_dict
 
     def beam_search(self,
@@ -192,7 +194,7 @@ class Event2Mind(Model):
                     k: int,
                     num_decoding_steps: int,
                     batch_size: int,
-                    source_mask) -> torch.Tensor:
+                    source_mask) -> (torch.Tensor, torch.Tensor):
         # List of (batchsize, k) tensors. One for each time step. Does not
         # include the start symbols, which are implicit.
         predictions = []
@@ -226,16 +228,36 @@ class Event2Mind(Model):
             unsqueeze(1).expand(batch_size, k, self._decoder_output_dim).\
             reshape(batch_size * k, self._decoder_output_dim)
 
+        # Log probability tensor that mandates that the end token is selected.
+        num_classes = self.vocab.get_vocab_size(self._target_namespace)
+        log_probs_after_end = start_class_log_probabilities.new_full(
+            (batch_size * k, num_classes),
+            float("-inf")
+        )
+        log_probs_after_end[:, self._end_index] = 0.0
+
         for timestep in range(num_decoding_steps - 1):
-            decoder_input = self._target_embedder(predictions[-1].reshape(batch_size * k))
+            # (batch_size * k,)
+            last_predictions = predictions[-1].reshape(batch_size * k)
+            decoder_input = self._target_embedder(last_predictions)
             # reshape(batch_size * k, self._decoder_output_dim)
             decoder_hidden = self._decoder_cell(decoder_input, decoder_hidden)
             # (batch_size * k, num_classes)
             output_projections = self._output_projection_layer(decoder_hidden)
 
+            # (batch_size * k, num_classes)
             class_log_probabilities = F.log_softmax(output_projections, dim=-1)
+
+            # (batch_size * k, num_classes)
+            last_predictions_expanded = last_predictions.unsqueeze(-1).expand(batch_size * k, num_classes)
+            cleaned_log_probabilities = torch.where(
+                last_predictions_expanded == self._end_index,
+                log_probs_after_end,
+                class_log_probabilities
+            )
+
             # (batch_size * k, k), (batch_size * k, k)
-            top_log_probabilities, predicted_classes = class_log_probabilities.topk(k)
+            top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(k)
             # TODO(brendanr): Account for predicted_class == end_symbol explicitly?
             # TODO(brendanr): Normalize for length?
             # (batch_size * k, k)
@@ -279,7 +301,7 @@ class Event2Mind(Model):
         # We don't add the start tokens here. They are implicit.
 
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
-        return all_predictions
+        return (all_predictions, log_probabilities[-1])
 
     @staticmethod
     def _get_loss(logits: torch.LongTensor,
@@ -323,11 +345,13 @@ class Event2Mind(Model):
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
         """
+        print(output_dict)
         predicted_indices = output_dict["predictions"]
         if not isinstance(predicted_indices, numpy.ndarray):
             predicted_indices = predicted_indices.detach().cpu().numpy()
         all_predicted_tokens = []
         for indices in predicted_indices:
+            print(indices)
             indices = list(indices)
             # Collect indices till the first end_symbol
             if self._end_index in indices:
