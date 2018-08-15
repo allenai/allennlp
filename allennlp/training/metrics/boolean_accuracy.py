@@ -45,7 +45,7 @@ class BooleanAccuracy(Metric):
         batch_size = predictions.size(0)
         predictions = predictions.view(batch_size, -1)
         gold_labels = gold_labels.view(batch_size, -1)
-        
+
         # The .prod() here is functioning as a logical and.
         correct = predictions.eq(gold_labels).prod(dim=1).float()
         count = torch.ones(gold_labels.size(0))
