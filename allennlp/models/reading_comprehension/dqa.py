@@ -113,12 +113,13 @@ class DQA(Model):
               yesno_list: torch.IntTensor = None,
               followup_list: torch.IntTensor = None,
               metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
+    model_in_cuda = span_start.is_cuda
     qa_mask = (1 - torch.eq(followup_list, -1)).view(-1)  # not all dialog has the same number of QA pairs. 
     batch_size, max_qa_count, max_q_len, max_word_len = question['token_characters'].size()
     #_, _, token_max_q_len = question['tokens'].size()
     #assert token_max_q_len == max_q_len
     question['token_characters'] = question['token_characters'].view(batch_size * max_qa_count, max_q_len, -1)
-    question['elmo'] = question['elmo'].view(batch_size * max_qa_count, max_q_len, -1)
+    question['tokens'] = question['tokens'].view(batch_size * max_qa_count, max_q_len)
     embedded_question = self._dropout(self._text_field_embedder(question))
     embedded_passage = self._dropout(self._text_field_embedder(passage))
     passage_length = embedded_passage.size(1)
@@ -130,7 +131,9 @@ class DQA(Model):
     passage_lstm_mask = passage_mask if self._mask_lstms else None
     
     if self._prev_a > 0:
-      question_num_ind = torch.Tensor(list(range(0, max_qa_count))* batch_size).cuda().long().reshape(-1, 1).repeat(1, max_q_len)
+      question_num_ind = torch.Tensor(list(range(0, max_qa_count))* batch_size).long().reshape(-1, 1).repeat(1, max_q_len)
+      if model_in_cuda:
+        question_num_ind.cuda()
       question_num_marker_emb = self._question_num_marker(question_num_ind)
       embedded_question = torch.cat([embedded_question, question_num_marker_emb], dim=-1)
       repeated_embedded_passage = embedded_passage. \
@@ -196,7 +199,9 @@ class DQA(Model):
 
     # torch.eye does not have a gpu implementation, so we are forced to use the cpu one and .cuda()
     # Not sure if this matters for performance
-    self_mask = Variable(torch.eye(passage_length, passage_length).cuda()).resize(1, passage_length, passage_length)
+    self_mask = Variable(torch.eye(passage_length, passage_length)).resize(1, passage_length, passage_length)
+    if model_in_cuda:
+      self_mask = self_mask.cuda()
     # self_mask = Variable(torch.eye(passage_length, passage_length)).resize(1, passage_length, passage_length)
     mask = mask * (1 - self_mask)
 
@@ -242,14 +247,18 @@ class DQA(Model):
         v.append(max(span_end[i] * 3 + i * passage_length * 3, 0))
         v.append(max(span_end[i] * 3 + i * passage_length * 3 + 1, 0))
         v.append(max(span_end[i] * 3 + i * passage_length * 3 + 2, 0))
-      gt_end = Variable(torch.LongTensor(v).cuda())
+      gt_end = Variable(torch.LongTensor(v))
+      if model_in_cuda:
+        gt_end = gt_end.cuda()
 
       v = []
       for i in range(0, batch_size * max_qa_count):
         v.append(max(best_span[i][1] * 3 + i * passage_length * 3, 0))
         v.append(max(best_span[i][1] * 3 + i * passage_length * 3 + 1, 0))
         v.append(max(best_span[i][1] * 3 + i * passage_length * 3 + 2, 0))
-      predicted_end = Variable(torch.LongTensor(v).cuda())
+      predicted_end = Variable(torch.LongTensor(v))
+      if model_in_cuda:
+        predicted_end = predicted_end.cuda()
 
       _yesno = span_yesno_logits.view(-1).index_select(0, gt_end).view(-1, 3)
       _followup = span_followup_logits.view(-1).index_select(0, gt_end).view(-1, 3)

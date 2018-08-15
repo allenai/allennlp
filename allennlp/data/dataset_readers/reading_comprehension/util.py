@@ -351,4 +351,3 @@ def handle_cannot(refs):
     else:
       refs = [x for x in refs if x != 'CANNOTANSWER']
     return refs
-
