@@ -336,7 +336,7 @@ def train_model(params: Params,
     best_model.load_state_dict(best_model_state)
 
     if test_data and evaluate_on_test:
-        logger.info("The model will be evaluated using the best epoch weights.")
+        logger.info("The model will be evaluated using the best   epoch weights.")
         test_metrics = evaluate(
                 best_model, test_data, validation_iterator or iterator,
                 cuda_device=trainer._cuda_devices[0] # pylint: disable=protected-access
