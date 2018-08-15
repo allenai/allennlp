@@ -266,9 +266,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         # Each group index here might get accessed multiple times, and doing the slicing operation
         # each time is more expensive than doing it once upfront.  These three lines give about a
         # 10% speedup in training time.
-        hidden_state = [x.squeeze(0) for x in updated_rnn_state['hidden_state'].split(0, 0)]
-        memory_cell = [x.squeeze(0) for x in updated_rnn_state['memory_cell'].split(0, 0)]
-        attended_question = [x.squeeze(0) for x in updated_rnn_state['attended_question'].split(1, 0)]
+        group_size = len(state.batch_indices)
+        hidden_state = [x.squeeze(0) for x in updated_rnn_state['hidden_state'].chunk(group_size, 0)]
+        memory_cell = [x.squeeze(0) for x in updated_rnn_state['memory_cell'].chunk(group_size, 0)]
+        attended_question = [x.squeeze(0) for x in updated_rnn_state['attended_question'].chunk(group_size, 0)]
 
         def make_state(group_index: int,
                        action: int,
