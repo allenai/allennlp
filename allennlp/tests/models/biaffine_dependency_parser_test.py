@@ -43,9 +43,9 @@ class BiaffineDependencyParserTest(ModelTestCase):
         # because in a typical dependency parse there should only be one
         # word which has the ROOT as it's head.
 
-        energy = torch.Tensor([[0, 1, 1],
-                               [10, 0, 1],
-                               [10, 1, 0]]).view(1, 1, 3, 3)
+        energy = torch.Tensor([[0, 2, 1],
+                               [10, 0, 0.5],
+                               [9, 0.2, 0]]).view(1, 1, 3, 3)
         # In this case, the maximum weight tree looks like this,
         # with both edges having weight 10.
         #               A(index 0)

@@ -25,7 +25,7 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
         assert head_tags is not None
         assert isinstance(head_tags, list)
         assert all(isinstance(x, int) for x in head_tags)
-        print(result)
+
         predicted_heads = result.get("predicted_heads")
         assert len(predicted_heads) == len(heads) - 1
 
