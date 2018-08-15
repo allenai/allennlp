@@ -101,7 +101,8 @@ class SimpleTagger(Model):
         encoded_text = self.encoder(embedded_text_input, mask)
 
         logits = self.tag_projection_layer(encoded_text)
-        reshaped_log_probs = logits.view(-1, self.num_classes)
+        reshaped_log_probs = logits.view(-1,
+                                         self.num_classes)
         class_probabilities = F.softmax(reshaped_log_probs, dim=-1).view([batch_size,
                                                                           sequence_length,
                                                                           self.num_classes])
