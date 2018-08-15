@@ -1,21 +1,28 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Any, List
+import logging
+import copy
 
 from overrides import overrides
 import torch
 import torch.nn.functional as F
+from torch.nn.modules import Dropout
 import numpy
 
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data import Vocabulary
-from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding
+from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding, InputVariationalDropout
 from allennlp.modules.matrix_attention.bilinear_matrix_attention import BilinearMatrixAttention
+from allennlp.modules import FeedForward
 from allennlp.models.model import Model
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.nn import InitializerApplicator, RegularizerApplicator, Activation
 from allennlp.nn.util import get_text_field_mask, get_range_vector
 from allennlp.nn.util import get_device_of, last_dim_log_softmax, get_lengths_from_binary_sequence_mask
 from allennlp.nn.decoding.chu_liu_edmonds import decode_mst
 from allennlp.training.metrics import AttachmentScores
 
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+POS_TO_IGNORE = {'``', "''", ':', ',', '.', 'PU', 'PUNCT', 'SYM'}
 
 @Model.register("biaffine_parser")
 class BiaffineDependencyParser(Model):
@@ -46,53 +53,93 @@ class BiaffineDependencyParser(Model):
         The dimension of the MLPs used for dependency tag prediction.
     arc_representation_dim : ``int``, required.
         The dimension of the MLPs used for head arc prediction.
+    tag_feedforward : ``FeedForward``, optional, (default = None).
+        The feedforward network used to produce tag representations.
+        By default, a 1 layer feedforward network with an elu activation is used.
+    arc_feedforward : ``FeedForward``, optional, (default = None).
+        The feedforward network used to produce arc representations.
+        By default, a 1 layer feedforward network with an elu activation is used.
     pos_tag_embedding : ``Embedding``, optional.
         Used to embed the ``pos_tags`` ``SequenceLabelField`` we get as input to the model.
     use_mst_decoding_for_validation : ``bool``, optional (default = True).
         Whether to use Edmond's algorithm to find the optimal minimum spanning tree during validation.
         If false, decoding is greedy.
+    dropout : ``float``, optional, (default = 0.0)
+        The variational dropout applied to the output of the encoder and MLP layers.
+    input_dropout : ``float``, optional, (default = 0.0)
+        The dropout applied to the embedded text input.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
-    def __init__(self, vocab: Vocabulary,
+    def __init__(self,
+                 vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
                  tag_representation_dim: int,
                  arc_representation_dim: int,
+                 tag_feedforward: FeedForward = None,
+                 arc_feedforward: FeedForward = None,
                  pos_tag_embedding: Embedding = None,
                  use_mst_decoding_for_validation: bool = True,
+                 dropout: float = 0.0,
+                 input_dropout: float = 0.0,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(BiaffineDependencyParser, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
-        self.num_classes = self.vocab.get_vocab_size("labels")
         self.encoder = encoder
 
         encoder_dim = encoder.get_output_dim()
-        self.head_arc_projection = torch.nn.Linear(encoder_dim, arc_representation_dim)
-        self.child_arc_projection = torch.nn.Linear(encoder_dim, arc_representation_dim)
+
+        self.head_arc_feedforward = arc_feedforward or \
+                                        FeedForward(encoder_dim, 1,
+                                                    arc_representation_dim,
+                                                    Activation.by_name("elu")())
+        self.child_arc_feedforward = copy.deepcopy(self.head_arc_feedforward)
+
         self.arc_attention = BilinearMatrixAttention(arc_representation_dim,
                                                      arc_representation_dim,
                                                      use_input_biases=True)
 
         num_labels = self.vocab.get_vocab_size("head_tags")
-        self.head_tag_projection = torch.nn.Linear(encoder_dim, tag_representation_dim)
-        self.child_tag_projection = torch.nn.Linear(encoder_dim, tag_representation_dim)
+
+        self.head_tag_feedforward = tag_feedforward or \
+                                        FeedForward(encoder_dim, 1,
+                                                    tag_representation_dim,
+                                                    Activation.by_name("elu")())
+        self.child_tag_feedforward = copy.deepcopy(self.head_tag_feedforward)
+
         self.tag_bilinear = torch.nn.modules.Bilinear(tag_representation_dim,
                                                       tag_representation_dim,
                                                       num_labels)
 
         self._pos_tag_embedding = pos_tag_embedding or None
+        self._dropout = InputVariationalDropout(dropout)
+        self._input_dropout = Dropout(input_dropout)
+        self._head_sentinel = torch.nn.Parameter(torch.randn([1, 1, encoder.get_output_dim()]))
+
         representation_dim = text_field_embedder.get_output_dim()
         if pos_tag_embedding is not None:
             representation_dim += pos_tag_embedding.get_output_dim()
+
         check_dimensions_match(representation_dim, encoder.get_input_dim(),
                                "text field embedding dim", "encoder input dim")
 
+        check_dimensions_match(tag_representation_dim, self.head_tag_feedforward.get_output_dim(),
+                               "tag representation dim", "tag feedforward output dim")
+        check_dimensions_match(arc_representation_dim, self.head_arc_feedforward.get_output_dim(),
+                               "arc representation dim", "arc feedforward output dim")
+
         self.use_mst_decoding_for_validation = use_mst_decoding_for_validation
+
+        tags = self.vocab.get_token_to_index_vocabulary("pos")
+        punctuation_tag_indices = {tag: index for tag, index in tags.items() if tag in POS_TO_IGNORE}
+        self._pos_to_ignore = set(punctuation_tag_indices.values())
+        logger.info(f"Found POS tags correspoding to the following punctuation : {punctuation_tag_indices}. "
+                    "Ignoring words with these POS tags for evaluation.")
 
         self._attachment_scores = AttachmentScores()
         initializer(self)
@@ -100,7 +147,8 @@ class BiaffineDependencyParser(Model):
     @overrides
     def forward(self,  # type: ignore
                 words: Dict[str, torch.LongTensor],
-                pos_tags: torch.LongTensor = None,
+                pos_tags: torch.LongTensor,
+                metadata: List[Dict[str, Any]],
                 head_tags: torch.LongTensor = None,
                 head_indices: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
@@ -116,8 +164,11 @@ class BiaffineDependencyParser(Model):
             sequence.  The dictionary is designed to be passed directly to a ``TextFieldEmbedder``,
             which knows how to combine different word representations into a single vector per
             token in your input.
-        pos_tags : ``torch.LongTensor``, optional (default = None)
+        pos_tags : ``torch.LongTensor``, required.
             The output of a ``SequenceLabelField`` containing POS tags.
+            POS tags are required regardless of whether they are used in the model,
+            because they are used to filter the evaluation metric to only consider
+            heads of words which are not punctuation.
         head_tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of integer gold class labels for the arcs
             in the dependency parse. Has shape ``(batch_size, sequence_length)``.
@@ -152,16 +203,29 @@ class BiaffineDependencyParser(Model):
             raise ConfigurationError("Model uses a POS embedding, but no POS tags were passed.")
 
         mask = get_text_field_mask(words)
-        float_mask = mask.float()
+        embedded_text_input = self._input_dropout(embedded_text_input)
         encoded_text = self.encoder(embedded_text_input, mask)
 
+        batch_size, _, encoding_dim = encoded_text.size()
+
+        head_sentinel = self._head_sentinel.expand(batch_size, 1, encoding_dim)
+        # Concatenate the head sentinel onto the sentence representation.
+        encoded_text = torch.cat([head_sentinel, encoded_text], 1)
+        mask = torch.cat([mask.new_ones(batch_size, 1), mask], 1)
+        if head_indices is not None:
+            head_indices = torch.cat([head_indices.new_zeros(batch_size, 1), head_indices], 1)
+        if head_tags is not None:
+            head_tags = torch.cat([head_tags.new_zeros(batch_size, 1), head_tags], 1)
+        float_mask = mask.float()
+        encoded_text = self._dropout(encoded_text)
+
         # shape (batch_size, sequence_length, arc_representation_dim)
-        head_arc_representation = F.elu(self.head_arc_projection(encoded_text))
-        child_arc_representation = F.elu(self.child_arc_projection(encoded_text))
+        head_arc_representation = self._dropout(self.head_arc_feedforward(encoded_text))
+        child_arc_representation = self._dropout(self.child_arc_feedforward(encoded_text))
 
         # shape (batch_size, sequence_length, tag_representation_dim)
-        head_tag_representation = F.elu(self.head_tag_projection(encoded_text))
-        child_tag_representation = F.elu(self.child_tag_projection(encoded_text))
+        head_tag_representation = self._dropout(self.head_tag_feedforward(encoded_text))
+        child_tag_representation = self._dropout(self.child_tag_feedforward(encoded_text))
         # shape (batch_size, sequence_length, sequence_length)
         attended_arcs = self.arc_attention(head_arc_representation,
                                            child_arc_representation)
@@ -190,6 +254,7 @@ class BiaffineDependencyParser(Model):
                                                     mask=mask)
             loss = arc_nll + tag_nll
 
+            evaluation_mask = self._get_mask_for_eval(mask[:, 1:], pos_tags)
             # We calculate attatchment scores for the whole sentence
             # but excluding the symbolic ROOT token at the start,
             # which is why we start from the second element in the sequence.
@@ -197,11 +262,15 @@ class BiaffineDependencyParser(Model):
                                     predicted_head_tags[:, 1:],
                                     head_indices[:, 1:],
                                     head_tags[:, 1:],
-                                    mask[:, 1:])
+                                    evaluation_mask)
         else:
-            arc_nll = None
-            tag_nll = None
-            loss = None
+            arc_nll, tag_nll = self._construct_loss(head_tag_representation=head_tag_representation,
+                                                    child_tag_representation=child_tag_representation,
+                                                    attended_arcs=attended_arcs,
+                                                    head_indices=predicted_heads.long(),
+                                                    head_tags=predicted_head_tags.long(),
+                                                    mask=mask)
+            loss = arc_nll + tag_nll
 
         output_dict = {
                 "heads": predicted_heads,
@@ -209,7 +278,9 @@ class BiaffineDependencyParser(Model):
                 "arc_loss": arc_nll,
                 "tag_loss": tag_nll,
                 "loss": loss,
-                "mask": mask
+                "mask": mask,
+                "words": [meta["words"] for meta in metadata],
+                "pos": [meta["pos"] for meta in metadata]
                 }
 
         return output_dict
@@ -418,7 +489,7 @@ class BiaffineDependencyParser(Model):
         attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
         # Shape (batch_size, sequence_length, sequence_length)
-        normalized_arc_logits = F.log_softmax(attended_arcs, dim=2)
+        normalized_arc_logits = F.log_softmax(attended_arcs, dim=2).transpose(1, 2)
         # Shape (batch_size, num_head_tags, sequence_length, sequence_length)
         batch_energy = torch.exp(normalized_arc_logits.unsqueeze(1) + normalized_pairwise_head_logits)
 
@@ -480,6 +551,32 @@ class BiaffineDependencyParser(Model):
                                             child_tag_representation)
         return head_tag_logits
 
+    def _get_mask_for_eval(self,
+                           mask: torch.LongTensor,
+                           pos_tags: torch.LongTensor) -> torch.LongTensor:
+        """
+        Dependency evaluation excludes words are punctuation.
+        Here, we create a new mask to exclude word indices which
+        have a "punctuation-like" part of speech tag.
+
+        Parameters
+        ----------
+        mask : ``torch.LongTensor``, required.
+            The original mask.
+        pos_tags : ``torch.LongTensor``, required.
+            The pos tags for the sequence.
+
+        Returns
+        -------
+        A new mask, where any indices equal to labels
+        we should be ignoring are masked.
+        """
+        new_mask = mask.detach()
+        for label in self._pos_to_ignore:
+            label_mask = pos_tags.eq(label).long()
+            new_mask = new_mask * (1 - label_mask)
+        return new_mask
+
     @overrides
-    def get_metrics(self, reset: bool = True) -> Dict[str, float]:
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return self._attachment_scores.get_metric(reset)

@@ -6,7 +6,7 @@ class BiaffineDependencyParserTest(ModelTestCase):
 
     def setUp(self):
         super(BiaffineDependencyParserTest, self).setUp()
-        self.set_up_model(self.FIXTURES_ROOT / "dependency_parser" / "experiment.json",
+        self.set_up_model(self.FIXTURES_ROOT / "biaffine_dependency_parser" / "experiment.json",
                           self.FIXTURES_ROOT / "data" / "dependencies.conllu")
 
     def test_dependency_parser_can_save_and_load(self):
@@ -29,4 +29,5 @@ class BiaffineDependencyParserTest(ModelTestCase):
 
         assert set(decode_output_dict.keys()) == set(['heads', 'head_tags', 'arc_loss',
                                                       'tag_loss', 'loss', 'mask',
-                                                      'predicted_dependencies', 'predicted_heads'])
+                                                      'predicted_dependencies', 'predicted_heads',
+                                                      'words', 'pos'])

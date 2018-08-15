@@ -73,7 +73,7 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         vocab = Vocabulary.from_instances(self.instances)
         for instance in self.instances:
             instance.index_fields(vocab)
-        del params['model']['text_field_embedder']['token_characters']
+        del params['model']['text_field_embedder']['token_embedders']['token_characters']
         params['model']['phrase_layer']['input_size'] = 2
         self.model = Model.from_params(vocab=vocab, params=params['model'])
 

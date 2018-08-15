@@ -11,6 +11,7 @@ allennlp.modules.token_embedders
 * :ref:`Embedding<embedding>`
 * :ref:`TokenCharactersEncoder<token-characters-encoder>`
 * :ref:`ELMoTokenEmbedder<elmo-token-embedder>`
+* :ref:`OpenaiTransformerEmbedder<openai-transformer-embedder>`
 
 .. _token-embedder:
 .. automodule:: allennlp.modules.token_embedders.token_embedder
@@ -32,6 +33,12 @@ allennlp.modules.token_embedders
 
 .. _elmo-token-embedder:
 .. automodule:: allennlp.modules.token_embedders.elmo_token_embedder
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _openai-transformer-embedder:
+.. automodule:: allennlp.modules.token_embedders.openai_transformer_embedder
    :members:
    :undoc-members:
    :show-inheritance:
