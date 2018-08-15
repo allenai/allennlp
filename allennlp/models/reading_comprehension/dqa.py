@@ -16,7 +16,6 @@ from allennlp.modules.tri_linear_attention import TriLinearAttention
 from allennlp.modules.variational_dropout import VariationalDropout
 from allennlp.nn import InitializerApplicator, util
 from allennlp.training.metrics import Average, BooleanAccuracy, CategoricalAccuracy
-np.set_printoptions(threshold=np.nan)
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -116,10 +115,10 @@ class DQA(Model):
               metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
     qa_mask = (1 - torch.eq(followup_list, -1)).view(-1)  # not all dialog has the same number of QA pairs. 
     batch_size, max_qa_count, max_q_len, max_word_len = question['token_characters'].size()
-    _, _, elmo_max_q_len, _ = question['elmo'].size()
-    assert elmo_max_q_len == max_q_len
-    question = {k: v.view(batch_size * max_qa_count, max_q_len, -1) for k, v in question.items()}
-    
+    #_, _, token_max_q_len = question['tokens'].size()
+    #assert token_max_q_len == max_q_len
+    question['token_characters'] = question['token_characters'].view(batch_size * max_qa_count, max_q_len, -1)
+    question['elmo'] = question['elmo'].view(batch_size * max_qa_count, max_q_len, -1)
     embedded_question = self._dropout(self._text_field_embedder(question))
     embedded_passage = self._dropout(self._text_field_embedder(passage))
     passage_length = embedded_passage.size(1)
@@ -147,7 +146,7 @@ class DQA(Model):
           p3_answer_marker = p3_answer_marker.view(batch_size * max_qa_count, passage_length)
           p3_answer_marker_emb = self._prev_ans_marker(p3_answer_marker)
           repeated_embedded_passage = torch.cat([repeated_embedded_passage, p3_answer_marker_emb], dim=-1)
-      repeated_passage_lstm_mask = passage_lstm_mask.unsqueeze(1).repeat(1, max_qa_count, 1, 1).view(batch_size * max_qa_count, passage_lstm_mask.size()[1])
+      repeated_passage_lstm_mask = passage_lstm_mask.unsqueeze(1).repeat(1, max_qa_count, 1).view(batch_size * max_qa_count, passage_length)
       repeated_encoded_passage = self._dropout(self._phrase_layer(repeated_embedded_passage, repeated_passage_lstm_mask))
     else:
       encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_lstm_mask))

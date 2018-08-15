@@ -1,7 +1,7 @@
 {
   "dataset_reader": {
     "type": "dqa",
-    "prev_a": 2,
+    "prev_a": 3,
     "lazy": true,
     "prev_q_followup": true,
     "token_indexers": {
@@ -22,7 +22,7 @@
   "validation_data_path": "https://s3.amazonaws.com/my89public/quac/val_seq_final.json",
   "model": {
     "type": "dqa",
-    "prev_a": 2,
+    "prev_a": 3,
     "text_field_embedder": {
       "token_characters": {
         "type": "character_encoding",
