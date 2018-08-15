@@ -42,14 +42,13 @@ class DQAReader(DatasetReader):
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False,
                  prev_a: int = 0,
-                 add_query: bool = False,
                  prev_q_followup: bool = False) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._prev_a = prev_a
-        self._add_query = add_query
         self._prev_q_followup = prev_q_followup
+
     @overrides
     def _read(self, file_path: str):
         # if `file_path` is a URL, redirect to the cache
@@ -116,19 +115,6 @@ class DQAReader(DatasetReader):
                   logger.debug("Answer: %s", passage_text[char_span_start:char_span_end])
               token_spans.append((span_start, span_end))
           answer_token_span_list.append(token_spans)
-        if self._add_query:
-          added_question_text_list = []
-          for q_idx, q in enumerate(question_text_list):
-            if q_idx == 0 or self._prev_a == 0:
-              added_question_text_list.append(q)
-            else:
-              if q_idx == 1 or self._prev_a == 1:
-                added_question_text_list.append(question_text_list[q_idx-1]+"|||"+q)
-              elif q_idx == 2 or self._prev_a == 2:
-                added_question_text_list.append(question_text_list[q_idx-2]+"|-|"+question_text_list[q_idx-1]+"|||"+q)
-              elif self._prev_a == 3:
-                added_question_text_list.append(question_text_list[q_idx-3] +"||" + question_text_list[q_idx-2]+"|-|"+question_text_list[q_idx-1]+"|||"+q)
-          question_text_list = added_question_text_list
         question_list_tokens = [self._tokenizer.tokenize(q) for q in question_text_list]
         # Map answer texts to "CANNOTANSWER" if more than half of them marked as so.
         additional_metadata['answer_texts_list'] = [util.handle_cannot(ans_list) for ans_list in additional_metadata['answer_texts_list']]

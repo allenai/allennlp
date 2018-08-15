@@ -3,7 +3,6 @@
     "type": "dqa",
     "prev_a": 2,
     "lazy": true,
-    "add_query": false,
     "prev_q_followup": true,
     "token_indexers": {
       "token_characters": {
