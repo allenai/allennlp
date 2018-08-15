@@ -281,11 +281,17 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                                      attended_question[group_index],
                                      state.rnn_state[group_index].encoder_outputs,
                                      state.rnn_state[group_index].encoder_output_mask)
+            batch_index = state.batch_indices[group_index]
+            for i, log_probs, _, actions in batch_action_probs[batch_index]:
+                if i == group_index:
+                    considered_actions = actions
+                    probabilities = log_probs.exp().cpu()
             return state.new_state_from_group_index(group_index,
                                                     action,
                                                     new_score,
                                                     new_rnn_state,
-                                                    batch_action_probs,
+                                                    considered_actions,
+                                                    probabilities,
                                                     updated_rnn_state['attention_weights'])
 
         new_states = []
@@ -475,36 +481,19 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # We'll yield a bunch of states here that all have a `group_size` of 1, so that the
                 # learning algorithm can decide how many of these it wants to keep, and it can just
                 # regroup them later, as that's a really easy operation.
-                batch_index = state.batch_indices[group_index]
-                new_action_history = state.action_history[group_index] + [action]
                 new_score = state.score[group_index] + sorted_log_probs[group_index, action_index]
-
-                production_rule = state.possible_actions[batch_index][action][0]
-                new_grammar_state = state.grammar_state[group_index].take_action(production_rule)
-                new_checklist_state = [state.checklist_state[group_index]]
-                if state.debug_info is not None:
-                    debug_info = {
-                            'considered_actions': considered_actions[group_index],
-                            'probabilities': probs_cpu[group_index],
-                            }
-                    new_debug_info = [state.debug_info[group_index] + [debug_info]]
-                else:
-                    new_debug_info = None
 
                 # This part is different from `_compute_new_states` - we're just passing through
                 # the previous RNN state, as predicting the start type wasn't included in the
                 # decoder RNN in the original model.
                 new_rnn_state = state.rnn_state[group_index]
-                new_state = WikiTablesDecoderState(batch_indices=[batch_index],
-                                                   action_history=[new_action_history],
-                                                   score=[new_score],
-                                                   rnn_state=[new_rnn_state],
-                                                   grammar_state=[new_grammar_state],
-                                                   possible_actions=state.possible_actions,
-                                                   world=state.world,
-                                                   example_lisp_string=state.example_lisp_string,
-                                                   checklist_state=new_checklist_state,
-                                                   debug_info=new_debug_info)
+                new_state = state.new_state_from_group_index(group_index,
+                                                             action,
+                                                             new_score,
+                                                             new_rnn_state,
+                                                             considered_actions[group_index],
+                                                             probs_cpu[group_index],
+                                                             updated_rnn_state['attention_weights'])
                 new_states.append(new_state)
         return new_states
 
