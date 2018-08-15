@@ -13,8 +13,8 @@ from allennlp.nn.decoding import BeamSearch
 from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
 from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.nlvr.nlvr_semantic_parser import NlvrSemanticParser
-from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
-from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
+from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
+from allennlp.models.semantic_parsing.wikitables.basic_transition_function import BasicTransitionFunction
 from allennlp.semparse.worlds import NlvrWorld
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -64,14 +64,14 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                                                        encoder=encoder,
                                                        dropout=dropout)
         self._decoder_trainer = MaximumMarginalLikelihood()
-        self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
-                                                   action_embedding_dim=action_embedding_dim,
-                                                   input_attention=attention,
-                                                   num_start_types=1,
-                                                   activation=Activation.by_name('tanh')(),
-                                                   predict_start_type_separately=False,
-                                                   add_action_bias=False,
-                                                   dropout=dropout)
+        self._decoder_step = BasicTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
+                                                     action_embedding_dim=action_embedding_dim,
+                                                     input_attention=attention,
+                                                     num_start_types=1,
+                                                     activation=Activation.by_name('tanh')(),
+                                                     predict_start_type_separately=False,
+                                                     add_action_bias=False,
+                                                     dropout=dropout)
         self._decoder_beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
         self._action_padding_index = -1
@@ -100,14 +100,14 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                                  range(batch_size)]
         worlds_list = [worlds[i] for i in range(batch_size)]
 
-        initial_state = WikiTablesDecoderState(batch_indices=list(range(batch_size)),
-                                               action_history=[[] for _ in range(batch_size)],
-                                               score=initial_score_list,
-                                               rnn_state=initial_rnn_state,
-                                               grammar_state=initial_grammar_state,
-                                               possible_actions=actions,
-                                               world=worlds_list,
-                                               example_lisp_string=label_strings)
+        initial_state = GrammarBasedDecoderState(batch_indices=list(range(batch_size)),
+                                                 action_history=[[] for _ in range(batch_size)],
+                                                 score=initial_score_list,
+                                                 rnn_state=initial_rnn_state,
+                                                 grammar_state=initial_grammar_state,
+                                                 possible_actions=actions,
+                                                 world=worlds_list,
+                                                 example_lisp_string=label_strings)
 
         if target_action_sequences is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).

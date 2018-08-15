@@ -60,7 +60,7 @@ class GrammarBasedDecoderState(DecoderState['GrammarBasedDecoderState']):
                  possible_actions: List[List[ProductionRuleArray]],
                  extras: List[Any] = None,
                  debug_info: List = None) -> None:
-        super(WikiTablesDecoderState, self).__init__(batch_indices, action_history, score)
+        super().__init__(batch_indices, action_history, score)
         self.rnn_state = rnn_state
         self.grammar_state = grammar_state
         self.possible_actions = possible_actions
@@ -74,33 +74,31 @@ class GrammarBasedDecoderState(DecoderState['GrammarBasedDecoderState']):
                                    new_rnn_state: RnnState,
                                    considered_actions: List[int] = None,
                                    action_probabilities: List[float] = None,
-                                   attention_weights: torch.Tensor = None) -> 'WikiTablesDecoderState':
+                                   attention_weights: torch.Tensor = None) -> 'GrammarBasedDecoderState':
+        if new_score.dim() > 0:
+            raise ValueError
         batch_index = self.batch_indices[group_index]
         new_action_history = self.action_history[group_index] + [action]
         production_rule = self.possible_actions[batch_index][action][0]
         new_grammar_state = self.grammar_state[group_index].take_action(production_rule)
         if self.debug_info is not None:
-            considered_actions: List[int] = []
-            for i, log_probs, _, actions in decoder_debug_info[batch_index]:
-                if i == group_index:
-                    considered_actions = actions
-                    probabilities = log_probs.exp().cpu()
+            attention = attention_weights[group_index] if attention_weights is not None else None
             debug_info = {
                     'considered_actions': considered_actions,
-                    'question_attention': attention_weights[group_index],
-                    'probabilities': probabilities,
+                    'question_attention': attention,
+                    'probabilities': action_probabilities,
                     }
             new_debug_info = [self.debug_info[group_index] + [debug_info]]
         else:
             new_debug_info = None
-        new_state = WikiTablesDecoderState(batch_indices=[batch_index],
-                                           action_history=[new_action_history],
-                                           score=[new_score],
-                                           rnn_state=[new_rnn_state],
-                                           grammar_state=[new_grammar_state],
-                                           possible_actions=self.possible_actions,
-                                           extras=self.extras,
-                                           debug_info=new_debug_info)
+        new_state = GrammarBasedDecoderState(batch_indices=[batch_index],
+                                             action_history=[new_action_history],
+                                             score=[new_score],
+                                             rnn_state=[new_rnn_state],
+                                             grammar_state=[new_grammar_state],
+                                             possible_actions=self.possible_actions,
+                                             extras=self.extras,
+                                             debug_info=new_debug_info)
         return new_state
 
     def print_action_history(self, group_index: int = None) -> None:
@@ -123,7 +121,7 @@ class GrammarBasedDecoderState(DecoderState['GrammarBasedDecoderState']):
         return self.grammar_state[0].is_finished()
 
     @classmethod
-    def combine_states(cls, states: List['WikiTablesDecoderState']) -> 'WikiTablesDecoderState':
+    def combine_states(cls, states: List['GrammarBasedDecoderState']) -> 'GrammarBasedDecoderState':
         batch_indices = [batch_index for state in states for batch_index in state.batch_indices]
         action_histories = [action_history for state in states for action_history in state.action_history]
         scores = [score for state in states for score in state.score]
@@ -133,11 +131,11 @@ class GrammarBasedDecoderState(DecoderState['GrammarBasedDecoderState']):
             debug_info = [debug_info for state in states for debug_info in state.debug_info]
         else:
             debug_info = None
-        return WikiTablesDecoderState(batch_indices=batch_indices,
-                                      action_history=action_histories,
-                                      score=scores,
-                                      rnn_state=rnn_states,
-                                      grammar_state=grammar_states,
-                                      possible_actions=states[0].possible_actions,
-                                      extras=states[0].extras,
-                                      debug_info=debug_info)
+        return GrammarBasedDecoderState(batch_indices=batch_indices,
+                                        action_history=action_histories,
+                                        score=scores,
+                                        rnn_state=rnn_states,
+                                        grammar_state=grammar_states,
+                                        possible_actions=states[0].possible_actions,
+                                        extras=states[0].extras,
+                                        debug_info=debug_info)

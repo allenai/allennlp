@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from overrides import overrides
 import torch
@@ -8,7 +8,7 @@ from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
+from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
 from allennlp.modules import Embedding, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, TimeDistributed
 from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
 from allennlp.nn import util
@@ -135,18 +135,19 @@ class WikiTablesSemanticParser(Model):
             self._question_entity_params = None
             self._question_neighbor_params = None
 
-    def _get_initial_state_and_scores(self,
-                                      question: Dict[str, torch.LongTensor],
-                                      table: Dict[str, torch.LongTensor],
-                                      world: List[WikiTablesWorld],
-                                      actions: List[List[ProductionRuleArray]],
-                                      example_lisp_string: List[str] = None,
-                                      add_world_to_initial_state: bool = False,
-                                      checklist_states: List[ChecklistState] = None) -> Dict:
+    def _get_initial_rnn_and_grammar_state(self,
+                                           question: Dict[str, torch.LongTensor],
+                                           table: Dict[str, torch.LongTensor],
+                                           world: List[WikiTablesWorld],
+                                           actions: List[List[ProductionRuleArray]],
+                                           outputs: Dict[str, Any]
+                                           ) -> Tuple[List[RnnState], List[GrammarState]]:
         """
-        Does initial preparation and creates an intiial state for both the semantic parsers. Note
-        that the checklist state is optional, and the ``WikiTablesMmlParser`` is not expected to
-        pass it.
+        Encodes the question and table, computes a linking between the two, and constructs an
+        initial RnnState and GrammarState for each batch instance to pass to the decoder.
+
+        We take ``outputs`` as a parameter here and `modify` it, adding things that we want to
+        visualize in a demo.
         """
         table_text = table['text']
         # (batch_size, question_length, embedding_dim)
@@ -269,7 +270,6 @@ class WikiTablesSemanticParser(Model):
         # `(batch_size, question_length, encoder_output_dim)`.  We need to convert this into a list
         # of `batch_size` tensors, each of shape `(question_length, encoder_output_dim)`.  Then we
         # won't have to do any index selects, or anything, we'll just do some `torch.cat()`s.
-        initial_score_list = [initial_score[i] for i in range(batch_size)]
         encoder_output_list = [encoder_outputs[i] for i in range(batch_size)]
         question_mask_list = [question_mask[i] for i in range(batch_size)]
         initial_rnn_state = []
@@ -285,21 +285,14 @@ class WikiTablesSemanticParser(Model):
                                                             linking_scores[i],
                                                             entity_types[i])
                                  for i in range(batch_size)]
-        initial_state_world = world if add_world_to_initial_state else None
-        initial_state = WikiTablesDecoderState(batch_indices=list(range(batch_size)),
-                                               action_history=[[] for _ in range(batch_size)],
-                                               score=initial_score_list,
-                                               rnn_state=initial_rnn_state,
-                                               grammar_state=initial_grammar_state,
-                                               possible_actions=actions,
-                                               world=initial_state_world,
-                                               example_lisp_string=example_lisp_string,
-                                               checklist_state=checklist_states,
-                                               debug_info=None)
-        return {"initial_state": initial_state,
-                "linking_scores": linking_scores,
-                "feature_scores": feature_scores,
-                "similarity_scores": question_entity_similarity_max_score}
+        if not self.training:
+            # We add a few things to the outputs that will be returned from `forward` at evaluation
+            # time, for visualization in a demo.
+            outputs['linking_scores'] = linking_scores
+            if feature_scores is not None:
+                outputs['feature_scores'] = feature_scores
+            outputs['similarity_scores'] = question_entity_similarity_max_score
+        return initial_rnn_state, initial_grammar_state
 
     @staticmethod
     def _get_neighbor_indices(worlds: List[WikiTablesWorld],
@@ -612,6 +605,58 @@ class WikiTablesSemanticParser(Model):
                             translated_valid_actions,
                             context_actions,
                             type_declaration.is_nonterminal)
+
+    def _compute_validation_outputs(self,
+                                    actions: List[List[ProductionRuleArray]],
+                                    best_final_states: Dict[int, List[GrammarBasedDecoderState]],
+                                    world: List[WikiTablesWorld],
+                                    example_lisp_string: List[str],
+                                    metadata: List[Dict[str, Any]],
+                                    outputs: Dict[str, Any]) -> None:
+        """
+        Does common things for validation time: computing logical form accuracy (which is expensive
+        and unnecessary during training), adding visualization info to the output dictionary, etc.
+
+        This doesn't return anything; instead it `modifies` the given ``outputs`` dictionary, and
+        calls metrics on ``self``.
+        """
+        batch_size = len(actions)
+        action_mapping = {}
+        for batch_index, batch_actions in enumerate(actions):
+            for action_index, action in enumerate(batch_actions):
+                action_mapping[(batch_index, action_index)] = action[0]
+        outputs['action_mapping'] = action_mapping
+        outputs['best_action_sequence'] = []
+        outputs['debug_info'] = []
+        outputs['entities'] = []
+        outputs['logical_form'] = []
+        for i in range(batch_size):
+            # Decoding may not have terminated with any completed logical forms, if `num_steps`
+            # isn't long enough (or if the model is not trained enough and gets into an
+            # infinite action loop).
+            if i in best_final_states:
+                best_action_indices = best_final_states[i][0].action_history[0]
+                action_strings = [action_mapping[(i, action_index)] for action_index in best_action_indices]
+                try:
+                    logical_form = world[i].get_logical_form(action_strings, add_var_function=False)
+                    self._has_logical_form(1.0)
+                except ParsingError:
+                    self._has_logical_form(0.0)
+                    logical_form = 'Error producing logical form'
+                if example_lisp_string:
+                    self._denotation_accuracy(logical_form, example_lisp_string[i])
+                outputs['best_action_sequence'].append(action_strings)
+                outputs['logical_form'].append(logical_form)
+                outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
+                outputs['entities'].append(world[i].table_graph.entities)
+            else:
+                outputs['logical_form'].append('')
+                self._has_logical_form(0.0)
+                if example_lisp_string:
+                    self._denotation_accuracy(None, example_lisp_string[i])
+        if metadata is not None:
+            outputs["question_tokens"] = [x["question_tokens"] for x in metadata]
+            outputs["original_table"] = [x["original_table"] for x in metadata]
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:

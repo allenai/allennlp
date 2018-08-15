@@ -4,20 +4,20 @@ import torch
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
-from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
+from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
+from allennlp.models.semantic_parsing.wikitables.basic_transition_function import BasicTransitionFunction
 from allennlp.modules import SimilarityFunction
 from allennlp.nn.decoding import GrammarState, RnnState
 from allennlp.semparse.type_declarations.type_declaration import is_nonterminal
 
 
-class WikiTablesDecoderStepTest(AllenNlpTestCase):
+class BasicTransitionFunctionTest(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.decoder_step = WikiTablesDecoderStep(encoder_output_dim=2,
-                                                  action_embedding_dim=2,
-                                                  attention_function=None,
-                                                  num_start_types=3)
+        self.decoder_step = BasicTransitionFunction(encoder_output_dim=2,
+                                                    action_embedding_dim=2,
+                                                    attention_function=None,
+                                                    num_start_types=3)
 
         batch_indices = [0, 1, 0]
         action_history = [[1], [3, 4], []]
@@ -70,12 +70,12 @@ class WikiTablesDecoderStepTest(AllenNlpTestCase):
                                       attended_question[i],
                                       self.encoder_outputs,
                                       self.encoder_output_mask))
-        self.state = WikiTablesDecoderState(batch_indices=batch_indices,
-                                            action_history=action_history,
-                                            score=score,
-                                            rnn_state=rnn_state,
-                                            grammar_state=grammar_state,
-                                            possible_actions=self.possible_actions)
+        self.state = GrammarBasedDecoderState(batch_indices=batch_indices,
+                                              action_history=action_history,
+                                              score=score,
+                                              rnn_state=rnn_state,
+                                              grammar_state=grammar_state,
+                                              possible_actions=self.possible_actions)
 
     def test_take_step(self):
         new_states = self.decoder_step.take_step(self.state,

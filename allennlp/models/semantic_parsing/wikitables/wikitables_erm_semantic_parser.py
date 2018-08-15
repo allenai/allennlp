@@ -9,8 +9,8 @@ from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
 from allennlp.models.archival import load_archive, Archive
-from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
-from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
+from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
+from allennlp.models.semantic_parsing.wikitables.linking_transition_function import LinkingTransitionFunction
 from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
 from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
 from allennlp.nn.decoding import ChecklistState
@@ -42,7 +42,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         The encoder to used for averaging the words of an entity. Passed to super class.
     attention : ``Attention``
         We compute an attention over the input question at each step of the decoder, using the
-        decoder hidden state as the query.  Passed to WikiTablesDecoderStep.
+        decoder hidden state as the query.  Passed to the transition function.
     decoder_beam_size : ``int``
         Beam size to be used by the ExpectedRiskMinimization algorithm.
     decoder_num_finished_states : ``int``
@@ -134,14 +134,14 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 # This is a terminal production.
                 unlinked_terminals_global_indices.append(index)
         self._num_unlinked_terminals = len(unlinked_terminals_global_indices)
-        self._decoder_step = WikiTablesDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
-                                                   action_embedding_dim=action_embedding_dim,
-                                                   input_attention=attention,
-                                                   num_start_types=self._num_start_types,
-                                                   predict_start_type_separately=True,
-                                                   add_action_bias=self._add_action_bias,
-                                                   mixture_feedforward=mixture_feedforward,
-                                                   unlinked_terminal_indices=unlinked_terminals_global_indices)
+        self._decoder_step = LinkingTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
+                                                       action_embedding_dim=action_embedding_dim,
+                                                       input_attention=attention,
+                                                       num_start_types=self._num_start_types,
+                                                       predict_start_type_separately=True,
+                                                       add_action_bias=self._add_action_bias,
+                                                       mixture_feedforward=mixture_feedforward,
+                                                       unlinked_terminal_indices=unlinked_terminals_global_indices)
         self._checklist_cost_weight = checklist_cost_weight
         self._agenda_coverage = Average()
         # TODO (pradeep): Checking whether file exists here to avoid raising an error when we've
@@ -257,65 +257,41 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                                                    checklist_target=checklist_target,
                                                    checklist_mask=checklist_mask,
                                                    checklist=initial_checklist))
-        initial_info = self._get_initial_state_and_scores(question=question,
-                                                          table=table,
-                                                          world=world,
-                                                          actions=actions,
-                                                          example_lisp_string=example_lisp_string,
-                                                          add_world_to_initial_state=True,
-                                                          checklist_states=checklist_states)
-        initial_state = initial_info["initial_state"]
-        # TODO(pradeep): Keep track of debug info. It's not straightforward currently because the
-        # ERM's decode does not return the best states.
+        outputs: Dict[str, Any] = {}
+        rnn_state, grammar_state = self._get_initial_rnn_and_grammar_state(question,
+                                                                           table,
+                                                                           world,
+                                                                           actions,
+                                                                           outputs)
+
+        batch_size = len(rnn_state)
+        initial_score_list = [initial_score[i] for i in range(batch_size)]
+        initial_state = GrammarBasedDecoderState(batch_indices=list(range(batch_size)),
+                                                 action_history=[[] for _ in range(batch_size)],
+                                                 score=initial_score_list,
+                                                 rnn_state=rnn_state,
+                                                 grammar_state=grammar_state,
+                                                 possible_actions=actions,
+                                                 extras=example_lisp_string,
+                                                 debug_info=None)
+
+        if not self.training:
+            initial_state.debug_info = [[] for _ in range(batch_size)]
+
         outputs = self._decoder_trainer.decode(initial_state,
                                                self._decoder_step,
                                                self._get_state_cost)
+        best_final_states = outputs['best_final_states']
+
         if not self.training:
-            # TODO(pradeep): Can move most of this block to super class.
-            linking_scores = initial_info["linking_scores"]
-            feature_scores = initial_info["feature_scores"]
-            similarity_scores = initial_info["similarity_scores"]
-            batch_size = list(question.values())[0].size(0)
-            action_mapping = {}
-            for batch_index, batch_actions in enumerate(actions):
-                for action_index, action in enumerate(batch_actions):
-                    action_mapping[(batch_index, action_index)] = action[0]
-            outputs['action_mapping'] = action_mapping
-            outputs['entities'] = []
-            outputs['linking_scores'] = linking_scores
-            if feature_scores is not None:
-                outputs['feature_scores'] = feature_scores
-            outputs['similarity_scores'] = similarity_scores
-            outputs['logical_form'] = []
-            best_action_sequences = outputs['best_action_sequences']
-            outputs["best_action_sequence"] = []
-            outputs['debug_info'] = []
+            batch_size = len(actions)
             agenda_indices = [actions_[:, 0].cpu().data for actions_ in agenda]
             for i in range(batch_size):
                 in_agenda_ratio = 0.0
                 # Decoding may not have terminated with any completed logical forms, if `num_steps`
                 # isn't long enough (or if the model is not trained enough and gets into an
                 # infinite action loop).
-                outputs['logical_form'].append([])
-                if i in best_action_sequences:
-                    for j, action_sequence in enumerate(best_action_sequences[i]):
-                        action_strings = [action_mapping[(i, action_index)] for action_index in action_sequence]
-                        try:
-                            logical_form = world[i].get_logical_form(action_strings, add_var_function=False)
-                            outputs['logical_form'][-1].append(logical_form)
-                        except ParsingError:
-                            logical_form = "Error producing logical form"
-                        if j == 0:
-                            # Updating denotation accuracy and has_logical_form only based on the
-                            # first logical form.
-                            if logical_form.startswith("Error"):
-                                self._has_logical_form(0.0)
-                            else:
-                                self._has_logical_form(1.0)
-                            if example_lisp_string:
-                                self._denotation_accuracy(logical_form, example_lisp_string[i])
-                            outputs['best_action_sequence'].append(action_strings)
-                    outputs['entities'].append(world[i].table_graph.entities)
+                if i in best_final_states:
                     instance_possible_actions = actions[i]
                     agenda_actions = []
                     for rule_id in agenda_indices[i]:
@@ -329,16 +305,14 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                         # Note: This means that when there are no actions on agenda, agenda coverage
                         # will be 0, not 1.
                         in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
-                else:
-                    outputs['best_action_sequence'].append([])
-                    outputs['logical_form'][-1].append('')
-                    self._has_logical_form(0.0)
-                    if example_lisp_string:
-                        self._denotation_accuracy(None, example_lisp_string[i])
                 self._agenda_coverage(in_agenda_ratio)
-        if metadata is not None:
-            outputs["question_tokens"] = [x["question_tokens"] for x in metadata]
-            outputs["original_table"] = [x["original_table"] for x in metadata]
+
+            self._compute_validation_outputs(actions,
+                                             best_final_states,
+                                             world,
+                                             example_lisp_string,
+                                             metadata,
+                                             outputs)
         return outputs
 
     @staticmethod
@@ -389,7 +363,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         checklist_mask = (target_checklist != 0).float()
         return target_checklist, terminal_actions, checklist_mask
 
-    def _get_state_cost(self, state: WikiTablesDecoderState) -> torch.Tensor:
+    def _get_state_cost(self, state: GrammarBasedDecoderState) -> torch.Tensor:
         if not state.is_finished():
             raise RuntimeError("_get_state_cost() is not defined for unfinished states!")
 
