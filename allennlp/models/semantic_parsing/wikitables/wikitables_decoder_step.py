@@ -199,14 +199,21 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
         batch_results: Dict[int, List[Tuple[int, torch.Tensor, torch.Tensor, List[int]]]] = defaultdict(list)
         for group_index in range(group_size):
             instance_actions = actions[group_index]
-            predicted_action_embedding = predicted_action_embeddings[group_index]
-            action_embeddings, output_action_embeddings, embedded_actions = instance_actions['global']
-            # TODO(mattg): Add back in the checklist balance modification to the predicted action
-            # embedding.
-            # This is just a matrix product between a (num_actions, embedding_dim) matrix and an
-            # (embedding_dim, 1) matrix.
-            embedded_action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
-            instance_action_ids = embedded_actions[:]
+            output_action_embeddings = predicted_action_embeddings.new_tensor([], dtype=torch.float)
+            embedded_action_logits = predicted_action_embeddings.new_tensor([], dtype=torch.float)
+            instance_action_ids = []
+
+            if 'global' in instance_actions: 
+                instance_actions = actions[group_index]
+                predicted_action_embedding = predicted_action_embeddings[group_index]
+                action_embeddings, output_action_embeddings, embedded_actions = instance_actions['global']
+                # TODO(mattg): Add back in the checklist balance modification to the predicted action
+                # embedding.
+                # This is just a matrix product between a (num_actions, embedding_dim) matrix and an
+                # (embedding_dim, 1) matrix.
+                embedded_action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
+                # instance_action_ids = embedded_actions[:]
+                instance_action_ids.extend(embedded_actions[:])
             if 'linked' in instance_actions:
                 linking_scores, type_embeddings, linked_actions = instance_actions['linked']
                 instance_action_ids.extend(linked_actions)

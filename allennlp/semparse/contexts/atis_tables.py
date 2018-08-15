@@ -76,7 +76,10 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
         if bigram in DAY_NUMBERS:
             day = DAY_NUMBERS[bigram]
     if month and day:
-        return datetime(year, month, day)
+        try:
+            return datetime(year, month, day)
+        except ValuError:
+            return None
     return None
 
 def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
