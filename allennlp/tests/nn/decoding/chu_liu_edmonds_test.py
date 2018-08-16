@@ -2,6 +2,7 @@
 
 import numpy
 import pytest
+import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
@@ -72,3 +73,8 @@ class ChuLiuEdmondsTest(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             energy = numpy.random.rand(3, 5, 5)
             decode_mst(energy, 5, has_labels=False)
+
+    def test_mst_finds_maximum_spanning_tree(self):
+        energy = torch.range(1, 9).view(1, 3, 3)
+        heads, _ = decode_mst(energy.numpy(), 3) # pylint: disable=protected-access
+        assert list(heads) == [-1, 2, 0]

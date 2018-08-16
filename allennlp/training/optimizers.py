@@ -112,6 +112,14 @@ class Optimizer(Registrable):
         else:
             parameter_groups = [param for name, param in model_parameters]
 
+        # Log the number of parameters to optimize
+        num_parameters = 0
+        for parameter_group in parameter_groups:
+            if isinstance(parameter_group, dict):
+                num_parameters += sum(parameter.numel() for parameter in parameter_group["params"])
+            else:
+                num_parameters += parameter_group.numel()
+        logger.info("Number of trainable parameters: %s", num_parameters)
         return Optimizer.by_name(optimizer)(parameter_groups, **params.as_dict()) # type: ignore
 
 # We just use the Pytorch optimizers, so here we force them into
