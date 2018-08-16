@@ -18,7 +18,8 @@ def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> List[Tu
     Parameters
     ----------
     constraint_type : ``str``, required
-        Indicates which constraint to apply. Current choices are "BIO" and "BIOUL".
+        Indicates which constraint to apply. Current choices are
+        "BIO", "IOB1", and BIOUL".
     tokens : ``Dict[int, str]``, required
         A mapping {token_id -> token}. Most commonly this would be the value from
         Vocabulary.get_index_to_token_vocabulary()
@@ -77,6 +78,31 @@ def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> List[Tu
         # start transitions
         for i, (to_bio, *to_entity) in tokens.items():
             if to_bio in ('O', 'B'):
+                allowed.append((start_tag, i))
+
+        # end transitions
+        for i, (from_bio, *from_entity) in tokens.items():
+            if from_bio in ('O', 'B', 'I'):
+                allowed.append((i, end_tag))
+
+    elif constraint_type == "IOB1":
+        for i, (from_bio, *from_entity) in tokens.items():
+            for j, (to_bio, *to_entity) in tokens.items():
+
+                is_allowed = any([
+                        # Can always transition to O or I-x
+                        to_bio in ('O', 'I'),
+                        # Can only transition to B-x from B-x or I-x, where
+                        # x is the same tag.
+                        to_bio == 'B' and from_bio in ('B', 'I') and from_entity == to_entity
+                ])
+
+                if is_allowed:
+                    allowed.append((i, j))
+
+        # start transitions
+        for i, (to_bio, *to_entity) in tokens.items():
+            if to_bio in ('O', 'I'):
                 allowed.append((start_tag, i))
 
         # end transitions
