@@ -3,6 +3,7 @@ from collections import Counter
 import os
 import pathlib
 import json
+import tempfile
 
 import boto3
 from moto import mock_s3
@@ -11,7 +12,7 @@ import responses
 
 from allennlp.common.file_utils import (
         url_to_filename, filename_to_url, get_from_cache, cached_path, split_s3_path,
-        s3_request, s3_etag)
+        s3_request, s3_etag, s3_get)
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -140,8 +141,24 @@ class TestFileUtils(AllenNlpTestCase):
             get_file_info("s3://my-bucket/missing_file.txt")
 
     def test_s3_etag(self):
+        # Ensure we can get the etag for an s3 object and that it looks as expected.
         etag = s3_etag("s3://my-bucket/embeddings/glove.txt.gz")
+        assert isinstance(etag, str)
         assert etag.startswith("'") or etag.startswith('"')
+
+        # Should raise FileNotFoundError if the file does not exist on the bucket.
+        with pytest.raises(FileNotFoundError):
+            s3_etag("s3://my-bucket/missing_file.txt")
+
+    def test_s3_get(self):
+        with tempfile.NamedTemporaryFile() as temp_file:
+            s3_get("s3://my-bucket/embeddings/glove.txt.gz", temp_file)
+            assert os.stat(temp_file.name).st_size != 0
+
+        # Should raise FileNotFoundError if the file does not exist on the bucket.
+        with pytest.raises(FileNotFoundError):
+            with tempfile.NamedTemporaryFile() as temp_file:
+                s3_get("s3://my-bucket/missing_file.txt", temp_file)
 
     @responses.activate
     def test_get_from_cache(self):
