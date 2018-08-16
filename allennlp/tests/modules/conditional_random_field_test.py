@@ -222,7 +222,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
         allowed = allowed_transitions("IOB1", dict(enumerate(iob1_labels)))
 
         # The empty spaces in this matrix indicate disallowed transitions.
-        assert set(allowed) == {                         # Extra column for end tag.
+        assert set(allowed) == {                            # Extra column for end tag.
             (0, 0),         (0, 2),         (0, 4),         (0, 6),
             (1, 0), (1, 1), (1, 2),         (1, 4),         (1, 6),
             (2, 0), (2, 1), (2, 2),         (2, 4),         (2, 6),
