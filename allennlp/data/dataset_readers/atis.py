@@ -96,7 +96,7 @@ class AtisDatasetReader(DatasetReader):
         Parameters
         ----------
         utterances: ``List[str]``, required.
-            List of utterances in the interaction, the last element is the current utterance. 
+            List of utterances in the interaction, the last element is the current utterance.
         sql_query: ``str``
             The SQL query, given as label during training or validation.
         """
@@ -130,8 +130,6 @@ class AtisDatasetReader(DatasetReader):
         action_map = {action.rule: i # type: ignore
                       for i, action in enumerate(action_field.field_list)}
         index_fields: List[Field] = []
-        
-        
         world_field = MetadataField(world)
         fields = {'utterance' : utterance_field,
                   'actions' : action_field,
@@ -145,7 +143,7 @@ class AtisDatasetReader(DatasetReader):
 
                 action_sequence_field: List[Field] = []
                 action_sequence_field.append(ListField(index_fields))
-                fields['target_action_sequence'] = ListField(action_sequence_field) 
+                fields['target_action_sequence'] = ListField(action_sequence_field)
             else:
                 # If we are given a SQL query, but we are unable to parse it, then we will skip it.
                 return None
