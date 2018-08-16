@@ -70,13 +70,16 @@ class Conll2003DatasetReader(DatasetReader):
         In the IOB1 scheme, I is a token inside a span, O is a token outside
         a span and B is the beginning of span immediately following another
         span of the same type.
+    label_namespace: ``str``, optional (default=``labels``)
+        Specifies the namespace for the chosen ``tag_label``.
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  tag_label: str = "ner",
                  feature_labels: Sequence[str] = (),
                  lazy: bool = False,
-                 coding_scheme: str = "IOB1") -> None:
+                 coding_scheme: str = "IOB1",
+                 label_namespace: str = "labels") -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         if tag_label is not None and tag_label not in _VALID_LABELS:
@@ -90,6 +93,7 @@ class Conll2003DatasetReader(DatasetReader):
         self.tag_label = tag_label
         self.feature_labels = set(feature_labels)
         self.coding_scheme = coding_scheme
+        self.label_namespace = label_namespace
 
     @overrides
     def _read(self, file_path: str) -> Iterable[Instance]:
@@ -153,10 +157,13 @@ class Conll2003DatasetReader(DatasetReader):
 
         # Add "tag label" to instance
         if self.tag_label == 'ner' and coded_ner is not None:
-            instance_fields['tags'] = SequenceLabelField(coded_ner, sequence)
+            instance_fields['tags'] = SequenceLabelField(coded_ner, sequence,
+                                                         self.label_namespace)
         elif self.tag_label == 'pos' and pos_tags is not None:
-            instance_fields['tags'] = SequenceLabelField(pos_tags, sequence)
+            instance_fields['tags'] = SequenceLabelField(pos_tags, sequence,
+                                                         self.label_namespace)
         elif self.tag_label == 'chunk' and coded_chunks is not None:
-            instance_fields['tags'] = SequenceLabelField(coded_chunks, sequence)
+            instance_fields['tags'] = SequenceLabelField(coded_chunks, sequence,
+                                                         self.label_namespace)
 
         return Instance(instance_fields)
