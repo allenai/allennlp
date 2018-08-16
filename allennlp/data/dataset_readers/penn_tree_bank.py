@@ -42,17 +42,21 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
     label_namespace_prefix : ``str``, optional, (default = ``""``)
         Prefix used for the label namespace.  The ``span_labels`` will use
         namespace ``label_namespace_prefix + 'labels'``, and if using POS
-        tags, their namespace is ``label_namespace_prefix + 'pos'``.
+        tags their namespace is ``label_namespace_prefix + pos_label_namespace``.
+    pos_label_namespace : ``str``, optional, (default = ``"pos"``)
+        The POS tag namespace is ``label_namespace_prefix + pos_label_namespace``.
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  use_pos_tags: bool = True,
                  lazy: bool = False,
-                 label_namespace_prefix: str = "") -> None:
+                 label_namespace_prefix: str = "",
+                 pos_label_namespace: str = "pos") -> None:
         super().__init__(lazy=lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._use_pos_tags = use_pos_tags
         self._label_namespace_prefix = label_namespace_prefix
+        self._pos_label_namespace = pos_label_namespace
 
     @overrides
     def _read(self, file_path):
@@ -109,9 +113,10 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         text_field = TextField([Token(x) for x in tokens], token_indexers=self._token_indexers)
         fields: Dict[str, Field] = {"tokens": text_field}
 
+        pos_namespace = self._label_namespace_prefix + self._pos_label_namespace
         if self._use_pos_tags and pos_tags is not None:
             pos_tag_field = SequenceLabelField(pos_tags, text_field,
-                                               label_namespace=self._label_namespace_prefix + "pos")
+                                               label_namespace=pos_namespace)
             fields["pos_tags"] = pos_tag_field
         elif self._use_pos_tags:
             raise ConfigurationError("use_pos_tags was set to True but no gold pos"
