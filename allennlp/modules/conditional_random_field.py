@@ -29,18 +29,26 @@ def allowed_transitions(constraint_type: str, labels: Dict[int, str]) -> List[Tu
     ``List[Tuple[int, int]]``
         The allowed transitions (from_label_id, to_label_id).
     """
-    num_tags = len(labels)
-    start_tag = num_tags
-    end_tag = num_tags + 1
+    num_labels = len(labels)
+    start_tag = num_labels
+    end_tag = num_labels + 1
 
     allowed = []
-    if constraint_type == "BIOUL":
-        for i, (from_tag, *from_entity) in labels.items():
-            for j, (to_tag, *to_entity) in labels.items():
-                if is_transition_allowed(constraint_type, from_tag, from_entity,
-                                         to_tag, to_entity):
-                    allowed.append((i, j))
+    for from_label_index, from_label in labels.items():
+        for to_label_index, to_label in labels.items():
+            # These lines treat the str from_label and to_label as sequences
+            # of characters to unpack them. from_tag is thus the first character of
+            # from_label, and from_entity is the remaining characters in from_label.
+            # The same applies to to_tag and to_entity.
+            from_tag = from_label[0]
+            from_entity = from_label[1:]
+            to_tag = to_label[0]
+            to_entity = to_label[1:]
+            if is_transition_allowed(constraint_type, from_tag, from_entity,
+                                     to_tag, to_entity):
+                allowed.append((from_label_index, to_label_index))
 
+    if constraint_type == "BIOUL":
         # start transitions
         for i, (to_bioul, *to_entity) in labels.items():
             if to_bioul in ('O', 'B', 'U'):
@@ -52,12 +60,6 @@ def allowed_transitions(constraint_type: str, labels: Dict[int, str]) -> List[Tu
                 allowed.append((i, end_tag))
 
     elif constraint_type == "BIO":
-        for i, (from_tag, *from_entity) in labels.items():
-            for j, (to_tag, *to_entity) in labels.items():
-                if is_transition_allowed(constraint_type, from_tag, from_entity,
-                                         to_tag, to_entity):
-                    allowed.append((i, j))
-
         # start transitions
         for i, (to_bio, *to_entity) in labels.items():
             if to_bio in ('O', 'B'):
@@ -69,12 +71,6 @@ def allowed_transitions(constraint_type: str, labels: Dict[int, str]) -> List[Tu
                 allowed.append((i, end_tag))
 
     elif constraint_type == "IOB1":
-        for i, (from_tag, *from_entity) in labels.items():
-            for j, (to_tag, *to_entity) in labels.items():
-                if is_transition_allowed(constraint_type, from_tag, from_entity,
-                                         to_tag, to_entity):
-                    allowed.append((i, j))
-
         # start transitions
         for i, (to_bio, *to_entity) in labels.items():
             if to_bio in ('O', 'I'):
@@ -126,28 +122,28 @@ def is_transition_allowed(constraint_type: str,
     """
     if constraint_type == "BIOUL":
         return any([
-            # O can transition to O, B-* or U-*
-            # L-x can transition to O, B-*, or U-*
-            # U-x can transition to O, B-*, or U-*
-            from_tag in ('O', 'L', 'U') and to_tag in ('O', 'B', 'U'),
-            # B-x can only transition to I-x or L-x
-            # I-x can only transition to I-x or L-x
-            from_tag in ('B', 'I') and to_tag in ('I', 'L') and from_entity == to_entity
+                # O can transition to O, B-* or U-*
+                # L-x can transition to O, B-*, or U-*
+                # U-x can transition to O, B-*, or U-*
+                from_tag in ('O', 'L', 'U') and to_tag in ('O', 'B', 'U'),
+                # B-x can only transition to I-x or L-x
+                # I-x can only transition to I-x or L-x
+                from_tag in ('B', 'I') and to_tag in ('I', 'L') and from_entity == to_entity
         ])
     elif constraint_type == "BIO":
         return any([
-            # Can always transition to O or B-x
-            to_tag in ('O', 'B'),
-            # Can only transition to I-x from B-x or I-x
-            to_tag == 'I' and from_tag in ('B', 'I') and from_entity == to_entity
+                # Can always transition to O or B-x
+                to_tag in ('O', 'B'),
+                # Can only transition to I-x from B-x or I-x
+                to_tag == 'I' and from_tag in ('B', 'I') and from_entity == to_entity
         ])
     elif constraint_type == "IOB1":
         return any([
-            # Can always transition to O or I-x
-            to_tag in ('O', 'I'),
-            # Can only transition to B-x from B-x or I-x, where
-            # x is the same tag.
-            to_tag == 'B' and from_tag in ('B', 'I') and from_entity == to_entity
+                # Can always transition to O or I-x
+                to_tag in ('O', 'I'),
+                # Can only transition to B-x from B-x or I-x, where
+                # x is the same tag.
+                to_tag == 'B' and from_tag in ('B', 'I') and from_entity == to_entity
         ])
     else:
         raise ConfigurationError(f"Unknown constraint type: {constraint_type}")
