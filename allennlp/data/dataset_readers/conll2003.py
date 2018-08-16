@@ -119,12 +119,12 @@ class Conll2003DatasetReader(DatasetReader):
                     # unzipping trick returns tuples, but our Fields need lists
                     fields = [list(field) for field in zip(*fields)]
                     if self.ignore_ner_tags:
-                        tokens, pos_tags, chunk_tags = fields[:3]
+                        tokens_, pos_tags, chunk_tags = fields[:3]
                         ner_tags = None
                     else:
-                        tokens, pos_tags, chunk_tags, ner_tags = fields
+                        tokens_, pos_tags, chunk_tags, ner_tags = fields
                     # TextField requires ``Token`` objects
-                    tokens = [Token(token) for token in tokens]
+                    tokens = [Token(token) for token in tokens_]
 
                     yield self.text_to_instance(tokens, pos_tags, chunk_tags, ner_tags)
 
