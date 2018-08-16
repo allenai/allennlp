@@ -116,10 +116,9 @@ class DQA(Model):
     model_in_cuda = span_start.is_cuda
     qa_mask = (1 - torch.eq(followup_list, -1)).view(-1)  # not all dialog has the same number of QA pairs. 
     batch_size, max_qa_count, max_q_len, max_word_len = question['token_characters'].size()
-    #_, _, token_max_q_len = question['tokens'].size()
-    #assert token_max_q_len == max_q_len
+    _, _, elmo_max_q_len, _ = question['elmo'].size()
     question['token_characters'] = question['token_characters'].view(batch_size * max_qa_count, max_q_len, -1)
-    question['tokens'] = question['tokens'].view(batch_size * max_qa_count, max_q_len)
+    question['elmo'] = question['elmo'].view(batch_size * max_qa_count, elmo_max_q_len, -1)
     embedded_question = self._dropout(self._text_field_embedder(question))
     embedded_passage = self._dropout(self._text_field_embedder(passage))
     passage_length = embedded_passage.size(1)
@@ -133,7 +132,7 @@ class DQA(Model):
     if self._prev_a > 0:
       question_num_ind = torch.Tensor(list(range(0, max_qa_count))* batch_size).long().reshape(-1, 1).repeat(1, max_q_len)
       if model_in_cuda:
-        question_num_ind.cuda()
+        question_num_ind = question_num_ind.cuda()
       question_num_marker_emb = self._question_num_marker(question_num_ind)
       embedded_question = torch.cat([embedded_question, question_num_marker_emb], dim=-1)
       repeated_embedded_passage = embedded_passage. \
@@ -315,6 +314,7 @@ class DQA(Model):
         output_dict['best_span_str'].append(output_bspan_list)
     output_dict["loss"] = loss
     output_dict['yesno'] = _yesno.view(batch_size, -1, 3).detach().cpu().numpy()
+    output_dict['followup'] = _followup.view(batch_size, -1, 3).detach().cpu().numpy()
     return output_dict 
 
   @overrides
@@ -322,7 +322,10 @@ class DQA(Model):
     yes_no_cpu = output_dict.pop('yesno')
     argmax_indices = np.argmax(yes_no_cpu, axis=-1)
     yesno_tags = [[self.vocab.get_token_from_index(x, namespace="yesno_labels") for x in argm_list] for argm_list in argmax_indices]
+    followup_argmax_indices = np.argmax(output_dict.pop("followup"), axis = -1)
+    followup_tags = [[self.vocab.get_token_from_index(x, namespace="followup_labels") for x in argm_list] for argm_list in followup_argmax_indices]
     output_dict['yesno']  = yesno_tags
+    output_dict['followup'] = followup_tags
     return output_dict
 
   def get_metrics(self, reset: bool = False) -> Dict[str, float]:
