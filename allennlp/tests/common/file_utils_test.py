@@ -4,10 +4,14 @@ import os
 import pathlib
 import json
 
+from botocore.exceptions import ClientError
 import pytest
 import responses
 
-from allennlp.common.file_utils import url_to_filename, filename_to_url, get_from_cache, cached_path
+from allennlp.common.file_utils import url_to_filename, filename_to_url, get_from_cache, \
+    cached_path, \
+    split_s3_path, \
+    s3_request
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -96,6 +100,43 @@ class TestFileUtils(AllenNlpTestCase):
             back_to_url, etag = filename_to_url(filename, cache_dir=self.TEST_DIR)
             assert back_to_url == url
             assert etag == "mytag"
+
+    def test_split_s3_path(self):
+        # Test splitting good urls.
+        assert split_s3_path("s3://my-bucket/subdir/file.txt") == ("my-bucket", "subdir/file.txt")
+        assert split_s3_path("s3://my-bucket/file.txt") == ("my-bucket", "file.txt")
+
+        # Test splitting bad urls.
+        with pytest.raises(ValueError):
+            split_s3_path("s3://")
+            split_s3_path("s3://myfile.txt")
+            split_s3_path("myfile.txt")
+
+    def test_s3_request_decorator(self):
+        fake_url = "s3://my-bucket/myfile.txt"
+
+        # Good request.
+        @s3_request
+        def good_s3_request(url):
+            return url
+
+        assert good_s3_request(fake_url) == fake_url
+
+        # Request that fails because the file is missing.
+        @s3_request
+        def missing_file_request(url):
+            raise ClientError({"Error": {"Code": 404}}, "s3_request to {}".format(url))
+
+        with pytest.raises(FileNotFoundError):
+            missing_file_request(fake_url)
+
+        # Request that fails due to other reasons.
+        @s3_request
+        def other_bad_request(url):
+            raise ClientError({"Error": {"Code": 503}}, "s3_request to {}".format(url))
+
+        with pytest.raises(ClientError):
+            other_bad_request(fake_url)
 
     @responses.activate
     def test_get_from_cache(self):
