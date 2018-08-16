@@ -46,6 +46,6 @@ class TestCcgBankReader(AllenNlpTestCase):
         vocab = Vocabulary.from_instances(instances)
         self.assertSetEqual(
                 set(vocab._token_to_index.keys()), # pylint: disable=protected-access
-                {'tokens', 'modified_pos_tags', 'original_pos_tags',
-                 'predicate_arg_categories', 'ccg_categories'}
+                {'tokens', 'modified_pos_tags_labels', 'original_pos_tags_labels',
+                 'predicate_arg_categories_labels', 'ccg_categories_labels'}
         )

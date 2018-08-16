@@ -40,8 +40,8 @@ class CcgBankDatasetReader(DatasetReader):
     lazy : ``bool``, optional, (default = ``False``)
         Whether or not instances can be consumed lazily.
     label_namespace_prefix: ``str``, optional, (default = ``""``)
-        Use the namespace ``label_namespace_prefix`` + field name when
-        creating the ``SequenceLabelField`` vocabularies.
+        Use the namespace ``label_namespace_prefix + field_name + '_labels``
+        when creating the ``SequenceLabelField`` vocabularies.
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
@@ -124,7 +124,9 @@ class CcgBankDatasetReader(DatasetReader):
                                    ('modified_pos_tags', modified_pos_tags),
                                    ('predicate_arg_categories', predicate_arg_categories)):
             if labels is not None:
+                # end namespace in labels so Vocabulary doesn't add PAD and UNK
+                namespace = self._label_namespace_prefix + field_name + '_labels'
                 fields[field_name] = SequenceLabelField(labels, text_field,
-                                                        self._label_namespace_prefix + field_name)
+                                                        namespace)
 
         return Instance(fields)
