@@ -97,7 +97,7 @@ class AtisDatasetReader(DatasetReader):
         ----------
         utterances: ``List[str]``, required.
             List of utterances in the interaction, the last element is the current utterance.
-        sql_query: ``str``
+        sql_query: ``str``, optional
             The SQL query, given as label during training or validation.
         """
         utterance = utterances[-1]
