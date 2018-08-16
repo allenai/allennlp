@@ -5,6 +5,7 @@ doc/_build/
 .ipynb_checkpoints
 .pytest_cache/
 allennlp/tools/EVALB/evalb.dSYM/
+allennlp/tools/EVALB/evalb
 
 # build artifacts
 allennlp.egg-info/

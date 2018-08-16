@@ -14,7 +14,6 @@ from allennlp.commands.train import train_model_from_file, train_model
 from allennlp.common import Params
 from allennlp.training.metrics import EvalbBracketingScorer
 
-EvalbBracketingScorer.compile_evalb()
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -73,6 +72,8 @@ if __name__ == "__main__":
                 'srl',
         ]
         for model in models:
+            if model == 'constituency_parser':
+                EvalbBracketingScorer.compile_evalb()
             train_fixture(f"allennlp/tests/fixtures/{model}/")
     logger.info("Changing directory back to %s", initial_working_dir)
     os.chdir(initial_working_dir)
