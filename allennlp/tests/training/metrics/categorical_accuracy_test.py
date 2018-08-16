@@ -115,3 +115,7 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
     def test_incorrect_top_k_catches_exceptions(self):
         with pytest.raises(ConfigurationError):
             CategoricalAccuracy(top_k=0)
+
+    def test_does_not_divide_by_zero_with_no_count(self):
+        accuracy = CategoricalAccuracy()
+        self.assertAlmostEqual(accuracy.get_metric(), 0.0)

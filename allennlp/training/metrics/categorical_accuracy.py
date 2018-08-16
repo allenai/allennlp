@@ -89,7 +89,10 @@ class CategoricalAccuracy(Metric):
         -------
         The accumulated accuracy.
         """
-        accuracy = float(self.correct_count) / float(self.total_count)
+        if self.total_count > 1e-12:
+            accuracy = float(self.correct_count) / float(self.total_count)
+        else:
+            accuracy = 0.0
         if reset:
             self.reset()
         return accuracy
