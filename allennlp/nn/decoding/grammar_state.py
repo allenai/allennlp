@@ -179,6 +179,7 @@ class GrammarState:
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
+            # pylint: disable=protected-access
             return all([
                     self._nonterminal_stack == other._nonterminal_stack,
                     self._lambda_stacks == other._lambda_stacks,

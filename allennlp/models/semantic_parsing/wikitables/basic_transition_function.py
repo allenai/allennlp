@@ -4,15 +4,11 @@ from typing import Any, Dict, List, Set, Tuple
 from overrides import overrides
 
 import torch
-from torch.nn import Parameter
 from torch.nn.modules.rnn import LSTMCell
 from torch.nn.modules.linear import Linear
 
-from allennlp.common import util as common_util
-from allennlp.common.checks import check_dimensions_match
 from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
-from allennlp.modules import Attention, FeedForward
-from allennlp.modules.token_embedders import Embedding
+from allennlp.modules import Attention
 from allennlp.nn import util, Activation
 from allennlp.nn.decoding import DecoderStep, RnnState
 
@@ -171,7 +167,10 @@ class BasicTransitionFunction(DecoderStep[GrammarBasedDecoderState]):
                                       hidden_state: torch.Tensor,
                                       attention_weights: torch.Tensor,
                                       predicted_action_embeddings: torch.Tensor
-                                      ) -> Dict[int, List[Tuple[int, Any, Any, List[int]]]]:
+                                     ) -> Dict[int, List[Tuple[int, Any, Any, List[int]]]]:
+        # We take a couple of extra arguments here because subclasses might use them.
+        # pylint: disable=unused-argument,no-self-use
+
         # In this section we take our predicted action embedding and compare it to the available
         # actions in our current state (which might be different for each group element).  For
         # computing action scores, we'll forget about doing batched / grouped computation, as it
@@ -208,6 +207,8 @@ class BasicTransitionFunction(DecoderStep[GrammarBasedDecoderState]):
                                batch_action_probs: Dict[int, List[Tuple[int, Any, Any, List[int]]]],
                                max_actions: int,
                                allowed_actions: List[Set[int]]):
+        # pylint: disable=no-self-use
+
         # We'll yield a bunch of states here that all have a `group_size` of 1, so that the
         # learning algorithm can decide how many of these it wants to keep, and it can just regroup
         # them later, as that's a really easy operation.
@@ -249,7 +250,7 @@ class BasicTransitionFunction(DecoderStep[GrammarBasedDecoderState]):
                                                     updated_rnn_state['attention_weights'])
 
         new_states = []
-        for batch_index, results in batch_action_probs.items():
+        for _, results in batch_action_probs.items():
             if allowed_actions and not max_actions:
                 # If we're given a set of allowed actions, and we're not just keeping the top k of
                 # them, we don't need to do any sorting, so we can speed things up quite a bit.
@@ -273,13 +274,13 @@ class BasicTransitionFunction(DecoderStep[GrammarBasedDecoderState]):
                 action_embeddings = torch.cat(group_action_embeddings, dim=0)
                 log_probs_cpu = log_probs.data.cpu().numpy().tolist()
                 batch_states = [(log_probs_cpu[i],
-                                group_indices[i],
-                                log_probs[i],
-                                action_embeddings[i],
-                                group_actions[i])
-                               for i in range(len(group_actions))
-                               if (not allowed_actions or
-                                   group_actions[i] in allowed_actions[group_indices[i]])]
+                                 group_indices[i],
+                                 log_probs[i],
+                                 action_embeddings[i],
+                                 group_actions[i])
+                                for i in range(len(group_actions))
+                                if (not allowed_actions or
+                                    group_actions[i] in allowed_actions[group_indices[i]])]
                 # We use a key here to make sure we're not trying to compare anything on the GPU.
                 batch_states.sort(key=lambda x: x[0], reverse=True)
                 if max_actions:

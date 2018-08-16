@@ -536,6 +536,7 @@ def tensors_equal(tensor1: torch.Tensor, tensor2: torch.Tensor, tolerance: float
     This is kind of a catch-all method that's designed to make implementing ``__eq__`` methods
     easier, in a way that's really only intended to be useful for tests.
     """
+    # pylint: disable=too-many-return-statements
     if isinstance(tensor1, (list, tuple)):
         if not isinstance(tensor2, (list, tuple)) or len(tensor1) != len(tensor2):
             return False

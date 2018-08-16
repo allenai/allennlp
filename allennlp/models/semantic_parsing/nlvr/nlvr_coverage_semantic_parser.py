@@ -382,13 +382,15 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             cost = checklist_cost + (1 - self._checklist_cost_weight) * denotation_cost
         return cost
 
-    def _get_state_info(self, state) -> Dict[str, List]:
+    def _get_state_info(self,
+                        state: CoverageDecoderState,
+                        batch_worlds: List[List[NlvrWorld]]) -> Dict[str, List]:
         """
         This method is here for debugging purposes, in case you want to look at the what the model
         is learning. It may be inefficient to call it while training the model on real data.
         """
         if len(state.batch_indices) == 1 and state.is_finished():
-            costs = [float(self._get_state_cost(state).detach().cpu().numpy())]
+            costs = [float(self._get_state_cost(batch_worlds, state).detach().cpu().numpy())]
         else:
             costs = []
         model_scores = [float(score.detach().cpu().numpy()) for score in state.score]

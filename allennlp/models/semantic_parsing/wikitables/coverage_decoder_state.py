@@ -1,12 +1,11 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any, List
 
 import torch
 
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.nn import util
-from allennlp.nn.decoding import ChecklistState, DecoderState, GrammarState, RnnState
+from allennlp.nn.decoding import ChecklistState, GrammarState, RnnState
 from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
-from allennlp.semparse import World
 
 
 # This syntax is pretty weird and ugly, but it's necessary to make mypy happy with the API that

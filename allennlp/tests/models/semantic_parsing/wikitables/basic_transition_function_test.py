@@ -2,7 +2,6 @@
 from numpy.testing import assert_almost_equal
 import torch
 
-from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
 from allennlp.models.semantic_parsing.wikitables.basic_transition_function import BasicTransitionFunction

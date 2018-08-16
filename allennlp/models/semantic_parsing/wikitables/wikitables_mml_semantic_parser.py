@@ -13,7 +13,6 @@ from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEnco
 from allennlp.nn.decoding import BeamSearch
 from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
 from allennlp.semparse.worlds import WikiTablesWorld
-from allennlp.semparse import ParsingError
 
 
 @Model.register("wikitables_mml_parser")

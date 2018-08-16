@@ -12,7 +12,8 @@ from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state imp
 from allennlp.modules import Embedding, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, TimeDistributed
 from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
 from allennlp.nn import util
-from allennlp.nn.decoding import GrammarState, RnnState, ChecklistState
+from allennlp.nn.decoding import GrammarState, RnnState
+from allennlp.semparse import ParsingError
 from allennlp.semparse.type_declarations import type_declaration
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import WikiTablesWorld
@@ -140,8 +141,7 @@ class WikiTablesSemanticParser(Model):
                                            table: Dict[str, torch.LongTensor],
                                            world: List[WikiTablesWorld],
                                            actions: List[List[ProductionRuleArray]],
-                                           outputs: Dict[str, Any]
-                                           ) -> Tuple[List[RnnState], List[GrammarState]]:
+                                           outputs: Dict[str, Any]) -> Tuple[List[RnnState], List[GrammarState]]:
         """
         Encodes the question and table, computes a linking between the two, and constructs an
         initial RnnState and GrammarState for each batch instance to pass to the decoder.
@@ -262,8 +262,6 @@ class WikiTablesSemanticParser(Model):
                                                              question_mask,
                                                              self._encoder.is_bidirectional())
         memory_cell = encoder_outputs.new_zeros(batch_size, self._encoder.get_output_dim())
-
-        initial_score = embedded_question.data.new_zeros(batch_size)
 
         # To make grouping states together in the decoder easier, we convert the batch dimension in
         # all of our tensors into an outer list.  For instance, the encoder outputs have shape

@@ -17,7 +17,6 @@ from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser impo
 from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
 from allennlp.nn.decoding import ChecklistState
 from allennlp.nn.decoding.decoder_trainers import ExpectedRiskMinimization
-from allennlp.semparse import ParsingError
 from allennlp.semparse.type_declarations import wikitables_type_declaration as types
 from allennlp.semparse.worlds import WikiTablesWorld
 from allennlp.training.metrics import Average
