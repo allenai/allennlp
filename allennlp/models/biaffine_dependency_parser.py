@@ -503,7 +503,7 @@ class BiaffineDependencyParser(Model):
         heads = []
         head_tags = []
         for energy, length in zip(batch_energy.detach().cpu(), lengths):
-            scores, label_ids = energy.max(dim=0)
+            scores, tag_ids = energy.max(dim=0)
             # Although we need to include the root node so that the MST includes it,
             # we do not want any word to be the parent of the root node.
             # Here, we enforce this by setting the scores for all word -> ROOT edges
@@ -514,13 +514,13 @@ class BiaffineDependencyParser(Model):
             head, _ = decode_mst(scores.numpy(), length, has_labels=False)
 
             # We don't care what the head is for the root token, but by default it's
-            # returned as -1 - this messes up the indexing into the label_ids tensor,
+            # returned as -1 - this messes up the indexing into the tag_ids tensor,
             # so we'll just fix it to have a value of 0.
             head[0] = 0
             # Find the labels which correspond to the edges in the max spanning tree.
             head_tag = []
             for child, parent in enumerate(head):
-                head_tag.append(label_ids[parent, child])
+                head_tag.append(tag_ids[parent, child])
             heads.append(head)
             head_tags.append(head_tag)
         return torch.from_numpy(numpy.stack(heads)), torch.from_numpy(numpy.stack(head_tags))
