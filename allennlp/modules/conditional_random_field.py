@@ -88,29 +88,16 @@ def is_transition_allowed(constraint_type: str,
     ``bool``
         Whether the transition is allowed under the given ``constraint_type``.
     """
+    # pylint: disable=too-many-return-statements
     if to_tag == "START" or from_tag == "END":
         # Cannot transition into START or from END
         return False
-    if from_tag == "START":
-        if constraint_type == "BIOUL":
-            return to_tag in ('O', 'B', 'U')
-        elif constraint_type == "BIO":
-            return to_tag in ('O', 'B')
-        elif constraint_type == "IOB1":
-            return to_tag in ('O', 'I')
-        else:
-            raise ConfigurationError(f"Unknown constraint type: {constraint_type}")
-    if to_tag == "END":
-        if constraint_type == "BIOUL":
-            return from_tag in ('O', 'L', 'U')
-        elif constraint_type == "BIO":
-            return from_tag in ('O', 'B', 'I')
-        elif constraint_type == "IOB1":
-            return from_tag in ('O', 'B', 'I')
-        else:
-            raise ConfigurationError(f"Unknown constraint type: {constraint_type}")
 
     if constraint_type == "BIOUL":
+        if from_tag == "START":
+            return to_tag in ('O', 'B', 'U')
+        if to_tag == "END":
+            return from_tag in ('O', 'L', 'U')
         return any([
                 # O can transition to O, B-* or U-*
                 # L-x can transition to O, B-*, or U-*
@@ -121,6 +108,10 @@ def is_transition_allowed(constraint_type: str,
                 from_tag in ('B', 'I') and to_tag in ('I', 'L') and from_entity == to_entity
         ])
     elif constraint_type == "BIO":
+        if from_tag == "START":
+            return to_tag in ('O', 'B')
+        if to_tag == "END":
+            return from_tag in ('O', 'B', 'I')
         return any([
                 # Can always transition to O or B-x
                 to_tag in ('O', 'B'),
@@ -128,6 +119,10 @@ def is_transition_allowed(constraint_type: str,
                 to_tag == 'I' and from_tag in ('B', 'I') and from_entity == to_entity
         ])
     elif constraint_type == "IOB1":
+        if from_tag == "START":
+            return to_tag in ('O', 'I')
+        if to_tag == "END":
+            return from_tag in ('O', 'B', 'I')
         return any([
                 # Can always transition to O or I-x
                 to_tag in ('O', 'I'),
