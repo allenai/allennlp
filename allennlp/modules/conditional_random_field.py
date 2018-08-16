@@ -32,58 +32,26 @@ def allowed_transitions(constraint_type: str, labels: Dict[int, str]) -> List[Tu
     num_labels = len(labels)
     start_tag = num_labels
     end_tag = num_labels + 1
+    labels_with_boundaries = list(labels.items()) + [(start_tag, "START"), (end_tag, "END")]
 
     allowed = []
-    for from_label_index, from_label in labels.items():
-        for to_label_index, to_label in labels.items():
-            # These lines treat the str from_label and to_label as sequences
-            # of characters to unpack them. from_tag is thus the first character of
-            # from_label, and from_entity is the remaining characters in from_label.
-            # The same applies to to_tag and to_entity.
+    for from_label_index, from_label in labels_with_boundaries:
+        if from_label in ("START", "END"):
+            from_tag = from_label
+            from_entity = ""
+        else:
             from_tag = from_label[0]
             from_entity = from_label[1:]
-            to_tag = to_label[0]
-            to_entity = to_label[1:]
+        for to_label_index, to_label in labels_with_boundaries:
+            if to_label in ("START", "END"):
+                to_tag = to_label
+                to_entity = ""
+            else:
+                to_tag = to_label[0]
+                to_entity = to_label[1:]
             if is_transition_allowed(constraint_type, from_tag, from_entity,
                                      to_tag, to_entity):
                 allowed.append((from_label_index, to_label_index))
-
-    if constraint_type == "BIOUL":
-        # start transitions
-        for i, (to_bioul, *to_entity) in labels.items():
-            if to_bioul in ('O', 'B', 'U'):
-                allowed.append((start_tag, i))
-
-        # end transitions
-        for i, (from_bioul, *from_entity) in labels.items():
-            if from_bioul in ('O', 'L', 'U'):
-                allowed.append((i, end_tag))
-
-    elif constraint_type == "BIO":
-        # start transitions
-        for i, (to_bio, *to_entity) in labels.items():
-            if to_bio in ('O', 'B'):
-                allowed.append((start_tag, i))
-
-        # end transitions
-        for i, (from_bio, *from_entity) in labels.items():
-            if from_bio in ('O', 'B', 'I'):
-                allowed.append((i, end_tag))
-
-    elif constraint_type == "IOB1":
-        # start transitions
-        for i, (to_bio, *to_entity) in labels.items():
-            if to_bio in ('O', 'I'):
-                allowed.append((start_tag, i))
-
-        # end transitions
-        for i, (from_bio, *from_entity) in labels.items():
-            if from_bio in ('O', 'B', 'I'):
-                allowed.append((i, end_tag))
-
-    else:
-        raise ConfigurationError(f"Unknown constraint type: {constraint_type}")
-
     return allowed
 
 
@@ -120,6 +88,28 @@ def is_transition_allowed(constraint_type: str,
     ``bool``
         Whether the transition is allowed under the given ``constraint_type``.
     """
+    if to_tag == "START" or from_tag == "END":
+        # Cannot transition into START or from END
+        return False
+    if from_tag == "START":
+        if constraint_type == "BIOUL":
+            return to_tag in ('O', 'B', 'U')
+        elif constraint_type == "BIO":
+            return to_tag in ('O', 'B')
+        elif constraint_type == "IOB1":
+            return to_tag in ('O', 'I')
+        else:
+            raise ConfigurationError(f"Unknown constraint type: {constraint_type}")
+    if to_tag == "END":
+        if constraint_type == "BIOUL":
+            return from_tag in ('O', 'L', 'U')
+        elif constraint_type == "BIO":
+            return from_tag in ('O', 'B', 'I')
+        elif constraint_type == "IOB1":
+            return from_tag in ('O', 'B', 'I')
+        else:
+            raise ConfigurationError(f"Unknown constraint type: {constraint_type}")
+
     if constraint_type == "BIOUL":
         return any([
                 # O can transition to O, B-* or U-*
