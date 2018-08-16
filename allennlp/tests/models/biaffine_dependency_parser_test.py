@@ -70,7 +70,10 @@ class BiaffineDependencyParserTest(ModelTestCase):
 
         # Make the score for the root label for arcs to the root token be higher - it
         # will be masked for the MST, but we want to make sure that the tags are with
-        # respect to the unmasked tensor.
+        # respect to the unmasked tensor. If the masking was incorrect, we would decode all
+        # zeros as the labels, because torch takes the first index in the case that all the
+        # values are equal, which would be the case if the labels were calculated from
+        # the masked score.
         energy[:, 1, 0, :] = 3
         length = torch.LongTensor([3])
         heads, tags = self.model._run_mst_decoding(energy, length) # pylint: disable=protected-access
