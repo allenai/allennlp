@@ -9,8 +9,9 @@ import tempfile
 import json
 from urllib.parse import urlparse
 from pathlib import Path
-from typing import Tuple, Union, IO
+from typing import Optional, Tuple, Union, IO
 from hashlib import sha256
+from functools import wraps
 
 import boto3
 from botocore.exceptions import ClientError
@@ -104,17 +105,49 @@ def split_s3_path(url: str) -> Tuple[str, str]:
     return bucket_name, s3_path
 
 
+def s3_request(func):
+    """
+    Wrapper function for s3 requests in order to create more helpful error
+    messages.
+    """
+
+    @wraps(func)
+    def wrapper(url: str, *args, **kwargs):
+        try:
+            return func(url, *args, **kwargs)
+        except ClientError as exc:
+            if exc.response["Error"]["Code"] == 404:
+                raise FileNotFoundError("file {} not found".format(url))
+            else:
+                raise
+
+    return wrapper
+
+
+@s3_request
+def s3_etag(url: str) -> Optional[str]:
+    """Check ETag on S3 object."""
+    s3_client = boto3.resource("s3")
+    bucket_name, s3_path = split_s3_path(url)
+    s3_object = s3_client.Object(bucket_name, s3_path)
+    return s3_object.e_tag
+
+
+@s3_request
 def s3_get(url: str, temp_file: IO) -> None:
     """Pull a file directly from S3."""
-    try:
-        s3_client = boto3.resource("s3")
-        bucket_name, s3_path = split_s3_path(url)
-        s3_client.Bucket(bucket_name).download_fileobj(s3_path, temp_file)
-    except ClientError as exc:
-        if exc.response["Error"]["Code"] == 404:
-            raise FileNotFoundError("file {} not found".format(url))
-        else:
-            raise
+    s3_client = boto3.resource("s3")
+    bucket_name, s3_path = split_s3_path(url)
+    s3_client.Bucket(bucket_name).download_fileobj(s3_path, temp_file)
+
+
+def http_etag(url: str) -> Optional[str]:
+    """Make HEAD request to check ETag."""
+    response = requests.head(url, allow_redirects=True)
+    if response.status_code != 200:
+        raise IOError("HEAD request failed for url {}".format(url))
+
+    return response.headers.get("ETag")
 
 
 def http_get(url: str, temp_file: IO) -> None:
@@ -140,16 +173,11 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
 
     os.makedirs(cache_dir, exist_ok=True)
 
-    if not url.startswith("s3://"):
-        # make HEAD request to check ETag
-        response = requests.head(url, allow_redirects=True)
-        if response.status_code != 200:
-            raise IOError("HEAD request failed for url {}".format(url))
-
-        # get ETag to add to filename if it exists
-        etag = response.headers.get("ETag")
+    # Get eTag to add to filename, if it exists.
+    if url.startswith("s3://"):
+        etag = s3_etag(url)
     else:
-        etag = None
+        etag = http_etag(url)
 
     filename = url_to_filename(url, etag)
 
