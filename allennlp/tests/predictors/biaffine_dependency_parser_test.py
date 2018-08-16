@@ -43,7 +43,7 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
         hierplane_tree.pop("linkToPosition")
         # pylint: disable=line-too-long,bad-continuation
         assert result.get("hierplane_tree") == {'text': 'Please could you parse this sentence ?',
-                                                'root': {'word': 'Please', 'nodeType': 'punct', 'attributes': ['UH'], 'link': 'punct', 'spans': [{'start': 0, 'end': 7}],
+                                                'root': {'word': 'Please', 'nodeType': 'det', 'attributes': ['UH'], 'link': 'det', 'spans': [{'start': 0, 'end': 7}],
                                                     'children': [
                                                             {'word': 'could', 'nodeType': 'nummod', 'attributes': ['MD'], 'link': 'nummod', 'spans': [{'start': 7, 'end': 13}]},
                                                             {'word': 'you', 'nodeType': 'nummod', 'attributes': ['PRP'], 'link': 'nummod', 'spans': [{'start': 13, 'end': 17}]},

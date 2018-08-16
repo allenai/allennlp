@@ -61,7 +61,7 @@ class BiaffineDependencyParserTest(ModelTestCase):
         # If we run the decoding with the model, it should enforce
         # the constraint.
         heads, _ = self.model._run_mst_decoding(energy, length) # pylint: disable=protected-access
-        assert heads.tolist()[0] == [-1, 0, 1]
+        assert heads.tolist()[0] == [0, 0, 1]
 
     def test_mst_decodes_arc_labels_with_respect_to_unconstrained_scores(self):
         energy = torch.Tensor([[0, 2, 1],
@@ -74,5 +74,5 @@ class BiaffineDependencyParserTest(ModelTestCase):
         energy[:, 1, 0, :] = 3
         length = torch.LongTensor([3])
         heads, tags = self.model._run_mst_decoding(energy, length) # pylint: disable=protected-access
-        assert heads.tolist()[0] == [-1, 0, 1]
+        assert heads.tolist()[0] == [0, 0, 1]
         assert tags.tolist()[0] == [0, 1, 0]
