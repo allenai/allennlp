@@ -6,7 +6,7 @@ from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
 from allennlp.models.semantic_parsing.wikitables.basic_transition_function import BasicTransitionFunction
-from allennlp.modules import SimilarityFunction
+from allennlp.modules import Attention
 from allennlp.nn.decoding import GrammarState, RnnState
 from allennlp.semparse.type_declarations.type_declaration import is_nonterminal
 
@@ -16,8 +16,9 @@ class BasicTransitionFunctionTest(AllenNlpTestCase):
         super().setUp()
         self.decoder_step = BasicTransitionFunction(encoder_output_dim=2,
                                                     action_embedding_dim=2,
-                                                    attention_function=None,
-                                                    num_start_types=3)
+                                                    input_attention=Attention.by_name('dot_product')(),
+                                                    num_start_types=3,
+                                                    add_action_bias=False)
 
         batch_indices = [0, 1, 0]
         action_history = [[1], [3, 4], []]
