@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Tuple, Union
 from hashlib import sha256
 
+import boto3
+from botocore.exceptions import ClientError
 import requests
 
 from allennlp.common.tqdm import Tqdm
@@ -78,7 +80,7 @@ def cached_path(url_or_filename: Union[str, Path], cache_dir: str = None) -> str
 
     parsed = urlparse(url_or_filename)
 
-    if parsed.scheme in ('http', 'https'):
+    if parsed.scheme in ('http', 'https', 's3'):
         # URL, so get it from the cache (downloading if necessary)
         return get_from_cache(url_or_filename, cache_dir)
     elif os.path.exists(url_or_filename):
@@ -92,17 +94,47 @@ def cached_path(url_or_filename: Union[str, Path], cache_dir: str = None) -> str
         raise ValueError("unable to parse {} as a URL or as a local path".format(url_or_filename))
 
 
-# TODO(joelgrus): do we want to do checksums or anything like that?
-def get_from_cache(url: str, cache_dir: str = None) -> str:
-    """
-    Given a URL, look for the corresponding dataset in the local cache.
-    If it's not there, download it. Then return the path to the cached file.
-    """
-    if cache_dir is None:
-        cache_dir = DATASET_CACHE
+def split_s3_path(url: str) -> Tuple[str, str]:
+    """Split a full s3 path into the bucket name and path."""
+    parts = url.split("/")
+    if len(parts) < 4:
+        raise ValueError("Invalid s3 path {}".format(url))
+    bucket_name = parts[2]
+    s3_path = "/".join(parts[3:])
+    return bucket_name, s3_path
 
-    os.makedirs(cache_dir, exist_ok=True)
 
+def write_file_metadata(url: str, cache_path: str, etag: str = None) -> None:
+    logger.info("creating metadata file for %s", cache_path)
+    meta = {'url': url}
+    if etag:
+        meta["etag"] = etag
+    meta_path = cache_path + '.json'
+    with open(meta_path, 'w') as meta_file:
+        json.dump(meta, meta_file)
+
+
+def s3_get(url: str, cache_dir: str) -> str:
+    """Pull a file directly from S3."""
+    filename = url_to_filename(url)
+    cache_path = os.path.join(cache_dir, filename)
+    if not os.path.exists(cache_path):
+        try:
+            s3_client = boto3.resource("s3")
+            bucket_name, s3_path = split_s3_path(url)
+            s3_client.Bucket(bucket_name).download_file(s3_path, cache_path)
+        except ClientError as exc:
+            if exc.response["Error"]["Code"] == 404:
+                raise FileNotFoundError("file {} not found".format(url))
+            else:
+                raise
+
+        write_file_metadata(url, cache_path)
+
+    return cache_path
+
+
+def http_get(url: str, cache_dir: str) -> str:
     # make HEAD request to check ETag
     response = requests.head(url, allow_redirects=True)
     if response.status_code != 200:
@@ -141,13 +173,28 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
             with open(cache_path, 'wb') as cache_file:
                 shutil.copyfileobj(temp_file, cache_file)
 
-            logger.info("creating metadata file for %s", cache_path)
-            meta = {'url': url, 'etag': etag}
-            meta_path = cache_path + '.json'
-            with open(meta_path, 'w') as meta_file:
-                json.dump(meta, meta_file)
+            write_file_metadata(url, cache_path, etag=etag)
 
             logger.info("removing temp file %s", temp_file.name)
+
+    return cache_path
+
+
+# TODO(joelgrus): do we want to do checksums or anything like that?
+def get_from_cache(url: str, cache_dir: str = None) -> str:
+    """
+    Given a URL, look for the corresponding dataset in the local cache.
+    If it's not there, download it. Then return the path to the cached file.
+    """
+    if cache_dir is None:
+        cache_dir = DATASET_CACHE
+
+    os.makedirs(cache_dir, exist_ok=True)
+
+    if url.startswith("s3://"):
+        cache_path = s3_get(url, cache_dir)
+    else:
+        cache_path = http_get(url, cache_dir)
 
     return cache_path
 
