@@ -9,9 +9,9 @@ from allennlp.common.checks import ConfigurationError
 import allennlp.nn.util as util
 
 
-def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> List[Tuple[int, int]]:
+def allowed_transitions(constraint_type: str, labels: Dict[int, str]) -> List[Tuple[int, int]]:
     """
-    Given tokens and a constraint type, returns the allowed transitions. It will
+    Given labels and a constraint type, returns the allowed transitions. It will
     additionally include transitions for the start and end states, which are used
     by the conditional random field.
 
@@ -20,68 +20,68 @@ def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> List[Tu
     constraint_type : ``str``, required
         Indicates which constraint to apply. Current choices are
         "BIO", "IOB1", and BIOUL".
-    tokens : ``Dict[int, str]``, required
-        A mapping {token_id -> token}. Most commonly this would be the value from
+    labels : ``Dict[int, str]``, required
+        A mapping {label_id -> label}. Most commonly this would be the value from
         Vocabulary.get_index_to_token_vocabulary()
 
     Returns
     -------
     ``List[Tuple[int, int]]``
-        The allowed transitions (from_token_id, to_token_id).
+        The allowed transitions (from_label_id, to_label_id).
     """
-    n_tags = len(tokens)
+    n_tags = len(labels)
     start_tag = n_tags
     end_tag = n_tags + 1
 
     allowed = []
     if constraint_type == "BIOUL":
-        for i, (from_tag, *from_entity) in tokens.items():
-            for j, (to_tag, *to_entity) in tokens.items():
+        for i, (from_tag, *from_entity) in labels.items():
+            for j, (to_tag, *to_entity) in labels.items():
                 if is_transition_allowed(constraint_type, from_tag, from_entity,
                                          to_tag, to_entity):
                     allowed.append((i, j))
 
         # start transitions
-        for i, (to_bioul, *to_entity) in tokens.items():
+        for i, (to_bioul, *to_entity) in labels.items():
             if to_bioul in ('O', 'B', 'U'):
                 allowed.append((start_tag, i))
 
         # end transitions
-        for i, (from_bioul, *from_entity) in tokens.items():
+        for i, (from_bioul, *from_entity) in labels.items():
             if from_bioul in ('O', 'L', 'U'):
                 allowed.append((i, end_tag))
 
     elif constraint_type == "BIO":
-        for i, (from_tag, *from_entity) in tokens.items():
-            for j, (to_tag, *to_entity) in tokens.items():
+        for i, (from_tag, *from_entity) in labels.items():
+            for j, (to_tag, *to_entity) in labels.items():
                 if is_transition_allowed(constraint_type, from_tag, from_entity,
                                          to_tag, to_entity):
                     allowed.append((i, j))
 
         # start transitions
-        for i, (to_bio, *to_entity) in tokens.items():
+        for i, (to_bio, *to_entity) in labels.items():
             if to_bio in ('O', 'B'):
                 allowed.append((start_tag, i))
 
         # end transitions
-        for i, (from_bio, *from_entity) in tokens.items():
+        for i, (from_bio, *from_entity) in labels.items():
             if from_bio in ('O', 'B', 'I'):
                 allowed.append((i, end_tag))
 
     elif constraint_type == "IOB1":
-        for i, (from_tag, *from_entity) in tokens.items():
-            for j, (to_tag, *to_entity) in tokens.items():
+        for i, (from_tag, *from_entity) in labels.items():
+            for j, (to_tag, *to_entity) in labels.items():
                 if is_transition_allowed(constraint_type, from_tag, from_entity,
                                          to_tag, to_entity):
                     allowed.append((i, j))
 
         # start transitions
-        for i, (to_bio, *to_entity) in tokens.items():
+        for i, (to_bio, *to_entity) in labels.items():
             if to_bio in ('O', 'I'):
                 allowed.append((start_tag, i))
 
         # end transitions
-        for i, (from_bio, *from_entity) in tokens.items():
+        for i, (from_bio, *from_entity) in labels.items():
             if from_bio in ('O', 'B', 'I'):
                 allowed.append((i, end_tag))
 
