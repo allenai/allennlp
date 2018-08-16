@@ -75,7 +75,7 @@ class GrammarBasedDecoderState(DecoderState[T]):
                                    new_rnn_state: RnnState,
                                    considered_actions: List[int] = None,
                                    action_probabilities: List[float] = None,
-                                   attention_weights: torch.Tensor = None) -> 'GrammarBasedDecoderState':
+                                   attention_weights: torch.Tensor = None) -> T:
         batch_index = self.batch_indices[group_index]
         new_action_history = self.action_history[group_index] + [action]
         production_rule = self.possible_actions[batch_index][action][0]
@@ -120,7 +120,7 @@ class GrammarBasedDecoderState(DecoderState[T]):
         return self.grammar_state[0].is_finished()
 
     @classmethod
-    def combine_states(cls, states: List['GrammarBasedDecoderState']) -> 'GrammarBasedDecoderState':
+    def combine_states(cls, states: List[T]) -> T:
         batch_indices = [batch_index for state in states for batch_index in state.batch_indices]
         action_histories = [action_history for state in states for action_history in state.action_history]
         scores = [score for state in states for score in state.score]
