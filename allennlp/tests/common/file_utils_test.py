@@ -10,7 +10,8 @@ import pytest
 import responses
 
 from allennlp.common.file_utils import (
-        url_to_filename, filename_to_url, get_from_cache, cached_path, split_s3_path, s3_request)
+        url_to_filename, filename_to_url, get_from_cache, cached_path, split_s3_path,
+        s3_request, s3_etag)
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -137,6 +138,10 @@ class TestFileUtils(AllenNlpTestCase):
         # File missing, should raise FileNotFoundError.
         with pytest.raises(FileNotFoundError):
             get_file_info("s3://my-bucket/missing_file.txt")
+
+    def test_s3_etag(self):
+        etag = s3_etag("s3://my-bucket/embeddings/glove.txt.gz")
+        assert etag.startswith("'") or etag.startswith('"')
 
     @responses.activate
     def test_get_from_cache(self):
