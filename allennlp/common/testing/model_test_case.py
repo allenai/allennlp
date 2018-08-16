@@ -1,4 +1,5 @@
 import copy
+from typing import Set
 
 from numpy.testing import assert_allclose
 import torch
@@ -42,7 +43,8 @@ class ModelTestCase(AllenNlpTestCase):
     def ensure_model_can_train_save_and_load(self,
                                              param_file: str,
                                              tolerance: float = 1e-4,
-                                             cuda_device: int = -1):
+                                             cuda_device: int = -1,
+                                             gradients_to_ignore: Set[str] = None):
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
         model = train_model_from_file(param_file, save_dir)
@@ -77,7 +79,7 @@ class ModelTestCase(AllenNlpTestCase):
 
         # Check gradients are None for non-trainable parameters and check that
         # trainable parameters receive some gradient if they are trainable.
-        self.check_model_computes_gradients_correctly(model, model_batch)
+        self.check_model_computes_gradients_correctly(model, model_batch, gradients_to_ignore)
 
         # The datasets themselves should be identical.
         assert model_batch.keys() == loaded_batch.keys()
@@ -139,7 +141,9 @@ class ModelTestCase(AllenNlpTestCase):
             assert field1 == field2, f"{name}, {type(field1)}, {type(field2)}"
 
     @staticmethod
-    def check_model_computes_gradients_correctly(model, model_batch):
+    def check_model_computes_gradients_correctly(model: Model,
+                                                 model_batch: Batch,
+                                                 params_to_ignore: Set[str] = None):
         print("Checking gradients")
         model.zero_grad()
         result = model(**model_batch)
@@ -147,6 +151,8 @@ class ModelTestCase(AllenNlpTestCase):
         has_zero_or_none_grads = {}
         for name, parameter in model.named_parameters():
             zeros = torch.zeros(parameter.size())
+            if params_to_ignore and name in params_to_ignore:
+                continue
             if parameter.requires_grad:
 
                 if parameter.grad is None:

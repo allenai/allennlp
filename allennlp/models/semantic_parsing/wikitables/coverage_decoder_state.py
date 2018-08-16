@@ -107,6 +107,6 @@ class CoverageDecoderState(GrammarBasedDecoderState['CoverageDecoderState']):
                     self.checklist_state == other.checklist_state,
                     self.possible_actions == other.possible_actions,
                     self.extras == other.extras,
-                    self.debug_info == other.debug_info,
+                    util.tensors_equal(self.debug_info, other.debug_info),
                     ])
         return NotImplemented
