@@ -29,9 +29,9 @@ def allowed_transitions(constraint_type: str, labels: Dict[int, str]) -> List[Tu
     ``List[Tuple[int, int]]``
         The allowed transitions (from_label_id, to_label_id).
     """
-    n_tags = len(labels)
-    start_tag = n_tags
-    end_tag = n_tags + 1
+    num_tags = len(labels)
+    start_tag = num_tags
+    end_tag = num_tags + 1
 
     allowed = []
     if constraint_type == "BIOUL":
