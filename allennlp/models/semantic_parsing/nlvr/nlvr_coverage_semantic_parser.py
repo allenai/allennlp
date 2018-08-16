@@ -1,5 +1,6 @@
 import logging
 import os
+from functools import partial
 from typing import Callable, List, Dict, Tuple, Union
 
 from overrides import overrides
@@ -14,7 +15,7 @@ from allennlp.nn.decoding import DecoderTrainer, ChecklistState
 from allennlp.nn.decoding.decoder_trainers import ExpectedRiskMinimization
 from allennlp.models.archival import load_archive, Archive
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
+from allennlp.models.semantic_parsing.wikitables.coverage_decoder_state import CoverageDecoderState
 from allennlp.models.semantic_parsing.wikitables.coverage_transition_function import CoverageTransitionFunction
 from allennlp.models.semantic_parsing.nlvr.nlvr_semantic_parser import NlvrSemanticParser
 from allennlp.semparse.worlds import NlvrWorld
@@ -96,7 +97,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                                          encoder=encoder,
                                                          dropout=dropout)
         self._agenda_coverage = Average()
-        self._decoder_trainer: DecoderTrainer[Callable[[GrammarBasedDecoderState], torch.Tensor]] = \
+        self._decoder_trainer: DecoderTrainer[Callable[[CoverageDecoderState], torch.Tensor]] = \
                 ExpectedRiskMinimization(beam_size=beam_size,
                                          normalize_by_length=normalize_beam_score_by_length,
                                          max_decoding_steps=max_decoding_steps,
@@ -214,6 +215,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
 
         label_strings = self._get_label_strings(labels) if labels is not None else None
         # Each instance's agenda is of size (agenda_size, 1)
+        # TODO(mattg): It looks like the agenda is only ever used on the CPU.  In that case, it's a
+        # waste to copy it to the GPU and then back, and this should probably be a MetadataField.
         agenda_list = [agenda[i] for i in range(batch_size)]
         initial_checklist_states = []
         for instance_actions, instance_agenda in zip(actions, agenda_list):
@@ -225,23 +228,25 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                                            checklist_target=checklist_target,
                                                            checklist_mask=checklist_mask,
                                                            checklist=initial_checklist))
-        initial_state = GrammarBasedDecoderState(batch_indices=list(range(batch_size)),
-                                                 action_history=[[] for _ in range(batch_size)],
-                                                 score=initial_score_list,
-                                                 rnn_state=initial_rnn_state,
-                                                 grammar_state=initial_grammar_state,
-                                                 possible_actions=actions,
-                                                 world=worlds,
-                                                 example_lisp_string=label_strings,
-                                                 checklist_state=initial_checklist_states)
+        initial_state = CoverageDecoderState(batch_indices=list(range(batch_size)),
+                                             action_history=[[] for _ in range(batch_size)],
+                                             score=initial_score_list,
+                                             rnn_state=initial_rnn_state,
+                                             grammar_state=initial_grammar_state,
+                                             possible_actions=actions,
+                                             extras=label_strings,
+                                             checklist_state=initial_checklist_states)
 
         agenda_data = [agenda_[:, 0].cpu().data for agenda_ in agenda_list]
         outputs = self._decoder_trainer.decode(initial_state,
                                                self._decoder_step,
-                                               self._get_state_cost)
+                                               partial(self._get_state_cost, worlds))
         if identifier is not None:
             outputs['identifier'] = identifier
-        best_action_sequences = outputs['best_action_sequences']
+        best_final_states = outputs['best_final_states']
+        best_action_sequences = {}
+        for batch_index, states in best_final_states.items():
+            best_action_sequences[batch_index] = [state.action_history[0] for state in states]
         batch_action_strings = self._get_action_strings(actions, best_action_sequences)
         batch_denotations = self._get_denotations(batch_action_strings, worlds)
         if labels is not None:
@@ -348,13 +353,14 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                 'agenda_coverage': self._agenda_coverage.get_metric(reset)
         }
 
-    def _get_state_cost(self, state: GrammarBasedDecoderState) -> torch.Tensor:
+    def _get_state_cost(self, batch_worlds: List[List[NlvrWorld]], state: CoverageDecoderState) -> torch.Tensor:
         """
         Return the costs a finished state. Since it is a finished state, the group size will be 1,
         and hence we'll return just one cost.
         """
         if not state.is_finished():
             raise RuntimeError("_get_state_cost() is not defined for unfinished states!")
+        instace_worlds = batch_worlds[state.batch_indices[0]]
         # Our checklist cost is a sum of squared error from where we want to be, making sure we
         # take into account the mask.
         checklist_balance = state.checklist_state[0].get_balance()
@@ -368,9 +374,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         checklist_cost = self._checklist_cost_weight * checklist_cost
         # TODO (pradeep): The denotation based cost below is strict. May be define a cost based on
         # how many worlds the logical form is correct in?
-        # example_lisp_string being None happens when we are testing. We do not care about the cost
+        # extras being None happens when we are testing. We do not care about the cost
         # then.  TODO (pradeep): Make this cleaner.
-        if state.example_lisp_string is None or all(self._check_state_denotations(state)):
+        if state.extras is None or all(self._check_state_denotations(state, instace_worlds)):
             cost = checklist_cost
         else:
             cost = checklist_cost + (1 - self._checklist_cost_weight) * denotation_cost

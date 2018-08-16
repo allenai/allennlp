@@ -3,6 +3,8 @@ from typing import Callable, Dict, List, Tuple
 
 import torch
 
+from allennlp.nn import util
+
 
 class GrammarState:
     """
@@ -174,3 +176,14 @@ class GrammarState:
             return production_string[1:-1].split(', ')
         else:
             return [production_string]
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return all([
+                    self._nonterminal_stack == other._nonterminal_stack,
+                    self._lambda_stacks == other._lambda_stacks,
+                    util.tensors_equal(self._valid_actions, other._valid_actions),
+                    util.tensors_equal(self._context_actions, other._context_actions),
+                    self._is_nonterminal == other._is_nonterminal,
+                    ])
+        return NotImplemented

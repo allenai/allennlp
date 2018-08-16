@@ -133,10 +133,14 @@ class ModelTestCase(AllenNlpTestCase):
         elif isinstance(field1, (float, int)):
             assert_allclose([field1], [field2], rtol=tolerance, err_msg=name)
         else:
-            assert field1 == field2
+            if field1 != field2:
+                for key in field1.__dict__:
+                    print(key, getattr(field1, key) == getattr(field2, key))
+            assert field1 == field2, f"{name}, {type(field1)}, {type(field2)}"
 
     @staticmethod
     def check_model_computes_gradients_correctly(model, model_batch):
+        print("Checking gradients")
         model.zero_grad()
         result = model(**model_batch)
         result["loss"].backward()

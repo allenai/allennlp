@@ -158,10 +158,11 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
         batch_states: Dict[int, List[StateType]] = defaultdict(list)
         for state in finished_states:
             batch_states[state.batch_indices[0]].append(state)
-        for batch_index, batch_states in finished_states.items():
+        best_states: Dict[int, List[StateType]] = {}
+        for batch_index, states in batch_states.items():
             # The time this sort takes is pretty negligible, no particular need to optimize this
             # yet.  Maybe with a larger beam size...
-            finished_to_sort = [(-state.score[0].item(), state) for state in batch_states]
+            finished_to_sort = [(-state.score[0].item(), state) for state in states]
             finished_to_sort.sort(key=lambda x: x[0])
             best_states[batch_index] = [state[1] for state in finished_to_sort[:self._beam_size]]
         return best_states

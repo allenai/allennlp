@@ -8,6 +8,7 @@ import torch
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
+from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
 from allennlp.nn import util
 from allennlp.nn.decoding import GrammarState, RnnState
@@ -162,12 +163,12 @@ class NlvrSemanticParser(Model):
         return all_denotations
 
     @staticmethod
-    def _check_denotation(best_action_sequence: List[str],
+    def _check_denotation(action_sequence: List[str],
                           labels: List[str],
                           worlds: List[NlvrWorld]) -> List[bool]:
         is_correct = []
         for world, label in zip(worlds, labels):
-            logical_form = world.get_logical_form(best_action_sequence)
+            logical_form = world.get_logical_form(action_sequence)
             denotation = world.execute(logical_form)
             is_correct.append(str(denotation).lower() == label)
         return is_correct
@@ -223,7 +224,7 @@ class NlvrSemanticParser(Model):
         output_dict["logical_form"] = logical_forms
         return output_dict
 
-    def _check_state_denotations(self, state) -> List[bool]:
+    def _check_state_denotations(self, state: GrammarBasedDecoderState, worlds: List[NlvrWorld]) -> List[bool]:
         """
         Returns whether action history in the state evaluates to the correct denotations over all
         worlds. Only defined when the state is finished.
@@ -231,8 +232,7 @@ class NlvrSemanticParser(Model):
         assert state.is_finished(), "Cannot compute denotations for unfinished states!"
         # Since this is a finished state, its group size must be 1.
         batch_index = state.batch_indices[0]
-        worlds = state.world[batch_index]
-        instance_label_strings = state.example_lisp_string[batch_index]
+        instance_label_strings = state.extras[batch_index]
         history = state.action_history[0]
         all_actions = state.possible_actions[0]
         action_sequence = [all_actions[action][0] for action in history]

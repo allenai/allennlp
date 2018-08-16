@@ -1,15 +1,16 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, TypeVar
 
 import torch
 
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
-from allennlp.nn.decoding import DecoderState, GrammarState, RnnState, ChecklistState
+from allennlp.nn.decoding import DecoderState, GrammarState, RnnState
 
+T = TypeVar('T', bound='GrammarBasedDecoderState')
 
 # This syntax is pretty weird and ugly, but it's necessary to make mypy happy with the API that
 # we've defined.  We're using generics to make the type of `combine_states` come out right.  See
 # the note in `nn.decoding.decoder_state.py` for a little more detail.
-class GrammarBasedDecoderState(DecoderState['GrammarBasedDecoderState']):
+class GrammarBasedDecoderState(DecoderState[T]):
     """
     A generic DecoderState that's suitable for most models that do grammar-based decoding.  We keep
     around a `group` of states, and each element in the group has a few things: a batch index, an
@@ -75,8 +76,6 @@ class GrammarBasedDecoderState(DecoderState['GrammarBasedDecoderState']):
                                    considered_actions: List[int] = None,
                                    action_probabilities: List[float] = None,
                                    attention_weights: torch.Tensor = None) -> 'GrammarBasedDecoderState':
-        if new_score.dim() > 0:
-            raise ValueError
         batch_index = self.batch_indices[group_index]
         new_action_history = self.action_history[group_index] + [action]
         production_rule = self.possible_actions[batch_index][action][0]

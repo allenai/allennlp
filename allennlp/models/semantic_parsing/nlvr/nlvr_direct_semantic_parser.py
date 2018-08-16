@@ -98,7 +98,6 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         # TODO (pradeep): Assuming all worlds give the same set of valid actions.
         initial_grammar_state = [self._create_grammar_state(worlds[i][0], actions[i]) for i in
                                  range(batch_size)]
-        worlds_list = [worlds[i] for i in range(batch_size)]
 
         initial_state = GrammarBasedDecoderState(batch_indices=list(range(batch_size)),
                                                  action_history=[[] for _ in range(batch_size)],
@@ -106,8 +105,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                                                  rnn_state=initial_rnn_state,
                                                  grammar_state=initial_grammar_state,
                                                  possible_actions=actions,
-                                                 world=worlds_list,
-                                                 example_lisp_string=label_strings)
+                                                 extras=label_strings)
 
         if target_action_sequences is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).

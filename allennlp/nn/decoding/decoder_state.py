@@ -65,3 +65,8 @@ class DecoderState(Generic[T]):
         Combines a list of states, each with their own group size, into a single state.
         """
         raise NotImplementedError
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
