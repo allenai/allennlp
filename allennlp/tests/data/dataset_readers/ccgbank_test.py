@@ -1,6 +1,7 @@
 from allennlp.data.dataset_readers import CcgBankDatasetReader
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.vocabulary import Vocabulary
 
 
 class TestCcgBankReader(AllenNlpTestCase):
@@ -37,3 +38,15 @@ class TestCcgBankReader(AllenNlpTestCase):
                                             'NP[nb]_29/N_29', 'N', '((S_1\\NP_2)_1\\(S_1\\NP_2)_1)/NP',
                                             'NP[nb]_48/N_48', 'N_43/N_43', 'N',
                                             '((S_61\\NP_56)_61\\(S_61\\NP_56)_61)/N[num]_62', 'N[num]', '.']
+
+    def test_vocab_from_instances_namespaces(self):
+        reader = CcgBankDatasetReader()
+        instances = ensure_list(reader.read(self.FIXTURES_ROOT / 'data' / 'ccgbank.txt'))
+        # check that we didn't clobber the labels namespace
+        vocab = Vocabulary.from_instances(instances)
+        self.assertSetEqual(
+                set(vocab._token_to_index.keys()),
+                {'tokens', 'modified_pos_tags', 'original_pos_tags', 
+                 'predicate_arg_categories', 'ccg_categories'}
+        )
+
