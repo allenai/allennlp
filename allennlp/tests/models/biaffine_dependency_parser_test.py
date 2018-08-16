@@ -3,6 +3,7 @@
 import torch
 
 from allennlp.common.testing.model_test_case import ModelTestCase
+from allennlp.nn.decoding.chu_liu_edmonds import decode_mst
 
 class BiaffineDependencyParserTest(ModelTestCase):
 
@@ -53,10 +54,25 @@ class BiaffineDependencyParserTest(ModelTestCase):
         #              \/        \/
         #          B(index 1)   C(index 2)
         length = torch.LongTensor([3])
-        heads, _ = self.model._run_mst_decoding(energy, length) # pylint: disable=protected-access
+        heads, _ = decode_mst(energy[0, 0, :, :].numpy(), length.item(), has_labels=False)
         # This is the correct MST, but not desirable for dependency parsing.
-        assert heads.tolist()[0] == [-1, 0, 0]
+        assert list(heads) == [-1, 0, 0]
 
-        energy[:, :, 0, :] = 0
+        # If we run the decoding with the model, it should enforce
+        # the constraint.
         heads, _ = self.model._run_mst_decoding(energy, length) # pylint: disable=protected-access
         assert heads.tolist()[0] == [-1, 0, 1]
+
+    def test_mst_decodes_arc_labels_with_respect_to_unconstrained_scores(self):
+        energy = torch.Tensor([[0, 2, 1],
+                               [10, 0, 0.5],
+                               [9, 0.2, 0]]).view(1, 1, 3, 3).expand(1, 2, 3, 3).contiguous()
+
+        # Make the score for the root label for arcs to the root token be higher - it
+        # will be masked for the MST, but we want to make sure that the tags are with
+        # respect to the unmasked tensor.
+        energy[:, 1, 0, :] = 3
+        length = torch.LongTensor([3])
+        heads, tags = self.model._run_mst_decoding(energy, length) # pylint: disable=protected-access
+        assert heads.tolist()[0] == [-1, 0, 1]
+        assert tags.tolist()[0] == [0, 1, 0]

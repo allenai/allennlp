@@ -513,6 +513,10 @@ class BiaffineDependencyParser(Model):
             # adding in word -> ROOT edges, we need to find the labels ourselves.
             head, _ = decode_mst(scores.numpy(), length, has_labels=False)
 
+            # We don't care what the head is for the root token, but by default it's
+            # returned as -1 - this messes up the indexing into the label_ids tensor,
+            # so we'll just fix it to have a value of 0.
+            head[0] = 0
             # Find the labels which correspond to the edges in the max spanning tree.
             head_tag = []
             for child, parent in enumerate(head):
