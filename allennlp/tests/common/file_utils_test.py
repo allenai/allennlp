@@ -4,14 +4,13 @@ import os
 import pathlib
 import json
 
-from botocore.exceptions import ClientError
+import boto3
+from moto import mock_s3
 import pytest
 import responses
 
-from allennlp.common.file_utils import url_to_filename, filename_to_url, get_from_cache, \
-    cached_path, \
-    split_s3_path, \
-    s3_request
+from allennlp.common.file_utils import (
+        url_to_filename, filename_to_url, get_from_cache, cached_path, split_s3_path, s3_request)
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -51,12 +50,18 @@ def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
     )
 
 
+@mock_s3
 class TestFileUtils(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.glove_file = self.FIXTURES_ROOT / 'embeddings/glove.6B.100d.sample.txt.gz'
         with open(self.glove_file, 'rb') as glove:
             self.glove_bytes = glove.read()
+
+        s3_client = boto3.client("s3")
+        s3_client.create_bucket(Bucket="my-bucket")
+        s3_client.upload_file(Filename=str(self.glove_file), Bucket="my-bucket",
+                              Key="embeddings/glove.txt.gz")
 
     def test_url_to_filename(self):
         for url in ['http://allenai.org', 'http://allennlp.org',
@@ -112,31 +117,26 @@ class TestFileUtils(AllenNlpTestCase):
             split_s3_path("s3://myfile.txt")
             split_s3_path("myfile.txt")
 
-    def test_s3_request_decorator(self):
-        fake_url = "s3://my-bucket/myfile.txt"
+    def test_s3_bucket(self):
+        s3_client = boto3.client("s3")
+        buckets = s3_client.list_buckets()["Buckets"]
+        assert len(buckets) == 1
+        assert buckets[0]["Name"] == "my-bucket"
 
-        # Good request.
+    def test_s3_request_wrapper(self):
+        s3_resource = boto3.resource("s3")
+
         @s3_request
-        def good_s3_request(url):
-            return url
+        def get_file_info(url):
+            bucket_name, s3_path = split_s3_path(url)
+            return s3_resource.Object(bucket_name, s3_path).content_type
 
-        assert good_s3_request(fake_url) == fake_url
+        # Good request, should work.
+        assert get_file_info("s3://my-bucket/embeddings/glove.txt.gz") == "text/plain"
 
-        # Request that fails because the file is missing.
-        @s3_request
-        def missing_file_request(url):
-            raise ClientError({"Error": {"Code": 404}}, "s3_request to {}".format(url))
-
+        # File missing, should raise FileNotFoundError.
         with pytest.raises(FileNotFoundError):
-            missing_file_request(fake_url)
-
-        # Request that fails due to other reasons.
-        @s3_request
-        def other_bad_request(url):
-            raise ClientError({"Error": {"Code": 503}}, "s3_request to {}".format(url))
-
-        with pytest.raises(ClientError):
-            other_bad_request(fake_url)
+            get_file_info("s3://my-bucket/missing_file.txt")
 
     @responses.activate
     def test_get_from_cache(self):

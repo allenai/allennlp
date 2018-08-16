@@ -9,7 +9,7 @@ import tempfile
 import json
 from urllib.parse import urlparse
 from pathlib import Path
-from typing import Optional, Tuple, Union, IO
+from typing import Optional, Tuple, Union, IO, Callable
 from hashlib import sha256
 from functools import wraps
 
@@ -97,15 +97,18 @@ def cached_path(url_or_filename: Union[str, Path], cache_dir: str = None) -> str
 
 def split_s3_path(url: str) -> Tuple[str, str]:
     """Split a full s3 path into the bucket name and path."""
-    parts = url.split("/")
-    if len(parts) < 4:
-        raise ValueError("Invalid s3 path {}".format(url))
-    bucket_name = parts[2]
-    s3_path = "/".join(parts[3:])
+    parsed = urlparse(url)
+    if not parsed.netloc or not parsed.path:
+        raise ValueError("bad s3 path {}".format(url))
+    bucket_name = parsed.netloc
+    s3_path = parsed.path
+    # Remove '/' at beginning of path.
+    if s3_path.startswith("/"):
+        s3_path = s3_path[1:]
     return bucket_name, s3_path
 
 
-def s3_request(func):
+def s3_request(func: Callable):
     """
     Wrapper function for s3 requests in order to create more helpful error
     messages.
@@ -116,7 +119,7 @@ def s3_request(func):
         try:
             return func(url, *args, **kwargs)
         except ClientError as exc:
-            if exc.response["Error"]["Code"] == 404:
+            if int(exc.response["Error"]["Code"]) == 404:
                 raise FileNotFoundError("file {} not found".format(url))
             else:
                 raise
@@ -127,18 +130,18 @@ def s3_request(func):
 @s3_request
 def s3_etag(url: str) -> Optional[str]:
     """Check ETag on S3 object."""
-    s3_client = boto3.resource("s3")
+    s3_resource = boto3.resource("s3")
     bucket_name, s3_path = split_s3_path(url)
-    s3_object = s3_client.Object(bucket_name, s3_path)
+    s3_object = s3_resource.Object(bucket_name, s3_path)
     return s3_object.e_tag
 
 
 @s3_request
 def s3_get(url: str, temp_file: IO) -> None:
     """Pull a file directly from S3."""
-    s3_client = boto3.resource("s3")
+    s3_resource = boto3.resource("s3")
     bucket_name, s3_path = split_s3_path(url)
-    s3_client.Bucket(bucket_name).download_fileobj(s3_path, temp_file)
+    s3_resource.Bucket(bucket_name).download_fileobj(s3_path, temp_file)
 
 
 def http_etag(url: str) -> Optional[str]:

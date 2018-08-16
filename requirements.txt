@@ -109,6 +109,9 @@ codecov
 # Required to run sanic tests
 aiohttp
 
+# For mocking s3.
+moto==1.3.4
+
 #### DOC-RELATED PACKAGES ####
 
 # Builds our documentation.
