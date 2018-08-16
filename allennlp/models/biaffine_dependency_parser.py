@@ -491,12 +491,6 @@ class BiaffineDependencyParser(Model):
         # Shape (batch_size, sequence_length, sequence_length)
         normalized_arc_logits = F.log_softmax(attended_arcs, dim=2).transpose(1, 2)
 
-        # Although we need to include the root node so that the MST includes it,
-        # we do not want any word to be the parent of the root node.
-        # Here, we enforce this by setting the scores for all word -> ROOT edges
-        # edges to be very negative.
-        normalized_arc_logits[:, 0, :] = -1e8
-
         # Shape (batch_size, num_head_tags, sequence_length, sequence_length)
         # This energy tensor expresses the following relation:
         # energy[i,j] = "Score that j is the head of i". In this
@@ -508,8 +502,21 @@ class BiaffineDependencyParser(Model):
     def _run_mst_decoding(batch_energy: torch.Tensor, lengths: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         heads = []
         head_tags = []
-        for energy, length in zip(batch_energy.detach().cpu().numpy(), lengths):
-            head, head_tag = decode_mst(energy, length)
+        for energy, length in zip(batch_energy.detach().cpu(), lengths):
+            scores, label_ids = energy.max(dim=0)
+            # Although we need to include the root node so that the MST includes it,
+            # we do not want any word to be the parent of the root node.
+            # Here, we enforce this by setting the scores for all word -> ROOT edges
+            # edges to be 0.
+            scores[0, :] = 0
+            # Decode the heads. Because we modify the scores to prevent
+            # adding in word -> ROOT edges, we need to find the labels ourselves.
+            head, _ = decode_mst(scores.numpy(), length, has_labels=False)
+
+            # Find the labels which correspond to the edges in the max spanning tree.
+            head_tag = []
+            for child, parent in enumerate(head):
+                head_tag.append(label_ids[parent, child])
             heads.append(head)
             head_tags.append(head_tag)
         return torch.from_numpy(numpy.stack(heads)), torch.from_numpy(numpy.stack(head_tags))
