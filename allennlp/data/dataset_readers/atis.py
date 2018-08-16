@@ -79,11 +79,10 @@ class AtisDatasetReader(DatasetReader):
             for line in _lazy_parse(atis_file.read()):
                 utterances = []
                 for current_interaction in line['interaction']:
-                    if not current_interaction:
+                    if not current_interaction['utterance']:
                         continue
                     utterances.append(current_interaction['utterance'])
                     instance = self.text_to_instance(utterances, current_interaction['sql'])
-                    # If we can't
                     if not instance:
                         continue
                     yield instance
@@ -106,6 +105,12 @@ class AtisDatasetReader(DatasetReader):
         utterance = utterances[-1]
         action_sequence: List[str] = []
 
+        tokenized_utterance = self._tokenizer.tokenize(utterance.lower())
+        utterance_field = TextField(tokenized_utterance, self._token_indexers)
+
+        if not tokenized_utterance:
+            return None
+
         world = AtisWorld(utterances)
 
         try:
@@ -113,11 +118,9 @@ class AtisDatasetReader(DatasetReader):
         except ParseError:
             logger.debug(f'Parsing error')
 
+        
         if not action_sequence:
             return None
-
-        tokenized_utterance = self._tokenizer.tokenize(utterance.lower())
-        utterance_field = TextField(tokenized_utterance, self._token_indexers)
 
         production_rule_fields: List[Field] = []
 

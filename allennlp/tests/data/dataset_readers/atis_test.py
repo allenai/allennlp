@@ -10,7 +10,7 @@ class TestAtisReader(AllenNlpTestCase):
         data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "atis" / "sample.json"
 
         instances = list(reader.read(str(data_path)))
-
+        
         assert len(instances) == 11
         instance = instances[0]
 

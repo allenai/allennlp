@@ -78,7 +78,7 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
     if month and day:
         try:
             return datetime(year, month, day)
-        except ValuError:
+        except ValueError:
             return None
     return None
 
