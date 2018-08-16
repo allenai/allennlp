@@ -9,7 +9,7 @@ import tempfile
 import json
 from urllib.parse import urlparse
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Tuple, Union, IO
 from hashlib import sha256
 
 import boto3
@@ -104,80 +104,29 @@ def split_s3_path(url: str) -> Tuple[str, str]:
     return bucket_name, s3_path
 
 
-def write_file_metadata(url: str, cache_path: str, etag: str = None) -> None:
-    logger.info("creating metadata file for %s", cache_path)
-    meta = {'url': url}
-    if etag:
-        meta["etag"] = etag
-    meta_path = cache_path + '.json'
-    with open(meta_path, 'w') as meta_file:
-        json.dump(meta, meta_file)
-
-
-def s3_get(url: str, cache_dir: str) -> str:
+def s3_get(url: str, temp_file: IO) -> None:
     """Pull a file directly from S3."""
-    filename = url_to_filename(url)
-    cache_path = os.path.join(cache_dir, filename)
-    if not os.path.exists(cache_path):
-        try:
-            s3_client = boto3.resource("s3")
-            bucket_name, s3_path = split_s3_path(url)
-            s3_client.Bucket(bucket_name).download_file(s3_path, cache_path)
-        except ClientError as exc:
-            if exc.response["Error"]["Code"] == 404:
-                raise FileNotFoundError("file {} not found".format(url))
-            else:
-                raise
-
-        write_file_metadata(url, cache_path)
-
-    return cache_path
+    try:
+        s3_client = boto3.resource("s3")
+        bucket_name, s3_path = split_s3_path(url)
+        s3_client.Bucket(bucket_name).download_fileobj(s3_path, temp_file)
+    except ClientError as exc:
+        if exc.response["Error"]["Code"] == 404:
+            raise FileNotFoundError("file {} not found".format(url))
+        else:
+            raise
 
 
-def http_get(url: str, cache_dir: str) -> str:
-    # make HEAD request to check ETag
-    response = requests.head(url, allow_redirects=True)
-    if response.status_code != 200:
-        raise IOError("HEAD request failed for url {}".format(url))
-
-    # add ETag to filename if it exists
-    etag = response.headers.get("ETag")
-    filename = url_to_filename(url, etag)
-
-    # get cache path to put the file
-    cache_path = os.path.join(cache_dir, filename)
-
-    if not os.path.exists(cache_path):
-        # Download to temporary file, then copy to cache dir once finished.
-        # Otherwise you get corrupt cache entries if the download gets interrupted.
-        with tempfile.NamedTemporaryFile() as temp_file:
-            logger.info("%s not found in cache, downloading to %s", url, temp_file.name)
-
-            # GET file object
-            req = requests.get(url, stream=True)
-            content_length = req.headers.get('Content-Length')
-            total = int(content_length) if content_length is not None else None
-            progress = Tqdm.tqdm(unit="B", total=total)
-            for chunk in req.iter_content(chunk_size=1024):
-                if chunk: # filter out keep-alive new chunks
-                    progress.update(len(chunk))
-                    temp_file.write(chunk)
-            progress.close()
-
-            # we are copying the file before closing it, so flush to avoid truncation
-            temp_file.flush()
-            # shutil.copyfileobj() starts at the current position, so go to the start
-            temp_file.seek(0)
-
-            logger.info("copying %s to cache at %s", temp_file.name, cache_path)
-            with open(cache_path, 'wb') as cache_file:
-                shutil.copyfileobj(temp_file, cache_file)
-
-            write_file_metadata(url, cache_path, etag=etag)
-
-            logger.info("removing temp file %s", temp_file.name)
-
-    return cache_path
+def http_get(url: str, temp_file: IO) -> None:
+    req = requests.get(url, stream=True)
+    content_length = req.headers.get('Content-Length')
+    total = int(content_length) if content_length is not None else None
+    progress = Tqdm.tqdm(unit="B", total=total)
+    for chunk in req.iter_content(chunk_size=1024):
+        if chunk: # filter out keep-alive new chunks
+            progress.update(len(chunk))
+            temp_file.write(chunk)
+    progress.close()
 
 
 # TODO(joelgrus): do we want to do checksums or anything like that?
@@ -191,10 +140,50 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
 
     os.makedirs(cache_dir, exist_ok=True)
 
-    if url.startswith("s3://"):
-        cache_path = s3_get(url, cache_dir)
+    if not url.startswith("s3://"):
+        # make HEAD request to check ETag
+        response = requests.head(url, allow_redirects=True)
+        if response.status_code != 200:
+            raise IOError("HEAD request failed for url {}".format(url))
+
+        # get ETag to add to filename if it exists
+        etag = response.headers.get("ETag")
     else:
-        cache_path = http_get(url, cache_dir)
+        etag = None
+
+    filename = url_to_filename(url, etag)
+
+    # get cache path to put the file
+    cache_path = os.path.join(cache_dir, filename)
+
+    if not os.path.exists(cache_path):
+        # Download to temporary file, then copy to cache dir once finished.
+        # Otherwise you get corrupt cache entries if the download gets interrupted.
+        with tempfile.NamedTemporaryFile() as temp_file:
+            logger.info("%s not found in cache, downloading to %s", url, temp_file.name)
+
+            # GET file object
+            if url.startswith("s3://"):
+                s3_get(url, temp_file)
+            else:
+                http_get(url, temp_file)
+
+            # we are copying the file before closing it, so flush to avoid truncation
+            temp_file.flush()
+            # shutil.copyfileobj() starts at the current position, so go to the start
+            temp_file.seek(0)
+
+            logger.info("copying %s to cache at %s", temp_file.name, cache_path)
+            with open(cache_path, 'wb') as cache_file:
+                shutil.copyfileobj(temp_file, cache_file)
+
+            logger.info("creating metadata file for %s", cache_path)
+            meta = {'url': url, 'etag': etag}
+            meta_path = cache_path + '.json'
+            with open(meta_path, 'w') as meta_file:
+                json.dump(meta, meta_file)
+
+            logger.info("removing temp file %s", temp_file.name)
 
     return cache_path
 
