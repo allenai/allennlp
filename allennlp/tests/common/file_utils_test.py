@@ -4,6 +4,7 @@ import os
 import pathlib
 import json
 import tempfile
+from typing import List, Tuple
 
 import boto3
 from moto import mock_s3
@@ -52,18 +53,20 @@ def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
     )
 
 
-@mock_s3
+def set_up_s3_bucket(bucket_name: str = "my-bucket", s3_objects: List[Tuple[str, str]] = None):
+    s3_client = boto3.client("s3")
+    s3_client.create_bucket(Bucket=bucket_name)
+    for filename, key in s3_objects or []:
+        s3_client.upload_file(Filename=filename, Bucket=bucket_name, Key=key)
+
+
+#  @mock_s3
 class TestFileUtils(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.glove_file = self.FIXTURES_ROOT / 'embeddings/glove.6B.100d.sample.txt.gz'
         with open(self.glove_file, 'rb') as glove:
             self.glove_bytes = glove.read()
-
-        s3_client = boto3.client("s3")
-        s3_client.create_bucket(Bucket="my-bucket")
-        s3_client.upload_file(Filename=str(self.glove_file), Bucket="my-bucket",
-                              Key="embeddings/glove.txt.gz")
 
     def test_url_to_filename(self):
         for url in ['http://allenai.org', 'http://allennlp.org',
@@ -119,13 +122,17 @@ class TestFileUtils(AllenNlpTestCase):
             split_s3_path("s3://myfile.txt")
             split_s3_path("myfile.txt")
 
+    @mock_s3
     def test_s3_bucket(self):
+        set_up_s3_bucket()
         s3_client = boto3.client("s3")
         buckets = s3_client.list_buckets()["Buckets"]
         assert len(buckets) == 1
         assert buckets[0]["Name"] == "my-bucket"
 
+    @mock_s3
     def test_s3_request_wrapper(self):
+        set_up_s3_bucket(s3_objects=[(str(self.glove_file), "embeddings/glove.txt.gz")])
         s3_resource = boto3.resource("s3")
 
         @s3_request
@@ -140,7 +147,9 @@ class TestFileUtils(AllenNlpTestCase):
         with pytest.raises(FileNotFoundError):
             get_file_info("s3://my-bucket/missing_file.txt")
 
+    @mock_s3
     def test_s3_etag(self):
+        set_up_s3_bucket(s3_objects=[(str(self.glove_file), "embeddings/glove.txt.gz")])
         # Ensure we can get the etag for an s3 object and that it looks as expected.
         etag = s3_etag("s3://my-bucket/embeddings/glove.txt.gz")
         assert isinstance(etag, str)
@@ -150,7 +159,10 @@ class TestFileUtils(AllenNlpTestCase):
         with pytest.raises(FileNotFoundError):
             s3_etag("s3://my-bucket/missing_file.txt")
 
+    @mock_s3
     def test_s3_get(self):
+        set_up_s3_bucket(s3_objects=[(str(self.glove_file), "embeddings/glove.txt.gz")])
+
         with tempfile.NamedTemporaryFile() as temp_file:
             s3_get("s3://my-bucket/embeddings/glove.txt.gz", temp_file)
             assert os.stat(temp_file.name).st_size != 0
