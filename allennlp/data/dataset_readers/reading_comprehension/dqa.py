@@ -41,13 +41,11 @@ class DQAReader(DatasetReader):
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False,
-                 prev_a: int = 0,
-                 prev_q_followup: bool = False) -> None:
+                 prev_a: int = 0) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._prev_a = prev_a
-        self._prev_q_followup = prev_q_followup
 
     @overrides
     def _read(self, file_path: str):
@@ -126,5 +124,4 @@ class DQAReader(DatasetReader):
                                                             yesno_list,
                                                             followup_list,
                                                             additional_metadata,
-                                                            self._prev_a,
-                                                            self._prev_q_followup)
+                                                            self._prev_a)

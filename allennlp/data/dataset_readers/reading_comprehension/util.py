@@ -222,8 +222,7 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
                                             yesno_list: List[int] = None,
                                             followup_list: List[int] = None,
                                             additional_metadata: Dict[str, Any] = None,
-                                            prev_a: int = 0,
-                                            add_prev_q_followup: bool = False) -> Instance:
+                                            prev_a: int = 0) -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
     in a reading comprehension model.
@@ -255,7 +254,6 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
     yesno_list : List[int]
     followup_list : List[int]
     prev_a : int
-    add_prev_q_followup : boolean
     additional_metadata : ``Dict[str, Any]``, optional
         The constructed ``metadata`` field will by default contain ``original_passage``,
         ``token_offsets``, ``question_tokens``, ``passage_tokens``, and ``answer_texts`` keys.  If
@@ -278,20 +276,17 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
     p2_answer_marker_list = []
     p3_answer_marker_list = []
 
-    def get_tag(i, i_name, followup):
-      if add_prev_q_followup:
-        return "<{0:d}_{1:s}_{2:s}>".format(i, i_name, followup)
-      else:
-        return "<{0:d}_{1:s}>".format(i, i_name)
+    def get_tag(i, i_name):
+      return "<{0:d}_{1:s}>".format(i, i_name)
 
-    def mark_tag(s_start, s_end, tags, p_count, followup_tag):
+    def mark_tag(s_start, s_end, tags, p_count):
       if s_start == s_end:
-        tags[p_count][s_start] = get_tag(p_count, "", followup_tag)
+        tags[p_count][s_start] = get_tag(p_count, "")
       else:
-        tags[p_count][s_start] = get_tag(p_count, "start", followup_tag)
-        tags[p_count][s_end] =  get_tag(p_count, "end", followup_tag)
+        tags[p_count][s_start] = get_tag(p_count, "start")
+        tags[p_count][s_end] =  get_tag(p_count, "end")
         for pi in range(s_start + 1, s_end):
-          tags[p_count][pi] =  get_tag(p_count, "in", followup_tag)
+          tags[p_count][pi] =  get_tag(p_count, "in")
 
     if token_span_lists:
       span_start_list=[]
@@ -304,11 +299,11 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
         span_end_list.append(IndexField(span_end, passage_field))
         p_tags = [[], ["O"] * len(passage_tokens), ["O"] * len(passage_tokens), ["O"] * len(passage_tokens)]
         if q_i > 0 and prev_a > 0:
-          mark_tag(p1_span_start, p1_span_end, p_tags, 1, followup_list[q_i-1])
+          mark_tag(p1_span_start, p1_span_end, p_tags, 1)
           if q_i > 1 and prev_a >1:
-            mark_tag(p2_span_start, p2_span_end, p_tags, 2, followup_list[q_i-2])
+            mark_tag(p2_span_start, p2_span_end, p_tags, 2)
             if q_i > 2 and prev_a > 2:
-              mark_tag(p3_span_start, p3_span_end, p_tags,3, followup_list[q_i-3])
+              mark_tag(p3_span_start, p3_span_end, p_tags, 3)
             p3_span_start = p2_span_start
             p3_span_end = p2_span_end
           p2_span_start = p1_span_start
