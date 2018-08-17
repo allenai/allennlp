@@ -61,7 +61,9 @@ class FineTune(Subcommand):
                                action='store_true',
                                default=False,
                                help='if specified, we will use the instances in your new dataset to '
-                                    'extend your vocabulary. ')
+                                    'extend your vocabulary. Currently expansion of embedding layers '
+                                    'is not implemented, so if your model has an embedding layer '
+                                    'this will probably make fine-tune crash.')
 
         subparser.add_argument('--file-friendly-logging',
                                action='store_true',
@@ -174,6 +176,7 @@ def fine_tune_model(model: Model,
                        "your configuration file, but it will be ignored. ")
 
     all_datasets = datasets_from_params(params)
+    vocab = model.vocab
 
     if extend_vocab:
         datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
@@ -183,7 +186,6 @@ def fine_tune_model(model: Model,
                 raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
 
         logger.info("Extending model vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
-        vocab = model.vocab
         vocab.extend_from_instances(vocabulary_params,
                                     (instance for key, dataset in all_datasets.items()
                                      for instance in dataset
@@ -192,7 +194,7 @@ def fine_tune_model(model: Model,
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     iterator = DataIterator.from_params(params.pop("iterator"))
-    iterator.index_with(vocab)
+    iterator.index_with(model.vocab)
 
     train_data = all_datasets['train']
     validation_data = all_datasets.get('validation')
