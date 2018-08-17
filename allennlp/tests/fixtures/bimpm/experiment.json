@@ -49,7 +49,7 @@
     "matcher_word": {
       "is_forward": true,
       "hidden_dim": 400,
-      "num_perspective": 10,
+      "num_perspectives": 10,
       "with_full_match": false
     },
     "encoder1": {
@@ -62,12 +62,12 @@
     "matcher_forward1": {
       "is_forward": true,
       "hidden_dim": 200,
-      "num_perspective": 10
+      "num_perspectives": 10
     },
     "matcher_backward1": {
       "is_forward": false,
       "hidden_dim": 200,
-      "num_perspective": 10
+      "num_perspectives": 10
     },
     "encoder2": {
       "type": "lstm",
@@ -79,12 +79,12 @@
     "matcher_forward2": {
       "is_forward": true,
       "hidden_dim": 200,
-      "num_perspective": 10
+      "num_perspectives": 10
     },
     "matcher_backward2": {
       "is_forward": false,
       "hidden_dim": 200,
-      "num_perspective": 10
+      "num_perspectives": 10
     },
     "aggregator":{
       "type": "lstm",

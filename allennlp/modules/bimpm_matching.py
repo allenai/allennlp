@@ -27,13 +27,13 @@ def multi_perspective_match(vector1: torch.Tensor,
     vector2 : ``torch.Tensor``
         A tensor of shape ``(batch, seq_len or 1, hidden_size)``
     weight : ``torch.Tensor``
-        A tensor of shape ``(num_perspective, hidden_size)``
+        A tensor of shape ``(num_perspectives, hidden_size)``
 
     Returns
     -------
     A tuple of two tensors consisting multi-perspective matching results.
     The first one is of the shape (batch, seq_len, 1), the second one is of shape
-    (batch, seq_len, num_perspective)
+    (batch, seq_len, num_perspectives)
     """
     assert vector1.size(0) == vector2.size(0)
     assert weight.size(1) == vector1.size(2) == vector1.size(2)
@@ -41,10 +41,10 @@ def multi_perspective_match(vector1: torch.Tensor,
     # (batch, seq_len, 1)
     similarity_single = F.cosine_similarity(vector1, vector2, 2).unsqueeze(2)
 
-    # (1, 1, num_perspective, hidden_size)
+    # (1, 1, num_perspectives, hidden_size)
     weight = weight.unsqueeze(0).unsqueeze(0)
 
-    # (batch, seq_len, num_perspective, hidden_size)
+    # (batch, seq_len, num_perspectives, hidden_size)
     vector1 = weight * vector1.unsqueeze(2)
     vector2 = weight * vector2.unsqueeze(2)
 
@@ -68,33 +68,33 @@ def multi_perspective_match_pairwise(vector1: torch.Tensor,
     vector2 : ``torch.Tensor``
         A tensor of shape ``(batch, seq_len2, hidden_size)``
     weight : ``torch.Tensor``
-        A tensor of shape ``(num_perspective, hidden_size)``
+        A tensor of shape ``(num_perspectives, hidden_size)``
     eps : ``float`` optional, (default = 1e-8)
         A small value to avoid zero division problem
 
     Returns
     -------
-    A tensor of shape (batch, seq_len1, seq_len2, num_perspective) consisting
+    A tensor of shape (batch, seq_len1, seq_len2, num_perspectives) consisting
     multi-perspective matching results
     """
-    num_perspective = weight.size(0)
+    num_perspectives = weight.size(0)
 
-    # (1, num_perspective, 1, hidden_size)
+    # (1, num_perspectives, 1, hidden_size)
     weight = weight.unsqueeze(0).unsqueeze(2)
 
-    # (batch, num_perspective, seq_len*, hidden_size)
-    vector1 = weight * vector1.unsqueeze(1).expand(-1, num_perspective, -1, -1)
-    vector2 = weight * vector2.unsqueeze(1).expand(-1, num_perspective, -1, -1)
+    # (batch, num_perspectives, seq_len*, hidden_size)
+    vector1 = weight * vector1.unsqueeze(1).expand(-1, num_perspectives, -1, -1)
+    vector2 = weight * vector2.unsqueeze(1).expand(-1, num_perspectives, -1, -1)
 
-    # (batch, num_perspective, seq_len*, 1)
+    # (batch, num_perspectives, seq_len*, 1)
     vector1_norm = vector1.norm(p=2, dim=3, keepdim=True)
     vector2_norm = vector2.norm(p=2, dim=3, keepdim=True)
 
-    # (batch, num_perspective, seq_len1, seq_len2)
+    # (batch, num_perspectives, seq_len1, seq_len2)
     mul_result = torch.matmul(vector1, vector2.transpose(2, 3))
     norm_value = vector1_norm * vector2_norm.transpose(2, 3)
 
-    # (batch, seq_len1, seq_len2, num_perspective)
+    # (batch, seq_len1, seq_len2, num_perspectives)
     return (mul_result / norm_value.clamp(min=eps)).permute(0, 2, 3, 1)
 
 
@@ -110,8 +110,8 @@ class BiMpmMatching(nn.Module, FromParams):
     ----------
     hidden_dim : ``int``, optional (default = 100)
         The hidden dimension of the representations
-    num_perspective : ``int``, optional (default = 20)
-        The number of perspective for matching
+    num_perspectives : ``int``, optional (default = 20)
+        The number of perspectives for matching
     share_weights_between_directions : ``bool``, optional (default = True)
         If True, share weight between matching from sentence1 to sentence2 and from sentence2
         to sentence1, useful for non-symmetric tasks
@@ -129,7 +129,7 @@ class BiMpmMatching(nn.Module, FromParams):
     """
     def __init__(self,
                  hidden_dim: int = 100,
-                 num_perspective: int = 20,
+                 num_perspectives: int = 20,
                  share_weights_between_directions: bool = True,
                  is_forward: bool = None,
                  with_full_match: bool = True,
@@ -139,7 +139,7 @@ class BiMpmMatching(nn.Module, FromParams):
         super(BiMpmMatching, self).__init__()
 
         self.hidden_dim = hidden_dim
-        self.num_perspective = num_perspective
+        self.num_perspectives = num_perspectives
         self.is_forward = is_forward
 
         self.with_full_match = with_full_match
@@ -151,7 +151,7 @@ class BiMpmMatching(nn.Module, FromParams):
             raise ConfigurationError("At least one of the matching method should be enabled")
 
         def create_parameter():  # utility function to create and initialize a parameter
-            param = nn.Parameter(torch.zeros(num_perspective, hidden_dim))
+            param = nn.Parameter(torch.zeros(num_perspectives, hidden_dim))
             torch.nn.init.kaiming_normal_(param)
             return param
 
@@ -164,21 +164,21 @@ class BiMpmMatching(nn.Module, FromParams):
                 raise ConfigurationError("Must specify is_forward to enable full matching")
             self.full_match_weights = create_parameter()
             self.full_match_weights_reversed = share_or_create(self.full_match_weights)
-            output_dim += num_perspective + 1
+            output_dim += num_perspectives + 1
 
         if with_maxpool_match:
             self.maxpool_match_weights = create_parameter()
-            output_dim += num_perspective * 2
+            output_dim += num_perspectives * 2
 
         if with_attentive_match:
             self.attentive_match_weights = create_parameter()
             self.attentive_match_weights_reversed = share_or_create(self.attentive_match_weights)
-            output_dim += num_perspective + 1
+            output_dim += num_perspectives + 1
 
         if with_max_attentive_match:
             self.max_attentive_match_weights = create_parameter()
             self.max_attentive_match_weights_reversed = share_or_create(self.max_attentive_match_weights)
-            output_dim += num_perspective + 1
+            output_dim += num_perspectives + 1
 
         self.output_dim = output_dim
 
@@ -211,7 +211,7 @@ class BiMpmMatching(nn.Module, FromParams):
         Returns
         -------
         A tuple of matching vectors for the two sentences. Each of which is a list of
-        matching vectors of shape (batch, seq_len, num_perspective or 1)
+        matching vectors of shape (batch, seq_len, num_perspectives or 1)
         """
         assert (not mask_2.requires_grad) and (not mask_1.requires_grad)
         assert context_1.size(-1) == context_2.size(-1) == self.hidden_dim
@@ -269,7 +269,7 @@ class BiMpmMatching(nn.Module, FromParams):
                 context_1_last = context_1[:, 0:1, :]
                 context_2_last = context_2[:, 0:1, :]
 
-            # (batch, seq_len*, num_perspective)
+            # (batch, seq_len*, num_perspectives)
             matching_vector_1_full = multi_perspective_match(context_1,
                                                              context_2_last,
                                                              self.full_match_weights)
@@ -286,12 +286,12 @@ class BiMpmMatching(nn.Module, FromParams):
         # contextual embedding of the other sentence, and only the max value of each
         # dimension is retained.
         if self.with_maxpool_match:
-            # (batch, seq_len1, seq_len2, num_perspective)
+            # (batch, seq_len1, seq_len2, num_perspectives)
             matching_vector_max = multi_perspective_match_pairwise(context_1,
                                                                    context_2,
                                                                    self.maxpool_match_weights)
 
-            # (batch, seq_len*, num_perspective)
+            # (batch, seq_len*, num_perspectives)
             matching_vector_1_max = masked_max(matching_vector_max,
                                                mask_2.unsqueeze(-2).unsqueeze(-1),
                                                dim=2)
@@ -328,7 +328,7 @@ class BiMpmMatching(nn.Module, FromParams):
             att_mean_2 = masked_softmax(att_2.sum(dim=2), mask_1.unsqueeze(-1))
             att_mean_1 = masked_softmax(att_1.sum(dim=1), mask_2.unsqueeze(-1))
 
-            # (batch, seq_len*, num_perspective)
+            # (batch, seq_len*, num_perspectives)
             matching_vector_1_att_mean = multi_perspective_match(context_1,
                                                                  att_mean_2,
                                                                  self.attentive_match_weights)
@@ -347,7 +347,7 @@ class BiMpmMatching(nn.Module, FromParams):
             att_max_2 = masked_max(att_2, mask_2.unsqueeze(-2).unsqueeze(-1), dim=2)
             att_max_1 = masked_max(att_1.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), dim=2)
 
-            # (batch, seq_len*, num_perspective)
+            # (batch, seq_len*, num_perspectives)
             matching_vector_1_att_max = multi_perspective_match(context_1,
                                                                 att_max_2,
                                                                 self.max_attentive_match_weights)

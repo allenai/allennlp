@@ -1,5 +1,4 @@
 from typing import Dict
-import re
 import logging
 import csv
 
@@ -14,14 +13,6 @@ from allennlp.data.tokenizers.word_splitter import JustSpacesWordSplitter
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
-
-def parse_file_uri(uri: str):
-    match = re.fullmatch(r'\((.*)\)#(.*)', uri)      # pylint: disable=anomalous-backslash-in-string
-    if match and len(match.groups()) == 2:
-        return match.groups()[0], match.groups()[1]
-    else:
-        return uri, None
 
 
 @DatasetReader.register("quora_paraphrase")
