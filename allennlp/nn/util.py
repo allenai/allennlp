@@ -226,6 +226,70 @@ def masked_log_softmax(vector, mask):
     return torch.nn.functional.log_softmax(vector, dim=1)
 
 
+def masked_max(vector: torch.Tensor,
+               mask: torch.Tensor,
+               dim: int,
+               keepdim: bool = False,
+               min_val: float = -1e7) -> torch.Tensor:
+    """
+    To calculate max along certain dimensions on masked values
+
+    Parameters
+    ----------
+    vector : ``torch.Tensor``
+        The vector to calculate max, assume unmasked parts are already zeros
+    mask : ``torch.Tensor``
+        The mask of the vector. It must be broadcastable with vector.
+    dim : ``int``
+        The dimension to calculate max
+    keepdim : ``bool``
+        Whether to keep dimension
+    min_val : ``float``
+        The minimal value for paddings
+
+    Returns
+    -------
+    A ``torch.Tensor`` of including the maximum values.
+    """
+    one_minus_mask = (1.0 - mask).byte()
+    replaced_vector = vector.masked_fill(one_minus_mask, min_val)
+    max_value, _ = replaced_vector.max(dim=dim, keepdim=keepdim)
+    return max_value
+
+
+def masked_mean(vector: torch.Tensor,
+                mask: torch.Tensor,
+                dim: int,
+                keepdim: bool = False,
+                eps: float = 1e-8) -> torch.Tensor:
+    """
+    To calculate mean along certain dimensions on masked values
+
+    Parameters
+    ----------
+    vector : ``torch.Tensor``
+        The vector to calculate mean.
+    mask : ``torch.Tensor``
+        The mask of the vector. It must be broadcastable with vector.
+    dim : ``int``
+        The dimension to calculate mean
+    keepdim : ``bool``
+        Whether to keep dimension
+    eps : ``float``
+        A small value to avoid zero division problem.
+
+    Returns
+    -------
+    A ``torch.Tensor`` of including the mean values.
+    """
+    one_minus_mask = (1.0 - mask).byte()
+    replaced_vector = vector.masked_fill(one_minus_mask, 0.0)
+
+    value_sum = torch.sum(replaced_vector, dim=dim, keepdim=keepdim)
+    value_count = torch.sum(mask.float(), dim=dim, keepdim=keepdim)
+    return value_sum / value_count.clamp(min=eps)
+
+
 def viterbi_decode(tag_sequence: torch.Tensor,
                    transition_matrix: torch.Tensor,
                    tag_observations: Optional[List[int]] = None):

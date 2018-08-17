@@ -10,8 +10,7 @@ class TestQuoraParaphraseReader():
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file(self, lazy):
         reader = QuoraParaphraseDatasetReader(lazy=lazy)
-        zip_file_name = str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'quora_paraphrase.zip')
-        instances = reader.read("(%s)#%s" % (zip_file_name, 'test.tsv'))
+        instances = reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'quora_paraphrase.tsv')
         instances = ensure_list(instances)
 
         instance1 = {"premise": "What should I do to avoid sleeping in class ?".split(),

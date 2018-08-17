@@ -2,7 +2,7 @@
 import torch
 
 from allennlp.common import Params
-from allennlp.modules import BiMPMMatching
+from allennlp.modules import BiMpmMatching
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -32,8 +32,8 @@ class TestBiMPMMatching(AllenNlpTestCase):
         test1_fw, test1_bw = torch.split(test1, d // 2, dim=-1)
         test2_fw, test2_bw = torch.split(test2, d // 2, dim=-1)
 
-        ml_fw = BiMPMMatching.from_params(Params({"is_forward": True, "num_perspective": l}))
-        ml_bw = BiMPMMatching.from_params(Params({"is_forward": False, "num_perspective": l}))
+        ml_fw = BiMpmMatching.from_params(Params({"is_forward": True, "num_perspective": l}))
+        ml_bw = BiMpmMatching.from_params(Params({"is_forward": False, "num_perspective": l}))
 
         vecs_p_fw, vecs_h_fw = ml_fw(test1_fw, mask1, test2_fw, mask2)
         vecs_p_bw, vecs_h_bw = ml_bw(test1_bw, mask1, test2_bw, mask2)

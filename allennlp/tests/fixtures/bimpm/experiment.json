@@ -18,8 +18,8 @@
       }
     }
   },
-  "train_data_path": "(allennlp/tests/fixtures/data/quora_paraphrase.zip)#test.tsv",
-  "validation_data_path": "(allennlp/tests/fixtures/data/quora_paraphrase.zip)#test.tsv",
+  "train_data_path": "allennlp/tests/fixtures/data/quora_paraphrase.tsv",
+  "validation_data_path": "allennlp/tests/fixtures/data/quora_paraphrase.tsv",
   "model": {
     "type": "bimpm",
     "dropout": 0.1,
@@ -46,11 +46,11 @@
         }
       }
     },
-    "word_matcher": {
+    "matcher_word": {
       "is_forward": true,
       "hidden_dim": 400,
       "num_perspective": 10,
-      "wo_full_match": true
+      "with_full_match": false
     },
     "encoder1": {
       "type": "lstm",
@@ -59,12 +59,12 @@
       "hidden_size": 200,
       "num_layers": 1
     },
-    "matcher_fw1": {
+    "matcher_forward1": {
       "is_forward": true,
       "hidden_dim": 200,
       "num_perspective": 10
     },
-    "matcher_bw1": {
+    "matcher_backward1": {
       "is_forward": false,
       "hidden_dim": 200,
       "num_perspective": 10
@@ -76,12 +76,12 @@
       "hidden_size": 200,
       "num_layers": 1
     },
-    "matcher_fw2": {
+    "matcher_forward2": {
       "is_forward": true,
       "hidden_dim": 200,
       "num_perspective": 10
     },
-    "matcher_bw2": {
+    "matcher_backward2": {
       "is_forward": false,
       "hidden_dim": 200,
       "num_perspective": 10
@@ -107,7 +107,7 @@
       [".*weight_ih.*", {"type": "xavier_normal"}],
       [".*weight_hh.*", {"type": "orthogonal"}],
       [".*bias.*", {"type": "constant", "val": 0}],
-      [".*matcher.*params.*", {"type": "kaiming_normal"}]
+      [".*matcher.*match_weights.*", {"type": "kaiming_normal"}]
     ]
   },
   "iterator": {

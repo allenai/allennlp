@@ -2,8 +2,6 @@ from typing import Dict
 import re
 import logging
 import csv
-import zipfile
-import io
 
 from overrides import overrides
 
@@ -25,10 +23,17 @@ def parse_file_uri(uri: str):
     else:
         return uri, None
 
+
 @DatasetReader.register("quora_paraphrase")
 class QuoraParaphraseDatasetReader(DatasetReader):
     """
-    Reads a Quora paraphrase data
+    Reads a file from the Quora Paraphrase dataset. The train/validation/test split of the data
+    comes from the paper `Bilateral Multi-Perspective Matching for Natural Language Sentences
+    <https://arxiv.org/abs/1702.03814>`_ by Zhiguo Wang et al., 2017. Each file of the data
+    is a tsv file without header. The columns are is_duplicate, question1, question2, and id.
+    All questions are pre-tokenized and tokens are space separated. We convert these keys into
+    fields named "label", "premise" and "hypothesis", so that it is compatible to some existing
+    natural language inference algorithms.
 
     Parameters
     ----------
@@ -54,25 +59,17 @@ class QuoraParaphraseDatasetReader(DatasetReader):
     @overrides
     def _read(self, file_path):
         logger.info("Reading instances from lines in file at: %s", file_path)
-        file_name, member = parse_file_uri(file_path)
-
-        if member is None:
-            with open(cached_path(file_path), "r") as data_file:
-                tsvin = csv.reader(data_file, delimiter='\t')
-                for row in tsvin:
-                    if len(row) == 4:
-                        yield self.text_to_instance(premise=row[1], hypothesis=row[2], label=row[0])
-        else:
-            with zipfile.ZipFile(cached_path(file_name), 'r') as zip_file:
-                with zip_file.open(member, "r") as member_file:
-                    data_file = io.TextIOWrapper(member_file)
-                    tsvin = csv.reader(data_file, delimiter='\t')
-                    for row in tsvin:
-                        if len(row) == 4:
-                            yield self.text_to_instance(premise=row[1], hypothesis=row[2], label=row[0])
+        with open(cached_path(file_path), "r") as data_file:
+            tsv_in = csv.reader(data_file, delimiter='\t')
+            for row in tsv_in:
+                if len(row) == 4:
+                    yield self.text_to_instance(premise=row[1], hypothesis=row[2], label=row[0])
 
     @overrides
-    def text_to_instance(self, premise: str, hypothesis: str, label: str = None) -> Instance:  # type: ignore
+    def text_to_instance(self,  # type: ignore
+                         premise: str,
+                         hypothesis: str,
+                         label: str = None) -> Instance:
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
         tokenized_premise = self._tokenizer.tokenize(premise)
