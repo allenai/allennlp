@@ -141,7 +141,11 @@ def fine_tune_model(model: Model,
         down tqdm's output to only once every 10 seconds.
     """
     prepare_environment(params)
-    os.makedirs(serialization_dir)
+    if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
+        raise ConfigurationError(f"Serialization directory ({serialization_dir}) "
+                                 f"already exists and is not empty.")
+
+    os.makedirs(serialization_dir, exist_ok=True)
     prepare_global_logging(serialization_dir, file_friendly_logging)
 
     serialization_params = deepcopy(params).as_dict(quiet=True)
