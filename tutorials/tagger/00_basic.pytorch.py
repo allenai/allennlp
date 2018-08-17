@@ -9,14 +9,15 @@ import torch.optim as optim
 
 torch.manual_seed(1)
 
-def prepare_sequence(seq: Iterable[str], to_ix: Mapping[str, int]) -> torch.Tensor:
-    idxs = [to_ix[w] for w in seq]
-    return torch.tensor(idxs, dtype=torch.long)
-
 training_data = [
         ("The dog ate the apple".split(), ["DET", "NN", "V", "DET", "NN"]),
         ("Everybody read that book".split(), ["NN", "V", "DET", "NN"])
 ]
+
+def prepare_sequence(seq: Iterable[str], to_ix: Mapping[str, int]) -> torch.Tensor:
+    idxs = [to_ix[w] for w in seq]
+    return torch.tensor(idxs, dtype=torch.long)
+
 
 word_to_ix: Dict[str, int] = {}
 tag_to_ix: Dict[str, int] = {}
@@ -115,6 +116,7 @@ with torch.no_grad():
     # Here, we can see the predicted sequence below is 0 1 2 0 1
     # since 0 is index of the maximum value of row 1,
     # 1 is the index of maximum value of row 2, etc.
-    # Which is DET NOUN VERB DET NOUN, the correct sequence!
+    # Which is DET NN V DET NN, the correct sequence!
     print(tag_scores)
-    print(torch.argmax(tag_scores, dim=-1))
+    tag_ids = torch.argmax(tag_scores, dim=-1).tolist()
+    print([["DET", "NN", "V"][i] for i in tag_ids])
