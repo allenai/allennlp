@@ -147,7 +147,7 @@ def fine_tune_model(model: Model,
     validation_data_path : ``str``, optional
         Path to the validation data to use while fine-tuning.
     extend_vocab: ``bool``, optional (default=False)
-        If ``False``, we use the new instances to extend your vocabulary.
+        If ``True``, we use the new instances to extend your vocabulary.
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
