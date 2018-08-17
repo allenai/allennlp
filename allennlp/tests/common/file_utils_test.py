@@ -54,13 +54,13 @@ def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
 
 
 def set_up_s3_bucket(bucket_name: str = "my-bucket", s3_objects: List[Tuple[str, str]] = None):
+    """Creates a mock s3 bucket optionally with objects uploaded from local files."""
     s3_client = boto3.client("s3")
     s3_client.create_bucket(Bucket=bucket_name)
     for filename, key in s3_objects or []:
         s3_client.upload_file(Filename=filename, Bucket=bucket_name, Key=key)
 
 
-#  @mock_s3
 class TestFileUtils(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
@@ -124,6 +124,7 @@ class TestFileUtils(AllenNlpTestCase):
 
     @mock_s3
     def test_s3_bucket(self):
+        """This just ensures the bucket gets set up correctly."""
         set_up_s3_bucket()
         s3_client = boto3.client("s3")
         buckets = s3_client.list_buckets()["Buckets"]
