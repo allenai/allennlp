@@ -144,15 +144,6 @@ def s3_get(url: str, temp_file: IO) -> None:
     s3_resource.Bucket(bucket_name).download_fileobj(s3_path, temp_file)
 
 
-def http_etag(url: str) -> Optional[str]:
-    """Make HEAD request to check ETag."""
-    response = requests.head(url, allow_redirects=True)
-    if response.status_code != 200:
-        raise IOError("HEAD request failed for url {}".format(url))
-
-    return response.headers.get("ETag")
-
-
 def http_get(url: str, temp_file: IO) -> None:
     req = requests.get(url, stream=True)
     content_length = req.headers.get('Content-Length')
@@ -180,7 +171,11 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
     if url.startswith("s3://"):
         etag = s3_etag(url)
     else:
-        etag = http_etag(url)
+        response = requests.head(url, allow_redirects=True)
+        if response.status_code != 200:
+            raise IOError("HEAD request failed for url {} with status code {}"
+                          .format(url, response.status_code))
+        etag = response.headers.get("ETag")
 
     filename = url_to_filename(url, etag)
 
