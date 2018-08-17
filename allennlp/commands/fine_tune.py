@@ -57,6 +57,14 @@ class FineTune(Subcommand):
                                help='a JSON structure used to override the training configuration '
                                '(only affects the config_file, _not_ the model_archive)')
 
+        subparser.add_argument('--extend-vocab',
+                               action='store_true',
+                               default=False,
+                               help='if specified, we will use the instances in your new dataset to '
+                                    'extend your vocabulary. Currently expansion of embedding layers '
+                                    'is not implemented, so if your model has an embedding layer '
+                                    'this will probably make fine-tune crash.')
+
         subparser.add_argument('--file-friendly-logging',
                                action='store_true',
                                default=False,
@@ -75,6 +83,7 @@ def fine_tune_model_from_args(args: argparse.Namespace):
                                     config_file=args.config_file,
                                     serialization_dir=args.serialization_dir,
                                     overrides=args.overrides,
+                                    extend_vocab=args.extend_vocab,
                                     file_friendly_logging=args.file_friendly_logging)
 
 
@@ -82,6 +91,7 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                                     config_file: str,
                                     serialization_dir: str,
                                     overrides: str = "",
+                                    extend_vocab: bool = False,
                                     file_friendly_logging: bool = False) -> Model:
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
@@ -110,12 +120,14 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
     return fine_tune_model(model=archive.model,
                            params=params,
                            serialization_dir=serialization_dir,
+                           extend_vocab=extend_vocab,
                            file_friendly_logging=file_friendly_logging)
 
 
 def fine_tune_model(model: Model,
                     params: Params,
                     serialization_dir: str,
+                    extend_vocab: bool = False,
                     file_friendly_logging: bool = False) -> Model:
     """
     Fine tunes the given model, using a set of parameters that is largely identical to those used
@@ -136,6 +148,8 @@ def fine_tune_model(model: Model,
         The directory in which to save results and logs.
     validation_data_path : ``str``, optional
         Path to the validation data to use while fine-tuning.
+    extend_vocab: ``bool``, optional (default=False)
+        If ``True``, we use the new instances to extend your vocabulary.
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
@@ -159,27 +173,28 @@ def fine_tune_model(model: Model,
     vocabulary_params = params.pop('vocabulary', {})
     if vocabulary_params.get('directory_path', None):
         logger.warning("You passed `directory_path` in parameters for the vocabulary in "
-                       "your configuration file, but it will be ignored. "
-                       "Vocabulary from the saved model will be extended with current data.")
+                       "your configuration file, but it will be ignored. ")
 
     all_datasets = datasets_from_params(params)
-
-    datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
-
-    for dataset in datasets_for_vocab_creation:
-        if dataset not in all_datasets:
-            raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
-
-    logger.info("Extending model vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
     vocab = model.vocab
-    vocab.extend_from_instances(vocabulary_params,
-                                (instance for key, dataset in all_datasets.items()
-                                 for instance in dataset
-                                 if key in datasets_for_vocab_creation))
+
+    if extend_vocab:
+        datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
+
+        for dataset in datasets_for_vocab_creation:
+            if dataset not in all_datasets:
+                raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
+
+        logger.info("Extending model vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
+        vocab.extend_from_instances(vocabulary_params,
+                                    (instance for key, dataset in all_datasets.items()
+                                     for instance in dataset
+                                     if key in datasets_for_vocab_creation))
+
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     iterator = DataIterator.from_params(params.pop("iterator"))
-    iterator.index_with(vocab)
+    iterator.index_with(model.vocab)
 
     train_data = all_datasets['train']
     validation_data = all_datasets.get('validation')
