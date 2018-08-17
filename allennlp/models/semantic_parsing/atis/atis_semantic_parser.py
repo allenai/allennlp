@@ -259,6 +259,7 @@ class AtisSemanticParser(Model):
 
     @staticmethod
     def _action_history_match(predicted: List[int], targets: torch.LongTensor) -> int:
+        print('action_history_match')
         # TODO(mattg): this could probably be moved into a FullSequenceMatch metric, or something.
         # Check if target is big enough to cover prediction (including start/end symbols)
         if len(predicted) > targets.size(1):
@@ -507,7 +508,7 @@ class AtisSemanticParser(Model):
             best_final_states = self._beam_search.search(num_steps,
                                                          initial_state,
                                                          self._decoder_step,
-                                                         keep_final_unfinished_states=False)
+                                                         keep_final_unfinished_states=True)
             outputs['best_action_sequence'] = []
             outputs['debug_info'] = []
             outputs['entities'] = []
@@ -526,23 +527,12 @@ class AtisSemanticParser(Model):
                         sequence_in_targets = self._action_history_match(best_action_indices, targets)
                         self._action_sequence_accuracy(sequence_in_targets)
                     action_strings = [action_mapping[(i, action_index)] for action_index in best_action_indices]
-                    '''
-                    try:
-                        logical_form = world[i].get_logical_form(action_strings, add_var_function=False)
-                        self._has_logical_form(1.0)
-                    except ParsingError:
-                        self._has_logical_form(0.0)
-                        logical_form = 'Error producing logical form'
-                    '''
                     outputs['best_action_sequence'].append(action_strings)
-                    # outputs['logical_form'].append(logical_form)
                     outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
-                    # outputs['entities'].append(world[i].table_graph.entities)
                 else:
-                    outputs['logical_form'].append('')
+                    outputs['logical_form'].append('logical form here')
                     self._has_logical_form(0.0)
-                    #if example_lisp_string:
-                    #     self._denotation_accuracy(None, example_lisp_string[i])
+                    print('best action seq', outputs['best_action_sequence'])
             return outputs
 
     @classmethod

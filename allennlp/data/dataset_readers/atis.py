@@ -95,20 +95,15 @@ class AtisDatasetReader(DatasetReader):
         """
         Parameters
         ----------
-        utterance: ``str``, required.
-            Input utterance
-        action_sequence: ``List[str]``, required.
-            List of actions for the utterance
-        world: ``AtisWorld``
-            The world in which this utterance appears in, we store this in a MetadataField.
+        utterances: ``List[str]``, required.
+            List of utterances in the interaction, the last element is the current utterance.
+        sql_query: ``str``, optional
+            The SQL query, given as label during training or validation.
         """
         utterance = utterances[-1]
         action_sequence: List[str] = []
 
-        tokenized_utterance = self._tokenizer.tokenize(utterance.lower())
-        utterance_field = TextField(tokenized_utterance, self._token_indexers)
-
-        if not tokenized_utterance:
+        if not utterance:
             return None
 
         world = AtisWorld(utterances)
@@ -118,9 +113,8 @@ class AtisDatasetReader(DatasetReader):
         except ParseError:
             logger.debug(f'Parsing error')
 
-        
-        if not action_sequence:
-            return None
+        tokenized_utterance = self._tokenizer.tokenize(utterance.lower())
+        utterance_field = TextField(tokenized_utterance, self._token_indexers)
 
         production_rule_fields: List[Field] = []
 
@@ -136,18 +130,22 @@ class AtisDatasetReader(DatasetReader):
         action_map = {action.rule: i # type: ignore
                       for i, action in enumerate(action_field.field_list)}
         index_fields: List[Field] = []
-
-        for production_rule in action_sequence:
-            index_fields.append(IndexField(action_map[production_rule], action_field))
-
-        action_sequence_field: List[Field] = []
-        action_sequence_field.append(ListField(index_fields))
-
         world_field = MetadataField(world)
         fields = {'utterance' : utterance_field,
                   'actions' : action_field,
                   'world' : world_field,
-                  'target_action_sequence' : ListField(action_sequence_field),
                   'linking_scores' : ArrayField(world.linking_scores)}
+
+        if sql_query:
+            if action_sequence:
+                for production_rule in action_sequence:
+                    index_fields.append(IndexField(action_map[production_rule], action_field))
+
+                action_sequence_field: List[Field] = []
+                action_sequence_field.append(ListField(index_fields))
+                fields['target_action_sequence'] = ListField(action_sequence_field)
+            else:
+                # If we are given a SQL query, but we are unable to parse it, then we will skip it.
+                return None
 
         return Instance(fields)
