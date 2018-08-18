@@ -107,7 +107,7 @@ class AtisDatasetReader(DatasetReader):
             return None
 
         world = AtisWorld(utterances)
- 
+
         if sql_query:
             try:
                 action_sequence = world.get_action_sequence(sql_query)
