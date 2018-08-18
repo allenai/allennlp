@@ -7,8 +7,8 @@
 # please visit http://pytorch.org/ and install the relevant version.
 torch>=0.4.0,<0.5.0
 
-# Parameter parsing.
-jsonnet==0.10.0
+# Parameter parsing (but not on Windows).
+jsonnet==0.10.0 ; sys.platform != 'win32'
 
 # Type checking for python
 typing
@@ -42,6 +42,9 @@ cffi==1.11.2
 
 # aws commandline tools for running on Docker remotely.
 awscli>=1.11.91
+
+# Accessing files from S3 directly.
+boto3
 
 # REST interface for models
 flask==0.12.1
@@ -83,7 +86,7 @@ flaky
 responses>=0.7
 
 # Reads Universal Dependencies files.
-conllu
+conllu==0.11
 
 #### TESTING-RELATED PACKAGES ####
 
@@ -105,6 +108,9 @@ codecov
 
 # Required to run sanic tests
 aiohttp
+
+# For mocking s3.
+moto==1.3.4
 
 #### DOC-RELATED PACKAGES ####
 

@@ -38,6 +38,23 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
         assert result.get("arc_loss") is not None
         assert result.get("tag_loss") is not None
 
+        hierplane_tree = result.get("hierplane_tree")
+        hierplane_tree.pop("nodeTypeToStyle")
+        hierplane_tree.pop("linkToPosition")
+        # pylint: disable=line-too-long,bad-continuation
+        assert result.get("hierplane_tree") == {'text': 'Please could you parse this sentence ?',
+                                                'root': {'word': 'Please', 'nodeType': 'punct', 'attributes': ['UH'], 'link': 'punct', 'spans': [{'start': 0, 'end': 7}],
+                                                    'children': [
+                                                            {'word': 'could', 'nodeType': 'nummod', 'attributes': ['MD'], 'link': 'nummod', 'spans': [{'start': 7, 'end': 13}]},
+                                                            {'word': 'you', 'nodeType': 'nummod', 'attributes': ['PRP'], 'link': 'nummod', 'spans': [{'start': 13, 'end': 17}]},
+                                                            {'word': 'parse', 'nodeType': 'nummod', 'attributes': ['VB'], 'link': 'nummod', 'spans': [{'start': 17, 'end': 23}]},
+                                                            {'word': 'this', 'nodeType': 'nummod', 'attributes': ['DT'], 'link': 'nummod', 'spans': [{'start': 23, 'end': 28}]},
+                                                            {'word': 'sentence', 'nodeType': 'nummod', 'attributes':['NN'], 'link': 'nummod', 'spans': [{'start': 28, 'end': 37}]},
+                                                            {'word': '?', 'nodeType': 'nummod', 'attributes': ['.'], 'link': 'nummod', 'spans': [{'start': 37, 'end': 39}]}
+                                                            ]
+                                                        }
+                                               }
+        # pylint: enable=line-too-long,bad-continuation
     def test_batch_prediction(self):
         inputs = [
                 {

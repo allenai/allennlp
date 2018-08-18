@@ -6,7 +6,7 @@ from conllu.parser import parse_line, DEFAULT_FIELDS
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, TextField, SequenceLabelField
+from allennlp.data.fields import Field, TextField, SequenceLabelField, MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token
@@ -99,4 +99,6 @@ class UniversalDependenciesDatasetReader(DatasetReader):
             fields["head_indices"] = SequenceLabelField([int(x[1]) for x in dependencies],
                                                         tokens,
                                                         label_namespace="head_index_tags")
+
+        fields["metadata"] = MetadataField({"words": words, "pos": upos_tags})
         return Instance(fields)

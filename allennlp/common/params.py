@@ -12,7 +12,19 @@ import logging
 import os
 
 from overrides import overrides
-import _jsonnet
+
+# _jsonnet doesn't work on Windows, so we have to use fakes.
+try:
+    from _jsonnet import evaluate_file, evaluate_snippet
+except ImportError:
+    def evaluate_file(filename: str, **_kwargs) -> str:
+        logger.warning(f"_jsonnet not loaded, treating {filename} as json")
+        with open(filename, 'r') as evaluation_file:
+            return evaluation_file.read()
+
+    def evaluate_snippet(_filename: str, expr: str, **_kwargs) -> str:
+        logger.warning(f"_jsonnet not loaded, treating snippet as json")
+        return expr
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
@@ -77,7 +89,7 @@ def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[s
 def parse_overrides(serialized_overrides: str) -> Dict[str, Any]:
     if serialized_overrides:
         ext_vars = dict(os.environ)
-        return unflatten(json.loads(_jsonnet.evaluate_snippet("", serialized_overrides, ext_vars=ext_vars)))
+        return unflatten(json.loads(evaluate_snippet("", serialized_overrides, ext_vars=ext_vars)))
     else:
         return {}
 
@@ -347,7 +359,7 @@ class Params(MutableMapping):
         params_file = cached_path(params_file)
         ext_vars = dict(os.environ)
 
-        file_dict = json.loads(_jsonnet.evaluate_file(params_file, ext_vars=ext_vars))
+        file_dict = json.loads(evaluate_file(params_file, ext_vars=ext_vars))
 
         overrides_dict = parse_overrides(params_overrides)
         param_dict = with_fallback(preferred=overrides_dict, fallback=file_dict)
