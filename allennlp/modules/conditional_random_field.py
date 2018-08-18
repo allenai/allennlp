@@ -9,85 +9,129 @@ from allennlp.common.checks import ConfigurationError
 import allennlp.nn.util as util
 
 
-def allowed_transitions(constraint_type: str, tokens: Dict[int, str]) -> List[Tuple[int, int]]:
+def allowed_transitions(constraint_type: str, labels: Dict[int, str]) -> List[Tuple[int, int]]:
     """
-    Given tokens and a constraint type, returns the allowed transitions. It will
+    Given labels and a constraint type, returns the allowed transitions. It will
     additionally include transitions for the start and end states, which are used
     by the conditional random field.
 
     Parameters
     ----------
     constraint_type : ``str``, required
-        Indicates which constraint to apply. Current choices are "BIO" and "BIOUL".
-    tokens : ``Dict[int, str]``, required
-        A mapping {token_id -> token}. Most commonly this would be the value from
+        Indicates which constraint to apply. Current choices are
+        "BIO", "IOB1", and BIOUL".
+    labels : ``Dict[int, str]``, required
+        A mapping {label_id -> label}. Most commonly this would be the value from
         Vocabulary.get_index_to_token_vocabulary()
 
     Returns
     -------
     ``List[Tuple[int, int]]``
-        The allowed transitions (from_token_id, to_token_id).
+        The allowed transitions (from_label_id, to_label_id).
     """
-    n_tags = len(tokens)
-    start_tag = n_tags
-    end_tag = n_tags + 1
+    num_labels = len(labels)
+    start_tag = num_labels
+    end_tag = num_labels + 1
+    labels_with_boundaries = list(labels.items()) + [(start_tag, "START"), (end_tag, "END")]
 
     allowed = []
+    for from_label_index, from_label in labels_with_boundaries:
+        if from_label in ("START", "END"):
+            from_tag = from_label
+            from_entity = ""
+        else:
+            from_tag = from_label[0]
+            from_entity = from_label[1:]
+        for to_label_index, to_label in labels_with_boundaries:
+            if to_label in ("START", "END"):
+                to_tag = to_label
+                to_entity = ""
+            else:
+                to_tag = to_label[0]
+                to_entity = to_label[1:]
+            if is_transition_allowed(constraint_type, from_tag, from_entity,
+                                     to_tag, to_entity):
+                allowed.append((from_label_index, to_label_index))
+    return allowed
+
+
+def is_transition_allowed(constraint_type: str,
+                          from_tag: str,
+                          from_entity: str,
+                          to_tag: str,
+                          to_entity: str):
+    """
+    Given a constraint type and strings ``from_tag`` and ``to_tag`` that
+    represent the origin and destination of the transition, return whether
+    the transition is allowed under the given constraint type.
+
+    Parameters
+    ----------
+    constraint_type : ``str``, required
+        Indicates which constraint to apply. Current choices are
+        "BIO", "IOB1", and BIOUL".
+    from_tag : ``str``, required
+        The tag that the transition originates from. For example, if the
+        label is ``I-PER``, the ``from_tag`` is ``I``.
+    from_entity: ``str``, required
+        The entity corresponding to the ``from_tag``. For example, if the
+        label is ``I-PER``, the ``from_entity`` is ``PER``.
+    to_tag : ``str``, required
+        The tag that the transition leads to. For example, if the
+        label is ``I-PER``, the ``to_tag`` is ``I``.
+    to_entity: ``str``, required
+        The entity corresponding to the ``to_tag``. For example, if the
+        label is ``I-PER``, the ``to_entity`` is ``PER``.
+
+    Returns
+    -------
+    ``bool``
+        Whether the transition is allowed under the given ``constraint_type``.
+    """
+    # pylint: disable=too-many-return-statements
+    if to_tag == "START" or from_tag == "END":
+        # Cannot transition into START or from END
+        return False
+
     if constraint_type == "BIOUL":
-        for i, (from_bioul, *from_entity) in tokens.items():
-            for j, (to_bioul, *to_entity) in tokens.items():
-
-                is_allowed = any([
-                        # O can transition to O, B-* or U-*
-                        # L-x can transition to O, B-*, or U-*
-                        # U-x can transition to O, B-*, or U-*
-                        from_bioul in ('O', 'L', 'U') and to_bioul in ('O', 'B', 'U'),
-                        # B-x can only transition to I-x or L-x
-                        # I-x can only transition to I-x or L-x
-                        from_bioul in ('B', 'I') and to_bioul in ('I', 'L') and from_entity == to_entity
-                ])
-
-                if is_allowed:
-                    allowed.append((i, j))
-
-        # start transitions
-        for i, (to_bioul, *to_entity) in tokens.items():
-            if to_bioul in ('O', 'B', 'U'):
-                allowed.append((start_tag, i))
-
-        # end transitions
-        for i, (from_bioul, *from_entity) in tokens.items():
-            if from_bioul in ('O', 'L', 'U'):
-                allowed.append((i, end_tag))
-
+        if from_tag == "START":
+            return to_tag in ('O', 'B', 'U')
+        if to_tag == "END":
+            return from_tag in ('O', 'L', 'U')
+        return any([
+                # O can transition to O, B-* or U-*
+                # L-x can transition to O, B-*, or U-*
+                # U-x can transition to O, B-*, or U-*
+                from_tag in ('O', 'L', 'U') and to_tag in ('O', 'B', 'U'),
+                # B-x can only transition to I-x or L-x
+                # I-x can only transition to I-x or L-x
+                from_tag in ('B', 'I') and to_tag in ('I', 'L') and from_entity == to_entity
+        ])
     elif constraint_type == "BIO":
-        for i, (from_bio, *from_entity) in tokens.items():
-            for j, (to_bio, *to_entity) in tokens.items():
-
-                is_allowed = any([
-                        # Can always transition to O or B-x
-                        to_bio in ('O', 'B'),
-                        # Can only transition to I-x from B-x or I-x
-                        to_bio == 'I' and from_bio in ('B', 'I') and from_entity == to_entity
-                ])
-
-                if is_allowed:
-                    allowed.append((i, j))
-
-        # start transitions
-        for i, (to_bio, *to_entity) in tokens.items():
-            if to_bio in ('O', 'B'):
-                allowed.append((start_tag, i))
-
-        # end transitions
-        for i, (from_bio, *from_entity) in tokens.items():
-            if from_bio in ('O', 'B', 'I'):
-                allowed.append((i, end_tag))
-
+        if from_tag == "START":
+            return to_tag in ('O', 'B')
+        if to_tag == "END":
+            return from_tag in ('O', 'B', 'I')
+        return any([
+                # Can always transition to O or B-x
+                to_tag in ('O', 'B'),
+                # Can only transition to I-x from B-x or I-x
+                to_tag == 'I' and from_tag in ('B', 'I') and from_entity == to_entity
+        ])
+    elif constraint_type == "IOB1":
+        if from_tag == "START":
+            return to_tag in ('O', 'I')
+        if to_tag == "END":
+            return from_tag in ('O', 'B', 'I')
+        return any([
+                # Can always transition to O or I-x
+                to_tag in ('O', 'I'),
+                # Can only transition to B-x from B-x or I-x, where
+                # x is the same tag.
+                to_tag == 'B' and from_tag in ('B', 'I') and from_entity == to_entity
+        ])
     else:
         raise ConfigurationError(f"Unknown constraint type: {constraint_type}")
-
-    return allowed
 
 
 class ConditionalRandomField(torch.nn.Module):

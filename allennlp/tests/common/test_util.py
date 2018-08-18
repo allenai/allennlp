@@ -55,6 +55,7 @@ class TestCommonUtils(AllenNlpTestCase):
         (self.TEST_DIR / 'mymodule' / '__init__.py').touch()
         (self.TEST_DIR / 'mymodule' / 'submodule').mkdir()
         (self.TEST_DIR / 'mymodule' / 'submodule' / '__init__.py').touch()
+        (self.TEST_DIR / 'mymodule' / 'submodule' / 'subsubmodule.py').touch()
 
         sys.path.insert(0, str(self.TEST_DIR))
         assert 'mymodule' not in sys.modules
@@ -64,8 +65,10 @@ class TestCommonUtils(AllenNlpTestCase):
 
         assert 'mymodule' in sys.modules
         assert 'mymodule.submodule' in sys.modules
+        assert 'mymodule.submodule.subsubmodule' in sys.modules
 
         sys.path.remove(str(self.TEST_DIR))
+
 
     def test_get_frozen_and_tunable_parameter_names(self):
         model = torch.nn.Sequential(OrderedDict([
