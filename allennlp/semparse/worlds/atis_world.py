@@ -164,8 +164,8 @@ class AtisWorld():
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
-            return (self.valid_actions == other.valid_actions and
-                    numpy.array_equal(self.linking_scores, other.linking_scores) and
-                    self.utterances == other.utterances and
-                    self.grammar_str == other.grammar_str)
+            return all([self.valid_actions == other.valid_actions,
+                        numpy.array_equal(self.linking_scores, other.linking_scores),
+                        self.utterances == other.utterances,
+                        self.grammar_str == other.grammar_str])
         return False

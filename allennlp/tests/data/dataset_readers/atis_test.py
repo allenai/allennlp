@@ -37,15 +37,6 @@ class TestAtisReader(AllenNlpTestCase):
         world = instance.fields['world'].metadata
         assert valid_strs == set(world.valid_actions['string'])
 
-        # We make sure all the entities are sorted in reverse order because
-        # we need to enforce some ordering for it to match the correct row
-        # in the linking scores.
-        assert sorted(world.valid_actions['string'], reverse=True) == \
-                world.valid_actions['string']
-
-        assert sorted(world.valid_actions['number'], reverse=True) == \
-                world.valid_actions['number']
-
         assert world.valid_actions['string'] == \
             ['string -> ["\'WESTCHESTER COUNTY\'"]',
              'string -> ["\'NO\'"]',
