@@ -23,3 +23,5 @@ allennlp.models
   allennlp.models.simple_tagger
   allennlp.models.biaffine_dependency_parser
   allennlp.models.esim
+  allennlp.models.bimpm
+

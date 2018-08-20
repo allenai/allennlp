@@ -274,7 +274,7 @@ def import_submodules(package_name: str) -> None:
 
     # Import at top level
     module = importlib.import_module(package_name)
-    path = getattr(module, '__path__', '')
+    path = getattr(module, '__path__', [])
 
     # walk_packages only finds immediate children, so need to recurse.
     for _, name, _ in pkgutil.walk_packages(path):
