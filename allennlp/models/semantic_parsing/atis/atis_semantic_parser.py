@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Tuple
 import re
+import difflib
 
 from overrides import overrides
 import torch
@@ -25,6 +26,23 @@ from allennlp.nn import util
 from allennlp.nn.decoding import GrammarState, RnnState, ChecklistState, AtisGrammarState, is_nonterminal
 from allennlp.semparse.worlds import AtisWorld
 from allennlp.training.metrics import Average
+
+def action_sequence_to_sql(action_sequences: List[str]) -> str:
+    query = []
+    for action in action_sequences:
+        nonterminal, right_hand_side = action.split(' -> ')
+        right_hand_side_tokens = right_hand_side[1:-1].split(', ')
+        if nonterminal == 'statement':
+            query.extend(right_hand_side_tokens)
+        else:
+            for query_index, token in reversed(list(enumerate(query))):
+                if token == nonterminal:
+                    query = query[:query_index] + \
+                            right_hand_side_tokens + \
+                            query[query_index + 1:]
+                    break 
+    return ' '.join([token.strip('"') for token in query])
+
 
 @Model.register("atis_parser")
 class AtisSemanticParser(Model):
@@ -83,6 +101,7 @@ class AtisSemanticParser(Model):
         self._rule_namespace = rule_namespace
         self._action_sequence_accuracy = Average()
         self._has_logical_form = Average()
+        self._action_similarity = Average()
 
         self._action_padding_index = -1  # the padding value used by IndexField
         num_actions = vocab.get_vocab_size(self._rule_namespace)
@@ -290,11 +309,15 @@ class AtisSemanticParser(Model):
             finished logical form.  We might not produce a valid logical form if the decoder gets
             into a repetitive loop, or we're trying to produce a super long logical form and run
             out of time steps, or something.
+
+            4. action_similarity, which is how similar the action sequence predicted is to the actual
+               action sequence.
         """
         return {
                 'dpd_acc': self._action_sequence_accuracy.get_metric(reset),
                 # 'denotation_acc': self._denotation_accuracy.get_metric(reset),
                 # 'lf_percent': self._has_logical_form.get_metric(reset),
+                'action_similarity': self._action_similarity.get_metric(reset)
                 }
 
     def _create_grammar_state(self,
@@ -455,11 +478,6 @@ class AtisSemanticParser(Model):
         utterance : Dict[str, torch.LongTensor]
            The output of ``TextField.as_array()`` applied on the utterance ``TextField``. This will
            be passed through a ``TextFieldEmbedder`` and then through an encoder.
-        table : ``Dict[str, torch.LongTensor]``
-            The output of ``KnowledgeGraphField.as_array()`` applied on the table
-            ``KnowledgeGraphField``.  This output is similar to a ``TextField`` output, where each
-            entity in the table is treated as a "token", and we will use a ``TextFieldEmbedder`` to
-            get embeddings for each entity.
         world : ``List[WikiTablesWorld]``
             We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
             how ``MetadataField`` works, this gets passed to us as a ``List[WikiTablesWorld]``,
@@ -473,6 +491,7 @@ class AtisSemanticParser(Model):
            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
            sequence_length)``.
         """
+        print('forward')
         initial_info = self._get_initial_state_and_scores(utterance, world, actions, linking_scores)
         initial_state = initial_info["initial_state"]
         batch_size = list(utterance.values())[0].size(0)
@@ -512,8 +531,9 @@ class AtisSemanticParser(Model):
             outputs['best_action_sequence'] = []
             outputs['debug_info'] = []
             outputs['entities'] = []
-
             outputs['logical_form'] = []
+
+    
             for i in range(batch_size):
                 # Decoding may not have terminated with any completed logical forms, if `num_steps`
                 # isn't long enough (or if the model is not trained enough and gets into an
@@ -526,13 +546,16 @@ class AtisSemanticParser(Model):
                         sequence_in_targets = 0
                         sequence_in_targets = self._action_history_match(best_action_indices, targets)
                         self._action_sequence_accuracy(sequence_in_targets)
+                        targets_list = [target.item() for target in targets[0]]
+                        similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
+                        self._action_similarity(similarity.ratio())
+
                     action_strings = [action_mapping[(i, action_index)] for action_index in best_action_indices]
                     outputs['best_action_sequence'].append(action_strings)
+                    outputs['logical_form'].append(action_sequence_to_sql(action_strings))
                     outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
                 else:
-                    outputs['logical_form'].append('logical form here')
                     self._has_logical_form(0.0)
-                    print('best action seq', outputs['best_action_sequence'])
             return outputs
 
     @classmethod
@@ -565,5 +588,6 @@ class AtisSemanticParser(Model):
                    training_beam_size=training_beam_size,
                    dropout=dropout,
                    rule_namespace=rule_namespace)
+
 
 
