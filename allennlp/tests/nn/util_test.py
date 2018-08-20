@@ -779,3 +779,19 @@ class TestNnUtil(AllenNlpTestCase):
 
         with pytest.raises(ConfigurationError):
             util.weighted_tensor_combination("x%y", tensors, weight)
+
+    def test_weighted_tensor_combination_with_same_batch_size_and_embedding_dim(self):
+        tensors = [torch.Tensor([[[5, 5], [4, 4]], [[2, 3], [1, 1]]])]
+        weight = torch.Tensor([4, 5])
+
+        combination = "x"
+        assert_almost_equal(util.weighted_tensor_combination(combination, tensors, weight),
+                            [[20 + 25, 16 + 20], [8 + 15, 4 + 5]])
+
+        tensors = [torch.Tensor([[[5, 5], [2, 2]], [[4, 4], [3, 3]]]),
+                   torch.Tensor([[[2, 3]], [[1, 1]]])]
+        weight = torch.Tensor([4, 5])
+        combination = "x*y"
+        assert_almost_equal(util.weighted_tensor_combination(combination, tensors, weight),
+                            [[5 * 2 * 4 + 5 * 3 * 5, 2 * 2 * 4 + 2 * 3 * 5],
+                             [4 * 1 * 4 + 4 * 1 * 5, 3 * 1 * 4 + 3 * 1 * 5]])
