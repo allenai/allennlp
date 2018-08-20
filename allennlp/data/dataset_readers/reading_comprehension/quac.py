@@ -14,8 +14,8 @@ from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@DatasetReader.register("dqa")
-class DQAReader(DatasetReader):
+@DatasetReader.register("quac")
+class QuACReader(DatasetReader):
     """
     Reads a JSON-formatted Quesiton Answering in Context (QuAC) data file
     and returns a ``Dataset`` where the ``Instances`` have four fields: ``question``, a ``ListField``,
@@ -119,12 +119,12 @@ class DQAReader(DatasetReader):
         # Map answer texts to "CANNOTANSWER" if more than half of them marked as so.
         additional_metadata['answer_texts_list'] = [util.handle_cannot(ans_list) for ans_list \
                                                     in additional_metadata['answer_texts_list']]
-        return util.make_reading_comprehension_instance_dqa(question_list_tokens,
-                                                            passage_tokens,
-                                                            self._token_indexers,
-                                                            passage_text,
-                                                            answer_token_span_list,
-                                                            yesno_list,
-                                                            followup_list,
-                                                            additional_metadata,
-                                                            self._num_context_answers)
+        return util.make_reading_comprehension_instance_quac(question_list_tokens,
+                                                             passage_tokens,
+                                                             self._token_indexers,
+                                                             passage_text,
+                                                             answer_token_span_list,
+                                                             yesno_list,
+                                                             followup_list,
+                                                             additional_metadata,
+                                                             self._num_context_answers)

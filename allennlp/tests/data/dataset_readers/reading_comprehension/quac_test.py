@@ -3,16 +3,16 @@ import pytest
 
 from allennlp.common import Params
 from allennlp.common.util import ensure_list
-from allennlp.data.dataset_readers import DQAReader
+from allennlp.data.dataset_readers import QuACReader
 from allennlp.common.testing import AllenNlpTestCase
 
 
-class TestDQAReader:
+class TestQuACReader:
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read(self, lazy):
         params = Params({'lazy': lazy, 'num_context_answers': 2,})
-        reader = DQAReader.from_params(params)
-        instances = reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'dqa_sample.json'))
+        reader = QuACReader.from_params(params)
+        instances = reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'quac_sample.json'))
         instances = ensure_list(instances)
 
         assert instances[0].fields["question"].sequence_length() == 6

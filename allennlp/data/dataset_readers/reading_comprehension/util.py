@@ -214,15 +214,15 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     return Instance(fields)
 
 
-def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Token]],
-                                            passage_tokens: List[Token],
-                                            token_indexers: Dict[str, TokenIndexer],
-                                            passage_text: str,
-                                            token_span_lists: List[List[Tuple[int, int]]] = None,
-                                            yesno_list: List[int] = None,
-                                            followup_list: List[int] = None,
-                                            additional_metadata: Dict[str, Any] = None,
-                                            num_context_answers: int = 0) -> Instance:
+def make_reading_comprehension_instance_quac(question_list_tokens: List[List[Token]],
+                                             passage_tokens: List[Token],
+                                             token_indexers: Dict[str, TokenIndexer],
+                                             passage_text: str,
+                                             token_span_lists: List[List[Tuple[int, int]]] = None,
+                                             yesno_list: List[int] = None,
+                                             followup_list: List[int] = None,
+                                             additional_metadata: Dict[str, Any] = None,
+                                             num_context_answers: int = 0) -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
     in a reading comprehension model.
@@ -235,7 +235,7 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
     Parameters
     ----------
     question_list_tokens : ``List[List[Token]]``
-        An already-tokenized question.
+        An already-tokenized list of questions. Each dialog have multiple questions.
     passage_tokens : ``List[Token]``
         An already-tokenized passage that contains the answer to the given question.
     token_indexers : ``Dict[str, TokenIndexer]``
@@ -247,10 +247,10 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
         official evaluation scripts.
     token_spans_lists : ``List[List[Tuple[int, int]]]``, optional
         Indices into ``passage_tokens`` to use as the answer to the question for training.  This is
-        a list because there might be several possible correct answer spans in the passage.
-        Currently, we just select the most frequent span in this list (i.e., SQuAD has multiple
-        annotations on the dev set; this will select the span that the most annotators gave as
-        correct).
+        a list of list, first because there is multiple questions per dialog, and
+        because there might be several possible correct answer spans in the passage.
+        Currently, we just select the last span in this list (i.e., QuAC has multiple
+        annotations on the dev set; this will select the last span, which was given by the original annotator).
     yesno_list : ``List[int]``
         List of the affirmation bit for each question answer pairs.
     followup_list : ``List[int]``
@@ -284,8 +284,11 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
         return "<{0:d}_{1:s}>".format(i, i_name)
 
     def mark_tag(span_start, span_end, passage_tags, prev_answer_distance):
-        assert span_start > 0
-        assert span_end > 0
+        try:
+            assert span_start > 0
+            assert span_end > 0
+        except:
+            raise ValueError("Previous {0:d}th answer span should have been updated!".format(prev_answer_distance))
         # Modify "tags" to mark previous answer span.
         if span_start == span_end:
             passage_tags[prev_answer_distance][span_start] = get_tag(prev_answer_distance, "")
@@ -301,8 +304,8 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
         p1_span_start, p1_span_end, p2_span_start = -1, -1, -1
         p2_span_end, p3_span_start, p3_span_end = -1, -1, -1
         # Looping each <<answers>>.
-        for question_index, doc_qs_spans in enumerate(token_span_lists):
-            span_start, span_end = doc_qs_spans[-1]  # Last one is the original answer
+        for question_index, answer_span_lists in enumerate(token_span_lists):
+            span_start, span_end = answer_span_lists[-1]  # Last one is the original answer
             span_start_list.append(IndexField(span_start, passage_field))
             span_end_list.append(IndexField(span_end, passage_field))
             prev_answer_marker_lists = [["O"] * len(passage_tokens), ["O"] * len(passage_tokens),
