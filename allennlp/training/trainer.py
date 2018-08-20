@@ -760,7 +760,7 @@ class Trainer:
                 training_elapsed_time = time.time() - training_start_time
                 estimated_time_remaining = training_elapsed_time * \
                     ((self._num_epochs - epoch_counter) / float(epoch - epoch_counter + 1) - 1)
-                formatted_time = time.strftime("%H:%M:%S", time.gmtime(estimated_time_remaining))
+                formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
                 logger.info("Estimated training time remaining: %s", formatted_time)
 
             epochs_trained += 1
