@@ -17,6 +17,17 @@ class SequenceAccuracy(Metric):
         self.correct_count = 0.0
         self.total_count = 0.0
 
+    # Note: See preprocess.py.
+	def recall(beams, s2):
+	   retval = 0.
+	   for w in s2:
+	      stillsearch = True
+	      for s1 in beams:
+	         if stillsearch and (w in s1):
+	            retval += 1./float(len(s2))
+	            stillsearch = False
+	   return retval
+
     def __call__(self,
                  predictions: torch.Tensor,
                  gold_labels: torch.Tensor,
@@ -41,7 +52,44 @@ class SequenceAccuracy(Metric):
             raise ConfigurationError("mask must have the same size as predictions but "
                                      "found tensor of shape: {}".format(mask.size()))
 
+#def recall(beams, s2):
+#   retval = 0.
+#   for w in s2:
+#      stillsearch = True
+#      for s1 in beams:
+#         if stillsearch and (w in s1):
+#            retval += 1./float(len(s2))
+#            stillsearch = False
+#   return retval
+
         k = predictions.size()[1]
+        batch_size = predictions.size()[0]
+        correct = 0.0
+        for i in range(batch_size):
+            beams = predictions[i]
+            cur_mask = mask[i]
+            cur_gold = gold_labels[i]
+
+            masked_gold = cur_gold * cur_mask
+            #TODO(brendanr): Verify!!!!!!!!!!
+            cleaned_gold = [x for x in masked_gold if x != 0]
+
+            retval = 0.
+            for w in cleaned_gold:
+               stillsearch = True
+               for beam in beams:
+                  masked_beam = beam * cur_mask
+                  s2 = [x for x in masked_beam if x != 0]
+                  if stillsearch and (w in beam):
+                     retval += 1./float(len(s2))
+                     stillsearch = False
+            correct += retval
+
+        self.correct_count += correct
+        self.total_count += predictions.size()[0]
+
+        return
+
         expanded_size = list(gold_labels.size())
         expanded_size.insert(1, k)
         expanded_gold = gold_labels.unsqueeze(1).expand(expanded_size)
@@ -61,16 +109,6 @@ class SequenceAccuracy(Metric):
 
         self.total_count += predictions.size()[0]
         self.correct_count += correct
-
-#def recall(beams, s2):
-#   retval = 0.
-#   for w in s2:
-#      stillsearch = True
-#      for s1 in beams:
-#         if stillsearch and (w in s1):
-#            retval += 1./float(len(s2))
-#            stillsearch = False
-#   return retval
 
     def get_metric(self, reset: bool = False):
         """
