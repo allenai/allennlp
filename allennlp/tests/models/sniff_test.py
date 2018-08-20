@@ -44,16 +44,6 @@ DEFAULT_MODELS = {
 
 class SniffTest(AllenNlpTestCase):
 
-    def test_config(self):
-        assert set(DEFAULT_MODELS.keys()) == {
-                'machine-comprehension',
-                'semantic-role-labeling',
-                'textual-entailment',
-                'coreference-resolution',
-                'named-entity-recognition',
-                'constituency-parsing'
-        }
-
     def test_machine_comprehension(self):
         predictor = demo_model(*DEFAULT_MODELS['machine-comprehension'])
 
