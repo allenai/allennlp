@@ -272,7 +272,8 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
     fields['question'] = ListField([TextField(q_tokens, token_indexers) for q_tokens in question_list_tokens])
     metadata = {'original_passage': passage_text,
                 'token_offsets': passage_offsets,
-                'question_tokens': [[token.text for token in q] for q in question_list_tokens],
+                'question_tokens': [[token.text for token in question_tokens] \
+                                    for question_tokens in question_list_tokens],
                 'passage_tokens': [token.text for token in passage_tokens], }
     p1_answer_marker_list: List[Field] = []
     p2_answer_marker_list: List[Field] = []
@@ -282,21 +283,23 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
         # Generate a tag to mark previous answer span in the passage.
         return "<{0:d}_{1:s}>".format(i, i_name)
 
-    def mark_tag(s_start, s_end, tags, prev_answer_distance):
+    def mark_tag(span_start, span_end, passage_tags, prev_answer_distance):
+        assert span_start > 0
+        assert span_end > 0
         # Modify "tags" to mark previous answer span.
-        if s_start == s_end:
-            tags[prev_answer_distance][s_start] = get_tag(prev_answer_distance, "")
+        if span_start == span_end:
+            passage_tags[prev_answer_distance][span_start] = get_tag(prev_answer_distance, "")
         else:
-            tags[prev_answer_distance][s_start] = get_tag(prev_answer_distance, "start")
-            tags[prev_answer_distance][s_end] = get_tag(prev_answer_distance, "end")
-            for passage_index in range(s_start + 1, s_end):
-                tags[prev_answer_distance][passage_index] = get_tag(prev_answer_distance, "in")
+            passage_tags[prev_answer_distance][span_start] = get_tag(prev_answer_distance, "start")
+            passage_tags[prev_answer_distance][span_end] = get_tag(prev_answer_distance, "end")
+            for passage_index in range(span_start + 1, span_end):
+                passage_tags[prev_answer_distance][passage_index] = get_tag(prev_answer_distance, "in")
 
     if token_span_lists:
         span_start_list: List[Field] = []
         span_end_list: List[Field] = []
-        p1_span_start, p1_span_end, p2_span_start = "", "", ""
-        p2_span_end, p3_span_start, p3_span_end = "", "", ""
+        p1_span_start, p1_span_end, p2_span_start = -1, -1, -1
+        p2_span_end, p3_span_start, p3_span_end = -1, -1, -1
         # Looping each <<answers>>.
         for question_index, doc_qs_spans in enumerate(token_span_lists):
             span_start, span_end = doc_qs_spans[-1]  # Last one is the original answer
@@ -345,7 +348,7 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
     return Instance(fields)
 
 
-def handle_cannot(refs: List[str]):
+def handle_cannot(reference_answers: List[str]):
     """
     Process a list of reference answers.
     If equal or more than half of the reference answers are "CANNOTANSWER", take it as gold.
@@ -353,13 +356,13 @@ def handle_cannot(refs: List[str]):
     """
     num_cannot = 0
     num_spans = 0
-    for ref in refs:
+    for ref in reference_answers:
         if ref == 'CANNOTANSWER':
             num_cannot += 1
         else:
             num_spans += 1
     if num_cannot >= num_spans:
-        refs = ['CANNOTANSWER']
+        reference_answers = ['CANNOTANSWER']
     else:
-        refs = [x for x in refs if x != 'CANNOTANSWER']
-    return refs
+        reference_answers = [x for x in reference_answers if x != 'CANNOTANSWER']
+    return reference_answers
