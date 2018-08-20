@@ -60,11 +60,12 @@ class RnnState:
     def __eq__(self, other):
         if isinstance(self, other.__class__):
             return all([
-                    util.tensors_equal(self.hidden_state, other.hidden_state),
-                    util.tensors_equal(self.memory_cell, other.memory_cell),
-                    util.tensors_equal(self.previous_action_embedding, other.previous_action_embedding),
-                    util.tensors_equal(self.attended_input, other.attended_input),
-                    util.tensors_equal(self.encoder_outputs, other.encoder_outputs),
-                    util.tensors_equal(self.encoder_output_mask, other.encoder_output_mask),
+                    util.tensors_equal(self.hidden_state, other.hidden_state, tolerance=1e-5),
+                    util.tensors_equal(self.memory_cell, other.memory_cell, tolerance=1e-5),
+                    util.tensors_equal(self.previous_action_embedding, other.previous_action_embedding,
+                                       tolerance=1e-5),
+                    util.tensors_equal(self.attended_input, other.attended_input, tolerance=1e-5),
+                    util.tensors_equal(self.encoder_outputs, other.encoder_outputs, tolerance=1e-5),
+                    util.tensors_equal(self.encoder_output_mask, other.encoder_output_mask, tolerance=1e-5),
                     ])
         return NotImplemented
