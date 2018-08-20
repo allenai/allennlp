@@ -732,3 +732,50 @@ class TestNnUtil(AllenNlpTestCase):
         result = util.add_positional_features(tensor, min_timescale=1.0, max_timescale=1.0e4)
         numpy.testing.assert_almost_equal(result[0].detach().cpu().numpy(), tensor2tensor_result)
         numpy.testing.assert_almost_equal(result[1].detach().cpu().numpy(), tensor2tensor_result)
+
+    def test_weighted_tensor_combination(self):
+        tensors = [torch.Tensor([[[2, 3]]]), torch.Tensor([[[5, 5]]])]
+        weight = torch.Tensor([4, 5])
+
+        combination = "x"
+        assert_almost_equal(util.weighted_tensor_combination(combination, tensors, weight),
+                            [[8 + 15]])
+
+        combination = "y"
+        assert_almost_equal(util.weighted_tensor_combination(combination, tensors, weight),
+                            [[20 + 25]])
+
+        combination = "x,y"
+        weight2 = torch.Tensor([4, 5, 4, 5])
+        assert_almost_equal(util.weighted_tensor_combination(combination, tensors, weight2),
+                            [[8 + 20 + 15 + 25]])
+
+        combination = "x-y"
+        assert_almost_equal(util.weighted_tensor_combination(combination, tensors, weight),
+                            [[-3 * 4 + -2 * 5]])
+
+        combination = "y-x"
+        assert_almost_equal(util.weighted_tensor_combination(combination, tensors, weight),
+                            [[3 * 4 + 2 * 5]])
+
+        combination = "y+x"
+        assert_almost_equal(util.weighted_tensor_combination(combination, tensors, weight),
+                            [[7 * 4 + 8 * 5]])
+
+        combination = "y*x"
+        assert_almost_equal(util.weighted_tensor_combination(combination, tensors, weight),
+                            [[10 * 4 + 15 * 5]])
+
+        combination = "y/x"
+        assert_almost_equal(util.weighted_tensor_combination(combination, tensors, weight),
+                            [[(5 / 2) * 4 + (5 / 3) * 5]], decimal=4)
+
+        combination = "x/y"
+        assert_almost_equal(util.weighted_tensor_combination(combination, tensors, weight),
+                            [[(2 / 5) * 4 + (3 / 5) * 5]], decimal=4)
+
+        with pytest.raises(ConfigurationError):
+            util.weighted_tensor_combination("x+y+y", tensors, weight)
+
+        with pytest.raises(ConfigurationError):
+            util.weighted_tensor_combination("x%y", tensors, weight)

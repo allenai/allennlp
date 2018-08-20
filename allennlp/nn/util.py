@@ -656,6 +656,72 @@ def _get_combination(combination: str, tensors: List[torch.Tensor]) -> torch.Ten
             raise ConfigurationError("Invalid operation: " + operation)
 
 
+def weighted_tensor_combination(combination: str,
+                                tensors: List[torch.Tensor],
+                                weights: torch.nn.Parameter) -> torch.Tensor:
+    """
+    Like :func:`combine_tensors`, but does a weighted (linear) multiplication while combining.
+    This is a separate function from ``combine_tensors`` because we try to avoid instantiating
+    large intermediate tensors during the combination, which is possible because we know that we're
+    going to be multiplying by a weight vector in the end.
+
+    Parameters
+    ----------
+    combination : ``str``
+        Same as in :func:`combine_tensors`
+    tensors : ``List[torch.Tensor]``
+        A list of tensors to combine, where the integers in the ``combination`` are (1-indexed)
+        positions in this list of tensors.  These tensors are all expected to have the same number
+        of dimensions, with the final dimension an embedding dimension, but some dimensions could
+        be length 1.
+    weights : ``torch.nn.Parameter``
+        A vector of weights to use for the combinations.  This should have shape (combined_dim,),
+        as calculated by :func:`get_combined_dim`.
+    """
+    if len(tensors) > 9:
+        raise ConfigurationError("Double-digit tensor lists not currently supported")
+    combination = combination.replace('x', '1').replace('y', '2')
+    pieces = combination.split(',')
+    tensor_dims = [tensor.size(-1) for tensor in tensors]
+    combination_dims = [_get_combination_dim(piece, tensor_dims) for piece in pieces]
+    dims_so_far = 0
+    to_sum = []
+    for piece, combination_dim in zip(pieces, combination_dims):
+        weight = weights[dims_so_far:(dims_so_far + combination_dim)]
+        dims_so_far += combination_dim
+        to_sum.append(_get_weighted_combination(piece, tensors, weight))
+    result = to_sum[0]
+    for result_piece in to_sum[1:]:
+        result = result + result_piece
+    return result
+
+
+def _get_weighted_combination(combination: str,
+                              tensors: List[torch.Tensor],
+                              weight: torch.nn.Parameter) -> torch.Tensor:
+    if combination.isdigit():
+        index = int(combination) - 1
+        return torch.sum(tensors[index] * weight, dim=-1)
+    else:
+        if len(combination) != 3:
+            raise ConfigurationError("Invalid combination: " + combination)
+        first_tensor = _get_combination(combination[0], tensors)
+        second_tensor = _get_combination(combination[2], tensors)
+        operation = combination[1]
+        if operation == '*':
+            intermediate = first_tensor * weight
+            return torch.sum(intermediate * second_tensor, dim=-1)
+        elif operation == '/':
+            intermediate = first_tensor * weight
+            return torch.sum(intermediate * second_tensor.pow(-1), dim=-1)
+        elif operation == '+':
+            return torch.sum(first_tensor * weight, dim=-1) + torch.sum(second_tensor * weight, dim=-1)
+        elif operation == '-':
+            return torch.sum(first_tensor * weight, dim=-1) - torch.sum(second_tensor * weight, dim=-1)
+        else:
+            raise ConfigurationError("Invalid operation: " + operation)
+
+
 def get_combined_dim(combination: str, tensor_dims: List[int]) -> int:
     """
     For use with :func:`combine_tensors`.  This function computes the resultant dimension when
