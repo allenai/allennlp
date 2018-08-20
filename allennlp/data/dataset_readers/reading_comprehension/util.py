@@ -285,15 +285,15 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
         # Generate a tag to mark previous answer span in the passage.
         return "<{0:d}_{1:s}>".format(i, i_name)
 
-    def mark_tag(s_start, s_end, tags, p_count):
+    def mark_tag(s_start, s_end, tags, prev_answer_distance):
         # Modify "tags" to mark previous answer span.
         if s_start == s_end:
-            tags[p_count][s_start] = get_tag(p_count, "")
+            tags[prev_answer_distance][s_start] = get_tag(prev_answer_distance, "")
         else:
-            tags[p_count][s_start] = get_tag(p_count, "start")
-            tags[p_count][s_end] = get_tag(p_count, "end")
+            tags[prev_answer_distance][s_start] = get_tag(prev_answer_distance, "start")
+            tags[prev_answer_distance][s_end] = get_tag(prev_answer_distance, "end")
             for passage_index in range(s_start + 1, s_end):
-                tags[p_count][passage_index] = get_tag(p_count, "in")
+                tags[prev_answer_distance][passage_index] = get_tag(prev_answer_distance, "in")
 
     if token_span_lists:
         span_start_list = []
@@ -303,13 +303,14 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
             span_start, span_end = doc_qs_spans[-1]  # Last one is the original answer
             span_start_list.append(IndexField(span_start, passage_field))
             span_end_list.append(IndexField(span_end, passage_field))
-            p_tags = [[], ["O"] * len(passage_tokens), ["O"] * len(passage_tokens), ["O"] * len(passage_tokens)]
+            prev_answer_marker_lists = [[], ["O"] * len(passage_tokens),
+                                ["O"] * len(passage_tokens), ["O"] * len(passage_tokens)]
             if question_index > 0 and num_context_answers > 0:
-                mark_tag(p1_span_start, p1_span_end, p_tags, 1)
+                mark_tag(p1_span_start, p1_span_end, prev_answer_marker_lists, 1)
                 if question_index > 1 and num_context_answers > 1:
-                    mark_tag(p2_span_start, p2_span_end, p_tags, 2)
+                    mark_tag(p2_span_start, p2_span_end, prev_answer_marker_lists, 2)
                     if question_index > 2 and num_context_answers > 2:
-                        mark_tag(p3_span_start, p3_span_end, p_tags, 3)
+                        mark_tag(p3_span_start, p3_span_end, prev_answer_marker_lists, 3)
                     p3_span_start = p2_span_start
                     p3_span_end = p2_span_end
                 p2_span_start = p1_span_start
@@ -318,13 +319,13 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
             p1_span_end = span_end
             if num_context_answers > 2:
                 p3_answer_marker_list.append(
-                    SequenceLabelField(p_tags[3], passage_field, label_namespace="answer_tags"))
+                    SequenceLabelField(prev_answer_marker_lists[3], passage_field, label_namespace="answer_tags"))
             if num_context_answers > 1:
                 p2_answer_marker_list.append(
-                    SequenceLabelField(p_tags[2], passage_field, label_namespace="answer_tags"))
+                    SequenceLabelField(prev_answer_marker_lists[2], passage_field, label_namespace="answer_tags"))
             if num_context_answers > 0:
                 p1_answer_marker_list.append(
-                    SequenceLabelField(p_tags[1], passage_field, label_namespace="answer_tags"))
+                    SequenceLabelField(prev_answer_marker_lists[1], passage_field, label_namespace="answer_tags"))
         fields['span_start'] = ListField(span_start_list)
         fields['span_end'] = ListField(span_end_list)
         if num_context_answers > 0:
@@ -342,7 +343,7 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
     return Instance(fields)
 
 
-def handle_cannot(refs):
+def handle_cannot(refs: List[str]):
     """
     Process a list of reference answers.
     If equal or more than half of the reference answers are "CANNOTANSWER", take it as gold.

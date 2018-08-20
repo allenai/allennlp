@@ -17,9 +17,12 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @DatasetReader.register("dqa")
 class DQAReader(DatasetReader):
     """
-    Reads a JSON-formatted QUAC file and returns a ``Dataset`` where the ``Instances`` have four
-    fields: ``question``, a ``TextField``, ``passage``, another ``TextField``, and ``span_start``
-    and ``span_end``, both ``IndexFields`` into the ``passage`` ``TextField``.  We also add a
+    Reads a JSON-formatted Quesiton Answering in Context (QuAC) data file
+    and returns a ``Dataset`` where the ``Instances`` have four fields: ``question``, a ``ListField``,
+    ``passage``, another ``TextField``, and ``span_start`` and ``span_end``, both ``ListField`` composed of
+    IndexFields`` into the ``passage`` ``TextField``.
+    Two ``ListField``, composed of ``LabelField``, ``yesno_list`` and  ``followup_list`` is added.
+    We also add a
     ``MetadataField`` that stores the instance's ID, the original passage text, gold answer strings,
     and token offsets into the original passage, accessible as ``metadata['id']``,
     ``metadata['original_passage']``, ``metadata['answer_text_lists'] and ``metadata['token_offsets']``.
@@ -32,7 +35,7 @@ class DQAReader(DatasetReader):
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         We similarly use this for both the question and the passage.  See :class:`TokenIndexer`.
         Default is ``{"tokens": SingleIdTokenIndexer()}``.
-    num_context_answers : Integer, optional
+    num_context_answers : ``int``, optional
         How many previous question answers to consider in a context.
     """
 
@@ -98,9 +101,9 @@ class DQAReader(DatasetReader):
         # `passage_tokens`, as the latter is what we'll actually use for supervision.
         answer_token_span_list = []
         passage_offsets = [(token.idx, token.idx + len(token.text)) for token in passage_tokens]
-        for st_list, end_list in zip(start_span_list, end_span_list):
+        for start_list, end_list in zip(start_span_list, end_span_list):
             token_spans: List[Tuple[int, int]] = []
-            for char_span_start, char_span_end in zip(st_list, end_list):
+            for char_span_start, char_span_end in zip(start_list, end_list):
                 (span_start, span_end), error = util.char_span_to_token_span(passage_offsets,
                                                                              (char_span_start, char_span_end))
                 if error:
