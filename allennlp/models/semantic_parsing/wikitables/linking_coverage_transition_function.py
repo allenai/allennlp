@@ -154,8 +154,8 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
                                                                     action_ids))
         return batch_results
 
-    def _get_linked_logits_addition(self,
-                                    checklist_state: ChecklistState,
+    @staticmethod
+    def _get_linked_logits_addition(checklist_state: ChecklistState,
                                     action_ids: List[int],
                                     action_logits: torch.Tensor) -> torch.Tensor:
         """

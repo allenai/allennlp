@@ -37,7 +37,7 @@ class TestGrammarState(AllenNlpTestCase):
     def test_get_valid_actions_adds_lambda_productions(self):
         state = GrammarState(['s'],
                              {('s', 'x'): ['s']},
-                             {'s': { 'global': (torch.Tensor([1, 1]), torch.Tensor([2, 2]), [1, 2]) }},
+                             {'s': {'global': (torch.Tensor([1, 1]), torch.Tensor([2, 2]), [1, 2])}},
                              {'s -> x': (torch.Tensor([5]), torch.Tensor([6]), 5)},
                              is_nonterminal)
         actions = state.get_valid_actions()
@@ -53,8 +53,8 @@ class TestGrammarState(AllenNlpTestCase):
     def test_get_valid_actions_adds_lambda_productions_only_for_correct_type(self):
         state = GrammarState(['t'],
                              {('s', 'x'): ['t']},
-                             {'s': {'global': (torch.Tensor([1, 1]), torch.Tensor([2, 2]), [1, 2]) },
-                              't': {'global': (torch.Tensor([3, 3]), torch.Tensor([4, 4]), [3, 4]) }},
+                             {'s': {'global': (torch.Tensor([1, 1]), torch.Tensor([2, 2]), [1, 2])},
+                              't': {'global': (torch.Tensor([3, 3]), torch.Tensor([4, 4]), [3, 4])}},
                              {'s -> x': (torch.Tensor([5]), torch.Tensor([6]), 5)},
                              is_nonterminal)
         actions = state.get_valid_actions()

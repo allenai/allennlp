@@ -1,21 +1,16 @@
 from collections import defaultdict
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List, Tuple
 
 from overrides import overrides
 
 import torch
 from torch.nn import Parameter
-from torch.nn.modules.rnn import LSTMCell
-from torch.nn.modules.linear import Linear
 
-from allennlp.common import util as common_util
-from allennlp.common.checks import check_dimensions_match
 from allennlp.models.semantic_parsing.wikitables.basic_transition_function import BasicTransitionFunction
 from allennlp.models.semantic_parsing.wikitables.coverage_decoder_state import CoverageDecoderState
-from allennlp.modules import Attention, FeedForward
-from allennlp.modules.token_embedders import Embedding
-from allennlp.nn import util, Activation
-from allennlp.nn.decoding import ChecklistState, DecoderStep, RnnState
+from allennlp.modules import Attention
+from allennlp.nn import Activation
+from allennlp.nn.decoding import ChecklistState
 
 
 class CoverageTransitionFunction(BasicTransitionFunction):
@@ -62,12 +57,13 @@ class CoverageTransitionFunction(BasicTransitionFunction):
                          dropout=dropout)
         self._checklist_multiplier = Parameter(torch.FloatTensor([1.0]))
 
+    @overrides
     def _compute_action_probabilities(self,
                                       state: CoverageDecoderState,
                                       hidden_state: torch.Tensor,
                                       attention_weights: torch.Tensor,
                                       predicted_action_embeddings: torch.Tensor
-                                      ) -> Dict[int, List[Tuple[int, Any, Any, List[int]]]]:
+                                     ) -> Dict[int, List[Tuple[int, Any, Any, List[int]]]]:
         # In this section we take our predicted action embedding and compare it to the available
         # actions in our current state (which might be different for each group element).  For
         # computing action scores, we'll forget about doing batched / grouped computation, as it
