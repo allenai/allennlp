@@ -8,8 +8,11 @@ def decode_mst(energy: numpy.ndarray,
                length: int,
                has_labels: bool = True) -> Tuple[numpy.ndarray, numpy.ndarray]:
     """
+    Note: Counter to typical intuition, this function decodes the _maximum_
+    spanning tree.
+
     Decode the optimal MST tree with the Chu-Liu-Edmonds algorithm for
-    minimum spanning arboresences on graphs.
+    maximum spanning arboresences on graphs.
 
     Parameters
     ----------
@@ -71,18 +74,13 @@ def decode_mst(energy: numpy.ndarray,
     heads = numpy.zeros([max_length], numpy.int32)
     if has_labels:
         head_type = numpy.ones([max_length], numpy.int32)
-        # Set the head type of the symbolic head to be zero, arbitrarily.
-        head_type[0] = 0
     else:
         head_type = None
 
     for child, parent in final_edges.items():
         heads[child] = parent
-        if has_labels and child != 0:
+        if has_labels:
             head_type[child] = label_id_matrix[parent, child]
-
-    # Set the head of the symbolic head to be zero, arbitrarily.
-    heads[0] = 0
 
     return heads, head_type
 
@@ -114,7 +112,7 @@ def chu_liu_edmonds(length: int,
         represent collapsed cycles in the graph.
     final_edges: ``Dict[int, int]``, required.
         An empty dictionary which will be populated with the
-        nodes which are connected in the minimum spanning tree.
+        nodes which are connected in the maximum spanning tree.
     old_input: ``numpy.ndarray``, required.
     old_output: ``numpy.ndarray``, required.
     representatives : ``List[Set[int]]``, required.

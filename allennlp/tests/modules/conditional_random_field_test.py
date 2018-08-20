@@ -217,5 +217,18 @@ class TestConditionalRandomField(AllenNlpTestCase):
             (9, 0), (9, 1),                 (9, 4), (9, 5),                 (9, 8)
         }
 
+        iob1_labels = ['O', 'B-X', 'I-X', 'B-Y', 'I-Y'] # start tag, end tag
+        #              0     1      2      3      4         5          6
+        allowed = allowed_transitions("IOB1", dict(enumerate(iob1_labels)))
+
+        # The empty spaces in this matrix indicate disallowed transitions.
+        assert set(allowed) == {                            # Extra column for end tag.
+            (0, 0),         (0, 2),         (0, 4),         (0, 6),
+            (1, 0), (1, 1), (1, 2),         (1, 4),         (1, 6),
+            (2, 0), (2, 1), (2, 2),         (2, 4),         (2, 6),
+            (3, 0),         (3, 2), (3, 3), (3, 4),         (3, 6),
+            (4, 0),         (4, 2), (4, 3), (4, 4),         (4, 6),
+            (5, 0),         (5, 2),         (5, 4),                # Extra row for start tag
+        }
         with raises(ConfigurationError):
             allowed_transitions("allennlp", {})

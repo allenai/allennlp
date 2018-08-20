@@ -112,7 +112,9 @@ class TestAtisWorld(AllenNlpTestCase):
                 {'conj -> ["OR"]', 'conj -> ["AND"]'}
         assert set(valid_actions['distinct']) == \
                {'distinct -> [""]', 'distinct -> ["DISTINCT"]'}
-        assert set(valid_actions['number']) == set()
+        assert set(valid_actions['number']) == \
+                {'number -> ["0"]',
+                 'number -> ["1"]'}
         assert set(valid_actions['string']) == set()
         assert set(valid_actions['col_ref']) == \
                 {'col_ref -> ["*"]',
@@ -252,9 +254,8 @@ class TestAtisWorld(AllenNlpTestCase):
         assert set(world.valid_actions['number']) == \
             {'number -> ["0"]',
              'number -> ["1"]',
-             'number -> ["2400"]',
              'number -> ["1200"]',
-             'number -> ["12"]'}
+             'number -> ["2400"]'}
 
         assert set(world.valid_actions['string']) == \
                 {'string -> ["\'DENVER\'"]',
@@ -267,10 +268,9 @@ class TestAtisWorld(AllenNlpTestCase):
         assert set(world.valid_actions['number']) == \
                 {'number -> ["0"]',
                  'number -> ["1"]',
-                 'number -> ["2400"]',
-                 'number -> ["12"]',
                  'number -> ["1800"]',
-                 'number -> ["1200"]'}
+                 'number -> ["1200"]',
+                 'number -> ["2400"]'}
 
         assert set(world.valid_actions['string']) == \
                 {'string -> ["\'DENVER\'"]',
@@ -294,12 +294,9 @@ class TestAtisWorld(AllenNlpTestCase):
                  'number -> ["5"]',
                  'number -> ["26"]',
                  'number -> ["2200"]',
-                 'number -> ["200300"]',
-                 'number -> ["199100"]',
                  'number -> ["1991"]',
                  'number -> ["1200"]',
-                 'number -> ["1000"]',
-                 'number -> ["10"]'}
+                 'number -> ["1000"]'}
 
         assert set(world.valid_actions['string']) == \
                 {'string -> ["\'COACH\'"]',
