@@ -273,10 +273,10 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
     metadata = {'original_passage': passage_text,
                 'token_offsets': passage_offsets,
                 'question_tokens': [[token.text for token in q] for q in question_list_tokens],
-                'passage_tokens': [token.text for token in passage_tokens],}
-    p1_answer_marker_list = []
-    p2_answer_marker_list = []
-    p3_answer_marker_list = []
+                'passage_tokens': [token.text for token in passage_tokens], }
+    p1_answer_marker_list: List[Field] = []
+    p2_answer_marker_list: List[Field] = []
+    p3_answer_marker_list: List[Field] = []
 
     def get_tag(i, i_name):
         # Generate a tag to mark previous answer span in the passage.
@@ -293,8 +293,8 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
                 tags[prev_answer_distance][passage_index] = get_tag(prev_answer_distance, "in")
 
     if token_span_lists:
-        span_start_list = []
-        span_end_list = []
+        span_start_list: List[Field] = []
+        span_end_list: List[Field] = []
         p1_span_start, p1_span_end, p2_span_start = None, None, None
         p2_span_end, p3_span_start, p3_span_end = None, None, None
         # Looping each <<answers>>.
@@ -318,15 +318,15 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
             p1_span_end = span_end
             if num_context_answers > 2:
                 p3_answer_marker_list.append(SequenceLabelField(prev_answer_marker_lists[3],
-                                                                passage_field,
+                                                                [p.text for p in passage_field],
                                                                 label_namespace="answer_tags"))
             if num_context_answers > 1:
                 p2_answer_marker_list.append(SequenceLabelField(prev_answer_marker_lists[2],
-                                                                passage_field,
+                                                                [p.text for p in passage_field],
                                                                 label_namespace="answer_tags"))
             if num_context_answers > 0:
                 p1_answer_marker_list.append(SequenceLabelField(prev_answer_marker_lists[1],
-                                                                passage_field,
+                                                                [p.text for p in passage_field],
                                                                 label_namespace="answer_tags"))
         fields['span_start'] = ListField(span_start_list)
         fields['span_end'] = ListField(span_end_list)
