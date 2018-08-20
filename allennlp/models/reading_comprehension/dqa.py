@@ -1,8 +1,8 @@
 import logging
 from typing import Any, Dict, List
 import numpy as np
-import torch
 from overrides import overrides
+import torch
 import torch.nn.functional as F
 from torch.nn.functional import nll_loss
 
@@ -130,7 +130,7 @@ class DQA(Model):
         question_lstm_mask = question_mask if self._mask_lstms else None
         passage_lstm_mask = passage_mask if self._mask_lstms else None
 
-        if self._prev_a > 0:
+        if self._num_context_answers > 0:
             question_num_ind = torch.Tensor(
                 list(range(0, max_qa_count)) * batch_size).long().reshape(-1, 1).repeat(1, max_q_len)
             if model_in_cuda:
