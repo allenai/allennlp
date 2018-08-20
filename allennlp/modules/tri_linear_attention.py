@@ -20,7 +20,7 @@ class TriLinearAttention(torch.nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        std = math.sqrt(6 / (self.input_dim*3 + 1))
+        std = math.sqrt(6 / (self.input_dim * 3 + 1))
         self._y_weights.data.uniform_(-std, std)
         self._x_weights.data.uniform_(-std, std)
         self._dot_weights.data.uniform_(-std, std)
@@ -32,11 +32,11 @@ class TriLinearAttention(torch.nn.Module):
         t2 = matrix_2.size(1)
 
         # (batch * time1, dim) * (dim, 1) -> (batch*tim1, 1)
-        x_factors = torch.matmul(matrix_1.resize(batch_dim*t1, self.input_dim), self._x_weights)
+        x_factors = torch.matmul(matrix_1.resize(batch_dim * t1, self.input_dim), self._x_weights)
         x_factors = x_factors.contiguous().view(batch_dim, t1, 1)  # ->  (batch, tim1, 1)
 
         # (batch * time2, dim) * (dim, 1) -> (batch*tim2, 1)
-        y_factors = torch.matmul(matrix_2.resize(batch_dim*t2, self.input_dim), self._y_weights)
+        y_factors = torch.matmul(matrix_2.resize(batch_dim * t2, self.input_dim), self._y_weights)
         y_factors = y_factors.contiguous().view(batch_dim, 1, t2)  # ->  (batch, 1, tim2)
 
         weighted_x = matrix_1 * self._dot_weights  # still (batch, time1, dim)
@@ -49,8 +49,3 @@ class TriLinearAttention(torch.nn.Module):
 
         # broadcasting will correctly repeat the x/y factors as needed
         return dot_factors + x_factors + y_factors
-
-    @classmethod
-    def from_params(cls):
-        raise NotImplementedError()
-
