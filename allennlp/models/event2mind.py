@@ -75,7 +75,7 @@ class Event2Mind(Model):
         self._target_namespace = target_namespace
         self._scheduled_sampling_ratio = scheduled_sampling_ratio
         # We need the start symbol to provide as the input at the first timestep of decoding, and
-        self._embedding_dropout = nn.Dropout(0.8)
+        self._embedding_dropout = nn.Dropout(0.2)
         #self._hidden_dropout = nn.Dropout(0.5)
 
         # end symbol as a way to indicate the end of the decoded sequence.
@@ -152,9 +152,9 @@ class Event2Mind(Model):
         """
         # (batch_size, input_sequence_length, encoder_output_dim)
         # TODO(brendanr): Revisit dropout.
-        #embedded_input = self._embedding_dropout(self._source_embedder(source_tokens))
+        embedded_input = self._embedding_dropout(self._source_embedder(source_tokens))
         # TODO(brendanr): Hack the embeddings here like initWEmb in modeling/utils/preprocess.py?
-        embedded_input = self._source_embedder(source_tokens)
+        #embedded_input = self._source_embedder(source_tokens)
         batch_size, _, _ = embedded_input.size()
         source_mask = get_text_field_mask(source_tokens)
         encoder_outputs = self._encoder(embedded_input, source_mask)
