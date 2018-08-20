@@ -144,11 +144,11 @@ class DQA(Model):
             p1_answer_marker = p1_answer_marker.view(batch_size * max_qa_count, passage_length)
             p1_answer_marker_emb = self._prev_ans_marker(p1_answer_marker)
             repeated_embedded_passage = torch.cat([repeated_embedded_passage, p1_answer_marker_emb], dim=-1)
-            if self._prev_a > 1:
+            if self._num_context_answers > 1:
                 p2_answer_marker = p2_answer_marker.view(batch_size * max_qa_count, passage_length)
                 p2_answer_marker_emb = self._prev_ans_marker(p2_answer_marker)
                 repeated_embedded_passage = torch.cat([repeated_embedded_passage, p2_answer_marker_emb], dim=-1)
-                if self._prev_a > 2:
+                if self._num_context_answers > 2:
                     p3_answer_marker = p3_answer_marker.view(batch_size * max_qa_count, passage_length)
                     p3_answer_marker_emb = self._prev_ans_marker(p3_answer_marker)
                     repeated_embedded_passage = torch.cat([repeated_embedded_passage, p3_answer_marker_emb], dim=-1)
