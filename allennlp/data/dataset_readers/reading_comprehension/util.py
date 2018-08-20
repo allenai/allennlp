@@ -7,7 +7,8 @@ import logging
 import string
 from typing import Any, Dict, List, Tuple
 
-from allennlp.data.fields import Field, TextField, IndexField, MetadataField, LabelField, ListField, SequenceLabelField
+from allennlp.data.fields import Field, TextField, IndexField, \
+    MetadataField, LabelField, ListField, SequenceLabelField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.tokenizers import Token
@@ -188,12 +189,9 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     passage_field = TextField(passage_tokens, token_indexers)
     fields['passage'] = passage_field
     fields['question'] = TextField(question_tokens, token_indexers)
-    metadata = {
-        'original_passage': passage_text,
-        'token_offsets': passage_offsets,
-        'question_tokens': [token.text for token in question_tokens],
-        'passage_tokens': [token.text for token in passage_tokens],
-    }
+    metadata = {'original_passage': passage_text, 'token_offsets': passage_offsets,
+                'question_tokens': [token.text for token in question_tokens],
+                'passage_tokens': [token.text for token in passage_tokens], }
     if answer_texts:
         metadata['answer_texts'] = answer_texts
 
@@ -258,7 +256,7 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
     followup_list : ``List[int]``
         List of the continuation bit for each question answer pairs.
     num_context_answers : ``int``, optional
-        How many answers to encode into the passage. 
+        How many answers to encode into the passage.
     additional_metadata : ``Dict[str, Any]``, optional
         The constructed ``metadata`` field will by default contain ``original_passage``,
         ``token_offsets``, ``question_tokens``, ``passage_tokens``, and ``answer_texts`` keys.  If
@@ -298,13 +296,15 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
     if token_span_lists:
         span_start_list = []
         span_end_list = []
+        p1_span_start, p1_span_end, p2_span_start = None, None, None
+        p2_span_end, p3_span_start, p3_span_end = None, None, None
         # Looping each <<answers>>.
         for question_index, doc_qs_spans in enumerate(token_span_lists):
             span_start, span_end = doc_qs_spans[-1]  # Last one is the original answer
             span_start_list.append(IndexField(span_start, passage_field))
             span_end_list.append(IndexField(span_end, passage_field))
-            prev_answer_marker_lists = [[], ["O"] * len(passage_tokens),
-                                ["O"] * len(passage_tokens), ["O"] * len(passage_tokens)]
+            prev_answer_marker_lists = [[], ["O"] * len(passage_tokens), ["O"] * len(passage_tokens),
+                                        ["O"] * len(passage_tokens)]
             if question_index > 0 and num_context_answers > 0:
                 mark_tag(p1_span_start, p1_span_end, prev_answer_marker_lists, 1)
                 if question_index > 1 and num_context_answers > 1:
@@ -318,14 +318,17 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
             p1_span_start = span_start
             p1_span_end = span_end
             if num_context_answers > 2:
-                p3_answer_marker_list.append(
-                    SequenceLabelField(prev_answer_marker_lists[3], passage_field, label_namespace="answer_tags"))
+                p3_answer_marker_list.append(SequenceLabelField(prev_answer_marker_lists[3],
+                                                                passage_field,
+                                                                label_namespace="answer_tags"))
             if num_context_answers > 1:
-                p2_answer_marker_list.append(
-                    SequenceLabelField(prev_answer_marker_lists[2], passage_field, label_namespace="answer_tags"))
+                p2_answer_marker_list.append(SequenceLabelField(prev_answer_marker_lists[2],
+                                                                passage_field,
+                                                                label_namespace="answer_tags"))
             if num_context_answers > 0:
-                p1_answer_marker_list.append(
-                    SequenceLabelField(prev_answer_marker_lists[1], passage_field, label_namespace="answer_tags"))
+                p1_answer_marker_list.append(SequenceLabelField(prev_answer_marker_lists[1],
+                                                                passage_field,
+                                                                label_namespace="answer_tags"))
         fields['span_start'] = ListField(span_start_list)
         fields['span_end'] = ListField(span_end_list)
         if num_context_answers > 0:
