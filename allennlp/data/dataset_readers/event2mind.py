@@ -92,8 +92,45 @@ class Event2MindDatasetReader(DatasetReader):
                         for oreact in oreacts:
                             yield self.text_to_instance(source_sequence, xintent, xreact, oreact)
 
+    """
+    See https://github.com/maartensap/event2mind-internal/blob/master/code/modeling/utils/preprocess.py#L80.
+    """
+    def _preprocess_target_string(self, string: str) -> str:
+       word_tokens = self._target_tokenizer.tokenize(string.lower())
+       words = [token.text for token in word_tokens]
+       if "person y" in string.lower():
+          #tokenize the string, reformat PersonY if mentioned for consistency
+          ws = []
+          skip = False
+          for i in range(0, len(words)-1):
+             # TODO(brendanr): Why not handle person x too?
+             if words[i] == "person" and words[i+1] == "y":
+                ws.append("persony")
+                skip = True
+             elif skip:
+                skip = False
+             else:
+                ws.append(words[i])
+          if not skip:
+             ws.append(words[-1])
+          words = ws
+       # get rid of "to" or "to be" prepended to annotations
+       retval = []
+       first = 0
+       for word in words:
+          first += 1
+          if word == "to" and first == 1:
+             continue
+          if word == "be" and first < 3:
+             continue
+          retval.append(word)
+       if len(retval) == 0:
+          retval.append("none")
+       return " ".join(retval)
+
     def _build_target_field(self, target_string: str) -> TextField:
-        tokenized_target = self._target_tokenizer.tokenize(target_string)
+        processed = self._preprocess_target_string(target_string)
+        tokenized_target = self._target_tokenizer.tokenize(processed)
         tokenized_target.insert(0, Token(START_SYMBOL))
         tokenized_target.append(Token(END_SYMBOL))
         return TextField(tokenized_target, self._target_token_indexers)
