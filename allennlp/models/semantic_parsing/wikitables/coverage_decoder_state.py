@@ -97,8 +97,8 @@ class CoverageDecoderState(GrammarBasedDecoderState):
             return all([
                     self.batch_indices == other.batch_indices,
                     self.action_history == other.action_history,
-                    util.tensors_equal(self.score, other.score, tolerance=1e-4),
-                    util.tensors_equal(self.rnn_state, other.rnn_state, tolerance=1e-6),
+                    util.tensors_equal(self.score, other.score, tolerance=1e-3),
+                    util.tensors_equal(self.rnn_state, other.rnn_state, tolerance=1e-4),
                     self.grammar_state == other.grammar_state,
                     self.checklist_state == other.checklist_state,
                     self.possible_actions == other.possible_actions,
