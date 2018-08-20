@@ -222,7 +222,7 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
                                             yesno_list: List[int] = None,
                                             followup_list: List[int] = None,
                                             additional_metadata: Dict[str, Any] = None,
-                                            prev_a: int = 0) -> Instance:
+                                            num_context_answers: int = 0) -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
     in a reading comprehension model.
@@ -253,7 +253,7 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
         correct).
     yesno_list : List[int]
     followup_list : List[int]
-    prev_a : int
+    num_context_answers : int
     additional_metadata : ``Dict[str, Any]``, optional
         The constructed ``metadata`` field will by default contain ``original_passage``,
         ``token_offsets``, ``question_tokens``, ``passage_tokens``, and ``answer_texts`` keys.  If
@@ -277,9 +277,11 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
     p3_answer_marker_list = []
 
     def get_tag(i, i_name):
+    # Generate a tag to mark previous answer span in the passage. 
       return "<{0:d}_{1:s}>".format(i, i_name)
 
     def mark_tag(s_start, s_end, tags, p_count):
+    # Modify "tags" to mark previous answer span. 
       if s_start == s_end:
         tags[p_count][s_start] = get_tag(p_count, "")
       else:
@@ -324,15 +326,19 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
           fields['p2_answer_marker'] = ListField(p2_answer_marker_list)
           if prev_a > 2:
             fields['p3_answer_marker'] = ListField(p3_answer_marker_list)
-      fields['yesno_list'] = ListField([LabelField(yesno, label_namespace="yesno_labels") for yesno in yesno_list])
-      fields['followup_list'] = ListField([LabelField(followup, label_namespace="followup_labels") for followup in followup_list])
+      fields['yesno_list'] = ListField(\
+                                       [LabelField(yesno, label_namespace="yesno_labels") for yesno in yesno_list])
+      fields['followup_list'] = ListField([LabelField(followup, label_namespace="followup_labels") \
+                                                                      for followup in followup_list])
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)
 
 def handle_cannot(refs):
     """
-    Process a list of reference answers. If equal or more than half of the answers are "CANNOTANSWER", take it as gold. Otherwise, return answers that are not "CANNOTANSWER". 
+    Process a list of reference answers. 
+    If equal or more than half of the reference answers are "CANNOTANSWER", take it as gold. 
+    Otherwise, return answers that are not "CANNOTANSWER". 
     """
     num_cannot = 0
     num_spans = 0

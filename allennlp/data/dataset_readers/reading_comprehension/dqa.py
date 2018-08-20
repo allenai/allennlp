@@ -34,18 +34,18 @@ class DQAReader(DatasetReader):
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         We similarly use this for both the question and the passage.  See :class:`TokenIndexer`.
         Default is ``{"tokens": SingleIdTokenIndexer()}``.
-    prev_a : Integer, optional 
-        How many previous questions to consider.
+    num_context_answers : Integer, optional 
+        How many previous question answers to consider in a context.
     """
     def __init__(self,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False,
-                 prev_a: int = 0) -> None:
+                 num_context_answers: int = 0) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
-        self._prev_a = prev_a
+        self._num_context_answers = num_context_answers
 
     @overrides
     def _read(self, file_path: str):
@@ -69,8 +69,8 @@ class DQAReader(DatasetReader):
                 metadata['answer_texts_list'] = answer_texts_list
                 span_starts_list = [[answer['answer_start'] for answer in qa['answers']] for qa in qas]
                 span_ends_list = []
-                for st_list, an_list in zip(span_starts_list, answer_texts_list):
-                  span_ends = [start + len(answer) for start, answer in zip(st_list, an_list)]
+                for answer_starts, an_list in zip(span_starts_list, answer_texts_list):
+                  span_ends = [start + len(answer) for start, answer in zip(answer_starts, an_list)]
                   span_ends_list.append(span_ends)
                 yesno_list = [str(qa['yesno']) for qa in qas]
                 followup_list = [str(qa['followup']) for qa in qas]
@@ -124,4 +124,4 @@ class DQAReader(DatasetReader):
                                                             yesno_list,
                                                             followup_list,
                                                             additional_metadata,
-                                                            self._prev_a)
+                                                            self._num_context_answers)

@@ -13,8 +13,7 @@ class DQAPredictor(Predictor):
     def predict(self, jsonline: str) -> JsonDict:
         """
         Make a machine comprehension prediction on the supplied input.
-        See https://rajpurkar.github.io/SQuAD-explorer/ for more information about the machine comprehension task.
-
+        
         Parameters
         ----------
         question : ``str``
