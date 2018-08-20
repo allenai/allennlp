@@ -1,0 +1,10 @@
+The DET
+dog NN
+ate V
+the DET
+apple NN
+
+Everybody NN
+read V
+that DET
+book NN

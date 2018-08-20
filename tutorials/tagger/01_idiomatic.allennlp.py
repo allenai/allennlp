@@ -44,7 +44,7 @@ class PosDatasetReader(DatasetReader):
 
 
     def _read(self, file_path: str) -> Iterator[Instance]:
-        if file_path == 'training':
+        if 'train' in file_path:
             data = training_data
         else:
             raise ValueError(f"unknown path {file_path}")
@@ -65,12 +65,14 @@ class LstmTagger(Model):
     def __init__(self,
                  word_embeddings: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
-                 hidden2tag: FeedForward,
                  vocab: Vocabulary) -> None:
         super().__init__(vocab)
         self.word_embeddings = word_embeddings
         self.encoder = encoder
-        self.hidden2tag = hidden2tag
+        self.hidden2tag = FeedForward(input_dim=encoder.get_output_dim(),
+                                      num_layers=1,
+                                      hidden_dims=vocab.get_vocab_size('labels'),
+                                      activations=lambda x: x)
 
     def forward(self, sentence: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
         embeddings = self.word_embeddings(sentence)
@@ -88,12 +90,8 @@ token_embedding = Embedding(num_embeddings=vocab.get_vocab_size('tokens'),
                             embedding_dim=EMBEDDING_DIM)
 word_embeddings = BasicTextFieldEmbedder({"tokens": token_embedding})
 lstm = PytorchSeq2SeqWrapper(torch.nn.LSTM(EMBEDDING_DIM, HIDDEN_DIM, batch_first=True))
-hidden2tag = FeedForward(input_dim=HIDDEN_DIM,
-                         num_layers=1,
-                         hidden_dims=vocab.get_vocab_size('labels'),
-                         activations=lambda x: x)
 
-model = LstmTagger(word_embeddings, lstm, hidden2tag, vocab)
+model = LstmTagger(word_embeddings, lstm, vocab)
 optimizer = optim.SGD(model.parameters(), lr=0.1)
 
 iterator = BasicIterator(batch_size=2)

@@ -1,6 +1,7 @@
 # from https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html
 # pylint: disable=invalid-name,arguments-differ
 from typing import Iterator, List
+import itertools
 import shutil
 import tempfile
 
@@ -23,16 +24,8 @@ from allennlp.training.trainer import Trainer
 
 torch.manual_seed(1)
 
-training_data = [
-        ("The dog ate the apple".split(), ["DET", "NN", "V", "DET", "NN"]),
-        ("Everybody read that book".split(), ["NN", "V", "DET", "NN"])
-]
-
 @DatasetReader.register('pos-tutorial')
 class PosDatasetReader(DatasetReader):
-    """
-    Normally you'd read data from a file, but here we're just using a tiny in-memory dataset
-    """
     def __init__(self) -> None:
         super().__init__(lazy=False)
         self.token_indexers = {"tokens": SingleIdTokenIndexer()}
@@ -44,15 +37,12 @@ class PosDatasetReader(DatasetReader):
         return Instance(fields={"sentence": sentence_field,
                                 "labels": label_field})
 
-
     def _read(self, file_path: str) -> Iterator[Instance]:
-        if 'train' in file_path:
-            data = training_data
-        else:
-            raise ValueError(f"unknown path {file_path}")
-
-        for sentence, tags in data:
-            yield self.text_to_instance(sentence, tags)
+        with open(file_path) as f:
+            for separator, group in itertools.groupby(f, lambda line: line.strip() == ''):
+                if not separator:
+                    sentence, tags = zip(*[line.split() for line in group])
+                    yield self.text_to_instance(sentence, tags)
 
 
 @Model.register('lstm-tagger')
@@ -81,47 +71,10 @@ class LstmTagger(Model):
 
         return output
 
-# These will usually be more like 32 or 64 dimensional.
-# We will keep them small, so we can see how the weights change as we train.
-EMBEDDING_DIM = 6
-HIDDEN_DIM = 6
-
-params = Params({
-    "train_dataset": 'training',
-    "dataset_reader": {
-        "type": "pos-tutorial"
-    },
-    "model": {
-        "type": "lstm-tagger",
-        "word_embeddings": {
-            "token_embedders": {
-                "tokens": {
-                    "type": "embedding",
-                    "embedding_dim": EMBEDDING_DIM
-                }
-            }
-        },
-        "encoder": {
-            "type": "lstm",
-            "input_size": EMBEDDING_DIM,
-            "hidden_size": HIDDEN_DIM
-        }
-    },
-    "iterator": {
-        "type": "basic",
-        "batch_size": 2
-    },
-    "trainer": {
-        "num_epochs": 1000,
-        "optimizer": {
-            "type": "sgd",
-            "lr": 0.1
-        },
-    }
-})
+params = Params.from_file('tutorials/tagger/experiment.jsonnet')
 
 reader = DatasetReader.from_params(params.pop("dataset_reader"))
-instances = reader.read('training')
+instances = reader.read(params.pop('train_data_path'))
 vocab = Vocabulary.from_instances(instances)
 
 model = Model.from_params(params.pop('model'), vocab=vocab)
