@@ -7,6 +7,7 @@ and produce datasets in the formats required by specific models.
 """
 
 # pylint: disable=line-too-long
+from allennlp.data.dataset_readers.atis import AtisDatasetReader
 from allennlp.data.dataset_readers.ccgbank import CcgBankDatasetReader
 from allennlp.data.dataset_readers.conll2003 import Conll2003DatasetReader
 from allennlp.data.dataset_readers.ontonotes_ner import OntonotesNamedEntityRecognition

@@ -17,20 +17,12 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
 
         result = predictor.predict_json(inputs)
 
-        heads = result.get("heads")
-        assert heads is not None
-        assert isinstance(heads, list)
-        assert all(isinstance(x, int) for x in heads)
-        head_tags = result.get("head_tags")
-        assert head_tags is not None
-        assert isinstance(head_tags, list)
-        assert all(isinstance(x, int) for x in head_tags)
-
+        words = result.get("words")
         predicted_heads = result.get("predicted_heads")
-        assert len(predicted_heads) == len(heads) - 1
+        assert len(predicted_heads) == len(words)
 
         predicted_dependencies = result.get("predicted_dependencies")
-        assert len(predicted_dependencies) == len(head_tags) - 1
+        assert len(predicted_dependencies) == len(words)
         assert isinstance(predicted_dependencies, list)
         assert all(isinstance(x, str) for x in predicted_dependencies)
 
@@ -43,7 +35,7 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
         hierplane_tree.pop("linkToPosition")
         # pylint: disable=line-too-long,bad-continuation
         assert result.get("hierplane_tree") == {'text': 'Please could you parse this sentence ?',
-                                                'root': {'word': 'Please', 'nodeType': 'punct', 'attributes': ['UH'], 'link': 'punct', 'spans': [{'start': 0, 'end': 7}],
+                                                'root': {'word': 'Please', 'nodeType': 'det', 'attributes': ['UH'], 'link': 'det', 'spans': [{'start': 0, 'end': 7}],
                                                     'children': [
                                                             {'word': 'could', 'nodeType': 'nummod', 'attributes': ['MD'], 'link': 'nummod', 'spans': [{'start': 7, 'end': 13}]},
                                                             {'word': 'you', 'nodeType': 'nummod', 'attributes': ['PRP'], 'link': 'nummod', 'spans': [{'start': 13, 'end': 17}]},
@@ -73,16 +65,7 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
         assert len(results) == 2
 
         for result in results:
-            sequence_length = sum(result.get("mask")) - 1
-            heads = result.get("heads")
-            assert heads is not None
-            assert isinstance(heads, list)
-            assert all(isinstance(x, int) for x in heads)
-            head_tags = result.get("head_tags")
-            assert head_tags is not None
-            assert isinstance(head_tags, list)
-            assert all(isinstance(x, int) for x in head_tags)
-
+            sequence_length = len(result.get("words"))
             predicted_heads = result.get("predicted_heads")
             assert len(predicted_heads) == sequence_length
 
