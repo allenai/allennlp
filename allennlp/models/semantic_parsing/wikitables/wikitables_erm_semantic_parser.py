@@ -281,7 +281,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         if not self.training:
             initial_state.debug_info = [[] for _ in range(batch_size)]
 
-        outputs = self._decoder_trainer.decode(initial_state,
+        outputs = self._decoder_trainer.decode(initial_state,  # type: ignore
                                                self._decoder_step,
                                                partial(self._get_state_cost, world))
         best_final_states = outputs['best_final_states']

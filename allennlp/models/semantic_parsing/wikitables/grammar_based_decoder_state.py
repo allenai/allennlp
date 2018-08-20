@@ -1,16 +1,14 @@
-from typing import Any, Dict, List, Tuple, TypeVar
+from typing import Any, Dict, List, Sequence, Tuple
 
 import torch
 
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.nn.decoding import DecoderState, GrammarState, RnnState
 
-T = TypeVar('T', bound='GrammarBasedDecoderState')
-
 # This syntax is pretty weird and ugly, but it's necessary to make mypy happy with the API that
 # we've defined.  We're using generics to make the type of `combine_states` come out right.  See
 # the note in `nn.decoding.decoder_state.py` for a little more detail.
-class GrammarBasedDecoderState(DecoderState[T]):
+class GrammarBasedDecoderState(DecoderState['GrammarBasedDecoderState']):
     """
     A generic DecoderState that's suitable for most models that do grammar-based decoding.  We keep
     around a `group` of states, and each element in the group has a few things: a batch index, an
@@ -75,7 +73,7 @@ class GrammarBasedDecoderState(DecoderState[T]):
                                    new_rnn_state: RnnState,
                                    considered_actions: List[int] = None,
                                    action_probabilities: List[float] = None,
-                                   attention_weights: torch.Tensor = None) -> T:
+                                   attention_weights: torch.Tensor = None) -> 'GrammarBasedDecoderState':
         batch_index = self.batch_indices[group_index]
         new_action_history = self.action_history[group_index] + [action]
         production_rule = self.possible_actions[batch_index][action][0]
@@ -90,15 +88,14 @@ class GrammarBasedDecoderState(DecoderState[T]):
             new_debug_info = [self.debug_info[group_index] + [debug_info]]
         else:
             new_debug_info = None
-        new_state = GrammarBasedDecoderState(batch_indices=[batch_index],
-                                             action_history=[new_action_history],
-                                             score=[new_score],
-                                             rnn_state=[new_rnn_state],
-                                             grammar_state=[new_grammar_state],
-                                             possible_actions=self.possible_actions,
-                                             extras=self.extras,
-                                             debug_info=new_debug_info)
-        return new_state
+        return GrammarBasedDecoderState(batch_indices=[batch_index],
+                                        action_history=[new_action_history],
+                                        score=[new_score],
+                                        rnn_state=[new_rnn_state],
+                                        grammar_state=[new_grammar_state],
+                                        possible_actions=self.possible_actions,
+                                        extras=self.extras,
+                                        debug_info=new_debug_info)
 
     def print_action_history(self, group_index: int = None) -> None:
         scores = self.score if group_index is None else [self.score[group_index]]
@@ -120,7 +117,7 @@ class GrammarBasedDecoderState(DecoderState[T]):
         return self.grammar_state[0].is_finished()
 
     @classmethod
-    def combine_states(cls, states: List[T]) -> T:
+    def combine_states(cls, states: Sequence['GrammarBasedDecoderState']) -> 'GrammarBasedDecoderState':
         batch_indices = [batch_index for state in states for batch_index in state.batch_indices]
         action_histories = [action_history for state in states for action_history in state.action_history]
         scores = [score for state in states for score in state.score]

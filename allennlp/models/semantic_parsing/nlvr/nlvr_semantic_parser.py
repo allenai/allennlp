@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict
+from typing import Dict, List, Tuple
 
 from overrides import overrides
 
@@ -180,7 +180,7 @@ class NlvrSemanticParser(Model):
         action_mapping = {}
         for i, action in enumerate(possible_actions):
             action_mapping[action[0]] = i
-        translated_valid_actions = {}
+        translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
         for key, action_strings in valid_actions.items():
             translated_valid_actions[key] = {}
             # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid

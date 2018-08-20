@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Sequence
 
 import torch
 
@@ -8,10 +8,7 @@ from allennlp.nn.decoding import ChecklistState, GrammarState, RnnState
 from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
 
 
-# This syntax is pretty weird and ugly, but it's necessary to make mypy happy with the API that
-# we've defined.  We're using generics to make the type of `combine_states` come out right.  See
-# the note in `nn.decoding.decoder_state.py` for a little more detail.
-class CoverageDecoderState(GrammarBasedDecoderState['CoverageDecoderState']):
+class CoverageDecoderState(GrammarBasedDecoderState):
     """
     This ``DecoderState`` adds one field to a ``GrammarBasedDecoderState``: a ``ChecklistState``
     that is used to specify a set of actions that should be taken during decoder, and keep track of
@@ -82,7 +79,7 @@ class CoverageDecoderState(GrammarBasedDecoderState['CoverageDecoderState']):
                                     debug_info=super_class_state.debug_info)
 
     @classmethod
-    def combine_states(cls, states: List['CoverageDecoderState']) -> 'CoverageDecoderState':
+    def combine_states(cls, states: Sequence['CoverageDecoderState']) -> 'CoverageDecoderState':  # type: ignore
         super_class_state = super().combine_states(states)
         checklist_states = [checklist_state for state in states for checklist_state in state.checklist_state]
         return CoverageDecoderState(batch_indices=super_class_state.batch_indices,

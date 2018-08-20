@@ -72,7 +72,7 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
                                    "mixture feedforward output dim", "dimension for scalar value")
 
     @overrides
-    def _compute_action_probabilities(self,
+    def _compute_action_probabilities(self,  # type: ignore
                                       state: CoverageDecoderState,
                                       hidden_state: torch.Tensor,
                                       attention_weights: torch.Tensor,

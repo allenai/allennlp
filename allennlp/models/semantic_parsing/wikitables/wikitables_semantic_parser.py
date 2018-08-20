@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Mapping, Sequence, Tuple
 
 from overrides import overrides
 import torch
@@ -606,7 +606,7 @@ class WikiTablesSemanticParser(Model):
 
     def _compute_validation_outputs(self,
                                     actions: List[List[ProductionRuleArray]],
-                                    best_final_states: Dict[int, List[GrammarBasedDecoderState]],
+                                    best_final_states: Mapping[int, Sequence[GrammarBasedDecoderState]],
                                     world: List[WikiTablesWorld],
                                     example_lisp_string: List[str],
                                     metadata: List[Dict[str, Any]],

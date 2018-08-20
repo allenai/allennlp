@@ -238,7 +238,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                              checklist_state=initial_checklist_states)
 
         agenda_data = [agenda_[:, 0].cpu().data for agenda_ in agenda_list]
-        outputs = self._decoder_trainer.decode(initial_state,
+        outputs = self._decoder_trainer.decode(initial_state,  # type: ignore
                                                self._decoder_step,
                                                partial(self._get_state_cost, worlds))
         if identifier is not None:
@@ -399,7 +399,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                             for history in state.action_history]
         agenda_sequences = []
         all_agenda_indices = []
-        for agenda, checklist_target in zip(state.terminal_actions, state.checklist_target):
+        # TODO(mattg,pradeep): This is broken after the action refactoring and needs to be either
+        # removed or updated.  Matt wasn't sure how to update it, so he just left it like this.
+        for agenda, checklist_target in zip(state.terminal_actions, state.checklist_target):  # type: ignore
             agenda_indices = []
             for action, is_wanted in zip(agenda, checklist_target):
                 action_int = int(action.detach().cpu().numpy())

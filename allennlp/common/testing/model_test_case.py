@@ -1,5 +1,5 @@
 import copy
-from typing import Set
+from typing import Any, Dict, Set, Union
 
 from numpy.testing import assert_allclose
 import torch
@@ -142,7 +142,7 @@ class ModelTestCase(AllenNlpTestCase):
 
     @staticmethod
     def check_model_computes_gradients_correctly(model: Model,
-                                                 model_batch: Batch,
+                                                 model_batch: Dict[str, Union[Any, Dict[str, Any]]],
                                                  params_to_ignore: Set[str] = None):
         print("Checking gradients")
         model.zero_grad()

@@ -58,7 +58,7 @@ class CoverageTransitionFunction(BasicTransitionFunction):
         self._checklist_multiplier = Parameter(torch.FloatTensor([1.0]))
 
     @overrides
-    def _compute_action_probabilities(self,
+    def _compute_action_probabilities(self,  # type: ignore
                                       state: CoverageDecoderState,
                                       hidden_state: torch.Tensor,
                                       attention_weights: torch.Tensor,
