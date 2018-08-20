@@ -288,9 +288,10 @@ class BiaffineDependencyParser(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
 
-        head_tags = output_dict["head_tags"].cpu().detach().numpy()
-        heads = output_dict["heads"].cpu().detach().numpy()
-        lengths = get_lengths_from_binary_sequence_mask(output_dict["mask"])
+        head_tags = output_dict.pop("head_tags").cpu().detach().numpy()
+        heads = output_dict.pop("heads").cpu().detach().numpy()
+        mask = output_dict.pop("mask")
+        lengths = get_lengths_from_binary_sequence_mask(mask)
         head_tag_labels = []
         head_indices = []
         for instance_heads, instance_tags, length in zip(heads, head_tags, lengths):

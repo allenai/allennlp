@@ -30,8 +30,7 @@ class BiaffineDependencyParserTest(ModelTestCase):
         output_dict = self.model(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
 
-        assert set(decode_output_dict.keys()) == set(['heads', 'head_tags', 'arc_loss',
-                                                      'tag_loss', 'loss', 'mask',
+        assert set(decode_output_dict.keys()) == set(['arc_loss', 'tag_loss', 'loss',
                                                       'predicted_dependencies', 'predicted_heads',
                                                       'words', 'pos'])
 

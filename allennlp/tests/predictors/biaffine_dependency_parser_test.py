@@ -17,20 +17,12 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
 
         result = predictor.predict_json(inputs)
 
-        heads = result.get("heads")
-        assert heads is not None
-        assert isinstance(heads, list)
-        assert all(isinstance(x, int) for x in heads)
-        head_tags = result.get("head_tags")
-        assert head_tags is not None
-        assert isinstance(head_tags, list)
-        assert all(isinstance(x, int) for x in head_tags)
-
+        words = result.get("words")
         predicted_heads = result.get("predicted_heads")
-        assert len(predicted_heads) == len(heads) - 1
+        assert len(predicted_heads) == len(words)
 
         predicted_dependencies = result.get("predicted_dependencies")
-        assert len(predicted_dependencies) == len(head_tags) - 1
+        assert len(predicted_dependencies) == len(words)
         assert isinstance(predicted_dependencies, list)
         assert all(isinstance(x, str) for x in predicted_dependencies)
 
@@ -73,16 +65,7 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
         assert len(results) == 2
 
         for result in results:
-            sequence_length = sum(result.get("mask")) - 1
-            heads = result.get("heads")
-            assert heads is not None
-            assert isinstance(heads, list)
-            assert all(isinstance(x, int) for x in heads)
-            head_tags = result.get("head_tags")
-            assert head_tags is not None
-            assert isinstance(head_tags, list)
-            assert all(isinstance(x, int) for x in head_tags)
-
+            sequence_length = len(result.get("words"))
             predicted_heads = result.get("predicted_heads")
             assert len(predicted_heads) == sequence_length
 
