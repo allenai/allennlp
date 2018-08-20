@@ -1,7 +1,7 @@
 allennlp.data.dataset_readers.dqa
 ========================================
 
-.. automodule:: allennlp.data.dataset_readers.dqa
+.. automodule:: allennlp.data.dataset_readers.reading_comprehension.dqa
    :members:
    :undoc-members:
    :show-inheritance:

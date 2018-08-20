@@ -273,8 +273,7 @@ def make_reading_comprehension_instance_dqa(question_list_tokens: List[List[Toke
     metadata = {'original_passage': passage_text,
                 'token_offsets': passage_offsets,
                 'question_tokens': [[token.text for token in q] for q in question_list_tokens],
-                'passage_tokens': [token.text for token in passage_tokens],
-                }
+                'passage_tokens': [token.text for token in passage_tokens],}
     p1_answer_marker_list = []
     p2_answer_marker_list = []
     p3_answer_marker_list = []
