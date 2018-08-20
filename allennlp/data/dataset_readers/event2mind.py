@@ -95,8 +95,9 @@ class Event2MindDatasetReader(DatasetReader):
     """
     See https://github.com/maartensap/event2mind-internal/blob/master/code/modeling/utils/preprocess.py#L80.
     """
-    def _preprocess_target_string(self, string: str) -> str:
-       word_tokens = self._target_tokenizer.tokenize(string.lower())
+    @staticmethod
+    def _preprocess_string(tokenizer, string: str) -> str:
+       word_tokens = tokenizer.tokenize(string.lower())
        words = [token.text for token in word_tokens]
        if "person y" in string.lower():
           #tokenize the string, reformat PersonY if mentioned for consistency
@@ -129,7 +130,7 @@ class Event2MindDatasetReader(DatasetReader):
        return " ".join(retval)
 
     def _build_target_field(self, target_string: str) -> TextField:
-        processed = self._preprocess_target_string(target_string)
+        processed = self._preprocess_string(self._target_tokenizer, target_string)
         tokenized_target = self._target_tokenizer.tokenize(processed)
         tokenized_target.insert(0, Token(START_SYMBOL))
         tokenized_target.append(Token(END_SYMBOL))
@@ -143,7 +144,8 @@ class Event2MindDatasetReader(DatasetReader):
             xreact_string: str = None,
             oreact_string: str = None) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
-        tokenized_source = self._source_tokenizer.tokenize(source_string)
+        processed = self._preprocess_string(self._source_tokenizer, source_string)
+        tokenized_source = self._source_tokenizer.tokenize(processed)
         if self._source_add_start_token:
             tokenized_source.insert(0, Token(START_SYMBOL))
         tokenized_source.append(Token(END_SYMBOL))

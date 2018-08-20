@@ -26,22 +26,22 @@ class TestEvent2MindDatasetReader:
 
         assert len(instances) == 12
         instance = instances[0]
-        assert get_text("source_tokens",instance) == ["@start@", "It", "is", "PersonX", "'s",
+        assert get_text("source_tokens",instance) == ["@start@", "it", "is", "personx", "'s",
                                                       "favorite", "animal", "@end@"]
         assert get_text("xintent_tokens",instance) == ["@start@", "none", "@end@"]
         assert get_text("xreact_tokens",instance) == ["@start@", "excited", "to", "see", "it", "@end@"]
         assert get_text("oreact_tokens",instance) == ["@start@", "none", "@end@"]
 
         instance = instances[3]
-        assert get_text("source_tokens",instance) == ["@start@", "PersonX", "drives",
-                                                      "PersonY", "'s", "truck", "@end@"]
+        assert get_text("source_tokens",instance) == ["@start@", "personx", "drives",
+                                                      "persony", "'s", "truck", "@end@"]
         assert get_text("xintent_tokens",instance) == ["@start@", "move", "@end@"]
         assert get_text("xreact_tokens",instance) == ["@start@", "grateful", "@end@"]
         assert get_text("oreact_tokens",instance) == ["@start@", "charitable", "@end@"]
 
         instance = instances[4]
-        assert get_text("source_tokens",instance) == ["@start@", "PersonX", "drives",
-                                                      "PersonY", "'s", "truck", "@end@"]
+        assert get_text("source_tokens",instance) == ["@start@", "personx", "drives",
+                                                      "persony", "'s", "truck", "@end@"]
         assert get_text("xintent_tokens",instance) == ["@start@", "move", "@end@"]
         assert get_text("xreact_tokens",instance) == ["@start@", "grateful", "@end@"]
         # Interestingly, taking all combinations doesn't make much sense if the original source is
@@ -49,14 +49,14 @@ class TestEvent2MindDatasetReader:
         assert get_text("oreact_tokens",instance) == ["@start@", "enraged", "@end@"]
 
         instance = instances[10]
-        assert get_text("source_tokens",instance) == ["@start@", "PersonX", "drives",
-                                                      "PersonY", "'s", "truck", "@end@"]
+        assert get_text("source_tokens",instance) == ["@start@", "personx", "drives",
+                                                      "persony", "'s", "truck", "@end@"]
         assert get_text("xintent_tokens",instance) == ["@start@", "steal", "@end@"]
         assert get_text("xreact_tokens",instance) == ["@start@", "guilty", "@end@"]
         assert get_text("oreact_tokens",instance) == ["@start@", "enraged", "@end@"]
 
         instance = instances[11]
-        assert get_text("source_tokens",instance) == ["@start@", "PersonX", "gets", "PersonY",
+        assert get_text("source_tokens",instance) == ["@start@", "personx", "gets", "persony",
                                         "'s", "mother", "@end@"]
         assert get_text("xintent_tokens",instance) == ["@start@", "helpful", "@end@"]
         assert get_text("xreact_tokens",instance) == ["@start@", "useful", "@end@"]
