@@ -16,7 +16,7 @@ allennlp.models.reading_comprehension
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.models.reading_comprehension.dqa
+.. automodule:: allennlp.models.reading_comprehension.dialog_qa
    :members:
    :undoc-members:
    :show-inheritance:

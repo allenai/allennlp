@@ -70,7 +70,9 @@ class DialogQA(Model):
 
         self._residual_encoder = residual_encoder
         self._prev_ans_marker = torch.nn.Embedding((num_context_answers * 4) + 1, 10)
-        self._question_num_marker = torch.nn.Embedding(12, 10 * num_context_answers)
+
+        if num_context_answers > 0:
+            self._question_num_marker = torch.nn.Embedding(12, 10 * num_context_answers)
 
         self._self_atten = LinearAttention(200, 200, 'x,y,x*y')
 
@@ -132,12 +134,15 @@ class DialogQA(Model):
         passage_lstm_mask = passage_mask if self._mask_lstms else None
 
         if self._num_context_answers > 0:
+            # Encode question turn number inside the dialog into question embedding.
             question_num_ind = torch.Tensor( \
                 list(range(0, max_qa_count)) * batch_size).long().reshape(-1, 1).repeat(1, max_q_len)
             if model_in_cuda:
                 question_num_ind = question_num_ind.cuda()
             question_num_marker_emb = self._question_num_marker(question_num_ind)
             embedded_question = torch.cat([embedded_question, question_num_marker_emb], dim=-1)
+
+            # Encode the answer of the previous answers in passage embedding.
             repeated_embedded_passage = embedded_passage. \
                 unsqueeze(1).repeat(1, max_qa_count, 1, 1).view( \
                 batch_size * max_qa_count, passage_lstm_mask.size()[1], -1)
@@ -235,13 +240,14 @@ class DialogQA(Model):
         span_yesno_logits = self._span_yesno_predictor(end_rep).squeeze(-1)
         span_followup_logits = self._span_followup_predictor(end_rep).squeeze(-1)
 
-        span_start_logits = util.replace_masked_values(span_start_logits, passage_mask,
-                                                       -1e7)  # batch_size * maxqa_len_pair, max_document_len
+        span_start_logits = util.replace_masked_values(span_start_logits, passage_mask, -1e7)
+        # batch_size * maxqa_len_pair, max_document_len
         span_end_logits = util.replace_masked_values(span_end_logits, passage_mask, -1e7)
 
+        best_span = self._get_best_span_yesno_followup(span_start_logits, span_end_logits,
+                                                       span_yesno_logits, span_followup_logits)
+
         output_dict: Dict[str, Any] = {}
-        best_span = self._get_best_span(span_start_logits, span_end_logits,
-                                        span_yesno_logits, span_followup_logits)
 
         # Compute the loss.
         if span_start is not None:
@@ -283,61 +289,63 @@ class DialogQA(Model):
             _followup = span_followup_logits.view(-1).index_select(0, predicted_end).view(-1, 3)
             self._span_yesno_accuracy(_yesno, yesno_list.view(-1), mask=qa_mask)
             self._span_followup_accuracy(_followup, followup_list.view(-1), mask=qa_mask)
-            output_dict['best_span_str'] = []
-            output_dict['qid'] = []
-            output_dict['aid'] = []
-            output_dict['followup'] = []
-            output_dict['yesno'] = []
-            # Eval
-            best_span_cpu = best_span.detach().cpu().numpy()
-            for i in range(batch_size):
-                passage_str = metadata[i]['original_passage']
-                offsets = metadata[i]['token_offsets']
-                f1_score = 0.0
-                per_dialog_best_span_list = []
-                per_dialog_yesno_list = []
-                per_dialog_followup_list = []
-                per_dialog_query_id_list = []
-                per_dialog_article_id_list = []
-                for currcount, (iid, answer_texts) in enumerate(
-                        zip(metadata[i]["instance_id"], metadata[i]["answer_texts_list"])):
-                    (aid, _) = iid.split("_q#")
-                    predicted_span = tuple(best_span_cpu[i * max_qa_count + currcount])
+            output_dict["loss"] = loss
 
-                    start_offset = offsets[predicted_span[0]][0]
-                    end_offset = offsets[predicted_span[1]][1]
+        # Compute F1 and preparing the output dictionary.
+        output_dict['best_span_str'] = []
+        output_dict['qid'] = []
+        output_dict['aid'] = []
+        output_dict['followup'] = []
+        output_dict['yesno'] = []
+        best_span_cpu = best_span.detach().cpu().numpy()
+        for i in range(batch_size):
+            passage_str = metadata[i]['original_passage']
+            offsets = metadata[i]['token_offsets']
+            f1_score = 0.0
+            per_dialog_best_span_list = []
+            per_dialog_yesno_list = []
+            per_dialog_followup_list = []
+            per_dialog_query_id_list = []
+            per_dialog_article_id_list = []
+            for per_dialog_query_index, (iid, answer_texts) in enumerate(
+                    zip(metadata[i]["instance_id"], metadata[i]["answer_texts_list"])):
+                (aid, _) = iid.split("_q#")
+                predicted_span = tuple(best_span_cpu[i * max_qa_count + per_dialog_query_index])
 
-                    yesno_pred = predicted_span[2]
-                    followup_pred = predicted_span[3]
-                    per_dialog_yesno_list.append(yesno_pred)
-                    per_dialog_followup_list.append(followup_pred)
-                    per_dialog_query_id_list.append(iid)
-                    per_dialog_article_id_list.append(aid)
+                start_offset = offsets[predicted_span[0]][0]
+                end_offset = offsets[predicted_span[1]][1]
 
-                    best_span_string = passage_str[start_offset:end_offset]
-                    per_dialog_best_span_list.append(best_span_string)
-                    if answer_texts:
-                        if len(answer_texts) > 1:
-                            t_f1 = []
-                            for answer_index in range(len(answer_texts)):
-                                idxes = list(range(len(answer_texts)))
-                                idxes.pop(answer_index)
-                                refs = [answer_texts[z] for z in idxes]
-                                t_f1.append(squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
-                                                                                     best_span_string,
-                                                                                     refs))
-                            f1_score = 1.0 * sum(t_f1) / len(t_f1)
-                        else:
-                            f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
-                                                                                best_span_string,
-                                                                                answer_texts)
-                    self._official_f1(100 * f1_score)
-                output_dict['qid'].append(per_dialog_query_id_list)
-                output_dict['aid'].append(per_dialog_article_id_list)
-                output_dict['best_span_str'].append(per_dialog_best_span_list)
-                output_dict['yesno'].append(per_dialog_yesno_list)
-                output_dict['followup'].append(per_dialog_followup_list)
-        output_dict["loss"] = loss
+                yesno_pred = predicted_span[2]
+                followup_pred = predicted_span[3]
+                per_dialog_yesno_list.append(yesno_pred)
+                per_dialog_followup_list.append(followup_pred)
+                per_dialog_query_id_list.append(iid)
+                per_dialog_article_id_list.append(aid)
+
+                best_span_string = passage_str[start_offset:end_offset]
+                per_dialog_best_span_list.append(best_span_string)
+                if answer_texts:
+                    if len(answer_texts) > 1:
+                        t_f1 = []
+                        # Compute F1 over N-1 human references and averages the scores.
+                        for answer_index in range(len(answer_texts)):
+                            idxes = list(range(len(answer_texts)))
+                            idxes.pop(answer_index)
+                            refs = [answer_texts[z] for z in idxes]
+                            t_f1.append(squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
+                                                                                 best_span_string,
+                                                                                 refs))
+                        f1_score = 1.0 * sum(t_f1) / len(t_f1)
+                    else:
+                        f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
+                                                                            best_span_string,
+                                                                            answer_texts)
+                self._official_f1(100 * f1_score)
+            output_dict['qid'].append(per_dialog_query_id_list)
+            output_dict['aid'].append(per_dialog_article_id_list)
+            output_dict['best_span_str'].append(per_dialog_best_span_list)
+            output_dict['yesno'].append(per_dialog_yesno_list)
+            output_dict['followup'].append(per_dialog_followup_list)
         return output_dict
 
     @overrides
@@ -359,10 +367,12 @@ class DialogQA(Model):
                 'f1': self._official_f1.get_metric(reset), }
 
     @staticmethod
-    def _get_best_span(span_start_logits: torch.Tensor,
-                       span_end_logits: torch.Tensor,
-                       span_yesno_logits: torch.Tensor,
-                       span_followup_logits: torch.Tensor) -> torch.Tensor:
+    def _get_best_span_yesno_followup(span_start_logits: torch.Tensor,
+                                      span_end_logits: torch.Tensor,
+                                      span_yesno_logits: torch.Tensor,
+                                      span_followup_logits: torch.Tensor) -> torch.Tensor:
+        # Returns the index of highest-scoring span that is not longer than 30 tokens, as well as
+        # yesno prediction bit and followup prediction bit from the predicted span end token.
         if span_start_logits.dim() != 2 or span_end_logits.dim() != 2:
             raise ValueError("Input shapes must be (batch_size, passage_length)")
         batch_size, passage_length = span_start_logits.size()
