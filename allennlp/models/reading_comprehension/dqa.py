@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @Model.register("dqa")
-class DQA(Model):
+class DialogQA(Model):
     """
     This class implements modified version of BiDAF
     (with self attention and residual layer, from Clark and Gardner ACL 17 paper) model as used in
