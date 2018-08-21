@@ -10,9 +10,6 @@ torch>=0.4.0,<0.5.0
 # Parameter parsing (but not on Windows).
 jsonnet==0.10.0 ; sys.platform != 'win32'
 
-# Type checking for python
-typing
-
 # Adds an @overrides decorator for better documentation and error checking when using subclasses.
 overrides
 
