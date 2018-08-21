@@ -6,6 +6,7 @@ from overrides import overrides
 from allennlp.modules.attention.legacy_attention import Attention
 from allennlp.nn import util
 from allennlp.nn.activations import Activation
+from allennlp.common.params import Params
 
 
 @Attention.register("linear")
@@ -47,14 +48,14 @@ class LinearAttention(Attention):
                  tensor_1_dim: int,
                  tensor_2_dim: int,
                  combination: str = 'x,y',
-                 activation: Activation = None,
+                 activation: Activation = Activation.by_name('linear')(),
                  normalize: bool = True) -> None:
         super().__init__(normalize)
         self._combination = combination
         combined_dim = util.get_combined_dim(combination, [tensor_1_dim, tensor_2_dim])
         self._weight_vector = Parameter(torch.Tensor(combined_dim))
         self._bias = Parameter(torch.Tensor(1))
-        self._activation = activation or Activation.by_name('linear')()
+        self._activation = activation
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -63,8 +64,30 @@ class LinearAttention(Attention):
         self._bias.data.fill_(0)
 
     @overrides
-    def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
-        combined_tensors = util.weighted_tensor_combination(self._combination,
-                                                            [vector.unsqueeze(1), matrix],
-                                                            self._weight_vector)
-        return self._activation(combined_tensors.squeeze(1) + self._bias)
+    def _forward_internal(self,
+                          vector: torch.Tensor,
+                          matrix: torch.Tensor,
+                          matrix_mask: torch.Tensor = None) -> torch.Tensor:
+        # TODO(mattg): Remove the need for this tiling.
+        # https://github.com/allenai/allennlp/pull/1235#issuecomment-391540133
+        tiled_vector = vector.unsqueeze(1).expand(vector.size()[0],
+                                                  matrix.size()[1],
+                                                  vector.size()[1])
+
+        combined_tensors = util.combine_tensors(self._combination, [tiled_vector, matrix])
+        dot_product = torch.matmul(combined_tensors, self._weight_vector)
+        return self._activation(dot_product + self._bias)
+
+    @classmethod
+    def from_params(cls, params: Params) -> 'Attention':
+        tensor_1_dim = params.pop_int("tensor_1_dim")
+        tensor_2_dim = params.pop_int("tensor_2_dim")
+        combination = params.pop("combination", "x,y")
+        activation = Activation.by_name(params.pop("activation", "linear"))()
+        normalize = params.pop_bool('normalize', True)
+        params.assert_empty(cls.__name__)
+        return cls(normalize=normalize,
+                   tensor_1_dim=tensor_1_dim,
+                   tensor_2_dim=tensor_2_dim,
+                   combination=combination,
+                   activation=activation)

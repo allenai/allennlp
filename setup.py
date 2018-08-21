@@ -103,7 +103,6 @@ setup(name='allennlp',
       install_requires=[
           'torch>=0.4.0,<0.5.0',
           "jsonnet==0.10.0 ; sys.platform != 'win32'",
-          'typing',
           'overrides',
           'nltk',
           'spacy>=2.0,<2.1',
