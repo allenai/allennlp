@@ -64,12 +64,7 @@ class LinearAttention(Attention):
 
     @overrides
     def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
-        # TODO(mattg): Remove the need for this tiling.
-        # https://github.com/allenai/allennlp/pull/1235#issuecomment-391540133
-        tiled_vector = vector.unsqueeze(1).expand(vector.size()[0],
-                                                  matrix.size()[1],
-                                                  vector.size()[1])
-
-        combined_tensors = util.combine_tensors(self._combination, [tiled_vector, matrix])
-        dot_product = torch.matmul(combined_tensors, self._weight_vector)
-        return self._activation(dot_product + self._bias)
+        combined_tensors = util.combine_tensors_and_multiply(self._combination,
+                                                             [vector.unsqueeze(1), matrix],
+                                                             self._weight_vector)
+        return self._activation(combined_tensors.squeeze(1) + self._bias)

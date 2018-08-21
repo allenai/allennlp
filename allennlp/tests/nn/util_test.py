@@ -732,3 +732,69 @@ class TestNnUtil(AllenNlpTestCase):
         result = util.add_positional_features(tensor, min_timescale=1.0, max_timescale=1.0e4)
         numpy.testing.assert_almost_equal(result[0].detach().cpu().numpy(), tensor2tensor_result)
         numpy.testing.assert_almost_equal(result[1].detach().cpu().numpy(), tensor2tensor_result)
+
+    def test_combine_tensors_and_multiply(self):
+        tensors = [torch.Tensor([[[2, 3]]]), torch.Tensor([[[5, 5]]])]
+        weight = torch.Tensor([4, 5])
+
+        combination = "x"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[8 + 15]])
+
+        combination = "y"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[20 + 25]])
+
+        combination = "x,y"
+        weight2 = torch.Tensor([4, 5, 4, 5])
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight2),
+                            [[8 + 20 + 15 + 25]])
+
+        combination = "x-y"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[-3 * 4 + -2 * 5]])
+
+        combination = "y-x"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[3 * 4 + 2 * 5]])
+
+        combination = "y+x"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[7 * 4 + 8 * 5]])
+
+        combination = "y*x"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[10 * 4 + 15 * 5]])
+
+        combination = "y/x"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[(5 / 2) * 4 + (5 / 3) * 5]], decimal=4)
+
+        combination = "x/y"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[(2 / 5) * 4 + (3 / 5) * 5]], decimal=4)
+
+        with pytest.raises(ConfigurationError):
+            util.combine_tensors_and_multiply("x+y+y", tensors, weight)
+
+        with pytest.raises(ConfigurationError):
+            util.combine_tensors_and_multiply("x%y", tensors, weight)
+
+    def test_combine_tensors_and_multiply_with_same_batch_size_and_embedding_dim(self):
+        # This test just makes sure we handle some potential edge cases where the lengths of all
+        # dimensions are the same, making sure that the multiplication with the weight vector
+        # happens along the right dimension (it should be the last one).
+        tensors = [torch.Tensor([[[5, 5], [4, 4]], [[2, 3], [1, 1]]])]  # (2, 2, 2)
+        weight = torch.Tensor([4, 5])  # (2,)
+
+        combination = "x"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[20 + 25, 16 + 20], [8 + 15, 4 + 5]])
+
+        tensors = [torch.Tensor([[[5, 5], [2, 2]], [[4, 4], [3, 3]]]),
+                   torch.Tensor([[[2, 3]], [[1, 1]]])]
+        weight = torch.Tensor([4, 5])
+        combination = "x*y"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[5 * 2 * 4 + 5 * 3 * 5, 2 * 2 * 4 + 2 * 3 * 5],
+                             [4 * 1 * 4 + 4 * 1 * 5, 3 * 1 * 4 + 3 * 1 * 5]])
