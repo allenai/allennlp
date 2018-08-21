@@ -701,7 +701,7 @@ def _get_weighted_combination(combination: str,
                               weight: torch.nn.Parameter) -> torch.Tensor:
     if combination.isdigit():
         index = int(combination) - 1
-        return torch.sum(tensors[index] * weight, dim=-1)
+        return torch.matmul(tensors[index], weight)
     else:
         if len(combination) != 3:
             raise ConfigurationError("Invalid combination: " + combination)
@@ -709,15 +709,31 @@ def _get_weighted_combination(combination: str,
         second_tensor = _get_combination(combination[2], tensors)
         operation = combination[1]
         if operation == '*':
+            if first_tensor.dim() > 4 or second_tensor.dim() > 4:
+                raise ValueError("Tensors with dim > 4 not currently supported")
+            if first_tensor.dim() == 4:
+                expanded_dim = first_tensor.size().index(1)
+                first_tensor = first_tensor.squeeze(expanded_dim)
+            if second_tensor.dim() == 4:
+                expanded_dim = second_tensor.size().index(1)
+                second_tensor = second_tensor.squeeze(expanded_dim)
             intermediate = first_tensor * weight
-            return torch.sum(intermediate * second_tensor, dim=-1)
+            return torch.matmul(intermediate, second_tensor.transpose(-1, -2)).squeeze(-1)
         elif operation == '/':
+            if first_tensor.dim() > 4 or second_tensor.dim() > 4:
+                raise ValueError("Tensors with dim > 4 not currently supported")
+            if first_tensor.dim() == 4:
+                expanded_dim = first_tensor.size().index(1)
+                first_tensor = first_tensor.squeeze(expanded_dim)
+            if second_tensor.dim() == 4:
+                expanded_dim = second_tensor.size().index(1)
+                second_tensor = second_tensor.squeeze(expanded_dim)
             intermediate = first_tensor * weight
-            return torch.sum(intermediate * second_tensor.pow(-1), dim=-1)
+            return torch.matmul(intermediate, second_tensor.pow(-1).transpose(-1, -2)).squeeze(-1)
         elif operation == '+':
-            return torch.sum(first_tensor * weight, dim=-1) + torch.sum(second_tensor * weight, dim=-1)
+            return torch.matmul(first_tensor, weight) + torch.matmul(second_tensor, weight)
         elif operation == '-':
-            return torch.sum(first_tensor * weight, dim=-1) - torch.sum(second_tensor * weight, dim=-1)
+            return torch.matmul(first_tensor, weight) - torch.matmul(second_tensor, weight)
         else:
             raise ConfigurationError("Invalid operation: " + operation)
 
