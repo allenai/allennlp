@@ -21,7 +21,7 @@
   "validation_data_path": "/home/eunsol/dqa/val_seq.json",
   "model": {
     "type": "dqa",
-    "prev_a": 2,
+    "num_context_answers": 2,
     "text_field_embedder": {
       "token_characters": {
         "type": "character_encoding",
