@@ -22,6 +22,7 @@
   "model": {
     "type": "dialog_qa",
     "num_context_answers": 2,
+    "marker_embedding_dim": 10,
     "text_field_embedder": {
       "token_characters": {
         "type": "character_encoding",

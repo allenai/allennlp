@@ -60,31 +60,36 @@ class DialogQA(Model):
                  initializer: InitializerApplicator,
                  dropout: float = 0.2,
                  num_context_answers: int = 0,
+                 marker_embed_dim: int = 10,
                  mask_lstms: bool = True) -> None:
-        super(DialogQA, self).__init__(vocab)
+        super().__init__(vocab)
         self._num_context_answers = num_context_answers
         self._text_field_embedder = text_field_embedder
         self._phrase_layer = phrase_layer
-        self._matrix_attention = LinearMatrixAttention(200, 200, 'x,y,x*y')
-        self._merge_atten = TimeDistributed(torch.nn.Linear(200 * 4, 200))
+
+        encoding_dim = phrase_layer.get_output_dim()
+        max_turn_length = 12
+
+        self._matrix_attention = LinearMatrixAttention(encoding_dim, encoding_dim, 'x,y,x*y')
+        self._merge_atten = TimeDistributed(torch.nn.Linear(encoding_dim * 4, encoding_dim))
 
         self._residual_encoder = residual_encoder
-        self._prev_ans_marker = torch.nn.Embedding((num_context_answers * 4) + 1, 10)
+        self._prev_ans_marker = torch.nn.Embedding((num_context_answers * 4) + 1, marker_embed_dim)
 
         if num_context_answers > 0:
-            self._question_num_marker = torch.nn.Embedding(12, 10 * num_context_answers)
+            self._question_num_marker = torch.nn.Embedding(max_turn_length, marker_embed_dim * num_context_answers)
 
-        self._self_atten = LinearMatrixAttention(200, 200, 'x,y,x*y')
+        self._self_atten = LinearMatrixAttention(encoding_dim, encoding_dim, 'x,y,x*y')
 
-        self._followup_lin = torch.nn.Linear(200, 3)
-        self._merge_self_atten = TimeDistributed(torch.nn.Linear(200 * 3, 200))
+        self._followup_lin = torch.nn.Linear(encoding_dim, 3)
+        self._merge_self_atten = TimeDistributed(torch.nn.Linear(encoding_dim * 3, encoding_dim))
 
         self._span_start_encoder = span_start_encoder
         self._span_end_encoder = span_end_encoder
 
-        self._span_start_predictor = TimeDistributed(torch.nn.Linear(200, 1))
-        self._span_end_predictor = TimeDistributed(torch.nn.Linear(200, 1))
-        self._span_yesno_predictor = TimeDistributed(torch.nn.Linear(200, 3))
+        self._span_start_predictor = TimeDistributed(torch.nn.Linear(encoding_dim, 1))
+        self._span_end_predictor = TimeDistributed(torch.nn.Linear(encoding_dim, 1))
+        self._span_yesno_predictor = TimeDistributed(torch.nn.Linear(encoding_dim, 3))
         self._span_followup_predictor = TimeDistributed(self._followup_lin)
 
         initializer(self)
@@ -295,7 +300,6 @@ class DialogQA(Model):
         # Compute F1 and preparing the output dictionary.
         output_dict['best_span_str'] = []
         output_dict['qid'] = []
-        output_dict['aid'] = []
         output_dict['followup'] = []
         output_dict['yesno'] = []
         best_span_cpu = best_span.detach().cpu().numpy()
@@ -307,10 +311,8 @@ class DialogQA(Model):
             per_dialog_yesno_list = []
             per_dialog_followup_list = []
             per_dialog_query_id_list = []
-            per_dialog_article_id_list = []
             for per_dialog_query_index, (iid, answer_texts) in enumerate(
                     zip(metadata[i]["instance_id"], metadata[i]["answer_texts_list"])):
-                (aid, _) = iid.split("_q#")
                 predicted_span = tuple(best_span_cpu[i * max_qa_count + per_dialog_query_index])
 
                 start_offset = offsets[predicted_span[0]][0]
@@ -321,7 +323,6 @@ class DialogQA(Model):
                 per_dialog_yesno_list.append(yesno_pred)
                 per_dialog_followup_list.append(followup_pred)
                 per_dialog_query_id_list.append(iid)
-                per_dialog_article_id_list.append(aid)
 
                 best_span_string = passage_str[start_offset:end_offset]
                 per_dialog_best_span_list.append(best_span_string)
@@ -343,7 +344,6 @@ class DialogQA(Model):
                                                                             answer_texts)
                 self._official_f1(100 * f1_score)
             output_dict['qid'].append(per_dialog_query_id_list)
-            output_dict['aid'].append(per_dialog_article_id_list)
             output_dict['best_span_str'].append(per_dialog_best_span_list)
             output_dict['yesno'].append(per_dialog_yesno_list)
             output_dict['followup'].append(per_dialog_followup_list)
