@@ -10,7 +10,7 @@ from allennlp.common import squad_eval
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
-from allennlp.modules.attention.linear_attention import LinearAttention
+from allennlp.modules.matrix_attention.linear_matrix_attention import LinearMatrixAttention
 from allennlp.modules.input_variational_dropout import InputVariationalDropout
 from allennlp.nn import InitializerApplicator, util
 from allennlp.training.metrics import Average, BooleanAccuracy, CategoricalAccuracy
@@ -18,7 +18,7 @@ from allennlp.training.metrics import Average, BooleanAccuracy, CategoricalAccur
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@Model.register("dqa")
+@Model.register("dialog_qa")
 class DialogQA(Model):
     """
     This class implements modified version of BiDAF
@@ -65,14 +65,14 @@ class DialogQA(Model):
         self._num_context_answers = num_context_answers
         self._text_field_embedder = text_field_embedder
         self._phrase_layer = phrase_layer
-        self._matrix_attention = LinearAttention(200, 200, 'x,y,x*y')
+        self._matrix_attention = LinearMatrixAttention(200, 200, 'x,y,x*y')
         self._merge_atten = TimeDistributed(torch.nn.Linear(200 * 4, 200))
 
         self._residual_encoder = residual_encoder
         self._prev_ans_marker = torch.nn.Embedding((num_context_answers * 4) + 1, 10)
         self._question_num_marker = torch.nn.Embedding(12, 10 * num_context_answers)
 
-        self._self_atten = LinearAttention(200, 200, 'x,y,x*y')
+        self._self_atten = LinearMatrixAttention(200, 200, 'x,y,x*y')
 
         self._followup_lin = torch.nn.Linear(200, 3)
         self._merge_self_atten = TimeDistributed(torch.nn.Linear(200 * 3, 200))
@@ -167,6 +167,7 @@ class DialogQA(Model):
         encoding_dim = encoded_question.size(-1)
 
         # Shape: (batch_size * max_qa_count, passage_length, question_length)
+        #print(repeated_encoded_passage.), encoded_question.size())
         passage_question_similarity = self._matrix_attention(repeated_encoded_passage, encoded_question)
         # Shape: (batch_size * max_qa_count, passage_length, question_length)
         passage_question_attention = util.last_dim_softmax(passage_question_similarity, question_mask)
