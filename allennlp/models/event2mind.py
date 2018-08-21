@@ -107,8 +107,7 @@ class Event2Mind(Model):
         self._xreact_accuracy = SequenceAccuracy()
         self._oreact_accuracy = SequenceAccuracy()
 
-    @staticmethod
-    def _update_accuracy(all_top_k_predictions, target_tokens, target_accuracy):
+    def _update_accuracy(self, all_top_k_predictions, target_tokens, target_accuracy):
         targets = target_tokens["tokens"]
         target_mask = get_text_field_mask(target_tokens)
         # See comment in _get_loss.
@@ -118,7 +117,8 @@ class Event2Mind(Model):
         target_accuracy(
                 all_top_k_predictions,
                 relevant_targets,
-                relevant_mask
+                relevant_mask,
+                self._end_index
         )
 
     def _get_num_decoding_steps(self, target_tokens):
