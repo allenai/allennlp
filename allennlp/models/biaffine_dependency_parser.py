@@ -288,9 +288,10 @@ class BiaffineDependencyParser(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
 
-        head_tags = output_dict["head_tags"].cpu().detach().numpy()
-        heads = output_dict["heads"].cpu().detach().numpy()
-        lengths = get_lengths_from_binary_sequence_mask(output_dict["mask"])
+        head_tags = output_dict.pop("head_tags").cpu().detach().numpy()
+        heads = output_dict.pop("heads").cpu().detach().numpy()
+        mask = output_dict.pop("mask")
+        lengths = get_lengths_from_binary_sequence_mask(mask)
         head_tag_labels = []
         head_indices = []
         for instance_heads, instance_tags, length in zip(heads, head_tags, lengths):
@@ -491,15 +492,9 @@ class BiaffineDependencyParser(Model):
         # Shape (batch_size, sequence_length, sequence_length)
         normalized_arc_logits = F.log_softmax(attended_arcs, dim=2).transpose(1, 2)
 
-        # Although we need to include the root node so that the MST includes it,
-        # we do not want any word to be the parent of the root node.
-        # Here, we enforce this by setting the scores for all word -> ROOT edges
-        # edges to be very negative.
-        normalized_arc_logits[:, 0, :] = -1e8
-
         # Shape (batch_size, num_head_tags, sequence_length, sequence_length)
         # This energy tensor expresses the following relation:
-        # energy[i,j] = "Score that j is the head of i". In this
+        # energy[i,j] = "Score that i is the head of j". In this
         # case, we have heads pointing to their children.
         batch_energy = torch.exp(normalized_arc_logits.unsqueeze(1) + normalized_pairwise_head_logits)
         return self._run_mst_decoding(batch_energy, lengths)
@@ -508,10 +503,28 @@ class BiaffineDependencyParser(Model):
     def _run_mst_decoding(batch_energy: torch.Tensor, lengths: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         heads = []
         head_tags = []
-        for energy, length in zip(batch_energy.detach().cpu().numpy(), lengths):
-            head, head_tag = decode_mst(energy, length)
-            heads.append(head)
-            head_tags.append(head_tag)
+        for energy, length in zip(batch_energy.detach().cpu(), lengths):
+            scores, tag_ids = energy.max(dim=0)
+            # Although we need to include the root node so that the MST includes it,
+            # we do not want any word to be the parent of the root node.
+            # Here, we enforce this by setting the scores for all word -> ROOT edges
+            # edges to be 0.
+            scores[0, :] = 0
+            # Decode the heads. Because we modify the scores to prevent
+            # adding in word -> ROOT edges, we need to find the labels ourselves.
+            instance_heads, _ = decode_mst(scores.numpy(), length, has_labels=False)
+
+            # Find the labels which correspond to the edges in the max spanning tree.
+            instance_head_tags = []
+            for child, parent in enumerate(instance_heads):
+                instance_head_tags.append(tag_ids[parent, child].item())
+            # We don't care what the head or tag is for the root token, but by default it's
+            # not necesarily the same in the batched vs unbatched case, which is annoying.
+            # Here we'll just set them to zero.
+            instance_heads[0] = 0
+            instance_head_tags[0] = 0
+            heads.append(instance_heads)
+            head_tags.append(instance_head_tags)
         return torch.from_numpy(numpy.stack(heads)), torch.from_numpy(numpy.stack(head_tags))
 
     def _get_head_tags(self,
