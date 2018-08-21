@@ -18,15 +18,15 @@ class SequenceAccuracy(Metric):
         self.total_count = 0.0
 
     # Note: See preprocess.py.
-	def recall(beams, s2):
-	   retval = 0.
-	   for w in s2:
-	      stillsearch = True
-	      for s1 in beams:
-	         if stillsearch and (w in s1):
-	            retval += 1./float(len(s2))
-	            stillsearch = False
-	   return retval
+    def recall(beams, s2):
+       retval = 0.
+       for w in s2:
+          stillsearch = True
+          for s1 in beams:
+             if stillsearch and (w in s1):
+                retval += 1./float(len(s2))
+                stillsearch = False
+       return retval
 
     def __call__(self,
                  predictions: torch.Tensor,

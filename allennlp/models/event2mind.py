@@ -231,6 +231,18 @@ class Event2Mind(Model):
                 self._update_accuracy(xreact_all_top_k_predictions, xreact_tokens, self._xreact_accuracy)
                 self._update_accuracy(oreact_all_top_k_predictions, oreact_tokens, self._oreact_accuracy)
 
+                # HACKS
+                # TODO(brendanr): Remove
+                local_xintent_accuracy = SequenceAccuracy()
+                local_xreact_accuracy = SequenceAccuracy()
+                local_oreact_accuracy = SequenceAccuracy()
+                self._update_accuracy(xintent_all_top_k_predictions, xintent_tokens, local_xintent_accuracy)
+                self._update_accuracy(xreact_all_top_k_predictions, xreact_tokens, local_xreact_accuracy)
+                self._update_accuracy(oreact_all_top_k_predictions, oreact_tokens, local_oreact_accuracy)
+                output_dict["xintent_recall"] = [local_xintent_accuracy.get_metric(reset=True)]
+                output_dict["xreact_recall"] = [local_xreact_accuracy.get_metric(reset=True)]
+                output_dict["oreact_recall"] = [local_oreact_accuracy.get_metric(reset=True)]
+
             output_dict["xintent_top_k_predictions"] = xintent_all_top_k_predictions
             output_dict["xintent_top_k_log_probabilities"] = xintent_log_probabilities
             output_dict["xreact_top_k_predictions"] = xreact_all_top_k_predictions
