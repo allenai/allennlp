@@ -4,7 +4,6 @@ from overrides import overrides
 import torch
 from torch.nn import Dropout
 
-from allennlp.common import Params
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.layer_norm import LayerNorm
 from allennlp.modules.seq2seq_encoders.multi_head_self_attention import MultiHeadSelfAttention
@@ -152,28 +151,3 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             output = layer_norm(self.dropout(attention_output) + feedforward_output)
 
         return output
-
-    @classmethod
-    def from_params(cls, params: Params):
-        input_dim = params.pop_int('input_dim')
-        hidden_dim = params.pop_int('hidden_dim')
-        projection_dim = params.pop_int('projection_dim', None)
-        feedforward_hidden_dim = params.pop_int("feedforward_hidden_dim")
-        num_layers = params.pop_int("num_layers", 2)
-        num_attention_heads = params.pop_int('num_attention_heads', 3)
-        use_positional_encoding = params.pop_bool('use_positional_encoding', True)
-        dropout_prob = params.pop_float("dropout_prob", 0.1)
-        residual_dropout_prob = params.pop_float("residual_dropout_prob", 0.2)
-        attention_dropout_prob = params.pop_float("attention_dropout_prob", 0.1)
-        params.assert_empty(cls.__name__)
-
-        return cls(input_dim=input_dim,
-                   hidden_dim=hidden_dim,
-                   feedforward_hidden_dim=feedforward_hidden_dim,
-                   projection_dim=projection_dim,
-                   num_layers=num_layers,
-                   num_attention_heads=num_attention_heads,
-                   use_positional_encoding=use_positional_encoding,
-                   dropout_prob=dropout_prob,
-                   residual_dropout_prob=residual_dropout_prob,
-                   attention_dropout_prob=attention_dropout_prob)

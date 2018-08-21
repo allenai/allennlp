@@ -3,7 +3,6 @@ import logging
 
 from overrides import overrides
 
-from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
@@ -93,29 +92,3 @@ class Seq2SeqDatasetReader(DatasetReader):
             return Instance({"source_tokens": source_field, "target_tokens": target_field})
         else:
             return Instance({'source_tokens': source_field})
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'Seq2SeqDatasetReader':
-        source_tokenizer_type = params.pop('source_tokenizer', None)
-        source_tokenizer = None if source_tokenizer_type is None else Tokenizer.from_params(source_tokenizer_type)
-        target_tokenizer_type = params.pop('target_tokenizer', None)
-        target_tokenizer = None if target_tokenizer_type is None else Tokenizer.from_params(target_tokenizer_type)
-        source_indexers_type = params.pop('source_token_indexers', None)
-        source_add_start_token = params.pop_bool('source_add_start_token', True)
-        if source_indexers_type is None:
-            source_token_indexers = None
-        else:
-            source_token_indexers = TokenIndexer.dict_from_params(source_indexers_type)
-        target_indexers_type = params.pop('target_token_indexers', None)
-        if target_indexers_type is None:
-            target_token_indexers = None
-        else:
-            target_token_indexers = TokenIndexer.dict_from_params(target_indexers_type)
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return Seq2SeqDatasetReader(source_tokenizer=source_tokenizer,
-                                    target_tokenizer=target_tokenizer,
-                                    source_token_indexers=source_token_indexers,
-                                    target_token_indexers=target_token_indexers,
-                                    source_add_start_token=source_add_start_token,
-                                    lazy=lazy)

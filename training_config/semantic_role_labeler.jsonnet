@@ -1,15 +1,17 @@
 {
   "dataset_reader":{"type":"srl"},
-  "train_data_path": "${SRL_TRAIN_DATA_PATH}",
-  "validation_data_path": "${SRL_VALIDATION_DATA_PATH}",
+  "train_data_path": std.extVar("SRL_TRAIN_DATA_PATH"),
+  "validation_data_path": std.extVar("SRL_VALIDATION_DATA_PATH"),
   "model": {
     "type": "srl",
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 100,
-        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.100d.txt.gz",
-        "trainable": true
+      "token_embedders": {
+        "tokens": {
+            "type": "embedding",
+            "embedding_dim": 100,
+            "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.100d.txt.gz",
+            "trainable": true
+        }
       }
     },
     "initializer": [

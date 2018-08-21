@@ -232,18 +232,12 @@ class Model(torch.nn.Module, Registrable):
         by a class attribute ``_warn_for_unseperable_batches`` because it would be extremely verbose
         otherwise.
         """
-        if  output_key in self._warn_for_unseparable_batches:
+        if  output_key not in self._warn_for_unseparable_batches:
             logger.warning(f"Encountered the {output_key} key in the model's return dictionary which "
                            "couldn't be split by the batch size. Key will be ignored.")
             # We only want to warn once for this key,
             # so we set this to false so we don't warn again.
             self._warn_for_unseparable_batches.add(output_key)
-
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'Model':
-        choice = params.pop_choice("type", cls.list_available())
-        model = cls.by_name(choice).from_params(vocab, params)
-        return model
 
     @classmethod
     def _load(cls,
@@ -268,7 +262,7 @@ class Model(torch.nn.Module, Registrable):
         # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
         # want the code to look for it, so we remove it from the parameters here.
         remove_pretrained_embedding_params(model_params)
-        model = Model.from_params(vocab, model_params)
+        model = Model.from_params(vocab=vocab, params=model_params)
         model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
         model.load_state_dict(model_state)
 

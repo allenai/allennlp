@@ -226,6 +226,70 @@ def masked_log_softmax(vector, mask):
     return torch.nn.functional.log_softmax(vector, dim=1)
 
 
+def masked_max(vector: torch.Tensor,
+               mask: torch.Tensor,
+               dim: int,
+               keepdim: bool = False,
+               min_val: float = -1e7) -> torch.Tensor:
+    """
+    To calculate max along certain dimensions on masked values
+
+    Parameters
+    ----------
+    vector : ``torch.Tensor``
+        The vector to calculate max, assume unmasked parts are already zeros
+    mask : ``torch.Tensor``
+        The mask of the vector. It must be broadcastable with vector.
+    dim : ``int``
+        The dimension to calculate max
+    keepdim : ``bool``
+        Whether to keep dimension
+    min_val : ``float``
+        The minimal value for paddings
+
+    Returns
+    -------
+    A ``torch.Tensor`` of including the maximum values.
+    """
+    one_minus_mask = (1.0 - mask).byte()
+    replaced_vector = vector.masked_fill(one_minus_mask, min_val)
+    max_value, _ = replaced_vector.max(dim=dim, keepdim=keepdim)
+    return max_value
+
+
+def masked_mean(vector: torch.Tensor,
+                mask: torch.Tensor,
+                dim: int,
+                keepdim: bool = False,
+                eps: float = 1e-8) -> torch.Tensor:
+    """
+    To calculate mean along certain dimensions on masked values
+
+    Parameters
+    ----------
+    vector : ``torch.Tensor``
+        The vector to calculate mean.
+    mask : ``torch.Tensor``
+        The mask of the vector. It must be broadcastable with vector.
+    dim : ``int``
+        The dimension to calculate mean
+    keepdim : ``bool``
+        Whether to keep dimension
+    eps : ``float``
+        A small value to avoid zero division problem.
+
+    Returns
+    -------
+    A ``torch.Tensor`` of including the mean values.
+    """
+    one_minus_mask = (1.0 - mask).byte()
+    replaced_vector = vector.masked_fill(one_minus_mask, 0.0)
+
+    value_sum = torch.sum(replaced_vector, dim=dim, keepdim=keepdim)
+    value_count = torch.sum(mask.float(), dim=dim, keepdim=keepdim)
+    return value_sum / value_count.clamp(min=eps)
+
+
 def viterbi_decode(tag_sequence: torch.Tensor,
                    transition_matrix: torch.Tensor,
                    tag_observations: Optional[List[int]] = None):
@@ -333,6 +397,8 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
     the mask.  Most frequently this will be a character id tensor, but it could also be a
     featurized representation of each token, etc.
 
+    If the input ``text_field_tensors`` contains the "mask" key, this is returned instead of inferring the mask.
+
     TODO(joelgrus): can we change this?
     NOTE: Our functions for generating masks create torch.LongTensors, because using
     torch.ByteTensors  makes it easy to run into overflow errors
@@ -342,6 +408,9 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
     >>> var_mask = torch.autograd.V(mask)
     >>> var_mask.sum() # equals 4, due to 8 bit precision - the sum overflows.
     """
+    if "mask" in text_field_tensors:
+        return text_field_tensors["mask"]
+
     tensor_dims = [(tensor.dim(), tensor) for tensor in text_field_tensors.values()]
     tensor_dims.sort(key=lambda x: x[0])
 

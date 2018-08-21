@@ -46,7 +46,7 @@ class Ensemble(Model):
         # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
         # want the code to look for it, so we remove it from the parameters here.
         remove_pretrained_embedding_params(model_params)
-        model = Model.from_params(None, model_params)
+        model = Model.from_params(vocab=None, params=model_params)
 
         # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
         # in sync with the weights

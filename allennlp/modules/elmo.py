@@ -179,6 +179,7 @@ class Elmo(torch.nn.Module):
 
         return {'elmo_representations': elmo_representations, 'mask': mask}
 
+    # The add_to_archive logic here requires a custom from_params.
     @classmethod
     def from_params(cls, params: Params) -> 'Elmo':
         # Add files to archive
@@ -232,7 +233,7 @@ def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
 
 class _ElmoCharacterEncoder(torch.nn.Module):
     """
-    Compute context sensitive token representation using pretrained biLM.
+    Compute context insensitive token representation using pretrained biLM.
 
     This embedder has input character ids of size (batch_size, sequence_length, 50)
     and returns (batch_size, sequence_length + 2, embedding_dim), where embedding_dim
@@ -334,7 +335,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         # run convolutions
         cnn_options = self._options['char_cnn']
         if cnn_options['activation'] == 'tanh':
-            activation = torch.nn.functional.tanh
+            activation = torch.tanh
         elif cnn_options['activation'] == 'relu':
             activation = torch.nn.functional.relu
         else:

@@ -7,6 +7,7 @@ from allennlp.data import Token
 from allennlp.data.fields import TextField, SpanField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
+
 class TestSpanField(AllenNlpTestCase):
     def setUp(self):
         super(TestSpanField, self).setUp()

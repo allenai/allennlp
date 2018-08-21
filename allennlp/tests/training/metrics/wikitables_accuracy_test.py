@@ -1,11 +1,12 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
 import os
+import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.metrics import WikiTablesAccuracy
 from allennlp.training.metrics.wikitables_accuracy import SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH
 
-
+@pytest.mark.java
 class WikiTablesAccuracyTest(AllenNlpTestCase):
     def setUp(self):
         super().setUp()

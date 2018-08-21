@@ -73,9 +73,9 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         vocab = Vocabulary.from_instances(self.instances)
         for instance in self.instances:
             instance.index_fields(vocab)
-        del params['model']['text_field_embedder']['token_characters']
+        del params['model']['text_field_embedder']['token_embedders']['token_characters']
         params['model']['phrase_layer']['input_size'] = 2
-        self.model = Model.from_params(vocab, params['model'])
+        self.model = Model.from_params(vocab=vocab, params=params['model'])
 
         self.ensure_batch_predictions_are_consistent()
 
@@ -116,18 +116,18 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         # the embedding + char cnn dimensions.
         params["model"]["phrase_layer"]["input_size"] = 12
         with pytest.raises(ConfigurationError):
-            Model.from_params(self.vocab, params.pop("model"))
+            Model.from_params(vocab=self.vocab, params=params.pop("model"))
 
         params = Params.from_file(self.param_file)
         # Make the modeling layer input_dimension wrong - it should be 40 to match
         # 4 * output_dim of the phrase_layer.
         params["model"]["phrase_layer"]["input_size"] = 30
         with pytest.raises(ConfigurationError):
-            Model.from_params(self.vocab, params.pop("model"))
+            Model.from_params(vocab=self.vocab, params=params.pop("model"))
 
         params = Params.from_file(self.param_file)
         # Make the modeling layer input_dimension wrong - it should be 70 to match
         # 4 * phrase_layer.output_dim + 3 * modeling_layer.output_dim.
         params["model"]["span_end_encoder"]["input_size"] = 50
         with pytest.raises(ConfigurationError):
-            Model.from_params(self.vocab, params.pop("model"))
+            Model.from_params(vocab=self.vocab, params=params.pop("model"))

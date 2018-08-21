@@ -6,7 +6,6 @@ import torch
 import torch.nn.functional as F
 from overrides import overrides
 
-from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.token_embedders import Embedding
@@ -584,38 +583,3 @@ class CoreferenceResolver(Model):
         # Shape: (batch_size, num_spans_to_keep, max_antecedents + 1)
         coreference_scores = torch.cat([dummy_scores, antecedent_scores], -1)
         return coreference_scores
-
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> "CoreferenceResolver":
-        embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-        context_layer = Seq2SeqEncoder.from_params(params.pop("context_layer"))
-        mention_feedforward = FeedForward.from_params(params.pop("mention_feedforward"))
-        antecedent_feedforward = FeedForward.from_params(params.pop("antecedent_feedforward"))
-
-        feature_size = params.pop_int("feature_size")
-        max_span_width = params.pop_int("max_span_width")
-        spans_per_word = params.pop_float("spans_per_word")
-        max_antecedents = params.pop_int("max_antecedents")
-        lexical_dropout = params.pop_float("lexical_dropout", 0.2)
-
-        init_params = params.pop("initializer", None)
-        reg_params = params.pop("regularizer", None)
-        initializer = (InitializerApplicator.from_params(init_params)
-                       if init_params is not None
-                       else InitializerApplicator())
-        regularizer = RegularizerApplicator.from_params(reg_params) if reg_params is not None else None
-
-        params.assert_empty(cls.__name__)
-        return cls(vocab=vocab,
-                   text_field_embedder=text_field_embedder,
-                   context_layer=context_layer,
-                   mention_feedforward=mention_feedforward,
-                   antecedent_feedforward=antecedent_feedforward,
-                   feature_size=feature_size,
-                   max_span_width=max_span_width,
-                   spans_per_word=spans_per_word,
-                   max_antecedents=max_antecedents,
-                   lexical_dropout=lexical_dropout,
-                   initializer=initializer,
-                   regularizer=regularizer)

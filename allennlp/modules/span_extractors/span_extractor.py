@@ -3,7 +3,6 @@ import torch
 from overrides import overrides
 
 from allennlp.common.registrable import Registrable
-from allennlp.common.params import Params
 
 class SpanExtractor(torch.nn.Module, Registrable):
     """
@@ -64,9 +63,3 @@ class SpanExtractor(torch.nn.Module, Registrable):
         Returns the expected final dimension of the returned span representation.
         """
         raise NotImplementedError
-
-
-    @classmethod
-    def from_params(cls, params: Params) -> "SpanExtractor":
-        choice = params.pop_choice('type', cls.list_available())
-        return cls.by_name(choice).from_params(params)

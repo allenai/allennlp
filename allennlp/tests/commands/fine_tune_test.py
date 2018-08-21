@@ -28,6 +28,26 @@ class TestFineTune(AllenNlpTestCase):
                                         config_file=self.config_file,
                                         serialization_dir=self.serialization_dir)
 
+    def test_fine_tune_does_not_expand_vocab_by_default(self):
+        params = Params.from_file(self.config_file)
+        # snli2 has a new token in it
+        params["train_data_path"] = str(self.FIXTURES_ROOT / 'data' / 'snli2.jsonl')
+
+        model = load_archive(self.model_archive).model
+
+        # By default, no vocab expansion.
+        fine_tune_model(model, params, self.serialization_dir)
+
+    def test_fine_tune_runtime_errors_with_vocab_expansion(self):
+        params = Params.from_file(self.config_file)
+        params["train_data_path"] = str(self.FIXTURES_ROOT / 'data' / 'snli2.jsonl')
+
+        model = load_archive(self.model_archive).model
+
+        # If we do vocab expansion, we get a runtime error because of the embedding.
+        with pytest.raises(RuntimeError):
+            fine_tune_model(model, params, self.serialization_dir, extend_vocab=True)
+
     def test_fine_tune_runs_from_parser_arguments(self):
         raw_args = ["fine-tune",
                     "-m", self.model_archive,

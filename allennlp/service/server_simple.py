@@ -78,8 +78,8 @@ def make_app(predictor: Predictor,
             logger.error("app directory %s does not exist, aborting", static_dir)
             sys.exit(-1)
     elif static_dir is None and field_names is None:
-        logger.error("must specify either build_dir or field_names")
-        sys.exit(-1)
+        print("Neither build_dir nor field_names passed. Demo won't render on this port.\n"
+              "You must use nodejs + react app to interact with the server.")
 
     app = Flask(__name__)  # pylint: disable=invalid-name
 
@@ -135,7 +135,7 @@ def main(args):
     parser.add_argument('--predictor', type=str, required=True, help='name of predictor')
     parser.add_argument('--static-dir', type=str, help='serve index.html from this directory')
     parser.add_argument('--title', type=str, help='change the default page title', default="AllenNLP Demo")
-    parser.add_argument('--field-name', type=str, required=True, action='append',
+    parser.add_argument('--field-name', type=str, action='append',
                         help='field names to include in the demo')
     parser.add_argument('--port', type=int, default=8000, help='port to serve the demo on')
 

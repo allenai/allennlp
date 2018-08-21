@@ -31,7 +31,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                         "embedding_dim": 3
                         }
                 })
-        self.token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        self.token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
         self.inputs = {
                 "words1": torch.LongTensor([[0, 2, 3, 5]]),
                 "words2": torch.LongTensor([[1, 4, 3, 2]]),
@@ -73,7 +73,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                                 },
                         }
                 })
-        token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
         inputs = {
                 'words': (torch.rand(3, 4, 5, 6) * 20).long(),
                 'characters': (torch.rand(3, 4, 5, 6, 7) * 15).long(),
@@ -103,3 +103,43 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 'elmo': (torch.rand(3, 6, 50) * 15).long(),
                 }
         token_embedder(inputs)
+
+    def test_old_from_params_new_from_params(self):
+
+        old_params = Params({
+                "words1": {
+                        "type": "embedding",
+                        "embedding_dim": 2
+                        },
+                "words2": {
+                        "type": "embedding",
+                        "embedding_dim": 5
+                        },
+                "words3": {
+                        "type": "embedding",
+                        "embedding_dim": 3
+                        }
+                })
+
+        with pytest.warns(DeprecationWarning):
+            BasicTextFieldEmbedder.from_params(params=old_params, vocab=self.vocab)
+
+        new_params = Params({
+                "token_embedders": {
+                        "words1": {
+                                "type": "embedding",
+                                "embedding_dim": 2
+                                },
+                        "words2": {
+                                "type": "embedding",
+                                "embedding_dim": 5
+                                },
+                        "words3": {
+                                "type": "embedding",
+                                "embedding_dim": 3
+                                }
+                        }
+                })
+
+        token_embedder = BasicTextFieldEmbedder.from_params(params=new_params, vocab=self.vocab)
+        assert token_embedder(self.inputs).size() == (1, 4, 10)

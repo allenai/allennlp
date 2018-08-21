@@ -3,7 +3,6 @@ import logging
 
 from overrides import overrides
 
-from allennlp.common import Params
 from allennlp.common.file_utils import cached_path
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
@@ -96,15 +95,3 @@ class LanguageModelingReader(DatasetReader):
         input_field = TextField(tokenized_string[:-1], self._token_indexers)
         output_field = TextField(tokenized_string[1:], self._output_indexer)
         return Instance({'input_tokens': input_field, 'output_tokens': output_field})
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'LanguageModelingReader':
-        tokens_per_instance = params.pop_int('tokens_per_instance', None)
-        tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return LanguageModelingReader(tokens_per_instance=tokens_per_instance,
-                                      tokenizer=tokenizer,
-                                      token_indexers=token_indexers,
-                                      lazy=lazy)

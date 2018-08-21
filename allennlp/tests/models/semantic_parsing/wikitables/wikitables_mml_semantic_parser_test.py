@@ -1,6 +1,7 @@
 # pylint: disable=invalid-name,no-self-use,protected-access
 from collections import namedtuple
 import os
+import pytest
 
 from flaky import flaky
 from numpy.testing import assert_almost_equal
@@ -11,6 +12,7 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.models import Model, WikiTablesMmlSemanticParser
 from allennlp.training.metrics.wikitables_accuracy import SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH
 
+@pytest.mark.java
 class WikiTablesMmlSemanticParserTest(ModelTestCase):
     def setUp(self):
         self.should_remove_sempre_abbreviations = not os.path.exists(SEMPRE_ABBREVIATIONS_PATH)
@@ -141,7 +143,7 @@ class WikiTablesMmlSemanticParserTest(ModelTestCase):
 
     def test_embed_actions_works_with_batched_and_padded_input(self):
         params = Params.from_file(self.param_file)
-        model = Model.from_params(self.vocab, params['model'])
+        model = Model.from_params(vocab=self.vocab, params=params['model'])
         action_embedding_weights = model._action_embedder.weight
         rule1 = model.vocab.get_token_from_index(1, 'rule_labels')
         rule1_tensor = torch.LongTensor([1])

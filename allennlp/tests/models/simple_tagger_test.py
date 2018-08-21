@@ -47,7 +47,7 @@ class SimpleTaggerTest(ModelTestCase):
         # the embedding dimension from the text_field_embedder.
         params["model"]["encoder"]["input_size"] = 10
         with pytest.raises(ConfigurationError):
-            Model.from_params(self.vocab, params.pop("model"))
+            Model.from_params(vocab=self.vocab, params=params.pop("model"))
 
     def test_regularization(self):
         penalty = self.model.get_regularization_penalty()

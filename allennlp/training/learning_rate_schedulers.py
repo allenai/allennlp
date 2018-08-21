@@ -37,8 +37,10 @@ class LearningRateScheduler(Registrable):
                 self.lr_scheduler.step_batch(batch_num_total)
             return
 
+    # Requires custom from_params
     @classmethod
-    def from_params(cls, optimizer: torch.optim.Optimizer, params: Params):
+    def from_params(cls, optimizer: torch.optim.Optimizer, params: Params):  # type: ignore
+        # pylint: disable=arguments-differ
         scheduler = params.pop_choice("type", LearningRateScheduler.list_available())
 
         schedulers = LearningRateScheduler.by_name(scheduler)(optimizer, **params.as_dict())  # type: ignore

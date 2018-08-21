@@ -16,7 +16,8 @@ class TestUniversalDependenciesDatasetReader(AllenNlpTestCase):
                                                             'Morphed', 'Into', 'GoogleOS', '?']
 
         assert fields["pos_tags"].labels == ['PRON', 'SCONJ', 'PROPN', 'VERB', 'ADP', 'PROPN', 'PUNCT']
-        assert fields["head_tags"].labels == ['root', 'mark', 'nsubj', 'advcl:if', 'case', 'obl:into', 'punct']
+        assert fields["head_tags"].labels == ['root', 'mark', 'nsubj', 'advcl',
+                                              'case', 'obl', 'punct']
         assert fields["head_indices"].labels == [0, 4, 4, 1, 6, 4, 4]
 
         instance = instances[1]
@@ -26,13 +27,13 @@ class TestUniversalDependenciesDatasetReader(AllenNlpTestCase):
                                                             'now', 'e-mail', ')', 'wares', 'into', 'a',
                                                             'full', '-', 'fledged', 'operating', 'system', '?']
 
-        assert fields["pos_tags"].labels == ['PRON', 'SCONJ', 'PROPN', 'VERB', 'ADP', 'PRON', 'NOUN', 'PUNCT',
-                                             'NOUN', 'PUNCT', 'CCONJ', 'ADV', 'NOUN', 'PUNCT', 'NOUN', 'ADP',
-                                             'DET', 'ADV', 'PUNCT', 'ADJ', 'NOUN', 'NOUN', 'PUNCT']
-        assert fields["head_tags"].labels == ['root', 'mark', 'nsubj', 'advcl:if', 'case', 'nmod:poss', 'compound',
-                                              'punct', 'compound', 'punct', 'cc', 'advmod', 'conj:and', 'punct',
-                                              'obl:on', 'case', 'det', 'advmod', 'punct', 'amod', 'compound',
-                                              'obl:into', 'punct']
+        assert fields["pos_tags"].labels == ['PRON', 'SCONJ', 'PROPN', 'VERB', 'ADP', 'PRON', 'NOUN',
+                                             'PUNCT', 'NOUN', 'PUNCT', 'CCONJ', 'ADV', 'NOUN', 'PUNCT', 'NOUN',
+                                             'ADP', 'DET', 'ADV', 'PUNCT', 'ADJ', 'NOUN', 'NOUN', 'PUNCT']
+        assert fields["head_tags"].labels == ['root', 'mark', 'nsubj', 'advcl', 'case', 'nmod:poss',
+                                              'compound', 'punct', 'compound', 'punct', 'cc', 'advmod',
+                                              'conj', 'punct', 'obl', 'case', 'det', 'advmod', 'punct',
+                                              'amod', 'compound', 'obl', 'punct']
         assert fields["head_indices"].labels == [0, 4, 4, 1, 15, 15, 9, 9, 15, 9, 13, 13,
                                                  9, 15, 4, 22, 22, 20, 20, 22, 22, 4, 4]
 
@@ -43,5 +44,22 @@ class TestUniversalDependenciesDatasetReader(AllenNlpTestCase):
         assert fields["pos_tags"].labels == ['PUNCT', 'ADP', 'PROPN', 'PROPN', 'ADP',
                                              'PROPN', 'PROPN', 'PROPN', 'PUNCT']
         assert fields["head_tags"].labels == ['punct', 'case', 'compound', 'root', 'case',
-                                              'nmod:from', 'flat', 'flat', 'punct']
+                                              'nmod', 'flat', 'flat', 'punct']
         assert fields["head_indices"].labels == [4, 4, 4, 0, 6, 4, 6, 6, 4]
+
+        # This instance tests specifically for filtering of elipsis:
+        # http://universaldependencies.org/u/overview/specific-syntax.html#ellipsis
+        # The original sentence is:
+        # "Over 300 Iraqis are reported dead and 500 [reported] wounded in Fallujah alone."
+        # But the second "reported" is elided, and as such isn't included in the syntax tree.
+        instance = instances[3]
+        fields = instance.fields
+        assert [t.text for t in fields["words"].tokens] == ['Over', '300', 'Iraqis', 'are',
+                                                            'reported', 'dead', 'and', '500', 'wounded',
+                                                            'in', 'Fallujah', 'alone', '.']
+        assert fields["pos_tags"].labels == ['ADV', 'NUM', 'PROPN', 'AUX', 'VERB', 'ADJ',
+                                             'CCONJ', 'NUM', 'ADJ', 'ADP', 'PROPN', 'ADV', 'PUNCT']
+        assert fields["head_tags"].labels == ['advmod', 'nummod', 'nsubj:pass', 'aux:pass',
+                                              'root', 'xcomp', 'cc', 'conj', 'orphan', 'case', 'obl',
+                                              'advmod', 'punct']
+        assert fields["head_indices"].labels == [2, 3, 5, 5, 0, 5, 8, 5, 8, 11, 5, 11, 5]

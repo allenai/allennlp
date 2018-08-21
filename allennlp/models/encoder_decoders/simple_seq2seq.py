@@ -8,7 +8,6 @@ from torch.nn.modules.rnn import LSTMCell
 from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
-from allennlp.common import Params
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
@@ -280,27 +279,3 @@ class SimpleSeq2Seq(Model):
             all_predicted_tokens.append(predicted_tokens)
         output_dict["predicted_tokens"] = all_predicted_tokens
         return output_dict
-
-    @classmethod
-    def from_params(cls, vocab, params: Params) -> 'SimpleSeq2Seq':
-        source_embedder_params = params.pop("source_embedder")
-        source_embedder = TextFieldEmbedder.from_params(vocab, source_embedder_params)
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        max_decoding_steps = params.pop("max_decoding_steps")
-        target_namespace = params.pop("target_namespace", "tokens")
-        # If no attention function is specified, we should not use attention, not attention with
-        # default similarity function.
-        attention_function_type = params.pop("attention_function", None)
-        if attention_function_type is not None:
-            attention_function = SimilarityFunction.from_params(attention_function_type)
-        else:
-            attention_function = None
-        scheduled_sampling_ratio = params.pop_float("scheduled_sampling_ratio", 0.0)
-        params.assert_empty(cls.__name__)
-        return cls(vocab,
-                   source_embedder=source_embedder,
-                   encoder=encoder,
-                   max_decoding_steps=max_decoding_steps,
-                   target_namespace=target_namespace,
-                   attention_function=attention_function,
-                   scheduled_sampling_ratio=scheduled_sampling_ratio)
