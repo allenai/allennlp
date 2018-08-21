@@ -39,12 +39,17 @@ class CcgBankDatasetReader(DatasetReader):
         are pre-tokenised in the data file.
     lazy : ``bool``, optional, (default = ``False``)
         Whether or not instances can be consumed lazily.
+    label_namespace_prefix: ``str``, optional, (default = ``""``)
+        Use the namespace ``label_namespace_prefix + field_name + '_labels``
+        when creating the ``SequenceLabelField`` vocabularies.
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
-                 lazy: bool = False) -> None:
+                 lazy: bool = False,
+                 label_namespace_prefix: str = "") -> None:
         super().__init__(lazy=lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._label_namespace_prefix = label_namespace_prefix
 
     @overrides
     def _read(self, file_path):
@@ -119,6 +124,9 @@ class CcgBankDatasetReader(DatasetReader):
                                    ('modified_pos_tags', modified_pos_tags),
                                    ('predicate_arg_categories', predicate_arg_categories)):
             if labels is not None:
-                fields[field_name] = SequenceLabelField(labels, text_field)
+                # end namespace in labels so Vocabulary doesn't add PAD and UNK
+                namespace = self._label_namespace_prefix + field_name + '_labels'
+                fields[field_name] = SequenceLabelField(labels, text_field,
+                                                        namespace)
 
         return Instance(fields)
