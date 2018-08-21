@@ -1,14 +1,38 @@
-*.pyc
-.cache/
-.coverage
-doc/_build/
-.ipynb_checkpoints
-.pytest_cache/
-allennlp/tools/EVALB/evalb.dSYM/
-
 # build artifacts
-allennlp.egg-info/
+
 .eggs/
+.mypy_cache
+allennlp.egg-info/
 build/
 dist/
-.mypy_cache
+
+
+# dev tools
+
+.envrc
+.python-version
+
+
+# jupyter notebooks
+
+.ipynb_checkpoints
+
+
+# miscellaneous
+
+.cache/
+allennlp/tools/EVALB/evalb.dSYM/
+doc/_build/
+
+
+# python
+
+*.pyc
+*.pyo
+__pycache__
+
+
+# testing and continuous integration
+
+.coverage
+.pytest_cache/
