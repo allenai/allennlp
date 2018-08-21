@@ -431,7 +431,11 @@ class Trainer:
 
         return loss
 
-    def _get_metrics(self, total_loss: float, num_batches: int, reset: bool = False) -> Dict[str, float]:
+    def _get_metrics(self,
+                     total_loss: float,
+                     num_batches: int,
+                     include_learning_rate: bool = False,
+                     reset: bool = False) -> Dict[str, float]:
         """
         Gets the metrics but sets ``"loss"`` to
         the total loss divided by the ``num_batches`` so that
@@ -439,6 +443,11 @@ class Trainer:
         """
         metrics = self._model.get_metrics(reset=reset)
         metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
+        if include_learning_rate:
+            for ind, param_group in enumerate(self._optimizer.param_groups):
+                learning_rate = param_group.get("lr")
+                if learning_rate is not None:
+                    metrics[f"learning_rate/param_group{ind:d}"] = learning_rate
         return metrics
 
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
@@ -537,7 +546,7 @@ class Trainer:
                         '{0}.{1}'.format(epoch, time_to_str(int(last_save_time))), [], is_best=False
                 )
 
-        return self._get_metrics(train_loss, batches_this_epoch, reset=True)
+        return self._get_metrics(train_loss, batches_this_epoch, reset=True, include_learning_rate=True)
 
     def _should_stop_early(self, metric_history: List[float]) -> bool:
         """
