@@ -11,7 +11,7 @@ torch>=0.4.0,<0.5.0
 jsonnet==0.10.0 ; sys.platform != 'win32'
 
 # Type checking for python
-typing
+typing; python_version < '3.5'
 
 # Adds an @overrides decorator for better documentation and error checking when using subclasses.
 overrides
