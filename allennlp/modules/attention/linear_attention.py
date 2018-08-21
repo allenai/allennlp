@@ -64,7 +64,7 @@ class LinearAttention(Attention):
 
     @overrides
     def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
-        combined_tensors = util.weighted_tensor_combination(self._combination,
-                                                            [vector.unsqueeze(1), matrix],
-                                                            self._weight_vector)
+        combined_tensors = util.combine_tensors_and_multiply(self._combination,
+                                                             [vector.unsqueeze(1), matrix],
+                                                             self._weight_vector)
         return self._activation(combined_tensors.squeeze(1) + self._bias)
