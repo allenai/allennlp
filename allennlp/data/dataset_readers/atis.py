@@ -136,8 +136,9 @@ class AtisDatasetReader(DatasetReader):
                   'actions' : action_field,
                   'world' : world_field,
                   'linking_scores' : ArrayField(world.linking_scores)}
-
-        if sql_query:
+        
+        if sql_query != None:
+            fields['example_sql_query'] = MetadataField(sql_query)
             if action_sequence:
                 for production_rule in action_sequence:
                     index_fields.append(IndexField(action_map[production_rule], action_field))

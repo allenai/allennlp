@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Tuple
 import re
 import difflib
+import sqlite3
 
 from overrides import overrides
 import torch
@@ -85,7 +86,8 @@ class AtisSemanticParser(Model):
                  add_action_bias: bool = True,
                  training_beam_size: int = None,
                  dropout: float = 0.0,
-                 rule_namespace: str = 'rule_labels') -> None:
+                 rule_namespace: str = 'rule_labels',
+                 tables_directory='./allennlp/models/semantic_parsing/atis/atis.db') -> None:
 
         # Atis semantic parser init
         super(AtisSemanticParser, self).__init__(vocab)
@@ -102,6 +104,13 @@ class AtisSemanticParser(Model):
         self._action_sequence_accuracy = Average()
         self._has_logical_form = Average()
         self._action_similarity = Average()
+        self._denotation_accuracy = Average()
+        
+        # Initialize a cursor to our sqlite database, so we can execute logical forms.
+        self._tables_directory = tables_directory
+        print('tables_directory', tables_directory)
+        self._connection = sqlite3.connect(self._tables_directory)
+        self._cursor = self._connection.cursor() 
 
         self._action_padding_index = -1  # the padding value used by IndexField
         num_actions = vocab.get_vocab_size(self._rule_namespace)
@@ -278,7 +287,6 @@ class AtisSemanticParser(Model):
 
     @staticmethod
     def _action_history_match(predicted: List[int], targets: torch.LongTensor) -> int:
-        print('action_history_match')
         # TODO(mattg): this could probably be moved into a FullSequenceMatch metric, or something.
         # Check if target is big enough to cover prediction (including start/end symbols)
         if len(predicted) > targets.size(1):
@@ -287,6 +295,34 @@ class AtisSemanticParser(Model):
         targets_trimmed = targets[:, :len(predicted)]
         # Return 1 if the predicted sequence is anywhere in the list of targets.
         return torch.max(torch.min(targets_trimmed.eq(predicted_tensor), dim=1)[0]).item()
+   
+    def preprocess_query_sqlite(self, query: str):
+        query = query.strip()
+        if query.startswith('('):
+            return query[1:query.rfind(')')] + ';'
+        return query
+
+    def _sql_result_match(self, predicted: str, target: str) -> int:
+        predicted = self.preprocess_query_sqlite(predicted) 
+        target = self.preprocess_query_sqlite(target) 
+        
+        try:
+            self._cursor.execute(predicted)
+            predicted_rows = self._cursor.fetchall()
+            print('predicted_rows', predicted_rows)
+        except sqlite3.OperationalError:
+            print("Operation error when executing predicted")
+            return 0
+        
+        try:
+            self._cursor.execute(target)
+            target_rows = self._cursor.fetchall()
+            print('target_rows', target_rows)
+        except sqlite3.OperationalError:
+            print("Operation error when executing target")
+            return 0
+
+        return predicted_rows == target_rows
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
@@ -315,7 +351,7 @@ class AtisSemanticParser(Model):
         """
         return {
                 'dpd_acc': self._action_sequence_accuracy.get_metric(reset),
-                # 'denotation_acc': self._denotation_accuracy.get_metric(reset),
+                'denotation_acc': self._denotation_accuracy.get_metric(reset),
                 # 'lf_percent': self._has_logical_form.get_metric(reset),
                 'action_similarity': self._action_similarity.get_metric(reset)
                 }
@@ -466,7 +502,8 @@ class AtisSemanticParser(Model):
                 world: List[AtisWorld], 
                 actions: List[List[ProductionRuleArray]],
                 linking_scores: torch.Tensor,
-                target_action_sequence: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                target_action_sequence: torch.LongTensor = None,
+                example_sql_query: str = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         In this method we encode the table entities, link them to words in the utterance, then
@@ -491,7 +528,6 @@ class AtisSemanticParser(Model):
            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
            sequence_length)``.
         """
-        print('forward')
         initial_info = self._get_initial_state_and_scores(utterance, world, actions, linking_scores)
         initial_state = initial_info["initial_state"]
         batch_size = list(utterance.values())[0].size(0)
@@ -546,13 +582,21 @@ class AtisSemanticParser(Model):
                         sequence_in_targets = 0
                         sequence_in_targets = self._action_history_match(best_action_indices, targets)
                         self._action_sequence_accuracy(sequence_in_targets)
+
                         targets_list = [target.item() for target in targets[0]]
                         similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
                         self._action_similarity(similarity.ratio())
 
-                    action_strings = [action_mapping[(i, action_index)] for action_index in best_action_indices]
+                        action_strings = [action_mapping[(i, action_index)]
+                                          for action_index in best_action_indices]
+                    if example_sql_query:
+                        predicted_sql_query = action_sequence_to_sql(action_strings)
+                        self._denotation_accuracy(self._sql_result_match(predicted_sql_query,
+                                                                         example_sql_query[0]))
+
+
                     outputs['best_action_sequence'].append(action_strings)
-                    outputs['logical_form'].append(action_sequence_to_sql(action_strings))
+                    outputs['logical_form'].append(predicted_sql_query)
                     outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
                 else:
                     self._has_logical_form(0.0)
