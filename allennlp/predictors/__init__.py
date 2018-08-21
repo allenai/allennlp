@@ -12,7 +12,6 @@ from allennlp.predictors.constituency_parser import ConstituencyParserPredictor
 from allennlp.predictors.biaffine_dependency_parser import BiaffineDependencyParserPredictor
 from allennlp.predictors.coref import CorefPredictor
 from allennlp.predictors.decomposable_attention import DecomposableAttentionPredictor
-from allennlp.predictors.event2mind import Event2MindPredictor
 from allennlp.predictors.semantic_role_labeler import SemanticRoleLabelerPredictor
 from allennlp.predictors.sentence_tagger import SentenceTaggerPredictor
 from allennlp.predictors.simple_seq2seq import SimpleSeq2SeqPredictor
