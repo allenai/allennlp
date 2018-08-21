@@ -1,8 +1,8 @@
 {
   "dataset_reader": {
-    "type": "dqa",
-    "lazy": true,
+    "type": "quac",
     "num_context_answers": 2,
+    "lazy": true,
     "token_indexers": {
       "token_characters": {
         "type": "characters",
@@ -17,8 +17,8 @@
      }
     }
   },
-  "train_data_path": "allennlp/tests/fixtures/data/dqa_sample.json",
-  "validation_data_path": "allennlp/tests/fixtures/data/dqa_sample.json",
+  "train_data_path": "allennlp/tests/fixtures/data/quac_sample.json",
+  "validation_data_path": "allennlp/tests/fixtures/data/quac_sample.json",
   "model": {
     "type": "dqa",
     "num_context_answers": 2,
