@@ -310,8 +310,10 @@ class AtisSemanticParser(Model):
             self._cursor.execute(predicted)
             predicted_rows = self._cursor.fetchall()
             print('predicted_rows', predicted_rows)
+            self._has_logical_form(1.0)
         except sqlite3.OperationalError:
             print("Operation error when executing predicted")
+            self._has_logical_form(0.0)
             return 0
         
         try:
@@ -352,7 +354,7 @@ class AtisSemanticParser(Model):
         return {
                 'dpd_acc': self._action_sequence_accuracy.get_metric(reset),
                 'denotation_acc': self._denotation_accuracy.get_metric(reset),
-                # 'lf_percent': self._has_logical_form.get_metric(reset),
+                'lf_percent': self._has_logical_form.get_metric(reset),
                 'action_similarity': self._action_similarity.get_metric(reset)
                 }
 
@@ -563,11 +565,12 @@ class AtisSemanticParser(Model):
             best_final_states = self._beam_search.search(num_steps,
                                                          initial_state,
                                                          self._decoder_step,
-                                                         keep_final_unfinished_states=True)
+                                                         keep_final_unfinished_states=False)
             outputs['best_action_sequence'] = []
             outputs['debug_info'] = []
             outputs['entities'] = []
             outputs['logical_form'] = []
+            outputs['example_sql_query'] = []
 
     
             for i in range(batch_size):
@@ -593,13 +596,12 @@ class AtisSemanticParser(Model):
                         predicted_sql_query = action_sequence_to_sql(action_strings)
                         self._denotation_accuracy(self._sql_result_match(predicted_sql_query,
                                                                          example_sql_query[0]))
+                        outputs['example_sql_query'].append(example_sql_query[0])
 
 
                     outputs['best_action_sequence'].append(action_strings)
                     outputs['logical_form'].append(predicted_sql_query)
                     outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
-                else:
-                    self._has_logical_form(0.0)
             return outputs
 
     @classmethod

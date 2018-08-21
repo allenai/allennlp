@@ -11,7 +11,7 @@ class TestAtisReader(AllenNlpTestCase):
 
         instances = list(reader.read(str(data_path)))
 
-        assert len(instances) == 12
+        assert len(instances) == 11
         instance = instances[0]
 
         assert instance.fields.keys() == \
@@ -19,7 +19,9 @@ class TestAtisReader(AllenNlpTestCase):
                  'actions',
                  'world',
                  'target_action_sequence',
-                 'linking_scores'}
+                 'linking_scores',
+                 'example_sql_query',
+                 'target_action_sequence'}
 
         assert [t.text for t in instance.fields["utterance"].tokens] == \
                 ['show', 'me', 'the', 'one', 'way',

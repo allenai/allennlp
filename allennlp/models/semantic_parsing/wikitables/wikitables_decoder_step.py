@@ -214,6 +214,10 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 embedded_action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
                 # instance_action_ids = embedded_actions[:]
                 instance_action_ids.extend(embedded_actions[:])
+
+                action_logits = embedded_action_logits
+                current_log_probs = torch.nn.functional.log_softmax(action_logits, dim=-1)
+
             if 'linked' in instance_actions:
                 linking_scores, type_embeddings, linked_actions = instance_actions['linked']
                 instance_action_ids.extend(linked_actions)
@@ -227,24 +231,9 @@ class WikiTablesDecoderStep(DecoderStep[WikiTablesDecoderState]):
                 # the entity type instead.
                 output_action_embeddings = torch.cat([output_action_embeddings, type_embeddings], dim=0)
 
-                if self._mixture_feedforward is not None:
-                    # The linked and global logits are combined with a mixture weight to prevent the
-                    # linked_action_logits from dominating the embedded_action_logits if a softmax
-                    # was applied on both together.
-                    mixture_weight = self._mixture_feedforward(hidden_state)
-                    mix1 = torch.log(mixture_weight)
-                    mix2 = torch.log(1 - mixture_weight)
-
-                    entity_action_probs = torch.nn.functional.log_softmax(linked_action_logits, dim=-1) + mix1
-                    embedded_action_probs = torch.nn.functional.log_softmax(embedded_action_logits, dim=-1) + mix2
-                    current_log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=-1)
-                else:
-                    action_logits = torch.cat([embedded_action_logits, linked_action_logits], dim=-1)
-                    current_log_probs = torch.nn.functional.log_softmax(action_logits, dim=-1)
-            else:
-                action_logits = embedded_action_logits
+                action_logits = torch.cat([embedded_action_logits, linked_action_logits], dim=-1)
                 current_log_probs = torch.nn.functional.log_softmax(action_logits, dim=-1)
-
+                
             # This is now the total score for each state after taking each action.  We're going to
             # sort by this later, so it's important that this is the total score, not just the
             # score for the current action.
