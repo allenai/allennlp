@@ -994,13 +994,14 @@ class Trainer:
                 assert "lr" in optimizer_params, \
                     "Error: A base learning rate is required for " \
                     "discriminative fine-tuning."
-                lr = optimizer_params["lr"]
+                rate = optimizer_params["lr"]
                 decay_factor = 0.38
                 # use the caret to match module only at the start
-                groups = [[[f"^{m}" for m in module], {"lr": lr*decay_factor**i}] for i, module in enumerate(reversed(modules))]
+                groups = [[[f"^{m}" for m in mod], {"lr": rate*decay_factor**i}]
+                          for i, mod in enumerate(reversed(modules))]
             else:
                 # use the default learning rate across all layers
-                groups = [[[f"^{m}" for m in module], {}] for module in reversed(modules)]
+                groups = [[[f"^{m}" for m in mod], {}] for mod in reversed(modules)]
             groups = [g for g in reversed(groups)]  # set original order again
             optimizer_params["parameter_groups"] = groups
 

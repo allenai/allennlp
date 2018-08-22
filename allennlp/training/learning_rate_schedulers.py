@@ -165,7 +165,7 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
         self.num_steps_per_epoch = num_steps_per_epoch
         self.cut_frac = cut_frac
         self.ratio = ratio
-        self.lr = lr
+        self.rate = lr
         self.gradual_unfreezing = gradual_unfreezing
         self.freezing_current = self.gradual_unfreezing
         self.first_epoch = True
@@ -192,10 +192,7 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
             for i, param_group in enumerate(reversed(self.optimizer.param_groups)):
                 for param in param_group["params"]:
                     # i = 0 is the default group; we care about i > 0
-                    if i <= num_layers_to_unfreeze:
-                        param.requires_grad = True
-                    else:
-                        param.requires_grad = False
+                    param.requires_grad = bool(i <= num_layers_to_unfreeze)
 
     def step_batch(self, epoch=None):
         if epoch is None:
@@ -218,8 +215,8 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
         cut = int(num_steps * self.cut_frac)
         if cut == step:
             print()
-        p = step / cut if step < cut else 1 - (step - cut) / (num_steps - cut)
-        lrs = [lr * (1 + p * (self.ratio - 1)) / self.ratio for lr in self.base_lrs]
+        prop = step / cut if step < cut else 1 - (step - cut) / (num_steps - cut)
+        lrs = [lr * (1 + prop * (self.ratio - 1)) / self.ratio for lr in self.base_lrs]
         return [max(lr, 0.0) for lr in lrs]
 
 # We just use the Pytorch LRSchedulers, so here we force them into
