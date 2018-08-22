@@ -182,6 +182,7 @@ class STLR(torch.optim.lr_scheduler._LRScheduler): # pylint: disable=protected-a
             # we want to set up for epoch #2, etc.
             epoch_no = epoch+1 if self.first_epoch else epoch+2
             if self.first_epoch:
+                self.step_batch(1)
                 self.first_epoch = False
             if epoch_no >= len(self.optimizer.param_groups)-1:
                 print('Gradual unfreezing finished. Training all layers.')
@@ -210,7 +211,8 @@ class STLR(torch.optim.lr_scheduler._LRScheduler): # pylint: disable=protected-a
             step = max(self.last_epoch, 1) % self.num_steps_per_epoch
         else:
             # otherwise we use the schedule for the rest of training
-            steps_while_frozen = (len(self.optimizer.param_groups)-1) * self.num_steps_per_epoch
+            # steps_while_frozen = (len(self.optimizer.param_groups)-1) * self.num_steps_per_epoch
+            steps_while_frozen = max((len(self.optimizer.param_groups) - 2) * self.num_steps_per_epoch, 0)
             num_steps = self.num_epochs * self.num_steps_per_epoch - steps_while_frozen
             step = max(self.last_epoch, 1) - steps_while_frozen
         cut = int(num_steps * self.cut_frac)
@@ -218,7 +220,7 @@ class STLR(torch.optim.lr_scheduler._LRScheduler): # pylint: disable=protected-a
             print()
         p = step / cut if step < cut else 1 - (step - cut) / (num_steps - cut)
         lrs = [lr * (1 + p * (self.ratio - 1)) / self.ratio for lr in self.base_lrs]
-        return lrs
+        return [max(lr, 0.0) for lr in lrs]
 
 # We just use the Pytorch LRSchedulers, so here we force them into
 # Registry._registry so we can build them from params.
