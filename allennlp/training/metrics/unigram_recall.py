@@ -1,16 +1,17 @@
 from typing import Optional
 
 from overrides import overrides
+import sys
 import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
 
-@Metric.register("sequence_accuracy")
-class SequenceAccuracy(Metric):
+@Metric.register("unigram_recall")
+class UnigramRecall(Metric):
     """
-    Sequence Top-K accuracy. Assumes integer labels, with
+    Unigram top-K recall. Assumes integer labels, with
     each item to be classified having a single correct class.
     """
     def __init__(self) -> None:
@@ -21,7 +22,7 @@ class SequenceAccuracy(Metric):
                  predictions: torch.Tensor,
                  gold_labels: torch.Tensor,
                  mask: Optional[torch.Tensor] = None,
-                 end_index: int = -1):
+                 end_index: int = sys.maxsize):
         """
         Parameters
         ----------
@@ -48,62 +49,44 @@ class SequenceAccuracy(Metric):
         # Note: See preprocess.py.
         for i in range(batch_size):
             beams = predictions[i]
-            cur_mask = mask[i]
             cur_gold = gold_labels[i]
 
-            masked_gold = cur_gold * cur_mask
-            #TODO(brendanr): Verify!
+            if mask is not None:
+                masked_gold = cur_gold * mask[i]
+            else:
+                masked_gold = cur_gold
+            #TODO(brendanr): Verify! Is 0 a valid index?
             cleaned_gold = [x for x in masked_gold if x != 0 and x != end_index]
 
             retval = 0.
             for w in cleaned_gold:
-               stillsearch = True
-               for beam in beams:
-                  masked_beam = beam * cur_mask
-                  # w is from cleaned gold which doesn't have 0 or end_index,
-                  # so we don't need to explicitly remove those from
-                  # masked_beam.
-                  if stillsearch and (w in masked_beam):
-                     retval += 1./float(len(cleaned_gold))
-                     stillsearch = False
+                stillsearch = True
+                for beam in beams:
+                    if mask is not None:
+                        masked_beam = beam * mask[i]
+                    else:
+                        masked_beam = beam
+                    # w is from cleaned gold which doesn't have 0 or end_index,
+                    # so we don't need to explicitly remove those from
+                    # masked_beam.
+                    if stillsearch and (w in masked_beam):
+                        retval += 1./float(len(cleaned_gold))
+                        stillsearch = False
             correct += retval
 
         self.correct_count += correct
         self.total_count += predictions.size()[0]
 
-        #TODO(brendanr): Remove this. Or provide it as an alternate metric.
-        return
-
-        expanded_size = list(gold_labels.size())
-        expanded_size.insert(1, k)
-        expanded_gold = gold_labels.unsqueeze(1).expand(expanded_size)
-
-        if mask is not None:
-            expanded_mask = mask.unsqueeze(1).expand(expanded_size)
-            masked_gold = expanded_mask * expanded_gold
-            masked_predictions = expanded_mask * predictions
-        else:
-            masked_gold = expanded_gold
-            masked_predictions = predictions
-
-        eqs = masked_gold.eq(masked_predictions)
-        matches_per_question = eqs.min(dim=2)[0]
-        some_match = matches_per_question.max(dim=1)[0]
-        correct = some_match.sum().item()
-
-        self.total_count += predictions.size()[0]
-        self.correct_count += correct
-
     def get_metric(self, reset: bool = False):
         """
         Returns
         -------
-        The accumulated accuracy.
+        The accumulated recall.
         """
-        accuracy = float(self.correct_count) / float(self.total_count)
+        recall = float(self.correct_count) / float(self.total_count)
         if reset:
             self.reset()
-        return accuracy
+        return recall
 
     @overrides
     def reset(self):

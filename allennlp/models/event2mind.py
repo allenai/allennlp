@@ -16,7 +16,7 @@ from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits, weighted_sum
-from allennlp.training.metrics import SequenceAccuracy
+from allennlp.training.metrics import UnigramRecall
 
 
 @Model.register("event2mind")
@@ -103,18 +103,18 @@ class Event2Mind(Model):
         self._oreact_decoder_cell = GRUCell(self._decoder_input_dim, self._decoder_output_dim)
         self._oreact_output_projection_layer = Linear(self._decoder_output_dim, num_classes)
 
-        self._xintent_accuracy = SequenceAccuracy()
-        self._xreact_accuracy = SequenceAccuracy()
-        self._oreact_accuracy = SequenceAccuracy()
+        self._xintent_recall = UnigramRecall()
+        self._xreact_recall = UnigramRecall()
+        self._oreact_recall = UnigramRecall()
 
-    def _update_accuracy(self, all_top_k_predictions, target_tokens, target_accuracy):
+    def _update_recall(self, all_top_k_predictions, target_tokens, target_recall):
         targets = target_tokens["tokens"]
         target_mask = get_text_field_mask(target_tokens)
         # See comment in _get_loss.
         # TODO(brendanr): Do we need contiguous here?
         relevant_targets = targets[:, 1:].contiguous()
         relevant_mask = target_mask[:, 1:].contiguous()
-        target_accuracy(
+        target_recall(
                 all_top_k_predictions,
                 relevant_targets,
                 relevant_mask,
@@ -227,21 +227,21 @@ class Event2Mind(Model):
             )
 
             if xintent_tokens:
-                self._update_accuracy(xintent_all_top_k_predictions, xintent_tokens, self._xintent_accuracy)
-                self._update_accuracy(xreact_all_top_k_predictions, xreact_tokens, self._xreact_accuracy)
-                self._update_accuracy(oreact_all_top_k_predictions, oreact_tokens, self._oreact_accuracy)
+                self._update_recall(xintent_all_top_k_predictions, xintent_tokens, self._xintent_recall)
+                self._update_recall(xreact_all_top_k_predictions, xreact_tokens, self._xreact_recall)
+                self._update_recall(oreact_all_top_k_predictions, oreact_tokens, self._oreact_recall)
 
                 # HACKS
                 # TODO(brendanr): Remove
-                local_xintent_accuracy = SequenceAccuracy()
-                local_xreact_accuracy = SequenceAccuracy()
-                local_oreact_accuracy = SequenceAccuracy()
-                self._update_accuracy(xintent_all_top_k_predictions, xintent_tokens, local_xintent_accuracy)
-                self._update_accuracy(xreact_all_top_k_predictions, xreact_tokens, local_xreact_accuracy)
-                self._update_accuracy(oreact_all_top_k_predictions, oreact_tokens, local_oreact_accuracy)
-                output_dict["xintent_recall"] = [local_xintent_accuracy.get_metric(reset=True)]
-                output_dict["xreact_recall"] = [local_xreact_accuracy.get_metric(reset=True)]
-                output_dict["oreact_recall"] = [local_oreact_accuracy.get_metric(reset=True)]
+                local_xintent_recall = UnigramRecall()
+                local_xreact_recall = UnigramRecall()
+                local_oreact_recall = UnigramRecall()
+                self._update_recall(xintent_all_top_k_predictions, xintent_tokens, local_xintent_recall)
+                self._update_recall(xreact_all_top_k_predictions, xreact_tokens, local_xreact_recall)
+                self._update_recall(oreact_all_top_k_predictions, oreact_tokens, local_oreact_recall)
+                output_dict["xintent_recall"] = [local_xintent_recall.get_metric(reset=True)]
+                output_dict["xreact_recall"] = [local_xreact_recall.get_metric(reset=True)]
+                output_dict["oreact_recall"] = [local_oreact_recall.get_metric(reset=True)]
 
             output_dict["xintent_top_k_predictions"] = xintent_all_top_k_predictions
             output_dict["xintent_top_k_log_probabilities"] = xintent_log_probabilities
@@ -499,7 +499,7 @@ class Event2Mind(Model):
         # TODO(brendanr): Update this to be top 10 recall.
         # TODO(brendanr): Think about recall vs precision in this case.
         if not self.training:
-            all_metrics["xintent"] = self._xintent_accuracy.get_metric(reset=reset)
-            all_metrics["xreact"] = self._xreact_accuracy.get_metric(reset=reset)
-            all_metrics["oreact"] = self._oreact_accuracy.get_metric(reset=reset)
+            all_metrics["xintent"] = self._xintent_recall.get_metric(reset=reset)
+            all_metrics["xreact"] = self._xreact_recall.get_metric(reset=reset)
+            all_metrics["oreact"] = self._oreact_recall.get_metric(reset=reset)
         return all_metrics
