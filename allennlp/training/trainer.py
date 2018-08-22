@@ -747,6 +747,11 @@ class Trainer:
             self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
             self._metrics_to_console(train_metrics, val_metrics)
+            for index, param_group in enumerate(self._optimizer.param_groups):
+                learning_rate = param_group.get("lr")
+                if learning_rate is not None:
+                    self._tensorboard.add_train_scalar(
+                            f"learning_rate/param_group{index:d}", learning_rate, epoch)
 
             if self._learning_rate_scheduler:
                 # The LRScheduler API is agnostic to whether your schedule requires a validation metric -
