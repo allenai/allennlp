@@ -60,9 +60,11 @@ class SequenceAccuracy(Metric):
                stillsearch = True
                for beam in beams:
                   masked_beam = beam * cur_mask
-                  s2 = [x for x in masked_beam if x != 0 and x != end_index]
-                  if stillsearch and (w in beam):
-                     retval += 1./float(len(s2))
+                  # w is from cleaned gold which doesn't have 0 or end_index,
+                  # so we don't need to explicitly remove those from
+                  # masked_beam.
+                  if stillsearch and (w in masked_beam):
+                     retval += 1./float(len(cleaned_gold))
                      stillsearch = False
             correct += retval
 
