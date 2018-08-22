@@ -233,15 +233,15 @@ class Event2Mind(Model):
 
                 # HACKS
                 # TODO(brendanr): Remove
-                local_xintent_recall = UnigramRecall()
-                local_xreact_recall = UnigramRecall()
-                local_oreact_recall = UnigramRecall()
-                self._update_recall(xintent_all_top_k_predictions, xintent_tokens, local_xintent_recall)
-                self._update_recall(xreact_all_top_k_predictions, xreact_tokens, local_xreact_recall)
-                self._update_recall(oreact_all_top_k_predictions, oreact_tokens, local_oreact_recall)
-                output_dict["xintent_recall"] = [local_xintent_recall.get_metric(reset=True)]
-                output_dict["xreact_recall"] = [local_xreact_recall.get_metric(reset=True)]
-                output_dict["oreact_recall"] = [local_oreact_recall.get_metric(reset=True)]
+                #local_xintent_recall = UnigramRecall()
+                #local_xreact_recall = UnigramRecall()
+                #local_oreact_recall = UnigramRecall()
+                #self._update_recall(xintent_all_top_k_predictions, xintent_tokens, local_xintent_recall)
+                #self._update_recall(xreact_all_top_k_predictions, xreact_tokens, local_xreact_recall)
+                #self._update_recall(oreact_all_top_k_predictions, oreact_tokens, local_oreact_recall)
+                #output_dict["xintent_recall"] = [local_xintent_recall.get_metric(reset=True)]
+                #output_dict["xreact_recall"] = [local_xreact_recall.get_metric(reset=True)]
+                #output_dict["oreact_recall"] = [local_oreact_recall.get_metric(reset=True)]
 
             output_dict["xintent_top_k_predictions"] = xintent_all_top_k_predictions
             output_dict["xintent_top_k_log_probabilities"] = xintent_log_probabilities
@@ -498,8 +498,11 @@ class Event2Mind(Model):
         all_metrics = {}
         # TODO(brendanr): Update this to be top 10 recall.
         # TODO(brendanr): Think about recall vs precision in this case.
-        if not self.training:
-            all_metrics["xintent"] = self._xintent_recall.get_metric(reset=reset)
-            all_metrics["xreact"] = self._xreact_recall.get_metric(reset=reset)
-            all_metrics["oreact"] = self._oreact_recall.get_metric(reset=reset)
+        #if not self.training:
+        #    all_metrics["xintent"] = self._xintent_recall.get_metric(reset=reset)
+        #    all_metrics["xreact"] = self._xreact_recall.get_metric(reset=reset)
+        #    all_metrics["oreact"] = self._oreact_recall.get_metric(reset=reset)
+        all_metrics["xintent"] = self._xintent_recall.get_metric(reset=reset)
+        all_metrics["xreact"] = self._xreact_recall.get_metric(reset=reset)
+        all_metrics["oreact"] = self._oreact_recall.get_metric(reset=reset)
         return all_metrics
