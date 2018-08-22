@@ -1,18 +1,18 @@
 # from https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html
-# pylint: disable=invalid-name,arguments-differ
+# pylint: disable=invalid-name,arguments-differ,redefined-outer-name
 from typing import Iterator, List, Dict
-import itertools
 import shutil
 import tempfile
 
 import torch
+import numpy as np
 
 from allennlp.commands.train import train_model
 from allennlp.common.params import Params
 from allennlp.data import Instance
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.fields import TextField, SequenceLabelField
-from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models import Model
@@ -20,29 +20,33 @@ from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
+from allennlp.predictors import SentenceTaggerPredictor
 from allennlp.training.metrics import CategoricalAccuracy
 
 torch.manual_seed(1)
 
 @DatasetReader.register('pos-tutorial')
 class PosDatasetReader(DatasetReader):
-    def __init__(self) -> None:
+    def __init__(self, token_indexers: Dict[str, TokenIndexer] = None) -> None:
         super().__init__(lazy=False)
-        self.token_indexers = {"tokens": SingleIdTokenIndexer()}
+        self.token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
-    def text_to_instance(self, sentence: List[str], tags: List[str]) -> Instance:
-        tokens = [Token(word) for word in sentence]
+    def text_to_instance(self, tokens: List[Token], tags: List[str] = None) -> Instance:
         sentence_field = TextField(tokens, self.token_indexers)
-        label_field = SequenceLabelField(labels=tags, sequence_field=sentence_field)
-        return Instance(fields={"sentence": sentence_field,
-                                "labels": label_field})
+        fields = {"sentence": sentence_field}
+
+        if tags:
+            label_field = SequenceLabelField(labels=tags, sequence_field=sentence_field)
+            fields["labels"] = label_field
+
+        return Instance(fields)
 
     def _read(self, file_path: str) -> Iterator[Instance]:
         with open(file_path) as f:
-            for separator, group in itertools.groupby(f, lambda line: line.strip() == ''):
-                if not separator:
-                    sentence, tags = zip(*[line.split() for line in group])
-                    yield self.text_to_instance(sentence, tags)
+            for line in f:
+                pairs = line.strip().split()
+                sentence, tags = zip(*(pair.split("###") for pair in pairs))
+                yield self.text_to_instance([Token(word) for word in sentence], tags)
 
 
 @Model.register('lstm-tagger')
@@ -77,9 +81,18 @@ class LstmTagger(Model):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {"accuracy": self.accuracy.get_metric(reset)}
 
-
+# In practice you'd probably do this from the command line:
+#   $ allennlp train tutorials/tagger/experiment.jsonnet -s /tmp/serialization_dir
+#
 params = Params.from_file('tutorials/tagger/experiment.jsonnet')
 serialization_dir = tempfile.mkdtemp()
-train_model(params, serialization_dir)
+model = train_model(params, serialization_dir)
+
+# Make predictions
+predictor = SentenceTaggerPredictor(model, dataset_reader=PosDatasetReader())
+tag_scores = predictor.predict("The dog ate the apple")['tag_logits']
+print(tag_scores)
+tag_ids = np.argmax(tag_scores, axis=-1)
+print([model.vocab.get_token_from_index(i, 'labels') for i in tag_ids])
 
 shutil.rmtree(serialization_dir)

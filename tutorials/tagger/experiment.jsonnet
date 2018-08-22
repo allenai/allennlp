@@ -2,6 +2,7 @@
 local embedding_dim = 6;
 local hidden_dim = 6;
 local num_epochs = 1000;
+local patience = 10;
 local batch_size = 2;
 local learning_rate = 0.1;
 
@@ -37,5 +38,6 @@ local learning_rate = 0.1;
             "type": "sgd",
             "lr": learning_rate
         },
+        "patience": patience
     }
 }

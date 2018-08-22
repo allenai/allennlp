@@ -1,15 +1,26 @@
-# from https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html
-# pylint: disable=invalid-name,arguments-differ
-from typing import Iterator, List
+"""
+This is the AllenNLP equivalent of
+https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html
+with the following changes:
+
+ 1. read data from files
+ 2. separate test data and validation data
+ 3. add tqdm with loss metrics
+ 4. early stopping based on validation loss
+ 5. track accuracy during training / validation
+"""
+# pylint: disable=invalid-name,arguments-differ,redefined-outer-name
+from typing import Iterator, List, Dict
 
 import torch
 import torch.optim as optim
+import numpy as np
 
 from allennlp.data import Instance
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.fields import TextField, SequenceLabelField
 from allennlp.data.iterators import BasicIterator
-from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models import Model
@@ -18,46 +29,44 @@ from allennlp.modules.text_field_embedders import TextFieldEmbedder, BasicTextFi
 from allennlp.modules.token_embedders import Embedding
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder, PytorchSeq2SeqWrapper
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
+from allennlp.predictors import SentenceTaggerPredictor
+from allennlp.training.metrics import CategoricalAccuracy
 from allennlp.training.trainer import Trainer
 
 torch.manual_seed(1)
 
-training_data = [
-        ("The dog ate the apple".split(), ["DET", "NN", "V", "DET", "NN"]),
-        ("Everybody read that book".split(), ["NN", "V", "DET", "NN"])
-]
-
 class PosDatasetReader(DatasetReader):
     """
-    Normally you'd read data from a file, but here we're just using a tiny in-memory dataset
+    DatasetReader for PoS tagging data, one sentence per line, like
+
+        The###DET dog###NN ate###V the###DET apple###NN
     """
-    def __init__(self) -> None:
+    def __init__(self, token_indexers: Dict[str, TokenIndexer] = None) -> None:
         super().__init__(lazy=False)
-        self.token_indexers = {"tokens": SingleIdTokenIndexer()}
+        self.token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
-    def text_to_instance(self, sentence: List[str], tags: List[str]) -> Instance:
-        tokens = [Token(word) for word in sentence]
+    def text_to_instance(self, tokens: List[Token], tags: List[str] = None) -> Instance:
         sentence_field = TextField(tokens, self.token_indexers)
-        label_field = SequenceLabelField(labels=tags, sequence_field=sentence_field)
-        return Instance(fields={"sentence": sentence_field,
-                                "labels": label_field})
+        fields = {"sentence": sentence_field}
 
+        if tags:
+            label_field = SequenceLabelField(labels=tags, sequence_field=sentence_field)
+            fields["labels"] = label_field
+
+        return Instance(fields)
 
     def _read(self, file_path: str) -> Iterator[Instance]:
-        if 'train' in file_path:
-            data = training_data
-        else:
-            raise ValueError(f"unknown path {file_path}")
-
-        for sentence, tags in data:
-            yield self.text_to_instance(sentence, tags)
+        with open(file_path) as f:
+            for line in f:
+                pairs = line.strip().split()
+                sentence, tags = zip(*(pair.split("###") for pair in pairs))
+                yield self.text_to_instance([Token(word) for word in sentence], tags)
 
 reader = PosDatasetReader()
-instances = reader.read('training')
-vocab = Vocabulary.from_instances(instances)
+train_dataset = reader.read('tutorials/tagger/training.txt')
+validation_dataset = reader.read('tutorials/tagger/validation.txt')
+vocab = Vocabulary.from_instances(train_dataset + validation_dataset)
 
-# These will usually be more like 32 or 64 dimensional.
-# We will keep them small, so we can see how the weights change as we train.
 EMBEDDING_DIM = 6
 HIDDEN_DIM = 6
 
@@ -73,6 +82,7 @@ class LstmTagger(Model):
                                       num_layers=1,
                                       hidden_dims=vocab.get_vocab_size('labels'),
                                       activations=lambda x: x)
+        self.accuracy = CategoricalAccuracy()
 
     def forward(self, sentence: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
         embeddings = self.word_embeddings(sentence)
@@ -82,9 +92,14 @@ class LstmTagger(Model):
         output = {"tag_logits": tag_logits}
 
         if labels is not None:
+            self.accuracy(tag_logits, labels, mask)
             output["loss"] = sequence_cross_entropy_with_logits(tag_logits, labels, mask)
 
         return output
+
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        return {"accuracy": self.accuracy.get_metric(reset)}
+
 
 token_embedding = Embedding(num_embeddings=vocab.get_vocab_size('tokens'),
                             embedding_dim=EMBEDDING_DIM)
@@ -95,8 +110,15 @@ model = LstmTagger(word_embeddings, lstm, vocab)
 optimizer = optim.SGD(model.parameters(), lr=0.1)
 
 iterator = BasicIterator(batch_size=2)
-trainer = Trainer(model=model, optimizer=optimizer, iterator=iterator, train_dataset=instances, num_epochs=500)
+iterator.index_with(vocab)
 
+trainer = Trainer(model=model,
+                  optimizer=optimizer,
+                  iterator=iterator,
+                  train_dataset=train_dataset,
+                  validation_dataset=validation_dataset,
+                  patience=10,
+                  num_epochs=1000)
 
 # No need to see what the scores are before training,
 # our trainer will show the loss over time.
@@ -105,14 +127,9 @@ trainer = Trainer(model=model, optimizer=optimizer, iterator=iterator, train_dat
 trainer.train()
 
 # See what the scores are after training
-with torch.no_grad():
-    tensor_dict = next(iterator(instances))
-    tag_scores = model.forward(**tensor_dict)['tag_logits']
-
-    # The sentence is "the dog ate the apple".  i,j corresponds to score for tag j
-    # for word i. The predicted tag is the maximum scoring tag.
-    # Here, we can see the predicted sequence below is
-    # DET NN V DET NN, the correct sequence!
-    print(tag_scores)
-    tag_ids = torch.argmax(tag_scores, dim=-1)[0].tolist()
-    print([vocab.get_token_from_index(i, 'labels') for i in tag_ids])
+# Make predictions
+predictor = SentenceTaggerPredictor(model, dataset_reader=PosDatasetReader())
+tag_scores = predictor.predict("The dog ate the apple")['tag_logits']
+print(tag_scores)
+tag_ids = np.argmax(tag_scores, axis=-1)
+print([model.vocab.get_token_from_index(i, 'labels') for i in tag_ids])
