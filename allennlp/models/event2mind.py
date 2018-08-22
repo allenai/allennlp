@@ -496,13 +496,9 @@ class Event2Mind(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         all_metrics = {}
-        # TODO(brendanr): Update this to be top 10 recall.
-        # TODO(brendanr): Think about recall vs precision in this case.
-        #if not self.training:
-        #    all_metrics["xintent"] = self._xintent_recall.get_metric(reset=reset)
-        #    all_metrics["xreact"] = self._xreact_recall.get_metric(reset=reset)
-        #    all_metrics["oreact"] = self._oreact_recall.get_metric(reset=reset)
-        all_metrics["xintent"] = self._xintent_recall.get_metric(reset=reset)
-        all_metrics["xreact"] = self._xreact_recall.get_metric(reset=reset)
-        all_metrics["oreact"] = self._oreact_recall.get_metric(reset=reset)
+        # TODO(brendanr): Why can't we do this during training?
+        if not self.training:
+            all_metrics["xintent"] = self._xintent_recall.get_metric(reset=reset)
+            all_metrics["xreact"] = self._xreact_recall.get_metric(reset=reset)
+            all_metrics["oreact"] = self._oreact_recall.get_metric(reset=reset)
         return all_metrics
