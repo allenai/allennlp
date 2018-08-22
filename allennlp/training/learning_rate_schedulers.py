@@ -127,7 +127,7 @@ class NoamLR(torch.optim.lr_scheduler._LRScheduler): # pylint: disable=protected
         return [scale for _ in range(len(self.base_lrs))]
 
 
-class STLR(torch.optim.lr_scheduler._LRScheduler): # pylint: disable=protected-access
+class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disable=protected-access
     """
     Implements the Slanted Triangular Learning Rate schedule with optional gradual
     unfreezing. The schedule corresponds to first linearly increasing the learning
@@ -231,5 +231,5 @@ Registrable._registry[LearningRateScheduler] = {   # pylint: disable=protected-a
         "reduce_on_plateau": torch.optim.lr_scheduler.ReduceLROnPlateau,
         "cosine": torch.optim.lr_scheduler.CosineAnnealingLR,
         "noam": NoamLR,
-        "stlr": STLR
+        "slanted_triangular": SlantedTriangular
 }
