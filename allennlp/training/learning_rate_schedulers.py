@@ -124,7 +124,6 @@ class NoamLR(torch.optim.lr_scheduler._LRScheduler): # pylint: disable=protected
         for param_group, learning_rate in zip(self.optimizer.param_groups, self.get_lr()):
             param_group['lr'] = learning_rate
 
-
     def get_lr(self):
         step = max(self.last_epoch, 1)
         scale = self.factor *  (self.model_size ** (-0.5) *
