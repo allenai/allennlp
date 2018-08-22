@@ -48,8 +48,7 @@
       "dropout": 0.2
     },
     "max_decoding_steps": 10,
-    "target_namespace": "target_tokens",
-    "scheduled_sampling_ratio": 0.0
+    "target_namespace": "target_tokens"
   },
   "iterator": {
     "type": "bucket",

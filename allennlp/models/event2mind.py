@@ -22,16 +22,12 @@ from allennlp.training.metrics import UnigramRecall
 @Model.register("event2mind")
 class Event2Mind(Model):
     """
-    This ``Event2Mind`` class is a :class:`Model` which takes a sequence, encodes it, and then
-    uses the encoded representations to decode another sequence.  You can use this as the basis for
-    a neural machine translation system, an abstractive summarization system, or any other common
-    seq2seq problem.  The model here is simple, but should be a decent starting place for
-    implementing recent models for these tasks.
+    This ``Event2Mind`` class is a :class:`Model` which takes an event
+    sequence, encodes it, and then uses the encoded representation to decode
+    several mental state sequences.
 
-    This ``Event2Mind`` model takes an encoder (:class:`Seq2SeqEncoder`) as an input, and
-    implements the functionality of the decoder.  In this implementation, the decoder uses the
-    encoder's outputs in two ways. The hidden state of the decoder is initialized with the output
-    from the final time-step of the encoder.
+    See: https://www.semanticscholar.org/paper/Event2Mind/b89f8a9b2192a8f2018eead6b135ed30a1f2144d
+
     Parameters
     ----------
     vocab : ``Vocabulary``, required
@@ -51,14 +47,6 @@ class Event2Mind(Model):
     target_embedding_dim : int, optional (default = source_embedding_dim)
         You can specify an embedding dimensionality for the target side. If not, we'll use the same
         value as the source embedder's.
-    scheduled_sampling_ratio: float, optional (default = 0.0)
-        At each timestep during training, we sample a random number between 0 and 1, and if it is
-        not less than this value, we use the ground truth labels for the whole batch. Else, we use
-        the predictions from the previous time step for the whole batch. If this value is 0.0
-        (default), this corresponds to teacher forcing, and if it is 1.0, it corresponds to not
-        using target side ground truth labels.  See the following paper for more information:
-        Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks. Bengio et al.,
-        2015.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -66,18 +54,16 @@ class Event2Mind(Model):
                  encoder: Seq2SeqEncoder,
                  max_decoding_steps: int,
                  target_namespace: str = "tokens",
-                 target_embedding_dim: int = None,
-                 scheduled_sampling_ratio: float = 0.0) -> None:
+                 target_embedding_dim: int = None) -> None:
         super(Event2Mind, self).__init__(vocab)
+        # TODO(brendanr): Hack the embeddings here like initWEmb in modeling/utils/preprocess.py?
         self._source_embedder = source_embedder
         self._encoder = encoder
         self._max_decoding_steps = max_decoding_steps
         self._target_namespace = target_namespace
-        self._scheduled_sampling_ratio = scheduled_sampling_ratio
-        # We need the start symbol to provide as the input at the first timestep of decoding, and
         self._embedding_dropout = nn.Dropout(0.2)
-        #self._hidden_dropout = nn.Dropout(0.5)
 
+        # We need the start symbol to provide as the input at the first timestep of decoding, and
         # end symbol as a way to indicate the end of the decoded sequence.
         self._start_index = self.vocab.get_token_index(START_SYMBOL, self._target_namespace)
         self._end_index = self.vocab.get_token_index(END_SYMBOL, self._target_namespace)
@@ -92,9 +78,6 @@ class Event2Mind(Model):
         self._oreact_embedder = Embedding(num_classes, target_embedding_dim)
 
         self._decoder_input_dim = target_embedding_dim
-
-        #self._decoder_cell = GRUCell(self._decoder_input_dim, self._decoder_output_dim)
-        #self._output_projection_layer = Linear(self._decoder_output_dim, num_classes)
 
         self._xintent_decoder_cell = GRUCell(self._decoder_input_dim, self._decoder_output_dim)
         self._xintent_output_projection_layer = Linear(self._decoder_output_dim, num_classes)
@@ -139,7 +122,7 @@ class Event2Mind(Model):
                 oreact_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
-        Decoder logic for producing the entire target sequence.
+        Decoder logic for producing the target sequences.
 
         Parameters
         ----------
@@ -153,7 +136,6 @@ class Event2Mind(Model):
         # (batch_size, input_sequence_length, encoder_output_dim)
         # TODO(brendanr): Revisit dropout.
         embedded_input = self._embedding_dropout(self._source_embedder(source_tokens))
-        # TODO(brendanr): Hack the embeddings here like initWEmb in modeling/utils/preprocess.py?
         #embedded_input = self._source_embedder(source_tokens)
         batch_size, _, _ = embedded_input.size()
         source_mask = get_text_field_mask(source_tokens)
@@ -231,7 +213,7 @@ class Event2Mind(Model):
                 self._update_recall(xreact_all_top_k_predictions, xreact_tokens, self._xreact_recall)
                 self._update_recall(oreact_all_top_k_predictions, oreact_tokens, self._oreact_recall)
 
-                # HACKS
+                # Hacks to calculate per-instance recall when making predictions.
                 # TODO(brendanr): Remove
                 #local_xintent_recall = UnigramRecall()
                 #local_xreact_recall = UnigramRecall()
@@ -250,28 +232,22 @@ class Event2Mind(Model):
             output_dict["oreact_top_k_predictions"] = oreact_all_top_k_predictions
             output_dict["oreact_top_k_log_probabilities"] = oreact_log_probabilities
 
-            # TODO(brendanr): Verify that the best prediction is in fact first.
-            #output_dict["predictions"] = xintent_all_top_k_predictions[:, 0, :]
-
         return output_dict
 
     # Returns the loss.
     def greedy_search(self, final_encoder_output, target_tokens, target_embedder, decoder_cell, output_projection_layer):
-        # TODO(brendanr): Something about this is suspicious. As in will we
-        # maybe have difficulty learning to output the end symbol? Maybe
-        # it's fine since this will make num_decoding_steps the length of
-        # the longest sequence and most targets will be shorter? Still...
         targets = target_tokens["tokens"]
         target_sequence_length = targets.size()[1]
         # The last input from the target is either padding or the end symbol. Either way, we
         # don't have to process it.
+        # TODO(brendanr): Something about this is suspicious. As in will we
+        # maybe have difficulty learning to output the end symbol? Maybe
+        # it's fine since this will make num_decoding_steps the length of
+        # the longest sequence and most targets will be shorter? Still...
         num_decoding_steps = target_sequence_length - 1
 
         decoder_hidden = final_encoder_output
-        last_predictions = None
         step_logits = []
-        step_probabilities = []
-        step_predictions = []
         for timestep in range(num_decoding_steps):
             # See https://github.com/allenai/allennlp/issues/1134.
             # TODO(brendanr): Grok this.
@@ -282,17 +258,8 @@ class Event2Mind(Model):
             output_projections = output_projection_layer(decoder_hidden)
             # list of (batch_size, 1, num_classes)
             step_logits.append(output_projections.unsqueeze(1))
-            class_probabilities = F.softmax(output_projections, dim=-1)
-            _, predicted_classes = torch.max(class_probabilities, 1)
-            step_probabilities.append(class_probabilities.unsqueeze(1))
-            last_predictions = predicted_classes
-            # (batch_size, 1)
-            step_predictions.append(last_predictions.unsqueeze(1))
-        # step_logits is a list containing tensors of shape (batch_size, 1, num_classes)
-        # This is (batch_size, num_decoding_steps, num_classes)
+        # (batch_size, num_decoding_steps, num_classes)
         logits = torch.cat(step_logits, 1)
-        # TODO(brendanr): Stop producing this at all?
-        #output_dict["predictions"] = torch.cat(step_predictions, 1)
         target_mask = get_text_field_mask(target_tokens)
         return self._get_loss(logits, targets, target_mask)
 
@@ -368,7 +335,6 @@ class Event2Mind(Model):
 
             # (batch_size * k, k), (batch_size * k, k)
             top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(k)
-            # TODO(brendanr): Account for predicted_class == end_symbol explicitly?
             # TODO(brendanr): Normalize for length?
             # (batch_size * k, k)
             expanded_last_log_probabilities = log_probabilities[-1].\
@@ -380,7 +346,7 @@ class Event2Mind(Model):
             reshaped_top_log_probabilities = summed_top_log_probabilities.reshape(batch_size, k * k)
             reshaped_predicted_classes = predicted_classes.reshape(batch_size, k * k)
             restricted_beam_log_probs, restricted_beam_indices = reshaped_top_log_probabilities.topk(k)
-            # TODO(brendanr): Something about this is weird. restricted_predicted_classes == restricted_beam_indices???
+            # TODO(brendanr): Something about this is weird. Why do restricted_predicted_classes == restricted_beam_indices?
             restricted_predicted_classes = reshaped_predicted_classes.gather(1, restricted_beam_indices)
 
             log_probabilities.append(restricted_beam_log_probs)
@@ -467,28 +433,13 @@ class Event2Mind(Model):
         within the ``forward`` method.
 
         This method trims the output predictions to the first end symbol, replaces indices with
-        corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
+        corresponding tokens, and adds fields for the tokens to the ``output_dict``.
         """
-
-        #       output_dict["xintent_top_k_predictions"] = xintent_all_top_k_predictions
-        #       output_dict["xintent_top_k_log_probabilities"] = xintent_log_probabilities
-        #       output_dict["xreact_top_k_predictions"] = xreact_all_top_k_predictions
-        #       output_dict["xreact_top_k_log_probabilities"] = xreact_log_probabilities
-        #       output_dict["oreact_top_k_predictions"] = oreact_all_top_k_predictions
-        #       output_dict["oreact_top_k_log_probabilities"] = oreact_log_probabilities
-
-        #predicted_indices = output_dict["predictions"]
-        #output_dict["predicted_tokens"] = self.decode_all(predicted_indices)
         xintent_top_k_predicted_indices = output_dict["xintent_top_k_predictions"][0]
-        # TODO(brendanr): Figure out why this needs to be wrapped in an extra list.
         output_dict["xintent_top_k_predicted_tokens"] = [self.decode_all(xintent_top_k_predicted_indices)]
-
         xreact_top_k_predicted_indices = output_dict["xreact_top_k_predictions"][0]
-        # TODO(brendanr): Figure out why this needs to be wrapped in an extra list.
         output_dict["xreact_top_k_predicted_tokens"] = [self.decode_all(xreact_top_k_predicted_indices)]
-
         oreact_top_k_predicted_indices = output_dict["oreact_top_k_predictions"][0]
-        # TODO(brendanr): Figure out why this needs to be wrapped in an extra list.
         output_dict["oreact_top_k_predicted_tokens"] = [self.decode_all(oreact_top_k_predicted_indices)]
 
         return output_dict
