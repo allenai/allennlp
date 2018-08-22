@@ -180,19 +180,19 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
             # epoch; so the first time, with epoch id 0, we want to set
             # up for epoch #1; the second time, still with epoch id 0,
             # we want to set up for epoch #2, etc.
-            epoch_no = epoch+1 if self.first_epoch else epoch+2
+            num_layers_to_unfreeze = epoch+1 if self.first_epoch else epoch+2
             if self.first_epoch:
                 self.step_batch(1)
                 self.first_epoch = False
-            if epoch_no >= len(self.optimizer.param_groups)-1:
+            if num_layers_to_unfreeze >= len(self.optimizer.param_groups)-1:
                 print('Gradual unfreezing finished. Training all layers.')
                 self.freezing_current = False
             else:
-                print(f'Gradual unfreezing. Training only the top {epoch_no} layers.')
+                print(f'Gradual unfreezing. Training only the top {num_layers_to_unfreeze} layers.')
             for i, param_group in enumerate(reversed(self.optimizer.param_groups)):
                 for param in param_group["params"]:
                     # i = 0 is the default group; we care about i > 0
-                    if i <= epoch_no:
+                    if i <= num_layers_to_unfreeze:
                         param.requires_grad = True
                     else:
                         param.requires_grad = False
