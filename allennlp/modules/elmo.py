@@ -496,13 +496,18 @@ class _ElmoBiLm(torch.nn.Module):
                  vocab_to_cache: List[str] = None) -> None:
         super(_ElmoBiLm, self).__init__()
 
-        self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=False if vocab_to_cache is not None else requires_grad)
+        self._token_embedder = _ElmoCharacterEncoder(options_file,
+                                                     weight_file,
+                                                     requires_grad=False
+                                                     if vocab_to_cache is not None else requires_grad)
 
         self._requires_grad = requires_grad
         if requires_grad and vocab_to_cache:
             logging.warning("You are fine tuning ELMo and caching char CNN word vectors. "
                             "This behaviour is not guaranteed to be well defined, particularly. "
-                            "if not all of your inputs will occur in the vocabulary cache.")
+                            "if not all of your inputs will occur in the vocabulary cache. "
+                            "_ElmoCharacterEncoder will be frozen because "
+                            "it is not used after word embedding caching.")
         # This is an embedding, used to look up cached
         # word vectors built from character level cnn embeddings.
         self._word_embedding = None

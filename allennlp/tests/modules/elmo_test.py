@@ -287,15 +287,19 @@ class TestElmoRequiresGrad(ElmoTestCase):
                 assert all([grad is None for grad in elmo_grads])
 
     def _run_test_with_vocab_to_cache(self, requires_grad):
-        vocab_to_cache = [ '<pad>', 'hello', 'world' ]
-        embedder = ElmoTokenEmbedder(self.options_file, self.weight_file, requires_grad=requires_grad, vocab_to_cache=vocab_to_cache)
-        word_tensor = torch.tensor([[[1, 2]]])
+        vocab_to_cache = ['<pad>', 'hello', 'world']
+        embedder = ElmoTokenEmbedder(self.options_file,
+                                     self.weight_file,
+                                     requires_grad=requires_grad,
+                                     vocab_to_cache=vocab_to_cache)
+        word_tensor = torch.LongTensor([[[1, 2]]])
         for _ in range(2):
-            embeddings = embedder(word_tensor)
+            embeddings = embedder(word_tensor, word_tensor)
             loss = embeddings.sum()
             loss.backward()
 
-            elmo_grads = [param.grad for name, param in embedder.named_parameters() if '_elmo_lstm' in name and '_token_embedder' not in name]
+            elmo_grads = [param.grad for name, param in embedder.named_parameters()
+                          if '_elmo_lstm' in name and '_token_embedder' not in name]
             if requires_grad:
                 # None of the elmo grads should be None.
                 assert all([grad is not None for grad in elmo_grads])
@@ -303,7 +307,8 @@ class TestElmoRequiresGrad(ElmoTestCase):
                 # All of the elmo grads should be None.
                 assert all([grad is None for grad in elmo_grads])
 
-            assert all([param.grad is None for name, param in embedder.named_parameters() if '_token_embedder' in name])
+            assert all([param.grad is None for name, param in embedder.named_parameters()
+                        if '_token_embedder' in name])
 
     def test_elmo_requires_grad(self):
         self._run_test(True)
@@ -311,6 +316,11 @@ class TestElmoRequiresGrad(ElmoTestCase):
     def test_elmo_does_not_require_grad(self):
         self._run_test(False)
 
+    def test_elmo_with_vocab_to_cache_requires_grad(self):
+        self._run_test_with_vocab_to_cache(True)
+
+    def test_elmo_with_vocab_to_cache_does_not_require_grad(self):
+        self._run_test_with_vocab_to_cache(False)
 
 class TestElmoTokenRepresentation(ElmoTestCase):
     def test_elmo_token_representation(self):
