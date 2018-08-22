@@ -309,7 +309,6 @@ class AtisSemanticParser(Model):
         try:
             self._cursor.execute(predicted)
             predicted_rows = self._cursor.fetchall()
-            print('predicted_rows', predicted_rows)
             self._has_logical_form(1.0)
         except sqlite3.OperationalError:
             print("Operation error when executing predicted")
@@ -319,7 +318,6 @@ class AtisSemanticParser(Model):
         try:
             self._cursor.execute(target)
             target_rows = self._cursor.fetchall()
-            print('target_rows', target_rows)
         except sqlite3.OperationalError:
             print("Operation error when executing target")
             return 0
@@ -621,6 +619,7 @@ class AtisSemanticParser(Model):
         training_beam_size = params.pop_int('training_beam_size', None)
         dropout = params.pop_float('dropout', 0.0)
         rule_namespace = params.pop('rule_namespace', 'rule_labels')
+        tables_directory = params.pop('tables_directory', None) 
         params.assert_empty(cls.__name__)
         return cls(vocab,
                    utterance_embedder=utterance_embedder,
@@ -633,7 +632,8 @@ class AtisSemanticParser(Model):
                    input_attention=input_attention,
                    training_beam_size=training_beam_size,
                    dropout=dropout,
-                   rule_namespace=rule_namespace)
+                   rule_namespace=rule_namespace,
+                   tables_directory=tables_directory)
 
 
 
