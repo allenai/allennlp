@@ -55,7 +55,7 @@ class CosineWithRestartsTest(AllenNlpTestCase):
 
     def test_from_params(self):
         optim = self._get_optimizer()
-        sched = LearningRateScheduler.from_params(optim, Params({"type": "cosine", "T_max": 5})).lr_scheduler
+        sched = LearningRateScheduler.from_params(optim, Params({"type": "cosine", "t_max": 5})).lr_scheduler
 
         assert sched.t_max == 5
         assert sched._initialized is True
@@ -64,7 +64,7 @@ class CosineWithRestartsTest(AllenNlpTestCase):
         assert optim.param_groups[0]["lr"] == 1.0
 
         with self.assertRaises(TypeError):
-            # T_max is required.
+            # t_max is required.
             LearningRateScheduler.from_params(optim, Params({"type": "cosine"}))
 
     def test_schedules(self):
@@ -104,9 +104,9 @@ class CosineWithRestartsTest(AllenNlpTestCase):
                               (90, 1.0)]),
         ]
 
-        for epochs, T_max, factor, lr_checks in cosine_schedule_cases:
+        for epochs, t_max, factor, lr_checks in cosine_schedule_cases:
             optimizer = self._get_optimizer()
-            scheduler = CosineWithRestarts(optimizer, T_max, factor=factor)
+            scheduler = CosineWithRestarts(optimizer, t_max, factor=factor)
             lrs = [optimizer.param_groups[0]["lr"]]
             for epoch in range(epochs):
                 scheduler.step(epoch)

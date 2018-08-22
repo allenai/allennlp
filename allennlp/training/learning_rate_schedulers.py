@@ -140,41 +140,40 @@ class CosineWithRestarts(torch.optim.lr_scheduler._LRScheduler):  # pylint: disa
 
     Parameters
     ----------
-    optimizer : torch.optim.Optimizer
+    optimizer : ``torch.optim.Optimizer``
 
-    T_max : int
+    t_max : ``int``
         The maximum number of iterations within the first cycle.
 
-    eta_min : float, optional (default: 0)
+    eta_min : ``float``, optional (default=0)
         The minimum learning rate.
 
-    last_epoch : int, optional (default: -1)
-        The index of the last epoch.
+    last_epoch : ``int``, optional (default=-1)
+        The index of the last epoch. This is used when restarting.
 
-    factor : float, optional (default: 1)
-        The factor by which the cycle length (``T_max``) increasing after each
-        restart.
+    factor : ``float``, optional (default=1)
+        The factor by which the cycle length (``T_max``) increases after each restart.
 
     """
 
     def __init__(self,
                  optimizer: torch.optim.Optimizer,
-                 T_max: int,
+                 t_max: int,
                  eta_min: float = 0.,
                  last_epoch: int = -1,
                  factor: float = 1.) -> None:
-        assert T_max > 0
+        assert t_max > 0
         assert eta_min >= 0
-        if T_max == 1 and factor == 1:
+        if t_max == 1 and factor == 1:
             logger.warning("Cosine annealing scheduler will have no effect on the learning "
                            "rate since T_max = 1 and factor = 1.")
-        self.t_max = T_max
+        self.t_max = t_max
         self.eta_min = eta_min
         self.factor = factor
         self._last_restart: int = 0
         self._cycle_counter: int = 0
         self._cycle_factor: float = 1.
-        self._updated_cycle_len: int = T_max
+        self._updated_cycle_len: int = t_max
         self._initialized: bool = False
         super(CosineWithRestarts, self).__init__(optimizer, last_epoch)
 
