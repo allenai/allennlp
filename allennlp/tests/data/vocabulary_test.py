@@ -675,7 +675,7 @@ class TestVocabulary(AllenNlpTestCase):
     def test_max_vocab_size_partial_dict(self):
         indexers = {"tokens": SingleIdTokenIndexer(), "token_characters": TokenCharactersIndexer()}
         instance = Instance({
-            'text': TextField([Token(w) for w in 'The quick brown fox lay down for a rest'.split(' ')], indexers)
+            'text': TextField([Token(w) for w in 'Abc def ghi jkl mno pqr stu vwx yz'.split(' ')], indexers)
         })
         dataset = Batch([instance])
         params = Params({
@@ -685,3 +685,5 @@ class TestVocabulary(AllenNlpTestCase):
         })
 
         vocab = Vocabulary.from_params(params=params, instances=dataset)
+        assert len(vocab.get_index_to_token_vocabulary("tokens").values()) == 3 # 1 + 2
+        assert len(vocab.get_index_to_token_vocabulary("token_characters").values()) == 28 # 26 + 2
