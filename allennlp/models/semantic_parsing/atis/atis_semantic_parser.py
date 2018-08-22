@@ -109,8 +109,8 @@ class AtisSemanticParser(Model):
         # Initialize a cursor to our sqlite database, so we can execute logical forms.
         self._tables_directory = tables_directory
         print('tables_directory', tables_directory)
-        self._connection = sqlite3.connect(self._tables_directory)
-        self._cursor = self._connection.cursor() 
+        # self._connection = sqlite3.connect(self._tables_directory)
+        # self._cursor = self._connection.cursor() 
 
         self._action_padding_index = -1  # the padding value used by IndexField
         num_actions = vocab.get_vocab_size(self._rule_namespace)
@@ -309,10 +309,10 @@ class AtisSemanticParser(Model):
         try:
             self._cursor.execute(predicted)
             predicted_rows = self._cursor.fetchall()
-            self._has_logical_form(1.0)
+            # self._has_logical_form(1.0)
         except sqlite3.OperationalError:
             print("Operation error when executing predicted")
-            self._has_logical_form(0.0)
+            # self._has_logical_form(0.0)
             return 0
         
         try:
@@ -585,15 +585,17 @@ class AtisSemanticParser(Model):
                         self._action_sequence_accuracy(sequence_in_targets)
 
                         targets_list = [target.item() for target in targets[0]]
-                        similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
-                        self._action_similarity(similarity.ratio())
+                        # similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
+                        # self._action_similarity(similarity.ratio())
 
                         action_strings = [action_mapping[(i, action_index)]
                                           for action_index in best_action_indices]
                     if example_sql_query:
                         predicted_sql_query = action_sequence_to_sql(action_strings)
+                        '''
                         self._denotation_accuracy(self._sql_result_match(predicted_sql_query,
                                                                          example_sql_query[0]))
+                        '''
                         outputs['example_sql_query'].append(example_sql_query[0])
 
 
