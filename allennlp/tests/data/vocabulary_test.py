@@ -671,3 +671,17 @@ class TestVocabulary(AllenNlpTestCase):
         words = vocab.get_index_to_token_vocabulary().values()
         # Additional 2 tokens are '@@PADDING@@' and '@@UNKNOWN@@' by default
         assert len(words) == 3
+
+    def test_max_vocab_size_partial_dict(self):
+        indexers = {"tokens": SingleIdTokenIndexer(), "token_characters": TokenCharactersIndexer()}
+        instance = Instance({
+            'text': TextField([Token(w) for w in 'The quick brown fox lay down for a rest'.split(' ')], indexers)
+        })
+        dataset = Batch([instance])
+        params = Params({
+                "max_vocab_size": {
+                        "tokens": 1
+                }
+        })
+
+        vocab = Vocabulary.from_params(params=params, instances=dataset)
