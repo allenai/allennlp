@@ -496,7 +496,7 @@ class Event2Mind(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         all_metrics = {}
-        # TODO(brendanr): Why can't we do this during training?
+        # Recall@10 needs beam search which doesn't happen during training.
         if not self.training:
             all_metrics["xintent"] = self._xintent_recall.get_metric(reset=reset)
             all_metrics["xreact"] = self._xreact_recall.get_metric(reset=reset)
