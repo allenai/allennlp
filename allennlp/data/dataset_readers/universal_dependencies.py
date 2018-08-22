@@ -26,6 +26,7 @@ def lazy_parse(text: str, fields: Tuple = DEFAULT_FIELDS):
 class UniversalDependenciesDatasetReader(DatasetReader):
     """
     Reads a file in the conllu Universal Dependencies format.
+
     Parameters
     ----------
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
