@@ -65,7 +65,6 @@ class UniversalDependenciesDatasetReader(DatasetReader):
                     pos_tags = [x["xpostag"] for x in annotation]
                 else:
                     pos_tags = [x["upostag"] for x in annotation]
-                print(pos_tags)
                 yield self.text_to_instance(words, pos_tags, list(zip(tags, heads)))
 
     @overrides
