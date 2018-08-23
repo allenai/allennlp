@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Tuple
 
 import numpy
 from overrides import overrides
@@ -77,7 +77,7 @@ class Event2Mind(Model):
                 "xreact",
                 "oreact"
         ]
-        self._states = {}
+        self._states: Dict[str, Event2Mind.StateDecoder] = {}
         for name in state_names:
             self._states[name] = self.StateDecoder(
                     num_classes,
@@ -86,7 +86,7 @@ class Event2Mind(Model):
             )
 
     class StateDecoder:
-        def __init__(self, name, num_classes, input_dim, output_dim):
+        def __init__(self, num_classes, input_dim, output_dim):
             self._embedder = Embedding(num_classes, input_dim)
             self._decoder_cell = GRUCell(input_dim, output_dim)
             self._output_projection_layer = Linear(output_dim, num_classes)
@@ -148,13 +148,13 @@ class Event2Mind(Model):
                 target_only = target_tokens.keys() - self._states.keys()
                 states_only = self._states.keys() - target_tokens.keys()
                 raise Exception("Mismatch between target_tokens and self._states. Keys in " +
-                        "targets only: {} Keys in states only: {}".format(target_only, states_only)
+                        "targets only: {} Keys in states only: {}".format(target_only, states_only))
             total_loss = 0
             for name, state in self._states.items():
                 loss = self.greedy_search(
                         final_encoder_output,
                         target_tokens[name],
-                        state.__embedder,
+                        state._embedder,
                         state._decoder_cell,
                         state._output_projection_layer)
                 total_loss += loss
@@ -221,7 +221,7 @@ class Event2Mind(Model):
                     source_mask,
                     target_embedder,
                     decoder_cell,
-                    output_projection_layer) -> (torch.Tensor, torch.Tensor):
+                    output_projection_layer) -> Tuple[torch.Tensor, torch.Tensor]:
         # List of (batchsize, k) tensors. One for each time step. Does not
         # include the start symbols, which are implicit.
         predictions = []
@@ -385,7 +385,7 @@ class Event2Mind(Model):
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds fields for the tokens to the ``output_dict``.
         """
-        for name, state in self._states:
+        for name, state in self._states.items():
             top_k_predicted_indices = output_dict["{}_top_k_predictions".format(name)][0]
             output_dict["{}_top_k_predicted_tokens".format(name)] = [self.decode_all(top_k_predicted_indices)]
 
@@ -396,6 +396,6 @@ class Event2Mind(Model):
         all_metrics = {}
         # Recall@10 needs beam search which doesn't happen during training.
         if not self.training:
-            for name, state in self._states:
+            for name, state in self._states.items():
                 all_metrics[name] = state._recall.get_metric(reset=reset)
         return all_metrics
