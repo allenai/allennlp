@@ -106,7 +106,6 @@ class DialogQA(Model):
         self._official_f1 = Average()
         if dropout > 0:
             self._variational_dropout = InputVariationalDropout(dropout)
-            self._dropout = torch.nn.Dropout(dropout)
         else:
             raise ValueError()
         self._mask_lstms = mask_lstms
@@ -166,18 +165,17 @@ class DialogQA(Model):
                                                           dim=-1)
             repeated_passage_lstm_mask = passage_lstm_mask.unsqueeze(1). \
                 repeat(1, max_qa_count, 1).view(batch_size * max_qa_count, passage_length)
-            repeated_encoded_passage = self._dropout(self._phrase_layer(repeated_embedded_passage,
+            repeated_encoded_passage = self._variational_dropout(self._phrase_layer(repeated_embedded_passage,
                                                                         repeated_passage_lstm_mask))
         else:
-            encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_lstm_mask))
+            encoded_passage = self._variational_dropout(self._phrase_layer(embedded_passage, passage_lstm_mask))
             repeated_encoded_passage = encoded_passage.unsqueeze(1).repeat(1, max_qa_count, 1, 1).view( \
                 batch_size * max_qa_count, passage_lstm_mask.size()[1], -1)
 
-        encoded_question = self._dropout(self._phrase_layer(embedded_question, question_lstm_mask))
+        encoded_question = self._variational_dropout(self._phrase_layer(embedded_question, question_lstm_mask))
         encoding_dim = encoded_question.size(-1)
 
         # Shape: (batch_size * max_qa_count, passage_length, question_length)
-        #print(repeated_encoded_passage.), encoded_question.size())
         passage_question_similarity = self._matrix_attention(repeated_encoded_passage, encoded_question)
         # Shape: (batch_size * max_qa_count, passage_length, question_length)
         passage_question_attention = util.last_dim_softmax(passage_question_similarity, question_mask)
@@ -210,7 +208,8 @@ class DialogQA(Model):
 
         final_merged_passage = F.relu(self._merge_atten(final_merged_passage))
 
-        residual_layer = self._dropout(self._residual_encoder(self._dropout(final_merged_passage), passage_mask))
+        merged_passage_for_residual = self._variational_dropout(final_merged_passage)
+        residual_layer = self._variational_dropout(self._residual_encoder(merged_passage_for_residual, passage_mask))
         self_atten_matrix = self._self_atten(residual_layer, residual_layer)
 
         mask = passage_mask.resize(batch_size * max_qa_count,
@@ -235,8 +234,8 @@ class DialogQA(Model):
                                                                   residual_layer * self_atten_vecs],
                                                                  dim=-1)))
 
-        final_merged_passage += residual_layer  # batch_size * maxqa_pair_len * max_passage_len * 200
-        final_merged_passage = self._dropout(final_merged_passage)
+        final_merged_passage = final_merged_passage + residual_layer  # batch_size * maxqa_pair_len * max_passage_len * 200
+        final_merged_passage = self._variational_dropout(final_merged_passage)
         start_rep = self._span_start_encoder(final_merged_passage, passage_mask)
         span_start_logits = self._span_start_predictor(start_rep).squeeze(-1)
 
