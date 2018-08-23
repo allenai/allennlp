@@ -63,8 +63,8 @@ class Conll2003DatasetReader(DatasetReader):
     feature_labels: ``Sequence[str]``, optional (default=``()``)
         These labels will be loaded as features into the corresponding instance fields:
         ``pos`` -> ``pos_tags``, ``chunk`` -> ``chunk_tags``, ``ner`` -> ``ner_tags``
-        Each will have its own namespace: ``pos_labels``, ``chunk_labels``, ``ner_labels``.
-        If you want to use one of the labels as a `feature` in your model, it should be
+        Each will have its own namespace: ``pos_tags``, ``chunk_tags``, ``ner_tags``.
+        If you want to use one of the tags as a `feature` in your model, it should be
         specified here.
     coding_scheme: ``str``, optional (default=``IOB1``)
         Specifies the coding scheme for ``ner_labels`` and ``chunk_labels``.
