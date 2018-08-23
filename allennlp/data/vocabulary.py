@@ -490,7 +490,10 @@ class Vocabulary(Registrable):
                 pretrained_list = None
             token_counts = list(counter[namespace].items())
             token_counts.sort(key=lambda x: x[1], reverse=True)
-            max_vocab = max_vocab_size[namespace]
+            try:
+                max_vocab = max_vocab_size[namespace]
+            except KeyError:
+                max_vocab = None
             if max_vocab:
                 token_counts = token_counts[:max_vocab]
             for token, count in token_counts:

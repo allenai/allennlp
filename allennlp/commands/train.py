@@ -6,11 +6,10 @@ which to write the results.
 .. code-block:: bash
 
    $ allennlp train --help
-   usage: allennlp train [-h] -s SERIALIZATION_DIR
-                              [-o OVERRIDES]
-                              [--include-package INCLUDE_PACKAGE]
-                              [--file-friendly-logging]
-                              param_path
+   usage: allennlp train [-h] -s SERIALIZATION_DIR [-r] [-o OVERRIDES]
+                         [--file-friendly-logging]
+                         [--include-package INCLUDE_PACKAGE]
+                         param_path
 
    Train the specified model on the specified dataset.
 
@@ -22,6 +21,7 @@ which to write the results.
    -h, --help            show this help message and exit
    -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
                            directory in which to save the model and its logs
+   -r, --recover         recover training from the state in serialization_dir
    -o OVERRIDES, --overrides OVERRIDES
                            a JSON structure used to override the experiment
                            configuration
