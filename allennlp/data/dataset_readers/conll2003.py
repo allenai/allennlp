@@ -68,11 +68,14 @@ class Conll2003DatasetReader(DatasetReader):
         specified here.
     coding_scheme: ``str``, optional (default=``IOB1``)
         Specifies the coding scheme for ``ner_labels`` and ``chunk_labels``.
-        Valid options are ``IOB1`` and ``BIOUL``.  The ``IOB1`` default maintains
-        the original IOB1 scheme in the CoNLL data.
+        Valid options are ``IOB1``, ``BIO``, and ``BIOUL``.  The ``IOB1`` default maintains
+        the original IOB1 scheme in the CoNLL 2003 NER data.
         In the IOB1 scheme, I is a token inside a span, O is a token outside
         a span and B is the beginning of span immediately following another
         span of the same type.
+        To maintain the default of the CoNLL 2000 syntactic chunking data,
+        use the ``BIO`` option. In the BIO scheme, B is the first token of a span,
+        I is a continuation of a span, and O is a token outside a span.
     label_namespace: ``str``, optional (default=``labels``)
         Specifies the namespace for the chosen ``tag_label``.
     ignore_ner_tags: ``bool``, optional (default=``False``)
