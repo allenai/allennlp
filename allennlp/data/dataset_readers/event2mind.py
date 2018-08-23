@@ -29,14 +29,7 @@ class Event2MindDatasetReader(DatasetReader):
     For instance:
     rocstory,PersonX talks to PersonX's mother,"[""to keep in touch""]","[""accomplished""]","[""loved""]",5.0,5.0
 
-    Currently we only consume the event and PersonX's intent.
-
-    #TODO(brendanr): Change this to:
-    #Currently we only consume the event, intent and emotions, not the sentiments.
-
-    The output of ``read`` is a list of ``Instance`` s with the fields:
-        source_tokens: ``TextField`` and
-        target_tokens: ``TextField``
+    Currently we only consume the event, intent and emotions, not the sentiments.
 
     `START_SYMBOL` and `END_SYMBOL` tokens are added to the source and target sequences.
 
@@ -156,10 +149,10 @@ class Event2MindDatasetReader(DatasetReader):
             if oreact_string is None:
                 raise Exception("missing oreact")
             return Instance({
-                "source_tokens": source_field,
-                "xintent_tokens": self._build_target_field(xintent_string),
-                "xreact_tokens": self._build_target_field(xreact_string),
-                "oreact_tokens": self._build_target_field(oreact_string),
+                "source": source_field,
+                "xintent": self._build_target_field(xintent_string),
+                "xreact": self._build_target_field(xreact_string),
+                "oreact": self._build_target_field(oreact_string),
                 })
         else:
-            return Instance({'source_tokens': source_field})
+            return Instance({'source': source_field})

@@ -18,7 +18,6 @@ from allennlp.models.model import Model
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits, weighted_sum
 from allennlp.training.metrics import UnigramRecall
 
-
 @Model.register("event2mind")
 class Event2Mind(Model):
     """
@@ -73,22 +72,25 @@ class Event2Mind(Model):
         self._decoder_output_dim = self._encoder.get_output_dim()
         target_embedding_dim = target_embedding_dim or self._source_embedder.get_output_dim()
 
-        self._xintent_embedder = Embedding(num_classes, target_embedding_dim)
-        self._xreact_embedder = Embedding(num_classes, target_embedding_dim)
-        self._oreact_embedder = Embedding(num_classes, target_embedding_dim)
+        state_names = [
+                "xintent",
+                "xreact",
+                "oreact"
+        ]
+        self._states = {}
+        for name in state_names:
+            self._states[name] = self.StateDecoder(
+                    num_classes,
+                    target_embedding_dim,
+                    self._decoder_output_dim
+            )
 
-        self._decoder_input_dim = target_embedding_dim
-
-        self._xintent_decoder_cell = GRUCell(self._decoder_input_dim, self._decoder_output_dim)
-        self._xintent_output_projection_layer = Linear(self._decoder_output_dim, num_classes)
-        self._xreact_decoder_cell = GRUCell(self._decoder_input_dim, self._decoder_output_dim)
-        self._xreact_output_projection_layer = Linear(self._decoder_output_dim, num_classes)
-        self._oreact_decoder_cell = GRUCell(self._decoder_input_dim, self._decoder_output_dim)
-        self._oreact_output_projection_layer = Linear(self._decoder_output_dim, num_classes)
-
-        self._xintent_recall = UnigramRecall()
-        self._xreact_recall = UnigramRecall()
-        self._oreact_recall = UnigramRecall()
+    class StateDecoder:
+        def __init__(self, name, num_classes, input_dim, output_dim):
+            self._embedder = Embedding(num_classes, input_dim)
+            self._decoder_cell = GRUCell(input_dim, output_dim)
+            self._output_projection_layer = Linear(output_dim, num_classes)
+            self._recall = UnigramRecall()
 
     def _update_recall(self, all_top_k_predictions, target_tokens, target_recall):
         targets = target_tokens["tokens"]
@@ -117,9 +119,7 @@ class Event2Mind(Model):
     @overrides
     def forward(self,  # type: ignore
                 source_tokens: Dict[str, torch.LongTensor],
-                xintent_tokens: Dict[str, torch.LongTensor] = None,
-                xreact_tokens: Dict[str, torch.LongTensor] = None,
-                oreact_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
+                **target_tokens) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Decoder logic for producing the target sequences.
@@ -129,14 +129,13 @@ class Event2Mind(Model):
         source_tokens : Dict[str, torch.LongTensor]
            The output of ``TextField.as_array()`` applied on the source ``TextField``. This will be
            passed through a ``TextFieldEmbedder`` and then through an encoder.
-        xintent_tokens : Dict[str, torch.LongTensor], optional (default = None)
-           Output of ``Textfield.as_array()`` applied on target ``TextField``. We assume that the
-           target tokens are also represented as a ``TextField``.
+        target_tokens :
+           Dictionary from name to output of ``Textfield.as_array()`` applied on target
+           ``TextField``. We assume that the target tokens are also represented as a ``TextField``.
         """
         # (batch_size, input_sequence_length, encoder_output_dim)
         # TODO(brendanr): Revisit dropout.
         embedded_input = self._embedding_dropout(self._source_embedder(source_tokens))
-        #embedded_input = self._source_embedder(source_tokens)
         batch_size, _, _ = embedded_input.size()
         source_mask = get_text_field_mask(source_tokens)
         encoder_outputs = self._encoder(embedded_input, source_mask)
@@ -144,93 +143,44 @@ class Event2Mind(Model):
         output_dict = {}
 
         # Perform greedy search so we can get the loss.
-        if xintent_tokens is not None:
-            if not xreact_tokens:
-                raise Exception("missing xreact")
-            if not oreact_tokens:
-                raise Exception("missing oreact")
-            xintent_loss = self.greedy_search(
-                    final_encoder_output,
-                    xintent_tokens,
-                    self._xintent_embedder,
-                    self._xintent_decoder_cell,
-                    self._xintent_output_projection_layer)
-            output_dict["xintent_loss"] = xintent_loss
-            xreact_loss = self.greedy_search(
-                    final_encoder_output,
-                    xreact_tokens,
-                    self._xreact_embedder,
-                    self._xreact_decoder_cell,
-                    self._xreact_output_projection_layer)
-            output_dict["xreact_loss"] = xreact_loss
-            oreact_loss = self.greedy_search(
-                    final_encoder_output,
-                    oreact_tokens,
-                    self._oreact_embedder,
-                    self._oreact_decoder_cell,
-                    self._oreact_output_projection_layer)
-            output_dict["oreact_loss"] = oreact_loss
+        if target_tokens:
+            if target_tokens.keys() != self._states.keys():
+                target_only = target_tokens.keys() - self._states.keys()
+                states_only = self._states.keys() - target_tokens.keys()
+                raise Exception("Mismatch between target_tokens and self._states. Keys in " +
+                        "targets only: {} Keys in states only: {}".format(target_only, states_only)
+            total_loss = 0
+            for name, state in self._states.items():
+                loss = self.greedy_search(
+                        final_encoder_output,
+                        target_tokens[name],
+                        state.__embedder,
+                        state._decoder_cell,
+                        state._output_projection_layer)
+                total_loss += loss
+                output_dict["{}_loss".format(name)] = loss
 
             # Average loss for interpretability.
-            output_dict["loss"] = (xintent_loss + xreact_loss + oreact_loss) / 3
+            output_dict["loss"] = total_loss / len(self._states)
 
         # Perform beam search to obtain the predictions.
         if not self.training:
-            # (batch_size, k, num_decoding_steps)
-            (xintent_all_top_k_predictions, xintent_log_probabilities) = self.beam_search(
-                    final_encoder_output,
-                    10,
-                    self._get_num_decoding_steps(xintent_tokens),
-                    batch_size,
-                    source_mask,
-                    self._xintent_embedder,
-                    self._xintent_decoder_cell,
-                    self._xintent_output_projection_layer
-            )
-            (xreact_all_top_k_predictions, xreact_log_probabilities) = self.beam_search(
-                    final_encoder_output,
-                    10,
-                    self._get_num_decoding_steps(xreact_tokens),
-                    batch_size,
-                    source_mask,
-                    self._xreact_embedder,
-                    self._xreact_decoder_cell,
-                    self._xreact_output_projection_layer
-            )
-            (oreact_all_top_k_predictions, oreact_log_probabilities) = self.beam_search(
-                    final_encoder_output,
-                    10,
-                    self._get_num_decoding_steps(oreact_tokens),
-                    batch_size,
-                    source_mask,
-                    self._oreact_embedder,
-                    self._oreact_decoder_cell,
-                    self._oreact_output_projection_layer
-            )
-
-            if xintent_tokens:
-                self._update_recall(xintent_all_top_k_predictions, xintent_tokens, self._xintent_recall)
-                self._update_recall(xreact_all_top_k_predictions, xreact_tokens, self._xreact_recall)
-                self._update_recall(oreact_all_top_k_predictions, oreact_tokens, self._oreact_recall)
-
-                # Hacks to calculate per-instance recall when making predictions.
-                # TODO(brendanr): Remove
-                #local_xintent_recall = UnigramRecall()
-                #local_xreact_recall = UnigramRecall()
-                #local_oreact_recall = UnigramRecall()
-                #self._update_recall(xintent_all_top_k_predictions, xintent_tokens, local_xintent_recall)
-                #self._update_recall(xreact_all_top_k_predictions, xreact_tokens, local_xreact_recall)
-                #self._update_recall(oreact_all_top_k_predictions, oreact_tokens, local_oreact_recall)
-                #output_dict["xintent_recall"] = [local_xintent_recall.get_metric(reset=True)]
-                #output_dict["xreact_recall"] = [local_xreact_recall.get_metric(reset=True)]
-                #output_dict["oreact_recall"] = [local_oreact_recall.get_metric(reset=True)]
-
-            output_dict["xintent_top_k_predictions"] = xintent_all_top_k_predictions
-            output_dict["xintent_top_k_log_probabilities"] = xintent_log_probabilities
-            output_dict["xreact_top_k_predictions"] = xreact_all_top_k_predictions
-            output_dict["xreact_top_k_log_probabilities"] = xreact_log_probabilities
-            output_dict["oreact_top_k_predictions"] = oreact_all_top_k_predictions
-            output_dict["oreact_top_k_log_probabilities"] = oreact_log_probabilities
+            for name, state in self._states.items():
+                # (batch_size, k, num_decoding_steps)
+                (all_top_k_predictions, log_probabilities) = self.beam_search(
+                        final_encoder_output,
+                        10,
+                        self._get_num_decoding_steps(target_tokens.get(name)),
+                        batch_size,
+                        source_mask,
+                        state._embedder,
+                        state._decoder_cell,
+                        state._output_projection_layer
+                )
+                if target_tokens:
+                    self._update_recall(all_top_k_predictions, target_tokens[name], state._recall)
+                output_dict["{}_top_k_predictions".format(name)] = all_top_k_predictions
+                output_dict["{}_top_k_log_probabilities".format(name)] = log_probabilities
 
         return output_dict
 
@@ -435,12 +385,9 @@ class Event2Mind(Model):
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds fields for the tokens to the ``output_dict``.
         """
-        xintent_top_k_predicted_indices = output_dict["xintent_top_k_predictions"][0]
-        output_dict["xintent_top_k_predicted_tokens"] = [self.decode_all(xintent_top_k_predicted_indices)]
-        xreact_top_k_predicted_indices = output_dict["xreact_top_k_predictions"][0]
-        output_dict["xreact_top_k_predicted_tokens"] = [self.decode_all(xreact_top_k_predicted_indices)]
-        oreact_top_k_predicted_indices = output_dict["oreact_top_k_predictions"][0]
-        output_dict["oreact_top_k_predicted_tokens"] = [self.decode_all(oreact_top_k_predicted_indices)]
+        for name, state in self._states:
+            top_k_predicted_indices = output_dict["{}_top_k_predictions".format(name)][0]
+            output_dict["{}_top_k_predicted_tokens".format(name)] = [self.decode_all(top_k_predicted_indices)]
 
         return output_dict
 
@@ -449,7 +396,6 @@ class Event2Mind(Model):
         all_metrics = {}
         # Recall@10 needs beam search which doesn't happen during training.
         if not self.training:
-            all_metrics["xintent"] = self._xintent_recall.get_metric(reset=reset)
-            all_metrics["xreact"] = self._xreact_recall.get_metric(reset=reset)
-            all_metrics["oreact"] = self._oreact_recall.get_metric(reset=reset)
+            for name, state in self._states:
+                all_metrics[name] = state._recall.get_metric(reset=reset)
         return all_metrics
