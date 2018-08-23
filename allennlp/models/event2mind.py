@@ -80,16 +80,21 @@ class Event2Mind(Model):
         self._states: Dict[str, Event2Mind.StateDecoder] = {}
         for name in state_names:
             self._states[name] = self.StateDecoder(
+                    name,
+                    self,
                     num_classes,
                     target_embedding_dim,
                     self._decoder_output_dim
             )
 
     class StateDecoder:
-        def __init__(self, num_classes, input_dim, output_dim):
+        def __init__(self, name, event2mind, num_classes, input_dim, output_dim):
             self._embedder = Embedding(num_classes, input_dim)
+            event2mind.add_module("{}_embedder".format(name), self._embedder)
             self._decoder_cell = GRUCell(input_dim, output_dim)
+            event2mind.add_module("{}_decoder_cell".format(name), self._decoder_cell)
             self._output_projection_layer = Linear(output_dim, num_classes)
+            event2mind.add_module("{}_output_project_layer".format(name), self._output_projection_layer)
             self._recall = UnigramRecall()
 
     def _update_recall(self, all_top_k_predictions, target_tokens, target_recall):
