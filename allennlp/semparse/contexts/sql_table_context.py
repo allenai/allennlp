@@ -5,6 +5,8 @@ the valid actions.
 import re
 from collections import defaultdict
 from typing import List, Dict, Set
+import sqlite3
+import sys
 
 from overrides import overrides
 
@@ -65,7 +67,10 @@ KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"
 
 def generate_one_of_string(nonterminal: str, literals: List[str]) -> str:
     if literals:
-        return  f"\n{nonterminal} \t\t = " + " / ".join([f'"{literal}"' for literal in literals])
+        if nonterminal.endswith('string'):
+            return  f"\n{nonterminal} \t\t = " + " / ".join([f'"\'{literal}\'"' for literal in literals]) + "\n"
+        else:
+            return  f"\n{nonterminal} \t\t = " + " / ".join([f'"{literal}"' for literal in literals]) + "\n"
     return  f'\n{nonterminal} \t\t = ""'
 
 def format_action(nonterminal: str, right_hand_side: str) -> str:
@@ -97,10 +102,13 @@ class SqlTableContext():
     """
     def __init__(self, tables: Dict[str, List[str]] = None) -> None:
         self.tables = tables
+        self.connection = sqlite3.connect("./tests/fixtures/data/atis/atis.db")
+        self.cursor = self.connection.cursor() 
+
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)
         self.valid_actions: Dict[str, List[str]] = self.initialize_valid_actions()
-
+        
     def initialize_valid_actions(self) -> Dict[str, List[str]]:
         """
         We initialize the valid actions with the global actions. These include the
@@ -145,6 +153,21 @@ class SqlTableContext():
                     " / ".join(sorted(column_right_hand_sides, reverse=True))
 
             grammar_str += generate_one_of_string('table_name', sorted(list(self.tables.keys()), reverse=True))
+        
+        tables = { 'airline' : ['airline_code', 'airline_name'],
+                   'city' : ['city_name']}
+        print('intialize_grammar_str')
+
+        biexprs = []
+        if tables:     
+            for table, columns in tables.items():
+                biexprs.extend([f'("{table}" ws "." ws "{column}" ws binaryop ws {table}_{column}_string)' for column in columns])
+                for column in columns:
+                    self.cursor.execute(f'SELECT {table} . {column} FROM {table}')
+                    grammar_str += generate_one_of_string(f'{table}_{column}_string', [row[0] for row in self.cursor.fetchall()])
+                    print([row[0] for row in self.cursor.fetchall()])
+
+        # grammar_str += f'biexpr = {" / ".join(sorted(biexprs, reverse=True))}' + ' / ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ( col_ref ws "LIKE" ws string)\n'
 
         return grammar_str
 
@@ -164,11 +187,13 @@ class SqlVisitor(NodeVisitor):
         A Grammar object that we use to parse the text.
     """
     def __init__(self, grammar: Grammar) -> None:
+        sys.stderr.write('init sql visitor\n')
         self.action_sequence: List[str] = []
         self.grammar: Grammar = grammar
 
     @overrides
     def generic_visit(self, node: Node, visited_children: List[None]) -> List[str]:
+        sys.stderr.write('generic visit\n')
         self.add_action(node)
         if node.expr.name == 'statement':
             return self.action_sequence
@@ -178,6 +203,7 @@ class SqlVisitor(NodeVisitor):
         """
         For each node, we accumulate the rules that generated its children in a list.
         """
+        sys.stderr.write('add_action\n')
         if node.expr.name and node.expr.name != 'ws':
             nonterminal = f'{node.expr.name} -> '
 
@@ -202,3 +228,4 @@ class SqlVisitor(NodeVisitor):
 
             rule = nonterminal + right_hand_side
             self.action_sequence = [rule] + self.action_sequence
+            sys.stderr.write(rule + '\n')

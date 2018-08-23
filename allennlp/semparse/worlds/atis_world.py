@@ -71,9 +71,10 @@ class AtisWorld():
 
         valid_actions = deepcopy(self.sql_table_context.valid_actions)
         linking_scores = []
+
         current_tokenized_utterance = [] if not self.tokenized_utterances \
                 else self.tokenized_utterances[-1]
-
+        '''
         strings: Set[str] = set()
         for tokenized_utterance in self.tokenized_utterances:
             string_linking_dict = get_strings_from_utterance(tokenized_utterance)
@@ -103,6 +104,7 @@ class AtisWorld():
             action = format_action('string', string)
             if action not in valid_actions['string']:
                 valid_actions['string'].append(action)
+        '''
 
         numbers = {'0', '1'}
         number_linking_dict: Dict[str, List[int]] = {}
@@ -126,6 +128,7 @@ class AtisWorld():
         for number in list(numbers_list):
             action = format_action('number', number)
             valid_actions['number'].append(action)
+
         return valid_actions, numpy.array(linking_scores)
 
     def get_grammar_str(self) -> str:
@@ -136,11 +139,14 @@ class AtisWorld():
         grammar_str_with_context = self.sql_table_context.grammar_str
         numbers = [number.split(" -> ")[1].lstrip('["').rstrip('"]') for \
                    number in sorted(self.valid_actions['number'], reverse=True)]
+        '''
         strings = [string .split(" -> ")[1].lstrip('["').rstrip('"]') for \
                    string in sorted(self.valid_actions['string'], reverse=True)]
+        '''
 
         grammar_str_with_context += generate_one_of_string("number", numbers)
-        grammar_str_with_context += generate_one_of_string("string", strings)
+        # grammar_str_with_context += generate_one_of_string("string", strings)
+        print(grammar_str_with_context)
         return grammar_str_with_context
 
 
