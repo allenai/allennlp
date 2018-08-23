@@ -155,17 +155,17 @@ class Conll2003DatasetReader(DatasetReader):
             if pos_tags is None:
                 raise ConfigurationError("Dataset reader was specified to use pos_tags as "
                                          "features. Pass them to text_to_instance.")
-            instance_fields['pos_tags'] = SequenceLabelField(pos_tags, sequence, "pos_labels")
+            instance_fields['pos_tags'] = SequenceLabelField(pos_tags, sequence, "pos_tags")
         if 'chunk' in self.feature_labels:
             if coded_chunks is None:
                 raise ConfigurationError("Dataset reader was specified to use chunk tags as "
                                          "features. Pass them to text_to_instance.")
-            instance_fields['chunk_tags'] = SequenceLabelField(coded_chunks, sequence, "chunk_labels")
+            instance_fields['chunk_tags'] = SequenceLabelField(coded_chunks, sequence, "chunk_tags")
         if 'ner' in self.feature_labels:
             if coded_ner is None:
                 raise ConfigurationError("Dataset reader was specified to use NER tags as "
                                          " features. Pass them to text_to_instance.")
-            instance_fields['ner_tags'] = SequenceLabelField(coded_ner, sequence, "ner_labels")
+            instance_fields['ner_tags'] = SequenceLabelField(coded_ner, sequence, "ner_tags")
 
         # Add "tag label" to instance
         if self.tag_label == 'ner' and coded_ner is not None:
