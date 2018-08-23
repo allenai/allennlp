@@ -744,7 +744,6 @@ class Trainer:
                 best_epoch_val_metrics = {}
                 this_epoch_val_metric = None
 
-            self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
             self._metrics_to_console(train_metrics, val_metrics)
             for index, param_group in enumerate(self._optimizer.param_groups):
@@ -757,6 +756,8 @@ class Trainer:
                 # The LRScheduler API is agnostic to whether your schedule requires a validation metric -
                 # if it doesn't, the validation metric passed here is ignored.
                 self._learning_rate_scheduler.step(this_epoch_val_metric, epoch)
+
+            self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", time.strftime("%H:%M:%S", time.gmtime(epoch_elapsed_time)))
