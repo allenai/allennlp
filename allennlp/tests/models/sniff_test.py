@@ -165,4 +165,3 @@ class SniffTest(AllenNlpTestCase):
         assert result['pos'] == ['PRP', 'VBD', 'NNS', 'IN', 'NNS', '.']
         assert result['predicted_dependencies'] == ['nsubj', 'root', 'dobj', 'prep', 'pobj', 'punct']
         assert result['predicted_heads'] == [2, 0, 2, 2, 4, 2]
-
