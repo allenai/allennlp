@@ -21,9 +21,9 @@ class AtisWorld():
         A list of utterances in the interaction, the last element in this list is the
         current utterance that we are interested in.
     """
-    sql_table_context = SqlTableContext(ALL_TABLES, TABLES_WITH_STRINGS)
 
-    def __init__(self, utterances: List[str], tokenizer=None) -> None:
+    def __init__(self, utterances: List[str], tokenizer=None, database_directory:str=None) -> None:
+        self.sql_table_context = SqlTableContext(ALL_TABLES, TABLES_WITH_STRINGS, database_directory)
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]

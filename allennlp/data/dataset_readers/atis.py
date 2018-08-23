@@ -63,10 +63,12 @@ class AtisDatasetReader(DatasetReader):
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False,
-                 tokenizer: Tokenizer = None) -> None:
+                 tokenizer: Tokenizer = None,
+                 database_directory:str = None) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
+        self.database_directory = database_directory
 
 
     @overrides
@@ -106,7 +108,8 @@ class AtisDatasetReader(DatasetReader):
         if not utterance:
             return None
 
-        world = AtisWorld(utterances)
+        world = AtisWorld(utterances=utterances,
+                          database_directory=self.database_directory)
 
         if sql_query:
             try:

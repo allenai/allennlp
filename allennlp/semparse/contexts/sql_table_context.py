@@ -101,11 +101,14 @@ class SqlTableContext():
     """
     def __init__(self,
                 all_tables: Dict[str, List[str]] = None, 
-                tables_with_strings: Dict[str, List[str]] = None) -> None:
+                tables_with_strings: Dict[str, List[str]] = None,
+                database_directory: str = None) -> None:
         self.all_tables = all_tables
         self.tables_with_strings = tables_with_strings
-        self.connection = sqlite3.connect("./tests/fixtures/data/atis/atis.db")
-        self.cursor = self.connection.cursor() 
+        if database_directory:
+            self.database_directory = database_directory
+            self.connection = sqlite3.connect(database_directory)
+            self.cursor = self.connection.cursor() 
 
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)
