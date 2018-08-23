@@ -23,7 +23,6 @@ from torch.nn.parallel import replicate, parallel_apply
 from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
 from tensorboardX import SummaryWriter
 
-
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import peak_memory_mb, gpu_memory_mb
@@ -34,6 +33,7 @@ from allennlp.models.model import Model
 from allennlp.nn import util
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.optimizers import Optimizer
+
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -298,8 +298,8 @@ class Trainer:
             raise ConfigurationError("Expected an int or list for cuda_device, got {}".format(cuda_device))
 
         if isinstance(cuda_device, list):
-            logger.info(f"WARNING: Multiple GPU support is experimental not recommended for use. "
-                        "In some cases it may lead to incorrect results or undefined behavior.")
+            logger.warning(f"Multiple GPU support is experimental not recommended for use. "
+                           "In some cases it may lead to incorrect results or undefined behavior.")
             self._multiple_gpu = True
             self._cuda_devices = cuda_device
             # data_parallel will take care of transfering to cuda devices,
