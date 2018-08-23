@@ -82,6 +82,8 @@ class ModelTestCase(AllenNlpTestCase):
         # The datasets themselves should be identical.
         assert model_batch.keys() == loaded_batch.keys()
         for key in model_batch.keys():
+            print(model_batch)
+            print(loaded_batch)
             self.assert_fields_equal(model_batch[key], loaded_batch[key], key, 1e-6)
 
         # Set eval mode, to turn off things like dropout, then get predictions.

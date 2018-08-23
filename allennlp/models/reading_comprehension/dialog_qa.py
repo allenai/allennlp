@@ -60,7 +60,7 @@ class DialogQA(Model):
                  initializer: InitializerApplicator,
                  dropout: float = 0.2,
                  num_context_answers: int = 0,
-                 marker_embed_dim: int = 10,
+                 marker_embedding_dim: int = 10,
                  mask_lstms: bool = True) -> None:
         super().__init__(vocab)
         self._num_context_answers = num_context_answers
@@ -74,10 +74,10 @@ class DialogQA(Model):
         self._merge_atten = TimeDistributed(torch.nn.Linear(encoding_dim * 4, encoding_dim))
 
         self._residual_encoder = residual_encoder
-        self._prev_ans_marker = torch.nn.Embedding((num_context_answers * 4) + 1, marker_embed_dim)
+        self._prev_ans_marker = torch.nn.Embedding((num_context_answers * 4) + 1, marker_embedding_dim)
 
         if num_context_answers > 0:
-            self._question_num_marker = torch.nn.Embedding(max_turn_length, marker_embed_dim * num_context_answers)
+            self._question_num_marker = torch.nn.Embedding(max_turn_length, marker_embedding_dim * num_context_answers)
 
         self._self_atten = LinearMatrixAttention(encoding_dim, encoding_dim, 'x,y,x*y')
 
