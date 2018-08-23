@@ -118,7 +118,7 @@ class Event2Mind(Model):
 
     @overrides
     def forward(self,  # type: ignore
-                source_tokens: Dict[str, torch.LongTensor],
+                source: Dict[str, torch.LongTensor],
                 **target_tokens) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
@@ -126,7 +126,7 @@ class Event2Mind(Model):
 
         Parameters
         ----------
-        source_tokens : Dict[str, torch.LongTensor]
+        source : Dict[str, torch.LongTensor]
            The output of ``TextField.as_array()`` applied on the source ``TextField``. This will be
            passed through a ``TextFieldEmbedder`` and then through an encoder.
         target_tokens :
@@ -135,9 +135,9 @@ class Event2Mind(Model):
         """
         # (batch_size, input_sequence_length, encoder_output_dim)
         # TODO(brendanr): Revisit dropout.
-        embedded_input = self._embedding_dropout(self._source_embedder(source_tokens))
+        embedded_input = self._embedding_dropout(self._source_embedder(source))
         batch_size, _, _ = embedded_input.size()
-        source_mask = get_text_field_mask(source_tokens)
+        source_mask = get_text_field_mask(source)
         encoder_outputs = self._encoder(embedded_input, source_mask)
         final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
         output_dict = {}
