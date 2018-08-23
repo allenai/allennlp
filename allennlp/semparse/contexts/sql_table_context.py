@@ -163,7 +163,7 @@ class SqlTableContext():
             for table, columns in self.tables_with_strings.items():
                 biexprs.extend([f'("{table}" ws "." ws "{column}" ws binaryop ws {table}_{column}_string)' for column in columns])
                 for column in columns:
-                    self.cursor.execute(f'SELECT {table} . {column} FROM {table}')
+                    self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
                     grammar_str += generate_one_of_string(f'{table}_{column}_string', [row[0] for row in self.cursor.fetchall()])
 
         grammar_str +=  'biexpr = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ' + f'{" / ".join(sorted(biexprs, reverse=True))}\n'

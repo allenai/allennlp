@@ -10,31 +10,6 @@ from allennlp.semparse.contexts.sql_table_context import \
 
 from allennlp.data.tokenizers import Token, WordTokenizer
 
-def get_strings_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
-    """
-    Based on the current utterance, return a dictionary where the keys are the strings in the utterance
-    that map to lists of the token indices that they are linked to.
-    """
-    string_linking_scores: Dict[str, List[int]] = defaultdict(list)
-    for index, (first_token, second_token) in enumerate(zip(tokenized_utterance, tokenized_utterance[1:])):
-        for string in ATIS_TRIGGER_DICT.get(first_token.text.lower(), []):
-            string_linking_scores[string].append(index)
-
-        bigram = f"{first_token.text} {second_token.text}".lower()
-        for string in ATIS_TRIGGER_DICT.get(bigram, []):
-            string_linking_scores[string].extend([index, index + 1])
-
-    if tokenized_utterance[-1].text.lower() in ATIS_TRIGGER_DICT:
-        for string in ATIS_TRIGGER_DICT[tokenized_utterance[-1].text.lower()]:
-            string_linking_scores[string].append(len(tokenized_utterance)-1)
-
-    date = get_date_from_utterance(tokenized_utterance)
-    if date:
-        for day in DAY_OF_WEEK_INDEX[date.weekday()]:
-            string_linking_scores[day] = []
-
-    return string_linking_scores
-
 class AtisWorld():
     """
     World representation for the Atis SQL domain. This class has a ``SqlTableContext`` which holds the base
@@ -74,37 +49,6 @@ class AtisWorld():
 
         current_tokenized_utterance = [] if not self.tokenized_utterances \
                 else self.tokenized_utterances[-1]
-        '''
-        strings: Set[str] = set()
-        for tokenized_utterance in self.tokenized_utterances:
-            string_linking_dict = get_strings_from_utterance(tokenized_utterance)
-            strings.update(string_linking_dict.keys())
-
-        # We want to sort things in reverse here to be consistent with the grammar.
-        # The parser is greedy which means that if we have a rule that has
-        # multiple options for the right hand side, the first one that succeeds is
-        # the one that is used. For example, if ``1400`` appears in the query, and
-        # both ``1400`` and ``1`` are valid numbers, then we want to try to match
-        # ``1400`` first. Otherwise, ``1`` will succeed but nothing will match ``400``.
-        # The same applies for strings here.
-        strings_list: List[str] = sorted(strings, reverse=True)
-
-        # We construct the linking scores for strings from the ``string_linking_dict`` here.
-        string_linking_scores = []
-        for string in strings_list:
-            entity_linking = [0 for token in current_tokenized_utterance]
-            # string_linking_dict has the strings and linking scores from the last utterance.
-            # If the string is not in the last utterance, then the linking scores will be all 0.
-            for token_index in string_linking_dict.get(string, []):
-                entity_linking[token_index] = 1
-            string_linking_scores.append(entity_linking)
-        linking_scores.extend(string_linking_scores)
-
-        for string in strings_list:
-            action = format_action('string', string)
-            if action not in valid_actions['string']:
-                valid_actions['string'].append(action)
-        '''
 
         numbers = {'0', '1'}
         number_linking_dict: Dict[str, List[int]] = {}
@@ -139,13 +83,8 @@ class AtisWorld():
         grammar_str_with_context = self.sql_table_context.grammar_str
         numbers = [number.split(" -> ")[1].lstrip('["').rstrip('"]') for \
                    number in sorted(self.valid_actions['number'], reverse=True)]
-        '''
-        strings = [string .split(" -> ")[1].lstrip('["').rstrip('"]') for \
-                   string in sorted(self.valid_actions['string'], reverse=True)]
-        '''
 
         grammar_str_with_context += generate_one_of_string("number", numbers)
-        # grammar_str_with_context += generate_one_of_string("string", strings)
         print(grammar_str_with_context)
         return grammar_str_with_context
 
