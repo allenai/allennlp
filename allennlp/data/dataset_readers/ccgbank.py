@@ -41,7 +41,7 @@ class CcgBankDatasetReader(DatasetReader):
         are pre-tokenised in the data file.
     lazy : ``bool``, optional, (default = ``False``)
         Whether or not instances can be consumed lazily.
-    tag_label: ``str``, optional (default=``ner``)
+    tag_label: ``str``, optional (default=``ccg``)
         Specify ``ccg``, ``modified_pos``, ``original_pos``, or ``predicate_arg`` to
         have that tag loaded into the instance field ``tag``.
     feature_labels: ``Sequence[str]``, optional (default=``()``)
