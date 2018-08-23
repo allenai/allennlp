@@ -579,14 +579,14 @@ def replace_masked_values(tensor: torch.Tensor, mask: torch.Tensor, replace_with
     Replaces all masked values in ``tensor`` with ``replace_with``.  ``mask`` must be broadcastable
     to the same shape as ``tensor``. We require that ``tensor.dim() == mask.dim()``, as otherwise we
     won't know which dimensions of the mask to unsqueeze.
+
+    This just does ``tensor.masked_fill()``, except the pytorch method fills in things with a mask
+    value of 1, where we want the opposite.  You can do this in your own code with
+    ``tensor.masked_fill((1 - mask).byte(), replace_with)``.
     """
-    # We'll build a tensor of the same shape as `tensor`, zero out masked values, then add back in
-    # the `replace_with` value.
     if tensor.dim() != mask.dim():
         raise ConfigurationError("tensor.dim() (%d) != mask.dim() (%d)" % (tensor.dim(), mask.dim()))
-    one_minus_mask = 1.0 - mask
-    values_to_add = replace_with * one_minus_mask
-    return tensor * mask + values_to_add
+    return tensor.masked_fill((1 - mask).byte(), replace_with)
 
 
 def device_mapping(cuda_device: int):
