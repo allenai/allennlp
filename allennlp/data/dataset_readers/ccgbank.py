@@ -140,7 +140,7 @@ class CcgBankDatasetReader(DatasetReader):
 
         # Add "feature labels" to instance
         if 'ccg' in self.feature_labels:
-            if pos_tags is None:
+            if ccg_categories is None:
                 raise ConfigurationError("Dataset reader was specified to use CCG categories as "
                                          "features. Pass them to text_to_instance.")
             fields['ccg_tags'] = SequenceLabelField(ccg_categories, text_field, "ccg_tags")
