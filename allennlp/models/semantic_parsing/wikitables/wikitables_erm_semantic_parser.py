@@ -51,6 +51,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
     max_decoding_steps : ``int``
         Maximum number of steps the decoder should take before giving up. Used both during training
         and evaluation. Passed to super class.
+    add_action_bias : ``bool``, optional (default=True)
+        If ``True``, we will learn a bias weight for each action that gets used when predicting
+        that action, in addition to its embedding.  Passed to super class.
     normalize_beam_score_by_length : ``bool``, optional (default=False)
         Should we normalize the log-probabilities by length before renormalizing the beam? This was
         shown to work better for NML by Edunov et al., but that many not be the case for semantic
@@ -95,6 +98,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                  decoder_num_finished_states: int,
                  max_decoding_steps: int,
                  mixture_feedforward: FeedForward = None,
+                 add_action_bias: bool = True,
                  normalize_beam_score_by_length: bool = False,
                  checklist_cost_weight: float = 0.6,
                  use_neighbor_similarity_for_linking: bool = False,
@@ -110,6 +114,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                          encoder=encoder,
                          entity_encoder=entity_encoder,
                          max_decoding_steps=max_decoding_steps,
+                         add_action_bias=add_action_bias,
                          use_neighbor_similarity_for_linking=use_similarity,
                          dropout=dropout,
                          num_linking_features=num_linking_features,
@@ -133,9 +138,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                                                    action_embedding_dim=action_embedding_dim,
                                                    input_attention=attention,
                                                    num_start_types=self._num_start_types,
-                                                   num_entity_types=self._num_entity_types,
+                                                   predict_start_type_separately=True,
+                                                   add_action_bias=self._add_action_bias,
                                                    mixture_feedforward=mixture_feedforward,
-                                                   dropout=dropout,
                                                    unlinked_terminal_indices=unlinked_terminals_global_indices)
         self._checklist_cost_weight = checklist_cost_weight
         self._agenda_coverage = Average()

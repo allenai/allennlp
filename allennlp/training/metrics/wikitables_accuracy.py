@@ -2,6 +2,7 @@ import atexit
 import logging
 import os
 import pathlib
+import shutil
 import subprocess
 
 from overrides import overrides
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 SEMPRE_EXECUTOR_JAR = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-executor-0.1.0.jar"
 ABBREVIATIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-abbreviations.tsv"
 GROW_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-grow.grammar"
-SEMPRE_DIR = str(pathlib.Path('data/'))
+SEMPRE_DIR = pathlib.Path('data/')
 SEMPRE_ABBREVIATIONS_PATH = os.path.join(SEMPRE_DIR, "abbreviations.tsv")
 SEMPRE_GRAMMAR_PATH = os.path.join(SEMPRE_DIR, "grow.grammar")
 
@@ -23,6 +24,7 @@ class WikiTablesAccuracy(Metric):
     def __init__(self, table_directory: str) -> None:
         self._table_directory = table_directory
         self._executor_process: subprocess.Popen = None
+        self._should_remove_sempre_dir = not os.path.exists(SEMPRE_DIR)
         self._create_sempre_executor()
         self._count = 0
         self._correct = 0
@@ -114,3 +116,6 @@ class WikiTablesAccuracy(Metric):
         self._executor_process.terminate()
         self._executor_process = None
         logger.info("Stopped SEMPRE server")
+        if self._should_remove_sempre_dir and os.path.exists(SEMPRE_DIR):
+            shutil.rmtree(SEMPRE_DIR)
+            logger.info(f"Removed SEMPRE data directory ({SEMPRE_DIR})")

@@ -79,7 +79,7 @@ class AtisDatasetReader(DatasetReader):
             for line in _lazy_parse(atis_file.read()):
                 utterances = []
                 for current_interaction in line['interaction']:
-                    if not current_interaction['utterance']:
+                    if not current_interaction['utterance'] or not current_interaction['sql']:
                         continue
                     utterances.append(current_interaction['utterance'])
                     instance = self.text_to_instance(utterances, current_interaction['sql'])
@@ -136,8 +136,9 @@ class AtisDatasetReader(DatasetReader):
                   'actions' : action_field,
                   'world' : world_field,
                   'linking_scores' : ArrayField(world.linking_scores)}
-
-        if sql_query:
+        
+        if sql_query != None:
+            fields['example_sql_query'] = MetadataField(sql_query)
             if action_sequence:
                 for production_rule in action_sequence:
                     index_fields.append(IndexField(action_map[production_rule], action_field))
