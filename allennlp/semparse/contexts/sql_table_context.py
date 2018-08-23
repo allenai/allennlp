@@ -44,14 +44,14 @@ SQL_GRAMMAR_STR = r"""
                           condition
     condition           = in_clause / ternaryexpr / biexpr
     in_clause           = (ws col_ref ws "IN" ws query ws)
-    biexpr              = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ( col_ref ws "LIKE" ws string)
+    biexpr              = ( col_ref ws binaryop ws value) / (value ws binaryop ws value)          
     binaryop            = "+" / "-" / "*" / "/" / "=" /
                           ">=" / "<=" / ">" / "<"  / "is" / "IS"
     ternaryexpr         = (col_ref ws "not" ws "BETWEEN" ws value ws "AND" ws value ws) /
                           (col_ref ws "NOT" ws "BETWEEN" ws value ws "AND" ws value ws) /
                           (col_ref ws "BETWEEN" ws value ws "AND" ws value ws)
     value               = ("not" ws pos_value) / ("NOT" ws pos_value) /(pos_value)
-    pos_value           = ("ALL" ws query) / ("ANY" ws query) / number / boolean / col_ref / string / agg_results / "NULL"
+    pos_value           = ("ALL" ws query) / ("ANY" ws query) / number / boolean / col_ref / agg_results / "NULL"
     agg_results         = (ws "("  ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ws ")" ws) /
                           (ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ws)
     boolean             = "true" / "false"
@@ -59,7 +59,6 @@ SQL_GRAMMAR_STR = r"""
     conj                = "AND" / "OR" 
     distinct            = ("DISTINCT") / ("")
     number              =  ""
-    string              =  ""
 """
 
 KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"', '"IN"', '"LIKE"',
@@ -100,8 +99,11 @@ class SqlTableContext():
         A dictionary representing the SQL tables in the dataset, the keys are the names of the tables
         that map to lists of the table's column names.
     """
-    def __init__(self, tables: Dict[str, List[str]] = None) -> None:
-        self.tables = tables
+    def __init__(self,
+                all_tables: Dict[str, List[str]] = None, 
+                tables_with_strings: Dict[str, List[str]] = None) -> None:
+        self.all_tables = all_tables
+        self.tables_with_strings = tables_with_strings
         self.connection = sqlite3.connect("./tests/fixtures/data/atis/atis.db")
         self.cursor = self.connection.cursor() 
 
@@ -143,32 +145,28 @@ class SqlTableContext():
         return valid_action_strings
 
     def initialize_grammar_str(self):
+        print('initialize_grammar_str')
         grammar_str = SQL_GRAMMAR_STR
 
-        if self.tables:
+        if self.all_tables:
             column_right_hand_sides = ['"*"']
-            for table, columns in self.tables.items():
+            for table, columns in self.all_tables.items():
                 column_right_hand_sides.extend([f'("{table}" ws "." ws "{column}")' for column in columns])
             grammar_str += "\n      col_ref \t\t = " + \
                     " / ".join(sorted(column_right_hand_sides, reverse=True))
 
-            grammar_str += generate_one_of_string('table_name', sorted(list(self.tables.keys()), reverse=True))
+            grammar_str += generate_one_of_string('table_name', sorted(list(self.all_tables.keys()), reverse=True))
         
-        tables = { 'airline' : ['airline_code', 'airline_name'],
-                   'city' : ['city_name']}
-        print('intialize_grammar_str')
-
+        
         biexprs = []
-        if tables:     
-            for table, columns in tables.items():
+        if self.tables_with_strings:
+            for table, columns in self.tables_with_strings.items():
                 biexprs.extend([f'("{table}" ws "." ws "{column}" ws binaryop ws {table}_{column}_string)' for column in columns])
                 for column in columns:
                     self.cursor.execute(f'SELECT {table} . {column} FROM {table}')
                     grammar_str += generate_one_of_string(f'{table}_{column}_string', [row[0] for row in self.cursor.fetchall()])
-                    print([row[0] for row in self.cursor.fetchall()])
 
-        # grammar_str += f'biexpr = {" / ".join(sorted(biexprs, reverse=True))}' + ' / ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ( col_ref ws "LIKE" ws string)\n'
-
+        grammar_str +=  'biexpr = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ' + f'{" / ".join(sorted(biexprs, reverse=True))}\n'
         return grammar_str
 
 class SqlVisitor(NodeVisitor):
@@ -187,13 +185,11 @@ class SqlVisitor(NodeVisitor):
         A Grammar object that we use to parse the text.
     """
     def __init__(self, grammar: Grammar) -> None:
-        sys.stderr.write('init sql visitor\n')
         self.action_sequence: List[str] = []
         self.grammar: Grammar = grammar
 
     @overrides
     def generic_visit(self, node: Node, visited_children: List[None]) -> List[str]:
-        sys.stderr.write('generic visit\n')
         self.add_action(node)
         if node.expr.name == 'statement':
             return self.action_sequence
@@ -203,7 +199,6 @@ class SqlVisitor(NodeVisitor):
         """
         For each node, we accumulate the rules that generated its children in a list.
         """
-        sys.stderr.write('add_action\n')
         if node.expr.name and node.expr.name != 'ws':
             nonterminal = f'{node.expr.name} -> '
 
@@ -228,4 +223,3 @@ class SqlVisitor(NodeVisitor):
 
             rule = nonterminal + right_hand_side
             self.action_sequence = [rule] + self.action_sequence
-            sys.stderr.write(rule + '\n')

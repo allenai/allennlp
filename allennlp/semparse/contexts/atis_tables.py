@@ -350,13 +350,14 @@ MISC_STR = {"every day" : ["DAILY"]}
 
 MISC_TIME_TRIGGERS = {'morning': ['0', '1200'],
                       'afternoon': ['1200', '1800'],
+                      'early afternoon' : ['1200', '1400'],
                       'after': ['1200', '1800'],
                       'evening': ['1800', '2200'],
                       'late evening': ['2000', '2200'],
                       'lunch': ['1400'],
                       'noon': ['1200']}
 
-TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
+ALL_TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
                        'manufacturer', 'basic_type', 'propulsion',
                        'wide_body', 'pressurized'],
           'airline': ['airline_name', 'airline_code'],
@@ -392,6 +393,20 @@ TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
                           'saturday_stay_required', 'minimum_stay', 'maximum_stay',
                           'application', 'no_discounts'],
           'state': ['state_code', 'state_name', 'country_name']}
+
+TABLES_WITH_STRINGS = {'airline' : ['airline_code', 'airline_name'],
+                       'city' : ['city_name', 'state_code'],
+                       'fare' : ['round_trip_required'],
+                       'flight' : ['airline_code', 'meal_code'],
+                       'airport' : ['airport_code'],
+                       'state' : ['state_name'],
+                       'fare_basis' : ['fare_basis_code', 'class_type'],
+                       'class_of_service' : ['booking_class'],
+                       'flight' : ['airline_flight'],
+                       'aircraft' : ['basic_type', 'manufacturer'],
+                       'restriction' : ['restriction_code'],
+                       'ground_service' : ['transport_type']}
+
 
 DAY_OF_WEEK_DICT = {'weekdays' : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']}
 
