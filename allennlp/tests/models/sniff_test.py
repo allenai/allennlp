@@ -1,7 +1,5 @@
 # pylint: disable=no-self-use,line-too-long
 
-import pytest
-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
@@ -38,7 +36,7 @@ DEFAULT_MODELS = {
                 'constituency-parser'
         ),
         'dependency-parsing': (
-                'https://s3-us-west-2.amazonaws.com/allennlp/models/biaffine-dependency-parser-2018.08.01.tar.gz',  # pylint: disable=line-too-long
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/biaffine-dependency-parser-ptb-2018.08.23.tar.gz',  # pylint: disable=line-too-long
                 'biaffine-dependency-parser'
         )
 }
@@ -154,9 +152,7 @@ class SniffTest(AllenNlpTestCase):
         assert result["tokens"] == ["Pierre", "Vinken", "died", "aged", "81", ";", "immortalised", "aged", "61", "."]
         assert result["trees"] == "(S (NP (NNP Pierre) (NNP Vinken)) (VP (VP (VBD died) (NP (JJ aged) (CD 81))) (, ;) (VP (VBD immortalised) (S (ADJP (VBN aged) (NP (CD 61)))))) (. .))"
 
-    @pytest.mark.skip(reason="Needs new dependency parsing model.")
     def test_dependency_parsing(self):
-        # TODO(Mark) - Fix this test once a new dependency parser is ready.
         predictor = demo_model(*DEFAULT_MODELS['dependency-parsing'])
         sentence = """He ate spaghetti with chopsticks."""
         result = predictor.predict_json({"sentence": sentence})
@@ -167,6 +163,5 @@ class SniffTest(AllenNlpTestCase):
         # a trained dependency parser.
         assert result['words'] == ['He', 'ate', 'spaghetti', 'with', 'chopsticks', '.']
         assert result['pos'] == ['PRP', 'VBD', 'NNS', 'IN', 'NNS', '.']
-        assert result['predicted_dependencies'] == ['nsubj', 'root', 'acomp', 'prep', 'pobj', 'punct']
-        assert result['predicted_heads'] == [3, 0, 2, 3, 4, 2]
-       
+        assert result['predicted_dependencies'] == ['nsubj', 'root', 'dobj', 'prep', 'pobj', 'punct']
+        assert result['predicted_heads'] == [2, 0, 2, 2, 4, 2]
