@@ -5,15 +5,11 @@ from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
 
-@Predictor.register('dqa')
-class DQAPredictor(Predictor):
-    """
-    """
-
+@Predictor.register('dialog_qa')
+class DialogQAPredictor(Predictor):
     def predict(self, jsonline: str) -> JsonDict:
         """
         Make a machine comprehension prediction on the supplied input.
-        See https://rajpurkar.github.io/SQuAD-explorer/ for more information about the machine comprehension task.
 
         Parameters
         ----------
