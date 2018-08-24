@@ -26,8 +26,6 @@ def _is_divider(line: str) -> bool:
         else:
             return False
 
-_VALID_LABELS = {'ner', 'pos', 'chunk'}
-
 
 @DatasetReader.register("conll2003")
 class Conll2003DatasetReader(DatasetReader):
@@ -63,13 +61,13 @@ class Conll2003DatasetReader(DatasetReader):
     feature_labels: ``Sequence[str]``, optional (default=``()``)
         These labels will be loaded as features into the corresponding instance fields:
         ``pos`` -> ``pos_tags``, ``chunk`` -> ``chunk_tags``, ``ner`` -> ``ner_tags``
-        Each will have its own namespace: ``pos_labels``, ``chunk_labels``, ``ner_labels``.
-        If you want to use one of the labels as a `feature` in your model, it should be
+        Each will have its own namespace: ``pos_tags``, ``chunk_tags``, ``ner_tags``.
+        If you want to use one of the tags as a `feature` in your model, it should be
         specified here.
     coding_scheme: ``str``, optional (default=``IOB1``)
         Specifies the coding scheme for ``ner_labels`` and ``chunk_labels``.
         Valid options are ``IOB1`` and ``BIOUL``.  The ``IOB1`` default maintains
-        the original IOB1 scheme in the CoNLL data.
+        the original IOB1 scheme in the CoNLL 2003 NER data.
         In the IOB1 scheme, I is a token inside a span, O is a token outside
         a span and B is the beginning of span immediately following another
         span of the same type.
@@ -78,6 +76,8 @@ class Conll2003DatasetReader(DatasetReader):
     ignore_ner_tags: ``bool``, optional (default=``False``)
         If specified, then ignore the NER annotations.
     """
+    _VALID_LABELS = {'ner', 'pos', 'chunk'}
+
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  tag_label: str = "ner",
@@ -88,10 +88,10 @@ class Conll2003DatasetReader(DatasetReader):
                  ignore_ner_tags: bool = False) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
-        if tag_label is not None and tag_label not in _VALID_LABELS:
+        if tag_label is not None and tag_label not in self._VALID_LABELS:
             raise ConfigurationError("unknown tag label type: {}".format(tag_label))
         for label in feature_labels:
-            if label not in _VALID_LABELS:
+            if label not in self._VALID_LABELS:
                 raise ConfigurationError("unknown feature label type: {}".format(label))
         if coding_scheme not in ("IOB1", "BIOUL"):
             raise ConfigurationError("unknown coding_scheme: {}".format(coding_scheme))

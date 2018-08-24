@@ -11,10 +11,7 @@
           "start_tokens": [259],
           "end_tokens": [260]
         }
-      },
-     "elmo": {
-       "type": "elmo_characters"
-     }
+      }
     }
   },
   "train_data_path": "allennlp/tests/fixtures/data/quac_sample.json",
@@ -37,19 +34,12 @@
           "ngram_filter_sizes": [5]
         },
         "dropout": 0.2
-      },
-     "elmo":{
-       "type": "elmo_token_embedder",
-       "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-       "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
-       "do_layer_norm": false,
-       "dropout": 0.2
-     }
+      }
     },
     "phrase_layer": {
       "type": "gru",
       "bidirectional": true,
-      "input_size": 1144,
+      "input_size": 120,
       "hidden_size": 100,
       "num_layers": 1
     },
