@@ -23,7 +23,8 @@ class DialogQA(Model):
     """
     This class implements modified version of BiDAF
     (with self attention and residual layer, from Clark and Gardner ACL 17 paper) model as used in
-    Question Answering in Context (EMNLP 2018) paper for baseline.
+    Question Answering in Context (EMNLP 2018) paper [https://arxiv.org/pdf/1808.07036.pdf].
+
     In this set-up, a single instance is a dialog, list of question answer pairs.
     Parameters
     ----------
@@ -103,10 +104,7 @@ class DialogQA(Model):
 
         self._span_accuracy = BooleanAccuracy()
         self._official_f1 = Average()
-        if dropout > 0:
-            self._variational_dropout = InputVariationalDropout(dropout)
-        else:
-            self._variational_dropout = lambda x : x
+        self._variational_dropout = InputVariationalDropout(dropout)
 
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
@@ -119,53 +117,118 @@ class DialogQA(Model):
                 yesno_list: torch.IntTensor = None,
                 followup_list: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
+        """
+        Parameters
+        ----------
+        question : Dict[str, torch.LongTensor]
+            From a ``TextField``.
+        passage : Dict[str, torch.LongTensor]
+            From a ``TextField``.  The model assumes that this passage contains the answer to the
+            question, and predicts the beginning and ending positions of the answer within the
+            passage.
+        span_start : ``torch.IntTensor``, optional
+            From an ``IndexField``.  This is one of the things we are trying to predict - the
+            beginning position of the answer with the passage.  This is an `inclusive` token index.
+            If this is given, we will compute a loss that gets included in the output dictionary.
+        span_end : ``torch.IntTensor``, optional
+            From an ``IndexField``.  This is one of the things we are trying to predict - the
+            ending position of the answer with the passage.  This is an `inclusive` token index.
+            If this is given, we will compute a loss that gets included in the output dictionary.
+        p1_answer_marker : ``torch.IntTensor``, optional
+            This is one of the inputs, but only when num_context_answers > 0.
+            This is a tensor that has a shape [batch_size, max_qa_count, max_passage_length].
+            Most passage token will have assigned 'O', except the passage tokens belongs to the previous answer
+            in the dialog, which will be assigned labels such as <1_start>, <1_in>, <1_end>.
+            For more details, look into dataset_readers/util/make_reading_comprehension_instance_quac
+        p2_answer_marker :  ``torch.IntTensor``, optional
+            This is one of the inputs, but only when num_context_answers > 1.
+            It is similar to p1_answer_marker, but marking previous previous answer in passage.
+        p3_answer_marker :  ``torch.IntTensor``, optional
+            This is one of the inputs, but only when num_context_answers > 2.
+            It is similar to p1_answer_marker, but marking previous previous previous answer in passage.
+        yesno_list :  ``torch.IntTensor``, optional
+            This is one of the outputs that we are trying to predict.
+            Three way classification (the yes/no/not a yes no question).
+        followup_list :  ``torch.IntTensor``, optional
+            This is one of the outputs that we are trying to predict.
+            Three way classification (followup / maybe followup / don't followup).
+        metadata : ``List[Dict[str, Any]]``, optional
+            If present, this should contain the question ID, original passage text, and token
+            offsets into the passage for each instance in the batch.  We use this for computing
+            official metrics using the official SQuAD evaluation script.  The length of this list
+            should be the batch size, and each dictionary should have the keys ``id``,
+            ``original_passage``, and ``token_offsets``.  If you only want the best span string and
+            don't care about official metrics, you can omit the ``id`` key.
+
+        Returns
+        -------
+        An output dictionary consisting of the followings.
+        Each of the followings is a nested list because first iterates over dialog, then questions in dialog.
+
+        qid : List[List[str]]
+            A list of list, consisting of question ids.
+        followup : List[List[int]]
+            A list of list, consisting of continuation marker prediction index.
+            (y :yes, m: maybe follow up, n: don't follow up)
+        yesno : List[List[int]]
+            A list of list, consisting of affirmation marker prediction index.
+            (y :yes, x: not a yes/no question, n: np)
+        best_span_str : List[List[str]]
+            If sufficient metadata was provided for the instances in the batch, we also return the
+            string from the original passage that the model thinks is the best answer to the
+            question.
+        loss : torch.FloatTensor, optional
+            A scalar loss to be optimised.
+        """
         batch_size, max_qa_count, max_q_len, _ = question['token_characters'].size()
-        qa_mask = torch.ge(followup_list, 0).view(batch_size * max_qa_count)
+        total_qa_count = batch_size * max_qa_count
+        qa_mask = torch.ge(followup_list, 0).view(total_qa_count)
         embedded_question = self._text_field_embedder(question, num_wrapping_dims=1)
-        embedded_question = embedded_question.reshape(batch_size * max_qa_count, max_q_len, self._text_field_embedder.get_output_dim())
+        embedded_question = embedded_question.reshape(total_qa_count, max_q_len,
+                                                      self._text_field_embedder.get_output_dim())
         embedded_question = self._variational_dropout(embedded_question)
         embedded_passage = self._variational_dropout(self._text_field_embedder(passage))
         passage_length = embedded_passage.size(1)
 
         question_mask = util.get_text_field_mask(question, num_wrapping_dims=1).float()
-        question_mask = question_mask.reshape(batch_size * max_qa_count, max_q_len)
+        question_mask = question_mask.reshape(total_qa_count, max_q_len)
         passage_mask = util.get_text_field_mask(passage).float()
 
+        repeated_passage_mask = passage_mask.unsqueeze(1).repeat(1, max_qa_count, 1)
+        repeated_passage_mask = repeated_passage_mask.view(total_qa_count, passage_length)
 
         if self._num_context_answers > 0:
             # Encode question turn number inside the dialog into question embedding.
             question_num_ind = util.get_range_vector(max_qa_count, util.get_device_of(embedded_question))
-            question_num_ind = question_num_ind.unsqueeze(-1).repeat(1, max_q_len).unsqueeze(0).repeat(batch_size, 1, 1)
-            question_num_ind = question_num_ind.reshape(batch_size * max_qa_count, max_q_len)
+            question_num_ind = question_num_ind.unsqueeze(-1).repeat(1, max_q_len)
+            question_num_ind = question_num_ind.unsqueeze(0).repeat(batch_size, 1, 1)
+            question_num_ind = question_num_ind.reshape(total_qa_count, max_q_len)
             question_num_marker_emb = self._question_num_marker(question_num_ind)
             embedded_question = torch.cat([embedded_question, question_num_marker_emb], dim=-1)
 
             # Encode the previous answers in passage embedding.
-            repeated_embedded_passage = embedded_passage. \
-                unsqueeze(1).repeat(1, max_qa_count, 1, 1).view(
-                batch_size * max_qa_count, passage_mask.size()[1], 
-                self._text_field_embedder.get_output_dim())
+            repeated_embedded_passage = embedded_passage.unsqueeze(1).repeat(1, max_qa_count, 1, 1). \
+                view(total_qa_count, passage_length, self._text_field_embedder.get_output_dim())
             # batch_size * max_qa_count, passage_length, word_embed_dim
-            p1_answer_marker = p1_answer_marker.view(batch_size * max_qa_count, passage_length)
+            p1_answer_marker = p1_answer_marker.view(total_qa_count, passage_length)
             p1_answer_marker_emb = self._prev_ans_marker(p1_answer_marker)
             repeated_embedded_passage = torch.cat([repeated_embedded_passage, p1_answer_marker_emb], dim=-1)
             if self._num_context_answers > 1:
-                p2_answer_marker = p2_answer_marker.view(batch_size * max_qa_count, passage_length)
+                p2_answer_marker = p2_answer_marker.view(total_qa_count, passage_length)
                 p2_answer_marker_emb = self._prev_ans_marker(p2_answer_marker)
                 repeated_embedded_passage = torch.cat([repeated_embedded_passage, p2_answer_marker_emb], dim=-1)
                 if self._num_context_answers > 2:
-                    p3_answer_marker = p3_answer_marker.view(batch_size * max_qa_count, passage_length)
+                    p3_answer_marker = p3_answer_marker.view(total_qa_count, passage_length)
                     p3_answer_marker_emb = self._prev_ans_marker(p3_answer_marker)
                     repeated_embedded_passage = torch.cat([repeated_embedded_passage, p3_answer_marker_emb],
                                                           dim=-1)
-            repeated_passage_mask = passage_mask.unsqueeze(1). \
-                repeat(1, max_qa_count, 1).view(batch_size * max_qa_count, passage_length)
+
             repeated_encoded_passage = self._variational_dropout(self._phrase_layer(repeated_embedded_passage,
                                                                                     repeated_passage_mask))
         else:
             encoded_passage = self._variational_dropout(self._phrase_layer(embedded_passage, passage_mask))
             repeated_encoded_passage = encoded_passage.unsqueeze(1).repeat(1, max_qa_count, 1, 1)
-            repeated_encoded_passage = repeated_encoded_passage.view(batch_size * max_qa_count,
+            repeated_encoded_passage = repeated_encoded_passage.view(total_qa_count,
                                                                      passage_length,
                                                                      self.encoding_dim)
 
@@ -184,13 +247,12 @@ class DialogQA(Model):
                                                        question_mask.unsqueeze(1),
                                                        -1e7)
 
-        passage_mask = passage_mask.unsqueeze(1).repeat(1, max_qa_count, 1).view(batch_size * max_qa_count, passage_length)
         question_passage_similarity = masked_similarity.max(dim=-1)[0].squeeze(-1)
         question_passage_attention = util.last_dim_softmax(question_passage_similarity,
-                                                           passage_mask)
+                                                           repeated_passage_mask)
         # Shape: (batch_size * max_qa_count, encoding_dim)
         question_passage_vector = util.weighted_sum(repeated_encoded_passage, question_passage_attention)
-        tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(batch_size * max_qa_count,
+        tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(total_qa_count,
                                                                                     passage_length,
                                                                                     self._encoding_dim)
 
@@ -204,12 +266,12 @@ class DialogQA(Model):
         final_merged_passage = F.relu(self._merge_atten(final_merged_passage))
 
         residual_layer = self._variational_dropout(self._residual_encoder(final_merged_passage,
-                                                                          passage_mask))
+                                                                          repeated_passage_mask))
         self_attention_matrix = self._self_attention(residual_layer, residual_layer)
 
-        mask = passage_mask.resize(batch_size * max_qa_count,
+        mask = passage_mask.resize(total_qa_count,
                                    passage_length,
-                                   1) * passage_mask.resize(batch_size * max_qa_count, 1, passage_length)
+                                   1) * repeated_passage_mask.resize(total_qa_count, 1, passage_length)
 
         self_mask = torch.eye(passage_length, passage_length, device=self_attention_matrix.device)
         self_mask = self_mask.resize(1, passage_length, passage_length)
@@ -217,28 +279,29 @@ class DialogQA(Model):
 
         self_attention_probs = util.last_dim_softmax(self_attention_matrix, mask)
 
-        # Batch matrix multiplication:
         # (batch, passage_len, passage_len) * (batch, passage_len, dim) -> (batch, passage_len, dim)
         self_attention_vecs = torch.matmul(self_attention_probs, residual_layer)
-        self_attention_vecs = torch.cat([self_attention_vecs, residual_layer, residual_layer * self_attention_vecs], 
+        self_attention_vecs = torch.cat([self_attention_vecs, residual_layer,
+                                         residual_layer * self_attention_vecs],
                                         dim=-1)
         residual_layer = F.relu(self._merge_self_attention(self_attention_vecs))
 
         final_merged_passage = final_merged_passage + residual_layer
         # batch_size * maxqa_pair_len * max_passage_len * 200
         final_merged_passage = self._variational_dropout(final_merged_passage)
-        start_rep = self._span_start_encoder(final_merged_passage, passage_mask)
+        start_rep = self._span_start_encoder(final_merged_passage, repeated_passage_mask)
         span_start_logits = self._span_start_predictor(start_rep).squeeze(-1)
 
-        end_rep = self._span_end_encoder(torch.cat([final_merged_passage, start_rep], dim=-1), passage_mask)
+        end_rep = self._span_end_encoder(torch.cat([final_merged_passage, start_rep], dim=-1),
+                                         repeated_passage_mask)
         span_end_logits = self._span_end_predictor(end_rep).squeeze(-1)
 
         span_yesno_logits = self._span_yesno_predictor(end_rep).squeeze(-1)
         span_followup_logits = self._span_followup_predictor(end_rep).squeeze(-1)
 
-        span_start_logits = util.replace_masked_values(span_start_logits, passage_mask, -1e7)
+        span_start_logits = util.replace_masked_values(span_start_logits, repeated_passage_mask, -1e7)
         # batch_size * maxqa_len_pair, max_document_len
-        span_end_logits = util.replace_masked_values(span_end_logits, passage_mask, -1e7)
+        span_end_logits = util.replace_masked_values(span_end_logits, repeated_passage_mask, -1e7)
 
         best_span = self._get_best_span_yesno_followup(span_start_logits, span_end_logits,
                                                        span_yesno_logits, span_followup_logits,
@@ -248,33 +311,33 @@ class DialogQA(Model):
 
         # Compute the loss.
         if span_start is not None:
-            loss = nll_loss(util.masked_log_softmax(span_start_logits, passage_mask), span_start.view(-1),
+            loss = nll_loss(util.masked_log_softmax(span_start_logits, repeated_passage_mask), span_start.view(-1),
                             ignore_index=-1)
             self._span_start_accuracy(span_start_logits, span_start.view(-1), mask=qa_mask)
             loss += nll_loss(util.masked_log_softmax(span_end_logits,
-                                                     passage_mask), span_end.view(-1), ignore_index=-1)
+                                                     repeated_passage_mask), span_end.view(-1), ignore_index=-1)
             self._span_end_accuracy(span_end_logits, span_end.view(-1), mask=qa_mask)
             self._span_accuracy(best_span[:, 0:2],
-                                torch.stack([span_start, span_end], -1).view(batch_size * max_qa_count, 2),
+                                torch.stack([span_start, span_end], -1).view(total_qa_count, 2),
                                 mask=qa_mask.unsqueeze(1).expand(-1, 2).long())
             # add a select for the right span to compute loss
             gold_span_end_loc = []
-            span_end = span_end.view(batch_size * max_qa_count).squeeze().data.cpu().numpy()
-            for i in range(0, batch_size * max_qa_count):
+            span_end = span_end.view(total_qa_count).squeeze().data.cpu().numpy()
+            for i in range(0, total_qa_count):
                 gold_span_end_loc.append(max(span_end[i] * 3 + i * passage_length * 3, 0))
                 gold_span_end_loc.append(max(span_end[i] * 3 + i * passage_length * 3 + 1, 0))
                 gold_span_end_loc.append(max(span_end[i] * 3 + i * passage_length * 3 + 2, 0))
             gold_span_end_loc = span_start.new(gold_span_end_loc)
 
             pred_span_end_loc = []
-            for i in range(0, batch_size * max_qa_count):
+            for i in range(0, total_qa_count):
                 pred_span_end_loc.append(max(best_span[i][1] * 3 + i * passage_length * 3, 0))
                 pred_span_end_loc.append(max(best_span[i][1] * 3 + i * passage_length * 3 + 1, 0))
                 pred_span_end_loc.append(max(best_span[i][1] * 3 + i * passage_length * 3 + 2, 0))
             predicted_end = span_start.new(pred_span_end_loc)
 
-            _yesno = span_yesno_logits.view(batch_size * max_qa_count * passage_length * 3).index_select(0, gold_span_end_loc).view(-1, 3)
-            _followup = span_followup_logits.view(batch_size * max_qa_count * passage_length * 3).index_select(0, gold_span_end_loc).view(-1, 3)
+            _yesno = span_yesno_logits.view(-1).index_select(0, gold_span_end_loc).view(-1, 3)
+            _followup = span_followup_logits.view(-1).index_select(0, gold_span_end_loc).view(-1, 3)
             loss += nll_loss(F.log_softmax(_yesno, dim=-1), yesno_list.view(-1), ignore_index=-1)
             loss += nll_loss(F.log_softmax(_followup, dim=-1), followup_list.view(-1), ignore_index=-1)
 
