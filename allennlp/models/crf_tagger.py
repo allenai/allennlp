@@ -107,7 +107,8 @@ class CrfTagger(Model):
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 tags: torch.LongTensor = None,
-                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
+                metadata: List[Dict[str, Any]] = None,
+                **kwargs) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
