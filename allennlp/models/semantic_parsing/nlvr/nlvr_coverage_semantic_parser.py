@@ -355,8 +355,12 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
 
     def _get_state_cost(self, batch_worlds: List[List[NlvrWorld]], state: CoverageDecoderState) -> torch.Tensor:
         """
-        Return the costs a finished state. Since it is a finished state, the group size will be 1,
-        and hence we'll return just one cost.
+        Return the cost of a finished state. Since it is a finished state, the group size will be
+        1, and hence we'll return just one cost.
+
+        The ``batch_worlds`` parameter here is because we need the world to check the denotation
+        accuracy of the action sequence in the finished state.  Instead of adding a field to the
+        ``State`` object just for this method, we take the ``World`` as a parameter here.
         """
         if not state.is_finished():
             raise RuntimeError("_get_state_cost() is not defined for unfinished states!")
@@ -399,11 +403,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                             for history in state.action_history]
         agenda_sequences = []
         all_agenda_indices = []
-        # TODO(mattg,pradeep): This is broken after the action refactoring and needs to be either
-        # removed or updated.  Matt wasn't sure how to update it, so he just left it like this.
-        for agenda, checklist_target in zip(state.terminal_actions, state.checklist_target):  # type: ignore
+        for checklist_state in state.checklist_state:
             agenda_indices = []
-            for action, is_wanted in zip(agenda, checklist_target):
+            for action, is_wanted in zip(checklist_state.terminal_actions, checklist_state.checklist_target):
                 action_int = int(action.detach().cpu().numpy())
                 is_wanted_int = int(is_wanted.detach().cpu().numpy())
                 if is_wanted_int != 0:

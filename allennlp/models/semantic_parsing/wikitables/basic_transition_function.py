@@ -241,6 +241,7 @@ class BasicTransitionFunction(DecoderStep[GrammarBasedDecoderState]):
                 if i == group_index:
                     considered_actions = actions
                     probabilities = log_probs.exp().cpu()
+                    break
             return state.new_state_from_group_index(group_index,
                                                     action,
                                                     new_score,

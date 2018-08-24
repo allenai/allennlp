@@ -20,6 +20,11 @@ class CoverageTransitionFunction(BasicTransitionFunction):
     externally-computed `agenda` of actions that are expected to be produced during decoding, and
     encourages the model to select actions on that agenda.
 
+    The way that we encourage the model to select actions on the agenda is that we add the
+    embeddings for actions on the agenda (that are available at this decoding step and haven't yet
+    been taken) to the predicted action embedding.  We weight that addition by a learned multiplier
+    that gets initialized to 1.
+
     Parameters
     ----------
     encoder_output_dim : ``int``
@@ -55,6 +60,7 @@ class CoverageTransitionFunction(BasicTransitionFunction):
                          predict_start_type_separately=predict_start_type_separately,
                          add_action_bias=add_action_bias,
                          dropout=dropout)
+        # See the class docstring for a description of what this does.
         self._checklist_multiplier = Parameter(torch.FloatTensor([1.0]))
 
     @overrides

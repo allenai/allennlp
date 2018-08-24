@@ -559,7 +559,7 @@ class WikiTablesSemanticParser(Model):
                 else:
                     linked_actions.append((production_rule_array[0], action_index))
 
-            # Then we get the ebmedded representations of the global actions.
+            # Then we get the embedded representations of the global actions.
             global_action_tensors, global_action_ids = zip(*global_actions)
             global_action_tensor = torch.cat(global_action_tensors, dim=0)
             global_input_embeddings = self._action_embedder(global_action_tensor)
@@ -587,7 +587,9 @@ class WikiTablesSemanticParser(Model):
                                                            list(linked_action_ids))
 
         # Lastly, we need to also create embedded representations of context-specific actions.  In
-        # this case, those are only variable productions, like "r -> x".
+        # this case, those are only variable productions, like "r -> x".  Note that our language
+        # only permits one lambda at a time, so we don't need to worry about how nested lambdas
+        # might impact this.
         context_actions = {}
         for action_id, action in enumerate(possible_actions):
             if action[0].endswith(" -> x"):

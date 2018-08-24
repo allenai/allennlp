@@ -45,6 +45,26 @@ class ModelTestCase(AllenNlpTestCase):
                                              tolerance: float = 1e-4,
                                              cuda_device: int = -1,
                                              gradients_to_ignore: Set[str] = None):
+        """
+        Parameters
+        ----------
+        param_file : ``str``
+            Path to a training configuration file that we will use to train the model for this
+            test.
+        tolerance : ``float``, optional (default=1e-4)
+            When comparing model predictions between the originally-trained model and the model
+            after saving and loading, we will use this tolerance value (passed as ``rtol`` to
+            ``numpy.testing.assert_allclose``).
+        cuda_device : ``int``, optional (default=-1)
+            The device to run the test on.
+        gradients_to_ignore : ``Set[str]``, optional (default=None)
+            This test runs a gradient check to make sure that we're actually computing gradients
+            for all of the parameters in the model.  If you really want to ignore certain
+            parameters when doing that check, you can pass their names here.  This is not
+            recommended unless you're `really` sure you don't need to have non-zero gradients for
+            those parameters (e.g., some of the beam search / state machine models have
+            infrequently-used parameters that are hard to force the model to use in a small test).
+        """
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
         model = train_model_from_file(param_file, save_dir)
