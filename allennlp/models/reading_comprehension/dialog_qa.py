@@ -26,6 +26,7 @@ class DialogQA(Model):
     Question Answering in Context (EMNLP 2018) paper [https://arxiv.org/pdf/1808.07036.pdf].
 
     In this set-up, a single instance is a dialog, list of question answer pairs.
+
     Parameters
     ----------
     vocab : ``Vocabulary``
@@ -271,7 +272,6 @@ class DialogQA(Model):
 
         mask = repeated_passage_mask.resize(total_qa_count, passage_length, 1) \
                 * repeated_passage_mask.resize(total_qa_count, 1, passage_length)
-
         self_mask = torch.eye(passage_length, passage_length, device=self_attention_matrix.device)
         self_mask = self_mask.resize(1, passage_length, passage_length)
         mask = mask * (1 - self_mask)
