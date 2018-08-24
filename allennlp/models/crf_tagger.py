@@ -44,10 +44,10 @@ class CrfTagger(Model):
         to produce valid labels based on the specified type
         (e.g. "BIO", or "BIOUL").
 
-        .. deprecated:: 0.6
+        .. deprecated:: 0.6.1
            ``constraint_type`` was deprecated and replaced with
            ``label_encoding``, ``constrain_crf_decoding``, and
-           ``calculate_span_f1`` in version 0.6. It will be removed
+           ``calculate_span_f1`` in version 0.6.1. It will be removed
            in version 0.8.
 
     include_start_end_transitions : ``bool``, optional (default=``True``)
@@ -106,7 +106,7 @@ class CrfTagger(Model):
         if constraint_type is not None:
             warnings.warn("'constraint_type' was removed and replaced with"
                           "'label_encoding', 'constrain_crf_decoding', and "
-                          "'calculate_span_f1' in version 0.6. It will be "
+                          "'calculate_span_f1' in version 0.6.1. It will be "
                           "removed in version 0.8.", DeprecationWarning)
             label_encoding = constraint_type
             constrain_crf_decoding = True
