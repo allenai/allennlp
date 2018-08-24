@@ -25,20 +25,23 @@ def lazy_parse(text: str, fields: Tuple = DEFAULT_FIELDS):
 @DatasetReader.register("universal_dependencies")
 class UniversalDependenciesDatasetReader(DatasetReader):
     """
-    Reads a file in the conllu Universal Dependencies format. Additionally,
-    in order to make it easy to structure a model as predicting arcs, we add a
-    dummy 'ROOT_HEAD' token to the start of the sequence.
+    Reads a file in the conllu Universal Dependencies format.
 
     Parameters
     ----------
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         The token indexers to be applied to the words TextField.
+    use_language_specific_pos : ``bool``, optional (default = False)
+        Whether to use UD POS tags, or to use the language specific POS tags
+        provided in the conllu format.
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
+                 use_language_specific_pos: bool = False,
                  lazy: bool = False) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self.use_language_specific_pos = use_language_specific_pos
 
     @overrides
     def _read(self, file_path: str):
@@ -59,7 +62,10 @@ class UniversalDependenciesDatasetReader(DatasetReader):
                 heads = [x["head"] for x in annotation]
                 tags = [x["deprel"] for x in annotation]
                 words = [x["form"] for x in annotation]
-                pos_tags = [x["upostag"] for x in annotation]
+                if self.use_language_specific_pos:
+                    pos_tags = [x["xpostag"] for x in annotation]
+                else:
+                    pos_tags = [x["upostag"] for x in annotation]
                 yield self.text_to_instance(words, pos_tags, list(zip(tags, heads)))
 
     @overrides

@@ -34,21 +34,15 @@ DEFAULT_MODELS = {
         'constituency-parsing': (
                 'https://s3-us-west-2.amazonaws.com/allennlp/models/elmo-constituency-parser-2018.03.14.tar.gz',  # pylint: disable=line-too-long
                 'constituency-parser'
+        ),
+        'dependency-parsing': (
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/biaffine-dependency-parser-ptb-2018.08.23.tar.gz',  # pylint: disable=line-too-long
+                'biaffine-dependency-parser'
         )
 }
 
 
 class SniffTest(AllenNlpTestCase):
-
-    def test_config(self):
-        assert set(DEFAULT_MODELS.keys()) == {
-                'machine-comprehension',
-                'semantic-role-labeling',
-                'textual-entailment',
-                'coreference-resolution',
-                'named-entity-recognition',
-                'constituency-parsing'
-        }
 
     def test_machine_comprehension(self):
         predictor = demo_model(*DEFAULT_MODELS['machine-comprehension'])
@@ -157,3 +151,17 @@ class SniffTest(AllenNlpTestCase):
 
         assert result["tokens"] == ["Pierre", "Vinken", "died", "aged", "81", ";", "immortalised", "aged", "61", "."]
         assert result["trees"] == "(S (NP (NNP Pierre) (NNP Vinken)) (VP (VP (VBD died) (NP (JJ aged) (CD 81))) (, ;) (VP (VBD immortalised) (S (ADJP (VBN aged) (NP (CD 61)))))) (. .))"
+
+    def test_dependency_parsing(self):
+        predictor = demo_model(*DEFAULT_MODELS['dependency-parsing'])
+        sentence = """He ate spaghetti with chopsticks."""
+        result = predictor.predict_json({"sentence": sentence})
+        # Note that this tree is incorrect. We are checking here that the decoded
+        # tree is _actually a tree_ - in greedy decoding versions of the dependency
+        # parser, this sentence has multiple heads. This test shouldn't really live here,
+        # but it's very difficult to re-create a concrete example of this behaviour without
+        # a trained dependency parser.
+        assert result['words'] == ['He', 'ate', 'spaghetti', 'with', 'chopsticks', '.']
+        assert result['pos'] == ['PRP', 'VBD', 'NNS', 'IN', 'NNS', '.']
+        assert result['predicted_dependencies'] == ['nsubj', 'root', 'dobj', 'prep', 'pobj', 'punct']
+        assert result['predicted_heads'] == [2, 0, 2, 2, 4, 2]

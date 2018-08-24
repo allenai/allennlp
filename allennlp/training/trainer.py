@@ -23,7 +23,6 @@ from torch.nn.parallel import replicate, parallel_apply
 from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
 from tensorboardX import SummaryWriter
 
-
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import peak_memory_mb, gpu_memory_mb
@@ -34,6 +33,7 @@ from allennlp.models.model import Model
 from allennlp.nn import util
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.optimizers import Optimizer
+
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -298,8 +298,8 @@ class Trainer:
             raise ConfigurationError("Expected an int or list for cuda_device, got {}".format(cuda_device))
 
         if isinstance(cuda_device, list):
-            logger.info(f"WARNING: Multiple GPU support is experimental not recommended for use. "
-                        "In some cases it may lead to incorrect results or undefined behavior.")
+            logger.warning(f"Multiple GPU support is experimental not recommended for use. "
+                           "In some cases it may lead to incorrect results or undefined behavior.")
             self._multiple_gpu = True
             self._cuda_devices = cuda_device
             # data_parallel will take care of transfering to cuda devices,
@@ -747,6 +747,11 @@ class Trainer:
             self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
             self._metrics_to_console(train_metrics, val_metrics)
+            for index, param_group in enumerate(self._optimizer.param_groups):
+                learning_rate = param_group.get("lr")
+                if learning_rate is not None:
+                    self._tensorboard.add_train_scalar(
+                            f"learning_rate/param_group{index:d}", learning_rate, epoch)
 
             if self._learning_rate_scheduler:
                 # The LRScheduler API is agnostic to whether your schedule requires a validation metric -
@@ -760,7 +765,7 @@ class Trainer:
                 training_elapsed_time = time.time() - training_start_time
                 estimated_time_remaining = training_elapsed_time * \
                     ((self._num_epochs - epoch_counter) / float(epoch - epoch_counter + 1) - 1)
-                formatted_time = time.strftime("%H:%M:%S", time.gmtime(estimated_time_remaining))
+                formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
                 logger.info("Estimated training time remaining: %s", formatted_time)
 
             epochs_trained += 1
