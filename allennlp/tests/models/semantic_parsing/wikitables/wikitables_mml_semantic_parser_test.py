@@ -7,9 +7,7 @@ from flaky import flaky
 from numpy.testing import assert_almost_equal
 import torch
 
-from allennlp.common import Params
 from allennlp.common.testing import ModelTestCase
-from allennlp.models import Model, WikiTablesMmlSemanticParser
 from allennlp.training.metrics.wikitables_accuracy import SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH
 
 @pytest.mark.java
@@ -44,7 +42,7 @@ class WikiTablesMmlSemanticParserTest(ModelTestCase):
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
-    def test_elmo_mixture_no_features_model_can_train_save_and_load(self):
+    def test_mixture_no_features_model_can_train_save_and_load(self):
         param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'experiment-mixture.json'
         self.ensure_model_can_train_save_and_load(param_file)
 
@@ -77,16 +75,8 @@ class WikiTablesMmlSemanticParserTest(ModelTestCase):
         tensor = torch.LongTensor([])
         type_vector, _ = self.model._get_type_vector(worlds, num_entities, tensor)
         # Verify that both types are present and padding used for non existent entities.
-        assert_almost_equal(type_vector.data.numpy(), [[[1, 0, 0, 0],
-                                                        [0, 1, 0, 0],
-                                                        [0, 1, 0, 0],
-                                                        [0, 0, 0, 1],
-                                                        [0, 0, 0, 1]],
-                                                       [[1, 0, 0, 0],
-                                                        [0, 1, 0, 0],
-                                                        [0, 0, 0, 1],
-                                                        [0, 0, 0, 0],
-                                                        [0, 0, 0, 0]]])
+        assert_almost_equal(type_vector.data.numpy(), [[0, 1, 1, 3, 3],
+                                                       [0, 1, 3, 0, 0]])
 
     def test_get_linking_probabilities(self):
         worlds, num_entities = self.get_fake_worlds()
@@ -140,87 +130,3 @@ class WikiTablesMmlSemanticParserTest(ModelTestCase):
                   for entity_list, entity2neighbors in zip(entities, neighbors)]
         num_entities = max([len(entity_list) for entity_list in entities])
         return worlds, num_entities
-
-    def test_embed_actions_works_with_batched_and_padded_input(self):
-        params = Params.from_file(self.param_file)
-        model = Model.from_params(vocab=self.vocab, params=params['model'])
-        action_embedding_weights = model._action_embedder.weight
-        rule1 = model.vocab.get_token_from_index(1, 'rule_labels')
-        rule1_tensor = torch.LongTensor([1])
-        rule2 = model.vocab.get_token_from_index(2, 'rule_labels')
-        rule2_tensor = torch.LongTensor([2])
-        rule3 = model.vocab.get_token_from_index(3, 'rule_labels')
-        rule3_tensor = torch.LongTensor([3])
-        actions = [[(rule1, True, rule1_tensor),
-                    (rule2, True, rule2_tensor),
-                    # This one is padding; the tensors shouldn't matter here.
-                    ('', False, None)],
-                   [(rule3, True, rule3_tensor),
-                    ('instance_action', False, None),
-                    (rule1, True, rule1_tensor)]]
-
-        embedded_actions, _, _, action_indices = model._embed_actions(actions)
-        assert action_indices[(0, 0)] == action_indices[(1, 2)]
-        assert action_indices[(1, 1)] == -1
-        assert len(set(action_indices.values())) == 4
-
-        # Now we'll go through all three unique actions and make sure the embedding is as we expect.
-        action_embedding = embedded_actions[action_indices[(0, 0)]]
-        expected_action_embedding = action_embedding_weights[action_indices[(0, 0)]]
-        assert_almost_equal(action_embedding.cpu().data.numpy(),
-                            expected_action_embedding.cpu().data.numpy())
-
-        action_embedding = embedded_actions[action_indices[(0, 1)]]
-        expected_action_embedding = action_embedding_weights[action_indices[(0, 1)]]
-        assert_almost_equal(action_embedding.cpu().data.numpy(),
-                            expected_action_embedding.cpu().data.numpy())
-
-        action_embedding = embedded_actions[action_indices[(1, 0)]]
-        expected_action_embedding = action_embedding_weights[action_indices[(1, 0)]]
-        assert_almost_equal(action_embedding.cpu().data.numpy(),
-                            expected_action_embedding.cpu().data.numpy())
-
-    def test_map_entity_productions(self):
-        # (batch_size, num_entities, num_question_tokens) = (3, 4, 5)
-        linking_scores = torch.rand(3, 4, 5)
-        # Because we only need a small piece of the WikiTablesWorld and TableKnowledgeGraph, we'll
-        # just use some namedtuples to fake the part of the API that we need, instead of going to
-        # the trouble of constructing the full objects.
-        FakeTable = namedtuple('FakeTable', ['entities'])
-        FakeWorld = namedtuple('FakeWorld', ['table_graph'])
-        entities = [['fb:cell.2010', 'fb:cell.2011', 'fb:row.row.year', 'fb:row.row.year2'],
-                    ['fb:cell.2012', 'fb:cell.2013', 'fb:row.row.year'],
-                    ['fb:cell.2010', 'fb:row.row.year']]
-        worlds = [FakeWorld(FakeTable(entity_list)) for entity_list in entities]
-        # The tensors here for the global actions won't actually be read, so we're not constructing
-        # them.
-        # it.  Same with the RHS tensors.  NT* here is just saying "some non-terminal".
-        actions = [[('@START@ -> r', True, None),
-                    ('@START@ -> c', True, None),
-                    ('@START@ -> <c,r>', True, None),
-                    ('c -> fb:cell.2010', False, None),
-                    ('c -> fb:cell.2011', False, None),
-                    ('<c,r> -> fb:row.row.year', False, None),
-                    ('<c,r> -> fb:row.row.year2', False, None)],
-                   [('@START@ -> c', True, None),
-                    ('c -> fb:cell.2012', False, None),
-                    ('c -> fb:cell.2013', False, None),
-                    ('<c,r> -> fb:row.row.year', False, None)],
-                   [('@START@ -> c', True, None),
-                    ('c -> fb:cell.2010', False, None),
-                    ('<c,r> -> fb:row.row.year', False, None)]]
-        flattened_linking_scores, actions_to_entities = \
-                WikiTablesMmlSemanticParser._map_entity_productions(linking_scores, worlds, actions)
-        assert_almost_equal(flattened_linking_scores.detach().cpu().numpy(),
-                            linking_scores.view(3 * 4, 5).detach().cpu().numpy())
-        assert actions_to_entities == {
-                (0, 3): 0,
-                (0, 4): 1,
-                (0, 5): 2,
-                (0, 6): 3,
-                (1, 1): 4,
-                (1, 2): 5,
-                (1, 3): 6,
-                (2, 1): 8,
-                (2, 2): 9,
-                }

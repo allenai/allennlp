@@ -39,15 +39,15 @@
     "phrase_layer": {
       "type": "gru",
       "bidirectional": true,
-      "input_size": 100,
-      "hidden_size": 5,
+      "input_size": 120,
+      "hidden_size": 100,
       "num_layers": 1
     },
     "residual_encoder": {
       "type": "gru",
       "bidirectional": true,
       "input_size": 200,
-      "hidden_size": 5,
+      "hidden_size": 100,
       "num_layers": 1
     },
     "span_start_encoder": {
@@ -61,7 +61,7 @@
       "type": "gru",
       "bidirectional": true,
       "input_size": 400,
-      "hidden_size": 5,
+      "hidden_size": 100,
       "num_layers": 1
     },
     "initializer": [

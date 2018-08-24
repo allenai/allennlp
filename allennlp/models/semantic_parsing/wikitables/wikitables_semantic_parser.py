@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Mapping, Sequence, Tuple
 
 from overrides import overrides
 import torch
@@ -8,11 +8,12 @@ from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
+from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
 from allennlp.modules import Embedding, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, TimeDistributed
 from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
 from allennlp.nn import util
-from allennlp.nn.decoding import GrammarState, RnnState, ChecklistState
+from allennlp.nn.decoding import GrammarState, RnnState
+from allennlp.semparse import ParsingError
 from allennlp.semparse.type_declarations import type_declaration
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import WikiTablesWorld
@@ -44,6 +45,9 @@ class WikiTablesSemanticParser(Model):
     max_decoding_steps : ``int``
         When we're decoding with a beam search, what's the maximum number of steps we should take?
         This only applies at evaluation time, not during training.
+    add_action_bias : ``bool``, optional (default=True)
+        If ``True``, we will learn a bias weight for each action that gets used when predicting
+        that action, in addition to its embedding.
     use_neighbor_similarity_for_linking : ``bool``, optional (default=False)
         If ``True``, we will compute a max similarity between a question token and the `neighbors`
         of an entity as a component of the linking scores.  This is meant to capture the same kind
@@ -73,6 +77,7 @@ class WikiTablesSemanticParser(Model):
                  encoder: Seq2SeqEncoder,
                  entity_encoder: Seq2VecEncoder,
                  max_decoding_steps: int,
+                 add_action_bias: bool = True,
                  use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
                  num_linking_features: int = 10,
@@ -83,6 +88,7 @@ class WikiTablesSemanticParser(Model):
         self._encoder = encoder
         self._entity_encoder = TimeDistributed(entity_encoder)
         self._max_decoding_steps = max_decoding_steps
+        self._add_action_bias = add_action_bias
         self._use_neighbor_similarity_for_linking = use_neighbor_similarity_for_linking
         if dropout > 0:
             self._dropout = torch.nn.Dropout(p=dropout)
@@ -95,9 +101,11 @@ class WikiTablesSemanticParser(Model):
 
         self._action_padding_index = -1  # the padding value used by IndexField
         num_actions = vocab.get_vocab_size(self._rule_namespace)
+        if self._add_action_bias:
+            self._action_biases = Embedding(num_embeddings=num_actions, embedding_dim=1)
         self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
         self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
-        self._action_biases = Embedding(num_embeddings=num_actions, embedding_dim=1)
+
 
         # This is what we pass as input in the first step of decoding, when we don't have a
         # previous action, or a previous question attention.
@@ -112,7 +120,8 @@ class WikiTablesSemanticParser(Model):
         self._num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
         self._num_start_types = 5  # TODO(mattg): get this in a more principled way somehow?
         self._embedding_dim = question_embedder.get_output_dim()
-        self._type_params = torch.nn.Linear(self._num_entity_types, self._embedding_dim)
+        self._entity_type_encoder_embedding = Embedding(self._num_entity_types, self._embedding_dim)
+        self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
 
         if num_linking_features > 0:
@@ -127,18 +136,18 @@ class WikiTablesSemanticParser(Model):
             self._question_entity_params = None
             self._question_neighbor_params = None
 
-    def _get_initial_state_and_scores(self,
-                                      question: Dict[str, torch.LongTensor],
-                                      table: Dict[str, torch.LongTensor],
-                                      world: List[WikiTablesWorld],
-                                      actions: List[List[ProductionRuleArray]],
-                                      example_lisp_string: List[str] = None,
-                                      add_world_to_initial_state: bool = False,
-                                      checklist_states: List[ChecklistState] = None) -> Dict:
+    def _get_initial_rnn_and_grammar_state(self,
+                                           question: Dict[str, torch.LongTensor],
+                                           table: Dict[str, torch.LongTensor],
+                                           world: List[WikiTablesWorld],
+                                           actions: List[List[ProductionRuleArray]],
+                                           outputs: Dict[str, Any]) -> Tuple[List[RnnState], List[GrammarState]]:
         """
-        Does initial preparation and creates an intiial state for both the semantic parsers. Note
-        that the checklist state is optional, and the ``WikiTablesMmlParser`` is not expected to
-        pass it.
+        Encodes the question and table, computes a linking between the two, and constructs an
+        initial RnnState and GrammarState for each batch instance to pass to the decoder.
+
+        We take ``outputs`` as a parameter here and `modify` it, adding things that we want to
+        visualize in a demo.
         """
         table_text = table['text']
         # (batch_size, question_length, embedding_dim)
@@ -170,13 +179,14 @@ class WikiTablesSemanticParser(Model):
         # (batch_size, num_entities, embedding_dim)
         embedded_neighbors = neighbor_encoder(embedded_neighbors, neighbor_mask)
 
-        # entity_types: one-hot tensor with shape (batch_size, num_entities, num_types)
+        # entity_types: tensor with shape (batch_size, num_entities), where each entry is the
+        # entity's type id.
         # entity_type_dict: Dict[int, int], mapping flattened_entity_index -> type_index
         # These encode the same information, but for efficiency reasons later it's nice
         # to have one version as a tensor and one that's accessible on the cpu.
         entity_types, entity_type_dict = self._get_type_vector(world, num_entities, encoded_table)
 
-        entity_type_embeddings = self._type_params(entity_types.float())
+        entity_type_embeddings = self._entity_type_encoder_embedding(entity_types)
         projected_neighbor_embeddings = self._neighbor_params(embedded_neighbors.float())
         # (batch_size, num_entities, embedding_dim)
         entity_embeddings = torch.tanh(entity_type_embeddings + projected_neighbor_embeddings)
@@ -253,20 +263,11 @@ class WikiTablesSemanticParser(Model):
                                                              self._encoder.is_bidirectional())
         memory_cell = encoder_outputs.new_zeros(batch_size, self._encoder.get_output_dim())
 
-        initial_score = embedded_question.data.new_zeros(batch_size)
-
-        action_embeddings, output_action_embeddings, action_biases, action_indices = self._embed_actions(actions)
-
-        _, num_entities, num_question_tokens = linking_scores.size()
-        flattened_linking_scores, actions_to_entities = self._map_entity_productions(linking_scores,
-                                                                                     world,
-                                                                                     actions)
         # To make grouping states together in the decoder easier, we convert the batch dimension in
         # all of our tensors into an outer list.  For instance, the encoder outputs have shape
         # `(batch_size, question_length, encoder_output_dim)`.  We need to convert this into a list
         # of `batch_size` tensors, each of shape `(question_length, encoder_output_dim)`.  Then we
         # won't have to do any index selects, or anything, we'll just do some `torch.cat()`s.
-        initial_score_list = [initial_score[i] for i in range(batch_size)]
         encoder_output_list = [encoder_outputs[i] for i in range(batch_size)]
         question_mask_list = [question_mask[i] for i in range(batch_size)]
         initial_rnn_state = []
@@ -277,30 +278,19 @@ class WikiTablesSemanticParser(Model):
                                               self._first_attended_question,
                                               encoder_output_list,
                                               question_mask_list))
-        initial_grammar_state = [self._create_grammar_state(world[i], actions[i])
+        initial_grammar_state = [self._create_grammar_state(world[i],
+                                                            actions[i],
+                                                            linking_scores[i],
+                                                            entity_types[i])
                                  for i in range(batch_size)]
-        initial_state_world = world if add_world_to_initial_state else None
-        initial_state = WikiTablesDecoderState(batch_indices=list(range(batch_size)),
-                                               action_history=[[] for _ in range(batch_size)],
-                                               score=initial_score_list,
-                                               rnn_state=initial_rnn_state,
-                                               grammar_state=initial_grammar_state,
-                                               action_embeddings=action_embeddings,
-                                               output_action_embeddings=output_action_embeddings,
-                                               action_biases=action_biases,
-                                               action_indices=action_indices,
-                                               possible_actions=actions,
-                                               flattened_linking_scores=flattened_linking_scores,
-                                               actions_to_entities=actions_to_entities,
-                                               entity_types=entity_type_dict,
-                                               world=initial_state_world,
-                                               example_lisp_string=example_lisp_string,
-                                               checklist_state=checklist_states,
-                                               debug_info=None)
-        return {"initial_state": initial_state,
-                "linking_scores": linking_scores,
-                "feature_scores": feature_scores,
-                "similarity_scores": question_entity_similarity_max_score}
+        if not self.training:
+            # We add a few things to the outputs that will be returned from `forward` at evaluation
+            # time, for visualization in a demo.
+            outputs['linking_scores'] = linking_scores
+            if feature_scores is not None:
+                outputs['feature_scores'] = feature_scores
+            outputs['similarity_scores'] = question_entity_similarity_max_score
+        return initial_rnn_state, initial_grammar_state
 
     @staticmethod
     def _get_neighbor_indices(worlds: List[WikiTablesWorld],
@@ -352,8 +342,8 @@ class WikiTablesSemanticParser(Model):
                          num_entities: int,
                          tensor: torch.Tensor) -> Tuple[torch.LongTensor, Dict[int, int]]:
         """
-        Produces the one hot encoding for each entity's type. In addition,
-        a map from a flattened entity index to type is returned to combine
+        Produces a tensor with shape ``(batch_size, num_entities)`` that encodes each entity's
+        type. In addition, a map from a flattened entity index to type is returned to combine
         entity type operations into one method.
 
         Parameters
@@ -365,7 +355,7 @@ class WikiTablesSemanticParser(Model):
 
         Returns
         -------
-        A ``torch.LongTensor`` with shape ``(batch_size, num_entities, num_types)``.
+        A ``torch.LongTensor`` with shape ``(batch_size, num_entities)``.
         entity_types : ``Dict[int, int]``
             This is a mapping from ((batch_index * num_entities) + entity_index) to entity type id.
         """
@@ -374,7 +364,6 @@ class WikiTablesSemanticParser(Model):
         for batch_index, world in enumerate(worlds):
             types = []
             for entity_index, entity in enumerate(world.table_graph.entities):
-                one_hot_vectors = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
                 # We need numbers to be first, then cells, then parts, then row, because our
                 # entities are going to be sorted.  We do a split by type and then a merge later,
                 # and it relies on this sorting.
@@ -386,16 +375,16 @@ class WikiTablesSemanticParser(Model):
                     entity_type = 3
                 else:
                     entity_type = 0
-                types.append(one_hot_vectors[entity_type])
+                types.append(entity_type)
 
                 # For easier lookups later, we're actually using a _flattened_ version
                 # of (batch_index, entity_index) for the key, because this is how the
                 # linking scores are stored.
                 flattened_entity_index = batch_index * num_entities + entity_index
                 entity_types[flattened_entity_index] = entity_type
-            padded = pad_sequence_to_length(types, num_entities, lambda: [0, 0, 0, 0])
+            padded = pad_sequence_to_length(types, num_entities, lambda: 0)
             batch_types.append(padded)
-        return tensor.new_tensor(batch_types), entity_types
+        return tensor.new_tensor(batch_types, dtype=torch.long), entity_types
 
     def _get_linking_probabilities(self,
                                    worlds: List[WikiTablesWorld],
@@ -518,133 +507,156 @@ class WikiTablesSemanticParser(Model):
                 'lf_percent': self._has_logical_form.get_metric(reset),
                 }
 
-    @staticmethod
-    def _create_grammar_state(world: WikiTablesWorld,
-                              possible_actions: List[ProductionRuleArray]) -> GrammarState:
-        valid_actions = world.get_valid_actions()
-        action_mapping = {}
-        for i, action in enumerate(possible_actions):
-            action_string = action[0]
-            action_mapping[action_string] = i
-        translated_valid_actions = {}
-        for key, action_strings in valid_actions.items():
-            translated_valid_actions[key] = [action_mapping[action_string]
-                                             for action_string in action_strings]
-        return GrammarState([START_SYMBOL],
-                            {},
-                            translated_valid_actions,
-                            action_mapping,
-                            type_declaration.is_nonterminal)
-
-    def _embed_actions(self, actions: List[List[ProductionRuleArray]]) -> Tuple[torch.Tensor,
-                                                                                torch.Tensor,
-                                                                                torch.Tensor,
-                                                                                Dict[Tuple[int, int], int]]:
+    def _create_grammar_state(self,
+                              world: WikiTablesWorld,
+                              possible_actions: List[ProductionRuleArray],
+                              linking_scores: torch.Tensor,
+                              entity_types: torch.Tensor) -> GrammarState:
         """
-        Given all of the possible actions for all batch instances, produce an embedding for them.
-        There will be significant overlap in this list, as the production rules from the grammar
-        are shared across all batch instances.  Our returned tensor has an embedding for each
-        `unique` action, so we also need to return a mapping from the original ``(batch_index,
-        action_index)`` to our new ``global_action_index``, so that we can get the right action
-        embedding during decoding.
+        This method creates the GrammarState object that's used for decoding.  Part of creating
+        that is creating the `valid_actions` dictionary, which contains embedded representations of
+        all of the valid actions.  So, we create that here as well.
 
-        Returns
-        -------
-        action_embeddings : ``torch.Tensor``
-            Has shape ``(num_unique_actions, action_embedding_dim)``.
-        output_action_embeddings : ``torch.Tensor``
-            Has shape ``(num_unique_actions, action_embedding_dim)``.
-        action_biases : ``torch.Tensor``
-            Has shape ``(num_unique_actions, 1)``.
-        action_map : ``Dict[Tuple[int, int], int]``
-            Maps ``(batch_index, action_index)`` in the input action list to ``action_index`` in
-            the ``action_embeddings`` tensor.  All non-embeddable actions get mapped to `-1` here.
-        """
-        # TODO(mattg): This whole action pipeline might be a whole lot more complicated than it
-        # needs to be.  We used to embed actions differently (using some crazy ideas about
-        # embedding the LHS and RHS separately); we could probably get away with simplifying things
-        # further now that we're just doing a simple embedding for global actions.  But I'm leaving
-        # it like this for now to have a minimal change to go from the LHS/RHS embedding to a
-        # single action embedding.
-        embedded_actions = self._action_embedder.weight
-        output_embedded_actions = self._output_action_embedder.weight
-        action_biases = self._action_biases.weight
-
-        # Now we just need to make a map from `(batch_index, action_index)` to
-        # `global_action_index`.  global_action_ids has the list of all unique actions; here we're
-        # going over all of the actions for each batch instance so we can map them to the global
-        # action ids.
-        action_vocab = self.vocab.get_token_to_index_vocabulary(self._rule_namespace)
-        action_map: Dict[Tuple[int, int], int] = {}
-        for batch_index, instance_actions in enumerate(actions):
-            for action_index, action in enumerate(instance_actions):
-                if not action[0]:
-                    # This rule is padding.
-                    continue
-                global_action_id = action_vocab.get(action[0], -1)
-                action_map[(batch_index, action_index)] = global_action_id
-        return embedded_actions, output_embedded_actions, action_biases, action_map
-
-    @staticmethod
-    def _map_entity_productions(linking_scores: torch.FloatTensor,
-                                worlds: List[WikiTablesWorld],
-                                actions: List[List[ProductionRuleArray]]) -> Tuple[torch.Tensor,
-                                                                                   Dict[Tuple[int, int], int]]:
-        """
-        Constructs a map from ``(batch_index, action_index)`` to ``(batch_index * entity_index)``.
-        That is, some actions correspond to terminal productions of entities from our table.  We
-        need to find those actions and map them to their corresponding entity indices, where the
-        entity index is its position in the list of entities returned by the ``world``.  This list
-        is what defines the second dimension of the ``linking_scores`` tensor, so we can use this
-        index to look up linking scores for each action in that tensor.
-
-        For easier processing later, the mapping that we return is `flattened` - we really want to
-        map ``(batch_index, action_index)`` to ``(batch_index, entity_index)``, but we are going to
-        have to use the result of this mapping to do ``index_selects`` on the ``linking_scores``
-        tensor.  You can't do ``index_select`` with tuples, so we flatten ``linking_scores`` to
-        have shape ``(batch_size * num_entities, num_question_tokens)``, and return shifted indices
-        into this flattened tensor.
+        The inputs to this method are for a `single instance in the batch`; none of the tensors we
+        create here are batched.  We grab the global action ids from the input
+        ``ProductionRuleArrays``, and we use those to embed the valid actions for every
+        non-terminal type.  We use the input ``linking_scores`` for non-global actions.
 
         Parameters
         ----------
+        world : ``WikiTablesWorld``
+            From the input to ``forward`` for a single batch instance.
+        possible_actions : ``List[ProductionRuleArray]``
+            From the input to ``forward`` for a single batch instance.
         linking_scores : ``torch.Tensor``
-            A tensor representing linking scores between each table entity and each question token.
-            Has shape ``(batch_size, num_entities, num_question_tokens)``.
-        worlds : ``List[WikiTablesWorld]``
-            The ``World`` for each batch instance.  The ``World`` contains a reference to the
-            ``TableKnowledgeGraph`` that defines the set of entities in the linking.
-        actions : ``List[List[ProductionRuleArray]]``
-            The list of possible actions for each batch instance.  Our action indices are defined
-            in terms of this list, so we'll find entity productions in this list and map them to
-            entity indices from the entity list we get from the ``World``.
-
-        Returns
-        -------
-        flattened_linking_scores : ``torch.Tensor``
-            A flattened version of ``linking_scores``, with shape ``(batch_size * num_entities,
-            num_question_tokens)``.
-        actions_to_entities : ``Dict[Tuple[int, int], int]``
-            A mapping from ``(batch_index, action_index)`` to ``(batch_size * num_entities)``,
-            representing which action indices correspond to which entity indices in the returned
-            ``flattened_linking_scores`` tensor.
+            Assumed to have shape ``(num_entities, num_question_tokens)`` (i.e., there is no batch
+            dimension).
+        entity_types : ``torch.Tensor``
+            Assumed to have shape ``(num_entities,)`` (i.e., there is no batch dimension).
         """
-        batch_size, num_entities, num_question_tokens = linking_scores.size()
-        entity_map: Dict[Tuple[int, str], int] = {}
-        for batch_index, world in enumerate(worlds):
-            for entity_index, entity in enumerate(world.table_graph.entities):
-                entity_map[(batch_index, entity)] = batch_index * num_entities + entity_index
-        actions_to_entities: Dict[Tuple[int, int], int] = {}
-        for batch_index, action_list in enumerate(actions):
-            for action_index, action in enumerate(action_list):
-                if not action[0]:
-                    # This action is padding.
-                    continue
-                _, production = action[0].split(' -> ')
-                entity_index = entity_map.get((batch_index, production), None)
-                if entity_index is not None:
-                    actions_to_entities[(batch_index, action_index)] = entity_index
-        flattened_linking_scores = linking_scores.view(batch_size * num_entities, num_question_tokens)
-        return flattened_linking_scores, actions_to_entities
+        action_map = {}
+        for action_index, action in enumerate(possible_actions):
+            action_string = action[0]
+            action_map[action_string] = action_index
+        entity_map = {}
+        for entity_index, entity in enumerate(world.table_graph.entities):
+            entity_map[entity] = entity_index
+
+        valid_actions = world.get_valid_actions()
+        translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
+        for key, action_strings in valid_actions.items():
+            translated_valid_actions[key] = {}
+            # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid
+            # productions of that non-terminal.  We'll first split those productions by global vs.
+            # linked action.
+            action_indices = [action_map[action_string] for action_string in action_strings]
+            production_rule_arrays = [(possible_actions[index], index) for index in action_indices]
+            global_actions = []
+            linked_actions = []
+            for production_rule_array, action_index in production_rule_arrays:
+                if production_rule_array[1]:
+                    global_actions.append((production_rule_array[2], action_index))
+                else:
+                    linked_actions.append((production_rule_array[0], action_index))
+
+            # Then we get the embedded representations of the global actions.
+            global_action_tensors, global_action_ids = zip(*global_actions)
+            global_action_tensor = torch.cat(global_action_tensors, dim=0)
+            global_input_embeddings = self._action_embedder(global_action_tensor)
+            if self._add_action_bias:
+                global_action_biases = self._action_biases(global_action_tensor)
+                global_input_embeddings = torch.cat([global_input_embeddings, global_action_biases], dim=-1)
+            global_output_embeddings = self._output_action_embedder(global_action_tensor)
+            translated_valid_actions[key]['global'] = (global_input_embeddings,
+                                                       global_output_embeddings,
+                                                       list(global_action_ids))
+
+            # Then the representations of the linked actions.
+            if linked_actions:
+                linked_rules, linked_action_ids = zip(*linked_actions)
+                entities = [rule.split(' -> ')[1] for rule in linked_rules]
+                entity_ids = [entity_map[entity] for entity in entities]
+                # (num_linked_actions, num_question_tokens)
+                entity_linking_scores = linking_scores[entity_ids]
+                # (num_linked_actions,)
+                entity_type_tensor = entity_types[entity_ids]
+                # (num_linked_actions, entity_type_embedding_dim)
+                entity_type_embeddings = self._entity_type_decoder_embedding(entity_type_tensor)
+                translated_valid_actions[key]['linked'] = (entity_linking_scores,
+                                                           entity_type_embeddings,
+                                                           list(linked_action_ids))
+
+        # Lastly, we need to also create embedded representations of context-specific actions.  In
+        # this case, those are only variable productions, like "r -> x".  Note that our language
+        # only permits one lambda at a time, so we don't need to worry about how nested lambdas
+        # might impact this.
+        context_actions = {}
+        for action_id, action in enumerate(possible_actions):
+            if action[0].endswith(" -> x"):
+                input_embedding = self._action_embedder(action[2])
+                if self._add_action_bias:
+                    input_bias = self._action_biases(action[2])
+                    input_embedding = torch.cat([input_embedding, input_bias], dim=-1)
+                output_embedding = self._output_action_embedder(action[2])
+                context_actions[action[0]] = (input_embedding, output_embedding, action_id)
+
+        return GrammarState([START_SYMBOL],
+                            {},
+                            translated_valid_actions,
+                            context_actions,
+                            type_declaration.is_nonterminal)
+
+    def _compute_validation_outputs(self,
+                                    actions: List[List[ProductionRuleArray]],
+                                    best_final_states: Mapping[int, Sequence[GrammarBasedDecoderState]],
+                                    world: List[WikiTablesWorld],
+                                    example_lisp_string: List[str],
+                                    metadata: List[Dict[str, Any]],
+                                    outputs: Dict[str, Any]) -> None:
+        """
+        Does common things for validation time: computing logical form accuracy (which is expensive
+        and unnecessary during training), adding visualization info to the output dictionary, etc.
+
+        This doesn't return anything; instead it `modifies` the given ``outputs`` dictionary, and
+        calls metrics on ``self``.
+        """
+        batch_size = len(actions)
+        action_mapping = {}
+        for batch_index, batch_actions in enumerate(actions):
+            for action_index, action in enumerate(batch_actions):
+                action_mapping[(batch_index, action_index)] = action[0]
+        outputs['action_mapping'] = action_mapping
+        outputs['best_action_sequence'] = []
+        outputs['debug_info'] = []
+        outputs['entities'] = []
+        outputs['logical_form'] = []
+        for i in range(batch_size):
+            # Decoding may not have terminated with any completed logical forms, if `num_steps`
+            # isn't long enough (or if the model is not trained enough and gets into an
+            # infinite action loop).
+            if i in best_final_states:
+                best_action_indices = best_final_states[i][0].action_history[0]
+                action_strings = [action_mapping[(i, action_index)] for action_index in best_action_indices]
+                try:
+                    logical_form = world[i].get_logical_form(action_strings, add_var_function=False)
+                    self._has_logical_form(1.0)
+                except ParsingError:
+                    self._has_logical_form(0.0)
+                    logical_form = 'Error producing logical form'
+                if example_lisp_string:
+                    self._denotation_accuracy(logical_form, example_lisp_string[i])
+                outputs['best_action_sequence'].append(action_strings)
+                outputs['logical_form'].append(logical_form)
+                outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
+                outputs['entities'].append(world[i].table_graph.entities)
+            else:
+                outputs['logical_form'].append('')
+                self._has_logical_form(0.0)
+                if example_lisp_string:
+                    self._denotation_accuracy(None, example_lisp_string[i])
+        if metadata is not None:
+            outputs["question_tokens"] = [x["question_tokens"] for x in metadata]
+            outputs["original_table"] = [x["original_table"] for x in metadata]
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
