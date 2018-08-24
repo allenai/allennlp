@@ -26,6 +26,7 @@ class DialogQA(Model):
     Question Answering in Context (EMNLP 2018) paper [https://arxiv.org/pdf/1808.07036.pdf].
 
     In this set-up, a single instance is a dialog, list of question answer pairs.
+    
     Parameters
     ----------
     vocab : ``Vocabulary``
