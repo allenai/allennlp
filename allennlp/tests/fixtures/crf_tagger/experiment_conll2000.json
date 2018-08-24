@@ -4,7 +4,7 @@
       "tag_label": "chunk",
       // Tests that CrfTagger.forward() works when it's passed a
       // keyword argument it doesn't expect
-      "feature_labels": ["pos"],
+      "feature_labels": ["pos", "chunk"],
       "token_indexers": {
         "tokens": {
           "type": "single_id",

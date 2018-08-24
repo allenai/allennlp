@@ -137,7 +137,7 @@ class Conll2000DatasetReader(DatasetReader):
             instance_fields['chunk_tags'] = SequenceLabelField(coded_chunks, sequence, "chunk_tags")
 
         # Add "tag label" to instance
-        elif self.tag_label == 'pos' and pos_tags is not None:
+        if self.tag_label == 'pos' and pos_tags is not None:
             instance_fields['tags'] = SequenceLabelField(pos_tags, sequence,
                                                          self.label_namespace)
         elif self.tag_label == 'chunk' and coded_chunks is not None:
