@@ -19,7 +19,7 @@ class CrfTaggerTest(ModelTestCase):
 
     def test_simple_tagger_can_train_save_and_conll2000(self):
         self.ensure_model_can_train_save_and_load(
-            self.FIXTURES_ROOT / 'crf_tagger' / 'experiment_conll2000.json')
+                self.FIXTURES_ROOT / 'crf_tagger' / 'experiment_conll2000.json')
 
     @flaky
     def test_batch_predictions_are_consistent(self):
