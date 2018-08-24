@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import List, Dict, Tuple, Set
+from typing import List, Dict, Tuple
 import numpy
 
 from parsimonious.grammar import Grammar
@@ -22,8 +22,11 @@ class AtisWorld():
         current utterance that we are interested in.
     """
 
-    def __init__(self, utterances: List[str], tokenizer=None, database_directory:str=None) -> None:
-        self.sql_table_context = SqlTableContext(ALL_TABLES, TABLES_WITH_STRINGS, database_directory)
+    def __init__(self,
+                 utterances: List[str],
+                 tokenizer=None,
+                 sql_table_context: SqlTableContext = None) -> None:
+        self.sql_table_context = sql_table_context
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]
@@ -85,7 +88,6 @@ class AtisWorld():
                    number in sorted(self.valid_actions['number'], reverse=True)]
 
         grammar_str_with_context += generate_one_of_string("number", numbers)
-        print(grammar_str_with_context)
         return grammar_str_with_context
 
 

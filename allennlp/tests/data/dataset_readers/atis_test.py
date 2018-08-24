@@ -7,7 +7,7 @@ from allennlp.semparse.worlds import AtisWorld
 class TestAtisReader(AllenNlpTestCase):
     def test_atis_read_from_file(self):
         data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "atis" / "sample.json"
-        database_directory= AllenNlpTestCase.FIXTURES_ROOT / "data" / "atis" / "atis.db"
+        database_directory = AllenNlpTestCase.FIXTURES_ROOT / "data" / "atis" / "atis.db"
         reader = AtisDatasetReader(database_directory=str(database_directory))
 
         instances = list(reader.read(str(data_path)))
@@ -30,7 +30,6 @@ class TestAtisReader(AllenNlpTestCase):
         assert isinstance(instance.fields['world'].as_tensor({}), AtisWorld)
 
         world = instance.fields['world'].metadata
-          
         assert world.valid_actions['number'] == \
                 ['number -> ["1"]',
                  'number -> ["0"]']
@@ -42,4 +41,3 @@ class TestAtisReader(AllenNlpTestCase):
                 len(world.valid_actions['number'])
         assert world.linking_scores.shape[1] == \
                 len(instance.fields['utterance'].tokens)
-

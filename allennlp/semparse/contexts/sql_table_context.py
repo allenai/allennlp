@@ -6,7 +6,6 @@ import re
 from collections import defaultdict
 from typing import List, Dict, Set
 import sqlite3
-import sys
 
 from overrides import overrides
 
@@ -100,20 +99,20 @@ class SqlTableContext():
         that map to lists of the table's column names.
     """
     def __init__(self,
-                all_tables: Dict[str, List[str]] = None, 
-                tables_with_strings: Dict[str, List[str]] = None,
-                database_directory: str = None) -> None:
+                 all_tables: Dict[str, List[str]] = None,
+                 tables_with_strings: Dict[str, List[str]] = None,
+                 database_directory: str = None) -> None:
         self.all_tables = all_tables
         self.tables_with_strings = tables_with_strings
         if database_directory:
             self.database_directory = database_directory
             self.connection = sqlite3.connect(database_directory)
-            self.cursor = self.connection.cursor() 
+            self.cursor = self.connection.cursor()
 
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)
         self.valid_actions: Dict[str, List[str]] = self.initialize_valid_actions()
-        
+
     def initialize_valid_actions(self) -> Dict[str, List[str]]:
         """
         We initialize the valid actions with the global actions. These include the
@@ -159,17 +158,18 @@ class SqlTableContext():
                     " / ".join(sorted(column_right_hand_sides, reverse=True))
 
             grammar_str += generate_one_of_string('table_name', sorted(list(self.all_tables.keys()), reverse=True))
-        
-        
         biexprs = []
         if self.tables_with_strings:
             for table, columns in self.tables_with_strings.items():
-                biexprs.extend([f'("{table}" ws "." ws "{column}" ws binaryop ws {table}_{column}_string)' for column in columns])
+                biexprs.extend([f'("{table}" ws "." ws "{column}" ws binaryop ws {table}_{column}_string)'
+                                for column in columns])
                 for column in columns:
                     self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
-                    grammar_str += generate_one_of_string(f'{table}_{column}_string', [row[0] for row in self.cursor.fetchall()])
+                    grammar_str += generate_one_of_string(f'{table}_{column}_string',
+                                                          [row[0] for row in self.cursor.fetchall()])
 
-        grammar_str +=  'biexpr = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ' + f'{" / ".join(sorted(biexprs, reverse=True))}\n'
+        grammar_str += 'biexpr = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ' + \
+                       f'{" / ".join(sorted(biexprs, reverse=True))}\n'
         return grammar_str
 
 class SqlVisitor(NodeVisitor):
