@@ -115,9 +115,9 @@ class CrfTagger(Model):
             if not label_encoding:
                 raise ConfigurationError("calculate_span_f1 is True, but "
                                          "no label_encoding was specified.")
-            self.f1_metric = SpanBasedF1Measure(vocab,
-                                                tag_namespace=label_namespace,
-                                                label_encoding=label_encoding)
+            self._f1_metric = SpanBasedF1Measure(vocab,
+                                                 tag_namespace=label_namespace,
+                                                 label_encoding=label_encoding)
 
         check_dimensions_match(text_field_embedder.get_output_dim(), encoder.get_input_dim(),
                                "text field embedding dim", "encoder input dim")
@@ -199,6 +199,8 @@ class CrfTagger(Model):
 
             for metric in self.metrics.values():
                 metric(class_probabilities, tags, mask.float())
+            if self.calculate_span_f1:
+                self._f1_metric(class_probabilities, tags, mask.float())
         if metadata is not None:
             output["words"] = [x["words"] for x in metadata]
         return output
@@ -223,11 +225,12 @@ class CrfTagger(Model):
         metrics_to_return = {metric_name: metric.get_metric(reset) for
                              metric_name, metric in self.metrics.items()}
 
-        f1_dict = self.f1_metric.get_metric(reset=reset)
-        if self._verbose_metrics:
-            metrics_to_return.update(f1_dict)
-        else:
-            metrics_to_return.update({
-                    x: y for x, y in f1_dict.items() if
-                    "overall" in x})
+        if self.calculate_span_f1:
+            f1_dict = self._f1_metric.get_metric(reset=reset)
+            if self._verbose_metrics:
+                metrics_to_return.update(f1_dict)
+            else:
+                metrics_to_return.update({
+                        x: y for x, y in f1_dict.items() if
+                        "overall" in x})
         return metrics_to_return
