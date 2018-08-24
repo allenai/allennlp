@@ -2,7 +2,6 @@
   "dataset_reader": {
     "type": "quac",
     "num_context_answers": 2,
-    "lazy": true,
     "token_indexers": {
       "token_characters": {
         "type": "characters",
