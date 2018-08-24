@@ -19,7 +19,7 @@ class TestQuACReader:
         assert instances[0].fields["yesno_list"].sequence_length() == 6
         assert [t.text for t in instances[0].fields["question"].field_list[0].tokens[:3]] == ["What", "was", "the"]
 
-        assert len(instances) == 1
+        assert len(instances) == 2
         passage_length = len(instances[0].fields["passage"].tokens)
 
         assert [t.text for t in instances[0].fields["passage"].tokens[:3]] == ["DJ", "Kool", "Herc"]

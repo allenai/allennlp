@@ -118,6 +118,7 @@ class DialogQA(Model):
                 yesno_list: torch.IntTensor = None,
                 followup_list: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
+        # pylint: disable=arguments-differ
         """
         Parameters
         ----------
