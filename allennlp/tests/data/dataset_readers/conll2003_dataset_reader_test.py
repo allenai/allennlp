@@ -27,10 +27,3 @@ class TestConll2003Reader():
         tokens = [t.text for t in fields['tokens'].tokens]
         assert tokens == ['AI2', 'engineer', 'Joel', 'lives', 'in', 'Seattle', '.']
         assert fields["tags"].labels == expected_labels
-
-    def test_read_conll2000_from_file(self):
-        conll_reader = Conll2003DatasetReader(tag_label='chunk',
-                                              ignore_ner_tags=True)
-        instances = conll_reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'conll2000.txt'))
-        instances = ensure_list(instances)
-        assert len(instances) == 2
