@@ -1,5 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 import pytest
+import torch
+from numpy.testing import assert_almost_equal
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.decoding import GrammarState
@@ -22,43 +24,63 @@ class TestGrammarState(AllenNlpTestCase):
         assert state.is_finished()
 
     def test_get_valid_actions_uses_top_of_stack(self):
-        state = GrammarState(['s'], {}, {'s': [1, 2], 't': [3, 4]}, {}, is_nonterminal)
-        assert state.get_valid_actions() == [1, 2]
-        state = GrammarState(['t'], {}, {'s': [1, 2], 't': [3, 4]}, {}, is_nonterminal)
-        assert state.get_valid_actions() == [3, 4]
-        state = GrammarState(['e'], {}, {'s': [1, 2], 't': [3, 4], 'e': []}, {}, is_nonterminal)
-        assert state.get_valid_actions() == []
+        s_actions = object()
+        t_actions = object()
+        e_actions = object()
+        state = GrammarState(['s'], {}, {'s': s_actions, 't': t_actions}, {}, is_nonterminal)
+        assert state.get_valid_actions() == s_actions
+        state = GrammarState(['t'], {}, {'s': s_actions, 't': t_actions}, {}, is_nonterminal)
+        assert state.get_valid_actions() == t_actions
+        state = GrammarState(['e'], {}, {'s': s_actions, 't': t_actions, 'e': e_actions}, {}, is_nonterminal)
+        assert state.get_valid_actions() == e_actions
 
     def test_get_valid_actions_adds_lambda_productions(self):
-        state = GrammarState(['s'], {('s', 'x'): ['s']}, {'s': [1, 2]}, {'s -> x': 5}, is_nonterminal)
-        assert state.get_valid_actions() == [1, 2, 5]
+        state = GrammarState(['s'],
+                             {('s', 'x'): ['s']},
+                             {'s': {'global': (torch.Tensor([1, 1]), torch.Tensor([2, 2]), [1, 2])}},
+                             {'s -> x': (torch.Tensor([5]), torch.Tensor([6]), 5)},
+                             is_nonterminal)
+        actions = state.get_valid_actions()
+        assert_almost_equal(actions['global'][0].cpu().numpy(), [1, 1, 5])
+        assert_almost_equal(actions['global'][1].cpu().numpy(), [2, 2, 6])
+        assert actions['global'][2] == [1, 2, 5]
         # We're doing this assert twice to make sure we haven't accidentally modified the state.
-        assert state.get_valid_actions() == [1, 2, 5]
+        actions = state.get_valid_actions()
+        assert_almost_equal(actions['global'][0].cpu().numpy(), [1, 1, 5])
+        assert_almost_equal(actions['global'][1].cpu().numpy(), [2, 2, 6])
+        assert actions['global'][2] == [1, 2, 5]
 
     def test_get_valid_actions_adds_lambda_productions_only_for_correct_type(self):
         state = GrammarState(['t'],
                              {('s', 'x'): ['t']},
-                             {'s': [1, 2], 't': [3, 4]},
-                             {'s -> x': 5},
+                             {'s': {'global': (torch.Tensor([1, 1]), torch.Tensor([2, 2]), [1, 2])},
+                              't': {'global': (torch.Tensor([3, 3]), torch.Tensor([4, 4]), [3, 4])}},
+                             {'s -> x': (torch.Tensor([5]), torch.Tensor([6]), 5)},
                              is_nonterminal)
-        assert state.get_valid_actions() == [3, 4]
+        actions = state.get_valid_actions()
+        assert_almost_equal(actions['global'][0].cpu().numpy(), [3, 3])
+        assert_almost_equal(actions['global'][1].cpu().numpy(), [4, 4])
+        assert actions['global'][2] == [3, 4]
         # We're doing this assert twice to make sure we haven't accidentally modified the state.
-        assert state.get_valid_actions() == [3, 4]
+        actions = state.get_valid_actions()
+        assert_almost_equal(actions['global'][0].cpu().numpy(), [3, 3])
+        assert_almost_equal(actions['global'][1].cpu().numpy(), [4, 4])
+        assert actions['global'][2] == [3, 4]
 
     def test_take_action_gives_correct_next_states_with_non_lambda_productions(self):
         # state.take_action() doesn't read or change these objects, it just passes them through, so
         # we'll use some sentinels to be sure of that.
         valid_actions = object()
-        action_indices = object()
+        context_actions = object()
 
-        state = GrammarState(['s'], {}, valid_actions, action_indices, is_nonterminal)
+        state = GrammarState(['s'], {}, valid_actions, context_actions, is_nonterminal)
         next_state = state.take_action('s -> [t, r]')
-        expected_next_state = GrammarState(['r', 't'], {}, valid_actions, action_indices, is_nonterminal)
+        expected_next_state = GrammarState(['r', 't'], {}, valid_actions, context_actions, is_nonterminal)
         assert next_state.__dict__ == expected_next_state.__dict__
 
-        state = GrammarState(['r', 't'], {}, valid_actions, action_indices, is_nonterminal)
+        state = GrammarState(['r', 't'], {}, valid_actions, context_actions, is_nonterminal)
         next_state = state.take_action('t -> identity')
-        expected_next_state = GrammarState(['r'], {}, valid_actions, action_indices, is_nonterminal)
+        expected_next_state = GrammarState(['r'], {}, valid_actions, context_actions, is_nonterminal)
         assert next_state.__dict__ == expected_next_state.__dict__
 
     def test_take_action_crashes_with_mismatched_types(self):
@@ -70,14 +92,14 @@ class TestGrammarState(AllenNlpTestCase):
         # state.take_action() doesn't read or change these objects, it just passes them through, so
         # we'll use some sentinels to be sure of that.
         valid_actions = object()
-        action_indices = object()
+        context_actions = object()
 
-        state = GrammarState(['t', '<s,d>'], {}, valid_actions, action_indices, is_nonterminal)
+        state = GrammarState(['t', '<s,d>'], {}, valid_actions, context_actions, is_nonterminal)
         next_state = state.take_action('<s,d> -> [lambda x, d]')
         expected_next_state = GrammarState(['t', 'd'],
                                            {('s', 'x'): ['d']},
                                            valid_actions,
-                                           action_indices,
+                                           context_actions,
                                            is_nonterminal)
         assert next_state.__dict__ == expected_next_state.__dict__
 
@@ -86,7 +108,7 @@ class TestGrammarState(AllenNlpTestCase):
         expected_next_state = GrammarState(['t', 'd', '<s,r>'],
                                            {('s', 'x'): ['d', '<s,r>']},
                                            valid_actions,
-                                           action_indices,
+                                           context_actions,
                                            is_nonterminal)
         assert next_state.__dict__ == expected_next_state.__dict__
 
@@ -95,7 +117,7 @@ class TestGrammarState(AllenNlpTestCase):
         expected_next_state = GrammarState(['t', 'd', 'r'],
                                            {('s', 'x'): ['d', 'r'], ('s', 'y'): ['r']},
                                            valid_actions,
-                                           action_indices,
+                                           context_actions,
                                            is_nonterminal)
         assert next_state.__dict__ == expected_next_state.__dict__
 
@@ -104,7 +126,7 @@ class TestGrammarState(AllenNlpTestCase):
         expected_next_state = GrammarState(['t', 'd'],
                                            {('s', 'x'): ['d']},
                                            valid_actions,
-                                           action_indices,
+                                           context_actions,
                                            is_nonterminal)
         assert next_state.__dict__ == expected_next_state.__dict__
 
@@ -113,6 +135,6 @@ class TestGrammarState(AllenNlpTestCase):
         expected_next_state = GrammarState(['t'],
                                            {},
                                            valid_actions,
-                                           action_indices,
+                                           context_actions,
                                            is_nonterminal)
         assert next_state.__dict__ == expected_next_state.__dict__

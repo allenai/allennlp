@@ -579,14 +579,51 @@ def replace_masked_values(tensor: torch.Tensor, mask: torch.Tensor, replace_with
     Replaces all masked values in ``tensor`` with ``replace_with``.  ``mask`` must be broadcastable
     to the same shape as ``tensor``. We require that ``tensor.dim() == mask.dim()``, as otherwise we
     won't know which dimensions of the mask to unsqueeze.
+
+    This just does ``tensor.masked_fill()``, except the pytorch method fills in things with a mask
+    value of 1, where we want the opposite.  You can do this in your own code with
+    ``tensor.masked_fill((1 - mask).byte(), replace_with)``.
     """
-    # We'll build a tensor of the same shape as `tensor`, zero out masked values, then add back in
-    # the `replace_with` value.
     if tensor.dim() != mask.dim():
         raise ConfigurationError("tensor.dim() (%d) != mask.dim() (%d)" % (tensor.dim(), mask.dim()))
-    one_minus_mask = 1.0 - mask
-    values_to_add = replace_with * one_minus_mask
-    return tensor * mask + values_to_add
+    return tensor.masked_fill((1 - mask).byte(), replace_with)
+
+
+def tensors_equal(tensor1: torch.Tensor, tensor2: torch.Tensor, tolerance: float = 1e-12) -> bool:
+    """
+    A check for tensor equality (by value).  We make sure that the tensors have the same shape,
+    then check all of the entries in the tensor for equality.  We additionally allow the input
+    tensors to be lists or dictionaries, where we then do the above check on every position in the
+    list / item in the dictionary.  If we find objects that aren't tensors as we're doing that, we
+    just defer to their equality check.
+
+    This is kind of a catch-all method that's designed to make implementing ``__eq__`` methods
+    easier, in a way that's really only intended to be useful for tests.
+    """
+    # pylint: disable=too-many-return-statements
+    if isinstance(tensor1, (list, tuple)):
+        if not isinstance(tensor2, (list, tuple)) or len(tensor1) != len(tensor2):
+            return False
+        return all([tensors_equal(t1, t2, tolerance) for t1, t2 in zip(tensor1, tensor2)])
+    elif isinstance(tensor1, dict):
+        if not isinstance(tensor2, dict):
+            return False
+        if tensor1.keys() != tensor2.keys():
+            return False
+        return all([tensors_equal(tensor1[key], tensor2[key], tolerance) for key in tensor1])
+    elif isinstance(tensor1, torch.Tensor):
+        if not isinstance(tensor2, torch.Tensor):
+            return False
+        if tensor1.size() != tensor2.size():
+            return False
+        return ((tensor1 - tensor2).abs().float() < tolerance).all()
+    else:
+        try:
+            return tensor1 == tensor2
+        except RuntimeError:
+            print(type(tensor1), type(tensor2))
+            raise
+
 
 
 def device_mapping(cuda_device: int):

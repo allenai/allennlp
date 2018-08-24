@@ -1,5 +1,8 @@
-from copy import deepcopy
 from typing import Callable, Dict, List, Tuple
+
+import torch
+
+from allennlp.nn import util
 
 
 class GrammarState:
@@ -38,13 +41,21 @@ class GrammarState:
         left hand side and right hand side, where the LHS is the type of the lambda variable and
         the RHS is the variable itself), and the value is a nonterminal stack much like
         ``nonterminal_stack``.  When the stack becomes empty, we remove the lambda entry.
-    valid_actions : ``Dict[str, List[int]]``
-        A mapping from non-terminals (represented as strings) to all valid (global and
-        instance-specific) productions from that non-terminal (represented as a list of integers).
-    action_indices : ``Dict[str, int]``
-        We use integers to represent productions in the ``valid_actions`` dictionary for efficiency
-        reasons in the decoder.  This means we need a way to map from the production rule strings
-        that we generate for lambda variables back to the integer used to represent it.
+    valid_actions : ``Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]]``
+        A mapping from non-terminals (represented as strings) to all valid expansions of that
+        non-terminal.  The way we represent the valid expansions is a little complicated: we use a
+        dictionary of `action types`, where the key is the action type (like "global", "linked", or
+        whatever your model is expecting), and the value is a tuple representing all actions of
+        that type.  The tuple is (input tensor, output tensor, action id).  The input tensor has
+        the representation that is used when `selecting` actions, for all actions of this type.
+        The output tensor has the representation that is used when feeding the action to the next
+        step of the decoder (this could just be the same as the input tensor).  The action ids are
+        a list of indices into the main action list for each batch instance.
+    context_actions : ``Dict[str, Tuple[torch.Tensor, torch.Tensor, int]]``
+        Variable actions are never included in the ``valid_actions`` dictionary, because they are
+        only valid depending on the current grammar state.  This dictionary maps from the string
+        representation of all such actions to the tensor representations of the actions.  These
+        will get added onto the "global" key in the ``valid_actions`` when they are allowed.
     is_nonterminal : ``Callable[[str], bool]``
         A function that is used to determine whether each piece of the RHS of the action string is
         a non-terminal that needs to be added to the non-terminal stack.  You can use
@@ -54,13 +65,13 @@ class GrammarState:
     def __init__(self,
                  nonterminal_stack: List[str],
                  lambda_stacks: Dict[Tuple[str, str], List[str]],
-                 valid_actions: Dict[str, List[int]],
-                 action_indices: Dict[str, int],
+                 valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]],
+                 context_actions: Dict[str, Tuple[torch.Tensor, torch.Tensor, int]],
                  is_nonterminal: Callable[[str], bool]) -> None:
         self._nonterminal_stack = nonterminal_stack
         self._lambda_stacks = lambda_stacks
         self._valid_actions = valid_actions
-        self._action_indices = action_indices
+        self._context_actions = context_actions
         self._is_nonterminal = is_nonterminal
 
     def is_finished(self) -> bool:
@@ -70,15 +81,29 @@ class GrammarState:
         """
         return not self._nonterminal_stack
 
-    def get_valid_actions(self) -> List[int]:
+    def get_valid_actions(self) -> Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]:
         """
-        Returns a list of valid actions (represented as integers)
+        Returns the valid actions in the current grammar state.  See the class docstring for a
+        description of what we're returning here.
         """
         actions = self._valid_actions[self._nonterminal_stack[-1]]
+        context_actions = []
         for type_, variable in self._lambda_stacks:
             if self._nonterminal_stack[-1] == type_:
                 production_string = f"{type_} -> {variable}"
-                actions = actions + [self._action_indices[production_string]]
+                context_actions.append(self._context_actions[production_string])
+        if context_actions:
+            input_tensor, output_tensor, action_ids = actions['global']
+            new_inputs = [input_tensor] + [x[0] for x in context_actions]
+            input_tensor = torch.cat(new_inputs, dim=0)
+            new_outputs = [output_tensor] + [x[1] for x in context_actions]
+            output_tensor = torch.cat(new_outputs, dim=0)
+            new_action_ids = action_ids + [x[2] for x in context_actions]
+            # We can't just reassign to actions['global'], because that would modify the state of
+            # self._valid_actions.  Instead, we need to construct a new actions dictionary.
+            new_actions = {**actions}
+            new_actions['global'] = (input_tensor, output_tensor, new_action_ids)
+            actions = new_actions
         return actions
 
     def take_action(self, production_rule: str) -> 'GrammarState':
@@ -98,12 +123,11 @@ class GrammarState:
         """
         left_side, right_side = production_rule.split(' -> ')
         assert self._nonterminal_stack[-1] == left_side, (f"Tried to expand {self._nonterminal_stack[-1]}"
-                                                          "but got rule f{left_side}->f{right_side}")
+                                                          f"but got rule {left_side} -> {right_side}")
+        assert all(self._lambda_stacks[key][-1] == left_side for key in self._lambda_stacks)
+
         new_stack = self._nonterminal_stack[:-1]
-        new_lambda_stacks = deepcopy(self._lambda_stacks)
-        for key, lambda_stack in new_lambda_stacks.items():
-            assert lambda_stack[-1] == left_side
-            lambda_stack.pop()  # pop to modify the value in the dictionary
+        new_lambda_stacks = {key: self._lambda_stacks[key][:-1] for key in self._lambda_stacks}
 
         productions = self._get_productions_from_string(right_side)
         # Looking for lambda productions, but not for cells or columns with the word "lambda" in
@@ -131,17 +155,13 @@ class GrammarState:
                     lambda_stack.append(production)
 
         # If any of the lambda stacks have now become empty, we remove them from our dictionary.
-        finished_lambdas = set()
-        for key, lambda_stack in new_lambda_stacks.items():
-            if not lambda_stack:
-                finished_lambdas.add(key)
-        for finished_lambda in finished_lambdas:
-            del new_lambda_stacks[finished_lambda]
+        new_lambda_stacks = {key: new_lambda_stacks[key]
+                             for key in new_lambda_stacks if new_lambda_stacks[key]}
 
         return GrammarState(nonterminal_stack=new_stack,
                             lambda_stacks=new_lambda_stacks,
                             valid_actions=self._valid_actions,
-                            action_indices=self._action_indices,
+                            context_actions=self._context_actions,
                             is_nonterminal=self._is_nonterminal)
 
     @staticmethod
@@ -155,3 +175,15 @@ class GrammarState:
             return production_string[1:-1].split(', ')
         else:
             return [production_string]
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            # pylint: disable=protected-access
+            return all([
+                    self._nonterminal_stack == other._nonterminal_stack,
+                    self._lambda_stacks == other._lambda_stacks,
+                    util.tensors_equal(self._valid_actions, other._valid_actions),
+                    util.tensors_equal(self._context_actions, other._context_actions),
+                    self._is_nonterminal == other._is_nonterminal,
+                    ])
+        return NotImplemented
