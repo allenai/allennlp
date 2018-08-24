@@ -22,7 +22,9 @@
   "evaluate_on_test": true,
   "model": {
     "type": "crf_tagger",
-    "constraint_type": "BIOUL",
+    "label_encoding": "BIOUL",
+    "constrain_crf_decoding": true,
+    "calculate_span_f1": true,
     "dropout": 0.5,
     "include_start_end_transitions": false,
     "text_field_embedder": {
