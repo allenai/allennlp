@@ -19,7 +19,7 @@
   "model": {
     "type": "dialog_qa",
     "num_context_answers": 2,
-    "marker_embedding_dim": 10,
+    "marker_embedding_dim": 5,
     "text_field_embedder": {
       "token_characters": {
         "type": "character_encoding",
@@ -30,7 +30,7 @@
         "encoder": {
           "type": "cnn",
           "embedding_dim": 20,
-          "num_filters": 100,
+          "num_filters": 10,
           "ngram_filter_sizes": [5]
         },
         "dropout": 0.2
@@ -39,29 +39,29 @@
     "phrase_layer": {
       "type": "gru",
       "bidirectional": true,
-      "input_size": 120,
-      "hidden_size": 100,
+      "input_size": 20,
+      "hidden_size": 5,
       "num_layers": 1
     },
     "residual_encoder": {
       "type": "gru",
       "bidirectional": true,
-      "input_size": 200,
-      "hidden_size": 100,
+      "input_size": 10,
+      "hidden_size": 5,
       "num_layers": 1
     },
     "span_start_encoder": {
       "type": "gru",
       "bidirectional": true,
-      "input_size": 200,
-      "hidden_size": 100,
+      "input_size": 10,
+      "hidden_size": 5,
       "num_layers": 1
     },
     "span_end_encoder": {
       "type": "gru",
       "bidirectional": true,
-      "input_size": 400,
-      "hidden_size": 100,
+      "input_size": 20,
+      "hidden_size": 5,
       "num_layers": 1
     },
     "initializer": [
@@ -81,7 +81,7 @@
     "max_instances_in_memory": 1000
   },
   "trainer": {
-    "num_epochs": 30,
+    "num_epochs": 1,
     "patience": 10,
     "validation_metric": "+f1",
     "learning_rate_scheduler":  {
