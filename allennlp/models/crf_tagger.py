@@ -4,7 +4,7 @@ from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear
 
-from allennlp.common.checks import check_dimensions_match
+from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules import ConditionalRandomField, FeedForward
@@ -12,7 +12,7 @@ from allennlp.modules.conditional_random_field import allowed_transitions
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 import allennlp.nn.util as util
-from allennlp.training.metrics import SpanBasedF1Measure
+from allennlp.training.metrics import CategoricalAccuracy, SpanBasedF1Measure
 
 
 @Model.register("crf_tagger")
@@ -34,15 +34,23 @@ class CrfTagger(Model):
         Unless you did something unusual, the default value should be what you want.
     feedforward : ``FeedForward``, optional, (default = None).
         An optional feedforward layer to apply after the encoder.
+    label_encoding : ``str``, optional (default=``None``)
+        Label encoding to use when calculating span f1 and constraining
+        the CRF at decoding time . Valid options are "BIO", "BIOUL", "IOB1".
+        Required if ``calculate_span_f1`` or ``constrain_crf_decoding`` is true.
+    include_start_end_transitions : ``bool``, optional (default=``True``)
+        Whether to include start and end transition parameters in the CRF.
+    constrain_crf_decoding : ``bool``, optional (default=``False``)
+        If ``True``, the CRF is constrained at decoding time to
+        produce valid sequences of tags. If this is ``True``, then
+        ``label_encoding`` is required.
+    calculate_span_f1 : ``bool``, optional (default=``False``)
+        Calculate span-level F1 metrics during training. If this is ``True``, then
+        ``label_encoding`` is required.
     dropout:  ``float``, optional (detault=``None``)
     verbose_metrics : ``bool``, optional (default = False)
         If true, metrics will be returned per label class in addition
         to the overall statistics.
-    constraint_type : ``str``, optional (default=``None``)
-        If provided, the CRF will be constrained at decoding time
-        to produce valid labels based on the specified type (e.g. "BIO", or "BIOUL").
-    include_start_end_transitions : ``bool``, optional (default=``True``)
-        Whether to include start and end transition parameters in the CRF.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
@@ -53,10 +61,12 @@ class CrfTagger(Model):
                  text_field_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
                  label_namespace: str = "labels",
-                 constraint_type: str = None,
-                 feedforward: FeedForward = None,
+                 feedforward: Optional[FeedForward] = None,
+                 label_encoding: Optional[str] = None,
                  include_start_end_transitions: bool = True,
-                 dropout: float = None,
+                 constrain_crf_decoding: bool = False,
+                 calculate_span_f1: bool = False,
+                 dropout: Optional[float] = None,
                  verbose_metrics: bool = False,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
@@ -80,21 +90,34 @@ class CrfTagger(Model):
         self.tag_projection_layer = TimeDistributed(Linear(output_dim,
                                                            self.num_tags))
 
-        if constraint_type is not None:
+        self.label_encoding = label_encoding
+        if constrain_crf_decoding:
+            if not label_encoding:
+                raise ConfigurationError("constrain_crf_decoding is True, but "
+                                         "no label_encoding was specified.")
             labels = self.vocab.get_index_to_token_vocabulary(label_namespace)
-            constraints = allowed_transitions(constraint_type, labels)
+            constraints = allowed_transitions(label_encoding, labels)
         else:
             constraints = None
 
+        self.include_start_end_transitions = include_start_end_transitions
         self.crf = ConditionalRandomField(
                 self.num_tags, constraints,
                 include_start_end_transitions=include_start_end_transitions
         )
 
-        self.span_metric = SpanBasedF1Measure(vocab,
-                                              tag_namespace=label_namespace,
-                                              label_encoding=constraint_type or "BIO")
-
+        self.metrics = {
+                "accuracy": CategoricalAccuracy(),
+                "accuracy3": CategoricalAccuracy(top_k=3)
+        }
+        self.calculate_span_f1 = calculate_span_f1
+        if calculate_span_f1:
+            if not label_encoding:
+                raise ConfigurationError("calculate_span_f1 is True, but "
+                                         "no label_encoding was specified.")
+            self.f1_metric = SpanBasedF1Measure(vocab,
+                                                tag_namespace=label_namespace,
+                                                label_encoding=label_encoding)
 
         check_dimensions_match(text_field_embedder.get_output_dim(), encoder.get_input_dim(),
                                "text field embedding dim", "encoder input dim")
@@ -168,13 +191,14 @@ class CrfTagger(Model):
             output["loss"] = -log_likelihood
 
             # Represent viterbi tags as "class probabilities" that we can
-            # feed into the `span_metric`
+            # feed into the metrics
             class_probabilities = logits * 0.
             for i, instance_tags in enumerate(predicted_tags):
                 for j, tag_id in enumerate(instance_tags):
                     class_probabilities[i, j, tag_id] = 1
 
-            self.span_metric(class_probabilities, tags, mask)
+            for metric in self.metrics.values():
+                metric(class_probabilities, tags, mask.float())
         if metadata is not None:
             output["words"] = [x["words"] for x in metadata]
         return output
@@ -196,8 +220,14 @@ class CrfTagger(Model):
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        metric_dict = self.span_metric.get_metric(reset=reset)
+        metrics_to_return = {metric_name: metric.get_metric(reset) for
+                             metric_name, metric in self.metrics.items()}
+
+        f1_dict = self.f1_metric.get_metric(reset=reset)
         if self._verbose_metrics:
-            return metric_dict
+            metrics_to_return.update(f1_dict)
         else:
-            return {x: y for x, y in metric_dict.items() if "overall" in x}
+            metrics_to_return.update({
+                    x: y for x, y in f1_dict.items() if
+                    "overall" in x})
+        return metrics_to_return
