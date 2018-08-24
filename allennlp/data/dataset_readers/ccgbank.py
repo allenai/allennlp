@@ -4,6 +4,7 @@ import re
 
 from overrides import overrides
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, SequenceLabelField
@@ -130,7 +131,7 @@ class CcgBankDatasetReader(DatasetReader):
                 The tokens in the sentence.
             tags : ``SequenceLabelField``
                 The tags corresponding to the ``tag_label`` constructor argument.
-            {feature_label}_tags : ``SequenceLabelField``s
+            feature_label_tags : ``SequenceLabelField``
                 Tags corresponding to each feature_label (if any) specified in the
                 ``feature_labels`` constructor argument.
         """
