@@ -52,13 +52,19 @@ class CrfTagger(Model):
 
     include_start_end_transitions : ``bool``, optional (default=``True``)
         Whether to include start and end transition parameters in the CRF.
-    constrain_crf_decoding : ``bool``, optional (default=``False``)
+    constrain_crf_decoding : ``bool``, optional (default=``None``)
         If ``True``, the CRF is constrained at decoding time to
         produce valid sequences of tags. If this is ``True``, then
-        ``label_encoding`` is required.
-    calculate_span_f1 : ``bool``, optional (default=``False``)
+        ``label_encoding`` is required. If ``None`` and
+        label_encoding is specified, this is set to ``True``.
+        If ``None`` and label_encoding is not specified, it defaults
+        to ``False``.
+    calculate_span_f1 : ``bool``, optional (default=``None``)
         Calculate span-level F1 metrics during training. If this is ``True``, then
-        ``label_encoding`` is required.
+        ``label_encoding`` is required. If ``None`` and
+        label_encoding is specified, this is set to ``True``.
+        If ``None`` and label_encoding is not specified, it defaults
+        to ``False``.
     dropout:  ``float``, optional (detault=``None``)
     verbose_metrics : ``bool``, optional (default = False)
         If true, metrics will be returned per label class in addition
@@ -77,8 +83,8 @@ class CrfTagger(Model):
                  label_encoding: Optional[str] = None,
                  constraint_type: Optional[str] = None,
                  include_start_end_transitions: bool = True,
-                 constrain_crf_decoding: bool = False,
-                 calculate_span_f1: bool = False,
+                 constrain_crf_decoding: bool = None,
+                 calculate_span_f1: bool = None,
                  dropout: Optional[float] = None,
                  verbose_metrics: bool = False,
                  initializer: InitializerApplicator = InitializerApplicator(),
@@ -109,7 +115,15 @@ class CrfTagger(Model):
                           "'calculate_span_f1' in version 0.6.1. It will be "
                           "removed in version 0.8.", DeprecationWarning)
             label_encoding = constraint_type
-            constrain_crf_decoding = True
+
+        # if  constrain_crf_decoding and calculate_span_f1 are not
+        # provided, (i.e., they're None), set them to True
+        # if label_encoding is provided and False if it isn't.
+        if constrain_crf_decoding is None:
+            constrain_crf_decoding = label_encoding is not None
+        if calculate_span_f1 is None:
+            calculate_span_f1 = label_encoding is not None
+
         self.label_encoding = label_encoding
         if constrain_crf_decoding:
             if not label_encoding:
