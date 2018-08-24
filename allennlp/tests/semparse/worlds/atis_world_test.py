@@ -9,7 +9,7 @@ from allennlp.semparse.contexts.sql_table_context import SqlTableContext
 class TestAtisWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        test_filename = self.FIXTURES_ROOT / "data" / "atis" / "short_sample.json"
+        test_filename = self.FIXTURES_ROOT / "data" / "atis" / "sample.json"
         data_directory = self.FIXTURES_ROOT / "data" / "atis" / "atis.db"
         self.sql_table_context = SqlTableContext(ALL_TABLES, TABLES_WITH_STRINGS, str(data_directory))
         self.data = open(test_filename).readlines()

@@ -19,8 +19,15 @@ from parsimonious.grammar import Grammar
 # Rules that differ only in capitalization of keywords are mapped to the same action by
 # the ``SqlVisitor``.  The nonterminal of the first rule is the starting symbol.
 # In addition to the grammar here, we add ``col_ref``, ``table_name`` based on the tables
-# that ``SqlTableContext`` is initialized with. ``number`` and ``string`` are initialized to
-# be empty and later on updated based on the utterances.
+# that ``SqlTableContext`` is initialized with. ``number`` is initialized to
+# be empty and later on updated based on the utterances. ``biexpr`` is altered based on the
+# database to column references with strings that are allowed to appear in that column.
+# We then create additional nonterminals for each column that may be used as a string constraint
+# in the query.
+# For example, to include city names as strings:
+#
+#       biexpr = ( "city" ws "." ws "city_name"  binop ws city_city_name_strings ) / ...
+#       city_city_name_strings = "NASHVILLE" / "BOSTON" /  ...
 
 SQL_GRAMMAR_STR = r"""
     statement           = query ws ";" ws
