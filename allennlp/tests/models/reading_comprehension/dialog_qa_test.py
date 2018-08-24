@@ -27,23 +27,12 @@ class DialogQATest(ModelTestCase):
         output_dict = self.model(**training_tensors)
         assert "best_span_str" in output_dict and "loss" in output_dict
         assert "followup" in output_dict and "yesno" in output_dict
-#        metrics = self.model.get_metrics(reset=True)
-
-    #    span_start_probs = output_dict['span_start_probs'][0].data.numpy()
- #       span_end_probs = output_dict['span_start_probs'][0].data.numpy()
-    #    print(span_start_probs)
-
-
-    #def test_forward_pass_runs_correctly(self):
-    #    training_tensors = self.dataset.as_tensor_dict()
-    #    output_dict = self.model(**training_tensors)
-    #    assert "logits" in output_dict and "loss" in output_dict
 
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file, tolerance=1e-4)
 
-    #def test_batch_predictions_are_consistent(self):
-    #    self.ensure_batch_predictions_are_consistent()
+    def test_batch_predictions_are_consistent(self):
+        self.ensure_batch_predictions_are_consistent()
         #assert_almost_equal(numpy.sum(span_start_probs, -1), 1, decimal=6)
         #assert_almost_equal(numpy.sum(span_end_probs, -1), 1, decimal=6)
         #span_start, span_end = tuple(output_dict['best_span'][0].data.numpy())
@@ -51,12 +40,6 @@ class DialogQATest(ModelTestCase):
         #assert span_start <= span_end
         #assert span_end < self.instances[0].fields['passage'].sequence_length()
         #assert isinstance(output_dict['best_span_str'][0], str)
-
-    # # Some recent efficiency changes (using bmm for `weighted_sum`, the more efficient
-    # # `masked_softmax`...) have made this _very_ flaky...
-    # @flaky(max_runs=5)
-    # def test_model_can_train_save_and_load(self):
-    #     self.ensure_model_can_train_save_and_load(self.param_file, tolerance=1e-4)
 
     # @flaky
     # def test_batch_predictions_are_consistent(self):

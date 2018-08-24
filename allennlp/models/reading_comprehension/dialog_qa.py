@@ -63,7 +63,7 @@ class DialogQA(Model):
         self._max_span_length = max_span_length
         self._text_field_embedder = text_field_embedder
         self._phrase_layer = phrase_layer
-
+        self._marker_embedding_dim = marker_embedding_dim
         self._encoding_dim = phrase_layer.get_output_dim()
         max_turn_length = 12
 
@@ -119,33 +119,32 @@ class DialogQA(Model):
                 yesno_list: torch.IntTensor = None,
                 followup_list: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        model_in_cuda = span_start.is_cuda
         batch_size, max_qa_count, max_q_len, _ = question['token_characters'].size()
         qa_mask = torch.ge(followup_list, 0).view(batch_size * max_qa_count)
-        embedded_question = self._variational_dropout(self._text_field_embedder(question, num_wrapping_dimensions=1))
-        embedded_question = embedded_question.reshape()
+        embedded_question = self._text_field_embedder(question, num_wrapping_dims=1)
+        embedded_question = embedded_question.reshape(batch_size * max_qa_count, max_q_len, self._text_field_embedder.get_output_dim())
+        embedded_question = self._variational_dropout(embedded_question)
         embedded_passage = self._variational_dropout(self._text_field_embedder(passage))
         passage_length = embedded_passage.size(1)
 
-        question_mask = util.get_text_field_mask(question).float()
+        question_mask = util.get_text_field_mask(question, num_wrapping_dims=1).float()
+        question_mask = question_mask.reshape(batch_size * max_qa_count, max_q_len)
         passage_mask = util.get_text_field_mask(passage).float()
 
 
         if self._num_context_answers > 0:
             # Encode question turn number inside the dialog into question embedding.
             question_num_ind = util.get_range_vector(max_qa_count, util.get_device_of(embedded_question))
-            question_num_ind = question_num_ind.unsqueeze(-1).repeat(1, max_q_len)
-           # question_num_ind = torch.Tensor( \
-           #     list(range(0, max_qa_count)) * batch_size).long().reshape(-1, 1).repeat(1, max_q_len)
-           # if model_in_cuda:
-           #     question_num_ind = question_num_ind.cuda()
+            question_num_ind = question_num_ind.unsqueeze(-1).repeat(1, max_q_len).unsqueeze(0).repeat(batch_size, 1, 1)
+            question_num_ind = question_num_ind.reshape(batch_size * max_qa_count, max_q_len)
             question_num_marker_emb = self._question_num_marker(question_num_ind)
             embedded_question = torch.cat([embedded_question, question_num_marker_emb], dim=-1)
 
             # Encode the previous answers in passage embedding.
             repeated_embedded_passage = embedded_passage. \
-                unsqueeze(1).repeat(1, max_qa_count, 1, 1).view( \
-                batch_size * max_qa_count, passage_mask.size()[1], -1)
+                unsqueeze(1).repeat(1, max_qa_count, 1, 1).view(
+                batch_size * max_qa_count, passage_mask.size()[1], 
+                self._text_field_embedder.get_output_dim())
             # batch_size * max_qa_count, passage_length, word_embed_dim
             p1_answer_marker = p1_answer_marker.view(batch_size * max_qa_count, passage_length)
             p1_answer_marker_emb = self._prev_ans_marker(p1_answer_marker)
@@ -167,7 +166,7 @@ class DialogQA(Model):
             encoded_passage = self._variational_dropout(self._phrase_layer(embedded_passage, passage_mask))
             repeated_encoded_passage = encoded_passage.unsqueeze(1).repeat(1, max_qa_count, 1, 1)
             repeated_encoded_passage = repeated_encoded_passage.view(batch_size * max_qa_count,
-                                                                     passage_mask.size()[1],
+                                                                     passage_length,
                                                                      self.encoding_dim)
 
         encoded_question = self._variational_dropout(self._phrase_layer(embedded_question, question_mask))
@@ -176,7 +175,6 @@ class DialogQA(Model):
         passage_question_similarity = self._matrix_attention(repeated_encoded_passage, encoded_question)
         # Shape: (batch_size * max_qa_count, passage_length, question_length)
         passage_question_attention = util.last_dim_softmax(passage_question_similarity, question_mask)
-
         # Shape: (batch_size * max_qa_count, passage_length, encoding_dim)
         passage_question_vectors = util.weighted_sum(encoded_question, passage_question_attention)
 
@@ -186,7 +184,7 @@ class DialogQA(Model):
                                                        question_mask.unsqueeze(1),
                                                        -1e7)
 
-        passage_mask = passage_mask.unsqueeze(1).repeat(1, max_qa_count, 1).view(batch_size * max_qa_count, -1)
+        passage_mask = passage_mask.unsqueeze(1).repeat(1, max_qa_count, 1).view(batch_size * max_qa_count, passage_length)
         question_passage_similarity = masked_similarity.max(dim=-1)[0].squeeze(-1)
         question_passage_attention = util.last_dim_softmax(question_passage_similarity,
                                                            passage_mask)
@@ -205,32 +203,26 @@ class DialogQA(Model):
 
         final_merged_passage = F.relu(self._merge_atten(final_merged_passage))
 
-        merged_passage_for_residual = self._variational_dropout(final_merged_passage)
-        residual_layer = self._variational_dropout(self._residual_encoder(merged_passage_for_residual,
+        residual_layer = self._variational_dropout(self._residual_encoder(final_merged_passage,
                                                                           passage_mask))
-        self_atten_matrix = self._self_atten(residual_layer, residual_layer)
+        self_attention_matrix = self._self_attention(residual_layer, residual_layer)
 
         mask = passage_mask.resize(batch_size * max_qa_count,
                                    passage_length,
                                    1) * passage_mask.resize(batch_size * max_qa_count, 1, passage_length)
 
-        # torch.eye does not have a gpu implementation, so we are forced to use the cpu one and .cuda()
-        # Not sure if this matters for performance
-        self_mask = torch.eye(passage_length, passage_length).resize(1, passage_length, passage_length)
-        if model_in_cuda:
-            self_mask = self_mask.cuda()
-        # self_mask = Variable(torch.eye(passage_length, passage_length)).resize(1, passage_length, passage_length)
+        self_mask = torch.eye(passage_length, passage_length, device=self_attention_matrix.device)
+        self_mask = self_mask.resize(1, passage_length, passage_length)
         mask = mask * (1 - self_mask)
 
-        self_atten_probs = util.last_dim_softmax(self_atten_matrix, mask)
+        self_attention_probs = util.last_dim_softmax(self_attention_matrix, mask)
 
         # Batch matrix multiplication:
         # (batch, passage_len, passage_len) * (batch, passage_len, dim) -> (batch, passage_len, dim)
-        self_atten_vecs = torch.matmul(self_atten_probs, residual_layer)
-
-        residual_layer = F.relu(self._merge_self_atten(torch.cat([self_atten_vecs, residual_layer,
-                                                                  residual_layer * self_atten_vecs],
-                                                                 dim=-1)))
+        self_attention_vecs = torch.matmul(self_attention_probs, residual_layer)
+        self_attention_vecs = torch.cat([self_attention_vecs, residual_layer, residual_layer * self_attention_vecs], 
+                                        dim=-1)
+        residual_layer = F.relu(self._merge_self_attention(self_attention_vecs))
 
         final_merged_passage = final_merged_passage + residual_layer
         # batch_size * maxqa_pair_len * max_passage_len * 200
@@ -267,26 +259,22 @@ class DialogQA(Model):
                                 mask=qa_mask.unsqueeze(1).expand(-1, 2).long())
             # add a select for the right span to compute loss
             gold_span_end_loc = []
-            span_end = span_end.view(-1).squeeze().data.cpu().numpy()
+            span_end = span_end.view(batch_size * max_qa_count).squeeze().data.cpu().numpy()
             for i in range(0, batch_size * max_qa_count):
                 gold_span_end_loc.append(max(span_end[i] * 3 + i * passage_length * 3, 0))
                 gold_span_end_loc.append(max(span_end[i] * 3 + i * passage_length * 3 + 1, 0))
                 gold_span_end_loc.append(max(span_end[i] * 3 + i * passage_length * 3 + 2, 0))
-            gold_span_end_loc = torch.LongTensor(gold_span_end_loc)
-            if model_in_cuda:
-                gold_span_end_loc = gold_span_end_loc.cuda()
+            gold_span_end_loc = span_start.new(gold_span_end_loc)
 
             pred_span_end_loc = []
             for i in range(0, batch_size * max_qa_count):
                 pred_span_end_loc.append(max(best_span[i][1] * 3 + i * passage_length * 3, 0))
                 pred_span_end_loc.append(max(best_span[i][1] * 3 + i * passage_length * 3 + 1, 0))
                 pred_span_end_loc.append(max(best_span[i][1] * 3 + i * passage_length * 3 + 2, 0))
-            predicted_end = torch.LongTensor(pred_span_end_loc)
-            if model_in_cuda:
-                predicted_end = predicted_end.cuda()
+            predicted_end = span_start.new(pred_span_end_loc)
 
-            _yesno = span_yesno_logits.view(-1).index_select(0, gold_span_end_loc).view(-1, 3)
-            _followup = span_followup_logits.view(-1).index_select(0, gold_span_end_loc).view(-1, 3)
+            _yesno = span_yesno_logits.view(batch_size * max_qa_count * passage_length * 3).index_select(0, gold_span_end_loc).view(-1, 3)
+            _followup = span_followup_logits.view(batch_size * max_qa_count * passage_length * 3).index_select(0, gold_span_end_loc).view(-1, 3)
             loss += nll_loss(F.log_softmax(_yesno, dim=-1), yesno_list.view(-1), ignore_index=-1)
             loss += nll_loss(F.log_softmax(_followup, dim=-1), followup_list.view(-1), ignore_index=-1)
 

@@ -76,12 +76,12 @@
     },
     "initializer": [
     ],
-    "dropout": 0.3
+    "dropout": 0.2
   },
   "iterator": {
     "type": "bucket",
     "sorting_keys": [["question", "num_fields"], ["passage", "num_tokens"]],
-    "batch_size": 7,
+    "batch_size": 10,
     "max_instances_in_memory": 1000
   },
   "validation_iterator": {
