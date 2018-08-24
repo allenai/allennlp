@@ -42,6 +42,11 @@ class DecoderStep(torch.nn.Module, Generic[StateType]):
         ``BeamSearch`` and other methods will break.  For efficiency, we do not perform an
         additional sort in those methods.
 
+        ALSO IMPORTANT: When ``alowed_actions`` is given and ``max_actions`` is not, we assume you
+        want to evaluate all possible states and do not need any sorting (e.g., this is true for
+        maximum marginal likelihood training that does not use a beam search).  In this case, we
+        may skip the sorting step for efficiency reasons.
+
         Parameters
         ----------
         state : ``DecoderState``

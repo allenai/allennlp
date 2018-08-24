@@ -24,9 +24,9 @@
       "hidden_size": 10,
       "num_layers": 1
     },
-    "beam_size": 20,
-    "max_num_finished_states": 20,
-    "max_decoding_steps": 20,
+    "beam_size": 40,
+    "max_num_finished_states": 40,
+    "max_decoding_steps": 40,
     "attention": {"type": "dot_product"},
     "checklist_cost_weight": 0.8,
     "dynamic_cost_weight": {
@@ -40,7 +40,7 @@
     "type": "epoch_tracking_bucket",
     "sorting_keys": [["sentence", "num_tokens"]],
     "padding_noise": 0.0,
-    "batch_size" : 2
+    "batch_size" : 4
   },
   "trainer": {
     "num_epochs": 1,
