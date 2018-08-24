@@ -49,9 +49,6 @@ class Conll2003DatasetReader(DatasetReader):
     on any combination of blank lines and "DOCSTART" tags; in particular, it does the right
     thing on well formed inputs.)
 
-    This dataset reader can also be used to read lines without NER annotations
-    by passing ``ignore_ner_tags=True`` (e.g. CoNLL 2000 chunking dataset).
-
     Parameters
     ----------
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
@@ -73,8 +70,6 @@ class Conll2003DatasetReader(DatasetReader):
         span of the same type.
     label_namespace: ``str``, optional (default=``labels``)
         Specifies the namespace for the chosen ``tag_label``.
-    ignore_ner_tags: ``bool``, optional (default=``False``)
-        If specified, then ignore the NER annotations.
     """
     _VALID_LABELS = {'ner', 'pos', 'chunk'}
 
@@ -84,8 +79,7 @@ class Conll2003DatasetReader(DatasetReader):
                  feature_labels: Sequence[str] = (),
                  lazy: bool = False,
                  coding_scheme: str = "IOB1",
-                 label_namespace: str = "labels",
-                 ignore_ner_tags: bool = False) -> None:
+                 label_namespace: str = "labels") -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         if tag_label is not None and tag_label not in self._VALID_LABELS:
@@ -100,7 +94,7 @@ class Conll2003DatasetReader(DatasetReader):
         self.feature_labels = set(feature_labels)
         self.coding_scheme = coding_scheme
         self.label_namespace = label_namespace
-        self.ignore_ner_tags = ignore_ner_tags
+        self._original_coding_scheme = "IOB1"
 
     @overrides
     def _read(self, file_path: str) -> Iterable[Instance]:
@@ -118,11 +112,7 @@ class Conll2003DatasetReader(DatasetReader):
                     fields = [line.strip().split() for line in lines]
                     # unzipping trick returns tuples, but our Fields need lists
                     fields = [list(field) for field in zip(*fields)]
-                    if self.ignore_ner_tags:
-                        tokens_, pos_tags, chunk_tags = fields[:3]
-                        ner_tags = None
-                    else:
-                        tokens_, pos_tags, chunk_tags, ner_tags = fields
+                    tokens_, pos_tags, chunk_tags, ner_tags = fields
                     # TextField requires ``Token`` objects
                     tokens = [Token(token) for token in tokens_]
 
@@ -143,8 +133,10 @@ class Conll2003DatasetReader(DatasetReader):
 
         # Recode the labels if necessary.
         if self.coding_scheme == "BIOUL":
-            coded_chunks = to_bioul(chunk_tags) if chunk_tags is not None else None
-            coded_ner = to_bioul(ner_tags) if ner_tags is not None else None
+            coded_chunks = to_bioul(chunk_tags,
+                                    encoding=self._original_coding_scheme) if chunk_tags is not None else None
+            coded_ner = to_bioul(ner_tags,
+                                 encoding=self._original_coding_scheme) if ner_tags is not None else None
         else:
             # the default IOB1
             coded_chunks = chunk_tags
