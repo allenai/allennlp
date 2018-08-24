@@ -208,8 +208,8 @@ class DialogQA(Model):
 
         final_merged_passage = F.relu(self._merge_atten(final_merged_passage))
 
-        merged_passage_for_residual = self._variational_dropout(final_merged_passage)
-        residual_layer = self._variational_dropout(self._residual_encoder(merged_passage_for_residual, passage_mask))
+        #merged_passage_for_residual = self._variational_dropout(final_merged_passage)
+        residual_layer = self._variational_dropout(self._residual_encoder(final_merged_passage, passage_mask))
         self_atten_matrix = self._self_atten(residual_layer, residual_layer)
 
         mask = passage_mask.resize(batch_size * max_qa_count,
