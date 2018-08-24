@@ -17,16 +17,16 @@ class TestConll2000Reader():
 
         if coding_scheme == 'BIO':
             expected_labels = [
-                'B-NP', 'B-PP', 'B-NP', 'I-NP', 'B-VP', 'I-VP', 'I-VP', 'I-VP', 'I-VP', 'B-NP',
-                'I-NP', 'I-NP', 'B-SBAR', 'B-NP', 'I-NP', 'B-PP', 'B-NP', 'O', 'B-ADJP', 'B-PP',
-                'B-NP', 'B-NP', 'O', 'B-VP', 'I-VP', 'I-VP', 'B-NP', 'I-NP', 'I-NP', 'B-PP',
-                'B-NP', 'I-NP', 'I-NP', 'B-NP', 'I-NP', 'I-NP', 'O']
+                    'B-NP', 'B-PP', 'B-NP', 'I-NP', 'B-VP', 'I-VP', 'I-VP', 'I-VP', 'I-VP', 'B-NP',
+                    'I-NP', 'I-NP', 'B-SBAR', 'B-NP', 'I-NP', 'B-PP', 'B-NP', 'O', 'B-ADJP', 'B-PP',
+                    'B-NP', 'B-NP', 'O', 'B-VP', 'I-VP', 'I-VP', 'B-NP', 'I-NP', 'I-NP', 'B-PP',
+                    'B-NP', 'I-NP', 'I-NP', 'B-NP', 'I-NP', 'I-NP', 'O']
         else:
             expected_labels = [
-                'U-NP', 'U-PP', 'B-NP', 'L-NP', 'B-VP', 'I-VP', 'I-VP', 'I-VP', 'L-VP', 'B-NP', 'I-NP',
-                'L-NP', 'U-SBAR', 'B-NP', 'L-NP', 'U-PP', 'U-NP', 'O', 'U-ADJP', 'U-PP', 'U-NP', 'U-NP',
-                'O', 'B-VP', 'I-VP', 'L-VP', 'B-NP', 'I-NP', 'L-NP', 'U-PP', 'B-NP', 'I-NP', 'L-NP', 'B-NP',
-                'I-NP', 'L-NP', 'O']
+                    'U-NP', 'U-PP', 'B-NP', 'L-NP', 'B-VP', 'I-VP', 'I-VP', 'I-VP', 'L-VP', 'B-NP', 'I-NP',
+                    'L-NP', 'U-SBAR', 'B-NP', 'L-NP', 'U-PP', 'U-NP', 'O', 'U-ADJP', 'U-PP', 'U-NP', 'U-NP',
+                    'O', 'B-VP', 'I-VP', 'L-VP', 'B-NP', 'I-NP', 'L-NP', 'U-PP', 'B-NP', 'I-NP', 'L-NP', 'B-NP',
+                    'I-NP', 'L-NP', 'O']
 
         fields = instances[0].fields
         tokens = [t.text for t in fields['tokens'].tokens]
@@ -38,14 +38,14 @@ class TestConll2000Reader():
 
         if coding_scheme == 'BIO':
             expected_labels = [
-                'O', 'B-PP', 'B-NP', 'I-NP', 'B-NP', 'I-NP', 'B-NP', 'I-NP', 'I-NP', 'B-PP', 'B-NP',
-                'I-NP', 'I-NP', 'I-NP', 'B-VP', 'I-VP', 'I-VP', 'I-VP', 'B-NP', 'I-NP', 'B-PP', 'B-NP',
-                'B-PP', 'B-NP', 'I-NP', 'I-NP', 'O']
+                    'O', 'B-PP', 'B-NP', 'I-NP', 'B-NP', 'I-NP', 'B-NP', 'I-NP', 'I-NP', 'B-PP', 'B-NP',
+                    'I-NP', 'I-NP', 'I-NP', 'B-VP', 'I-VP', 'I-VP', 'I-VP', 'B-NP', 'I-NP', 'B-PP', 'B-NP',
+                    'B-PP', 'B-NP', 'I-NP', 'I-NP', 'O']
         else:
             expected_labels = [
-                'O', 'U-PP', 'B-NP', 'L-NP', 'B-NP', 'L-NP', 'B-NP', 'I-NP', 'L-NP', 'U-PP', 'B-NP',
-                'I-NP', 'I-NP', 'L-NP', 'B-VP', 'I-VP', 'I-VP', 'L-VP', 'B-NP', 'L-NP', 'U-PP', 'U-NP',
-                'U-PP', 'B-NP', 'I-NP', 'L-NP', 'O']
+                    'O', 'U-PP', 'B-NP', 'L-NP', 'B-NP', 'L-NP', 'B-NP', 'I-NP', 'L-NP', 'U-PP', 'B-NP',
+                    'I-NP', 'I-NP', 'L-NP', 'B-VP', 'I-VP', 'I-VP', 'L-VP', 'B-NP', 'L-NP', 'U-PP', 'U-NP',
+                    'U-PP', 'B-NP', 'I-NP', 'L-NP', 'O']
 
         fields = instances[1].fields
         tokens = [t.text for t in fields['tokens'].tokens]

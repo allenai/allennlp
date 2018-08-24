@@ -17,9 +17,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def _is_divider(line: str) -> bool:
-    empty_line = line.strip() == ''
-    if empty_line:
-        return True
+    return line.strip() == ''
 
 
 @DatasetReader.register("conll2000")
