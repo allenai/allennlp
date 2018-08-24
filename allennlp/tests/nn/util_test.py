@@ -218,6 +218,70 @@ class TestNnUtil(AllenNlpTestCase):
         vector_1d_softmaxed = util.masked_log_softmax(vector_1d, mask_1d).data.numpy()
         assert not numpy.isnan(vector_1d_softmaxed).any()
 
+    def test_masked_max(self):
+        # Testing the general masked 1D case.
+        vector_1d = torch.FloatTensor([1.0, 12.0, 5.0])
+        mask_1d = torch.FloatTensor([1.0, 0.0, 1.0])
+        vector_1d_maxed = util.masked_max(vector_1d, mask_1d, dim=0).data.numpy()
+        assert_array_almost_equal(vector_1d_maxed, 5.0)
+
+        # Testing if all masks are zero, the output will be arbitrary, but it should not be nan.
+        vector_1d = torch.FloatTensor([1.0, 12.0, 5.0])
+        mask_1d = torch.FloatTensor([0.0, 0.0, 0.0])
+        vector_1d_maxed = util.masked_max(vector_1d, mask_1d, dim=0).data.numpy()
+        assert not numpy.isnan(vector_1d_maxed).any()
+
+        # Testing batch value and batch masks
+        matrix = torch.FloatTensor([[1.0, 12.0, 5.0], [-1.0, -2.0, 3.0]])
+        mask = torch.FloatTensor([[1.0, 0.0, 1.0], [1.0, 1.0, 0.0]])
+        matrix_maxed = util.masked_max(matrix, mask, dim=-1).data.numpy()
+        assert_array_almost_equal(matrix_maxed, numpy.array([5.0, -1.0]))
+
+        # Testing keepdim for batch value and batch masks
+        matrix = torch.FloatTensor([[1.0, 12.0, 5.0], [-1.0, -2.0, 3.0]])
+        mask = torch.FloatTensor([[1.0, 0.0, 1.0], [1.0, 1.0, 0.0]])
+        matrix_maxed = util.masked_max(matrix, mask, dim=-1, keepdim=True).data.numpy()
+        assert_array_almost_equal(matrix_maxed, numpy.array([[5.0], [-1.0]]))
+
+        # Testing broadcast
+        matrix = torch.FloatTensor([[[1.0, 2.0], [12.0, 3.0], [5.0, -1.0]],
+                                    [[-1.0, -3.0], [-2.0, -0.5], [3.0, 8.0]]])
+        mask = torch.FloatTensor([[1.0, 0.0, 1.0], [1.0, 1.0, 0.0]]).unsqueeze(-1)
+        matrix_maxed = util.masked_max(matrix, mask, dim=1).data.numpy()
+        assert_array_almost_equal(matrix_maxed, numpy.array([[5.0, 2.0], [-1.0, -0.5]]))
+
+    def test_masked_mean(self):
+        # Testing the general masked 1D case.
+        vector_1d = torch.FloatTensor([1.0, 12.0, 5.0])
+        mask_1d = torch.FloatTensor([1.0, 0.0, 1.0])
+        vector_1d_mean = util.masked_mean(vector_1d, mask_1d, dim=0).data.numpy()
+        assert_array_almost_equal(vector_1d_mean, 3.0)
+
+        # Testing if all masks are zero, the output will be arbitrary, but it should not be nan.
+        vector_1d = torch.FloatTensor([1.0, 12.0, 5.0])
+        mask_1d = torch.FloatTensor([0.0, 0.0, 0.0])
+        vector_1d_mean = util.masked_mean(vector_1d, mask_1d, dim=0).data.numpy()
+        assert not numpy.isnan(vector_1d_mean).any()
+
+        # Testing batch value and batch masks
+        matrix = torch.FloatTensor([[1.0, 12.0, 5.0], [-1.0, -2.0, 3.0]])
+        mask = torch.FloatTensor([[1.0, 0.0, 1.0], [1.0, 1.0, 0.0]])
+        matrix_mean = util.masked_mean(matrix, mask, dim=-1).data.numpy()
+        assert_array_almost_equal(matrix_mean, numpy.array([3.0, -1.5]))
+
+        # Testing keepdim for batch value and batch masks
+        matrix = torch.FloatTensor([[1.0, 12.0, 5.0], [-1.0, -2.0, 3.0]])
+        mask = torch.FloatTensor([[1.0, 0.0, 1.0], [1.0, 1.0, 0.0]])
+        matrix_mean = util.masked_mean(matrix, mask, dim=-1, keepdim=True).data.numpy()
+        assert_array_almost_equal(matrix_mean, numpy.array([[3.0], [-1.5]]))
+
+        # Testing broadcast
+        matrix = torch.FloatTensor([[[1.0, 2.0], [12.0, 3.0], [5.0, -1.0]],
+                                    [[-1.0, -3.0], [-2.0, -0.5], [3.0, 8.0]]])
+        mask = torch.FloatTensor([[1.0, 0.0, 1.0], [1.0, 1.0, 0.0]]).unsqueeze(-1)
+        matrix_mean = util.masked_mean(matrix, mask, dim=1).data.numpy()
+        assert_array_almost_equal(matrix_mean, numpy.array([[3.0, 0.5], [-1.5, -1.75]]))
+
     def test_get_text_field_mask_returns_a_correct_mask(self):
         text_field_tensors = {
                 "tokens": torch.LongTensor([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
@@ -668,3 +732,69 @@ class TestNnUtil(AllenNlpTestCase):
         result = util.add_positional_features(tensor, min_timescale=1.0, max_timescale=1.0e4)
         numpy.testing.assert_almost_equal(result[0].detach().cpu().numpy(), tensor2tensor_result)
         numpy.testing.assert_almost_equal(result[1].detach().cpu().numpy(), tensor2tensor_result)
+
+    def test_combine_tensors_and_multiply(self):
+        tensors = [torch.Tensor([[[2, 3]]]), torch.Tensor([[[5, 5]]])]
+        weight = torch.Tensor([4, 5])
+
+        combination = "x"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[8 + 15]])
+
+        combination = "y"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[20 + 25]])
+
+        combination = "x,y"
+        weight2 = torch.Tensor([4, 5, 4, 5])
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight2),
+                            [[8 + 20 + 15 + 25]])
+
+        combination = "x-y"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[-3 * 4 + -2 * 5]])
+
+        combination = "y-x"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[3 * 4 + 2 * 5]])
+
+        combination = "y+x"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[7 * 4 + 8 * 5]])
+
+        combination = "y*x"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[10 * 4 + 15 * 5]])
+
+        combination = "y/x"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[(5 / 2) * 4 + (5 / 3) * 5]], decimal=4)
+
+        combination = "x/y"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[(2 / 5) * 4 + (3 / 5) * 5]], decimal=4)
+
+        with pytest.raises(ConfigurationError):
+            util.combine_tensors_and_multiply("x+y+y", tensors, weight)
+
+        with pytest.raises(ConfigurationError):
+            util.combine_tensors_and_multiply("x%y", tensors, weight)
+
+    def test_combine_tensors_and_multiply_with_same_batch_size_and_embedding_dim(self):
+        # This test just makes sure we handle some potential edge cases where the lengths of all
+        # dimensions are the same, making sure that the multiplication with the weight vector
+        # happens along the right dimension (it should be the last one).
+        tensors = [torch.Tensor([[[5, 5], [4, 4]], [[2, 3], [1, 1]]])]  # (2, 2, 2)
+        weight = torch.Tensor([4, 5])  # (2,)
+
+        combination = "x"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[20 + 25, 16 + 20], [8 + 15, 4 + 5]])
+
+        tensors = [torch.Tensor([[[5, 5], [2, 2]], [[4, 4], [3, 3]]]),
+                   torch.Tensor([[[2, 3]], [[1, 1]]])]
+        weight = torch.Tensor([4, 5])
+        combination = "x*y"
+        assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
+                            [[5 * 2 * 4 + 5 * 3 * 5, 2 * 2 * 4 + 2 * 3 * 5],
+                             [4 * 1 * 4 + 4 * 1 * 5, 3 * 1 * 4 + 3 * 1 * 5]])

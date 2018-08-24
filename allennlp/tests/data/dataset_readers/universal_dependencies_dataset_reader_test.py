@@ -63,3 +63,17 @@ class TestUniversalDependenciesDatasetReader(AllenNlpTestCase):
                                               'root', 'xcomp', 'cc', 'conj', 'orphan', 'case', 'obl',
                                               'advmod', 'punct']
         assert fields["head_indices"].labels == [2, 3, 5, 5, 0, 5, 8, 5, 8, 11, 5, 11, 5]
+
+    def test_read_from_file_with_language_specific_pos(self):
+        reader = UniversalDependenciesDatasetReader(use_language_specific_pos=True)
+        instances = list(reader.read(str(self.data_path)))
+
+        instance = instances[0]
+        fields = instance.fields
+        assert [t.text for t in fields["words"].tokens] == ['What', 'if', 'Google',
+                                                            'Morphed', 'Into', 'GoogleOS', '?']
+
+        assert fields["pos_tags"].labels == ['WP', 'IN', 'NNP', 'VBD', 'IN', 'NNP', '.']
+        assert fields["head_tags"].labels == ['root', 'mark', 'nsubj', 'advcl',
+                                              'case', 'obl', 'punct']
+        assert fields["head_indices"].labels == [0, 4, 4, 1, 6, 4, 4]

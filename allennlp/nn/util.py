@@ -226,6 +226,70 @@ def masked_log_softmax(vector, mask):
     return torch.nn.functional.log_softmax(vector, dim=1)
 
 
+def masked_max(vector: torch.Tensor,
+               mask: torch.Tensor,
+               dim: int,
+               keepdim: bool = False,
+               min_val: float = -1e7) -> torch.Tensor:
+    """
+    To calculate max along certain dimensions on masked values
+
+    Parameters
+    ----------
+    vector : ``torch.Tensor``
+        The vector to calculate max, assume unmasked parts are already zeros
+    mask : ``torch.Tensor``
+        The mask of the vector. It must be broadcastable with vector.
+    dim : ``int``
+        The dimension to calculate max
+    keepdim : ``bool``
+        Whether to keep dimension
+    min_val : ``float``
+        The minimal value for paddings
+
+    Returns
+    -------
+    A ``torch.Tensor`` of including the maximum values.
+    """
+    one_minus_mask = (1.0 - mask).byte()
+    replaced_vector = vector.masked_fill(one_minus_mask, min_val)
+    max_value, _ = replaced_vector.max(dim=dim, keepdim=keepdim)
+    return max_value
+
+
+def masked_mean(vector: torch.Tensor,
+                mask: torch.Tensor,
+                dim: int,
+                keepdim: bool = False,
+                eps: float = 1e-8) -> torch.Tensor:
+    """
+    To calculate mean along certain dimensions on masked values
+
+    Parameters
+    ----------
+    vector : ``torch.Tensor``
+        The vector to calculate mean.
+    mask : ``torch.Tensor``
+        The mask of the vector. It must be broadcastable with vector.
+    dim : ``int``
+        The dimension to calculate mean
+    keepdim : ``bool``
+        Whether to keep dimension
+    eps : ``float``
+        A small value to avoid zero division problem.
+
+    Returns
+    -------
+    A ``torch.Tensor`` of including the mean values.
+    """
+    one_minus_mask = (1.0 - mask).byte()
+    replaced_vector = vector.masked_fill(one_minus_mask, 0.0)
+
+    value_sum = torch.sum(replaced_vector, dim=dim, keepdim=keepdim)
+    value_count = torch.sum(mask.float(), dim=dim, keepdim=keepdim)
+    return value_sum / value_count.clamp(min=eps)
+
+
 def viterbi_decode(tag_sequence: torch.Tensor,
                    transition_matrix: torch.Tensor,
                    tag_observations: Optional[List[int]] = None):
@@ -515,14 +579,14 @@ def replace_masked_values(tensor: torch.Tensor, mask: torch.Tensor, replace_with
     Replaces all masked values in ``tensor`` with ``replace_with``.  ``mask`` must be broadcastable
     to the same shape as ``tensor``. We require that ``tensor.dim() == mask.dim()``, as otherwise we
     won't know which dimensions of the mask to unsqueeze.
+
+    This just does ``tensor.masked_fill()``, except the pytorch method fills in things with a mask
+    value of 1, where we want the opposite.  You can do this in your own code with
+    ``tensor.masked_fill((1 - mask).byte(), replace_with)``.
     """
-    # We'll build a tensor of the same shape as `tensor`, zero out masked values, then add back in
-    # the `replace_with` value.
     if tensor.dim() != mask.dim():
         raise ConfigurationError("tensor.dim() (%d) != mask.dim() (%d)" % (tensor.dim(), mask.dim()))
-    one_minus_mask = 1.0 - mask
-    values_to_add = replace_with * one_minus_mask
-    return tensor * mask + values_to_add
+    return tensor.masked_fill((1 - mask).byte(), replace_with)
 
 
 def tensors_equal(tensor1: torch.Tensor, tensor2: torch.Tensor, tolerance: float = 1e-12) -> bool:
@@ -625,6 +689,88 @@ def _get_combination(combination: str, tensors: List[torch.Tensor]) -> torch.Ten
             return first_tensor + second_tensor
         elif operation == '-':
             return first_tensor - second_tensor
+        else:
+            raise ConfigurationError("Invalid operation: " + operation)
+
+
+def combine_tensors_and_multiply(combination: str,
+                                 tensors: List[torch.Tensor],
+                                 weights: torch.nn.Parameter) -> torch.Tensor:
+    """
+    Like :func:`combine_tensors`, but does a weighted (linear) multiplication while combining.
+    This is a separate function from ``combine_tensors`` because we try to avoid instantiating
+    large intermediate tensors during the combination, which is possible because we know that we're
+    going to be multiplying by a weight vector in the end.
+
+    Parameters
+    ----------
+    combination : ``str``
+        Same as in :func:`combine_tensors`
+    tensors : ``List[torch.Tensor]``
+        A list of tensors to combine, where the integers in the ``combination`` are (1-indexed)
+        positions in this list of tensors.  These tensors are all expected to have either three or
+        four dimensions, with the final dimension being an embedding.  If there are four
+        dimensions, one of them must have length 1.
+    weights : ``torch.nn.Parameter``
+        A vector of weights to use for the combinations.  This should have shape (combined_dim,),
+        as calculated by :func:`get_combined_dim`.
+    """
+    if len(tensors) > 9:
+        raise ConfigurationError("Double-digit tensor lists not currently supported")
+    combination = combination.replace('x', '1').replace('y', '2')
+    pieces = combination.split(',')
+    tensor_dims = [tensor.size(-1) for tensor in tensors]
+    combination_dims = [_get_combination_dim(piece, tensor_dims) for piece in pieces]
+    dims_so_far = 0
+    to_sum = []
+    for piece, combination_dim in zip(pieces, combination_dims):
+        weight = weights[dims_so_far:(dims_so_far + combination_dim)]
+        dims_so_far += combination_dim
+        to_sum.append(_get_combination_and_multiply(piece, tensors, weight))
+    result = to_sum[0]
+    for result_piece in to_sum[1:]:
+        result = result + result_piece
+    return result
+
+
+def _get_combination_and_multiply(combination: str,
+                                  tensors: List[torch.Tensor],
+                                  weight: torch.nn.Parameter) -> torch.Tensor:
+    if combination.isdigit():
+        index = int(combination) - 1
+        return torch.matmul(tensors[index], weight)
+    else:
+        if len(combination) != 3:
+            raise ConfigurationError("Invalid combination: " + combination)
+        first_tensor = _get_combination(combination[0], tensors)
+        second_tensor = _get_combination(combination[2], tensors)
+        operation = combination[1]
+        if operation == '*':
+            if first_tensor.dim() > 4 or second_tensor.dim() > 4:
+                raise ValueError("Tensors with dim > 4 not currently supported")
+            if first_tensor.dim() == 4:
+                expanded_dim = first_tensor.size().index(1)
+                first_tensor = first_tensor.squeeze(expanded_dim)
+            if second_tensor.dim() == 4:
+                expanded_dim = second_tensor.size().index(1)
+                second_tensor = second_tensor.squeeze(expanded_dim)
+            intermediate = first_tensor * weight
+            return torch.matmul(intermediate, second_tensor.transpose(-1, -2)).squeeze(-1)
+        elif operation == '/':
+            if first_tensor.dim() > 4 or second_tensor.dim() > 4:
+                raise ValueError("Tensors with dim > 4 not currently supported")
+            if first_tensor.dim() == 4:
+                expanded_dim = first_tensor.size().index(1)
+                first_tensor = first_tensor.squeeze(expanded_dim)
+            if second_tensor.dim() == 4:
+                expanded_dim = second_tensor.size().index(1)
+                second_tensor = second_tensor.squeeze(expanded_dim)
+            intermediate = first_tensor * weight
+            return torch.matmul(intermediate, second_tensor.pow(-1).transpose(-1, -2)).squeeze(-1)
+        elif operation == '+':
+            return torch.matmul(first_tensor, weight) + torch.matmul(second_tensor, weight)
+        elif operation == '-':
+            return torch.matmul(first_tensor, weight) - torch.matmul(second_tensor, weight)
         else:
             raise ConfigurationError("Invalid operation: " + operation)
 

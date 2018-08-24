@@ -97,7 +97,7 @@ is shared publicly on Amazon S3.
 We can use the `evaluate` command, giving it the archived model and the evaluation dataset:
 
 ```
-$ allennlp evaluate /tmp/tutorials/getting_started/model.tar.gz --evaluation-data-file https://allennlp.s3.amazonaws.com/datasets/getting-started/sentences.small.test
+$ allennlp evaluate /tmp/tutorials/getting_started/model.tar.gz https://allennlp.s3.amazonaws.com/datasets/getting-started/sentences.small.test
 ```
 
 When you run this it will load the archived model, download and cache the evaluation dataset, and then make predictions:
