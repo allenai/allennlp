@@ -305,9 +305,6 @@ TABLES_WITH_STRINGS = {'airline' : ['airline_code', 'airline_name'],
                        'ground_service' : ['transport_type'],
                        'days' : ['day_name']}
 
-
-DAY_OF_WEEK_DICT = {'weekdays' : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']}
-
 DAY_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
 
 DAY_OF_WEEK_INDEX = {idx : [day] for idx, day in enumerate(DAY_OF_WEEK)}

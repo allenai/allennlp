@@ -8,7 +8,7 @@ from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-
 from allennlp.semparse.contexts.sql_table_context import \
         SqlTableContext, SqlVisitor, generate_one_of_string, format_action
 
-from allennlp.data.tokenizers import Token, WordTokenizer
+from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
 class AtisWorld():
     """
@@ -24,7 +24,7 @@ class AtisWorld():
 
     def __init__(self,
                  utterances: List[str],
-                 tokenizer=None,
+                 tokenizer: Tokenizer = None,
                  sql_table_context: SqlTableContext = None) -> None:
         self.sql_table_context = sql_table_context
         self.utterances: List[str] = utterances

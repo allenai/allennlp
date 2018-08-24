@@ -61,6 +61,9 @@ class AtisDatasetReader(DatasetReader):
     tokenizer : ``Tokenizer``, optional
         Tokenizer to use for the utterances. Will default to ``WordTokenizer()`` with Spacy's tagger
         enabled.
+    database_directory : ``str``, optional
+        The directory to find the sqlite database file. We query the sqlite database to find the strings
+        that are allowed.
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
@@ -70,7 +73,9 @@ class AtisDatasetReader(DatasetReader):
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
-        self.sql_table_context = SqlTableContext(ALL_TABLES, TABLES_WITH_STRINGS, database_directory)
+        self.sql_table_context = SqlTableContext(ALL_TABLES,
+                                                 TABLES_WITH_STRINGS,
+                                                 database_directory)
 
 
     @overrides

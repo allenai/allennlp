@@ -43,7 +43,7 @@ SQL_GRAMMAR_STR = r"""
                           condition
     condition           = in_clause / ternaryexpr / biexpr
     in_clause           = (ws col_ref ws "IN" ws query ws)
-    biexpr              = ( col_ref ws binaryop ws value) / (value ws binaryop ws value)          
+    biexpr              = ( col_ref ws binaryop ws value) / (value ws binaryop ws value)
     binaryop            = "+" / "-" / "*" / "/" / "=" /
                           ">=" / "<=" / ">" / "<"  / "is" / "IS"
     ternaryexpr         = (col_ref ws "not" ws "BETWEEN" ws value ws "AND" ws value ws) /
@@ -63,9 +63,11 @@ SQL_GRAMMAR_STR = r"""
 KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"', '"IN"', '"LIKE"',
             '"IS"', '"BETWEEN"', '"AND"', '"ALL"', '"ANY"', '"NULL"', '"OR"', '"DISTINCT"']
 
-def generate_one_of_string(nonterminal: str, literals: List[str]) -> str:
+def generate_one_of_string(nonterminal: str,
+                           literals: List[str],
+                           is_string: bool = False) -> str:
     if literals:
-        if nonterminal.endswith('string'):
+        if is_string:
             return  f"\n{nonterminal} \t\t = " + " / ".join([f'"\'{literal}\'"' for literal in literals]) + "\n"
         else:
             return  f"\n{nonterminal} \t\t = " + " / ".join([f'"{literal}"' for literal in literals]) + "\n"
@@ -94,9 +96,15 @@ class SqlTableContext():
 
     Parameters
     ----------
-    tables: ``Dict[str, List[str]]``
+    all_tables: ``Dict[str, List[str]]``
         A dictionary representing the SQL tables in the dataset, the keys are the names of the tables
         that map to lists of the table's column names.
+    tables_with_strings: ``Dict[str, List[str]]``
+        A dictionary representing the SQL tables that we want to generate strings for. The keys are the
+        names of the tables that map to lists of the table's column names.
+    database_directory : ``str``, optional
+        The directory to find the sqlite database file. We query the sqlite database to find the strings
+        that are allowed.
     """
     def __init__(self,
                  all_tables: Dict[str, List[str]] = None,
@@ -147,7 +155,6 @@ class SqlTableContext():
         return valid_action_strings
 
     def initialize_grammar_str(self):
-        print('initialize_grammar_str')
         grammar_str = SQL_GRAMMAR_STR
 
         if self.all_tables:
@@ -165,8 +172,9 @@ class SqlTableContext():
                                 for column in columns])
                 for column in columns:
                     self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
-                    grammar_str += generate_one_of_string(f'{table}_{column}_string',
-                                                          [row[0] for row in self.cursor.fetchall()])
+                    grammar_str += generate_one_of_string(nonterminal=f'{table}_{column}_string',
+                                                          literals=[row[0] for row in self.cursor.fetchall()],
+                                                          is_string=True)
 
         grammar_str += 'biexpr = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ' + \
                        f'{" / ".join(sorted(biexprs, reverse=True))}\n'
