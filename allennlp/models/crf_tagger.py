@@ -142,7 +142,7 @@ class CrfTagger(Model):
             # Maintain deprecated behavior if constraint_type is provided
             self._f1_metric = SpanBasedF1Measure(vocab,
                                                  tag_namespace=label_namespace,
-                                                 label_encoding=constraint_type or "BIO")
+                                                 label_encoding=constraint_type)
 
         check_dimensions_match(text_field_embedder.get_output_dim(), encoder.get_input_dim(),
                                "text field embedding dim", "encoder input dim")
