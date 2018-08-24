@@ -70,7 +70,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
             loss += renormalized_probs.dot(costs)
         mean_loss = loss / len(finished_model_scores)
         return {'loss': mean_loss,
-                'best_action_sequences': self._get_best_action_sequences(finished_states)}
+                'best_final_states': self._get_best_final_states(finished_states)}
 
     def _get_finished_states(self,
                              initial_state: DecoderState,
@@ -150,25 +150,19 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
             batch_costs[batch_index].append(cost)
         return batch_costs
 
-    def _get_best_action_sequences(self,
-                                   finished_states: List[StateType]) -> Dict[int, List[List[int]]]:
+    def _get_best_final_states(self, finished_states: List[StateType]) -> Dict[int, List[StateType]]:
         """
-        Returns the best action sequences for each item based on model scores. We return at most
-        ``self._max_num_decoded_sequences`` number of sequences per instance.
+        Returns the best finished states for each batch instance based on model scores. We return
+        at most ``self._max_num_decoded_sequences`` number of sequences per instance.
         """
-        batch_action_histories: Dict[int, List[List[int]]] = defaultdict(list)
+        batch_states: Dict[int, List[StateType]] = defaultdict(list)
         for state in finished_states:
-            for batch_index, action_history in zip(state.batch_indices,
-                                                   state.action_history):
-                batch_action_histories[batch_index].append(action_history)
-
-        batch_scores = self._get_model_scores_by_batch(finished_states)
-        best_action_sequences: Dict[int, List[List[int]]] = {}
-        for batch_index, scores in batch_scores.items():
-            _, sorted_indices = torch.cat([score.view(-1) for score in scores]).sort(-1, descending=True)
-            cpu_indices = [int(index) for index in sorted_indices.detach().cpu().numpy()]
-            best_action_indices = cpu_indices[:self._max_num_decoded_sequences]
-            instance_best_sequences = [batch_action_histories[batch_index][i]
-                                       for i in best_action_indices]
-            best_action_sequences[batch_index] = instance_best_sequences
-        return best_action_sequences
+            batch_states[state.batch_indices[0]].append(state)
+        best_states: Dict[int, List[StateType]] = {}
+        for batch_index, states in batch_states.items():
+            # The time this sort takes is pretty negligible, no particular need to optimize this
+            # yet.  Maybe with a larger beam size...
+            finished_to_sort = [(-state.score[0].item(), state) for state in states]
+            finished_to_sort.sort(key=lambda x: x[0])
+            best_states[batch_index] = [state[1] for state in finished_to_sort[:self._beam_size]]
+        return best_states

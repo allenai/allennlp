@@ -1,0 +1,62 @@
+{
+    "dataset_reader": {
+      "type": "conll2000",
+      "tag_label": "chunk",
+      // Tests that CrfTagger.forward() works when it's passed a
+      // keyword argument it doesn't expect
+      "feature_labels": ["pos", "chunk"],
+      "token_indexers": {
+        "tokens": {
+          "type": "single_id",
+          "lowercase_tokens": true
+        },
+        "token_characters": {
+          "type": "characters"
+        }
+      }
+    },
+    "train_data_path": "allennlp/tests/fixtures/data/conll2000.txt",
+    "validation_data_path": "allennlp/tests/fixtures/data/conll2000.txt",
+    "model": {
+      "type": "crf_tagger",
+      "text_field_embedder": {
+          "token_embedders": {
+              "tokens": {
+                      "type": "embedding",
+                      "embedding_dim": 50
+              },
+              "token_characters": {
+                "type": "character_encoding",
+                "embedding": {
+                  "embedding_dim": 25
+                },
+                "encoder": {
+                  "type": "gru",
+                  "input_size": 25,
+                  "hidden_size": 80,
+                  "num_layers": 2,
+                  "dropout": 0.25,
+                  "bidirectional": true
+                }
+              }
+          }
+      },
+      "encoder": {
+              "type": "gru",
+              "input_size": 210,
+              "hidden_size": 300,
+              "num_layers": 2,
+              "dropout": 0.5,
+              "bidirectional": true
+      },
+      "regularizer": [
+        ["transitions$", {"type": "l2", "alpha": 0.01}]
+      ]
+    },
+    "iterator": {"type": "basic", "batch_size": 32},
+    "trainer": {
+      "optimizer": "adam",
+      "num_epochs": 5,
+      "cuda_device": -1
+    }
+  }
