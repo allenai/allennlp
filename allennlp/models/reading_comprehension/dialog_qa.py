@@ -269,10 +269,9 @@ class DialogQA(Model):
                                                                           repeated_passage_mask))
         self_attention_matrix = self._self_attention(residual_layer, residual_layer)
 
-        mask = passage_mask.resize(total_qa_count,
-                                   passage_length,
-                                   1) * repeated_passage_mask.resize(total_qa_count, 1, passage_length)
-
+        mask = repeated_passage_mask.resize(total_qa_count, passage_length, 1) \
+                * repeated_passage_mask.resize(total_qa_count, 1, passage_length)
+        
         self_mask = torch.eye(passage_length, passage_length, device=self_attention_matrix.device)
         self_mask = self_mask.resize(1, passage_length, passage_length)
         mask = mask * (1 - self_mask)
