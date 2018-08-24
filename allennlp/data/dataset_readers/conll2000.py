@@ -52,9 +52,8 @@ class Conll2000DatasetReader(DatasetReader):
         Specifies the coding scheme for ``chunk_labels``.
         Valid options are ``BIO`` and ``BIOUL``.  The ``BIO`` default maintains
         the original BIO scheme in the CoNLL 2000 chunking data.
-        In the BIO scheme, B is a token starting a span, I is a token continuing a O is a token outside
-        a span and B is the beginning of span immediately following another
-        span of the same type.
+        In the BIO scheme, B is a token starting a span, I is a token continuing a span, and
+        O is a token outside of a span.
     label_namespace: ``str``, optional (default=``labels``)
         Specifies the namespace for the chosen ``tag_label``.
     """
