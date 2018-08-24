@@ -2,6 +2,8 @@ from typing import List
 
 import torch
 
+from allennlp.nn import util
+
 
 class RnnState:
     """
@@ -54,3 +56,16 @@ class RnnState:
         self.attended_input = attended_input
         self.encoder_outputs = encoder_outputs
         self.encoder_output_mask = encoder_output_mask
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return all([
+                    util.tensors_equal(self.hidden_state, other.hidden_state, tolerance=1e-5),
+                    util.tensors_equal(self.memory_cell, other.memory_cell, tolerance=1e-5),
+                    util.tensors_equal(self.previous_action_embedding, other.previous_action_embedding,
+                                       tolerance=1e-5),
+                    util.tensors_equal(self.attended_input, other.attended_input, tolerance=1e-5),
+                    util.tensors_equal(self.encoder_outputs, other.encoder_outputs, tolerance=1e-5),
+                    util.tensors_equal(self.encoder_output_mask, other.encoder_output_mask, tolerance=1e-5),
+                    ])
+        return NotImplemented

@@ -1,12 +1,14 @@
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, Generic, List, Mapping, Sequence, TypeVar
 
 from allennlp.common.registrable import FromParams
 from allennlp.nn.decoding.decoder_step import DecoderStep
 from allennlp.nn.decoding.decoder_state import DecoderState
 
+StateType = TypeVar('StateType', bound=DecoderState)  # pylint: disable=invalid-name
 
-class BeamSearch(FromParams):
+
+class BeamSearch(FromParams, Generic[StateType]):
     """
     This class implements beam search over transition sequences given an initial ``DecoderState``
     and a ``DecoderStep``, returning the highest scoring final states found by the beam (the states
@@ -25,9 +27,9 @@ class BeamSearch(FromParams):
 
     def search(self,
                num_steps: int,
-               initial_state: DecoderState,
+               initial_state: StateType,
                decoder_step: DecoderStep,
-               keep_final_unfinished_states: bool = True) -> Dict[int, List[DecoderState]]:
+               keep_final_unfinished_states: bool = True) -> Mapping[int, Sequence[StateType]]:
         """
         Parameters
         ----------
@@ -35,7 +37,7 @@ class BeamSearch(FromParams):
             How many steps should we take in our search?  This is an upper bound, as it's possible
             for the search to run out of valid actions before hitting this number, or for all
             states on the beam to finish.
-        initial_state : ``DecoderState``
+        initial_state : ``StateType``
             The starting state of our search.  This is assumed to be `batched`, and our beam search
             is batch-aware - we'll keep ``beam_size`` states around for each instance in the batch.
         decoder_step : ``DecoderStep``
@@ -47,14 +49,14 @@ class BeamSearch(FromParams):
 
         Returns
         -------
-        best_states : ``Dict[int, List[DecoderState]]``
+        best_states : ``Dict[int, List[StateType]]``
             This is a mapping from batch index to the top states for that instance.
         """
-        finished_states: Dict[int, List[DecoderState]] = defaultdict(list)
+        finished_states: Dict[int, List[StateType]] = defaultdict(list)
         states = [initial_state]
         step_num = 1
         while states and step_num <= num_steps:
-            next_states: Dict[int, List[DecoderState]] = defaultdict(list)
+            next_states: Dict[int, List[StateType]] = defaultdict(list)
             grouped_state = states[0].combine_states(states)
             for next_state in decoder_step.take_step(grouped_state, max_actions=self._beam_size):
                 # NOTE: we're doing state.batch_indices[0] here (and similar things below),
@@ -73,7 +75,7 @@ class BeamSearch(FromParams):
                 # ones here, without an additional sort.
                 states.extend(batch_states[:self._beam_size])
             step_num += 1
-        best_states: Dict[int, List[DecoderState]] = {}
+        best_states: Dict[int, Sequence[StateType]] = {}
         for batch_index, batch_states in finished_states.items():
             # The time this sort takes is pretty negligible, no particular need to optimize this
             # yet.  Maybe with a larger beam size...

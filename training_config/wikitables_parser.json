@@ -51,10 +51,10 @@
     },
     "training_beam_size": 5,
     "max_decoding_steps": 40,
-    "attention_function": {
+    "attention": {
       "type": "bilinear",
-      "tensor_1_dim": 200,
-      "tensor_2_dim": 200
+      "vector_dim": 200,
+      "matrix_dim": 200
     },
     "dropout": 0.5
   },

@@ -2,6 +2,9 @@ from typing import Dict
 
 import torch
 
+from allennlp.nn import util
+
+
 class ChecklistState:
     """
     This class keeps track of checklist related variables that are used while training a coverage
@@ -66,3 +69,14 @@ class ChecklistState:
 
     def get_balance(self) -> torch.Tensor:
         return self.checklist_mask * (self.checklist_target - self.checklist)
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return all([
+                    util.tensors_equal(self.terminal_actions, other.terminal_actions),
+                    util.tensors_equal(self.checklist_target, other.checklist_target),
+                    util.tensors_equal(self.checklist_mask, other.checklist_mask),
+                    util.tensors_equal(self.checklist, other.checklist),
+                    self.terminal_indices_dict == other.terminal_indices_dict,
+                    ])
+        return NotImplemented
