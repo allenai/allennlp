@@ -1,4 +1,5 @@
 from typing import Dict, Optional, List, Any
+import warnings
 
 from overrides import overrides
 import torch
@@ -38,6 +39,17 @@ class CrfTagger(Model):
         Label encoding to use when calculating span f1 and constraining
         the CRF at decoding time . Valid options are "BIO", "BIOUL", "IOB1".
         Required if ``calculate_span_f1`` or ``constrain_crf_decoding`` is true.
+    constraint_type : ``str``, optional (default=``None``)
+        If provided, the CRF will be constrained at decoding time
+        to produce valid labels based on the specified type
+        (e.g. "BIO", or "BIOUL").
+
+        .. deprecated:: 0.6
+           ``constraint_type`` was deprecated and replaced with
+           ``label_encoding``, ``constrain_crf_decoding``, and
+           ``calculate_span_f1`` in version 0.6. It will be removed
+           in version 0.8.
+
     include_start_end_transitions : ``bool``, optional (default=``True``)
         Whether to include start and end transition parameters in the CRF.
     constrain_crf_decoding : ``bool``, optional (default=``False``)
@@ -63,6 +75,7 @@ class CrfTagger(Model):
                  label_namespace: str = "labels",
                  feedforward: Optional[FeedForward] = None,
                  label_encoding: Optional[str] = None,
+                 constraint_type: Optional[str] = None,
                  include_start_end_transitions: bool = True,
                  constrain_crf_decoding: bool = False,
                  calculate_span_f1: bool = False,
@@ -90,6 +103,13 @@ class CrfTagger(Model):
         self.tag_projection_layer = TimeDistributed(Linear(output_dim,
                                                            self.num_tags))
 
+        if constraint_type is not None:
+            warnings.warn("'constraint_type' was removed and replaced with"
+                          "'label_encoding', 'constrain_crf_decoding', and "
+                          "'calculate_span_f1' in version 0.6. It will be "
+                          "removed in version 0.8.", DeprecationWarning)
+            label_encoding = constraint_type
+            constrain_crf_decoding = True
         self.label_encoding = label_encoding
         if constrain_crf_decoding:
             if not label_encoding:
@@ -118,6 +138,11 @@ class CrfTagger(Model):
             self._f1_metric = SpanBasedF1Measure(vocab,
                                                  tag_namespace=label_namespace,
                                                  label_encoding=label_encoding)
+        elif constraint_type is not None:
+            # Maintain deprecated behavior if constraint_type is provided
+            self._f1_metric = SpanBasedF1Measure(vocab,
+                                                 tag_namespace=label_namespace,
+                                                 label_encoding=constraint_type or "BIO")
 
         check_dimensions_match(text_field_embedder.get_output_dim(), encoder.get_input_dim(),
                                "text field embedding dim", "encoder input dim")
