@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import torch
 
@@ -27,8 +27,12 @@ class ConstrainedBeamSearch:
 
     Parameters
     ----------
-    beam_size : ``int``
-        The beam size to use.
+    beam_size : ``Optional[int]``
+        The beam size to use.  Because this is a `constrained` beam search, we allow for the case
+        where you just want to evaluate all options in the constrained set.  In that case, you
+        don't need a beam, and you can pass a beam size of ``None``, and we will just evaluate
+        everything.  This lets us be more efficient in :func:`DecoderStep.take_step` and skip the
+        sorting that is typically done there.
     allowed_sequences : ``torch.Tensor``
         A ``(batch_size, num_sequences, sequence_length)`` tensor containing the transition
         sequences that we will search in.  The values in this tensor must match whatever the
@@ -40,7 +44,7 @@ class ConstrainedBeamSearch:
         the ``num_sequences`` dimension and the ``sequence_length`` dimension.
     """
     def __init__(self,
-                 beam_size: int,
+                 beam_size: Optional[int],
                  allowed_sequences: torch.Tensor,
                  allowed_sequence_mask: torch.Tensor) -> None:
         self._beam_size = beam_size
@@ -90,7 +94,9 @@ class ConstrainedBeamSearch:
             for batch_index, batch_states in next_states.items():
                 # The states from the generator are already sorted, so we can just take the first
                 # ones here, without an additional sort.
-                states.extend(batch_states[:self._beam_size])
+                if self._beam_size:
+                    batch_states = batch_states[:self._beam_size]
+                states.extend(batch_states)
         best_states: Dict[int, List[DecoderState]] = {}
         for batch_index, batch_states in finished_states.items():
             # The time this sort takes is pretty negligible, no particular need to optimize this

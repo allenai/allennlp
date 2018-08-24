@@ -45,11 +45,7 @@ class MaximumMarginalLikelihood(DecoderTrainer[Tuple[torch.Tensor, torch.Tensor]
                decode_step: DecoderStep,
                supervision: Tuple[torch.Tensor, torch.Tensor]) -> Dict[str, torch.Tensor]:
         targets, target_mask = supervision
-
-        # If self._beam_size is not set, we use a beam size that ensures we keep all of the
-        # sequences.
-        beam_size = self._beam_size or targets.size(1)
-        beam_search = ConstrainedBeamSearch(beam_size, targets, target_mask)
+        beam_search = ConstrainedBeamSearch(self._beam_size, targets, target_mask)
         finished_states: Dict[int, List[DecoderState]] = beam_search.search(initial_state, decode_step)
 
         loss = 0
