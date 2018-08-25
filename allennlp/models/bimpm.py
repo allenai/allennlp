@@ -200,8 +200,7 @@ class BiMpm(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Converts indices to string labels, and adds a ``"label"`` key 
-        to the dictionary with the result.
+        Converts indices to string labels, and adds a ``"label"`` key to the result.
         """
         predictions = output_dict["probs"].cpu().data.numpy()
         argmax_indices = numpy.argmax(predictions, axis=-1)
