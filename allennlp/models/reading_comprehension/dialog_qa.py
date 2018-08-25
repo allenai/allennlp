@@ -232,7 +232,7 @@ class DialogQA(Model):
             repeated_encoded_passage = encoded_passage.unsqueeze(1).repeat(1, max_qa_count, 1, 1)
             repeated_encoded_passage = repeated_encoded_passage.view(total_qa_count,
                                                                      passage_length,
-                                                                     self.encoding_dim)
+                                                                     self._encoding_dim)
 
         encoded_question = self._variational_dropout(self._phrase_layer(embedded_question, question_mask))
 
