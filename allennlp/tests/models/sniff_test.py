@@ -36,7 +36,7 @@ DEFAULT_MODELS = {
                 'constituency-parser'
         ),
         'dependency-parsing': (
-                'https://s3-us-west-2.amazonaws.com/allennlp/models/biaffine-dependency-parser-2018.08.01.tar.gz',  # pylint: disable=line-too-long
+                'https://s3-us-west-2.amazonaws.com/allennlp/models/biaffine-dependency-parser-ptb-2018.08.23.tar.gz',  # pylint: disable=line-too-long
                 'biaffine-dependency-parser'
         )
 }
@@ -163,6 +163,5 @@ class SniffTest(AllenNlpTestCase):
         # a trained dependency parser.
         assert result['words'] == ['He', 'ate', 'spaghetti', 'with', 'chopsticks', '.']
         assert result['pos'] == ['PRP', 'VBD', 'NNS', 'IN', 'NNS', '.']
-        assert result['predicted_dependencies'] == ['nsubj', 'root', 'acomp', 'prep', 'pobj', 'punct']
-        assert result['predicted_heads'] == [3, 0, 2, 3, 4, 2]
-       
+        assert result['predicted_dependencies'] == ['nsubj', 'root', 'dobj', 'prep', 'pobj', 'punct']
+        assert result['predicted_heads'] == [2, 0, 2, 2, 4, 2]

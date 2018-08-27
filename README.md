@@ -9,16 +9,16 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
 
 ## Installation
 
-The preferred way to install AllenNLP is via `pip`.  Just run `pip install allennlp` in your Python 3.6 environment and you're good to go!
+AllenNLP requires Python 3.6.1 or later. The preferred way to install AllenNLP is via `pip`.  Just run `pip install allennlp` in your Python environment and you're good to go!
 
-If you need pointers on setting up a Python 3.6 environment or would like to install AllenNLP using a different method, see below.
+If you need pointers on setting up an appropriate Python environment or would like to install AllenNLP using a different method, see below.
 
 ### Installing via pip
 
 #### Setting up a virtual environment
 
 [Conda](https://conda.io/) can be used set up a virtual environment with the
-version of Python required for AllenNLP.  If you already have a Python 3.6
+version of Python required for AllenNLP.  If you already have a Python 3.6 or 3.7
 environment you want to use, you can skip to the 'installing via pip' section.
 
 1.  [Download and install Conda](https://conda.io/docs/download.html).
