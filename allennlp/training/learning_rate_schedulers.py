@@ -144,38 +144,45 @@ class CosineWithRestarts(torch.optim.lr_scheduler._LRScheduler):  # pylint: disa
     ----------
     optimizer : ``torch.optim.Optimizer``
 
-    t_max : ``int``
-        The maximum number of iterations within the first cycle.
+    t_initial : ``int``
+        The number of iterations within the first cycle.
+
+    t_mul : ``float``, optional (default=1)
+        Determines the number of iterations in the i-th decay cycle, which is the
+        length of the last cycle multiplied by ``t_mul``.
 
     eta_min : ``float``, optional (default=0)
         The minimum learning rate.
 
+    eta_mul : ``float``, optional (default=1)
+        Determines the initial learning rate for the i-th decay cycle, which is the
+        last initial learning rate multiplied by ``m_mul``.
+
     last_epoch : ``int``, optional (default=-1)
         The index of the last epoch. This is used when restarting.
-
-    factor : ``float``, optional (default=1)
-        The factor by which the cycle length (``T_max``) increases after each restart.
 
     """
 
     def __init__(self,
                  optimizer: torch.optim.Optimizer,
-                 t_max: int,
+                 t_initial: int,
+                 t_mul: float = 1.,
                  eta_min: float = 0.,
-                 last_epoch: int = -1,
-                 factor: float = 1.) -> None:
-        assert t_max > 0
+                 eta_mul: float = 1.,
+                 last_epoch: int = -1) -> None:
+        assert t_initial > 0
         assert eta_min >= 0
-        if t_max == 1 and factor == 1:
+        if t_initial == 1 and t_mul == 1 and eta_mul == 1:
             logger.warning("Cosine annealing scheduler will have no effect on the learning "
-                           "rate since T_max = 1 and factor = 1.")
-        self.t_max = t_max
+                           "rate since t_initial = t_mul = eta_mul = 1.")
+        self.t_initial = t_initial
+        self.t_mul = t_mul
         self.eta_min = eta_min
-        self.factor = factor
+        self.eta_mul = eta_mul
         self._last_restart: int = 0
         self._cycle_counter: int = 0
-        self._cycle_factor: float = 1.
-        self._updated_cycle_len: int = t_max
+        self._cycle_len: int = t_initial
+        self._n_restarts: int = 0
         self._initialized: bool = False
         super(CosineWithRestarts, self).__init__(optimizer, last_epoch)
 
@@ -192,23 +199,20 @@ class CosineWithRestarts(torch.optim.lr_scheduler._LRScheduler):  # pylint: disa
         step = self.last_epoch + 1
         self._cycle_counter = step - self._last_restart
 
+        if self._cycle_counter % self._cycle_len == 0:
+            self._n_restarts += 1
+            self._cycle_counter = 0
+            self._last_restart = step
+
+        base_lrs = [lr * self.eta_mul**self._n_restarts for lr in self.base_lrs]
+        self._cycle_len = int(self.t_initial * self.t_mul**self._n_restarts)
+
         lrs = [
                 self.eta_min + ((lr - self.eta_min) / 2) * (
-                        np.cos(
-                                np.pi *
-                                (self._cycle_counter % self._updated_cycle_len) /
-                                self._updated_cycle_len
-                        ) + 1
+                        np.cos(np.pi * (self._cycle_counter % self._cycle_len) / self._cycle_len) + 1
                 )
-                for lr in self.base_lrs
+                for lr in base_lrs
         ]
-
-        if self._cycle_counter % self._updated_cycle_len == 0:
-            # Adjust the cycle length.
-            self._cycle_factor *= self.factor
-            self._cycle_counter = 0
-            self._updated_cycle_len = int(self._cycle_factor * self.t_max)
-            self._last_restart = step
 
         return lrs
 
