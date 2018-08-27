@@ -8,11 +8,11 @@ from allennlp.predictors import Predictor
 
 class TestDialogQAPredictor(AllenNlpTestCase):
     def test_uses_named_inputs(self):
-        inputs = {
-                "": [],
-                "": [],
-                "question": ["When was the first meeting?", "How many people attended it?", "Was the meeting successful?"],
-                "passage": "One time I was writing a unit test, and it succeeded on the first attempt."
+        inputs = { "paragraphs":[{
+                "qas": [{"followup": "y", "yesno": "x", "question":"When was the first meeting?", "answers":[{"answer_start":0, "text": "One time"}], "id": "CHAR_q#0"}, 
+                        {"followup": "n", "yesno": "x", "question":"What were you doing?", "answers":[{"answer_start":15, "text": "writing a"}], "id": "CHAR_q#1"}, 
+                        {"followup": "m", "yesno": "y", "question":"How often?", "answers":[{"answer_start":4, "text": "time I"}], "id": "CHAR_q#2"}], 
+                "context": "One time I was writing a unit test, and it succeeded on the first attempt."}]
         }
 
         archive = load_archive(self.FIXTURES_ROOT / 'dialog_qa' / 'serialization' / 'model.tar.gz')
@@ -20,30 +20,28 @@ class TestDialogQAPredictor(AllenNlpTestCase):
 
         result = predictor.predict_json(inputs)
 
-        best_span_str = result.get("best_span_str")
-        assert isinstance(best_span_str, str)
-        assert best_span_str != ""
+        best_span_str_list = result.get("best_span_str")
+        for best_span_str in best_span_str_list:
+          assert isinstance(best_span_str, str)
+          assert best_span_str != ""
 
 
     def test_batch_prediction(self):
-        inputs = [
-                {
-                        "question": ["When was the first meeting?", "How many people attended it?", "Was the meeting successful?"],
-                        "passage": "One time I was writing a unit test, and it succeeded on the first attempt."
-                },
-                {
-                        "question": ["When was the first meeting?", "How many people attended it?", "Was the meeting successful?"],
-                        "passage": "One time I was writing a unit test, and it always failed!"
-                }
-        ]
+        inputs = [{ "paragraphs":[{
+                "qas": [{"followup": "y", "yesno": "x", "question":"When was the first meeting?", "answers":[{"answer_start":0, "text": "One time"}], "id": "CHAR_q#0"}, 
+                        {"followup": "n", "yesno": "x", "question":"What were you doing?", "answers":[{"answer_start":15, "text": "writing a "}],"id": "CHAR_q#1"}, 
+                        {"followup": "m", "yesno": "y", "question":"How often?", "answers":[{"answer_start":4, "text": "time I"}],"id": "CHAR_q#2"}], 
+                "context": "One time I was writing a unit test, and it succeeded on the first attempt."}]
+        },
+        { "paragraphs":[{
+                "qas": [{"followup": "y", "yesno": "x", "question":"When was the first meeting?", "answers":[{"answer_start":0, "text": "One time"}], "id": "CHAR_q#0"}, 
+                        {"followup": "n", "yesno": "x", "question":"What were you doing?", "answers":[{"answer_start":15, "text": "writing a"}], "id": "CHAR_q#1"}, 
+                        {"followup": "m", "yesno": "y", "question":"How often?", "answers":[{"answer_start":4, "text": "time I"}], "id": "CHAR_q#2"}], 
+                "context": "One time I was writing a unit test, and it succeeded on the first attempt."}]
+        }]
 
         archive = load_archive(self.FIXTURES_ROOT / 'dialog_qa' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'dialog_qa')
 
         results = predictor.predict_batch_json(inputs)
         assert len(results) == 2
-
-        for result in results:
-            best_span_str = result.get("best_span_str")
-            assert isinstance(best_span_str, str)
-            assert best_span_str != ""
