@@ -716,7 +716,7 @@ class TestAtisWorld(AllenNlpTestCase):
     def test_all_possible_actions(self): # pylint: disable=no-self-use
         world = AtisWorld([("give me all flights from boston to "
                             "philadelphia next week arriving after lunch")],
-                           database_directory=str(self.database_directory))
+                          database_directory=str(self.database_directory))
         possible_actions = world.all_possible_actions()
         assert possible_actions == \
             ['agg -> [agg_func, "(", col_ref, ")"]',
