@@ -6,6 +6,7 @@ import torch
 
 from allennlp.commands.train import train_model_from_file
 from allennlp.common import Params
+from allennlp.common.util import ensure_list
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.data import DataIterator, DatasetReader, Vocabulary
 from allennlp.data.dataset import Batch
@@ -23,7 +24,7 @@ class ModelTestCase(AllenNlpTestCase):
         params = Params.from_file(self.param_file)
 
         reader = DatasetReader.from_params(params['dataset_reader'])
-        instances = reader.read(dataset_file)
+        instances = ensure_list(reader.read(dataset_file))
         # Use parameters for vocabulary if they are present in the config file, so that choices like
         # "non_padded_namespaces", "min_count" etc. can be set if needed.
         if 'vocabulary' in params:
