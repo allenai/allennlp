@@ -19,3 +19,9 @@ class TestBiMPM(ModelTestCase):
 
     def test_batch_predictions_are_consistent(self):
         self.ensure_batch_predictions_are_consistent()
+
+    def test_decode_runs_correctly(self):
+        training_tensors = self.dataset.as_tensor_dict()
+        output_dict = self.model(**training_tensors)
+        decode_output_dict = self.model.decode(output_dict)
+        assert "label" in decode_output_dict
