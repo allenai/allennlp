@@ -122,7 +122,7 @@ def train_model_from_file(parameter_filename: str,
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we make our output more friendly to saved model files.  We just pass this
         along to :func:`train_model`.
-    recover : ``bool`, optional (default=False)
+    recover : ``bool``, optional (default=False)
         If ``True``, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
         of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
