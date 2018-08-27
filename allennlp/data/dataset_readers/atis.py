@@ -82,7 +82,9 @@ class AtisDatasetReader(DatasetReader):
                     if not current_interaction['utterance'] or not current_interaction['sql']:
                         continue
                     utterances.append(current_interaction['utterance'])
-                    instance = self.text_to_instance(utterances, current_interaction['sql'])
+                    queries = [query for query in current_interaction['sql'].split('\n') if query]
+                    query = min(queries, key=len)
+                    instance = self.text_to_instance(utterances, query) 
                     if not instance:
                         continue
                     yield instance

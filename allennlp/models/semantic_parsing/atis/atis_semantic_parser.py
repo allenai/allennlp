@@ -309,10 +309,10 @@ class AtisSemanticParser(Model):
         try:
             self._cursor.execute(predicted)
             predicted_rows = self._cursor.fetchall()
-            # self._has_logical_form(1.0)
+            self._has_logical_form(1.0)
         except sqlite3.OperationalError:
             print("Operation error when executing predicted")
-            # self._has_logical_form(0.0)
+            self._has_logical_form(0.0)
             return 0
         
         try:
@@ -585,8 +585,8 @@ class AtisSemanticParser(Model):
                         self._action_sequence_accuracy(sequence_in_targets)
 
                         targets_list = [target.item() for target in targets[0]]
-                        # similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
-                        # self._action_similarity(similarity.ratio())
+                        similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
+                        self._action_similarity(similarity.ratio())
 
                         action_strings = [action_mapping[(i, action_index)]
                                           for action_index in best_action_indices]

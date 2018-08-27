@@ -32,6 +32,7 @@
     "decoder_beam_search": {
       "beam_size": 10
     },
+    "training_beam_size": 5,
     "max_decoding_steps": 200,
     "attention": {"type": "dot_product"},
     "dropout": 0.5,
@@ -39,7 +40,7 @@
   },
   "iterator": {
     "type": "basic",
-    "batch_size" : 16
+    "batch_size" : 2
   },
   "trainer": {
     "num_epochs": 20,
