@@ -40,8 +40,8 @@ cffi==1.11.2
 # aws commandline tools for running on Docker remotely.
 awscli>=1.11.91
 
-# Accessing files from S3 directly.
-boto3
+# Accessing files from S3 directly. Pin to 1.7.80 to avoid https://github.com/spulec/moto/issues/1793
+boto3==1.7.80
 
 # REST interface for models
 flask==0.12.3
