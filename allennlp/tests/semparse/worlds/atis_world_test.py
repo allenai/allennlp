@@ -1,5 +1,7 @@
+# pylint: disable=too-many-lines
 import json
 
+from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.atis_world import AtisWorld
 
@@ -8,30 +10,46 @@ class TestAtisWorld(AllenNlpTestCase):
         super().setUp()
         test_filename = self.FIXTURES_ROOT / "data" / "atis" / "sample.json"
         self.data = open(test_filename).readlines()
+        self.database_directory = self.FIXTURES_ROOT / "data" / "atis" / "atis.db"
 
     def test_atis_global_actions(self): # pylint: disable=no-self-use
-        world = AtisWorld([])
+        world = AtisWorld(utterances=[],
+                          database_directory=str(self.database_directory))
         valid_actions = world.valid_actions
-
         assert set(valid_actions.keys()) == {'agg',
                                              'agg_func',
                                              'agg_results',
+                                             'aircraft_basic_type_string',
+                                             'aircraft_manufacturer_string',
+                                             'airline_airline_code_string',
+                                             'airline_airline_name_string',
+                                             'airport_airport_code_string',
                                              'biexpr',
                                              'binaryop',
                                              'boolean',
+                                             'city_city_name_string',
+                                             'city_state_code_string',
+                                             'class_of_service_booking_class_string',
                                              'col_ref',
                                              'col_refs',
                                              'condition',
                                              'conditions',
                                              'conj',
+                                             'days_day_name_string',
                                              'distinct',
+                                             'fare_basis_class_type_string',
+                                             'fare_basis_fare_basis_code_string',
+                                             'fare_round_trip_required_string',
+                                             'flight_airline_code_string',
+                                             'ground_service_transport_type_string',
                                              'in_clause',
                                              'number',
                                              'pos_value',
                                              'query',
+                                             'restriction_restriction_code_string',
                                              'select_results',
+                                             'state_state_name_string',
                                              'statement',
-                                             'string',
                                              'table_name',
                                              'table_refs',
                                              'ternaryexpr',
@@ -72,10 +90,38 @@ class TestAtisWorld(AllenNlpTestCase):
                  'condition -> [ternaryexpr]'}
         assert set(valid_actions['in_clause']) == \
                 {'in_clause -> [col_ref, "IN", query]'}
+        print(set(valid_actions['biexpr']))
         assert set(valid_actions['biexpr']) == \
-                {'biexpr -> [col_ref, "LIKE", string]',
-                 'biexpr -> [col_ref, binaryop, value]',
-                 'biexpr -> [value, binaryop, value]'}
+               {'biexpr -> ["aircraft", ".", "basic_type", binaryop, '
+                'aircraft_basic_type_string]',
+                'biexpr -> ["aircraft", ".", "manufacturer", binaryop, '
+                'aircraft_manufacturer_string]',
+                'biexpr -> ["airline", ".", "airline_code", binaryop, '
+                'airline_airline_code_string]',
+                'biexpr -> ["airline", ".", "airline_name", binaryop, '
+                'airline_airline_name_string]',
+                'biexpr -> ["airport", ".", "airport_code", binaryop, '
+                'airport_airport_code_string]',
+                'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
+                'biexpr -> ["city", ".", "state_code", binaryop, city_state_code_string]',
+                'biexpr -> ["class_of_service", ".", "booking_class", binaryop, '
+                'class_of_service_booking_class_string]',
+                'biexpr -> ["days", ".", "day_name", binaryop, days_day_name_string]',
+                'biexpr -> ["fare", ".", "round_trip_required", binaryop, '
+                'fare_round_trip_required_string]',
+                'biexpr -> ["fare_basis", ".", "class_type", binaryop, '
+                'fare_basis_class_type_string]',
+                'biexpr -> ["fare_basis", ".", "fare_basis_code", binaryop, '
+                'fare_basis_fare_basis_code_string]',
+                'biexpr -> ["flight", ".", "airline_code", binaryop, '
+                'flight_airline_code_string]',
+                'biexpr -> ["ground_service", ".", "transport_type", binaryop, '
+                'ground_service_transport_type_string]',
+                'biexpr -> ["restriction", ".", "restriction_code", binaryop, '
+                'restriction_restriction_code_string]',
+                'biexpr -> ["state", ".", "state_name", binaryop, state_state_name_string]',
+                'biexpr -> [col_ref, binaryop, value]',
+                'biexpr -> [value, binaryop, value]'}
         assert set(valid_actions['binaryop']) == \
                 {'binaryop -> ["*"]',
                  'binaryop -> ["+"]',
@@ -100,8 +146,7 @@ class TestAtisWorld(AllenNlpTestCase):
                  'pos_value -> [agg_results]',
                  'pos_value -> [boolean]',
                  'pos_value -> [col_ref]',
-                 'pos_value -> [number]',
-                 'pos_value -> [string]'}
+                 'pos_value -> [number]'}
         assert set(valid_actions['agg_results']) == \
                 {('agg_results -> ["(", "SELECT", distinct, agg, "FROM", table_name, '
                   'where_clause, ")"]'),
@@ -115,7 +160,6 @@ class TestAtisWorld(AllenNlpTestCase):
         assert set(valid_actions['number']) == \
                 {'number -> ["0"]',
                  'number -> ["1"]'}
-        assert set(valid_actions['string']) == set()
         assert set(valid_actions['col_ref']) == \
                 {'col_ref -> ["*"]',
                  'col_ref -> ["aircraft", ".", "aircraft_code"]',
@@ -250,20 +294,18 @@ class TestAtisWorld(AllenNlpTestCase):
 
     def test_atis_local_actions(self): # pylint: disable=no-self-use
         # Check if the triggers activate correcty
-        world = AtisWorld(["show me the flights from denver at 12 o'clock"])
+        world = AtisWorld(["show me the flights from denver at 12 o'clock"],
+                          database_directory=str(self.database_directory))
+
         assert set(world.valid_actions['number']) == \
             {'number -> ["0"]',
              'number -> ["1"]',
              'number -> ["1200"]',
              'number -> ["2400"]'}
 
-        assert set(world.valid_actions['string']) == \
-                {'string -> ["\'DENVER\'"]',
-                 'string -> ["\'DDEN\'"]',
-                 'string -> ["\'AT\'"]'}
-
         world = AtisWorld(["show me the flights from denver at 12 o'clock",
-                           "show me the delta or united flights in afternoon"])
+                           "show me the delta or united flights in afternoon"],
+                          database_directory=str(self.database_directory))
 
         assert set(world.valid_actions['number']) == \
                 {'number -> ["0"]',
@@ -272,18 +314,11 @@ class TestAtisWorld(AllenNlpTestCase):
                  'number -> ["1200"]',
                  'number -> ["2400"]'}
 
-        assert set(world.valid_actions['string']) == \
-                {'string -> ["\'DENVER\'"]',
-                 'string -> ["\'DDEN\'"]',
-                 'string -> ["\'AT\'"]',
-                 'string -> ["\'DL\'"]',
-                 'string -> ["\'UA\'"]',
-                 'string -> ["\'IN\'"]'}
-
         world = AtisWorld(["i would like one coach reservation for \
                           may ninth from pittsburgh to atlanta leaving \
                           pittsburgh before 10 o'clock in morning 1991 \
-                          august twenty sixth"])
+                          august twenty sixth"],
+                          database_directory=str(self.database_directory))
 
         assert set(world.valid_actions['number']) == \
                 {'number -> ["0"]',
@@ -298,21 +333,10 @@ class TestAtisWorld(AllenNlpTestCase):
                  'number -> ["1200"]',
                  'number -> ["1000"]'}
 
-        assert set(world.valid_actions['string']) == \
-                {'string -> ["\'COACH\'"]',
-                 'string -> ["\'PITTSBURGH\'"]',
-                 'string -> ["\'PIT\'"]',
-                 'string -> ["\'PPIT\'"]',
-                 'string -> ["\'ATLANTA\'"]',
-                 'string -> ["\'ATL\'"]',
-                 'string -> ["\'MATL\'"]',
-                 'string -> ["\'IN\'"]',
-                 'string -> ["\'MONDAY\'"]'}
-
-
     def test_atis_simple_action_sequence(self): # pylint: disable=no-self-use
         world = AtisWorld([("give me all flights from boston to "
-                            "philadelphia next week arriving after lunch")])
+                            "philadelphia next week arriving after lunch")],
+                          database_directory=str(self.database_directory))
         action_sequence = world.get_action_sequence(("(SELECT DISTINCT city . city_code , city . city_name "
                                                      "FROM city WHERE ( city.city_name = 'BOSTON' ) );"))
         assert action_sequence == ['statement -> [query, ";"]',
@@ -321,12 +345,9 @@ class TestAtisWorld(AllenNlpTestCase):
                                    'where_clause -> ["WHERE", "(", conditions, ")"]',
                                    'conditions -> [condition]',
                                    'condition -> [biexpr]',
-                                   'biexpr -> [col_ref, binaryop, value]',
-                                   'value -> [pos_value]',
-                                   'pos_value -> [string]',
-                                   'string -> ["\'BOSTON\'"]',
+                                   'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
+                                   'city_city_name_string -> ["\'BOSTON\'"]',
                                    'binaryop -> ["="]',
-                                   'col_ref -> ["city", ".", "city_name"]',
                                    'table_refs -> [table_name]',
                                    'table_name -> ["city"]',
                                    'select_results -> [col_refs]',
@@ -335,13 +356,11 @@ class TestAtisWorld(AllenNlpTestCase):
                                    'col_ref -> ["city", ".", "city_name"]',
                                    'col_ref -> ["city", ".", "city_code"]',
                                    'distinct -> ["DISTINCT"]']
-
         action_sequence = world.get_action_sequence(("( SELECT airport_service . airport_code "
                                                      "FROM airport_service "
                                                      "WHERE airport_service . city_code IN ( "
                                                      "SELECT city . city_code FROM city "
                                                      "WHERE city.city_name = 'BOSTON' ) ) ;"))
-
         assert action_sequence == ['statement -> [query, ";"]',
                                    'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
                                    'where_clause, ")"]',
@@ -354,12 +373,9 @@ class TestAtisWorld(AllenNlpTestCase):
                                    'where_clause -> ["WHERE", conditions]',
                                    'conditions -> [condition]',
                                    'condition -> [biexpr]',
-                                   'biexpr -> [col_ref, binaryop, value]',
-                                   'value -> [pos_value]',
-                                   'pos_value -> [string]',
-                                   'string -> ["\'BOSTON\'"]',
+                                   'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
+                                   'city_city_name_string -> ["\'BOSTON\'"]',
                                    'binaryop -> ["="]',
-                                   'col_ref -> ["city", ".", "city_name"]',
                                    'table_refs -> [table_name]',
                                    'table_name -> ["city"]',
                                    'select_results -> [col_refs]',
@@ -373,58 +389,54 @@ class TestAtisWorld(AllenNlpTestCase):
                                    'col_refs -> [col_ref]',
                                    'col_ref -> ["airport_service", ".", "airport_code"]',
                                    'distinct -> [""]']
-
         action_sequence = world.get_action_sequence(("( SELECT airport_service . airport_code "
                                                      "FROM airport_service WHERE airport_service . city_code IN "
                                                      "( SELECT city . city_code FROM city "
                                                      "WHERE city.city_name = 'BOSTON' ) AND 1 = 1) ;"))
-
         assert action_sequence == \
-                ['statement -> [query, ";"]',
-                 'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
-                 'where_clause, ")"]',
-                 'where_clause -> ["WHERE", conditions]',
-                 'conditions -> [condition, conj, conditions]',
-                 'conditions -> [condition]',
-                 'condition -> [biexpr]',
-                 'biexpr -> [value, binaryop, value]',
-                 'value -> [pos_value]',
-                 'pos_value -> [number]',
-                 'number -> ["1"]',
-                 'binaryop -> ["="]',
-                 'value -> [pos_value]',
-                 'pos_value -> [number]',
-                 'number -> ["1"]',
-                 'conj -> ["AND"]',
-                 'condition -> [in_clause]',
-                 'in_clause -> [col_ref, "IN", query]',
-                 'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
-                 'where_clause, ")"]',
-                 'where_clause -> ["WHERE", conditions]',
-                 'conditions -> [condition]',
-                 'condition -> [biexpr]',
-                 'biexpr -> [col_ref, binaryop, value]',
-                 'value -> [pos_value]',
-                 'pos_value -> [string]',
-                 'string -> ["\'BOSTON\'"]',
-                 'binaryop -> ["="]',
-                 'col_ref -> ["city", ".", "city_name"]',
-                 'table_refs -> [table_name]',
-                 'table_name -> ["city"]',
-                 'select_results -> [col_refs]',
-                 'col_refs -> [col_ref]',
-                 'col_ref -> ["city", ".", "city_code"]',
-                 'distinct -> [""]',
-                 'col_ref -> ["airport_service", ".", "city_code"]',
-                 'table_refs -> [table_name]',
-                 'table_name -> ["airport_service"]',
-                 'select_results -> [col_refs]',
-                 'col_refs -> [col_ref]',
-                 'col_ref -> ["airport_service", ".", "airport_code"]',
-                 'distinct -> [""]']
-
+               ['statement -> [query, ";"]',
+                'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                'where_clause, ")"]',
+                'where_clause -> ["WHERE", conditions]',
+                'conditions -> [condition, conj, conditions]',
+                'conditions -> [condition]',
+                'condition -> [biexpr]',
+                'biexpr -> [value, binaryop, value]',
+                'value -> [pos_value]',
+                'pos_value -> [number]',
+                'number -> ["1"]',
+                'binaryop -> ["="]',
+                'value -> [pos_value]',
+                'pos_value -> [number]',
+                'number -> ["1"]',
+                'conj -> ["AND"]',
+                'condition -> [in_clause]',
+                'in_clause -> [col_ref, "IN", query]',
+                'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                'where_clause, ")"]',
+                'where_clause -> ["WHERE", conditions]',
+                'conditions -> [condition]',
+                'condition -> [biexpr]',
+                'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
+                'city_city_name_string -> ["\'BOSTON\'"]',
+                'binaryop -> ["="]',
+                'table_refs -> [table_name]',
+                'table_name -> ["city"]',
+                'select_results -> [col_refs]',
+                'col_refs -> [col_ref]',
+                'col_ref -> ["city", ".", "city_code"]',
+                'distinct -> [""]',
+                'col_ref -> ["airport_service", ".", "city_code"]',
+                'table_refs -> [table_name]',
+                'table_name -> ["airport_service"]',
+                'select_results -> [col_refs]',
+                'col_refs -> [col_ref]',
+                'col_ref -> ["airport_service", ".", "airport_code"]',
+                'distinct -> [""]']
         world = AtisWorld([("give me all flights from boston to "
-                            "philadelphia next week arriving after lunch")])
+                            "philadelphia next week arriving after lunch")],
+                          database_directory=str(self.database_directory))
+
         action_sequence = world.get_action_sequence(("( SELECT DISTINCT flight.flight_id "
                                                      "FROM flight WHERE "
                                                      "( flight . from_airport IN "
@@ -433,7 +445,6 @@ class TestAtisWorld(AllenNlpTestCase):
                                                      "( SELECT city . city_code "
                                                      "FROM city "
                                                      "WHERE city.city_name = 'BOSTON' )))) ;"))
-
         assert action_sequence == \
             ['statement -> [query, ";"]',
              'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
@@ -453,12 +464,9 @@ class TestAtisWorld(AllenNlpTestCase):
              'where_clause -> ["WHERE", conditions]',
              'conditions -> [condition]',
              'condition -> [biexpr]',
-             'biexpr -> [col_ref, binaryop, value]',
-             'value -> [pos_value]',
-             'pos_value -> [string]',
-             'string -> ["\'BOSTON\'"]',
+             'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
+             'city_city_name_string -> ["\'BOSTON\'"]',
              'binaryop -> ["="]',
-             'col_ref -> ["city", ".", "city_name"]',
              'table_refs -> [table_name]',
              'table_name -> ["city"]',
              'select_results -> [col_refs]',
@@ -482,7 +490,8 @@ class TestAtisWorld(AllenNlpTestCase):
 
     def test_atis_long_action_sequence(self): # pylint: disable=no-self-use
         world = AtisWorld([("what is the earliest flight in morning "
-                            "1993 june fourth from boston to pittsburgh")])
+                            "1993 june fourth from boston to pittsburgh")],
+                          database_directory=str(self.database_directory))
         action_sequence = world.get_action_sequence("( SELECT DISTINCT flight.flight_id "
                                                     "FROM flight "
                                                     "WHERE ( flight.departure_time = ( "
@@ -515,6 +524,7 @@ class TestAtisWorld(AllenNlpTestCase):
                                                     "SELECT city . city_code "
                                                     "FROM city "
                                                     "WHERE city.city_name = 'PITTSBURGH' )) ) ) )   ) ;")
+
         assert action_sequence == \
             ['statement -> [query, ";"]',
              'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
@@ -539,12 +549,9 @@ class TestAtisWorld(AllenNlpTestCase):
              'where_clause -> ["WHERE", conditions]',
              'conditions -> [condition]',
              'condition -> [biexpr]',
-             'biexpr -> [col_ref, binaryop, value]',
-             'value -> [pos_value]',
-             'pos_value -> [string]',
-             'string -> ["\'PITTSBURGH\'"]',
+             'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
+             'city_city_name_string -> ["\'PITTSBURGH\'"]',
              'binaryop -> ["="]',
-             'col_ref -> ["city", ".", "city_name"]',
              'table_refs -> [table_name]',
              'table_name -> ["city"]',
              'select_results -> [col_refs]',
@@ -573,12 +580,9 @@ class TestAtisWorld(AllenNlpTestCase):
              'where_clause -> ["WHERE", conditions]',
              'conditions -> [condition]',
              'condition -> [biexpr]',
-             'biexpr -> [col_ref, binaryop, value]',
-             'value -> [pos_value]',
-             'pos_value -> [string]',
-             'string -> ["\'BOSTON\'"]',
+             'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
+             'city_city_name_string -> ["\'BOSTON\'"]',
              'binaryop -> ["="]',
-             'col_ref -> ["city", ".", "city_name"]',
              'table_refs -> [table_name]',
              'table_name -> ["city"]',
              'select_results -> [col_refs]',
@@ -628,12 +632,9 @@ class TestAtisWorld(AllenNlpTestCase):
              'where_clause -> ["WHERE", conditions]',
              'conditions -> [condition]',
              'condition -> [biexpr]',
-             'biexpr -> [col_ref, binaryop, value]',
-             'value -> [pos_value]',
-             'pos_value -> [string]',
-             'string -> ["\'PITTSBURGH\'"]',
+             'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
+             'city_city_name_string -> ["\'PITTSBURGH\'"]',
              'binaryop -> ["="]',
-             'col_ref -> ["city", ".", "city_name"]',
              'table_refs -> [table_name]',
              'table_name -> ["city"]',
              'select_results -> [col_refs]',
@@ -662,12 +663,9 @@ class TestAtisWorld(AllenNlpTestCase):
              'where_clause -> ["WHERE", conditions]',
              'conditions -> [condition]',
              'condition -> [biexpr]',
-             'biexpr -> [col_ref, binaryop, value]',
-             'value -> [pos_value]',
-             'pos_value -> [string]',
-             'string -> ["\'BOSTON\'"]',
+             'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
+             'city_city_name_string -> ["\'BOSTON\'"]',
              'binaryop -> ["="]',
-             'col_ref -> ["city", ".", "city_name"]',
              'table_refs -> [table_name]',
              'table_name -> ["city"]',
              'select_results -> [col_refs]',
@@ -706,20 +704,20 @@ class TestAtisWorld(AllenNlpTestCase):
              'col_ref -> ["flight", ".", "flight_id"]',
              'distinct -> ["DISTINCT"]']
 
-
     def test_atis_from_json(self):
         line = json.loads(self.data[0])
         for utterance_idx in range(len(line['interaction'])):
             world = AtisWorld([interaction['utterance'] for
-                               interaction in line['interaction'][:utterance_idx+1]])
+                               interaction in line['interaction'][:utterance_idx+1]],
+                              database_directory=str(self.database_directory))
             action_sequence = world.get_action_sequence(line['interaction'][utterance_idx]['sql'])
             assert action_sequence is not None
 
     def test_all_possible_actions(self): # pylint: disable=no-self-use
         world = AtisWorld([("give me all flights from boston to "
-                            "philadelphia next week arriving after lunch")])
+                            "philadelphia next week arriving after lunch")],
+                          database_directory=str(self.database_directory))
         possible_actions = world.all_possible_actions()
-
         assert possible_actions == \
             ['agg -> [agg_func, "(", col_ref, ")"]',
              'agg_func -> ["COUNT"]',
@@ -728,7 +726,223 @@ class TestAtisWorld(AllenNlpTestCase):
              'agg_results -> ["(", "SELECT", distinct, agg, "FROM", table_name, '
              'where_clause, ")"]',
              'agg_results -> ["SELECT", distinct, agg, "FROM", table_name, where_clause]',
-             'biexpr -> [col_ref, "LIKE", string]',
+             'aircraft_basic_type_string -> ["\'\'"]',
+             'aircraft_basic_type_string -> ["\'100\'"]',
+             'aircraft_basic_type_string -> ["\'146\'"]',
+             'aircraft_basic_type_string -> ["\'1900\'"]',
+             'aircraft_basic_type_string -> ["\'228\'"]',
+             'aircraft_basic_type_string -> ["\'360\'"]',
+             'aircraft_basic_type_string -> ["\'727\'"]',
+             'aircraft_basic_type_string -> ["\'737\'"]',
+             'aircraft_basic_type_string -> ["\'747\'"]',
+             'aircraft_basic_type_string -> ["\'757\'"]',
+             'aircraft_basic_type_string -> ["\'767\'"]',
+             'aircraft_basic_type_string -> ["\'A300\'"]',
+             'aircraft_basic_type_string -> ["\'A310\'"]',
+             'aircraft_basic_type_string -> ["\'A320\'"]',
+             'aircraft_basic_type_string -> ["\'ATP\'"]',
+             'aircraft_basic_type_string -> ["\'ATR72\'"]',
+             'aircraft_basic_type_string -> ["\'BRASILIA\'"]',
+             'aircraft_basic_type_string -> ["\'C99\'"]',
+             'aircraft_basic_type_string -> ["\'DC10\'"]',
+             'aircraft_basic_type_string -> ["\'DC8\'"]',
+             'aircraft_basic_type_string -> ["\'DC9\'"]',
+             'aircraft_basic_type_string -> ["\'DHC7\'"]',
+             'aircraft_basic_type_string -> ["\'DHC8\'"]',
+             'aircraft_basic_type_string -> ["\'F27\'"]',
+             'aircraft_basic_type_string -> ["\'F28\'"]',
+             'aircraft_basic_type_string -> ["\'JETSTREAM\'"]',
+             'aircraft_basic_type_string -> ["\'L1011\'"]',
+             'aircraft_basic_type_string -> ["\'MD11\'"]',
+             'aircraft_basic_type_string -> ["\'MD80\'"]',
+             'aircraft_basic_type_string -> ["\'METRO\'"]',
+             'aircraft_basic_type_string -> ["\'SF340\'"]',
+             'aircraft_manufacturer_string -> ["\'AEROSPATIALE/AERITALIA\'"]',
+             'aircraft_manufacturer_string -> ["\'AIRBUS INDUSTRIE\'"]',
+             'aircraft_manufacturer_string -> ["\'BEECHCRAFT\'"]',
+             'aircraft_manufacturer_string -> ["\'BOEING CANADA\'"]',
+             'aircraft_manufacturer_string -> ["\'BOEING\'"]',
+             'aircraft_manufacturer_string -> ["\'BRITISH AEROSPACE\'"]',
+             'aircraft_manufacturer_string -> ["\'DORNIER\'"]',
+             'aircraft_manufacturer_string -> ["\'EMBRAER\'"]',
+             'aircraft_manufacturer_string -> ["\'FAIRCHILD\'"]',
+             'aircraft_manufacturer_string -> ["\'FOKKER\'"]',
+             'aircraft_manufacturer_string -> ["\'LOCKHEED\'"]',
+             'aircraft_manufacturer_string -> ["\'MCDONNELL DOUGLAS\'"]',
+             'aircraft_manufacturer_string -> ["\'SAAB\'"]',
+             'aircraft_manufacturer_string -> ["\'SHORTS\'"]',
+             'airline_airline_code_string -> ["\'2V\'"]',
+             'airline_airline_code_string -> ["\'3J\'"]',
+             'airline_airline_code_string -> ["\'7V\'"]',
+             'airline_airline_code_string -> ["\'9E\'"]',
+             'airline_airline_code_string -> ["\'9L\'"]',
+             'airline_airline_code_string -> ["\'9N\'"]',
+             'airline_airline_code_string -> ["\'9X\'"]',
+             'airline_airline_code_string -> ["\'AA\'"]',
+             'airline_airline_code_string -> ["\'AC\'"]',
+             'airline_airline_code_string -> ["\'AR\'"]',
+             'airline_airline_code_string -> ["\'AS\'"]',
+             'airline_airline_code_string -> ["\'AT\'"]',
+             'airline_airline_code_string -> ["\'BA\'"]',
+             'airline_airline_code_string -> ["\'BE\'"]',
+             'airline_airline_code_string -> ["\'CO\'"]',
+             'airline_airline_code_string -> ["\'CP\'"]',
+             'airline_airline_code_string -> ["\'DH\'"]',
+             'airline_airline_code_string -> ["\'DL\'"]',
+             'airline_airline_code_string -> ["\'EV\'"]',
+             'airline_airline_code_string -> ["\'FF\'"]',
+             'airline_airline_code_string -> ["\'GX\'"]',
+             'airline_airline_code_string -> ["\'HP\'"]',
+             'airline_airline_code_string -> ["\'HQ\'"]',
+             'airline_airline_code_string -> ["\'KW\'"]',
+             'airline_airline_code_string -> ["\'LH\'"]',
+             'airline_airline_code_string -> ["\'MG\'"]',
+             'airline_airline_code_string -> ["\'NW\'"]',
+             'airline_airline_code_string -> ["\'NX\'"]',
+             'airline_airline_code_string -> ["\'OE\'"]',
+             'airline_airline_code_string -> ["\'OH\'"]',
+             'airline_airline_code_string -> ["\'OK\'"]',
+             'airline_airline_code_string -> ["\'OO\'"]',
+             'airline_airline_code_string -> ["\'QD\'"]',
+             'airline_airline_code_string -> ["\'RP\'"]',
+             'airline_airline_code_string -> ["\'RZ\'"]',
+             'airline_airline_code_string -> ["\'SN\'"]',
+             'airline_airline_code_string -> ["\'SX\'"]',
+             'airline_airline_code_string -> ["\'TG\'"]',
+             'airline_airline_code_string -> ["\'TW\'"]',
+             'airline_airline_code_string -> ["\'TZ\'"]',
+             'airline_airline_code_string -> ["\'UA\'"]',
+             'airline_airline_code_string -> ["\'US\'"]',
+             'airline_airline_code_string -> ["\'WN\'"]',
+             'airline_airline_code_string -> ["\'XJ\'"]',
+             'airline_airline_code_string -> ["\'YX\'"]',
+             'airline_airline_code_string -> ["\'ZW\'"]',
+             'airline_airline_name_string -> ["\'AEROLINEAS ARGENTINAS\'"]',
+             'airline_airline_name_string -> ["\'AIR ALLIANCE\'"]',
+             'airline_airline_name_string -> ["\'AIR CANADA\'"]',
+             'airline_airline_name_string -> ["\'AIR ONTARIO\'"]',
+             'airline_airline_name_string -> ["\'AIR WISCONSIN\'"]',
+             'airline_airline_name_string -> ["\'ALASKA AIRLINES\'"]',
+             'airline_airline_name_string -> ["\'ALPHA AIR\'"]',
+             'airline_airline_name_string -> ["\'AMERICA WEST AIRLINES.\'"]',
+             'airline_airline_name_string -> ["\'AMERICAN AIRLINES.\'"]',
+             'airline_airline_name_string -> ["\'AMERICAN TRANS AIR\'"]',
+             'airline_airline_name_string -> ["\'ATLANTIC COAST AIRLINES\'"]',
+             'airline_airline_name_string -> ["\'ATLANTIC SOUTHEAST AIRLINES.\'"]',
+             'airline_airline_name_string -> ["\'BRANIFF INTERNATIONAL AIRLINES.\'"]',
+             'airline_airline_name_string -> ["\'BRITISH AIRWAYS\'"]',
+             'airline_airline_name_string -> ["\'BUSINESS EXPRESS\'"]',
+             'airline_airline_name_string -> ["\'CANADIAN AIRLINES INTERNATIONAL LTD.\'"]',
+             'airline_airline_name_string -> ["\'CARNIVAL AIR LINES\'"]',
+             'airline_airline_name_string -> ["\'CHRISTMAN AIR SYSTEM\'"]',
+             'airline_airline_name_string -> ["\'COLGAN AIR\'"]',
+             'airline_airline_name_string -> ["\'COMAIR.\'"]',
+             'airline_airline_name_string -> ["\'CONTINENTAL AIRLINES\'"]',
+             'airline_airline_name_string -> ["\'CZECHOSLOVAK AIRLINES\'"]',
+             'airline_airline_name_string -> ["\'DELTA AIR LINES.\'"]',
+             'airline_airline_name_string -> ["\'EXPRESS AIRLINES I.\'"]',
+             'airline_airline_name_string -> ["\'GRAND AIRWAYS.\'"]',
+             'airline_airline_name_string -> ["\'LUFTHANSA GERMAN AIRLINES\'"]',
+             'airline_airline_name_string -> ["\'MESABA AVIATION\'"]',
+             'airline_airline_name_string -> ["\'MGM GRAND AIR.\'"]',
+             'airline_airline_name_string -> ["\'MIDWEST EXPRESS AIRLINES.\'"]',
+             'airline_airline_name_string -> ["\'NATIONAIR\'"]',
+             'airline_airline_name_string -> ["\'NORTHEAST EXPRESS REGIONAL AIRLINES\'"]',
+             'airline_airline_name_string -> ["\'NORTHWEST AIRLINES.\'"]',
+             'airline_airline_name_string -> ["\'ONTARIO EXPRESS LTD.\'"]',
+             'airline_airline_name_string -> ["\'PRECISION AIRLINES\'"]',
+             'airline_airline_name_string -> ["\'ROYAL AIR MAROC\'"]',
+             'airline_airline_name_string -> ["\'SABENA BELGIAN WORLD AIRLINES\'"]',
+             'airline_airline_name_string -> ["\'SKY WEST AIRLINES\'"]',
+             'airline_airline_name_string -> ["\'SOUTHWEST AIRLINES\'"]',
+             'airline_airline_name_string -> ["\'THAI AIRWAYS INTERNATIONAL,LTD.\'"]',
+             'airline_airline_name_string -> ["\'TOWER AIR.\'"]',
+             'airline_airline_name_string -> ["\'TRANS STATES AIRLINES.\'"]',
+             'airline_airline_name_string -> ["\'TRANS WORLD AIRLINES.\'"]',
+             'airline_airline_name_string -> ["\'TRANS WORLD EXPRESS.\'"]',
+             'airline_airline_name_string -> ["\'UNITED AIRLINES\'"]',
+             'airline_airline_name_string -> ["\'USAIR\'"]',
+             'airline_airline_name_string -> ["\'WESTAIR AIRLINES\'"]',
+             'airport_airport_code_string -> ["\'ATL\'"]',
+             'airport_airport_code_string -> ["\'BNA\'"]',
+             'airport_airport_code_string -> ["\'BOS\'"]',
+             'airport_airport_code_string -> ["\'BUR\'"]',
+             'airport_airport_code_string -> ["\'BWI\'"]',
+             'airport_airport_code_string -> ["\'CLE\'"]',
+             'airport_airport_code_string -> ["\'CLT\'"]',
+             'airport_airport_code_string -> ["\'CMH\'"]',
+             'airport_airport_code_string -> ["\'CVG\'"]',
+             'airport_airport_code_string -> ["\'DAL\'"]',
+             'airport_airport_code_string -> ["\'DCA\'"]',
+             'airport_airport_code_string -> ["\'DEN\'"]',
+             'airport_airport_code_string -> ["\'DET\'"]',
+             'airport_airport_code_string -> ["\'DFW\'"]',
+             'airport_airport_code_string -> ["\'DTW\'"]',
+             'airport_airport_code_string -> ["\'EWR\'"]',
+             'airport_airport_code_string -> ["\'HOU\'"]',
+             'airport_airport_code_string -> ["\'HPN\'"]',
+             'airport_airport_code_string -> ["\'IAD\'"]',
+             'airport_airport_code_string -> ["\'IAH\'"]',
+             'airport_airport_code_string -> ["\'IND\'"]',
+             'airport_airport_code_string -> ["\'JFK\'"]',
+             'airport_airport_code_string -> ["\'LAS\'"]',
+             'airport_airport_code_string -> ["\'LAX\'"]',
+             'airport_airport_code_string -> ["\'LGA\'"]',
+             'airport_airport_code_string -> ["\'LGB\'"]',
+             'airport_airport_code_string -> ["\'MCI\'"]',
+             'airport_airport_code_string -> ["\'MCO\'"]',
+             'airport_airport_code_string -> ["\'MDW\'"]',
+             'airport_airport_code_string -> ["\'MEM\'"]',
+             'airport_airport_code_string -> ["\'MIA\'"]',
+             'airport_airport_code_string -> ["\'MKE\'"]',
+             'airport_airport_code_string -> ["\'MSP\'"]',
+             'airport_airport_code_string -> ["\'OAK\'"]',
+             'airport_airport_code_string -> ["\'ONT\'"]',
+             'airport_airport_code_string -> ["\'ORD\'"]',
+             'airport_airport_code_string -> ["\'PHL\'"]',
+             'airport_airport_code_string -> ["\'PHX\'"]',
+             'airport_airport_code_string -> ["\'PIE\'"]',
+             'airport_airport_code_string -> ["\'PIT\'"]',
+             'airport_airport_code_string -> ["\'SAN\'"]',
+             'airport_airport_code_string -> ["\'SEA\'"]',
+             'airport_airport_code_string -> ["\'SFO\'"]',
+             'airport_airport_code_string -> ["\'SJC\'"]',
+             'airport_airport_code_string -> ["\'SLC\'"]',
+             'airport_airport_code_string -> ["\'STL\'"]',
+             'airport_airport_code_string -> ["\'TPA\'"]',
+             'airport_airport_code_string -> ["\'YKZ\'"]',
+             'airport_airport_code_string -> ["\'YMX\'"]',
+             'airport_airport_code_string -> ["\'YTZ\'"]',
+             'airport_airport_code_string -> ["\'YUL\'"]',
+             'airport_airport_code_string -> ["\'YYZ\'"]',
+             'biexpr -> ["aircraft", ".", "basic_type", binaryop, '
+             'aircraft_basic_type_string]',
+             'biexpr -> ["aircraft", ".", "manufacturer", binaryop, '
+             'aircraft_manufacturer_string]',
+             'biexpr -> ["airline", ".", "airline_code", binaryop, '
+             'airline_airline_code_string]',
+             'biexpr -> ["airline", ".", "airline_name", binaryop, '
+             'airline_airline_name_string]',
+             'biexpr -> ["airport", ".", "airport_code", binaryop, '
+             'airport_airport_code_string]',
+             'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
+             'biexpr -> ["city", ".", "state_code", binaryop, city_state_code_string]',
+             'biexpr -> ["class_of_service", ".", "booking_class", binaryop, '
+             'class_of_service_booking_class_string]',
+             'biexpr -> ["days", ".", "day_name", binaryop, days_day_name_string]',
+             'biexpr -> ["fare", ".", "round_trip_required", binaryop, '
+             'fare_round_trip_required_string]',
+             'biexpr -> ["fare_basis", ".", "class_type", binaryop, '
+             'fare_basis_class_type_string]',
+             'biexpr -> ["fare_basis", ".", "fare_basis_code", binaryop, '
+             'fare_basis_fare_basis_code_string]',
+             'biexpr -> ["flight", ".", "airline_code", binaryop, '
+             'flight_airline_code_string]',
+             'biexpr -> ["ground_service", ".", "transport_type", binaryop, '
+             'ground_service_transport_type_string]',
+             'biexpr -> ["restriction", ".", "restriction_code", binaryop, '
+             'restriction_restriction_code_string]',
+             'biexpr -> ["state", ".", "state_name", binaryop, state_state_name_string]',
              'biexpr -> [col_ref, binaryop, value]',
              'biexpr -> [value, binaryop, value]',
              'binaryop -> ["*"]',
@@ -743,6 +957,97 @@ class TestAtisWorld(AllenNlpTestCase):
              'binaryop -> ["IS"]',
              'boolean -> ["false"]',
              'boolean -> ["true"]',
+             'city_city_name_string -> ["\'ATLANTA\'"]',
+             'city_city_name_string -> ["\'BALTIMORE\'"]',
+             'city_city_name_string -> ["\'BOSTON\'"]',
+             'city_city_name_string -> ["\'BURBANK\'"]',
+             'city_city_name_string -> ["\'CHARLOTTE\'"]',
+             'city_city_name_string -> ["\'CHICAGO\'"]',
+             'city_city_name_string -> ["\'CINCINNATI\'"]',
+             'city_city_name_string -> ["\'CLEVELAND\'"]',
+             'city_city_name_string -> ["\'COLUMBUS\'"]',
+             'city_city_name_string -> ["\'DALLAS\'"]',
+             'city_city_name_string -> ["\'DENVER\'"]',
+             'city_city_name_string -> ["\'DETROIT\'"]',
+             'city_city_name_string -> ["\'FORT WORTH\'"]',
+             'city_city_name_string -> ["\'HOUSTON\'"]',
+             'city_city_name_string -> ["\'INDIANAPOLIS\'"]',
+             'city_city_name_string -> ["\'KANSAS CITY\'"]',
+             'city_city_name_string -> ["\'LAS VEGAS\'"]',
+             'city_city_name_string -> ["\'LONG BEACH\'"]',
+             'city_city_name_string -> ["\'LOS ANGELES\'"]',
+             'city_city_name_string -> ["\'MEMPHIS\'"]',
+             'city_city_name_string -> ["\'MIAMI\'"]',
+             'city_city_name_string -> ["\'MILWAUKEE\'"]',
+             'city_city_name_string -> ["\'MINNEAPOLIS\'"]',
+             'city_city_name_string -> ["\'MONTREAL\'"]',
+             'city_city_name_string -> ["\'NASHVILLE\'"]',
+             'city_city_name_string -> ["\'NEW YORK\'"]',
+             'city_city_name_string -> ["\'NEWARK\'"]',
+             'city_city_name_string -> ["\'OAKLAND\'"]',
+             'city_city_name_string -> ["\'ONTARIO\'"]',
+             'city_city_name_string -> ["\'ORLANDO\'"]',
+             'city_city_name_string -> ["\'PHILADELPHIA\'"]',
+             'city_city_name_string -> ["\'PHOENIX\'"]',
+             'city_city_name_string -> ["\'PITTSBURGH\'"]',
+             'city_city_name_string -> ["\'SALT LAKE CITY\'"]',
+             'city_city_name_string -> ["\'SAN DIEGO\'"]',
+             'city_city_name_string -> ["\'SAN FRANCISCO\'"]',
+             'city_city_name_string -> ["\'SAN JOSE\'"]',
+             'city_city_name_string -> ["\'SEATTLE\'"]',
+             'city_city_name_string -> ["\'ST. LOUIS\'"]',
+             'city_city_name_string -> ["\'ST. PAUL\'"]',
+             'city_city_name_string -> ["\'ST. PETERSBURG\'"]',
+             'city_city_name_string -> ["\'TACOMA\'"]',
+             'city_city_name_string -> ["\'TAMPA\'"]',
+             'city_city_name_string -> ["\'TORONTO\'"]',
+             'city_city_name_string -> ["\'WASHINGTON\'"]',
+             'city_city_name_string -> ["\'WESTCHESTER COUNTY\'"]',
+             'city_state_code_string -> ["\'AZ\'"]',
+             'city_state_code_string -> ["\'CA\'"]',
+             'city_state_code_string -> ["\'CO\'"]',
+             'city_state_code_string -> ["\'DC\'"]',
+             'city_state_code_string -> ["\'FL\'"]',
+             'city_state_code_string -> ["\'GA\'"]',
+             'city_state_code_string -> ["\'IL\'"]',
+             'city_state_code_string -> ["\'IN\'"]',
+             'city_state_code_string -> ["\'MA\'"]',
+             'city_state_code_string -> ["\'MD\'"]',
+             'city_state_code_string -> ["\'MI\'"]',
+             'city_state_code_string -> ["\'MN\'"]',
+             'city_state_code_string -> ["\'MO\'"]',
+             'city_state_code_string -> ["\'NC\'"]',
+             'city_state_code_string -> ["\'NJ\'"]',
+             'city_state_code_string -> ["\'NV\'"]',
+             'city_state_code_string -> ["\'NY\'"]',
+             'city_state_code_string -> ["\'OH\'"]',
+             'city_state_code_string -> ["\'ON\'"]',
+             'city_state_code_string -> ["\'PA\'"]',
+             'city_state_code_string -> ["\'PQ\'"]',
+             'city_state_code_string -> ["\'TN\'"]',
+             'city_state_code_string -> ["\'TX\'"]',
+             'city_state_code_string -> ["\'UT\'"]',
+             'city_state_code_string -> ["\'WA\'"]',
+             'city_state_code_string -> ["\'WI\'"]',
+             'class_of_service_booking_class_string -> ["\'B\'"]',
+             'class_of_service_booking_class_string -> ["\'BN\'"]',
+             'class_of_service_booking_class_string -> ["\'C\'"]',
+             'class_of_service_booking_class_string -> ["\'CN\'"]',
+             'class_of_service_booking_class_string -> ["\'F\'"]',
+             'class_of_service_booking_class_string -> ["\'FN\'"]',
+             'class_of_service_booking_class_string -> ["\'H\'"]',
+             'class_of_service_booking_class_string -> ["\'J\'"]',
+             'class_of_service_booking_class_string -> ["\'K\'"]',
+             'class_of_service_booking_class_string -> ["\'KN\'"]',
+             'class_of_service_booking_class_string -> ["\'L\'"]',
+             'class_of_service_booking_class_string -> ["\'M\'"]',
+             'class_of_service_booking_class_string -> ["\'P\'"]',
+             'class_of_service_booking_class_string -> ["\'Q\'"]',
+             'class_of_service_booking_class_string -> ["\'S\'"]',
+             'class_of_service_booking_class_string -> ["\'U\'"]',
+             'class_of_service_booking_class_string -> ["\'V\'"]',
+             'class_of_service_booking_class_string -> ["\'Y\'"]',
+             'class_of_service_booking_class_string -> ["\'YN\'"]',
              'col_ref -> ["*"]',
              'col_ref -> ["aircraft", ".", "aircraft_code"]',
              'col_ref -> ["aircraft", ".", "aircraft_description"]',
@@ -864,8 +1169,119 @@ class TestAtisWorld(AllenNlpTestCase):
              'conditions -> [condition]',
              'conj -> ["AND"]',
              'conj -> ["OR"]',
+             'days_day_name_string -> ["\'FRIDAY\'"]',
+             'days_day_name_string -> ["\'MONDAY\'"]',
+             'days_day_name_string -> ["\'SATURDAY\'"]',
+             'days_day_name_string -> ["\'SUNDAY\'"]',
+             'days_day_name_string -> ["\'THURSDAY\'"]',
+             'days_day_name_string -> ["\'TUESDAY\'"]',
+             'days_day_name_string -> ["\'WEDNESDAY\'"]',
              'distinct -> [""]',
              'distinct -> ["DISTINCT"]',
+             'fare_basis_class_type_string -> ["\'BUSINESS\'"]',
+             'fare_basis_class_type_string -> ["\'COACH\'"]',
+             'fare_basis_class_type_string -> ["\'FIRST\'"]',
+             'fare_basis_class_type_string -> ["\'SHUTTLE\'"]',
+             'fare_basis_class_type_string -> ["\'STANDARD\'"]',
+             'fare_basis_class_type_string -> ["\'THRIFT\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'B\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'BH\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'BHW\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'BHX\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'BL\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'BLW\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'BLX\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'BN\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'BOW\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'BOX\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'BW\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'BX\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'C\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'CN\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'F\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'FN\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'H\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'HH\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'HHW\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'HHX\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'HL\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'HLW\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'HLX\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'HOW\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'HOX\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'J\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'K\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'KH\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'KL\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'KN\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'LX\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'M\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'MH\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'ML\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'MOW\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'P\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'Q\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'QH\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'QHW\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'QHX\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'QLW\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'QLX\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'QO\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'QOW\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'QOX\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'QW\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'QX\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'S\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'U\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'V\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'VHW\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'VHX\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'VW\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'VX\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'Y\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'YH\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'YL\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'YN\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'YW\'"]',
+             'fare_basis_fare_basis_code_string -> ["\'YX\'"]',
+             'fare_round_trip_required_string -> ["\'NO\'"]',
+             'fare_round_trip_required_string -> ["\'YES\'"]',
+             'flight_airline_code_string -> ["\'\'"]',
+             'flight_airline_code_string -> ["\'7V\'"]',
+             'flight_airline_code_string -> ["\'9L\'"]',
+             'flight_airline_code_string -> ["\'AA\'"]',
+             'flight_airline_code_string -> ["\'AC\'"]',
+             'flight_airline_code_string -> ["\'AR\'"]',
+             'flight_airline_code_string -> ["\'AS\'"]',
+             'flight_airline_code_string -> ["\'AT\'"]',
+             'flight_airline_code_string -> ["\'BA\'"]',
+             'flight_airline_code_string -> ["\'BE\'"]',
+             'flight_airline_code_string -> ["\'CO\'"]',
+             'flight_airline_code_string -> ["\'CP\'"]',
+             'flight_airline_code_string -> ["\'DL\'"]',
+             'flight_airline_code_string -> ["\'FF\'"]',
+             'flight_airline_code_string -> ["\'HP\'"]',
+             'flight_airline_code_string -> ["\'KW\'"]',
+             'flight_airline_code_string -> ["\'LH\'"]',
+             'flight_airline_code_string -> ["\'MG\'"]',
+             'flight_airline_code_string -> ["\'NW\'"]',
+             'flight_airline_code_string -> ["\'NX\'"]',
+             'flight_airline_code_string -> ["\'OK\'"]',
+             'flight_airline_code_string -> ["\'QD\'"]',
+             'flight_airline_code_string -> ["\'SN\'"]',
+             'flight_airline_code_string -> ["\'SX\'"]',
+             'flight_airline_code_string -> ["\'TG\'"]',
+             'flight_airline_code_string -> ["\'TW\'"]',
+             'flight_airline_code_string -> ["\'TZ\'"]',
+             'flight_airline_code_string -> ["\'UA\'"]',
+             'flight_airline_code_string -> ["\'US\'"]',
+             'flight_airline_code_string -> ["\'WN\'"]',
+             'flight_airline_code_string -> ["\'YX\'"]',
+             'ground_service_transport_type_string -> ["\'AIR TAXI OPERATION\'"]',
+             'ground_service_transport_type_string -> ["\'LIMOUSINE\'"]',
+             'ground_service_transport_type_string -> ["\'RAPID TRANSIT\'"]',
+             'ground_service_transport_type_string -> ["\'RENTAL CAR\'"]',
+             'ground_service_transport_type_string -> ["\'TAXI\'"]',
              'in_clause -> [col_ref, "IN", query]',
              'number -> ["0"]',
              'number -> ["1"]',
@@ -879,21 +1295,53 @@ class TestAtisWorld(AllenNlpTestCase):
              'pos_value -> [boolean]',
              'pos_value -> [col_ref]',
              'pos_value -> [number]',
-             'pos_value -> [string]',
              'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
              'where_clause, ")"]',
              'query -> ["SELECT", distinct, select_results, "FROM", table_refs, '
              'where_clause]',
+             'restriction_restriction_code_string -> ["\'AP/12\'"]',
+             'restriction_restriction_code_string -> ["\'AP/2\'"]',
+             'restriction_restriction_code_string -> ["\'AP/20\'"]',
+             'restriction_restriction_code_string -> ["\'AP/21\'"]',
+             'restriction_restriction_code_string -> ["\'AP/57\'"]',
+             'restriction_restriction_code_string -> ["\'AP/58\'"]',
+             'restriction_restriction_code_string -> ["\'AP/6\'"]',
+             'restriction_restriction_code_string -> ["\'AP/60\'"]',
+             'restriction_restriction_code_string -> ["\'AP/75\'"]',
+             'restriction_restriction_code_string -> ["\'EX/13\'"]',
+             'restriction_restriction_code_string -> ["\'EX/14\'"]',
+             'restriction_restriction_code_string -> ["\'EX/17\'"]',
+             'restriction_restriction_code_string -> ["\'EX/19\'"]',
+             'restriction_restriction_code_string -> ["\'EX/9\'"]',
              'select_results -> [agg]',
              'select_results -> [col_refs]',
+             'state_state_name_string -> ["\'ARIZONA\'"]',
+             'state_state_name_string -> ["\'CALIFORNIA\'"]',
+             'state_state_name_string -> ["\'COLORADO\'"]',
+             'state_state_name_string -> ["\'DISTRICT OF COLUMBIA\'"]',
+             'state_state_name_string -> ["\'FLORIDA\'"]',
+             'state_state_name_string -> ["\'GEORGIA\'"]',
+             'state_state_name_string -> ["\'ILLINOIS\'"]',
+             'state_state_name_string -> ["\'INDIANA\'"]',
+             'state_state_name_string -> ["\'MARYLAND\'"]',
+             'state_state_name_string -> ["\'MASSACHUSETTS\'"]',
+             'state_state_name_string -> ["\'MICHIGAN\'"]',
+             'state_state_name_string -> ["\'MINNESOTA\'"]',
+             'state_state_name_string -> ["\'MISSOURI\'"]',
+             'state_state_name_string -> ["\'NEVADA\'"]',
+             'state_state_name_string -> ["\'NEW JERSEY\'"]',
+             'state_state_name_string -> ["\'NEW YORK\'"]',
+             'state_state_name_string -> ["\'NORTH CAROLINA\'"]',
+             'state_state_name_string -> ["\'OHIO\'"]',
+             'state_state_name_string -> ["\'ONTARIO\'"]',
+             'state_state_name_string -> ["\'PENNSYLVANIA\'"]',
+             'state_state_name_string -> ["\'QUEBEC\'"]',
+             'state_state_name_string -> ["\'TENNESSEE\'"]',
+             'state_state_name_string -> ["\'TEXAS\'"]',
+             'state_state_name_string -> ["\'UTAH\'"]',
+             'state_state_name_string -> ["\'WASHINGTON\'"]',
+             'state_state_name_string -> ["\'WISCONSIN\'"]',
              'statement -> [query, ";"]',
-             'string -> ["\'BBOS\'"]',
-             'string -> ["\'BOS\'"]',
-             'string -> ["\'BOSTON\'"]',
-             'string -> ["\'LUNCH\'"]',
-             'string -> ["\'PHILADELPHIA\'"]',
-             'string -> ["\'PHL\'"]',
-             'string -> ["\'PPHL\'"]',
              'table_name -> ["aircraft"]',
              'table_name -> ["airline"]',
              'table_name -> ["airport"]',
