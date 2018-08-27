@@ -20,13 +20,22 @@ class AtisWorld():
     utterances: ``List[str]``
         A list of utterances in the interaction, the last element in this list is the
         current utterance that we are interested in.
+    tokenizer: ``Tokenizer``, optional (default=``WordTokenizer()``)
+        We use this tokenizer to tokenize the utterances.
+    database_directory: ``str``, optional
+        We pass the location of the database directory to ``SqlTableContext`` to get the allowed strings in
+        the grammar.
     """
 
     def __init__(self,
                  utterances: List[str],
                  tokenizer: Tokenizer = None,
-                 sql_table_context: SqlTableContext = None) -> None:
-        self.sql_table_context = sql_table_context
+                 database_directory: str = None) -> None:
+        if database_directory:
+            self.sql_table_context = SqlTableContext(ALL_TABLES,
+                                                     TABLES_WITH_STRINGS,
+                                                     database_directory)
+
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]

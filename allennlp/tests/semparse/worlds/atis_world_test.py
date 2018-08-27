@@ -4,19 +4,17 @@ import json
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.atis_world import AtisWorld
-from allennlp.semparse.contexts.sql_table_context import SqlTableContext
 
 class TestAtisWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         test_filename = self.FIXTURES_ROOT / "data" / "atis" / "sample.json"
-        data_directory = self.FIXTURES_ROOT / "data" / "atis" / "atis.db"
-        self.sql_table_context = SqlTableContext(ALL_TABLES, TABLES_WITH_STRINGS, str(data_directory))
         self.data = open(test_filename).readlines()
+        self.database_directory = self.FIXTURES_ROOT / "data" / "atis" / "atis.db"
 
     def test_atis_global_actions(self): # pylint: disable=no-self-use
         world = AtisWorld(utterances=[],
-                          sql_table_context=self.sql_table_context)
+                          database_directory=str(self.database_directory))
         valid_actions = world.valid_actions
         assert set(valid_actions.keys()) == {'agg',
                                              'agg_func',
@@ -297,7 +295,7 @@ class TestAtisWorld(AllenNlpTestCase):
     def test_atis_local_actions(self): # pylint: disable=no-self-use
         # Check if the triggers activate correcty
         world = AtisWorld(["show me the flights from denver at 12 o'clock"],
-                          sql_table_context=self.sql_table_context)
+                          database_directory=str(self.database_directory))
 
         assert set(world.valid_actions['number']) == \
             {'number -> ["0"]',
@@ -307,7 +305,7 @@ class TestAtisWorld(AllenNlpTestCase):
 
         world = AtisWorld(["show me the flights from denver at 12 o'clock",
                            "show me the delta or united flights in afternoon"],
-                          sql_table_context=self.sql_table_context)
+                          database_directory=str(self.database_directory))
 
         assert set(world.valid_actions['number']) == \
                 {'number -> ["0"]',
@@ -320,7 +318,7 @@ class TestAtisWorld(AllenNlpTestCase):
                           may ninth from pittsburgh to atlanta leaving \
                           pittsburgh before 10 o'clock in morning 1991 \
                           august twenty sixth"],
-                          sql_table_context=self.sql_table_context)
+                          database_directory=str(self.database_directory))
 
         assert set(world.valid_actions['number']) == \
                 {'number -> ["0"]',
@@ -338,7 +336,7 @@ class TestAtisWorld(AllenNlpTestCase):
     def test_atis_simple_action_sequence(self): # pylint: disable=no-self-use
         world = AtisWorld([("give me all flights from boston to "
                             "philadelphia next week arriving after lunch")],
-                          sql_table_context=self.sql_table_context)
+                          database_directory=str(self.database_directory))
         action_sequence = world.get_action_sequence(("(SELECT DISTINCT city . city_code , city . city_name "
                                                      "FROM city WHERE ( city.city_name = 'BOSTON' ) );"))
         assert action_sequence == ['statement -> [query, ";"]',
@@ -437,7 +435,7 @@ class TestAtisWorld(AllenNlpTestCase):
                 'distinct -> [""]']
         world = AtisWorld([("give me all flights from boston to "
                             "philadelphia next week arriving after lunch")],
-                          sql_table_context=self.sql_table_context)
+                          database_directory=str(self.database_directory))
 
         action_sequence = world.get_action_sequence(("( SELECT DISTINCT flight.flight_id "
                                                      "FROM flight WHERE "
@@ -493,7 +491,7 @@ class TestAtisWorld(AllenNlpTestCase):
     def test_atis_long_action_sequence(self): # pylint: disable=no-self-use
         world = AtisWorld([("what is the earliest flight in morning "
                             "1993 june fourth from boston to pittsburgh")],
-                          sql_table_context=self.sql_table_context)
+                          database_directory=str(self.database_directory))
         action_sequence = world.get_action_sequence("( SELECT DISTINCT flight.flight_id "
                                                     "FROM flight "
                                                     "WHERE ( flight.departure_time = ( "
@@ -711,14 +709,14 @@ class TestAtisWorld(AllenNlpTestCase):
         for utterance_idx in range(len(line['interaction'])):
             world = AtisWorld([interaction['utterance'] for
                                interaction in line['interaction'][:utterance_idx+1]],
-                              sql_table_context=self.sql_table_context)
+                              database_directory=str(self.database_directory))
             action_sequence = world.get_action_sequence(line['interaction'][utterance_idx]['sql'])
             assert action_sequence is not None
 
     def test_all_possible_actions(self): # pylint: disable=no-self-use
         world = AtisWorld([("give me all flights from boston to "
                             "philadelphia next week arriving after lunch")],
-                          sql_table_context=self.sql_table_context)
+                           database_directory=str(self.database_directory))
         possible_actions = world.all_possible_actions()
         assert possible_actions == \
             ['agg -> [agg_func, "(", col_ref, ")"]',

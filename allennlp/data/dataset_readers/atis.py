@@ -15,8 +15,6 @@ from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
 from allennlp.semparse.worlds.atis_world import AtisWorld
-from allennlp.semparse.contexts.atis_tables import ALL_TABLES, TABLES_WITH_STRINGS
-from allennlp.semparse.contexts.sql_table_context import SqlTableContext
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -73,10 +71,7 @@ class AtisDatasetReader(DatasetReader):
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
-        self.sql_table_context = SqlTableContext(ALL_TABLES,
-                                                 TABLES_WITH_STRINGS,
-                                                 database_directory)
-
+        self._database_directory = database_directory
 
     @overrides
     def _read(self, file_path: str):
@@ -116,7 +111,7 @@ class AtisDatasetReader(DatasetReader):
             return None
 
         world = AtisWorld(utterances=utterances,
-                          sql_table_context=self.sql_table_context)
+                          database_directory=self._database_directory)
 
         if sql_query:
             try:
