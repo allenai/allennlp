@@ -34,17 +34,55 @@ included with AllenNLP. Once you start creating custom models,
 you'll need to make your own script which imports them and then
 calls ``main()``.
 
-.. toctree::
-    allennlp.commands.subcommand
-    allennlp.commands.configure
-    allennlp.commands.evaluate
-    allennlp.commands.make_vocab
-    allennlp.commands.predict
-    allennlp.commands.train
-    allennlp.commands.fine_tune
-    allennlp.commands.elmo
-    allennlp.commands.dry_run
-    allennlp.commands.test_install
+.. automodule:: allennlp.commands.subcommand
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.commands.configure
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.commands.evaluate
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.commands.make_vocab
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.commands.predict
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.commands.train
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.commands.fine_tune
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.commands.elmo
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.commands.dry_run
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.commands.test_install
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. automodule:: allennlp.commands
    :members:
