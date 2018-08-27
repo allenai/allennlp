@@ -23,7 +23,7 @@
     },
     "iterator": {
         "type": "bucket",
-        "batch_size": 10,
+        "batch_size": 8,
         "max_instances_in_memory": 1000,
         "sorting_keys": [
             [
@@ -108,11 +108,9 @@
         },
         "num_epochs": 30,
         "optimizer": {
-            "type": "adam",
-            "betas": [
-                0.9,
-                0.9
-            ]
+            "type": "sgd",
+            "lr": 0.05,
+            "momentum": 0.9
         },
         "patience": 10,
         "validation_metric": "+f1"
