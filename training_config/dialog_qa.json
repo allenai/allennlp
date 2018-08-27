@@ -23,7 +23,7 @@
     },
     "iterator": {
         "type": "bucket",
-        "batch_size": 8,
+        "batch_size": 10,
         "max_instances_in_memory": 1000,
         "sorting_keys": [
             [
@@ -109,7 +109,7 @@
         "num_epochs": 30,
         "optimizer": {
             "type": "sgd",
-            "lr": 0.05,
+            "lr": 0.01,
             "momentum": 0.9
         },
         "patience": 10,
