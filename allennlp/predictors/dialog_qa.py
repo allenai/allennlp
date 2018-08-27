@@ -28,12 +28,12 @@ class DialogQAPredictor(Predictor):
         """
         Expects json that looks like the original quac file
         """
-
-        json_elem = json_dict["paragraphs"][0]
-        paragraph = json_elem['context']
+        paragraph_json = json_dict["paragraphs"][0]
+        paragraph = paragraph_json['context']
         tokenized_paragraph = self._tokenizer.split_words(paragraph)
-        qas = json_elem['qas']
-        metadata = {"instance_id": [qa['id'] for qa in qas]}
+        qas = paragraph_json['qas']
+        metadata = {}
+        metadata["instance_id"] = [qa['id'] for qa in qas]
         question_text_list = [qa["question"].strip().replace("\n", "") for qa in qas]
         answer_texts_list = [[answer['text'] for answer in qa['answers']] for qa in qas]
         metadata["answer_texts_list"] = answer_texts_list

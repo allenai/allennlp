@@ -6,6 +6,7 @@ from typing import Dict, Optional, List, Any
 
 from overrides import overrides
 import torch
+import numpy
 
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
@@ -185,14 +186,27 @@ class BiMpm(Model):
 
         # the final forward layer
         logits = self.classifier_feedforward(torch.cat([aggregated_premise, aggregated_hypothesis], dim=-1))
+        probs = torch.nn.functional.softmax(logits, dim=-1)
 
-        output_dict = {'logits': logits}
+        output_dict = {'logits': logits, "probs": probs}
         if label is not None:
             loss = self.loss(logits, label)
             for metric in self.metrics.values():
                 metric(logits, label)
             output_dict["loss"] = loss
 
+        return output_dict
+
+    @overrides
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Converts indices to string labels, and adds a ``"label"`` key to the result.
+        """
+        predictions = output_dict["probs"].cpu().data.numpy()
+        argmax_indices = numpy.argmax(predictions, axis=-1)
+        labels = [self.vocab.get_token_from_index(x, namespace="labels")
+                  for x in argmax_indices]
+        output_dict['label'] = labels
         return output_dict
 
     @overrides
