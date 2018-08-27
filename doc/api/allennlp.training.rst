@@ -15,11 +15,17 @@ for training AllenNLP models.
    :undoc-members:
    :show-inheritance:
 
-.. _optimzers:
+allennlp.optimizers
+-------------------
+
+.. _optimizers:
 .. automodule:: allennlp.training.optimizers
    :members:
    :undoc-members:
    :show-inheritance:
+
+allennlp.learning_rate_schedulers
+---------------------------------
 
 .. _learning-rate-schedulers:
 .. automodule:: allennlp.training.learning_rate_schedulers
@@ -32,6 +38,9 @@ for training AllenNLP models.
    :members:
    :undoc-members:
    :show-inheritance:
+
+allennlp.metrics
+----------------
 
 * :ref:`Metric<metric>`
 * :ref:`Average<average>`
