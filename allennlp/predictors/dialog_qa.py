@@ -10,8 +10,7 @@ class DialogQAPredictor(Predictor):
     def predict(self, jsonline: str) -> JsonDict:
         """
         Make a machine comprehension prediction on the supplied input.
-        The input should be the same format as the original quac dataset, just in jsonline format instead of the json.
-        -------
+       -------
         A dictionary that represents the prediction made by the system.  The answer string will be under the
         "best_span_str" key.
         """
@@ -20,7 +19,7 @@ class DialogQAPredictor(Predictor):
     @overrides
     def _json_to_instance(self, paragraph_json: JsonDict) -> Instance:
         """
-        Expects JSON that looks like ``{"question": ["..."], "passage": "..."}``.
+        Expects json that looks like the original quac file
         """
         for paragraph_json in paragraph_json["paragraphs"]:
           paragraph = paragraph_json['context']
