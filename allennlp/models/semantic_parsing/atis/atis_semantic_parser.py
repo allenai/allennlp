@@ -175,7 +175,8 @@ class AtisSemanticParser(Model):
 
         num_entities = 0
         for w in world:
-            num_entities = max(len(w.valid_actions['string']) + len(w.valid_actions['number']), num_entities)
+            # num_entities = max(len(w.valid_actions['string']) + len(w.valid_actions['number']), num_entities)
+            num_entities = max(len(w.valid_actions['number']), num_entities)
         # entity_types: one-hot tensor with shape (batch_size, num_entities, num_types)
         # Actually, I think entity_types might be of shape (batch_size, num_entities)
         entity_types, entity_type_dict = self._get_type_vector(world, num_entities, embedded_utterance)
@@ -262,8 +263,8 @@ class AtisSemanticParser(Model):
         for batch_index, world in enumerate(worlds):
             types = []
 
-            entities = [('number', num) for num in world.valid_actions['number']]  + \
-                       [('string', string) for string in world.valid_actions['string']]
+            entities = [('number', num) for num in world.valid_actions['number']]
+                       # [('string', string) for string in world.valid_actions['string']]
 
             for entity_index, entity in enumerate(entities):
                 # We need numbers to be first, then cells, then parts, then row, because our
@@ -394,7 +395,8 @@ class AtisSemanticParser(Model):
         
         valid_actions = world.valid_actions
         entity_map = {}
-        entities = valid_actions['string'] + valid_actions['number']
+        # entities = valid_actions['string'] + valid_actions['number']
+        entities = valid_actions['number']
 
 
         for entity_index, entity in enumerate(entities):

@@ -31,10 +31,9 @@ class AtisWorld():
                  utterances: List[str],
                  tokenizer: Tokenizer = None,
                  database_directory: str = None) -> None:
-        if database_directory:
-            self.sql_table_context = SqlTableContext(ALL_TABLES,
-                                                     TABLES_WITH_STRINGS,
-                                                     database_directory)
+        self.sql_table_context = SqlTableContext(ALL_TABLES,
+                                                 TABLES_WITH_STRINGS,
+                                                 database_directory) if database_directory else None
 
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
