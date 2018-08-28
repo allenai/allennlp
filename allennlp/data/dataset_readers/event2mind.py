@@ -130,12 +130,12 @@ class Event2MindDatasetReader(DatasetReader):
         return TextField(tokenized_target, self._target_token_indexers)
 
     @overrides
-    def text_to_instance(
+    def text_to_instance(  # type: ignore
             self,
             source_string: str,
             xintent_string: str = None,
             xreact_string: str = None,
-            oreact_string: str = None) -> Instance:  # type: ignore
+            oreact_string: str = None) -> Instance:
         # pylint: disable=arguments-differ
         processed = self._preprocess_string(self._source_tokenizer, source_string)
         tokenized_source = self._source_tokenizer.tokenize(processed)
