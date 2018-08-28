@@ -1,4 +1,5 @@
 import copy
+from typing import Any, Dict, Set, Union
 
 from numpy.testing import assert_allclose
 import torch
@@ -22,7 +23,8 @@ class ModelTestCase(AllenNlpTestCase):
         params = Params.from_file(self.param_file)
 
         reader = DatasetReader.from_params(params['dataset_reader'])
-        instances = reader.read(dataset_file)
+        # The dataset reader might be lazy, but a lazy list here breaks some of our tests.
+        instances = list(reader.read(dataset_file))
         # Use parameters for vocabulary if they are present in the config file, so that choices like
         # "non_padded_namespaces", "min_count" etc. can be set if needed.
         if 'vocabulary' in params:
@@ -42,7 +44,28 @@ class ModelTestCase(AllenNlpTestCase):
     def ensure_model_can_train_save_and_load(self,
                                              param_file: str,
                                              tolerance: float = 1e-4,
-                                             cuda_device: int = -1):
+                                             cuda_device: int = -1,
+                                             gradients_to_ignore: Set[str] = None):
+        """
+        Parameters
+        ----------
+        param_file : ``str``
+            Path to a training configuration file that we will use to train the model for this
+            test.
+        tolerance : ``float``, optional (default=1e-4)
+            When comparing model predictions between the originally-trained model and the model
+            after saving and loading, we will use this tolerance value (passed as ``rtol`` to
+            ``numpy.testing.assert_allclose``).
+        cuda_device : ``int``, optional (default=-1)
+            The device to run the test on.
+        gradients_to_ignore : ``Set[str]``, optional (default=None)
+            This test runs a gradient check to make sure that we're actually computing gradients
+            for all of the parameters in the model.  If you really want to ignore certain
+            parameters when doing that check, you can pass their names here.  This is not
+            recommended unless you're `really` sure you don't need to have non-zero gradients for
+            those parameters (e.g., some of the beam search / state machine models have
+            infrequently-used parameters that are hard to force the model to use in a small test).
+        """
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
         model = train_model_from_file(param_file, save_dir)
@@ -77,7 +100,7 @@ class ModelTestCase(AllenNlpTestCase):
 
         # Check gradients are None for non-trainable parameters and check that
         # trainable parameters receive some gradient if they are trainable.
-        self.check_model_computes_gradients_correctly(model, model_batch)
+        self.check_model_computes_gradients_correctly(model, model_batch, gradients_to_ignore)
 
         # The datasets themselves should be identical.
         assert model_batch.keys() == loaded_batch.keys()
@@ -133,16 +156,24 @@ class ModelTestCase(AllenNlpTestCase):
         elif isinstance(field1, (float, int)):
             assert_allclose([field1], [field2], rtol=tolerance, err_msg=name)
         else:
-            assert field1 == field2
+            if field1 != field2:
+                for key in field1.__dict__:
+                    print(key, getattr(field1, key) == getattr(field2, key))
+            assert field1 == field2, f"{name}, {type(field1)}, {type(field2)}"
 
     @staticmethod
-    def check_model_computes_gradients_correctly(model, model_batch):
+    def check_model_computes_gradients_correctly(model: Model,
+                                                 model_batch: Dict[str, Union[Any, Dict[str, Any]]],
+                                                 params_to_ignore: Set[str] = None):
+        print("Checking gradients")
         model.zero_grad()
         result = model(**model_batch)
         result["loss"].backward()
         has_zero_or_none_grads = {}
         for name, parameter in model.named_parameters():
             zeros = torch.zeros(parameter.size())
+            if params_to_ignore and name in params_to_ignore:
+                continue
             if parameter.requires_grad:
 
                 if parameter.grad is None:

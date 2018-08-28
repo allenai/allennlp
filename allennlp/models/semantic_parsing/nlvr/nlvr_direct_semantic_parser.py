@@ -8,12 +8,13 @@ import torch
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.nn import Activation
 from allennlp.nn.decoding import BeamSearch
 from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.nlvr.nlvr_decoder_state import NlvrDecoderState
-from allennlp.models.semantic_parsing.nlvr.nlvr_decoder_step import NlvrDecoderStep
 from allennlp.models.semantic_parsing.nlvr.nlvr_semantic_parser import NlvrSemanticParser
+from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
+from allennlp.models.semantic_parsing.wikitables.basic_transition_function import BasicTransitionFunction
 from allennlp.semparse.worlds import NlvrWorld
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -63,10 +64,14 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                                                        encoder=encoder,
                                                        dropout=dropout)
         self._decoder_trainer = MaximumMarginalLikelihood()
-        self._decoder_step = NlvrDecoderStep(encoder_output_dim=self._encoder.get_output_dim(),
-                                             action_embedding_dim=action_embedding_dim,
-                                             input_attention=attention,
-                                             dropout=dropout)
+        self._decoder_step = BasicTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
+                                                     action_embedding_dim=action_embedding_dim,
+                                                     input_attention=attention,
+                                                     num_start_types=1,
+                                                     activation=Activation.by_name('tanh')(),
+                                                     predict_start_type_separately=False,
+                                                     add_action_bias=False,
+                                                     dropout=dropout)
         self._decoder_beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
         self._action_padding_index = -1
@@ -85,7 +90,6 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         likelihod over a set of approximate logical forms.
         """
         batch_size = len(worlds)
-        action_embeddings, action_indices = self._embed_actions(actions)
 
         initial_rnn_state = self._get_initial_rnn_state(sentence)
         initial_score_list = [next(iter(sentence.values())).new_zeros(1, dtype=torch.float)
@@ -94,18 +98,14 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         # TODO (pradeep): Assuming all worlds give the same set of valid actions.
         initial_grammar_state = [self._create_grammar_state(worlds[i][0], actions[i]) for i in
                                  range(batch_size)]
-        worlds_list = [worlds[i] for i in range(batch_size)]
 
-        initial_state = NlvrDecoderState(batch_indices=list(range(batch_size)),
-                                         action_history=[[] for _ in range(batch_size)],
-                                         score=initial_score_list,
-                                         rnn_state=initial_rnn_state,
-                                         grammar_state=initial_grammar_state,
-                                         action_embeddings=action_embeddings,
-                                         action_indices=action_indices,
-                                         possible_actions=actions,
-                                         worlds=worlds_list,
-                                         label_strings=label_strings)
+        initial_state = GrammarBasedDecoderState(batch_indices=list(range(batch_size)),
+                                                 action_history=[[] for _ in range(batch_size)],
+                                                 score=initial_score_list,
+                                                 rnn_state=initial_rnn_state,
+                                                 grammar_state=initial_grammar_state,
+                                                 possible_actions=actions,
+                                                 extras=label_strings)
 
         if target_action_sequences is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).
@@ -121,27 +121,28 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
             outputs = self._decoder_trainer.decode(initial_state,
                                                    self._decoder_step,
                                                    (target_action_sequences, target_mask))
-        best_final_states = self._decoder_beam_search.search(self._max_decoding_steps,
-                                                             initial_state,
-                                                             self._decoder_step,
-                                                             keep_final_unfinished_states=False)
-        best_action_sequences: Dict[int, List[List[int]]] = {}
-        for i in range(batch_size):
-            # Decoding may not have terminated with any completed logical forms, if `num_steps`
-            # isn't long enough (or if the model is not trained enough and gets into an
-            # infinite action loop).
-            if i in best_final_states:
-                best_action_indices = [best_final_states[i][0].action_history[0]]
-                best_action_sequences[i] = best_action_indices
-        batch_action_strings = self._get_action_strings(actions, best_action_sequences)
-        batch_denotations = self._get_denotations(batch_action_strings, worlds)
-        if target_action_sequences is not None:
-            self._update_metrics(action_strings=batch_action_strings,
-                                 worlds=worlds,
-                                 label_strings=label_strings)
-        else:
-            outputs["best_action_strings"] = batch_action_strings
-            outputs["denotations"] = batch_denotations
+        if not self.training:
+            best_final_states = self._decoder_beam_search.search(self._max_decoding_steps,
+                                                                 initial_state,
+                                                                 self._decoder_step,
+                                                                 keep_final_unfinished_states=False)
+            best_action_sequences: Dict[int, List[List[int]]] = {}
+            for i in range(batch_size):
+                # Decoding may not have terminated with any completed logical forms, if `num_steps`
+                # isn't long enough (or if the model is not trained enough and gets into an
+                # infinite action loop).
+                if i in best_final_states:
+                    best_action_indices = [best_final_states[i][0].action_history[0]]
+                    best_action_sequences[i] = best_action_indices
+            batch_action_strings = self._get_action_strings(actions, best_action_sequences)
+            batch_denotations = self._get_denotations(batch_action_strings, worlds)
+            if target_action_sequences is not None:
+                self._update_metrics(action_strings=batch_action_strings,
+                                     worlds=worlds,
+                                     label_strings=label_strings)
+            else:
+                outputs["best_action_strings"] = batch_action_strings
+                outputs["denotations"] = batch_denotations
         return outputs
 
     def _update_metrics(self,

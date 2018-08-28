@@ -21,12 +21,32 @@ allennlp.models.semantic_parsing.wikitables
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state
+.. automodule:: allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.models.semantic_parsing.wikitables.wikitables_decoder_step
+.. automodule:: allennlp.models.semantic_parsing.wikitables.coverage_decoder_state
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.models.semantic_parsing.wikitables.basic_transition_function
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.models.semantic_parsing.wikitables.linking_transition_function
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.models.semantic_parsing.wikitables.coverage_transition_function
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.models.semantic_parsing.wikitables.linking_coverage_transition_function
    :members:
    :undoc-members:
    :show-inheritance:
