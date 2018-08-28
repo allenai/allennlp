@@ -75,7 +75,7 @@ Note that this simple case only includes one layer of ELMo representation
 in the final model.
 In some case (e.g. SQuAD and SNLI) we found that including multiple layers improved performance.  Multiple layers require code changes (see below).
 
-We will use existing SRL model [configuration file](../../training_config/semantic_role_labeler.json) as an example to illustrate the changes.  Without ELMo, it uses 100 dimensional pre-trained GloVe vectors.
+We will use existing SRL model [configuration file](../../training_config/semantic_role_labeler.jsonnet) as an example to illustrate the changes.  Without ELMo, it uses 100 dimensional pre-trained GloVe vectors.
 
 To add ELMo, there are three relevant changes.  First, modify the `text_field_embedder` section by adding an `elmo` section as follows:
 
