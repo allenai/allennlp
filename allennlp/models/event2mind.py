@@ -153,7 +153,8 @@ class Event2Mind(Model):
                 target_only = target_tokens.keys() - self._states.keys()
                 states_only = self._states.keys() - target_tokens.keys()
                 raise Exception("Mismatch between target_tokens and self._states. Keys in " +
-                        "targets only: {} Keys in states only: {}".format(target_only, states_only))
+                                "targets only: {} Keys in states only: {}".format(
+                                    target_only, states_only))
             total_loss = 0
             for name, state in self._states.items():
                 loss = self.greedy_search(
@@ -190,7 +191,13 @@ class Event2Mind(Model):
         return output_dict
 
     # Returns the loss.
-    def greedy_search(self, final_encoder_output, target_tokens, target_embedder, decoder_cell, output_projection_layer):
+    def greedy_search(
+            self,
+            final_encoder_output,
+            target_tokens,
+            target_embedder,
+            decoder_cell,
+            output_projection_layer):
         targets = target_tokens["tokens"]
         target_sequence_length = targets.size()[1]
         # The last input from the target is either padding or the end symbol. Either way, we

@@ -1,7 +1,4 @@
 # pylint: disable=invalid-name
-import numpy
-import torch
-
 from allennlp.common.testing import ModelTestCase
 
 
