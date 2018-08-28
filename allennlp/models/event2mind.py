@@ -154,7 +154,7 @@ class Event2Mind(Model):
                 states_only = self._states.keys() - target_tokens.keys()
                 raise Exception("Mismatch between target_tokens and self._states. Keys in " +
                                 "targets only: {} Keys in states only: {}".format(
-                                    target_only, states_only))
+                                        target_only, states_only))
             total_loss = 0
             for name, state in self._states.items():
                 loss = self.greedy_search(
@@ -266,8 +266,8 @@ class Event2Mind(Model):
         # Log probability tensor that mandates that the end token is selected.
         num_classes = self.vocab.get_vocab_size(self._target_namespace)
         log_probs_after_end = start_class_log_probabilities.new_full(
-            (batch_size * k, num_classes),
-            float("-inf")
+                (batch_size * k, num_classes),
+                float("-inf")
         )
         log_probs_after_end[:, self._end_index] = 0.0
 
@@ -285,9 +285,9 @@ class Event2Mind(Model):
             # (batch_size * k, num_classes)
             last_predictions_expanded = last_predictions.unsqueeze(-1).expand(batch_size * k, num_classes)
             cleaned_log_probabilities = torch.where(
-                last_predictions_expanded == self._end_index,
-                log_probs_after_end,
-                class_log_probabilities
+                    last_predictions_expanded == self._end_index,
+                    log_probs_after_end,
+                    class_log_probabilities
             )
 
             # (batch_size * k, k), (batch_size * k, k)

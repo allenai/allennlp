@@ -8,12 +8,12 @@ from allennlp.training.metrics import UnigramRecall
 class UnigramRecallTest(AllenNlpTestCase):
     def test_sequence_recall(self):
         recall = UnigramRecall()
-        gold = torch.tensor([
+        gold = torch.Tensor([
                 [1, 2, 3],
                 [2, 4, 8],
                 [7, 1, 1]
         ])
-        predictions = torch.tensor([
+        predictions = torch.Tensor([
                 [[1, 2, 3], [1, 2, -1]],
                 [[2, 4, 8], [2, 5, 9]],
                 [[-1, -1, -1], [7, 1, -1]]
@@ -25,13 +25,13 @@ class UnigramRecallTest(AllenNlpTestCase):
 
     def test_sequence_recall_respects_mask(self):
         recall = UnigramRecall()
-        gold = torch.tensor([
+        gold = torch.Tensor([
                 [2, 4, 8],
                 [1, 2, 3],
                 [7, 1, 1],
                 [11, 14, 17]
         ])
-        predictions = torch.tensor([
+        predictions = torch.Tensor([
                 [[2, 4, 8], [2, 5, 9]], # 3/3
                 # TODO(brendanr): Is this okay? The mask for the targets
                 # doesn't necessarily apply to the predictions.
@@ -39,7 +39,7 @@ class UnigramRecallTest(AllenNlpTestCase):
                 [[-1, -1, -1], [7, 2, -1]], # 1/2
                 [[12, 13, 17], [11, 13, 18]] # 2/2
         ])
-        mask = torch.tensor([
+        mask = torch.Tensor([
                 [1, 1, 1],
                 [0, 1, 1],
                 [1, 1, 0],
@@ -52,9 +52,9 @@ class UnigramRecallTest(AllenNlpTestCase):
 
     def test_sequence_recall_accumulates_and_resets_correctly(self):
         recall = UnigramRecall()
-        gold = torch.tensor([[1, 2, 3]])
-        recall(torch.tensor([[[1, 2, 3]]]), gold)
-        recall(torch.tensor([[[7, 8, 4]]]), gold)
+        gold = torch.Tensor([[1, 2, 3]])
+        recall(torch.Tensor([[[1, 2, 3]]]), gold)
+        recall(torch.Tensor([[[7, 8, 4]]]), gold)
 
         actual_recall = recall.get_metric(reset=True)
         numpy.testing.assert_almost_equal(actual_recall, 1/2)
