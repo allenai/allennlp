@@ -1,0 +1,4 @@
+Source,Event,Xintent,Xemotion,Otheremotion,Xsent,Osent
+it_events,It is PersonX's favorite animal,"[""none""]","[""none""]","[""excited to see it"", ""happy"", ""lucky""]",,4.0
+rocstory,PersonX drives PersonY's truck,"[""to move"", ""to steal""]","[""grateful"", ""enraged""]","[""charitable"", ""guilty""]",3.0,5.0
+rocstory,PersonX gets PersonY's mother,"[""to be helpful""]","[""useful""]","[""grateful""]",3.0,4.0

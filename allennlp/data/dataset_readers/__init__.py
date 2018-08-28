@@ -14,6 +14,7 @@ from allennlp.data.dataset_readers.conll2000 import Conll2000DatasetReader
 from allennlp.data.dataset_readers.ontonotes_ner import OntonotesNamedEntityRecognition
 from allennlp.data.dataset_readers.coreference_resolution import ConllCorefReader, WinobiasReader
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.dataset_readers.event2mind import Event2MindDatasetReader
 from allennlp.data.dataset_readers.language_modeling import LanguageModelingReader
 from allennlp.data.dataset_readers.nlvr import NlvrDatasetReader
 from allennlp.data.dataset_readers.penn_tree_bank import PennTreeBankConstituencySpanDatasetReader
