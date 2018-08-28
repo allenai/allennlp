@@ -21,13 +21,13 @@ class DialogQAPredictor(Predictor):
         question answer pairs, containing question, answer, yesno, followup, id
         as well as the context (passage).
 
-        Parameter
-        -------
+        Parameters
+        ----------
         jsonline: ``str``
             A json line that has the same format as the quac data file.
 
         Returns
-        -------
+        ----------
         A dictionary that represents the prediction made by the system.  The answer string will be under the
         "best_span_str" key.
         """
