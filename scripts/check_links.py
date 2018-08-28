@@ -67,14 +67,14 @@ def main():
 
     with Pool(processes=10) as pool:
         results = pool.map(link_ok, [match for match in list(all_matches)])
-    unreachable_results = [result for result in results if not result[1]]
+    unreachable_results = [match_tuple for match_tuple, success in results if not success]
 
     if unreachable_results:
         print(f"Unreachable links ({len(unreachable_results)}):")
-        for result in unreachable_results:
-            print("  > Source: " + result[0].source)
-            print("    Name: " + result[0].name)
-            print("    Link: " + result[0].link)
+        for match_tuple in unreachable_results:
+            print("  > Source: " + match_tuple.source)
+            print("    Name: " + match_tuple.name)
+            print("    Link: " + match_tuple.link)
         sys.exit(1)
     print("No Unreachable link found.")
 
