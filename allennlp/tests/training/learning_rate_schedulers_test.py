@@ -132,7 +132,7 @@ class CosineWithRestartsTest(AllenNlpTestCase):
                         [(0, 1.0),
                          (30, .5),
                          (90, .25)],
-                        []
+                        [29, 90]
                 ),
                 (
                         150,
