@@ -439,9 +439,7 @@ def _last_dimension_applicator(function_to_apply: Callable[[torch.Tensor, Option
     if mask is not None:
         while mask.dim() < tensor.dim():
             mask = mask.unsqueeze(1)
-        print(mask.size())
-        print(tensor.size())
-        mask = mask.expand_as(tensor).byte().contiguous()
+        mask = mask.byte().expand_as(tensor).contiguous()
         mask = mask.view(-1, mask.size()[-1])
     reshaped_result = function_to_apply(reshaped_tensor, mask)
     return reshaped_result.view(*tensor_shape)
