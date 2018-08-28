@@ -42,10 +42,11 @@
     "encoder": {
       "type": "gru",
       "input_size": 300,
-      "hidden_size": 100,
+      # When we concatenate the forward and backward states together this gives
+      # our desired encoded vector of size 100.
+      "hidden_size": 50,
       "num_layers": 1,
-      "bidirectional": true,
-      "dropout": 0.2
+      "bidirectional": true
     },
     "max_decoding_steps": 10,
     "target_namespace": "target_tokens"

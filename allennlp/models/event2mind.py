@@ -11,7 +11,7 @@ import torch.nn.functional as F
 
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.modules import Seq2VecEncoder, TextFieldEmbedder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
@@ -50,7 +50,7 @@ class Event2Mind(Model):
     def __init__(self,
                  vocab: Vocabulary,
                  source_embedder: TextFieldEmbedder,
-                 encoder: Seq2SeqEncoder,
+                 encoder: Seq2VecEncoder,
                  max_decoding_steps: int,
                  target_namespace: str = "tokens",
                  target_embedding_dim: int = None) -> None:
@@ -60,6 +60,7 @@ class Event2Mind(Model):
         self._encoder = encoder
         self._max_decoding_steps = max_decoding_steps
         self._target_namespace = target_namespace
+        # TODO(brendanr): Revisit dropout.
         self._embedding_dropout = nn.Dropout(0.2)
 
         # We need the start symbol to provide as the input at the first timestep of decoding, and
@@ -138,13 +139,12 @@ class Event2Mind(Model):
            Dictionary from name to output of ``Textfield.as_array()`` applied on target
            ``TextField``. We assume that the target tokens are also represented as a ``TextField``.
         """
-        # (batch_size, input_sequence_length, encoder_output_dim)
-        # TODO(brendanr): Revisit dropout.
+        # (batch_size, input_sequence_length, embedding_dim)
         embedded_input = self._embedding_dropout(self._source_embedder(source))
         batch_size, _, _ = embedded_input.size()
         source_mask = get_text_field_mask(source)
-        encoder_outputs = self._encoder(embedded_input, source_mask)
-        final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
+        # (batch_size, encoder_output_dim)
+        final_encoder_output = self._encoder(embedded_input, source_mask)
         output_dict = {}
 
         # Perform greedy search so we can get the loss.
@@ -205,7 +205,6 @@ class Event2Mind(Model):
         step_logits = []
         for timestep in range(num_decoding_steps):
             # See https://github.com/allenai/allennlp/issues/1134.
-            # TODO(brendanr): Grok this.
             input_choices = targets[:, timestep]
             decoder_input = target_embedder(input_choices)
             decoder_hidden = decoder_cell(decoder_input, decoder_hidden)
@@ -237,9 +236,6 @@ class Event2Mind(Model):
         # predictions so that backpointer[t][i][n] corresponds to
         # predictions[t][n].
         backpointers = []
-        # List of (batchsize * k,) tensors.
-        # TODO(brendanr): Just keep last
-        log_probabilities = []
 
         # Timestep 1
         start_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index)
@@ -250,8 +246,8 @@ class Event2Mind(Model):
         start_top_log_probabilities, start_predicted_classes = start_class_log_probabilities.topk(k)
 
         # Set starting values
-        # [(batch_size, k)]
-        log_probabilities.append(start_top_log_probabilities)
+        # The log probabilities for the last time step. (batch_size, k)
+        log_probabilities = start_top_log_probabilities
         # [(batch_size, k)]
         predictions.append(start_predicted_classes)
         # Set the same hidden state for each element in beam.
@@ -272,7 +268,6 @@ class Event2Mind(Model):
             # (batch_size * k,)
             last_predictions = predictions[-1].reshape(batch_size * k)
             decoder_input = target_embedder(last_predictions)
-            # reshape(batch_size * k, self._decoder_output_dim)
             decoder_hidden = decoder_cell(decoder_input, decoder_hidden)
             # (batch_size * k, num_classes)
             output_projections = output_projection_layer(decoder_hidden)
@@ -292,7 +287,7 @@ class Event2Mind(Model):
             top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(k)
             # TODO(brendanr): Normalize for length?
             # (batch_size * k, k)
-            expanded_last_log_probabilities = log_probabilities[-1].\
+            expanded_last_log_probabilities = log_probabilities.\
                 unsqueeze(2).\
                 expand(batch_size, k, k).\
                 reshape(batch_size * k, k)
@@ -301,10 +296,11 @@ class Event2Mind(Model):
             reshaped_top_log_probabilities = summed_top_log_probabilities.reshape(batch_size, k * k)
             reshaped_predicted_classes = predicted_classes.reshape(batch_size, k * k)
             restricted_beam_log_probs, restricted_beam_indices = reshaped_top_log_probabilities.topk(k)
-            # TODO(brendanr): Something about this is weird. Why do restricted_predicted_classes == restricted_beam_indices?
+            # TODO(brendanr): Something about this is weird. Why do
+            # restricted_predicted_classes == restricted_beam_indices?
             restricted_predicted_classes = reshaped_predicted_classes.gather(1, restricted_beam_indices)
 
-            log_probabilities.append(restricted_beam_log_probs)
+            log_probabilities = restricted_beam_log_probs
             predictions.append(restricted_predicted_classes)
             backpointer = restricted_beam_indices / k
             backpointers.append(backpointer)
@@ -332,7 +328,7 @@ class Event2Mind(Model):
         # We don't add the start tokens here. They are implicit.
 
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
-        return (all_predictions, log_probabilities[-1])
+        return (all_predictions, log_probabilities)
 
     @staticmethod
     def _get_loss(logits: torch.LongTensor,

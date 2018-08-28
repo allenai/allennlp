@@ -25,8 +25,8 @@
   "vocabulary": {
     "min_count": {"tokens": 1}
   },
-  "train_data_path": "allennlp/tests/fixtures/data/event2mind.csv",
-  "validation_data_path": "allennlp/tests/fixtures/data/event2mind.csv",
+  "train_data_path": "allennlp/tests/fixtures/data/event2mind_medium.csv",
+  "validation_data_path": "allennlp/tests/fixtures/data/event2mind_medium.csv",
   "model": {
     "type": "event2mind",
     "source_embedder": {
@@ -40,10 +40,11 @@
     "encoder": {
       "type": "gru",
       "input_size": 300,
-      "hidden_size": 100,
+      # When we concatenate the forward and backward states together this gives
+      # our desired encoded vector of size 100.
+      "hidden_size": 50,
       "num_layers": 1,
-      "bidirectional": true,
-      "dropout": 0.2
+      "bidirectional": true
     },
     "max_decoding_steps": 10,
     "target_namespace": "target_tokens"
@@ -56,6 +57,7 @@
   },
   "trainer": {
     "num_epochs": 2,
+    "cuda_device": -1,
     "optimizer": {
       "type": "adam"
     }

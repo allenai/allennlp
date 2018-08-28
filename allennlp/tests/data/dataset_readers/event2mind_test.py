@@ -12,16 +12,13 @@ from allennlp.data.instance import Instance
 def get_text(key: str, instance: Instance):
     return [t.text for t in cast(TextField, instance.fields[key]).tokens]
 
-#Source,Event,Xintent,Xemotion,Otheremotion,Xsent,Osent
-#it_events,It is PersonX's favorite animal,"[""none""]","[""excited to see it"", ""happy"", ""lucky""]","[""none""]",,4.0
-#rocstory,PersonX drives PersonY's truck,"[""to move"", ""to steal""]","[""grateful"", ""guilty""]","[""charitable"", ""enraged""]",3.0,5.0
-#rocstory,PersonX gets PersonY's mother,"[""to be helpful""]","[""useful""]","[""grateful""]",3.0,4.0
-
 class TestEvent2MindDatasetReader:
     @pytest.mark.parametrize("lazy", (True, False))
     def test_default_format(self, lazy):
         reader = Event2MindDatasetReader(lazy=lazy)
-        instances = reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'event2mind.csv'))
+        instances = reader.read(
+                str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'event2mind_small.csv')
+        )
         instances = ensure_list(instances)
 
         assert len(instances) == 12
