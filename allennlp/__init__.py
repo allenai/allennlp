@@ -1,9 +1,10 @@
 # pylint: disable=wrong-import-position
 
-# Make sure that allennlp is running in Python 3.6
+# Make sure that allennlp is running on Python 3.6.1 or later
+# (to avoid running into this bug: https://bugs.python.org/issue29246)
 import sys
-if sys.version_info < (3, 6):
-    raise RuntimeError("AllenNLP requires Python 3.6 or later")
+if sys.version_info < (3, 6, 1):
+    raise RuntimeError("AllenNLP requires Python 3.6.1 or later")
 
 # We get a lot of these spurious warnings,
 # see https://github.com/ContinuumIO/anaconda-issues/issues/6678
