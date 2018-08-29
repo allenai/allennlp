@@ -11,10 +11,13 @@ allennlp.training.metrics
 * :ref:`BooleanAccuracy<boolean-accuracy>`
 * :ref:`CategoricalAccuracy<categorical-accuracy>`
 * :ref:`ConllCorefScores<conll-coref-scores>`
+* :ref:`Covariance<covariance>`
 * :ref:`Entropy<entropy>`
 * :ref:`EvalbBracketingScorer<evalb>`
 * :ref:`F1Measure<f1-measure>`
+* :ref:`MeanAbsoluteError<mean-absolute-error>`
 * :ref:`MentionRecall<mention-recall>`
+* :ref:`PearsonCorrelation<pearson-correlation>`
 * :ref:`SpanBasedF1Measure<span-based-f1-measure>`
 * :ref:`SquadEmAndF1<squad-em-and-f1>`
 * :ref:`WikiTablesAccuracy<wikitables-accuracy>`
@@ -51,6 +54,12 @@ allennlp.training.metrics
    :undoc-members:
    :show-inheritance:
 
+.. _covariance:
+.. automodule:: allennlp.training.metrics.covariance
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. _entropy:
 .. automodule:: allennlp.training.metrics.entropy
    :members:
@@ -69,8 +78,20 @@ allennlp.training.metrics
    :undoc-members:
    :show-inheritance:
 
+.. _mean-absolute-error:
+.. automodule:: allennlp.training.metrics.mean_absolute_error
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. _mention-recall:
 .. automodule:: allennlp.training.metrics.mention_recall
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _pearson-correlation:
+.. automodule:: allennlp.training.metrics.pearson_correlation
    :members:
    :undoc-members:
    :show-inheritance:
