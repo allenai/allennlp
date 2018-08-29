@@ -14,8 +14,8 @@ class Covariance(Metric):
     variable (i.e., the input tensors are implicitly flattened into vectors and the
     covariance is calculated between the vectors).
 
-    This implementation is mostly modeled after the streaming_covariance function in Tensorflow.
-    See https://github.com/tensorflow/tensorflow/blob/v1.10.1/tensorflow/contrib/metrics/python/ops/metric_ops.py#L3127-L3264 .
+    This implementation is mostly modeled after the streaming_covariance function in Tensorflow. See:
+    https://github.com/tensorflow/tensorflow/blob/v1.10.1/tensorflow/contrib/metrics/python/ops/metric_ops.py#L3127
 
     The following is copied from the Tensorflow documentation:
 
