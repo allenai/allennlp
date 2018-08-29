@@ -392,7 +392,7 @@ class Event2Mind(Model):
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds fields for the tokens to the ``output_dict``.
         """
-        for name in self._states.keys():
+        for name in self._states:
             top_k_predicted_indices = output_dict["{}_top_k_predictions".format(name)][0]
             output_dict["{}_top_k_predicted_tokens".format(name)] = [self.decode_all(top_k_predicted_indices)]
 
