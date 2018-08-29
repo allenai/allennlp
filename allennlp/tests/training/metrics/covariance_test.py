@@ -18,14 +18,13 @@ class CovarianceTest(AllenNlpTestCase):
         stride = 10
 
         for i in range(batch_size // stride):
-            timestep_predictions = predictions[stride * i:stride * (i+1), :]
-            timestep_labels = labels[stride * i:stride * (i+1), :]
+            timestep_predictions = torch.FloatTensor(predictions[stride * i:stride * (i+1), :])
+            timestep_labels = torch.FloatTensor(labels[stride * i:stride * (i+1), :])
             # Flatten the predictions and labels thus far, so numpy treats them as
             # independent observations.
             expected_covariance = np.cov(predictions[:stride * (i + 1), :].reshape(-1),
                                          labels[:stride * (i + 1), :].reshape(-1))[0, 1]
-            covariance(torch.FloatTensor(timestep_predictions),
-                       torch.FloatTensor(timestep_labels))
+            covariance(timestep_predictions, timestep_labels)
             assert_allclose(expected_covariance, covariance.get_metric(), rtol=1e-5)
 
     def test_covariance_masked_computation(self):
@@ -39,15 +38,13 @@ class CovarianceTest(AllenNlpTestCase):
         stride = 10
 
         for i in range(batch_size // stride):
-            timestep_predictions = predictions[stride * i:stride * (i+1), :]
-            timestep_labels = labels[stride * i:stride * (i+1), :]
-            timestep_mask = mask[stride * i:stride * (i+1), :]
+            timestep_predictions = torch.FloatTensor(predictions[stride * i:stride * (i+1), :])
+            timestep_labels = torch.FloatTensor(labels[stride * i:stride * (i+1), :])
+            timestep_mask = torch.FloatTensor(mask[stride * i:stride * (i+1), :])
             # Flatten the predictions, labels, and mask thus far, so numpy treats them as
             # independent observations.
             expected_covariance = np.cov(predictions[:stride * (i + 1), :].reshape(-1),
                                          labels[:stride * (i + 1), :].reshape(-1),
                                          fweights=mask[:stride * (i + 1), :].reshape(-1))[0, 1]
-            covariance(torch.FloatTensor(timestep_predictions),
-                       torch.FloatTensor(timestep_labels),
-                       torch.FloatTensor(timestep_mask))
+            covariance(timestep_predictions, timestep_labels, timestep_mask)
             assert_allclose(expected_covariance, covariance.get_metric(), rtol=1e-5)
