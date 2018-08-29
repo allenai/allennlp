@@ -17,6 +17,42 @@ class CrfTaggerTest(ModelTestCase):
     def test_simple_tagger_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
+    def test_simple_tagger_can_train_save_and_load_ccgbank(self):
+        self.ensure_model_can_train_save_and_load(
+                self.FIXTURES_ROOT / 'crf_tagger' / 'experiment_ccgbank.json')
+
+    def test_simple_tagger_can_train_save_and_conll2000(self):
+        self.ensure_model_can_train_save_and_load(
+                self.FIXTURES_ROOT / 'crf_tagger' / 'experiment_conll2000.json')
+
+    def test_simple_tagger_constraint_type_deprecated(self):
+        params = Params({"model": {
+                "type": "crf_tagger",
+                "constraint_type": "IOB1",
+                "text_field_embedder": {
+                        "token_embedders": {
+                                "tokens": {
+                                        "type": "embedding",
+                                        "embedding_dim": 50
+                                },
+                        }
+                },
+                "encoder": {
+                        "type": "gru",
+                        "input_size": 50,
+                        "hidden_size": 10,
+                        "num_layers": 2,
+                        "dropout": 0.5,
+                        "bidirectional": True
+                }}})
+        with pytest.warns(DeprecationWarning):
+            model = Model.from_params(vocab=self.vocab,
+                                      params=params.pop("model"))
+        assert model._f1_metric is not None
+        assert model._f1_metric._label_encoding == "IOB1"
+        assert model.label_encoding == "IOB1"
+        assert model.crf._constraint_mask.sum().item() != (model.num_tags + 2)**2
+
     @flaky
     def test_batch_predictions_are_consistent(self):
         self.ensure_batch_predictions_are_consistent()

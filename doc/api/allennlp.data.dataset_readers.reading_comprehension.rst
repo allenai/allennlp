@@ -16,6 +16,11 @@ allennlp.data.dataset_readers.reading_comprehension
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.data.dataset_readers.reading_comprehension.quac
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.data.dataset_readers.reading_comprehension.util
    :members:
    :undoc-members:

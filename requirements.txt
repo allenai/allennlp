@@ -10,9 +10,6 @@ torch>=0.4.0,<0.5.0
 # Parameter parsing (but not on Windows).
 jsonnet==0.10.0 ; sys.platform != 'win32'
 
-# Type checking for python
-typing
-
 # Adds an @overrides decorator for better documentation and error checking when using subclasses.
 overrides
 
@@ -41,10 +38,14 @@ tensorboardX==1.2
 cffi==1.11.2
 
 # aws commandline tools for running on Docker remotely.
-awscli>=1.11.91
+# second requirement is to get botocore < 1.11, to avoid the below bug
+awscli>=1.11.91,<=1.15.85
+
+# Accessing files from S3 directly. Pin to 1.7.80 to avoid https://github.com/spulec/moto/issues/1793
+boto3==1.7.80
 
 # REST interface for models
-flask==0.12.1
+flask==0.12.3
 flask-cors==3.0.3
 gevent==1.3.5
 
@@ -105,6 +106,9 @@ codecov
 
 # Required to run sanic tests
 aiohttp
+
+# For mocking s3.
+moto==1.3.4
 
 #### DOC-RELATED PACKAGES ####
 

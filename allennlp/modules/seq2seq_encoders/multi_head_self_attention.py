@@ -2,7 +2,7 @@ from overrides import overrides
 import torch
 from torch.nn import Dropout, Linear
 
-from allennlp.nn.util import last_dim_softmax, weighted_sum
+from allennlp.nn.util import masked_softmax, weighted_sum
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 
 
@@ -129,7 +129,7 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
 
         # shape (num_heads * batch_size, timesteps, timesteps)
         # Normalise the distributions, using the same mask for all heads.
-        attention = last_dim_softmax(scaled_similarities, mask.repeat(1, num_heads).view(batch_size * num_heads, timesteps))
+        attention = masked_softmax(scaled_similarities, mask.repeat(1, num_heads).view(batch_size * num_heads, timesteps))
         attention = self._attention_dropout(attention)
 
         # Take a weighted sum of the values with respect to the attention

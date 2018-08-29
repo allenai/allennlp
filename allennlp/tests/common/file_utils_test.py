@@ -3,11 +3,17 @@ from collections import Counter
 import os
 import pathlib
 import json
+import tempfile
+from typing import List, Tuple
 
+import boto3
+from moto import mock_s3
 import pytest
 import responses
 
-from allennlp.common.file_utils import url_to_filename, filename_to_url, get_from_cache, cached_path
+from allennlp.common.file_utils import (
+        url_to_filename, filename_to_url, get_from_cache, cached_path, split_s3_path,
+        s3_request, s3_etag, s3_get)
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -45,6 +51,14 @@ def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
             url,
             callback=head_callback
     )
+
+
+def set_up_s3_bucket(bucket_name: str = "my-bucket", s3_objects: List[Tuple[str, str]] = None):
+    """Creates a mock s3 bucket optionally with objects uploaded from local files."""
+    s3_client = boto3.client("s3")
+    s3_client.create_bucket(Bucket=bucket_name)
+    for filename, key in s3_objects or []:
+        s3_client.upload_file(Filename=filename, Bucket=bucket_name, Key=key)
 
 
 class TestFileUtils(AllenNlpTestCase):
@@ -96,6 +110,68 @@ class TestFileUtils(AllenNlpTestCase):
             back_to_url, etag = filename_to_url(filename, cache_dir=self.TEST_DIR)
             assert back_to_url == url
             assert etag == "mytag"
+
+    def test_split_s3_path(self):
+        # Test splitting good urls.
+        assert split_s3_path("s3://my-bucket/subdir/file.txt") == ("my-bucket", "subdir/file.txt")
+        assert split_s3_path("s3://my-bucket/file.txt") == ("my-bucket", "file.txt")
+
+        # Test splitting bad urls.
+        with pytest.raises(ValueError):
+            split_s3_path("s3://")
+            split_s3_path("s3://myfile.txt")
+            split_s3_path("myfile.txt")
+
+    @mock_s3
+    def test_s3_bucket(self):
+        """This just ensures the bucket gets set up correctly."""
+        set_up_s3_bucket()
+        s3_client = boto3.client("s3")
+        buckets = s3_client.list_buckets()["Buckets"]
+        assert len(buckets) == 1
+        assert buckets[0]["Name"] == "my-bucket"
+
+    @mock_s3
+    def test_s3_request_wrapper(self):
+        set_up_s3_bucket(s3_objects=[(str(self.glove_file), "embeddings/glove.txt.gz")])
+        s3_resource = boto3.resource("s3")
+
+        @s3_request
+        def get_file_info(url):
+            bucket_name, s3_path = split_s3_path(url)
+            return s3_resource.Object(bucket_name, s3_path).content_type
+
+        # Good request, should work.
+        assert get_file_info("s3://my-bucket/embeddings/glove.txt.gz") == "text/plain"
+
+        # File missing, should raise FileNotFoundError.
+        with pytest.raises(FileNotFoundError):
+            get_file_info("s3://my-bucket/missing_file.txt")
+
+    @mock_s3
+    def test_s3_etag(self):
+        set_up_s3_bucket(s3_objects=[(str(self.glove_file), "embeddings/glove.txt.gz")])
+        # Ensure we can get the etag for an s3 object and that it looks as expected.
+        etag = s3_etag("s3://my-bucket/embeddings/glove.txt.gz")
+        assert isinstance(etag, str)
+        assert etag.startswith("'") or etag.startswith('"')
+
+        # Should raise FileNotFoundError if the file does not exist on the bucket.
+        with pytest.raises(FileNotFoundError):
+            s3_etag("s3://my-bucket/missing_file.txt")
+
+    @mock_s3
+    def test_s3_get(self):
+        set_up_s3_bucket(s3_objects=[(str(self.glove_file), "embeddings/glove.txt.gz")])
+
+        with tempfile.NamedTemporaryFile() as temp_file:
+            s3_get("s3://my-bucket/embeddings/glove.txt.gz", temp_file)
+            assert os.stat(temp_file.name).st_size != 0
+
+        # Should raise FileNotFoundError if the file does not exist on the bucket.
+        with pytest.raises(FileNotFoundError):
+            with tempfile.NamedTemporaryFile() as temp_file:
+                s3_get("s3://my-bucket/missing_file.txt", temp_file)
 
     @responses.activate
     def test_get_from_cache(self):

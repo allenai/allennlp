@@ -16,6 +16,9 @@
     "validation_data_path": "allennlp/tests/fixtures/data/conll2003.txt",
     "model": {
       "type": "crf_tagger",
+      "label_encoding": "IOB1",
+      "constrain_crf_decoding" : true,
+      "calculate_span_f1" : true,
       "text_field_embedder": {
           "token_embedders": {
               "tokens": {

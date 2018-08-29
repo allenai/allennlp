@@ -1,0 +1,347 @@
+{
+  "data": [
+    {
+      "title": "The break",
+      "paragraphs": [
+        {
+          "context": "DJ Kool Herc developed the style that was the blueprint for hip hop music. Herc used the record to focus on a short, heavily percussive part in it: the \"break\". Since this part of the record was the one the dancers liked best, Herc isolated the break and prolonged it by changing between two record players. As one record reached the end of the break, he cued a second record back to the beginning of the break, which allowed him to extend a relatively short section of music into \"five-minute loop of fury\". This innovation had its roots in what Herc called \"The Merry-Go-Round,\" a technique by which the deejay switched from break to break at the height of the party. This technique is specifically called \"The Merry-Go-Round\" because according to Herc, it takes one \"back and forth with no slack.\" Herc told The New York Times that he first introduced the Merry-Go-Round into his sets in 1972. The earliest known Merry-Go-Round involved playing James Brown's \"Give It Up or Turnit a Loose\" (with its refrain, \"Now clap your hands! Stomp your feet!\"), then switching from that record's break into the break from a second record, \"Bongo Rock\" by The Incredible Bongo Band. From the \"Bongo Rock\"'s break, Herc used a third record to switch to the break on \"The Mexican\" by the English rock band Babe Ruth. Kool Herc also contributed to developing the rhyming style of hip hop by punctuating the recorded music with slang phrases, announcing: \"Rock on, my mellow!\" \"B-boys, b-girls, are you ready? keep on rock steady\" \"This is the joint! Herc beat on the point\" \"To the beat, y'all!\" \"You don't stop!\" For his contributions, Herc is called a \"founding father of hip hop,\" a \"nascent cultural hero,\" and an integral part of the beginnings of hip hop by Time. On August 11, 1973, DJ Kool Herc was a disc jockey and emcee at a party in the recreation room at Sedgwick Avenue. Specifically, DJ Kool Herc: extended an instrumental beat (breaking or scratching) to let people dance longer (break dancing) and began MC'ing (rapping) during the extended breakdancing. ... [This] helped lay the foundation for a cultural revolution. According to music journalist Steven Ivory, in 1973, Herc placed on the turntables two copies of Brown's 1970 Sex Machine album and ran \"an extended cut 'n' mix of the percussion breakdown\" from \"Give It Up or Turnit Loose\", signaling the birth of hip hop. CANNOTANSWER",
+          "qas": [
+            {
+              "yesno": "x",
+              "question": "What was the break?",
+              "orig_answer": {
+                "text": "Herc used the record to focus on a short, heavily percussive part in it: the \"break\".",
+                "answer_start": 75
+              },
+              "answers": [
+                {
+                  "text": "Herc used the record to focus on a short, heavily percussive part in it: the \"break\".",
+                  "answer_start": 75
+                }
+              ],
+              "followup": "y",
+              "id": "C_ec865aa8cf664d4d879ed364dd7048ed_1_q#0"
+            },
+            {
+              "yesno": "x",
+              "question": "What did the break consist of?",
+              "orig_answer": {
+                "text": "Specifically, DJ Kool Herc: extended an instrumental beat (breaking or scratching) to let people dance longer",
+                "answer_start": 1873
+              },
+              "answers": [
+                {
+                  "text": "Since this part of the record was the one the dancers liked best, Herc isolated the break and prolonged it by changing between two record players.",
+                  "answer_start": 161
+                },
+                {
+                  "text": "Herc isolated the break and prolonged it by changing between two record players.",
+                  "answer_start": 227
+                },
+                {
+                  "text": "Since this part of the record was the one the dancers liked best, Herc isolated the break and prolonged it by changing between two record players.",
+                  "answer_start": 161
+                },
+                {
+                  "text": "five-minute loop of fury",
+                  "answer_start": 482
+                },
+                {
+                  "text": "Specifically, DJ Kool Herc: extended an instrumental beat (breaking or scratching) to let people dance longer",
+                  "answer_start": 1873
+                }
+              ],
+              "followup": "m",
+              "id": "C_ec865aa8cf664d4d879ed364dd7048ed_1_q#1"
+            },
+            {
+              "yesno": "y",
+              "question": "Did people like it?",
+              "orig_answer": {
+                "text": "... [This] helped lay the foundation for a cultural revolution.",
+                "answer_start": 2060
+              },
+              "answers": [
+                {
+                  "text": "Since this part of the record was the one the dancers liked best,",
+                  "answer_start": 161
+                },
+                {
+                  "text": "helped lay the foundation for a cultural revolution.",
+                  "answer_start": 2071
+                },
+                {
+                  "text": "Since this part of the record was the one the dancers liked best,",
+                  "answer_start": 161
+                },
+                {
+                  "text": "... [This] helped lay the foundation for a cultural revolution.",
+                  "answer_start": 2060
+                }
+              ],
+              "followup": "m",
+              "id": "C_ec865aa8cf664d4d879ed364dd7048ed_1_q#2"
+            },
+            {
+              "yesno": "x",
+              "question": "How did it lead to a cultural evolution?",
+              "orig_answer": {
+                "text": "extended an instrumental beat (breaking or scratching) to let people dance longer (break dancing) and began MC'ing (rapping) during the extended breakdancing. ... [",
+                "answer_start": 1901
+              },
+              "answers": [
+                {
+                  "text": "the style that was the blueprint for hip hop music.",
+                  "answer_start": 23
+                },
+                {
+                  "text": ") to let people dance longer (break dancing) and began MC'ing (rapping) during the extended breakdancing.",
+                  "answer_start": 1954
+                },
+                {
+                  "text": "extended an instrumental beat (breaking or scratching) to let people dance longer (break dancing) and began MC'ing (rapping) during the extended breakdancing. ... [",
+                  "answer_start": 1901
+                },
+                {
+                  "text": "extended an instrumental beat (breaking or scratching) to let people dance longer (break dancing) and began MC'ing (rapping) during the extended breakdancing. ... [",
+                  "answer_start": 1901
+                }
+              ],
+              "followup": "n",
+              "id": "C_ec865aa8cf664d4d879ed364dd7048ed_1_q#3"
+            },
+            {
+              "yesno": "x",
+              "question": "Did he influence others?",
+              "orig_answer": {
+                "text": "Herc is called a \"founding father of hip hop,\"",
+                "answer_start": 1625
+              },
+              "answers": [
+                {
+                  "text": "blueprint for hip hop music.",
+                  "answer_start": 46
+                },
+                {
+                  "text": "Herc is called a \"founding father of hip hop,\" a \"nascent cultural hero,\" and an integral part of the beginnings of hip hop by Time.",
+                  "answer_start": 1625
+                },
+                {
+                  "text": "Herc is called a \"founding father of hip hop,\"",
+                  "answer_start": 1625
+                }
+              ],
+              "followup": "m",
+              "id": "C_ec865aa8cf664d4d879ed364dd7048ed_1_q#4"
+            },
+            {
+              "yesno": "x",
+              "question": "What else is interesting in this article?",
+              "orig_answer": {
+                "text": "As one record reached the end of the break, he cued a second record back to the beginning of the break,",
+                "answer_start": 308
+              },
+              "answers": [
+                {
+                  "text": "ran \"an extended cut 'n' mix of the percussion breakdown\" from \"Give It Up or Turnit Loose\", signaling the birth of hip hop.",
+                  "answer_start": 2256
+                },
+                {
+                  "text": "On August 11, 1973, DJ Kool Herc was a disc jockey and emcee at a party in the recreation room at Sedgwick Avenue. Specifically, DJ Kool Herc:",
+                  "answer_start": 1758
+                },
+                {
+                  "text": "This technique is specifically called \"The Merry-Go-Round\" because according to Herc, it takes one \"back and forth with no slack.\"",
+                  "answer_start": 670
+                },
+                {
+                  "text": "!\" For his contributions, Herc is called a \"founding father of hip hop,\" a \"nascent cultural hero,\" and an integral part of the beginnings of hip hop by Time.",
+                  "answer_start": 1599
+                },
+                {
+                  "text": "As one record reached the end of the break, he cued a second record back to the beginning of the break,",
+                  "answer_start": 308
+                }
+              ],
+              "followup": "y",
+              "id": "C_ec865aa8cf664d4d879ed364dd7048ed_1_q#5"
+            }
+          ],
+          "id": "C_ec865aa8cf664d4d879ed364dd7048ed_1"
+        }
+      ]
+    },
+    {
+      "title": "The break",
+      "paragraphs": [
+        {
+          "context": "DJ Kool Herc developed the style that was the blueprint for hip hop music. Herc used the record to focus on a short, heavily percussive part in it: the \"break\". Since this part of the record was the one the dancers liked best, Herc isolated the break and prolonged it by changing between two record players. As one record reached the end of the break, he cued a second record back to the beginning of the break, which allowed him to extend a relatively short section of music into \"five-minute loop of fury\". This innovation had its roots in what Herc called \"The Merry-Go-Round,\" a technique by which the deejay switched from break to break at the height of the party. This technique is specifically called \"The Merry-Go-Round\" because according to Herc, it takes one \"back and forth with no slack.\" Herc told The New York Times that he first introduced the Merry-Go-Round into his sets in 1972. The earliest known Merry-Go-Round involved playing James Brown's \"Give It Up or Turnit a Loose\" (with its refrain, \"Now clap your hands! Stomp your feet!\"), then switching from that record's break into the break from a second record, \"Bongo Rock\" by The Incredible Bongo Band. From the \"Bongo Rock\"'s break, Herc used a third record to switch to the break on \"The Mexican\" by the English rock band Babe Ruth. Kool Herc also contributed to developing the rhyming style of hip hop by punctuating the recorded music with slang phrases, announcing: \"Rock on, my mellow!\" \"B-boys, b-girls, are you ready? keep on rock steady\" \"This is the joint! Herc beat on the point\" \"To the beat, y'all!\" \"You don't stop!\" For his contributions, Herc is called a \"founding father of hip hop,\" a \"nascent cultural hero,\" and an integral part of the beginnings of hip hop by Time. On August 11, 1973, DJ Kool Herc was a disc jockey and emcee at a party in the recreation room at Sedgwick Avenue. Specifically, DJ Kool Herc: extended an instrumental beat (breaking or scratching) to let people dance longer (break dancing) and began MC'ing (rapping) during the extended breakdancing. ... [This] helped lay the foundation for a cultural revolution. According to music journalist Steven Ivory, in 1973, Herc placed on the turntables two copies of Brown's 1970 Sex Machine album and ran \"an extended cut 'n' mix of the percussion breakdown\" from \"Give It Up or Turnit Loose\", signaling the birth of hip hop. CANNOTANSWER",
+          "qas": [
+            {
+              "yesno": "x",
+              "question": "What was the break?",
+              "orig_answer": {
+                "text": "Herc used the record to focus on a short, heavily percussive part in it: the \"break\".",
+                "answer_start": 75
+              },
+              "answers": [
+                {
+                  "text": "Herc used the record to focus on a short, heavily percussive part in it: the \"break\".",
+                  "answer_start": 75
+                }
+              ],
+              "followup": "y",
+              "id": "C_ec865aa8cf664d4d879ed364dd7048ed_1_q#0"
+            },
+            {
+              "yesno": "x",
+              "question": "What did the break consist of?",
+              "orig_answer": {
+                "text": "Specifically, DJ Kool Herc: extended an instrumental beat (breaking or scratching) to let people dance longer",
+                "answer_start": 1873
+              },
+              "answers": [
+                {
+                  "text": "Since this part of the record was the one the dancers liked best, Herc isolated the break and prolonged it by changing between two record players.",
+                  "answer_start": 161
+                },
+                {
+                  "text": "Herc isolated the break and prolonged it by changing between two record players.",
+                  "answer_start": 227
+                },
+                {
+                  "text": "Since this part of the record was the one the dancers liked best, Herc isolated the break and prolonged it by changing between two record players.",
+                  "answer_start": 161
+                },
+                {
+                  "text": "five-minute loop of fury",
+                  "answer_start": 482
+                },
+                {
+                  "text": "Specifically, DJ Kool Herc: extended an instrumental beat (breaking or scratching) to let people dance longer",
+                  "answer_start": 1873
+                }
+              ],
+              "followup": "m",
+              "id": "C_ec865aa8cf664d4d879ed364dd7048ed_1_q#1"
+            },
+            {
+              "yesno": "y",
+              "question": "Did people like it?",
+              "orig_answer": {
+                "text": "... [This] helped lay the foundation for a cultural revolution.",
+                "answer_start": 2060
+              },
+              "answers": [
+                {
+                  "text": "Since this part of the record was the one the dancers liked best,",
+                  "answer_start": 161
+                },
+                {
+                  "text": "helped lay the foundation for a cultural revolution.",
+                  "answer_start": 2071
+                },
+                {
+                  "text": "Since this part of the record was the one the dancers liked best,",
+                  "answer_start": 161
+                },
+                {
+                  "text": "... [This] helped lay the foundation for a cultural revolution.",
+                  "answer_start": 2060
+                }
+              ],
+              "followup": "m",
+              "id": "C_ec865aa8cf664d4d879ed364dd7048ed_1_q#2"
+            },
+            {
+              "yesno": "x",
+              "question": "How did it lead to a cultural evolution?",
+              "orig_answer": {
+                "text": "extended an instrumental beat (breaking or scratching) to let people dance longer (break dancing) and began MC'ing (rapping) during the extended breakdancing. ... [",
+                "answer_start": 1901
+              },
+              "answers": [
+                {
+                  "text": "the style that was the blueprint for hip hop music.",
+                  "answer_start": 23
+                },
+                {
+                  "text": ") to let people dance longer (break dancing) and began MC'ing (rapping) during the extended breakdancing.",
+                  "answer_start": 1954
+                },
+                {
+                  "text": "extended an instrumental beat (breaking or scratching) to let people dance longer (break dancing) and began MC'ing (rapping) during the extended breakdancing. ... [",
+                  "answer_start": 1901
+                },
+                {
+                  "text": "extended an instrumental beat (breaking or scratching) to let people dance longer (break dancing) and began MC'ing (rapping) during the extended breakdancing. ... [",
+                  "answer_start": 1901
+                }
+              ],
+              "followup": "n",
+              "id": "C_ec865aa8cf664d4d879ed364dd7048ed_1_q#3"
+            },
+            {
+              "yesno": "x",
+              "question": "Did he influence others?",
+              "orig_answer": {
+                "text": "Herc is called a \"founding father of hip hop,\"",
+                "answer_start": 1625
+              },
+              "answers": [
+                {
+                  "text": "blueprint for hip hop music.",
+                  "answer_start": 46
+                },
+                {
+                  "text": "Herc is called a \"founding father of hip hop,\" a \"nascent cultural hero,\" and an integral part of the beginnings of hip hop by Time.",
+                  "answer_start": 1625
+                },
+                {
+                  "text": "Herc is called a \"founding father of hip hop,\"",
+                  "answer_start": 1625
+                }
+              ],
+              "followup": "m",
+              "id": "C_ec865aa8cf664d4d879ed364dd7048ed_1_q#4"
+            },
+            {
+              "yesno": "x",
+              "question": "What else is interesting in this article?",
+              "orig_answer": {
+                "text": "As one record reached the end of the break, he cued a second record back to the beginning of the break,",
+                "answer_start": 308
+              },
+              "answers": [
+                {
+                  "text": "ran \"an extended cut 'n' mix of the percussion breakdown\" from \"Give It Up or Turnit Loose\", signaling the birth of hip hop.",
+                  "answer_start": 2256
+                },
+                {
+                  "text": "On August 11, 1973, DJ Kool Herc was a disc jockey and emcee at a party in the recreation room at Sedgwick Avenue. Specifically, DJ Kool Herc:",
+                  "answer_start": 1758
+                },
+                {
+                  "text": "This technique is specifically called \"The Merry-Go-Round\" because according to Herc, it takes one \"back and forth with no slack.\"",
+                  "answer_start": 670
+                },
+                {
+                  "text": "!\" For his contributions, Herc is called a \"founding father of hip hop,\" a \"nascent cultural hero,\" and an integral part of the beginnings of hip hop by Time.",
+                  "answer_start": 1599
+                },
+                {
+                  "text": "As one record reached the end of the break, he cued a second record back to the beginning of the break,",
+                  "answer_start": 308
+                }
+              ],
+              "followup": "y",
+              "id": "C_ec865aa8cf664d4d879ed364dd7048ed_1_q#5"
+            }
+          ],
+          "id": "C_ec865aa8cf664d4d879ed364dd7048ed_1"
+        }
+      ]
+    }
+ 
+  ]
+}

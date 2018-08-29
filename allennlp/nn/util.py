@@ -3,10 +3,11 @@ Assorted utilities for working with neural networks in AllenNLP.
 """
 # pylint: disable=too-many-lines
 from collections import defaultdict
-from typing import Dict, List, Optional, Any, Tuple, Callable
+from typing import Dict, List, Optional, Any, Tuple
 import logging
-
 import math
+import warnings
+
 import torch
 
 from allennlp.common.checks import ConfigurationError
@@ -176,35 +177,44 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
     return dropout_mask
 
 
-def masked_softmax(vector, mask):
+def masked_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) -> torch.Tensor:
     """
     ``torch.nn.functional.softmax(vector)`` does not work if some elements of ``vector`` should be
     masked.  This performs a softmax on just the non-masked portions of ``vector``.  Passing
     ``None`` in for the mask is also acceptable; you'll just get a regular softmax.
 
-    We assume that both ``vector`` and ``mask`` (if given) have shape ``(batch_size, vector_dim)``.
+    ``vector`` can have an arbitrary number of dimensions; the only requirement is that ``mask`` is
+    broadcastable to ``vector's`` shape.  If ``mask`` has fewer dimensions than ``vector``, we will
+    unsqueeze on dimension 1 until they match.  If you need a different unsqueezing of your mask,
+    do it yourself before passing the mask into this function.
 
     In the case that the input vector is completely masked, this function returns an array
     of ``0.0``. This behavior may cause ``NaN`` if this is used as the last layer of a model
     that uses categorical cross-entropy loss.
     """
     if mask is None:
-        result = torch.nn.functional.softmax(vector, dim=-1)
+        result = torch.nn.functional.softmax(vector, dim=dim)
     else:
+        mask = mask.float()
+        while mask.dim() < vector.dim():
+            mask = mask.unsqueeze(1)
         # To limit numerical errors from large vector elements outside the mask, we zero these out.
-        result = torch.nn.functional.softmax(vector * mask, dim=-1)
+        result = torch.nn.functional.softmax(vector * mask, dim=dim)
         result = result * mask
-        result = result / (result.sum(dim=1, keepdim=True) + 1e-13)
+        result = result / (result.sum(dim=dim, keepdim=True) + 1e-13)
     return result
 
 
-def masked_log_softmax(vector, mask):
+def masked_log_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) -> torch.Tensor:
     """
     ``torch.nn.functional.log_softmax(vector)`` does not work if some elements of ``vector`` should be
     masked.  This performs a log_softmax on just the non-masked portions of ``vector``.  Passing
     ``None`` in for the mask is also acceptable; you'll just get a regular log_softmax.
 
-    We assume that both ``vector`` and ``mask`` (if given) have shape ``(batch_size, vector_dim)``.
+    ``vector`` can have an arbitrary number of dimensions; the only requirement is that ``mask`` is
+    broadcastable to ``vector's`` shape.  If ``mask`` has fewer dimensions than ``vector``, we will
+    unsqueeze on dimension 1 until they match.  If you need a different unsqueezing of your mask,
+    do it yourself before passing the mask into this function.
 
     In the case that the input vector is completely masked, the return value of this function is
     arbitrary, but not ``nan``.  You should be masking the result of whatever computation comes out
@@ -217,13 +227,80 @@ def masked_log_softmax(vector, mask):
     extreme, you've got bigger problems than this.
     """
     if mask is not None:
+        mask = mask.float()
+        while mask.dim() < vector.dim():
+            mask = mask.unsqueeze(1)
         # vector + mask.log() is an easy way to zero out masked elements in logspace, but it
         # results in nans when the whole vector is masked.  We need a very small value instead of a
         # zero in the mask for these cases.  log(1 + 1e-45) is still basically 0, so we can safely
         # just add 1e-45 before calling mask.log().  We use 1e-45 because 1e-46 is so small it
         # becomes 0 - this is just the smallest value we can actually use.
         vector = vector + (mask + 1e-45).log()
-    return torch.nn.functional.log_softmax(vector, dim=1)
+    return torch.nn.functional.log_softmax(vector, dim=dim)
+
+
+def masked_max(vector: torch.Tensor,
+               mask: torch.Tensor,
+               dim: int,
+               keepdim: bool = False,
+               min_val: float = -1e7) -> torch.Tensor:
+    """
+    To calculate max along certain dimensions on masked values
+
+    Parameters
+    ----------
+    vector : ``torch.Tensor``
+        The vector to calculate max, assume unmasked parts are already zeros
+    mask : ``torch.Tensor``
+        The mask of the vector. It must be broadcastable with vector.
+    dim : ``int``
+        The dimension to calculate max
+    keepdim : ``bool``
+        Whether to keep dimension
+    min_val : ``float``
+        The minimal value for paddings
+
+    Returns
+    -------
+    A ``torch.Tensor`` of including the maximum values.
+    """
+    one_minus_mask = (1.0 - mask).byte()
+    replaced_vector = vector.masked_fill(one_minus_mask, min_val)
+    max_value, _ = replaced_vector.max(dim=dim, keepdim=keepdim)
+    return max_value
+
+
+def masked_mean(vector: torch.Tensor,
+                mask: torch.Tensor,
+                dim: int,
+                keepdim: bool = False,
+                eps: float = 1e-8) -> torch.Tensor:
+    """
+    To calculate mean along certain dimensions on masked values
+
+    Parameters
+    ----------
+    vector : ``torch.Tensor``
+        The vector to calculate mean.
+    mask : ``torch.Tensor``
+        The mask of the vector. It must be broadcastable with vector.
+    dim : ``int``
+        The dimension to calculate mean
+    keepdim : ``bool``
+        Whether to keep dimension
+    eps : ``float``
+        A small value to avoid zero division problem.
+
+    Returns
+    -------
+    A ``torch.Tensor`` of including the mean values.
+    """
+    one_minus_mask = (1.0 - mask).byte()
+    replaced_vector = vector.masked_fill(one_minus_mask, 0.0)
+
+    value_sum = torch.sum(replaced_vector, dim=dim, keepdim=keepdim)
+    value_count = torch.sum(mask.float(), dim=dim, keepdim=keepdim)
+    return value_sum / value_count.clamp(min=eps)
 
 
 def viterbi_decode(tag_sequence: torch.Tensor,
@@ -360,34 +437,20 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
     else:
         raise ValueError("Expected a tensor with dimension 2 or 3, found {}".format(smallest_dim))
 
-def _last_dimension_applicator(function_to_apply: Callable[[torch.Tensor, Optional[torch.Tensor]], torch.Tensor],
-                               tensor: torch.Tensor,
-                               mask: Optional[torch.Tensor] = None):
-    """
-    Takes a tensor with 3 or more dimensions and applies a function over the last dimension.  We
-    assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
-    has shape ``(batch_size, sequence_length)``.  We first unsqueeze and expand the mask so that it
-    has the same shape as the tensor, then flatten them both to be 2D, pass them through
-    the function and put the tensor back in its original shape.
-    """
-    tensor_shape = tensor.size()
-    reshaped_tensor = tensor.view(-1, tensor.size()[-1])
-    if mask is not None:
-        while mask.dim() < tensor.dim():
-            mask = mask.unsqueeze(1)
-        mask = mask.expand_as(tensor).contiguous().float()
-        mask = mask.view(-1, mask.size()[-1])
-    reshaped_result = function_to_apply(reshaped_tensor, mask)
-    return reshaped_result.view(*tensor_shape)
-
 
 def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
     """
     Takes a tensor with 3 or more dimensions and does a masked softmax over the last dimension.  We
     assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
     has shape ``(batch_size, sequence_length)``.
+
+    .. deprecated:: 0.6.1
+           ``last_dim_softmax`` was deprecated in favor of just using ``masked_softmax`` in version
+           0.6.1.  It will be removed in version 0.8.
     """
-    return _last_dimension_applicator(masked_softmax, tensor, mask)
+    warnings.warn("``last_dim_softmax`` was deprecated in favor of just using ``masked_softmax`` "
+                  "in version 0.6.1.  It will be removed in version 0.8.", DeprecationWarning)
+    return masked_softmax(tensor, mask, dim=-1)
 
 
 def last_dim_log_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
@@ -395,8 +458,15 @@ def last_dim_log_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = No
     Takes a tensor with 3 or more dimensions and does a masked log softmax over the last dimension.
     We assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
     has shape ``(batch_size, sequence_length)``.
+
+    .. deprecated:: 0.6.1
+           ``last_dim_log_softmax`` was deprecated in favor of just using ``masked_log_softmax`` in
+           version 0.6.1.  It will be removed in version 0.8.
     """
-    return _last_dimension_applicator(masked_log_softmax, tensor, mask)
+    warnings.warn("``last_dim_log_softmax`` was deprecated in favor of just using "
+                  "``masked_log_softmax`` in version 0.6.1.  It will be removed in version 0.8.",
+                  DeprecationWarning)
+    return masked_log_softmax(tensor, mask, dim=-1)
 
 
 def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
@@ -515,14 +585,51 @@ def replace_masked_values(tensor: torch.Tensor, mask: torch.Tensor, replace_with
     Replaces all masked values in ``tensor`` with ``replace_with``.  ``mask`` must be broadcastable
     to the same shape as ``tensor``. We require that ``tensor.dim() == mask.dim()``, as otherwise we
     won't know which dimensions of the mask to unsqueeze.
+
+    This just does ``tensor.masked_fill()``, except the pytorch method fills in things with a mask
+    value of 1, where we want the opposite.  You can do this in your own code with
+    ``tensor.masked_fill((1 - mask).byte(), replace_with)``.
     """
-    # We'll build a tensor of the same shape as `tensor`, zero out masked values, then add back in
-    # the `replace_with` value.
     if tensor.dim() != mask.dim():
         raise ConfigurationError("tensor.dim() (%d) != mask.dim() (%d)" % (tensor.dim(), mask.dim()))
-    one_minus_mask = 1.0 - mask
-    values_to_add = replace_with * one_minus_mask
-    return tensor * mask + values_to_add
+    return tensor.masked_fill((1 - mask).byte(), replace_with)
+
+
+def tensors_equal(tensor1: torch.Tensor, tensor2: torch.Tensor, tolerance: float = 1e-12) -> bool:
+    """
+    A check for tensor equality (by value).  We make sure that the tensors have the same shape,
+    then check all of the entries in the tensor for equality.  We additionally allow the input
+    tensors to be lists or dictionaries, where we then do the above check on every position in the
+    list / item in the dictionary.  If we find objects that aren't tensors as we're doing that, we
+    just defer to their equality check.
+
+    This is kind of a catch-all method that's designed to make implementing ``__eq__`` methods
+    easier, in a way that's really only intended to be useful for tests.
+    """
+    # pylint: disable=too-many-return-statements
+    if isinstance(tensor1, (list, tuple)):
+        if not isinstance(tensor2, (list, tuple)) or len(tensor1) != len(tensor2):
+            return False
+        return all([tensors_equal(t1, t2, tolerance) for t1, t2 in zip(tensor1, tensor2)])
+    elif isinstance(tensor1, dict):
+        if not isinstance(tensor2, dict):
+            return False
+        if tensor1.keys() != tensor2.keys():
+            return False
+        return all([tensors_equal(tensor1[key], tensor2[key], tolerance) for key in tensor1])
+    elif isinstance(tensor1, torch.Tensor):
+        if not isinstance(tensor2, torch.Tensor):
+            return False
+        if tensor1.size() != tensor2.size():
+            return False
+        return ((tensor1 - tensor2).abs().float() < tolerance).all()
+    else:
+        try:
+            return tensor1 == tensor2
+        except RuntimeError:
+            print(type(tensor1), type(tensor2))
+            raise
+
 
 
 def device_mapping(cuda_device: int):
@@ -588,6 +695,88 @@ def _get_combination(combination: str, tensors: List[torch.Tensor]) -> torch.Ten
             return first_tensor + second_tensor
         elif operation == '-':
             return first_tensor - second_tensor
+        else:
+            raise ConfigurationError("Invalid operation: " + operation)
+
+
+def combine_tensors_and_multiply(combination: str,
+                                 tensors: List[torch.Tensor],
+                                 weights: torch.nn.Parameter) -> torch.Tensor:
+    """
+    Like :func:`combine_tensors`, but does a weighted (linear) multiplication while combining.
+    This is a separate function from ``combine_tensors`` because we try to avoid instantiating
+    large intermediate tensors during the combination, which is possible because we know that we're
+    going to be multiplying by a weight vector in the end.
+
+    Parameters
+    ----------
+    combination : ``str``
+        Same as in :func:`combine_tensors`
+    tensors : ``List[torch.Tensor]``
+        A list of tensors to combine, where the integers in the ``combination`` are (1-indexed)
+        positions in this list of tensors.  These tensors are all expected to have either three or
+        four dimensions, with the final dimension being an embedding.  If there are four
+        dimensions, one of them must have length 1.
+    weights : ``torch.nn.Parameter``
+        A vector of weights to use for the combinations.  This should have shape (combined_dim,),
+        as calculated by :func:`get_combined_dim`.
+    """
+    if len(tensors) > 9:
+        raise ConfigurationError("Double-digit tensor lists not currently supported")
+    combination = combination.replace('x', '1').replace('y', '2')
+    pieces = combination.split(',')
+    tensor_dims = [tensor.size(-1) for tensor in tensors]
+    combination_dims = [_get_combination_dim(piece, tensor_dims) for piece in pieces]
+    dims_so_far = 0
+    to_sum = []
+    for piece, combination_dim in zip(pieces, combination_dims):
+        weight = weights[dims_so_far:(dims_so_far + combination_dim)]
+        dims_so_far += combination_dim
+        to_sum.append(_get_combination_and_multiply(piece, tensors, weight))
+    result = to_sum[0]
+    for result_piece in to_sum[1:]:
+        result = result + result_piece
+    return result
+
+
+def _get_combination_and_multiply(combination: str,
+                                  tensors: List[torch.Tensor],
+                                  weight: torch.nn.Parameter) -> torch.Tensor:
+    if combination.isdigit():
+        index = int(combination) - 1
+        return torch.matmul(tensors[index], weight)
+    else:
+        if len(combination) != 3:
+            raise ConfigurationError("Invalid combination: " + combination)
+        first_tensor = _get_combination(combination[0], tensors)
+        second_tensor = _get_combination(combination[2], tensors)
+        operation = combination[1]
+        if operation == '*':
+            if first_tensor.dim() > 4 or second_tensor.dim() > 4:
+                raise ValueError("Tensors with dim > 4 not currently supported")
+            if first_tensor.dim() == 4:
+                expanded_dim = first_tensor.size().index(1)
+                first_tensor = first_tensor.squeeze(expanded_dim)
+            if second_tensor.dim() == 4:
+                expanded_dim = second_tensor.size().index(1)
+                second_tensor = second_tensor.squeeze(expanded_dim)
+            intermediate = first_tensor * weight
+            return torch.matmul(intermediate, second_tensor.transpose(-1, -2)).squeeze(-1)
+        elif operation == '/':
+            if first_tensor.dim() > 4 or second_tensor.dim() > 4:
+                raise ValueError("Tensors with dim > 4 not currently supported")
+            if first_tensor.dim() == 4:
+                expanded_dim = first_tensor.size().index(1)
+                first_tensor = first_tensor.squeeze(expanded_dim)
+            if second_tensor.dim() == 4:
+                expanded_dim = second_tensor.size().index(1)
+                second_tensor = second_tensor.squeeze(expanded_dim)
+            intermediate = first_tensor * weight
+            return torch.matmul(intermediate, second_tensor.pow(-1).transpose(-1, -2)).squeeze(-1)
+        elif operation == '+':
+            return torch.matmul(first_tensor, weight) + torch.matmul(second_tensor, weight)
+        elif operation == '-':
+            return torch.matmul(first_tensor, weight) - torch.matmul(second_tensor, weight)
         else:
             raise ConfigurationError("Invalid operation: " + operation)
 

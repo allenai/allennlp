@@ -9,10 +9,13 @@ from allennlp.training.metrics.average import Average
 from allennlp.training.metrics.boolean_accuracy import BooleanAccuracy
 from allennlp.training.metrics.categorical_accuracy import CategoricalAccuracy
 from allennlp.training.metrics.conll_coref_scores import ConllCorefScores
+from allennlp.training.metrics.covariance import Covariance
 from allennlp.training.metrics.entropy import Entropy
 from allennlp.training.metrics.evalb_bracketing_scorer import EvalbBracketingScorer, DEFAULT_EVALB_DIR
 from allennlp.training.metrics.f1_measure import F1Measure
+from allennlp.training.metrics.mean_absolute_error import MeanAbsoluteError
 from allennlp.training.metrics.mention_recall import MentionRecall
+from allennlp.training.metrics.pearson_correlation import PearsonCorrelation
 from allennlp.training.metrics.span_based_f1_measure import SpanBasedF1Measure
 from allennlp.training.metrics.squad_em_and_f1 import SquadEmAndF1
 from allennlp.training.metrics.wikitables_accuracy import WikiTablesAccuracy
