@@ -316,43 +316,6 @@ class TestNnUtil(AllenNlpTestCase):
         assert_almost_equal(util.get_text_field_mask(text_field_tensors).numpy(),
                             [[0, 0, 1]])
 
-    def test_last_dim_softmax_does_softmax_on_last_dim(self):
-        batch_size = 1
-        length_1 = 5
-        length_2 = 3
-        num_options = 4
-        options_array = numpy.zeros((batch_size, length_1, length_2, num_options))
-        for i in range(length_1):
-            for j in range(length_2):
-                options_array[0, i, j] = [2, 4, 0, 1]
-        options_tensor = torch.from_numpy(options_array)
-        softmax_tensor = util.last_dim_softmax(options_tensor).data.numpy()
-        assert softmax_tensor.shape == (batch_size, length_1, length_2, num_options)
-        for i in range(length_1):
-            for j in range(length_2):
-                assert_almost_equal(softmax_tensor[0, i, j],
-                                    [0.112457, 0.830953, 0.015219, 0.041371],
-                                    decimal=5)
-
-    def test_last_dim_softmax_handles_mask_correctly(self):
-        batch_size = 1
-        length_1 = 4
-        length_2 = 3
-        num_options = 5
-        options_array = numpy.zeros((batch_size, length_1, length_2, num_options))
-        for i in range(length_1):
-            for j in range(length_2):
-                options_array[0, i, j] = [2, 4, 0, 1, 6]
-        mask = torch.IntTensor([[1, 1, 1, 1, 0]])
-        options_tensor = torch.from_numpy(options_array).float()
-        softmax_tensor = util.last_dim_softmax(options_tensor, mask).data.numpy()
-        assert softmax_tensor.shape == (batch_size, length_1, length_2, num_options)
-        for i in range(length_1):
-            for j in range(length_2):
-                assert_almost_equal(softmax_tensor[0, i, j],
-                                    [0.112457, 0.830953, 0.015219, 0.041371, 0.0],
-                                    decimal=5)
-
     def test_weighted_sum_works_on_simple_input(self):
         batch_size = 1
         sentence_length = 5

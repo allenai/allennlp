@@ -94,7 +94,7 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
                                                           span_indices,
                                                           flat_span_indices).squeeze(-1)
         # Shape: (batch_size, num_spans, max_batch_span_width)
-        span_attention_weights = util.last_dim_softmax(span_attention_logits, span_mask)
+        span_attention_weights = util.masked_softmax(span_attention_logits, span_mask)
 
         # Do a weighted sum of the embedded spans with
         # respect to the normalised attention distributions.
