@@ -55,7 +55,8 @@ class Covariance(Metric):
         updated_count = self._total_count + num_batch_items
 
         batch_mean_prediction = torch.sum(predictions) / num_batch_items
-        delta_mean_prediction = ((batch_mean_prediction - self._total_prediction_mean) * num_batch_items) / updated_count
+        delta_mean_prediction = ((batch_mean_prediction - self._total_prediction_mean) *
+                                 num_batch_items) / updated_count
         previous_total_prediction_mean = self._total_prediction_mean
         self._total_prediction_mean += delta_mean_prediction.item()
 
@@ -70,9 +71,9 @@ class Covariance(Metric):
         else:
             batch_comoment = torch.sum(batch_coresiduals)
         delta_comoment = (
-            batch_comoment + (previous_total_prediction_mean - batch_mean_prediction) *
-            (previous_total_label_mean - batch_mean_label) *
-            (previous_count * num_batch_items / updated_count))
+                batch_comoment + (previous_total_prediction_mean - batch_mean_prediction) *
+                (previous_total_label_mean - batch_mean_label) *
+                (previous_count * num_batch_items / updated_count))
         self._total_comoment += delta_comoment.item()
         self._total_count = updated_count
 
