@@ -85,42 +85,43 @@ class Event2MindDatasetReader(DatasetReader):
                         for oreact in oreacts:
                             yield self.text_to_instance(source_sequence, xintent, xreact, oreact)
 
-    """
-    See https://github.com/maartensap/event2mind-internal/blob/master/code/modeling/utils/preprocess.py#L80.
-    """
     @staticmethod
     def _preprocess_string(tokenizer, string: str) -> str:
-       word_tokens = tokenizer.tokenize(string.lower())
-       words = [token.text for token in word_tokens]
-       if "person y" in string.lower():
-          #tokenize the string, reformat PersonY if mentioned for consistency
-          ws = []
-          skip = False
-          for i in range(0, len(words)-1):
-             # TODO(brendanr): Why not handle person x too?
-             if words[i] == "person" and words[i+1] == "y":
-                ws.append("persony")
-                skip = True
-             elif skip:
-                skip = False
-             else:
-                ws.append(words[i])
-          if not skip:
-             ws.append(words[-1])
-          words = ws
-       # get rid of "to" or "to be" prepended to annotations
-       retval = []
-       first = 0
-       for word in words:
-          first += 1
-          if word == "to" and first == 1:
-             continue
-          if word == "be" and first < 3:
-             continue
-          retval.append(word)
-       if len(retval) == 0:
-          retval.append("none")
-       return " ".join(retval)
+        """
+        Taken from:
+        https://github.com/maartensap/event2mind-internal/blob/master/code/modeling/utils/preprocess.py#L80.
+        """
+        word_tokens = tokenizer.tokenize(string.lower())
+        words = [token.text for token in word_tokens]
+        if "person y" in string.lower():
+            #tokenize the string, reformat PersonY if mentioned for consistency
+            words_with_persony = []
+            skip = False
+            for i in range(0, len(words)-1):
+                # TODO(brendanr): Why not handle person x too?
+                if words[i] == "person" and words[i+1] == "y":
+                    words_with_persony.append("persony")
+                    skip = True
+                elif skip:
+                    skip = False
+                else:
+                    words_with_persony.append(words[i])
+            if not skip:
+                words_with_persony.append(words[-1])
+            words = words_with_persony
+        # get rid of "to" or "to be" prepended to annotations
+        retval = []
+        first = 0
+        for word in words:
+            first += 1
+            if word == "to" and first == 1:
+                continue
+            if word == "be" and first < 3:
+                continue
+            retval.append(word)
+        if not retval:
+            retval.append("none")
+        return " ".join(retval)
 
     def _build_target_field(self, target_string: str) -> TextField:
         processed = self._preprocess_string(self._target_tokenizer, target_string)
@@ -149,10 +150,10 @@ class Event2MindDatasetReader(DatasetReader):
             if oreact_string is None:
                 raise Exception("missing oreact")
             return Instance({
-                "source": source_field,
-                "xintent": self._build_target_field(xintent_string),
-                "xreact": self._build_target_field(xreact_string),
-                "oreact": self._build_target_field(oreact_string),
-                })
+                    "source": source_field,
+                    "xintent": self._build_target_field(xintent_string),
+                    "xreact": self._build_target_field(xreact_string),
+                    "oreact": self._build_target_field(oreact_string),
+            })
         else:
             return Instance({'source': source_field})
