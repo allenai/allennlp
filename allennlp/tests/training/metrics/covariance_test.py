@@ -27,6 +27,12 @@ class CovarianceTest(AllenNlpTestCase):
             covariance(timestep_predictions, timestep_labels)
             assert_allclose(expected_covariance, covariance.get_metric(), rtol=1e-5)
 
+        # Test reset
+        covariance.reset()
+        covariance(torch.FloatTensor(predictions), torch.FloatTensor(labels))
+        assert_allclose(np.cov(predictions.reshape(-1), labels.reshape(-1))[0, 1],
+                        covariance.get_metric(), rtol=1e-5)
+
     def test_covariance_masked_computation(self):
         covariance = Covariance()
         batch_size = 100
@@ -48,3 +54,9 @@ class CovarianceTest(AllenNlpTestCase):
                                          fweights=mask[:stride * (i + 1), :].reshape(-1))[0, 1]
             covariance(timestep_predictions, timestep_labels, timestep_mask)
             assert_allclose(expected_covariance, covariance.get_metric(), rtol=1e-5)
+
+        # Test reset
+        covariance.reset()
+        covariance(torch.FloatTensor(predictions), torch.FloatTensor(labels), torch.FloatTensor(mask))
+        assert_allclose(np.cov(predictions.reshape(-1), labels.reshape(-1), fweights=mask.reshape(-1))[0, 1],
+                        covariance.get_metric(), rtol=1e-5)

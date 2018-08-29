@@ -24,6 +24,11 @@ class PearsonCorrelationTest(AllenNlpTestCase):
                                                        labels[:stride * (i + 1), :].reshape(-1))[0, 1]
             pearson_correlation(timestep_predictions, timestep_labels)
             assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric(), rtol=1e-5)
+        # Test reset
+        pearson_correlation.reset()
+        pearson_correlation(torch.FloatTensor(predictions), torch.FloatTensor(labels))
+        assert_allclose(np.corrcoef(predictions.reshape(-1), labels.reshape(-1))[0, 1],
+                        pearson_correlation.get_metric(), rtol=1e-5)
 
     def test_pearson_correlation_masked_computation(self):
         pearson_correlation = PearsonCorrelation()
