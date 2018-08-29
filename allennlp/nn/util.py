@@ -192,8 +192,8 @@ def masked_softmax(vector, mask):
         result = torch.nn.functional.softmax(vector, dim=-1)
     else:
         # To limit numerical errors from large vector elements outside the mask, we zero these out.
-        result = torch.nn.functional.softmax(vector * mask, dim=-1)
-        result = result * mask
+        result = torch.nn.functional.softmax(replace_masked_values(vector, mask, 0.0), dim=-1)
+        result = replace_masked_values(result, mask, 0.0)
         result = result / (result.sum(dim=1, keepdim=True) + 1e-13)
     return result
 
@@ -439,7 +439,7 @@ def _last_dimension_applicator(function_to_apply: Callable[[torch.Tensor, Option
     if mask is not None:
         while mask.dim() < tensor.dim():
             mask = mask.unsqueeze(1)
-        mask = mask.expand_as(tensor).contiguous().float()
+        mask = mask.byte().expand_as(tensor).contiguous()
         mask = mask.view(-1, mask.size()[-1])
     reshaped_result = function_to_apply(reshaped_tensor, mask)
     return reshaped_result.view(*tensor_shape)
