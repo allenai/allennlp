@@ -201,7 +201,7 @@ def masked_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) -> t
         # To limit numerical errors from large vector elements outside the mask, we zero these out.
         result = torch.nn.functional.softmax(vector * mask, dim=dim)
         result = result * mask
-        result = result / (result.sum(dim=-1, keepdim=True) + 1e-13)
+        result = result / (result.sum(dim=dim, keepdim=True) + 1e-13)
     return result
 
 
