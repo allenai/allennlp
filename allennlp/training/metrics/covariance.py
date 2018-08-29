@@ -28,7 +28,7 @@ class Covariance(Metric):
     def __init__(self) -> None:
         self._total_prediction_mean = 0.0
         self._total_label_mean = 0.0
-        self._total_comoment = 0.0
+        self._total_co_moment = 0.0
         self._total_count = 0.0
 
     def __call__(self,
@@ -81,14 +81,14 @@ class Covariance(Metric):
 
         batch_coresiduals = (predictions - batch_mean_prediction) * (gold_labels - batch_mean_label)
         if mask is not None:
-            batch_comoment = torch.sum(batch_coresiduals * mask)
+            batch_co_moment = torch.sum(batch_coresiduals * mask)
         else:
-            batch_comoment = torch.sum(batch_coresiduals)
-        delta_comoment = (
-                batch_comoment + (previous_total_prediction_mean - batch_mean_prediction) *
+            batch_co_moment = torch.sum(batch_coresiduals)
+        delta_co_moment = (
+                batch_co_moment + (previous_total_prediction_mean - batch_mean_prediction) *
                 (previous_total_label_mean - batch_mean_label) *
                 (previous_count * num_batch_items / updated_count))
-        self._total_comoment += delta_comoment.item()
+        self._total_co_moment += delta_co_moment.item()
         self._total_count = updated_count
 
     def get_metric(self, reset: bool = False):
@@ -97,7 +97,7 @@ class Covariance(Metric):
         -------
         The accumulated covariance.
         """
-        covariance = self._total_comoment / (self._total_count - 1)
+        covariance = self._total_co_moment / (self._total_count - 1)
         if reset:
             self.reset()
         return covariance
@@ -106,5 +106,5 @@ class Covariance(Metric):
     def reset(self):
         self._total_prediction_mean = 0.0
         self._total_label_mean = 0.0
-        self._total_comoment = 0.0
+        self._total_co_moment = 0.0
         self._total_count = 0.0
