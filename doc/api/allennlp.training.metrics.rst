@@ -11,6 +11,7 @@ allennlp.training.metrics
 * :ref:`BooleanAccuracy<boolean-accuracy>`
 * :ref:`CategoricalAccuracy<categorical-accuracy>`
 * :ref:`ConllCorefScores<conll-coref-scores>`
+* :ref:`Covariance<covariance>`
 * :ref:`Entropy<entropy>`
 * :ref:`EvalbBracketingScorer<evalb>`
 * :ref:`F1Measure<f1-measure>`
@@ -48,6 +49,12 @@ allennlp.training.metrics
 
 .. _conll-coref-scores:
 .. automodule:: allennlp.training.metrics.conll_coref_scores
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _covariance:
+.. automodule:: allennlp.training.metrics.covariance
    :members:
    :undoc-members:
    :show-inheritance:

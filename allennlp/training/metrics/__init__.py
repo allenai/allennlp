@@ -9,6 +9,7 @@ from allennlp.training.metrics.average import Average
 from allennlp.training.metrics.boolean_accuracy import BooleanAccuracy
 from allennlp.training.metrics.categorical_accuracy import CategoricalAccuracy
 from allennlp.training.metrics.conll_coref_scores import ConllCorefScores
+from allennlp.training.metrics.covariance import Covariance
 from allennlp.training.metrics.entropy import Entropy
 from allennlp.training.metrics.evalb_bracketing_scorer import EvalbBracketingScorer, DEFAULT_EVALB_DIR
 from allennlp.training.metrics.f1_measure import F1Measure
