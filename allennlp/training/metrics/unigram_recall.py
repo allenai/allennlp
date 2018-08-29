@@ -12,8 +12,9 @@ from allennlp.training.metrics.metric import Metric
 @Metric.register("unigram_recall")
 class UnigramRecall(Metric):
     """
-    Unigram top-K recall. Assumes integer labels, with
-    each item to be classified having a single correct class.
+    Unigram top-K recall. This does not take word order into account. Assumes
+    integer labels, with each item to be classified having a single correct
+    class.
     """
     def __init__(self) -> None:
         self.correct_count = 0.0

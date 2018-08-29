@@ -34,7 +34,7 @@ class Event2Mind(Model):
         be specified as ``target_namespace``.
     source_embedder : ``TextFieldEmbedder``, required
         Embedder for source side sequences
-    encoder : ``Seq2SeqEncoder``, required
+    encoder : ``Seq2VecEncoder``, required
         The encoder of the "encoder/decoder" model
     max_decoding_steps : int, required
         Length of decoded sequences
