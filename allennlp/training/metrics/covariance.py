@@ -80,7 +80,7 @@ class Covariance(Metric):
         """
         Returns
         -------
-        The accumulated mean absolute error.
+        The accumulated covariance.
         """
         covariance = self._total_comoment / (self._total_count - 1)
         if reset:
