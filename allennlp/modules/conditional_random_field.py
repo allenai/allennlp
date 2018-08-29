@@ -242,7 +242,7 @@ class ConditionalRandomField(torch.nn.Module):
         """
         Computes the numerator term for the log-likelihood, which is just score(inputs, tags)
         """
-        batch_size, sequence_length, num_tags = logits.data.shape
+        batch_size, sequence_length, _ = logits.data.shape
 
         # Transpose batch size and sequence dimensions:
         logits = logits.transpose(0, 1).contiguous()
@@ -273,7 +273,7 @@ class ConditionalRandomField(torch.nn.Module):
         # Transition from last state to "stop" state. To start with, we need to find the last tag
         # for each instance.
         last_tag_index = mask.sum(0).long() - 1
-        last_tags = torch.gather(tags, 0, last_tag_index.view(1, batch_size)).view(-1)
+        last_tags = torch.gather(tags, 0, last_tag_index.view(1, batch_size)).squeeze(0)
 
         # Compute score of transitioning to `stop_tag` from each "last tag".
         if self.include_start_end_transitions:
