@@ -19,7 +19,7 @@ def allowed_transitions(constraint_type: str, labels: Dict[int, str]) -> List[Tu
     ----------
     constraint_type : ``str``, required
         Indicates which constraint to apply. Current choices are
-        "BIO", "IOB1", and BIOUL".
+        "BIO", "IOB1", "BIOUL", and "BMES".
     labels : ``Dict[int, str]``, required
         A mapping {label_id -> label}. Most commonly this would be the value from
         Vocabulary.get_index_to_token_vocabulary()
@@ -69,7 +69,7 @@ def is_transition_allowed(constraint_type: str,
     ----------
     constraint_type : ``str``, required
         Indicates which constraint to apply. Current choices are
-        "BIO", "IOB1", and BIOUL".
+        "BIO", "IOB1", "BIOUL", and "BMES".
     from_tag : ``str``, required
         The tag that the transition originates from. For example, if the
         label is ``I-PER``, the ``from_tag`` is ``I``.
@@ -129,6 +129,21 @@ def is_transition_allowed(constraint_type: str,
                 # Can only transition to B-x from B-x or I-x, where
                 # x is the same tag.
                 to_tag == 'B' and from_tag in ('B', 'I') and from_entity == to_entity
+        ])
+    elif constraint_type == "BMES":
+        if from_tag == "START":
+            return to_tag in ('B', 'S')
+        if to_tag == "END":
+            return from_tag in ('E', 'S')
+        return any([
+                # Can only transition to B or S from E or S.
+                to_tag in ('B', 'S') and from_tag in ('E', 'S'),
+                # Can only transition to M-x from B-x, where
+                # x is the same tag.
+                to_tag == 'M' and from_tag == 'B' and from_entity == to_entity,
+                # Can only transition to E-x from B-x or M-x, where
+                # x is the same tag.
+                to_tag == 'E' and from_tag in ('B', 'M') and from_entity == to_entity,
         ])
     else:
         raise ConfigurationError(f"Unknown constraint type: {constraint_type}")
