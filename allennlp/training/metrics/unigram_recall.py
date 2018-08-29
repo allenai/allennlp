@@ -1,7 +1,8 @@
 from typing import Optional
 
-from overrides import overrides
 import sys
+
+from overrides import overrides
 import torch
 
 from allennlp.common.checks import ConfigurationError
@@ -43,7 +44,6 @@ class UnigramRecall(Metric):
             raise ConfigurationError("mask must have the same size as predictions but "
                                      "found tensor of shape: {}".format(mask.size()))
 
-        k = predictions.size()[1]
         batch_size = predictions.size()[0]
         correct = 0.0
         # Note: See preprocess.py.
@@ -55,21 +55,20 @@ class UnigramRecall(Metric):
                 masked_gold = cur_gold * mask[i]
             else:
                 masked_gold = cur_gold
-            #TODO(brendanr): Verify! Is 0 a valid index?
             cleaned_gold = [x for x in masked_gold if x != 0 and x != end_index]
 
             retval = 0.
-            for w in cleaned_gold:
+            for word in cleaned_gold:
                 stillsearch = True
                 for beam in beams:
                     if mask is not None:
                         masked_beam = beam * mask[i]
                     else:
                         masked_beam = beam
-                    # w is from cleaned gold which doesn't have 0 or end_index,
-                    # so we don't need to explicitly remove those from
-                    # masked_beam.
-                    if stillsearch and (w in masked_beam):
+                    # word is from cleaned gold which doesn't have 0 or
+                    # end_index, so we don't need to explicitly remove those
+                    # from masked_beam.
+                    if stillsearch and (word in masked_beam):
                         retval += 1./float(len(cleaned_gold))
                         stillsearch = False
             correct += retval
