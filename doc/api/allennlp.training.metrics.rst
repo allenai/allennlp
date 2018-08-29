@@ -14,6 +14,7 @@ allennlp.training.metrics
 * :ref:`Entropy<entropy>`
 * :ref:`EvalbBracketingScorer<evalb>`
 * :ref:`F1Measure<f1-measure>`
+* :ref:`MeanAbsoluteError<mean-absolute-error>`
 * :ref:`MentionRecall<mention-recall>`
 * :ref:`SpanBasedF1Measure<span-based-f1-measure>`
 * :ref:`SquadEmAndF1<squad-em-and-f1>`
@@ -65,6 +66,12 @@ allennlp.training.metrics
 
 .. _f1-measure:
 .. automodule:: allennlp.training.metrics.f1_measure
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _mean-absolute-error:
+.. automodule:: allennlp.training.metrics.mean_absolute_error
    :members:
    :undoc-members:
    :show-inheritance:
