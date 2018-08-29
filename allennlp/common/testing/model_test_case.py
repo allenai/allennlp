@@ -23,7 +23,8 @@ class ModelTestCase(AllenNlpTestCase):
         params = Params.from_file(self.param_file)
 
         reader = DatasetReader.from_params(params['dataset_reader'])
-        instances = reader.read(dataset_file)
+        # The dataset reader might be lazy, but a lazy list here breaks some of our tests.
+        instances = list(reader.read(dataset_file))
         # Use parameters for vocabulary if they are present in the config file, so that choices like
         # "non_padded_namespaces", "min_count" etc. can be set if needed.
         if 'vocabulary' in params:

@@ -285,8 +285,8 @@ def make_reading_comprehension_instance_quac(question_list_tokens: List[List[Tok
 
     def mark_tag(span_start, span_end, passage_tags, prev_answer_distance):
         try:
-            assert span_start > 0
-            assert span_end > 0
+            assert span_start >= 0
+            assert span_end >= 0
         except:
             raise ValueError("Previous {0:d}th answer span should have been updated!".format(prev_answer_distance))
         # Modify "tags" to mark previous answer span.
