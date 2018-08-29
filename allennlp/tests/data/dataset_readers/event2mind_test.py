@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
-import pytest
-
 from typing import cast
+
+import pytest
 
 from allennlp.data.dataset_readers import Event2MindDatasetReader
 from allennlp.common.util import ensure_list

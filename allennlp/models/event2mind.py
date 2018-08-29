@@ -4,7 +4,7 @@ import numpy
 from overrides import overrides
 
 import torch
-from torch.nn.modules.rnn import GRUCell, LSTMCell
+from torch.nn.modules.rnn import GRUCell
 from torch.nn.modules.linear import Linear
 from torch import nn
 import torch.nn.functional as F
@@ -12,10 +12,9 @@ import torch.nn.functional as F
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Seq2VecEncoder, TextFieldEmbedder
-from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
-from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits, weighted_sum
+from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.training.metrics import UnigramRecall
 
 @Model.register("event2mind")
@@ -90,13 +89,13 @@ class Event2Mind(Model):
 
     class StateDecoder:
         def __init__(self, name, event2mind, num_classes, input_dim, output_dim):
-            self._embedder = Embedding(num_classes, input_dim)
-            event2mind.add_module("{}_embedder".format(name), self._embedder)
-            self._decoder_cell = GRUCell(input_dim, output_dim)
-            event2mind.add_module("{}_decoder_cell".format(name), self._decoder_cell)
-            self._output_projection_layer = Linear(output_dim, num_classes)
-            event2mind.add_module("{}_output_project_layer".format(name), self._output_projection_layer)
-            self._recall = UnigramRecall()
+            self.embedder = Embedding(num_classes, input_dim)
+            event2mind.add_module("{}_embedder".format(name), self.embedder)
+            self.decoder_cell = GRUCell(input_dim, output_dim)
+            event2mind.add_module("{}_decoder_cell".format(name), self.decoder_cell)
+            self.output_projection_layer = Linear(output_dim, num_classes)
+            event2mind.add_module("{}_output_project_layer".format(name), self.output_projection_layer)
+            self.recall = UnigramRecall()
 
     def _update_recall(self, all_top_k_predictions, target_tokens, target_recall):
         targets = target_tokens["tokens"]
@@ -160,9 +159,9 @@ class Event2Mind(Model):
                 loss = self.greedy_search(
                         final_encoder_output,
                         target_tokens[name],
-                        state._embedder,
-                        state._decoder_cell,
-                        state._output_projection_layer)
+                        state.embedder,
+                        state.decoder_cell,
+                        state.output_projection_layer)
                 total_loss += loss
                 output_dict["{}_loss".format(name)] = loss
 
@@ -179,12 +178,12 @@ class Event2Mind(Model):
                         self._get_num_decoding_steps(target_tokens.get(name)),
                         batch_size,
                         source_mask,
-                        state._embedder,
-                        state._decoder_cell,
-                        state._output_projection_layer
+                        state.embedder,
+                        state.decoder_cell,
+                        state.output_projection_layer
                 )
                 if target_tokens:
-                    self._update_recall(all_top_k_predictions, target_tokens[name], state._recall)
+                    self._update_recall(all_top_k_predictions, target_tokens[name], state.recall)
                 output_dict["{}_top_k_predictions".format(name)] = all_top_k_predictions
                 output_dict["{}_top_k_log_probabilities".format(name)] = log_probabilities
 
@@ -393,7 +392,7 @@ class Event2Mind(Model):
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds fields for the tokens to the ``output_dict``.
         """
-        for name, state in self._states.items():
+        for name in self._states.keys():
             top_k_predicted_indices = output_dict["{}_top_k_predictions".format(name)][0]
             output_dict["{}_top_k_predicted_tokens".format(name)] = [self.decode_all(top_k_predicted_indices)]
 
@@ -405,5 +404,5 @@ class Event2Mind(Model):
         # Recall@10 needs beam search which doesn't happen during training.
         if not self.training:
             for name, state in self._states.items():
-                all_metrics[name] = state._recall.get_metric(reset=reset)
+                all_metrics[name] = state.recall.get_metric(reset=reset)
         return all_metrics
