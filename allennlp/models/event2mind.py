@@ -235,12 +235,9 @@ class Event2Mind(Model):
         # List of (batchsize, k) tensors. One for each time step. Does not
         # include the start symbols, which are implicit.
         predictions = []
-        # TODO(brendanr): Fix this comment.
         # List of (batchsize, k) tensors. One for each time step. None for
         # the first.  Stores the index n for the parent prediction, i.e.
-        # predictions[t-1][i][n], that it came from. This is aligned with
-        # predictions so that backpointer[t][i][n] corresponds to
-        # predictions[t][n].
+        # predictions[t-1][i][n], that it came from.
         backpointers = []
 
         # Timestep 1
