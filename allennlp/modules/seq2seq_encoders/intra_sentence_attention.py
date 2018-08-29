@@ -107,7 +107,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
             similarity_matrix = similarity_matrix.permute(0, 1, 3, 2)
 
         # Shape: (batch_size, sequence_length, [num_heads,] sequence_length)
-        intra_sentence_attention = util.last_dim_softmax(similarity_matrix.contiguous(), mask)
+        intra_sentence_attention = util.masked_softmax(similarity_matrix.contiguous(), mask)
 
         # Shape: (batch_size, sequence_length, projection_dim)
         output_token_representation = self._projection(tokens)

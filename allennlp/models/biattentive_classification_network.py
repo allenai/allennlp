@@ -234,7 +234,7 @@ class BiattentiveClassificationNetwork(Model):
 
         # Compute biattention. This is a special case since the inputs are the same.
         attention_logits = encoded_tokens.bmm(encoded_tokens.permute(0, 2, 1).contiguous())
-        attention_weights = util.last_dim_softmax(attention_logits, text_mask)
+        attention_weights = util.masked_softmax(attention_logits, text_mask)
         encoded_text = util.weighted_sum(encoded_tokens, attention_weights)
 
         # Build the input to the integrator

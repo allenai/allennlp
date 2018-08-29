@@ -19,7 +19,7 @@ def allowed_transitions(constraint_type: str, labels: Dict[int, str]) -> List[Tu
     ----------
     constraint_type : ``str``, required
         Indicates which constraint to apply. Current choices are
-        "BIO", "IOB1", and BIOUL".
+        "BIO", "IOB1", "BIOUL", and "BMES".
     labels : ``Dict[int, str]``, required
         A mapping {label_id -> label}. Most commonly this would be the value from
         Vocabulary.get_index_to_token_vocabulary()
@@ -69,7 +69,7 @@ def is_transition_allowed(constraint_type: str,
     ----------
     constraint_type : ``str``, required
         Indicates which constraint to apply. Current choices are
-        "BIO", "IOB1", and BIOUL".
+        "BIO", "IOB1", "BIOUL", and "BMES".
     from_tag : ``str``, required
         The tag that the transition originates from. For example, if the
         label is ``I-PER``, the ``from_tag`` is ``I``.
@@ -129,6 +129,21 @@ def is_transition_allowed(constraint_type: str,
                 # Can only transition to B-x from B-x or I-x, where
                 # x is the same tag.
                 to_tag == 'B' and from_tag in ('B', 'I') and from_entity == to_entity
+        ])
+    elif constraint_type == "BMES":
+        if from_tag == "START":
+            return to_tag in ('B', 'S')
+        if to_tag == "END":
+            return from_tag in ('E', 'S')
+        return any([
+                # Can only transition to B or S from E or S.
+                to_tag in ('B', 'S') and from_tag in ('E', 'S'),
+                # Can only transition to M-x from B-x, where
+                # x is the same tag.
+                to_tag == 'M' and from_tag == 'B' and from_entity == to_entity,
+                # Can only transition to E-x from B-x or M-x, where
+                # x is the same tag.
+                to_tag == 'E' and from_tag in ('B', 'M') and from_entity == to_entity,
         ])
     else:
         raise ConfigurationError(f"Unknown constraint type: {constraint_type}")
@@ -242,7 +257,7 @@ class ConditionalRandomField(torch.nn.Module):
         """
         Computes the numerator term for the log-likelihood, which is just score(inputs, tags)
         """
-        batch_size, sequence_length, num_tags = logits.data.shape
+        batch_size, sequence_length, _ = logits.data.shape
 
         # Transpose batch size and sequence dimensions:
         logits = logits.transpose(0, 1).contiguous()
@@ -255,26 +270,13 @@ class ConditionalRandomField(torch.nn.Module):
         else:
             score = 0.0
 
-        # Broadcast the transition scores to one per batch element
-        broadcast_transitions = self.transitions.view(1, num_tags, num_tags).expand(batch_size, num_tags, num_tags)
-
         # Add up the scores for the observed transitions and all the inputs but the last
         for i in range(sequence_length - 1):
             # Each is shape (batch_size,)
             current_tag, next_tag = tags[i], tags[i+1]
 
             # The scores for transitioning from current_tag to next_tag
-            transition_score = (
-                    broadcast_transitions
-                    # Choose the current_tag-th row for each input
-                    .gather(1, current_tag.view(batch_size, 1, 1).expand(batch_size, 1, num_tags))
-                    # Squeeze down to (batch_size, num_tags)
-                    .squeeze(1)
-                    # Then choose the next_tag-th column for each of those
-                    .gather(1, next_tag.view(batch_size, 1))
-                    # And squeeze down to (batch_size,)
-                    .squeeze(1)
-            )
+            transition_score = self.transitions[current_tag.view(-1), next_tag.view(-1)]
 
             # The score for using current_tag
             emit_score = logits[i].gather(1, current_tag.view(batch_size, 1)).squeeze(1)
@@ -286,10 +288,7 @@ class ConditionalRandomField(torch.nn.Module):
         # Transition from last state to "stop" state. To start with, we need to find the last tag
         # for each instance.
         last_tag_index = mask.sum(0).long() - 1
-        last_tags = tags.gather(0, last_tag_index.view(1, batch_size).expand(sequence_length, batch_size))
-
-        # Is (sequence_length, batch_size), but all the columns are the same, so take the first.
-        last_tags = last_tags[0]
+        last_tags = tags.gather(0, last_tag_index.view(1, batch_size)).squeeze(0)
 
         # Compute score of transitioning to `stop_tag` from each "last tag".
         if self.include_start_end_transitions:
