@@ -232,3 +232,18 @@ class TestConditionalRandomField(AllenNlpTestCase):
         }
         with raises(ConfigurationError):
             allowed_transitions("allennlp", {})
+
+        bmes_labels = ['B-X', 'M-X', 'E-X', 'S-X', 'B-Y', 'M-Y', 'E-Y', 'S-Y'] # start tag, end tag
+        #               0      1      2      3      4      5      6      7       8          9
+        allowed = allowed_transitions("BMES", dict(enumerate(bmes_labels)))
+        assert set(allowed) == {
+                    (0, 1), (0, 2),
+                            (1, 2),                                         # Extra column for end tag.
+            (2, 0),                 (2, 3),                                 (2, 9),
+            (3, 0),                 (3, 3),                                 (3, 9),
+                                                    (4, 5), (4, 6),
+                                                            (5, 6),
+                                            (6, 4),                 (6, 7), (6, 9),
+                                            (7, 4),                 (7, 7), (7, 9),
+            (8, 0),                 (8, 3), (8, 4),                 (8, 7),  # Extra row for start tag
+        }
