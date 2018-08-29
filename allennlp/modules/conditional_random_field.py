@@ -273,7 +273,7 @@ class ConditionalRandomField(torch.nn.Module):
         # Transition from last state to "stop" state. To start with, we need to find the last tag
         # for each instance.
         last_tag_index = mask.sum(0).long() - 1
-        last_tags = torch.gather(tags, 0, last_tag_index.view(1, batch_size)).squeeze(0)
+        last_tags = tags.gather(0, last_tag_index.view(1, batch_size)).squeeze(0)
 
         # Compute score of transitioning to `stop_tag` from each "last tag".
         if self.include_start_end_transitions:
