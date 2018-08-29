@@ -3,10 +3,11 @@ Assorted utilities for working with neural networks in AllenNLP.
 """
 # pylint: disable=too-many-lines
 from collections import defaultdict
-from typing import Dict, List, Optional, Any, Tuple, Callable
+from typing import Dict, List, Optional, Any, Tuple
 import logging
-
 import math
+import warnings
+
 import torch
 
 from allennlp.common.checks import ConfigurationError
@@ -176,35 +177,44 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
     return dropout_mask
 
 
-def masked_softmax(vector, mask):
+def masked_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) -> torch.Tensor:
     """
     ``torch.nn.functional.softmax(vector)`` does not work if some elements of ``vector`` should be
     masked.  This performs a softmax on just the non-masked portions of ``vector``.  Passing
     ``None`` in for the mask is also acceptable; you'll just get a regular softmax.
 
-    We assume that both ``vector`` and ``mask`` (if given) have shape ``(batch_size, vector_dim)``.
+    ``vector`` can have an arbitrary number of dimensions; the only requirement is that ``mask`` is
+    broadcastable to ``vector's`` shape.  If ``mask`` has fewer dimensions than ``vector``, we will
+    unsqueeze on dimension 1 until they match.  If you need a different unsqueezing of your mask,
+    do it yourself before passing the mask into this function.
 
     In the case that the input vector is completely masked, this function returns an array
     of ``0.0``. This behavior may cause ``NaN`` if this is used as the last layer of a model
     that uses categorical cross-entropy loss.
     """
     if mask is None:
-        result = torch.nn.functional.softmax(vector, dim=-1)
+        result = torch.nn.functional.softmax(vector, dim=dim)
     else:
+        mask = mask.float()
+        while mask.dim() < vector.dim():
+            mask = mask.unsqueeze(1)
         # To limit numerical errors from large vector elements outside the mask, we zero these out.
-        result = torch.nn.functional.softmax(vector * mask, dim=-1)
+        result = torch.nn.functional.softmax(vector * mask, dim=dim)
         result = result * mask
-        result = result / (result.sum(dim=1, keepdim=True) + 1e-13)
+        result = result / (result.sum(dim=dim, keepdim=True) + 1e-13)
     return result
 
 
-def masked_log_softmax(vector, mask):
+def masked_log_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) -> torch.Tensor:
     """
     ``torch.nn.functional.log_softmax(vector)`` does not work if some elements of ``vector`` should be
     masked.  This performs a log_softmax on just the non-masked portions of ``vector``.  Passing
     ``None`` in for the mask is also acceptable; you'll just get a regular log_softmax.
 
-    We assume that both ``vector`` and ``mask`` (if given) have shape ``(batch_size, vector_dim)``.
+    ``vector`` can have an arbitrary number of dimensions; the only requirement is that ``mask`` is
+    broadcastable to ``vector's`` shape.  If ``mask`` has fewer dimensions than ``vector``, we will
+    unsqueeze on dimension 1 until they match.  If you need a different unsqueezing of your mask,
+    do it yourself before passing the mask into this function.
 
     In the case that the input vector is completely masked, the return value of this function is
     arbitrary, but not ``nan``.  You should be masking the result of whatever computation comes out
@@ -217,13 +227,16 @@ def masked_log_softmax(vector, mask):
     extreme, you've got bigger problems than this.
     """
     if mask is not None:
+        mask = mask.float()
+        while mask.dim() < vector.dim():
+            mask = mask.unsqueeze(1)
         # vector + mask.log() is an easy way to zero out masked elements in logspace, but it
         # results in nans when the whole vector is masked.  We need a very small value instead of a
         # zero in the mask for these cases.  log(1 + 1e-45) is still basically 0, so we can safely
         # just add 1e-45 before calling mask.log().  We use 1e-45 because 1e-46 is so small it
         # becomes 0 - this is just the smallest value we can actually use.
         vector = vector + (mask + 1e-45).log()
-    return torch.nn.functional.log_softmax(vector, dim=1)
+    return torch.nn.functional.log_softmax(vector, dim=dim)
 
 
 def masked_max(vector: torch.Tensor,
@@ -424,34 +437,20 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
     else:
         raise ValueError("Expected a tensor with dimension 2 or 3, found {}".format(smallest_dim))
 
-def _last_dimension_applicator(function_to_apply: Callable[[torch.Tensor, Optional[torch.Tensor]], torch.Tensor],
-                               tensor: torch.Tensor,
-                               mask: Optional[torch.Tensor] = None):
-    """
-    Takes a tensor with 3 or more dimensions and applies a function over the last dimension.  We
-    assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
-    has shape ``(batch_size, sequence_length)``.  We first unsqueeze and expand the mask so that it
-    has the same shape as the tensor, then flatten them both to be 2D, pass them through
-    the function and put the tensor back in its original shape.
-    """
-    tensor_shape = tensor.size()
-    reshaped_tensor = tensor.view(-1, tensor.size()[-1])
-    if mask is not None:
-        while mask.dim() < tensor.dim():
-            mask = mask.unsqueeze(1)
-        mask = mask.expand_as(tensor).contiguous().float()
-        mask = mask.view(-1, mask.size()[-1])
-    reshaped_result = function_to_apply(reshaped_tensor, mask)
-    return reshaped_result.view(*tensor_shape)
-
 
 def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
     """
     Takes a tensor with 3 or more dimensions and does a masked softmax over the last dimension.  We
     assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
     has shape ``(batch_size, sequence_length)``.
+
+    .. deprecated:: 0.6.1
+           ``last_dim_softmax`` was deprecated in favor of just using ``masked_softmax`` in version
+           0.6.1.  It will be removed in version 0.8.
     """
-    return _last_dimension_applicator(masked_softmax, tensor, mask)
+    warnings.warn("``last_dim_softmax`` was deprecated in favor of just using ``masked_softmax`` "
+                  "in version 0.6.1.  It will be removed in version 0.8.", DeprecationWarning)
+    return masked_softmax(tensor, mask, dim=-1)
 
 
 def last_dim_log_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
@@ -459,8 +458,15 @@ def last_dim_log_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = No
     Takes a tensor with 3 or more dimensions and does a masked log softmax over the last dimension.
     We assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
     has shape ``(batch_size, sequence_length)``.
+
+    .. deprecated:: 0.6.1
+           ``last_dim_log_softmax`` was deprecated in favor of just using ``masked_log_softmax`` in
+           version 0.6.1.  It will be removed in version 0.8.
     """
-    return _last_dimension_applicator(masked_log_softmax, tensor, mask)
+    warnings.warn("``last_dim_log_softmax`` was deprecated in favor of just using "
+                  "``masked_log_softmax`` in version 0.6.1.  It will be removed in version 0.8.",
+                  DeprecationWarning)
+    return masked_log_softmax(tensor, mask, dim=-1)
 
 
 def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:

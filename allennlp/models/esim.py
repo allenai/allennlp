@@ -9,7 +9,7 @@ from allennlp.modules import FeedForward, InputVariationalDropout
 from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TextFieldEmbedder
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
-from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum, replace_masked_values
+from allennlp.nn.util import get_text_field_mask, masked_softmax, weighted_sum, replace_masked_values
 from allennlp.training.metrics import CategoricalAccuracy
 
 
@@ -142,12 +142,12 @@ class ESIM(Model):
         similarity_matrix = self._matrix_attention(encoded_premise, encoded_hypothesis)
 
         # Shape: (batch_size, premise_length, hypothesis_length)
-        p2h_attention = last_dim_softmax(similarity_matrix, hypothesis_mask)
+        p2h_attention = masked_softmax(similarity_matrix, hypothesis_mask)
         # Shape: (batch_size, premise_length, embedding_dim)
         attended_hypothesis = weighted_sum(encoded_hypothesis, p2h_attention)
 
         # Shape: (batch_size, hypothesis_length, premise_length)
-        h2p_attention = last_dim_softmax(similarity_matrix.transpose(1, 2).contiguous(), premise_mask)
+        h2p_attention = masked_softmax(similarity_matrix.transpose(1, 2).contiguous(), premise_mask)
         # Shape: (batch_size, hypothesis_length, embedding_dim)
         attended_premise = weighted_sum(encoded_premise, h2p_attention)
 

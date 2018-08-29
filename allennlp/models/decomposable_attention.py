@@ -9,7 +9,7 @@ from allennlp.modules import FeedForward
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
-from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum
+from allennlp.nn.util import get_text_field_mask, masked_softmax, weighted_sum
 from allennlp.training.metrics import CategoricalAccuracy
 
 
@@ -139,12 +139,12 @@ class DecomposableAttention(Model):
         similarity_matrix = self._matrix_attention(projected_premise, projected_hypothesis)
 
         # Shape: (batch_size, premise_length, hypothesis_length)
-        p2h_attention = last_dim_softmax(similarity_matrix, hypothesis_mask)
+        p2h_attention = masked_softmax(similarity_matrix, hypothesis_mask)
         # Shape: (batch_size, premise_length, embedding_dim)
         attended_hypothesis = weighted_sum(embedded_hypothesis, p2h_attention)
 
         # Shape: (batch_size, hypothesis_length, premise_length)
-        h2p_attention = last_dim_softmax(similarity_matrix.transpose(1, 2).contiguous(), premise_mask)
+        h2p_attention = masked_softmax(similarity_matrix.transpose(1, 2).contiguous(), premise_mask)
         # Shape: (batch_size, hypothesis_length, embedding_dim)
         attended_premise = weighted_sum(embedded_premise, h2p_attention)
 
