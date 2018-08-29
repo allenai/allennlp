@@ -31,10 +31,8 @@ class MeanAbsoluteError(Metric):
         """
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
 
-        # Get absolute errors between the elements in the two tensors
         absolute_errors = torch.abs(predictions - gold_labels)
         if mask is not None:
-            # Mask absolute errors if applicable
             absolute_errors *= mask
             self._total_count += torch.sum(mask)
         else:
