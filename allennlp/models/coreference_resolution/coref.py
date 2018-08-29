@@ -276,7 +276,7 @@ class CoreferenceResolver(Model):
             # probability assigned to all valid antecedents. This is a valid objective for
             # clustering as we don't mind which antecedent is predicted, so long as they are in
             #  the same coreference cluster.
-            coreference_log_probs = util.last_dim_log_softmax(coreference_scores, top_span_mask)
+            coreference_log_probs = util.masked_log_softmax(coreference_scores, top_span_mask)
             correct_antecedent_log_probs = coreference_log_probs + gold_antecedent_labels.log()
             negative_marginal_log_likelihood = -util.logsumexp(correct_antecedent_log_probs).sum()
 
