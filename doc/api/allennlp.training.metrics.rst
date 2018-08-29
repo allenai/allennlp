@@ -17,6 +17,7 @@ allennlp.training.metrics
 * :ref:`F1Measure<f1-measure>`
 * :ref:`MeanAbsoluteError<mean-absolute-error>`
 * :ref:`MentionRecall<mention-recall>`
+* :ref:`PearsonCorrelation<pearson-correlation>`
 * :ref:`SpanBasedF1Measure<span-based-f1-measure>`
 * :ref:`SquadEmAndF1<squad-em-and-f1>`
 * :ref:`WikiTablesAccuracy<wikitables-accuracy>`
@@ -85,6 +86,12 @@ allennlp.training.metrics
 
 .. _mention-recall:
 .. automodule:: allennlp.training.metrics.mention_recall
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _pearson-correlation:
+.. automodule:: allennlp.training.metrics.pearson_correlation
    :members:
    :undoc-members:
    :show-inheritance:
