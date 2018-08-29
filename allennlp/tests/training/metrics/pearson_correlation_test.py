@@ -51,3 +51,10 @@ class PearsonCorrelationTest(AllenNlpTestCase):
                                                                                covariance_matrices[1, 1])
             pearson_correlation(timestep_predictions, timestep_labels, timestep_mask)
             assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric(), rtol=1e-5)
+        # Test reset
+        pearson_correlation.reset()
+        pearson_correlation(torch.FloatTensor(predictions), torch.FloatTensor(labels), torch.FloatTensor(mask))
+        covariance_matrices = np.cov(predictions.reshape(-1), labels.reshape(-1), fweights=mask.reshape(-1))
+        expected_pearson_correlation = covariance_matrices[0, 1] / np.sqrt(covariance_matrices[0, 0] *
+                                                                           covariance_matrices[1, 1])
+        assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric(), rtol=1e-5)
