@@ -39,10 +39,10 @@ cffi==1.11.2
 
 # aws commandline tools for running on Docker remotely.
 # second requirement is to get botocore < 1.11, to avoid the below bug
-awscli>=1.11.91,<=1.15.85
+awscli>=1.11.91
 
-# Accessing files from S3 directly. Pin to 1.7.80 to avoid https://github.com/spulec/moto/issues/1793
-boto3==1.7.80
+# Accessing files from S3 directly.
+boto3
 
 # REST interface for models
 flask==0.12.4
