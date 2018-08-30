@@ -190,12 +190,12 @@ In some cases, we haven't had the resources to tune the AllenNLP implementations
 For the tasks in Table 1, this table lists the corresponding AllenNLP config files in cases where we have a re-implementation, and notes about reproducing the results in cases where we do not.
 The config files are in the [training_config/](../../training_config) folder.
 
-|Task |    Baseline Config | Baseline + ELMo config |  Notes
-|-----|--------------------|------------------------|---------
-|SQuAD|   N/A | N/A | The SQuAD model is from [Clark and Gardner, 2018](https://www.semanticscholar.org/paper/Simple-and-Effective-Multi-Paragraph-Reading-Clark-Gardner/b95f7399861dd08d4f057bcbe2d6e21a9c543ddc). Tensorflow code to reproduce the results is [here](https://github.com/allenai/document-qa/tree/master/docqa/elmo).|
-|SNLI| esim.json | esim_elmo.json  | This configuration is modified slightly from the one used in the ELMo paper, but performance is comparable. AllenNLP re-implementation has test accuracy 88.5% (original 88.7 +/- 0.17).  See the comment in esim_elmo.json for more details.|
-|SRL | semantic_role_labeler.jsonnet     | semantic_role_labeler_elmo.jsonnet    | There's also a config that uses the ELMo trained on 5.5B tokens. TODO: add details about CUDA version |
-|Coref | coref.jsonnet   | coref_elmo.jsonnet    | The allennlp reimplementation is missing some features of the original tensorflow version and performance is a few percent below the original result. See [Tensorflow code](https://github.com/kentonl/e2e-coref) for running the original experiments and extentions reported in [Lee et al. 2018](https://arxiv.org/abs/1804.05392).|
-|NER | ner.jsonnet   | ner_elmo.jsonnet  | AllenNLP baseline has F1 of 89.91 +/- 0.35 (Keras original is 90.15). AllenNLP with ELMo single run F1 is 92.51 (original 92.22 +/- 0.10), see ner_elmo.jsonnnet for details.|
-|SST-5 | biattentive_classification_network.json     | biattentive_classification_network_elmo.json  |   |
+|Task |    Configs |  Notes
+|-----|------------|-------|
+|SQuAD|   N/A | The SQuAD model is from [Clark and Gardner, 2018](https://www.semanticscholar.org/paper/Simple-and-Effective-Multi-Paragraph-Reading-Clark-Gardner/b95f7399861dd08d4f057bcbe2d6e21a9c543ddc). Tensorflow code to reproduce the results is [here](https://github.com/allenai/document-qa/tree/master/docqa/elmo).|
+|SNLI| esim.json / esim_elmo.json  | This configuration is modified slightly from the one used in the ELMo paper, but performance is comparable. AllenNLP re-implementation has test accuracy 88.5% (original 88.7 +/- 0.17).  See the comment in esim_elmo.json for more details.|
+|SRL | semantic_role_labeler.jsonnet /  semantic_role_labeler_elmo.jsonnet    | There's also a config that uses the ELMo trained on 5.5B tokens. TODO: add details about CUDA version |
+|Coref | coref.jsonnet  / coref_elmo.jsonnet    | The allennlp reimplementation is missing some features of the original tensorflow version and performance is a few percent below the original result. See [Tensorflow code](https://github.com/kentonl/e2e-coref) for running the original experiments and extentions reported in [Lee et al. 2018](https://arxiv.org/abs/1804.05392).|
+|NER | ner.jsonnet  / ner_elmo.jsonnet  | AllenNLP baseline has F1 of 89.91 +/- 0.35 (Keras original is 90.15). AllenNLP with ELMo single run F1 is 92.51 (original 92.22 +/- 0.10), see ner_elmo.jsonnnet for details.|
+|SST-5 | biattentive_classification_network.json / biattentive_classification_network_elmo.json  |   |
 
