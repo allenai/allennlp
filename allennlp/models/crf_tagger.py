@@ -37,7 +37,7 @@ class CrfTagger(Model):
         An optional feedforward layer to apply after the encoder.
     label_encoding : ``str``, optional (default=``None``)
         Label encoding to use when calculating span f1 and constraining
-        the CRF at decoding time . Valid options are "BIO", "BIOUL", "IOB1".
+        the CRF at decoding time . Valid options are "BIO", "BIOUL", "IOB1", "BMES".
         Required if ``calculate_span_f1`` or ``constrain_crf_decoding`` is true.
     constraint_type : ``str``, optional (default=``None``)
         If provided, the CRF will be constrained at decoding time
