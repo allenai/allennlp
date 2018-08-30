@@ -183,27 +183,29 @@ class SpanBasedF1Test(AllenNlpTestCase):
 
         prediction_tensor = torch.rand([2, 5, 4])
         # [S, B, E, S, S]
+        # TP: 2, FP: 2, FN: 1.
         prediction_tensor[0, 0, 3] = 1 # (True positive)
         prediction_tensor[0, 1, 0] = 1 # (False positive
         prediction_tensor[0, 2, 2] = 1 # *)
-        prediction_tensor[0, 3, 3] = 1
+        prediction_tensor[0, 3, 3] = 1 # (False positive)
         prediction_tensor[0, 4, 3] = 1 # (True positive)
-        # [B, E, S, S, S]
+        # [B, E, S, B, E]
+        # TP: 1, FP: 2, FN: 4.
         prediction_tensor[1, 0, 0] = 1 # (False positive
         prediction_tensor[1, 1, 2] = 1 # *)
         prediction_tensor[1, 2, 3] = 1 # (True positive)
-        prediction_tensor[1, 3, 3] = 1 # (True positive)
-        prediction_tensor[1, 4, 3] = 1 # (True positive)
+        prediction_tensor[1, 3, 0] = 1 # (False positive
+        prediction_tensor[1, 4, 2] = 1 # *)
 
         metric = SpanBasedF1Measure(self.vocab, "bmes_tags", label_encoding="BMES")
         metric(prediction_tensor, gold_tensor)
 
-        # TP: 5, FP: 2, FN: 3.
+        # TP: 3, FP: 4, FN: 5.
         metric_dict = metric.get_metric()
 
-        numpy.testing.assert_almost_equal(metric_dict["recall-overall"], 0.625)
-        numpy.testing.assert_almost_equal(metric_dict["precision-overall"], 0.714, decimal=3)
-        numpy.testing.assert_almost_equal(metric_dict["f1-measure-overall"], 0.666, decimal=3)
+        numpy.testing.assert_almost_equal(metric_dict["recall-overall"], 0.375)
+        numpy.testing.assert_almost_equal(metric_dict["precision-overall"], 0.428, decimal=3)
+        numpy.testing.assert_almost_equal(metric_dict["f1-measure-overall"], 0.4)
 
     def test_span_f1_can_build_from_params(self):
         params = Params({"type": "span_f1", "tag_namespace": "tags", "ignore_classes": ["V"]})
