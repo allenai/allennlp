@@ -197,5 +197,5 @@ The config files are in the [training_config/](../../training_config) folder.
 |SRL | semantic_role_labeler.jsonnet /  semantic_role_labeler_elmo.jsonnet    | There's also a config that uses the ELMo trained on 5.5B tokens. TODO: add details about CUDA version |
 |Coref | coref.jsonnet  / coref_elmo.jsonnet    | The allennlp reimplementation is missing some features of the original tensorflow version and performance is a few percent below the original result. See [Tensorflow code](https://github.com/kentonl/e2e-coref) for running the original experiments and extentions reported in [Lee et al. 2018](https://arxiv.org/abs/1804.05392).|
 |NER | ner.jsonnet  / ner_elmo.jsonnet  | AllenNLP baseline has F1 of 89.91 +/- 0.35 (Keras original is 90.15). AllenNLP with ELMo single run F1 is 92.51 (original 92.22 +/- 0.10), see ner_elmo.jsonnnet for details.|
-|SST-5 | biattentive_classification_network.json / biattentive_classification_network_elmo.json  |   |
+|SST-5 | biattentive_classification_network.json / biattentive_classification_network_elmo.json  | AllenNLP baseline single random seed test accuracy is 51.3 (original 51.4), with ELMo accuracy is XX (original is 54.7 +/- 0.5).  See biattentive_classification_network_elmo.json for details.|
 
