@@ -184,13 +184,16 @@ There are a few practical implications of this:
 This section provides details on reproducing the results in Table 1
 of the [ELMo paper](http://www.aclweb.org/anthology/N18-1202).
 
-For context, almost all of the experiments for the ELMo paper were done before AllenNLP existed, and almost all of the models in AllenNLP are re-implementations of things that were typically originally written in tensorflow code (the SRL model is the only exception).
+For context, all of the experiments for the ELMo paper were done before AllenNLP existed, and almost all of the models in AllenNLP are re-implementations of things that were typically originally written in tensorflow code (the SRL model is the only exception).
 In some cases, we haven't had the resources to tune the AllenNLP implementations to match the existing performance numbers yet; if you are able to do this for some of the models and submit back a tuned model, we (and many others) would greatly appreciate it.
 
+For the tasks in Table 1, this table lists the corresponding AllenNLP config files in cases where we have a re-implementation, and notes about reproducing the results in cases where we do not.
+The config files are in the [training_config/](training_config) folder.
 
 |Task |    Baseline Config | Baseline + ELMo config |  Notes
 |-----|--------------------|------------------------|---------
-|SQuAD|   N/A | N/A | The SQuAD model is from Clark and Gardner 2017. We're working on adding this model to allennlp, but the original code used to run the experiments is in this repo|
+|SQuAD|   N/A | N/A | The SQuAD model is from [Clark and Gardner, 2018](https://www.semanticscholar.org/paper/Simple-and-Effective-Multi-Paragraph-Reading-Clark-Gardner/b95f7399861dd08d4f057bcbe2d6e21a9c543ddc). Tensorflow code to reproduce the results is [here](https://github.com/allenai/document-qa/tree/master/docqa/elmo).|
+|SNLI| [esim.json](training_config/esim.json) | [esim_elmo.json](training_config/esim_elmo.json)   | This configuration is modified slightly from the one used in the ELMo paper, performance is comparable. See the comment in the config for more details.|
 
 
 For coref and SQuAD it's known that our existing AllenNLP models aren't at the original performance in the ELMo paper (coref is missing some features, there's an open PR with the SQuAD model but it's very out of date, and a point off of the original performance).
