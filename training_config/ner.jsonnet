@@ -43,6 +43,7 @@
                 "conv_layer_activation": "relu"
             }
           }
+       },
     },
     "encoder": {
         "type": "lstm",
@@ -67,6 +68,6 @@
     "num_epochs": 75,
     "grad_norm": 5.0,
     "patience": 25,
-    "cuda_device": 0
+    "cuda_device": -1
   }
 }
