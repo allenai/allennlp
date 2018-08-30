@@ -22,9 +22,7 @@
   "evaluate_on_test": true,
   "model": {
     "type": "crf_tagger",
-    "label_encoding": "BIOUL",
-    "constrain_crf_decoding": true,
-    "calculate_span_f1": true,
+    "constraint_type": "BIOUL",
     "dropout": 0.5,
     "include_start_end_transitions": false,
     "text_field_embedder": {
@@ -45,33 +43,34 @@
         "token_characters": {
             "type": "character_encoding",
             "embedding": {
-                "embedding_dim": 16
+            "embedding_dim": 16
             },
             "encoder": {
-                "type": "cnn",
-                "embedding_dim": 16,
-                "num_filters": 128,
-                "ngram_filter_sizes": [3],
-                "conv_layer_activation": "relu"
+            "type": "cnn",
+            "embedding_dim": 16,
+            "num_filters": 128,
+            "ngram_filter_sizes": [3],
+            "conv_layer_activation": "relu"
             }
-          }
+        }
+      }
     },
     "encoder": {
-        "type": "lstm",
-        "input_size": 1202,
-        "hidden_size": 200,
-        "num_layers": 2,
-        "dropout": 0.5,
-        "bidirectional": true
+      "type": "lstm",
+      "input_size": 1202,
+      "hidden_size": 200,
+      "num_layers": 2,
+      "dropout": 0.5,
+      "bidirectional": true
     },
     "regularizer": [
-        [
-            "scalar_parameters",
-            {
-                "type": "l2",
-                "alpha": 0.1
-            }
-        ]
+      [
+        "scalar_parameters",
+        {
+          "type": "l2",
+          "alpha": 0.1
+        }
+      ]
     ]
   },
   "iterator": {
