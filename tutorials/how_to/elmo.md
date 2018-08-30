@@ -193,8 +193,10 @@ The config files are in the [training_config/](../../training_config) folder.
 |Task |    Baseline Config | Baseline + ELMo config |  Notes
 |-----|--------------------|------------------------|---------
 |SQuAD|   N/A | N/A | The SQuAD model is from [Clark and Gardner, 2018](https://www.semanticscholar.org/paper/Simple-and-Effective-Multi-Paragraph-Reading-Clark-Gardner/b95f7399861dd08d4f057bcbe2d6e21a9c543ddc). Tensorflow code to reproduce the results is [here](https://github.com/allenai/document-qa/tree/master/docqa/elmo).|
-|SNLI| esim.json | esim_elmo.json  | This configuration is modified slightly from the one used in the ELMo paper, but performance is comparable. See the comment in the config for more details.|
+|SNLI| esim.json | esim_elmo.json  | This configuration is modified slightly from the one used in the ELMo paper, but performance is comparable. See the comment in esim_elmo.json for more details.|
+|SRL | semantic_role_labeler.jsonnet     | semantic_role_labeler_elmo.jsonnet    | There's also a config that uses the ELMo trained on 5.5B tokens. TODO: add details about CUDA version |
+|Coref | coref.jsonnet   | coref_elmo.jsonnet    | The allennlp reimplementation is missing some features of the original tensorflow version and performance is a few percent below the original result. See [Tensorflow code](https://github.com/kentonl/e2e-coref) for running the original experiments and extentions reported in [Lee et al. 2018](https://arxiv.org/abs/1804.05392).|
+|NER | ner.jsonnet   | ner_elmo.jsonnet  |    |
+|SST-5 | biattentive_classification_network.json     | biattentive_classification_network_elmo.json  |   |
 
-
-For coref and SQuAD it's known that our existing AllenNLP models aren't at the original performance in the ELMo paper (coref is missing some features, there's an open PR with the SQuAD model but it's very out of date, and a point off of the original performance).
 

@@ -11,15 +11,10 @@
       "token_characters": {
         "type": "characters"
       },
-      "elmo": {
-        "type": "elmo_characters"
-     }
     }
   },
   "train_data_path": std.extVar("NER_TRAIN_DATA_PATH"),
   "validation_data_path": std.extVar("NER_TEST_A_PATH"),
-  "test_data_path": std.extVar("NER_TEST_B_PATH"),
-  "evaluate_on_test": true,
   "model": {
     "type": "crf_tagger",
     "label_encoding": "BIOUL",
@@ -34,13 +29,6 @@
             "embedding_dim": 50,
             "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
             "trainable": true
-        },
-        "elmo":{
-            "type": "elmo_token_embedder",
-        "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-        "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
-            "do_layer_norm": false,
-            "dropout": 0.0
         },
         "token_characters": {
             "type": "character_encoding",
@@ -58,21 +46,12 @@
     },
     "encoder": {
         "type": "lstm",
-        "input_size": 1202,
+        "input_size": 50 + 128,
         "hidden_size": 200,
         "num_layers": 2,
         "dropout": 0.5,
         "bidirectional": true
     },
-    "regularizer": [
-        [
-            "scalar_parameters",
-            {
-                "type": "l2",
-                "alpha": 0.1
-            }
-        ]
-    ]
   },
   "iterator": {
     "type": "basic",
