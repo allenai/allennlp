@@ -18,7 +18,8 @@ DEFAULT_PREDICTORS = {
         'crf_tagger': 'sentence-tagger',
         'coref': 'coreference-resolution',
         'constituency_parser': 'constituency-parser',
-        'dialog_qa': 'dialog_qa'
+        'dialog_qa': 'dialog_qa',
+        'biaffine_parser': 'biaffine-dependency-parser'
 }
 
 class Predictor(Registrable):

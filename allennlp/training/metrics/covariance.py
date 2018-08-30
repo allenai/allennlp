@@ -54,8 +54,8 @@ class Covariance(Metric):
 
         if mask is not None:
             mask = mask.view(-1)
-            predictions *= mask
-            gold_labels *= mask
+            predictions = predictions * mask
+            gold_labels = gold_labels * mask
             num_batch_items = torch.sum(mask).item()
         else:
             num_batch_items = gold_labels.numel()
