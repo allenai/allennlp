@@ -398,7 +398,7 @@ def bmes_tags_to_spans(tag_sequence: List[str],
     """
     def extract_bmes_tag_label(text):
         bmes_tag = text[0]
-        label = text.partition('-')[2]
+        label = text[2:]
         return bmes_tag, label
 
     spans = []
