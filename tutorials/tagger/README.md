@@ -3,7 +3,7 @@
 ## Getting Started
 
 Welcome to AllenNLP! This tutorial will walk you through the basics of building and training an AllenNLP model.
-Before we get started, make sure you have a clean Python 3.6 or 3.7 virtual environment with AllenNLP installed:
+Before we get started, make sure you have a clean Python 3.6 or 3.7 virtual environment with AllenNLP installed, and then run
 
 ```
 pip install allennlp
@@ -15,22 +15,24 @@ adding some features that make it a slightly more realistic task (and that also 
 
 ## The Problem
 
-Given a sentence (e.g. "The dog ate the apple") we want to predict part-of-speech tags for each word (e.g ["DET", "NN", "V", "DET", "NN"]). Following the tutorial, we'll embed each word in a low-dimensional space, pass them through an LSTM to get a sequence of encodings, and use a feedforward layer to transform them into a sequence of logits (corresponding to the possible part-of-speech tags).
+Given a sentence (e.g. "The dog ate the apple") we want to predict part-of-speech tags for each word (e.g ["DET", "NN", "V", "DET", "NN"]).
+
+As in the PyTorch tutorial, we'll embed each word in a low-dimensional space, pass them through an LSTM to get a sequence of encodings, and use a feedforward layer to transform those into a sequence of logits (corresponding to the possible part-of-speech tags).
 
 The PyTorch tutorial example is extremely simple, so we'll add a few small twists to make it slightly more realistic:
 
 1. We'll read our data from files. (The tutorial example uses data that's given as part of the Python code.)
-2. We'll use a separate validation dataset to test our model. (The tutorial example trains and evaluates on the same dataset.)
+2. We'll use a separate validation dataset to check our performance. (The tutorial example trains and evaluates on the same dataset.)
 3. We'll use [`tqdm`](https://github.com/tqdm/tqdm) to track the progress of our training.
 4. We'll implement [early stopping](https://en.wikipedia.org/wiki/Early_stopping) based on the loss on the validation dataset.
 5. We'll track accuracy on both the training and validation sets as we train the model.
 
 We won't go through it in detail, but the vanilla PyTorch code (with these modifications)
-can be found in [basic_pytorch.py](/basic_pytorch.py).
+can be found in [basic_pytorch.py](/tutorials/tagging/basic_pytorch.py).
 
 ## The Data
 
-The data can be found in [training.txt](/training.txt) and [validation.txt](/validation.txt). It has one sentence per line, formatted as follows:
+The data can be found in [training.txt](/tutorials/tagging/training.txt) and [validation.txt](/tutorials/tagging/validation.txt). It has one sentence per line, formatted as follows:
 
 ```
 The###DET dog###NN ate###V the###DET apple###NN
@@ -67,17 +69,17 @@ Typically to create a `DatasetReader` you'd implement two methods:
    and returns the `Instance` containing those fields.
 
 2. `_read` takes the path to an input file and returns an `Iterator` of `Instance`s.
-   Most of the work here will be done by calling `text_to_instance`.
+   (It will probably delegate most of its work to `text_to_instance`.)
 
 ### Constructing a `DatasetReader`
 
 Usually a `DatasetReader` will need to have a `dict` of `TokenIndexer`s
-that specify how to convert text tokens into indices. For instance, you
+that specify how you want to convert text tokens into indices. For instance, you
 will usually have a `SingleIdTokenIndexer` which maps each word to a unique ID,
 and you might also (or instead) have a `TokenCharactersIndexer`, which maps
 each word to a sequence of indices corresponding to its characters.
 
-In this case we'll only ever want to use word IDs, but as good practice we'll
+In this case we'll only use word IDs, but as good practice we'll
 allow users to pass in an alternate set of token indexers if they so desire:
 
 ```python
@@ -92,11 +94,9 @@ class PosDatasetReader(DatasetReader):
         self.token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 ```
 
-Notice that the constructor accepts a dict `index_name` -> `token_indexer`,
-but that by default it just maps each token to an ID.
-You can also see that the base `DatasetReader` constructor has a parameter
-that allows for "lazy" reading of large datasets, but that we don't need to use that
-seeing as how our training and validation datasets each have two sentences.
+The base `DatasetReader` constructor has a parameter
+that allows for "lazy" reading of large datasets,
+but our datasets only have two sentences each, so we just specify `False`.
 
 ### Implementing `text_to_instance`
 
@@ -116,14 +116,14 @@ Next we need to implement the method that creates `Instance`s:
 
 A couple of things to notice. The first is that the `tokens` variable is a `List[Token]` (and not a `List[str]`).
 If you use the `spacy` tokenizer (which is what our default `WordTokenizer` does), that's already the output you get.
-If (like us) you have pre-tokenized data, you just need to wrap each string token in a `Token`.
+If (like us) you have pre-tokenized data, you just need to wrap each string token in a call to `Token`.
 
 Another thing to notice is that the `tags` are optional.
 This is so that after we train a model we can use it to make predictions
 on untagged data (which clearly won't have any tags).
 
-We define a `TextField` to hold the sentence (which requires the dict of token indexers from the constructor),
-and if tags are provided we put them in a `SequenceLabelField`, which is for labels that apply to each
+We define a `TextField` to hold the sentence (you can see that it needs to know the token indexers from the constructor),
+and if tags are provided we put them in a `SequenceLabelField`, which is for labels corresponding to each
 element of a sequence. (If we had a label that applied to the entire sentence, for example sentiment, we
 would instead use a `LabelField`.)
 
