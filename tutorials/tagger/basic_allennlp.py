@@ -1,6 +1,6 @@
 """
 This is the AllenNLP equivalent of
-https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html
+https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html#example-an-lstm-for-part-of-speech-tagging
 with the following changes:
 
  1. read data from files
@@ -128,7 +128,7 @@ trainer.train()
 
 # See what the scores are after training
 # Make predictions
-predictor = SentenceTaggerPredictor(model, dataset_reader=PosDatasetReader())
+predictor = SentenceTaggerPredictor(model, dataset_reader=reader)
 tag_scores = predictor.predict("The dog ate the apple")['tag_logits']
 print(tag_scores)
 tag_ids = np.argmax(tag_scores, axis=-1)
