@@ -199,6 +199,8 @@ class SpanBasedF1Test(AllenNlpTestCase):
         metric(prediction_tensor, gold_tensor)
 
         # TP: 5, FP: 2, FN: 3.
+        metric_dict = metric.get_metric()
+
         numpy.testing.assert_almost_equal(metric_dict["recall-overall"], 0.625)
         numpy.testing.assert_almost_equal(metric_dict["precision-overall"], 0.714, decimal=3)
         numpy.testing.assert_almost_equal(metric_dict["f1-measure-overall"], 0.666, decimal=3)
