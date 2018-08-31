@@ -3,11 +3,13 @@
 ## Getting Started
 
 Welcome to AllenNLP! This tutorial will walk you through the basics of building and training an AllenNLP model.
-Before we get started, make sure you have a clean Python 3.6 or 3.7 virtual environment with AllenNLP installed, and then run
+Before we get started, make sure you have a clean Python 3.6 or 3.7 virtual environment, and then run
 
 ```
 pip install allennlp
 ```
+
+to install the AllenNLP library.
 
 In this tutorial we'll implement a slightly enhanced version of the PyTorch
 [LSTM for Part-of-Speech Tagging](https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html#example-an-lstm-for-part-of-speech-tagging) tutorial,
@@ -28,11 +30,11 @@ The PyTorch tutorial example is extremely simple, so we'll add a few small twist
 5. We'll track accuracy on both the training and validation sets as we train the model.
 
 We won't go through it in detail, but the vanilla PyTorch code (with these modifications)
-can be found in [basic_pytorch.py](/tutorials/tagging/basic_pytorch.py).
+can be found in [basic_pytorch.py](/tutorials/tagger/basic_pytorch.py).
 
 ## The Data
 
-The data can be found in [training.txt](/tutorials/tagging/training.txt) and [validation.txt](/tutorials/tagging/validation.txt). It has one sentence per line, formatted as follows:
+The data can be found in [training.txt](/tutorials/tagger/training.txt) and [validation.txt](/tutorials/tagger/validation.txt). It has one sentence per line, formatted as follows:
 
 ```
 The###DET dog###NN ate###V the###DET apple###NN
@@ -167,7 +169,7 @@ and then call `text_to_instance`.
 
  As in the PyTorch tutorial we're copying, our model will consist of an embedding layer,
  a sequence encoder, and a feedforward network. One thing we'll do that might seem unusual
- is _inject_ two of those into our model:
+ is that we're going to _inject_ two of those into our model:
 
 ```python
 class LstmTagger(Model):
@@ -207,7 +209,7 @@ to find the corrct output dimension.
 The last thing to notice is that we also instantiate a `CategoricalAccuracy` metric,
 which we'll use to track accuracy during each training and validation epoch.
 
-Because of the dependency injection, that's all we have to do to define the model.
+Because of the dependency injection, that's all we have to do to construct the model.
 
 ### Implementing `forward`
 
@@ -495,7 +497,7 @@ serialization_dir = tempfile.mkdtemp()
 model = train_model(params, serialization_dir)
 ```
 
-You can see this version in [config_allennlp.py](/config_allennlp.py).
+You can see this version in [config_allennlp.py](/tutorials/tagger/config_allennlp.py).
 
 ### Using the Command Line Tool
 
