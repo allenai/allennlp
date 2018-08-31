@@ -26,4 +26,5 @@ from allennlp.data.dataset_readers.universal_dependencies import UniversalDepend
 from allennlp.data.dataset_readers.stanford_sentiment_tree_bank import (
         StanfordSentimentTreeBankDatasetReader)
 from allennlp.data.dataset_readers.wikitables import WikiTablesDatasetReader
+from allennlp.data.dataset_readers.java import JavaDatasetReader
 from allennlp.data.dataset_readers.quora_paraphrase import QuoraParaphraseDatasetReader
