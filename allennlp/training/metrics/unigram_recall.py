@@ -47,7 +47,6 @@ class UnigramRecall(Metric):
 
         batch_size = predictions.size()[0]
         correct = 0.0
-        # Note: See preprocess.py.
         for i in range(batch_size):
             beams = predictions[i]
             cur_gold = gold_labels[i]
@@ -83,7 +82,7 @@ class UnigramRecall(Metric):
         -------
         The accumulated recall.
         """
-        recall = float(self.correct_count) / float(self.total_count)
+        recall = float(self.correct_count) / float(self.total_count) if self.total_count > 0 else 0
         if reset:
             self.reset()
         return recall

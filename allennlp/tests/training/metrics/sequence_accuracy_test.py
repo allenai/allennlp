@@ -58,3 +58,9 @@ class SequenceAccuracyTest(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(actual_accuracy, 1/2)
         assert accuracy.correct_count == 0
         assert accuracy.total_count == 0
+
+    def test_get_metric_on_new_object_works(self):
+        accuracy = SequenceAccuracy()
+
+        actual_accuracy = accuracy.get_metric(reset=True)
+        numpy.testing.assert_almost_equal(actual_accuracy, 0)

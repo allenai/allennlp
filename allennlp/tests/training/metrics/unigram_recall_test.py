@@ -60,3 +60,9 @@ class UnigramRecallTest(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(actual_recall, 1/2)
         assert recall.correct_count == 0
         assert recall.total_count == 0
+
+    def test_get_metric_on_new_object_works(self):
+        recall = UnigramRecall()
+
+        actual_recall = recall.get_metric(reset=True)
+        numpy.testing.assert_almost_equal(actual_recall, 0)
