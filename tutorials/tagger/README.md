@@ -201,7 +201,7 @@ class LstmTagger(Model):
 
 The embedding layer is specified as an AllenNLP `TextFieldEmbedder`,
 which represents a general way of turning tokens into tensors.
-(Here we know that we want to represent each unique word with a specific tensor,
+(Here we know that we want to represent each unique word with a learned tensor,
  but using the general class allows us to easily experiment with different
  types of embeddings.)
 
@@ -399,7 +399,7 @@ As in the original PyTorch tutorial, we'd like to look at the predictions our mo
 AllenNLP contains a `Predictor` abstraction that takes inputs, converts them to `Instance`s,
 feeds them through your model, and returns JSON-serializable results.
 
-Often you'd need to implement your own `Predictor`, but AllenNLP already has a `SequenceTaggerPredictor`
+Often you'd need to implement your own `Predictor`, but AllenNLP already has a `SentenceTaggerPredictor`
 that works perfectly here, so we can use it:
 
 ```python
@@ -495,7 +495,7 @@ class LstmTagger:
 
 Other than those decorators, the model and dataset reader can remain exactly the same.
 
-But now the remainder of the configuration is specified in [experiment.jsonnet](/experiment.jsonnet).
+But now the remainder of the configuration is specified in [experiment.jsonnet](/tutorials/tagger/experiment.jsonnet).
 For the most part it should be pretty straightforward;
 one novel piece is that Jsonnet allows us to use local variables,
 which means we can specify experimental parameters all in one place.
