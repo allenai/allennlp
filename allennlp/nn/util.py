@@ -531,7 +531,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         index of the true class for each corresponding step.
     weights : ``torch.FloatTensor``, required.
         A ``torch.FloatTensor`` of size (batch, sequence_length)
-    batch_average : bool, optional, (default = True).
+    batch_average : bool, optional, (default = None).
         A bool indicating whether the loss should be averaged across the batch,
         or returned as a vector of losses per batch element.
 
@@ -541,7 +541,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
            in version 0.8.
 
     average: str, optional (default = "batch")
-        If "batch", average the loss across the batches. If "token", averaged
+        If "batch", average the loss across the batches. If "token", average
         the loss across each item in the input. If ``None``, return a vector
         of losses per batch element.
     label_smoothing : ``float``, optional (default = None)
@@ -570,7 +570,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                           "removed in version 0.8.", DeprecationWarning)
             average = None
     if average not in {None, "token", "batch"}:
-        raise ValueError("Got averaage f{average}, expected one of "
+        raise ValueError("Got average f{average}, expected one of "
                          "None, 'token', or 'batch'")
 
     # shape : (batch * sequence_length, num_classes)
