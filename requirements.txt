@@ -1,5 +1,7 @@
 # Library dependencies for the python code.  You need to install these with
 # `pip install -r requirements.txt` before you can run this.
+# NOTE: all essential packages must be placed under a section named 'ESSENTIAL ...'
+# so that the script `./scripts/check_requirements_and_setup.py` can find them.
 
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
 
@@ -55,7 +57,7 @@ unidecode
 # Used by semantic parsing code to parse SQL
 parsimonious==0.8.0
 
-#### LIBRARIES USED IN SCRIPTS ####
+#### ESSENTIAL LIBRARIES USED IN SCRIPTS ####
 # Used for downloading datasets over HTTP
 requests>=2.18
 
