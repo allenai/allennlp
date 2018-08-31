@@ -33,16 +33,14 @@
       "tokens": {
         "type": "embedding",
         "vocab_namespace": "source_tokens",
-        "embedding_dim": 300,
+        "embedding_dim": 10,
         "trainable": true
       }
     },
     "encoder": {
       "type": "gru",
-      "input_size": 300,
-      # When we concatenate the forward and backward states together this gives
-      # our desired encoded vector of size 100.
-      "hidden_size": 50,
+      "input_size": 10,
+      "hidden_size": 10,
       "num_layers": 1,
       "bidirectional": true
     },
@@ -52,7 +50,7 @@
   "iterator": {
     "type": "bucket",
     "padding_noise": 0.0,
-    "batch_size" : 64,
+    "batch_size" : 10,
     "sorting_keys": [["source", "num_tokens"]]
   },
   "trainer": {
