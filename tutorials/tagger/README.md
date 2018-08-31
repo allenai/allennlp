@@ -672,6 +672,43 @@ A couple of things to note:
    and requires a reasonable understanding of how AllenNLP works. We hope this
    tutorial has helped you toward such an understanding!
 
+## Bonus: Creating a Simple Demo
+
+Training a model produces a `model.tar.gz` file containing the model architecture,
+vocabulary, and weights. In the previous example the file will be located at
+
+```
+/tmp/serialization_dir_exercise/model.tar.gz
+```
+
+Using a trained model it's easy to run a simple text-in-JSON-out demo:
+
+```bash
+python -m allennlp.service.server_simple \
+    --archive-path /tmp/serialization_dir_exercise/model.tar.gz \
+    --predictor sentence-tagger \
+    --title "AllenNLP Tutorial" \
+    --field-name sentence \
+    --include-package tutorials.tagger.config_allennlp \
+    --port 8234
+```
+
+It requires the path to the trained model archive,
+the registered name of the predictor to use,
+the field names that the predictor expects,
+any extra packages to include, and optionally a title and port.
+
+After a moment you should get a `Model loaded, serving demo on port 8234` message.
+
+If you navigate your browser to `localhost:8234`, you'll get an attractive demo
+that runs your model:
+
+![attractive demo](/tutorials/tagger/simple_demo.png)
+
+The tag logits are not the most elegant visualization of what's going on in your model, but they're extremely helpful for debugging, and you got them basically for free!
+
+## Thanks for reading!
+
 Please let us know if you have any feedback on the tutorial,
 if any parts are unclear, or if there are things we could add
 to make it better!
