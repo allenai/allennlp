@@ -1,7 +1,7 @@
-allennlp.modules.span_pruner
-=========================================
+allennlp.modules.pruner
+=======================
 
-.. automodule:: allennlp.modules.span_pruner
+.. automodule:: allennlp.modules.pruner
    :members:
    :undoc-members:
    :show-inheritance:
