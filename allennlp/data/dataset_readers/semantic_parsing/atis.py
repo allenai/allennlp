@@ -1,6 +1,7 @@
 import json
 from typing import Dict, List
 import logging
+from copy import deepcopy
 
 from overrides import overrides
 from parsimonious.exceptions import ParseError
@@ -86,7 +87,9 @@ class AtisDatasetReader(DatasetReader):
                     if not current_interaction['utterance']:
                         continue
                     utterances.append(current_interaction['utterance'])
-                    instance = self.text_to_instance(utterances, current_interaction['sql'])
+                    queries = [query for query in current_interaction['sql'].split('\n') if query]
+                    query = min(queries, key=len)
+                    instance = self.text_to_instance(deepcopy(utterances), query) 
                     if not instance:
                         continue
                     yield instance
@@ -112,7 +115,6 @@ class AtisDatasetReader(DatasetReader):
 
         world = AtisWorld(utterances=utterances,
                           database_directory=self._database_directory)
-
         if sql_query:
             try:
                 action_sequence = world.get_action_sequence(sql_query)

@@ -1,6 +1,7 @@
 from typing import List, Dict, Callable, Set
 from datetime import datetime
 import re
+from nltk import ngrams
 
 from collections import defaultdict
 from allennlp.data.tokenizers import Token
@@ -60,11 +61,12 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
     it is 1993 so we do the same here. If there is no mention of the month or day then
     we do not return any dates from the utterance.
     """
+    dates = []
     utterance = ' '.join([token.text for token in tokenized_utterance])
     year_result = re.findall(r'199[0-4]', utterance)
     if year_result:
         year = int(year_result[0])
-
+    ''' 
     for token in tokenized_utterance:
         if token.text in MONTH_NUMBERS:
             month = MONTH_NUMBERS[token.text]
@@ -75,12 +77,25 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
         bigram = ' '.join([tens.text, digits.text])
         if bigram in DAY_NUMBERS:
             day = DAY_NUMBERS[bigram]
-    if month and day:
-        try:
-            return datetime(year, month, day)
-        except ValueError:
-            return None
-    return None
+    '''
+    trigrams = ngrams([token.text for token in tokenized_utterance], 3)
+    for month, tens, digit in trigrams:
+        day = ' '.join([tens, digit]) 
+        if month in MONTH_NUMBERS and day in DAY_NUMBERS:
+            try:
+                dates.append(datetime(year, MONTH_NUMBERS[month], DAY_NUMBERS[day]))
+            except ValueError:
+                print('invalid month day') 
+    
+    bigrams = ngrams([token.text for token in tokenized_utterance], 2)
+    for month, day in bigrams:
+        if month in MONTH_NUMBERS and day in DAY_NUMBERS:
+            try:
+                dates.append(datetime(year, MONTH_NUMBERS[month], DAY_NUMBERS[day]))
+            except ValueError:
+                print('invalid month day') 
+
+    return dates
 
 def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     """
@@ -102,6 +117,7 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
                                        if token.text in WORDS_PRECEDING_TIME}
 
     number_linking_dict: Dict[str, List[int]] = defaultdict(list)
+
     for token_index, token in enumerate(tokenized_utterance):
         if token.text.isdigit():
             if token_index - 1 in indices_of_words_preceding_time:
@@ -113,7 +129,6 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
     times_linking_dict = get_times_from_utterance(utterance,
                                                   char_offset_to_token_index,
                                                   indices_of_approximate_words)
-
     for key, value in times_linking_dict.items():
         number_linking_dict[key].extend(value)
 
@@ -249,7 +264,7 @@ DAY_NUMBERS = {'first': 1,
                'thirty first': 31}
 
 
-MISC_TIME_TRIGGERS = {'morning': ['0', '1200'],
+MISC_TIME_TRIGGERS = {'morning': ['0', '1200', '800'],
                       'afternoon': ['1200', '1800'],
                       'early afternoon' : ['1200', '1400'],
                       'after': ['1200', '1800'],
@@ -269,7 +284,7 @@ ALL_TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
                                   'direction', 'minutes_distant'],
               'city': ['city_code', 'city_name', 'state_code', 'country_name', 'time_zone_code'],
               'class_of_service': ['booking_class', 'rank', 'class_description'],
-              'date_day': ['month_number', 'day_number', 'year', 'day_name'],
+              'date_day': ['day_name'],
               'days': ['days_code', 'day_name'],
               'equipment_sequence': ['aircraft_code_sequence', 'aircraft_code'],
               'fare': ['fare_id', 'from_airport', 'to_airport', 'fare_basis_code',
@@ -298,7 +313,7 @@ ALL_TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
 TABLES_WITH_STRINGS = {'airline' : ['airline_code', 'airline_name'],
                        'city' : ['city_name', 'state_code'],
                        'fare' : ['round_trip_required'],
-                       'flight' : ['airline_code'],
+                       'flight' : ['airline_code', 'flight_days'],
                        'airport' : ['airport_code'],
                        'state' : ['state_name'],
                        'fare_basis' : ['fare_basis_code', 'class_type'],
@@ -306,7 +321,8 @@ TABLES_WITH_STRINGS = {'airline' : ['airline_code', 'airline_name'],
                        'aircraft' : ['basic_type', 'manufacturer'],
                        'restriction' : ['restriction_code'],
                        'ground_service' : ['transport_type'],
-                       'days' : ['day_name']}
+                       'days' : ['day_name'],
+                       'food_service': ['meal_description']}
 
 DAY_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
 

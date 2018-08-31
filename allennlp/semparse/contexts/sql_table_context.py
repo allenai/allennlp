@@ -121,6 +121,7 @@ class SqlTableContext():
         self.tables_with_strings = tables_with_strings
         if database_directory:
             self.database_directory = database_directory
+            database_directory = "/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db"
             self.connection = sqlite3.connect(database_directory)
             self.cursor = self.connection.cursor()
 

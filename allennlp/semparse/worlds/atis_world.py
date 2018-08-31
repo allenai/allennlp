@@ -92,10 +92,28 @@ class AtisWorld():
         rules that define the grammar.
         """
         grammar_str_with_context = self.sql_table_context.grammar_str
+        grammar_str_lines = [line for line in grammar_str_with_context.split('\n') if line]
+
+        dates = []
+        for tokenized_utterance in self.tokenized_utterances:
+            dates.extend(get_date_from_utterance(tokenized_utterance))
+        if dates:
+            for date in dates:
+                grammar_str_lines[-1] += f' / ("date_day" ws "." ws "year" ws binaryop ws "{date.year}")' \
+        f' / ("date_day" ws "." ws "month_number" ws binaryop ws "{date.month}")' \
+        f' / ("date_day" ws "." ws "day_number" ws binaryop ws "{date.day}")'
+                self.valid_actions['biexpr'].extend([f'biexpr -> ["date_day", ".", "year", binaryop, "{date.year}"]',
+                                                    f'biexpr -> ["date_day", ".", "month_number", binaryop, "{date.month}"]',
+                                                    f'biexpr -> ["date_day", ".", "day_number", binaryop, "{date.day}"]'])
+
+        
+        grammar_str_with_context = "\n".join(grammar_str_lines)
+
         numbers = [number.split(" -> ")[1].lstrip('["').rstrip('"]') for \
                    number in sorted(self.valid_actions['number'], reverse=True)]
 
         grammar_str_with_context += generate_one_of_string("number", numbers)
+
         return grammar_str_with_context
 
 
