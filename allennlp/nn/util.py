@@ -598,15 +598,17 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     negative_log_likelihood = negative_log_likelihood_flat.view(*targets.size())
     # shape : (batch, sequence_length)
     negative_log_likelihood = negative_log_likelihood * weights.float()
-    # shape : (batch_size,)
-    per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1).float() + 1e-13)
 
     if average == "batch":
+        # shape : (batch_size,)
+        per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1).float() + 1e-13)
         num_non_empty_sequences = ((weights.sum(1) > 0).float().sum() + 1e-13)
         return per_batch_loss.sum() / num_non_empty_sequences
     elif average == "token":
         return negative_log_likelihood.sum() / (weights.sum().float() + 1e-13)
     else:
+        # shape : (batch_size,)
+        per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1).float() + 1e-13)
         return per_batch_loss
 
 
