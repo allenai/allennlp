@@ -371,3 +371,72 @@ def to_bioul(tag_sequence: List[str], encoding: str = "IOB1") -> List[str]:
         process_stack(stack, bioul_sequence)
 
     return bioul_sequence
+
+
+def bmes_tags_to_spans(tag_sequence: List[str],
+                       classes_to_ignore: List[str] = None) -> List[TypedStringSpan]:
+    """
+    Given a sequence corresponding to BMES tags, extracts spans.
+    Spans are inclusive and can be of zero length, representing a single word span.
+    Ill-formed spans are not allowed and will raise ``InvalidTagSequence``.
+    This function works properly when the spans are unlabeled (i.e., your labels are
+    simply "B", "M", "E" and "S").
+
+    Parameters
+    ----------
+    tag_sequence : List[str], required.
+        The integer class labels for a sequence.
+    classes_to_ignore : List[str], optional (default = None).
+        A list of string class labels `excluding` the bio tag
+        which should be ignored when extracting spans.
+
+    Returns
+    -------
+    spans : List[TypedStringSpan]
+        The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
+        Note that the label `does not` contain any BIO tag prefixes.
+    """
+    def extract_bmes_tag_label(text):
+        bmes_tag = text[0]
+        label = text[2:]
+        return bmes_tag, label
+
+    spans = []
+    classes_to_ignore = classes_to_ignore or []
+    invalid = False
+    index = 0
+    while index < len(tag_sequence) and not invalid:
+        start_bmes_tag, start_label = extract_bmes_tag_label(tag_sequence[index])
+        start_index = index
+
+        if start_bmes_tag == 'B':
+            index += 1
+            while index < len(tag_sequence):
+                bmes_tag, label = extract_bmes_tag_label(tag_sequence[index])
+                # Stop conditions.
+                if label != start_label or bmes_tag not in ('M', 'E'):
+                    invalid = True
+                    break
+                if bmes_tag == 'E':
+                    break
+                # bmes_tag == 'M', move to next.
+                index += 1
+
+            if index >= len(tag_sequence):
+                invalid = True
+            if not invalid:
+                spans.append((start_label, (start_index, index)))
+
+        elif start_bmes_tag == 'S':
+            spans.append((start_label, (start_index, start_index)))
+
+        else:
+            invalid = True
+
+        # Move to next span.
+        index += 1
+
+    if invalid:
+        raise InvalidTagSequence(tag_sequence)
+
+    return [span for span in spans if span[0] not in classes_to_ignore]

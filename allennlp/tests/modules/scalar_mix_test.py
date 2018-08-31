@@ -53,4 +53,4 @@ class TestScalarMix(AllenNlpTestCase):
             expected_result += (normed_tensor * normed_weights[k])
         expected_result *= 0.5
 
-        numpy.testing.assert_almost_equal(expected_result, result.data.numpy())
+        numpy.testing.assert_almost_equal(expected_result, result.data.numpy(), decimal=6)
