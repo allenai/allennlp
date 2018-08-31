@@ -18,7 +18,7 @@ from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
 # from java_programmer.fields import JavaProductionRuleField, JavaGlobalProductionRuleField, ProductionRuleField
-from allennlp.semparse import KnowledgeGraph
+from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
 from nltk.corpus import stopwords
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
