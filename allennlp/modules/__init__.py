@@ -18,7 +18,7 @@ from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.pruner import Pruner
 # TODO(mattg): This line is to keep backwards compatibility.  I'm not sure how to give a
 # deprecation warning on using this import, but we should remove this around version 0.8.
-from allennlp.modules.pruner import Pruner as SpanPruner
+from allennlp.modules.pruner import Pruner as SpanPruner  # pylint: disable=reimported
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders import TokenEmbedder, Embedding
