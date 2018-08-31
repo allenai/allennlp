@@ -24,7 +24,7 @@ class Event2Mind(Model):
     sequence, encodes it, and then uses the encoded representation to decode
     several mental state sequences.
 
-    See: https://www.semanticscholar.org/paper/Event2Mind/b89f8a9b2192a8f2018eead6b135ed30a1f2144d
+    It is based on `the paper by Rashkin et al. <https://www.semanticscholar.org/paper/Event2Mind/b89f8a9b2192a8f2018eead6b135ed30a1f2144d>`
 
     Parameters
     ----------
