@@ -45,10 +45,10 @@ Each sentence consists of space-separated word-tag pairs, which are themselves s
 
 Typically to solve a problem like this using AllenNLP, you'll have to implement two classes.
 
-The first is a [`DatasetReader`](/link/goes/here), which contains the logic for reading a file of data
+The first is a [`DatasetReader`](https://allenai.github.io/allennlp-docs/api/allennlp.data.dataset_readers.html), which contains the logic for reading a file of data
 and producing a stream of `Instance`s (more about those shortly).
 
-The second is a [`Model`](/link/goes/here), which is a PyTorch `Module` that takes `Tensor` inputs and produces a dict of `Tensor` outputs (including the training `loss` you want to optimize).
+The second is a [`Model`](https://allenai.github.io/allennlp-docs/api/allennlp.models.model.html), which is a PyTorch `Module` that takes `Tensor` inputs and produces a dict of `Tensor` outputs (including the training `loss` you want to optimize).
 
 AllenNLP handles the remaining details such as training, batching, padding, logging, model persistence, and so on.
 AllenNLP also includes many high-level abstractions that will make writing those two classes much easier.
@@ -124,7 +124,7 @@ on untagged data (which clearly won't have any tags).
 
 We define a `TextField` to hold the sentence (you can see that it needs to know the token indexers from the constructor),
 and if tags are provided we put them in a `SequenceLabelField`, which is for labels corresponding to each
-element of a sequence. (If we had a label that applied to the entire sentence, for example sentiment, we
+element of a sequence. (If we had a label that applied to the entire sentence, for example "sentiment", we
 would instead use a `LabelField`.)
 
 Finally, we just return an `Instance` containing the dict `field_name` -> `Field`.
@@ -506,7 +506,7 @@ so in practice you probably wouldn't read the params or call `train_model` yours
 ```bash
 $ allennlp train tutorials/tagger/experiment.jsonnet \
                  -s /tmp/serialization_dir \
-                 --include-package tutorials.tagger
+                 --include-package tutorials.tagger.config_allennlp
 ```
 
 The serialization directory is where AllenNLP writes out its serialized model,
@@ -522,4 +522,154 @@ And so the `--include-package` argument tells AllenNLP to load the
 specified modules (and in particular run their `register` decorators)
 before instantiating and training your module.
 
-And that's it! This should be enough to get you going using AllenNLP.
+And that's it!
+
+## Solved Exercise: Adding Character-Level Features
+
+The PyTorch tutorial [poses a challenge at the end](https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html#exercise-augmenting-the-lstm-part-of-speech-tagger-with-character-level-features):
+
+    Let’s augment the word embeddings with a representation derived from the characters of the word. We expect that this should help significantly, since character-level information like affixes have a large bearing on part-of-speech. For example, words with the affix -ly are almost always tagged as adverbs in English.
+
+    To do this, let cw be the character-level representation of word w. Let xw be the word embedding as before. Then the input to our sequence model is the concatenation of xw and cw. So if xw has dimension 5, and cw dimension 3, then our LSTM should accept an input of dimension 8.
+
+    To get the character level representation, do an LSTM over the characters of a word, and let cw be the final hidden state of this LSTM.
+
+One of the great benefits of AllenNLP is that it makes this sort of modification extremely simple.
+
+### Changing the Jsonnet Variables
+
+In the original version we used variables in our Jsonnet file:
+
+```
+local embedding_dim = 6;
+local hidden_dim = 6;
+local num_epochs = 1000;
+local patience = 10;
+local batch_size = 2;
+local learning_rate = 0.1;
+```
+
+Now we'll have separate embeddings for words and characters,
+which means we need to make a change like:
+
+```
+local word_embedding_dim = 5;
+local char_embedding_dim = 3;
+local embedding_dim = word_embedding_dim + char_embedding_dim;
+```
+
+If we use those variables correctly, then we only need to change
+the word-embedding dimension in a single place to experiment
+with different models.
+
+### Adding Character-Level Indexing
+
+The first big change is that we need to add a second `TokenIndexer` to our dataset reader
+that captures the character-level indices. As the token indexers can be provided as a
+constructor input, we can accomplish this with just a small change to our configuration file:
+
+```json
+    "dataset_reader": {
+        "type": "pos-tutorial",
+        "token_indexers": {
+            "tokens": { "type": "single_id" },
+            "token_characters": { "type": "characters" }
+        }
+    },
+```
+
+We now have to explicitly specify the token indexers
+(previously we skipped that part and just used the default).
+And we have to add a second one that indexes characters.
+
+Where did the name "characters" come from? If you look at the code
+ for [`TokenCharactersIndexer`](https://github.com/allenai/allennlp/blob/master/allennlp/data/token_indexers/token_characters_indexer.py#L14), you can see that that's the name it was registered under.
+
+The name `"token_characters"` is our choice -- we'll need to use it as a key
+when we specify token embedders inside our model.
+
+### Adding Character-Level Encoding
+
+The section of the configuration corresponding to our model was previously
+
+```json
+    "model": {
+        "type": "lstm-tagger",
+        "word_embeddings": {
+            "token_embedders": {
+                "tokens": {
+                    "type": "embedding",
+                    "embedding_dim": embedding_dim
+                }
+            }
+        },
+        "encoder": {
+            "type": "lstm",
+            "input_size": embedding_dim,
+            "hidden_size": hidden_dim
+        }
+    },
+```
+
+The `BasicTokenEmbedder` already knows that if it has multiple token embedders it
+should concatenate their outputs. So all we need to do is add a second token embedder
+with the right key:
+
+```json
+            "token_embedders": {
+                "tokens": {
+                    "type": "embedding",
+                    "embedding_dim": word_embedding_dim
+                },
+                "token_characters": {
+                    "type": "character_encoding",
+                    "embedding": {
+                        "embedding_dim": char_embedding_dim,
+                    },
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": char_embedding_dim,
+                        "hidden_size": char_embedding_dim
+                    }
+                }
+            },
+```
+
+First we change the `embedding_dim` for tokens to `word_embedding_dim`.
+Then we add a [character encoding](https://github.com/allenai/allennlp/blob/master/allennlp/modules/token_embedders/token_characters_encoder.py#L11), which if you look at its code expects both
+an `Embedding` (for turning characters into tensors)
+and a `Seq2VecEncoder` (for turning a sequence of tensors into a single tensor).
+
+The embedding is the same type of embedding we used for the word tokens
+(but with a different dimension),
+and our `Seq2VecEncoder` will just be an LSTM with the same input and hidden dim.
+
+Because of the way we defined the variables in the config file, the
+subsequent LSTM automatically has the right dimensions.
+
+### That's All!
+
+Those small changes to the configuration file are all that's needed
+to solve the "add character level encodings exercise"!
+The enhanced model is now ready to train:
+
+```bash
+$ allennlp train tutorials/tagger/exercise.jsonnet \
+                 -s /tmp/serialization_dir_exercise \
+                 --include-package tutorials.tagger.config_allennlp
+```
+
+A couple of things to note:
+
+1. What could have been a fairly involved exercise
+   (and should have involved writing code)
+   only required a few changes to the Jsonnet configuration file.
+   This ease of experimentation is one of the primary benefits of using AllenNLP.
+
+2. That said, *what changes to make* is not obvious for a newcomer to the library
+   and requires a reasonable understanding of how AllenNLP works. We hope this
+   tutorial has helped you toward such an understanding!
+
+Please let us know if you have any feedback on the tutorial,
+if any parts are unclear, or if there are things we could add
+to make it better!

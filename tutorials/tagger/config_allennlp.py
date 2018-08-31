@@ -84,15 +84,16 @@ class LstmTagger(Model):
 # In practice you'd probably do this from the command line:
 #   $ allennlp train tutorials/tagger/experiment.jsonnet -s /tmp/serialization_dir
 #
-params = Params.from_file('tutorials/tagger/experiment.jsonnet')
-serialization_dir = tempfile.mkdtemp()
-model = train_model(params, serialization_dir)
+if __name__ == "__main__":
+    params = Params.from_file('tutorials/tagger/experiment.jsonnet')
+    serialization_dir = tempfile.mkdtemp()
+    model = train_model(params, serialization_dir)
 
-# Make predictions
-predictor = SentenceTaggerPredictor(model, dataset_reader=PosDatasetReader())
-tag_scores = predictor.predict("The dog ate the apple")['tag_logits']
-print(tag_scores)
-tag_ids = np.argmax(tag_scores, axis=-1)
-print([model.vocab.get_token_from_index(i, 'labels') for i in tag_ids])
+    # Make predictions
+    predictor = SentenceTaggerPredictor(model, dataset_reader=PosDatasetReader())
+    tag_scores = predictor.predict("The dog ate the apple")['tag_logits']
+    print(tag_scores)
+    tag_ids = np.argmax(tag_scores, axis=-1)
+    print([model.vocab.get_token_from_index(i, 'labels') for i in tag_ids])
 
-shutil.rmtree(serialization_dir)
+    shutil.rmtree(serialization_dir)

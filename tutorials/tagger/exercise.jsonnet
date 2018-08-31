@@ -1,5 +1,8 @@
-// jsonnet allows local variables like this
-local embedding_dim = 6;
+// Modification to allow character-level features
+
+local word_embedding_dim = 5;
+local char_embedding_dim = 3;
+local embedding_dim = word_embedding_dim + char_embedding_dim;
 local hidden_dim = 6;
 local num_epochs = 1000;
 local patience = 10;
@@ -10,20 +13,32 @@ local learning_rate = 0.1;
     "train_data_path": 'tutorials/tagger/training.txt',
     "validation_data_path": 'tutorials/tagger/validation.txt',
     "dataset_reader": {
-        "type": "pos-tutorial"
+        "type": "pos-tutorial",
+        "token_indexers": {
+            "tokens": { "type": "single_id" },
+            "token_characters": { "type": "characters" }
+        }
     },
     "model": {
         "type": "lstm-tagger",
         "word_embeddings": {
-            // Technically you could put a "type": "basic" here,
-            // but that's the default TextFieldEmbedder, so doing so
-            // is optional.
             "token_embedders": {
                 "tokens": {
                     "type": "embedding",
-                    "embedding_dim": embedding_dim
+                    "embedding_dim": word_embedding_dim
+                },
+                "token_characters": {
+                    "type": "character_encoding",
+                    "embedding": {
+                        "embedding_dim": char_embedding_dim,
+                    },
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": char_embedding_dim,
+                        "hidden_size": char_embedding_dim
+                    }
                 }
-            }
+            },
         },
         "encoder": {
             "type": "lstm",
