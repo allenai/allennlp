@@ -1370,3 +1370,15 @@ class TestAtisWorld(AllenNlpTestCase):
              'value -> [pos_value]',
              'where_clause -> ["WHERE", "(", conditions, ")"]',
              'where_clause -> ["WHERE", conditions]']
+
+    def test_atis_debug(self): # pylint: disable=no-self-use
+        world = AtisWorld(['flights from nashville to orlando daily'],
+                              database_directory=str(self.database_directory))
+        print(world.valid_actions)
+        action_sequence = world.get_action_sequence("( SELECT DISTINCT flight.flight_id FROM flight WHERE ( flight.flight_days = 'DAILY' AND ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'NASHVILLE' )) AND flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'ORLANDO' )) ) )   ) ;")
+        print(action_sequence)
+
+
+
+
+     

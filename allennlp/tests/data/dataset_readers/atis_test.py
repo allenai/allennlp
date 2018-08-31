@@ -6,7 +6,7 @@ from allennlp.semparse.worlds import AtisWorld
 
 class TestAtisReader(AllenNlpTestCase):
     def test_atis_read_from_file(self):
-        data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "atis" / "sample.json"
+        data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "atis" / "dev.json"
         database_directory = AllenNlpTestCase.FIXTURES_ROOT / "data" / "atis" / "atis.db"
         reader = AtisDatasetReader(database_directory=str(database_directory))
 

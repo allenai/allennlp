@@ -11,8 +11,6 @@ from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.fields.array_field import ArrayField 
 from allennlp.models.model import Model
-# from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_step import WikiTablesDecoderStep
-# from allennlp.models.semantic_parsing.wikitables.wikitables_decoder_state import WikiTablesDecoderState
 from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
 from allennlp.models.semantic_parsing.wikitables.linking_transition_function import LinkingTransitionFunction
 from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
@@ -89,8 +87,8 @@ class AtisSemanticParser(Model):
                  training_beam_size: int = None,
                  dropout: float = 0.0,
                  rule_namespace: str = 'rule_labels',
+                 # tables_directory='./atis/atis.db') -> None:
                  tables_directory='./allennlp/models/semantic_parsing/atis/atis.db') -> None:
-
         # Atis semantic parser init
         super(AtisSemanticParser, self).__init__(vocab)
         self._utterance_embedder = utterance_embedder
@@ -108,11 +106,11 @@ class AtisSemanticParser(Model):
         self._action_similarity = Average()
         self._denotation_accuracy = Average()
         
-        # Initialize a cursor to our sqlite database, so we can execute logical forms.
+        # Initialize a cursor to our sqlite database, so we can execute logical forms for denotation accuracy.
+        tables_directory = "/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db"
         self._tables_directory = tables_directory
-        print('tables_directory', tables_directory)
-        # self._connection = sqlite3.connect(self._tables_directory)
-        # self._cursor = self._connection.cursor() 
+        self._connection = sqlite3.connect(self._tables_directory)
+        self._cursor = self._connection.cursor() 
 
         self._action_padding_index = -1  # the padding value used by IndexField
         num_actions = vocab.get_vocab_size(self._rule_namespace)
@@ -140,7 +138,6 @@ class AtisSemanticParser(Model):
         # self._entity_type_encoder_embedding = Embedding(self._num_entity_types, self._embedding_dim)
         self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
         
-        # The rest of Wikitables MML
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
         self._decoder_step = LinkingTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
@@ -159,11 +156,6 @@ class AtisSemanticParser(Model):
                                       atis_linking_scores: torch.Tensor,
                                       add_world_to_initial_state: bool = False,
                                       checklist_states: List[ChecklistState] = None) -> Dict:
-        """
-        Does initial preparation and creates an intiial state for both the semantic parsers. Note
-        that the checklist state is optional, and the ``WikiTablesMmlParser`` is not expected to
-        pass it.
-        """
 
         embedded_utterance = self._utterance_embedder(utterance)
         utterance_mask = util.get_text_field_mask(utterance).float()
@@ -228,8 +220,6 @@ class AtisSemanticParser(Model):
                                                  rnn_state=initial_rnn_state,
                                                  grammar_state=initial_grammar_state,
                                                  possible_actions=actions,
-                                                 # world=initial_state_world,
-                                                 # checklist_state=checklist_states,
                                                  debug_info=None)
 
         return {"initial_state": initial_state}
@@ -245,7 +235,7 @@ class AtisSemanticParser(Model):
 
         Parameters
         ----------
-        worlds : ``List[WikiTablesWorld]``
+        worlds : ``List[AtisWorld]``
         num_entities : ``int``
         tensor : ``torch.Tensor``
             Used for copying the constructed list onto the right device.
@@ -310,6 +300,7 @@ class AtisSemanticParser(Model):
         target = self.preprocess_query_sqlite(target) 
         
         try:
+            print('predicted:', predicted)
             self._cursor.execute(predicted)
             predicted_rows = self._cursor.fetchall()
             self._has_logical_form(1.0)
@@ -319,23 +310,22 @@ class AtisSemanticParser(Model):
             return 0
         
         try:
+            print('target: ', target)
             self._cursor.execute(target)
             target_rows = self._cursor.fetchall()
         except sqlite3.OperationalError:
             print("Operation error when executing target")
             return 0
-
+        
         return predicted_rows == target_rows
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         """
-        We track three metrics here:
+        We track four metrics here:
 
             1. dpd_acc, which is the percentage of the time that our best output action sequence is
-            in the set of action sequences provided by DPD.  This is an easy-to-compute lower bound
-            on denotation accuracy for the set of examples where we actually have DPD output.  We
-            only score dpd_acc on that subset.
+            in the set of action sequences provided by DPD.
 
             2. denotation_acc, which is the percentage of examples where we get the correct
             denotation.  This is the typical "accuracy" metric, and it is what you should usually
@@ -350,7 +340,7 @@ class AtisSemanticParser(Model):
             out of time steps, or something.
 
             4. action_similarity, which is how similar the action sequence predicted is to the actual
-               action sequence.
+               action sequence. This is basically a soft measure of dpd_acc.
         """
         return {
                 'dpd_acc': self._action_sequence_accuracy.get_metric(reset),
@@ -376,7 +366,7 @@ class AtisSemanticParser(Model):
 
         Parameters
         ----------
-        world : ``WikiTablesWorld``
+        world : ``AtisWorld``
             From the input to ``forward`` for a single batch instance.
         possible_actions : ``List[ProductionRuleArray]``
             From the input to ``forward`` for a single batch instance.
@@ -428,7 +418,6 @@ class AtisSemanticParser(Model):
                 # global_action_tensor = torch.cat(global_action_tensors, dim=0)
                 global_action_tensor = entity_types.new_tensor(torch.cat(global_action_tensors, dim=0), dtype=torch.long)
                 # Whats being fed to Embeddings needs to be on CUDA
-
 
                 global_input_embeddings = self._action_embedder(global_action_tensor)
                 global_output_embeddings = self._output_action_embedder(global_action_tensor)
@@ -573,8 +562,8 @@ class AtisSemanticParser(Model):
             outputs['entities'] = []
             outputs['logical_form'] = []
             outputs['example_sql_query'] = []
-
-    
+            outputs['utterance'] = []
+            
             for i in range(batch_size):
                 # Decoding may not have terminated with any completed logical forms, if `num_steps`
                 # isn't long enough (or if the model is not trained enough and gets into an
@@ -596,11 +585,10 @@ class AtisSemanticParser(Model):
                                           for action_index in best_action_indices]
                     if example_sql_query:
                         predicted_sql_query = action_sequence_to_sql(action_strings)
-                        '''
                         self._denotation_accuracy(self._sql_result_match(predicted_sql_query,
-                                                                         example_sql_query[0]))
-                        '''
+                                                                         example_sql_query[i]))
                         outputs['example_sql_query'].append(example_sql_query[0])
+                        outputs['utterance'].append(world[i].utterances[-1])
 
 
                     outputs['best_action_sequence'].append(action_strings)
