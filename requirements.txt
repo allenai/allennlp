@@ -73,6 +73,9 @@ h5py
 # For timezone utilities
 pytz==2017.3
 
+# Reads Universal Dependencies files.
+conllu==0.11
+
 #### ESSENTIAL TESTING-RELATED PACKAGES ####
 
 # We'll use pytest to run our tests; this isn't really necessary to run the code, but it is to run
@@ -85,8 +88,8 @@ flaky
 # Required to mock out `requests` calls
 responses>=0.7
 
-# Reads Universal Dependencies files.
-conllu==0.11
+# For mocking s3.
+moto==1.3.4
 
 #### TESTING-RELATED PACKAGES ####
 
@@ -108,9 +111,6 @@ codecov
 
 # Required to run sanic tests
 aiohttp
-
-# For mocking s3.
-moto==1.3.4
 
 #### DOC-RELATED PACKAGES ####
 
