@@ -1,5 +1,17 @@
 # Getting Started with AllenNLP
 
+* [Getting Started](#getting-started)
+* [The Problem](#the-problem)
+* [The Data](#the-data)
+* [Our Task](#our-task)
+* [The `DatasetReader`](#the-datasetreader)
+* [Defining a `Model`](#defining-a-model)
+* [Training the Model](#training-the-model)
+* [Making Predictions](#making-predictions)
+* [Using Config Files](#using-config-files)
+* [Solved Exercise: Adding Character-Level Features](#solved-exercise-adding-character-level-features)
+* [Bonus: Creating a Simple Demo](#bonus-creating-a-simple-demo)
+
 ## Getting Started
 
 Welcome to AllenNLP! This tutorial will walk you through the basics of building and training an AllenNLP model.
