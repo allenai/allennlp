@@ -15,7 +15,10 @@ from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
-from allennlp.modules.span_pruner import SpanPruner
+from allennlp.modules.pruner import Pruner
+# TODO(mattg): This line is to keep backwards compatibility.  I'm not sure how to give a
+# deprecation warning on using this import, but we should remove this around version 0.8.
+from allennlp.modules.pruner import Pruner as SpanPruner
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders import TokenEmbedder, Embedding
