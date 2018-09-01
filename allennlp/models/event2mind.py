@@ -33,11 +33,11 @@ class Event2Mind(Model):
         (``tokens``) or the target tokens can have a different namespace, in which case it needs to
         be specified as ``target_namespace``.
     source_embedder : ``TextFieldEmbedder``, required
-        Embedder for source side sequences
+        Embedder for source side sequences.
     encoder : ``Seq2VecEncoder``, required
-        The encoder of the "encoder/decoder" model
+        The encoder of the "encoder/decoder" model.
     max_decoding_steps : int, required
-        Length of decoded sequences
+        Length of decoded sequences.
     target_namespace : str, optional (default = 'tokens')
         If the target side vocabulary is different from the source side's, you need to specify the
         target's namespace here. If not, we'll assume it is "tokens", which is also the default
