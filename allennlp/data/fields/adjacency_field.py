@@ -28,8 +28,8 @@ class AdjacencyField(Field[torch.Tensor]):
     ----------
     indices : ``List[Tuple[int, int]]``
     sequence_field : ``SequenceField``
-        A field containing the sequence that this ``SequenceLabelField`` is labeling.  Most often, this is a
-        ``TextField``, for tagging individual tokens in a sentence.
+        A field containing the sequence that this ``AdjacencyField`` is labeling.  Most often,
+        this is a ``TextField``, for tagging edge relations between tokens in a sentence.
      labels : ``List[str]``, optional, default = None
         Optional labels for the edges of the adjacency matrix.
     label_namespace : ``str``, optional (default='labels')
