@@ -30,12 +30,14 @@ class AdjacencyField(Field[torch.Tensor]):
     sequence_field : ``SequenceField``
         A field containing the sequence that this ``AdjacencyField`` is labeling.  Most often,
         this is a ``TextField``, for tagging edge relations between tokens in a sentence.
-     labels : ``List[str]``, optional, default = None
+    labels : ``List[str]``, optional, default = None
         Optional labels for the edges of the adjacency matrix.
     label_namespace : ``str``, optional (default='labels')
         The namespace to use for converting tag strings into integers.  We convert tag strings to
         integers for you, and this parameter tells the ``Vocabulary`` object which mapping from
         strings to integers to use (so that "O" as a tag doesn't get the same id as "O" as a word).
+    padding_value : ``int``, (optional, default = -1)
+        The value to use as padding.
     """
     # It is possible that users want to use this field with a namespace which uses OOV/PAD tokens.
     # This warning will be repeated for every instantiation of this class (i.e for every data
@@ -47,12 +49,15 @@ class AdjacencyField(Field[torch.Tensor]):
                  indices: List[Tuple[int, int]],
                  sequence_field: SequenceField,
                  labels: List[str] = None,
-                 label_namespace: str = 'labels') -> None:
+                 label_namespace: str = 'labels',
+                 padding_value: int = -1) -> None:
         self.indices = indices
         self.labels = labels
         self.sequence_field = sequence_field
         self._label_namespace = label_namespace
+        self._padding_value = padding_value
         self._indexed_labels = None
+
         self._maybe_warn_for_namespace(label_namespace)
         field_length = sequence_field.sequence_length()
 
@@ -95,7 +100,7 @@ class AdjacencyField(Field[torch.Tensor]):
                   padding_lengths: Dict[str, int],
                   cuda_device: int = -1) -> torch.Tensor:
         desired_num_tokens = padding_lengths['num_tokens']
-        tensor = torch.zeros(desired_num_tokens, desired_num_tokens)
+        tensor = torch.ones(desired_num_tokens, desired_num_tokens) * self._padding_value
         labels = self._indexed_labels or [1 for _  in range(len(self.indices))]
 
         for index, label in zip(self.indices, labels):
@@ -107,7 +112,9 @@ class AdjacencyField(Field[torch.Tensor]):
         # pylint: disable=protected-access
         # The empty_list here is needed for mypy
         empty_list: List[str] = []
-        adjacency_field = AdjacencyField(empty_list, self.sequence_field.empty_field())
+        adjacency_field = AdjacencyField(empty_list,
+                                         self.sequence_field.empty_field(),
+                                         padding_value=self._padding_value)
         return adjacency_field
 
     def __str__(self) -> str:
@@ -116,6 +123,6 @@ class AdjacencyField(Field[torch.Tensor]):
                                     for labels in textwrap.wrap(repr(self.labels), 100)])
         formatted_indices = "".join(["\t\t" + index + "\n"
                                      for index in textwrap.wrap(repr(self.indices), 100)])
-        return f"AdjacencyField of length {length} with " \
-               f"indices:\n {formatted_indices}\n" \
+        return f"AdjacencyField of length {length}\n" \
+               f"\t\twith indices:\n {formatted_indices}\n" \
                f"\t\tand labels:\n {formatted_labels} \t\tin namespace: '{self._label_namespace}'."
