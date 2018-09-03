@@ -55,7 +55,6 @@ class SemanticDependenciesDatasetReader(DatasetReader):
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
-                 use_language_specific_pos: bool = False,
                  lazy: bool = False) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
@@ -87,7 +86,7 @@ class SemanticDependenciesDatasetReader(DatasetReader):
 
         fields: Dict[str, Field] = {}
         tokens = TextField([Token(t) for t in tokens], self._token_indexers)
-        fields["words"] = tokens
+        fields["tokens"] = tokens
 
         if arc_indices is not None and arc_labels is not None:
             fields["arc_labels"] = AdjacencyField(arc_indices, tokens, arc_labels)
