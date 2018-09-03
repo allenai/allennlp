@@ -15,7 +15,7 @@ class TestAdjacencyField(AllenNlpTestCase):
         self.text = TextField([Token(t) for t in ["here", "is", "a", "sentence", "."]],
                               {"words": SingleIdTokenIndexer("words")})
 
-    def test_label_field_can_index_with_vocab(self):
+    def test_adjacency_field_can_index_with_vocab(self):
         vocab = Vocabulary()
         vocab.add_token_to_namespace("a", namespace="labels")
         vocab.add_token_to_namespace("b", namespace="labels")
@@ -32,13 +32,17 @@ class TestAdjacencyField(AllenNlpTestCase):
                                                                 [-1, -1, -1, -1, -1],
                                                                 [-1, -1, -1, -1, -1]]))
 
-    def test_label_field_raises_with_out_of_bounds_indices(self):
+    def test_adjacency_field_raises_with_out_of_bounds_indices(self):
         with pytest.raises(ConfigurationError):
             _ = AdjacencyField([(0, 24)], self.text)
 
-    def test_label_field_raises_with_mismatching_labels_for_indices(self):
+    def test_adjacency_field_raises_with_mismatching_labels_for_indices(self):
         with pytest.raises(ConfigurationError):
             _ = AdjacencyField([(0, 1), (0, 2)], self.text, ["label1"])
+
+    def test_adjacency_field_raises_with_duplicate_indices(self):
+        with pytest.raises(ConfigurationError):
+            _ = AdjacencyField([(0, 1), (0, 1)], self.text, ["label1"])
 
     def test_adjacency_field_empty_field_works(self):
         field = AdjacencyField([(0, 1)], self.text)

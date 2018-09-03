@@ -61,6 +61,9 @@ class AdjacencyField(Field[torch.Tensor]):
         self._maybe_warn_for_namespace(label_namespace)
         field_length = sequence_field.sequence_length()
 
+        if len(set(indices)) != len(indices):
+            raise ConfigurationError(f"Indices must be unique, but found {indices}")
+
         if not all([0 <= index[1] < field_length and 0 <= index[0] < field_length for index in indices]):
             raise ConfigurationError(f"Label indices and sequence length "
                                      f"are incompatible: {indices} and {field_length}")
