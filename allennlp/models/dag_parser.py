@@ -100,7 +100,6 @@ class DagParser(Model):
         self._pos_tag_embedding = pos_tag_embedding or None
         self._dropout = InputVariationalDropout(dropout)
         self._input_dropout = Dropout(input_dropout)
-        self._head_sentinel = torch.nn.Parameter(torch.randn([1, 1, encoder.get_output_dim()]))
 
         representation_dim = text_field_embedder.get_output_dim()
         if pos_tag_embedding is not None:
@@ -156,17 +155,7 @@ class DagParser(Model):
         mask = get_text_field_mask(tokens)
         embedded_text_input = self._input_dropout(embedded_text_input)
         encoded_text = self.encoder(embedded_text_input, mask)
-        batch_size, sequence_length, encoding_dim = encoded_text.size()
 
-        # TODO(Mark) See if we need this. Maybe we don't now we don't have a single head?
-        head_sentinel = self._head_sentinel.expand(batch_size, 1, encoding_dim)
-        # Concatenate the head sentinel onto the sentence representation.
-        encoded_text = torch.cat([head_sentinel, encoded_text], 1)
-        mask = torch.cat([mask.new_ones(batch_size, 1), mask], 1)
-        if arc_labels is not None:
-            new_padding = - arc_labels.new_ones(batch_size, 1, 1)
-            arc_labels = torch.cat([new_padding.expand(batch_size, 1, sequence_length), arc_labels], 1)
-            arc_labels = torch.cat([new_padding.expand(batch_size, sequence_length + 1, 1), arc_labels], 2)
         float_mask = mask.float()
         encoded_text = self._dropout(encoded_text)
 
@@ -271,14 +260,9 @@ class DagParser(Model):
         reshaped_tags = head_tags.view(-1)
         tag_nll = self._tag_loss(reshaped_logits, reshaped_tags.long()).view(original_shape) * tag_mask
 
-        # We don't care about predictions for the symbolic ROOT token's head,
-        # so we remove it from the loss.
-        arc_nll = arc_nll[:, 0:]
-        tag_nll = tag_nll[:, 1:]
-
         # The number of valid positions is equal to the number of unmasked elements minus
         # 1 per sequence in the batch, to account for the symbolic HEAD token.
-        valid_positions = mask.sum() - mask.size(0)
+        valid_positions = mask.sum()
 
         arc_nll = arc_nll.sum() / valid_positions.float()
         tag_nll = tag_nll.sum() / valid_positions.float()
@@ -322,8 +306,7 @@ class DagParser(Model):
         if mask is not None:
             minus_mask = (1 - mask).byte().unsqueeze(2)
             attended_arcs.masked_fill_(minus_mask, -numpy.inf)
-        # TODO(Mark) Think about masking the head tags here too, because
-        # Compute the heads greedily.
+            head_tag_logits.masked_fill_(minus_mask.unsqueeze(-1), -numpy.inf)
         # shape (batch_size, sequence_length, sequence_length)
         arc_probs = attended_arcs.sigmoid()
         # shape (batch_size, sequence_length, sequence_length, num_tags)
