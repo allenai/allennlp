@@ -992,7 +992,7 @@ class Trainer:
                                                     optimizer_params["parameter_groups"]]
         else:
             # split up parameters in groups based on modules
-            optimizer_params["parameter_groups"] = [[[f"^{m}"], {}] for m in model._modules]
+            optimizer_params["parameter_groups"] = [[[f"^{m}"], {}] for m in model._modules]  # pylint: disable=protected-access
 
         if cuda_device >= 0:
             model = model.cuda(cuda_device)
