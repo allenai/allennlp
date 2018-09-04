@@ -986,7 +986,8 @@ class Trainer:
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
         optimizer_params = params.pop("optimizer")
-
+        if isinstance(optimizer_params, str):
+            optimizer_params = Params({"type": optimizer_params})
         if "parameter_groups" in optimizer_params:
             optimizer_params["parameter_groups"] = [[[f"^{group[0]}"], {}] for group in
                                                     optimizer_params["parameter_groups"]]
