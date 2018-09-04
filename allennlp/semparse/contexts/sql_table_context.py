@@ -5,6 +5,7 @@ the valid actions.
 import re
 from collections import defaultdict
 from typing import List, Dict, Set
+import sqlite3
 
 from overrides import overrides
 
@@ -18,8 +19,15 @@ from parsimonious.grammar import Grammar
 # Rules that differ only in capitalization of keywords are mapped to the same action by
 # the ``SqlVisitor``.  The nonterminal of the first rule is the starting symbol.
 # In addition to the grammar here, we add ``col_ref``, ``table_name`` based on the tables
-# that ``SqlTableContext`` is initialized with. ``number`` and ``string`` are initialized to
-# be empty and later on updated based on the utterances.
+# that ``SqlTableContext`` is initialized with. ``number`` is initialized to
+# be empty and later on updated based on the utterances. ``biexpr`` is altered based on the
+# database to column references with strings that are allowed to appear in that column.
+# We then create additional nonterminals for each column that may be used as a string constraint
+# in the query.
+# For example, to include city names as strings:
+#
+#       biexpr = ( "city" ws "." ws "city_name"  binop ws city_city_name_strings ) / ...
+#       city_city_name_strings = "NASHVILLE" / "BOSTON" /  ...
 
 SQL_GRAMMAR_STR = r"""
     statement           = query ws ";" ws
@@ -42,14 +50,14 @@ SQL_GRAMMAR_STR = r"""
                           condition
     condition           = in_clause / ternaryexpr / biexpr
     in_clause           = (ws col_ref ws "IN" ws query ws)
-    biexpr              = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ( col_ref ws "LIKE" ws string)
+    biexpr              = ( col_ref ws binaryop ws value) / (value ws binaryop ws value)
     binaryop            = "+" / "-" / "*" / "/" / "=" /
                           ">=" / "<=" / ">" / "<"  / "is" / "IS"
     ternaryexpr         = (col_ref ws "not" ws "BETWEEN" ws value ws "AND" ws value ws) /
                           (col_ref ws "NOT" ws "BETWEEN" ws value ws "AND" ws value ws) /
                           (col_ref ws "BETWEEN" ws value ws "AND" ws value ws)
     value               = ("not" ws pos_value) / ("NOT" ws pos_value) /(pos_value)
-    pos_value           = ("ALL" ws query) / ("ANY" ws query) / number / boolean / col_ref / string / agg_results / "NULL"
+    pos_value           = ("ALL" ws query) / ("ANY" ws query) / number / boolean / col_ref / agg_results / "NULL"
     agg_results         = (ws "("  ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ws ")" ws) /
                           (ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ws)
     boolean             = "true" / "false"
@@ -57,15 +65,19 @@ SQL_GRAMMAR_STR = r"""
     conj                = "AND" / "OR" 
     distinct            = ("DISTINCT") / ("")
     number              =  ""
-    string              =  ""
 """
 
 KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"', '"IN"', '"LIKE"',
             '"IS"', '"BETWEEN"', '"AND"', '"ALL"', '"ANY"', '"NULL"', '"OR"', '"DISTINCT"']
 
-def generate_one_of_string(nonterminal: str, literals: List[str]) -> str:
+def generate_one_of_string(nonterminal: str,
+                           literals: List[str],
+                           is_string: bool = False) -> str:
     if literals:
-        return  f"\n{nonterminal} \t\t = " + " / ".join([f'"{literal}"' for literal in literals])
+        if is_string:
+            return  f"\n{nonterminal} \t\t = " + " / ".join([f'"\'{literal}\'"' for literal in literals]) + "\n"
+        else:
+            return  f"\n{nonterminal} \t\t = " + " / ".join([f'"{literal}"' for literal in literals]) + "\n"
     return  f'\n{nonterminal} \t\t = ""'
 
 def format_action(nonterminal: str, right_hand_side: str) -> str:
@@ -91,12 +103,27 @@ class SqlTableContext():
 
     Parameters
     ----------
-    tables: ``Dict[str, List[str]]``
+    all_tables: ``Dict[str, List[str]]``
         A dictionary representing the SQL tables in the dataset, the keys are the names of the tables
         that map to lists of the table's column names.
+    tables_with_strings: ``Dict[str, List[str]]``
+        A dictionary representing the SQL tables that we want to generate strings for. The keys are the
+        names of the tables that map to lists of the table's column names.
+    database_directory : ``str``, optional
+        The directory to find the sqlite database file. We query the sqlite database to find the strings
+        that are allowed.
     """
-    def __init__(self, tables: Dict[str, List[str]] = None) -> None:
-        self.tables = tables
+    def __init__(self,
+                 all_tables: Dict[str, List[str]] = None,
+                 tables_with_strings: Dict[str, List[str]] = None,
+                 database_directory: str = None) -> None:
+        self.all_tables = all_tables
+        self.tables_with_strings = tables_with_strings
+        if database_directory:
+            self.database_directory = database_directory
+            self.connection = sqlite3.connect(database_directory)
+            self.cursor = self.connection.cursor()
+
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)
         self.valid_actions: Dict[str, List[str]] = self.initialize_valid_actions()
@@ -137,15 +164,27 @@ class SqlTableContext():
     def initialize_grammar_str(self):
         grammar_str = SQL_GRAMMAR_STR
 
-        if self.tables:
+        if self.all_tables:
             column_right_hand_sides = ['"*"']
-            for table, columns in self.tables.items():
+            for table, columns in self.all_tables.items():
                 column_right_hand_sides.extend([f'("{table}" ws "." ws "{column}")' for column in columns])
             grammar_str += "\n      col_ref \t\t = " + \
                     " / ".join(sorted(column_right_hand_sides, reverse=True))
 
-            grammar_str += generate_one_of_string('table_name', sorted(list(self.tables.keys()), reverse=True))
+            grammar_str += generate_one_of_string('table_name', sorted(list(self.all_tables.keys()), reverse=True))
+        biexprs = []
+        if self.tables_with_strings:
+            for table, columns in self.tables_with_strings.items():
+                biexprs.extend([f'("{table}" ws "." ws "{column}" ws binaryop ws {table}_{column}_string)'
+                                for column in columns])
+                for column in columns:
+                    self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
+                    grammar_str += generate_one_of_string(nonterminal=f'{table}_{column}_string',
+                                                          literals=[row[0] for row in self.cursor.fetchall()],
+                                                          is_string=True)
 
+        grammar_str += 'biexpr = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ' + \
+                       f'{" / ".join(sorted(biexprs, reverse=True))}\n'
         return grammar_str
 
 class SqlVisitor(NodeVisitor):

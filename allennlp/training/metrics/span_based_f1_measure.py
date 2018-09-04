@@ -11,6 +11,7 @@ from allennlp.data.dataset_readers.dataset_utils.span_utils import (
         bio_tags_to_spans,
         bioul_tags_to_spans,
         iob1_tags_to_spans,
+        bmes_tags_to_spans,
         TypedStringSpan
 )
 
@@ -58,10 +59,10 @@ class SpanBasedF1Measure(Metric):
             spans in a BIO tagging scheme which are typically not included.
         label_encoding : ``str``, optional (default = "BIO")
             The encoding used to specify label span endpoints in the sequence.
-            Valid options are "BIO", "IOB1", or BIOUL".
+            Valid options are "BIO", "IOB1", "BIOUL" or "BMES".
         """
-        if label_encoding not in ["BIO", "IOB1", "BIOUL"]:
-            raise ConfigurationError("Unknown label encoding - expected 'BIO', 'IOB1', 'BIOUL'.")
+        if label_encoding not in ["BIO", "IOB1", "BIOUL", "BMES"]:
+            raise ConfigurationError("Unknown label encoding - expected 'BIO', 'IOB1', 'BIOUL', 'BMES'.")
 
         self._label_encoding = label_encoding
         self._label_vocabulary = vocabulary.get_index_to_token_vocabulary(tag_namespace)
@@ -143,6 +144,9 @@ class SpanBasedF1Measure(Metric):
             elif self._label_encoding == "BIOUL":
                 predicted_spans = bioul_tags_to_spans(predicted_string_labels, self._ignore_classes)
                 gold_spans = bioul_tags_to_spans(gold_string_labels, self._ignore_classes)
+            elif self._label_encoding == "BMES":
+                predicted_spans = bmes_tags_to_spans(predicted_string_labels, self._ignore_classes)
+                gold_spans = bmes_tags_to_spans(gold_string_labels, self._ignore_classes)
 
             predicted_spans = self._handle_continued_spans(predicted_spans)
             gold_spans = self._handle_continued_spans(gold_spans)
