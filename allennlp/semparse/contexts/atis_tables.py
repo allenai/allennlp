@@ -2,6 +2,7 @@ from typing import List, Dict, Callable, Set
 from datetime import datetime
 import re
 from nltk import ngrams
+from pprint import pprint
 
 from collections import defaultdict
 from allennlp.data.tokenizers import Token
@@ -66,18 +67,7 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
     year_result = re.findall(r'199[0-4]', utterance)
     if year_result:
         year = int(year_result[0])
-    ''' 
-    for token in tokenized_utterance:
-        if token.text in MONTH_NUMBERS:
-            month = MONTH_NUMBERS[token.text]
-        if token.text in DAY_NUMBERS:
-            day = DAY_NUMBERS[token.text]
 
-    for tens, digits in zip(tokenized_utterance, tokenized_utterance[1:]):
-        bigram = ' '.join([tens.text, digits.text])
-        if bigram in DAY_NUMBERS:
-            day = DAY_NUMBERS[bigram]
-    '''
     trigrams = ngrams([token.text for token in tokenized_utterance], 3)
     for month, tens, digit in trigrams:
         day = ' '.join([tens, digit]) 
@@ -135,12 +125,6 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
     for index, token in enumerate(tokenized_utterance):
         for number in NUMBER_TRIGGER_DICT.get(token.text, []):
             number_linking_dict[number].append(index)
-
-    for tens, digits in zip(tokenized_utterance, tokenized_utterance[1:]):
-        bigram = ' '.join([tens.text, digits.text])
-        if bigram in DAY_NUMBERS:
-            number_linking_dict[str(DAY_NUMBERS[bigram])].append(len(tokenized_utterance) - 1)
-
     return number_linking_dict
 
 def digit_to_query_time(digit: str) -> List[int]:
@@ -218,6 +202,100 @@ def get_trigger_dict(trigger_lists: List[List[str]],
 def convert_to_string_list_value_dict(trigger_dict: Dict[str, int]) -> Dict[str, List[str]]:
     return {key: [str(value)] for key, value in trigger_dict.items()}
 
+AIRLINE_CODES = {'alaska': ['AS'],
+                 'alliance': ['3J'],
+                 'alpha': ['7V'],
+                 'america west': ['HP'],
+                 'american': ['AA'],
+                 'american trans': ['TZ'],
+                 'argentina': ['AR'],
+                 'atlantic': ['DH'],
+                 'atlantic.': ['EV'],
+                 'braniff.': ['BE'],
+                 'british': ['BA'],
+                 'business': ['HQ'],
+                 'canada': ['AC'],
+                 'canadian': ['CP'],
+                 'carnival': ['KW'],
+                 'christman': ['SX'],
+                 'colgan': ['9L'],
+                 'comair': ['OH'],
+                 'continental': ['CO'],
+                 'czecho': ['OK'],
+                 'delta': ['DL'],
+                 'eastern': ['EA'],
+                 'express': ['9E'],
+                 'grand': ['QD'],
+                 'lufthansa': ['LH'],
+                 'mesaba': ['XJ'],
+                 'mgm': ['MG'],
+                 'midwest': ['YX'],
+                 'nation': ['NX'],
+                 'northeast': ['2V'],
+                 'northwest': ['NW'],
+                 'ontario': ['GX'],
+                 'ontario express': ['9X'],
+                 'precision': ['RP'],
+                 'royal': ['AT'],
+                 'sabena': ['SN'],
+                 'sky': ['OO'],
+                 'south': ['WN'],
+                 'states': ['9N'],
+                 'thai': ['TG'],
+                 'tower': ['FF'],
+                 'twa': ['TW'],
+                 'united': ['UA'],
+                 'us': ['US'],
+                 'west': ['OE'],
+                 'wisconson': ['ZW'],
+                 'world': ['RZ']}
+
+CITY_CODES = {'ATLANTA': ['MATL'],
+              'BALTIMORE': ['BBWI'],
+              'BOSTON': ['BBOS'],
+              'BURBANK': ['BBUR'],
+              'CHARLOTTE': ['CCLT'],
+              'CHICAGO': ['CCHI'],
+              'CINCINNATI': ['CCVG'],
+              'CLEVELAND': ['CCLE'],
+              'COLUMBUS': ['CCMH'],
+              'DALLAS': ['DDFW'],
+              'DENVER': ['DDEN'],
+              'DETROIT': ['DDTT'],
+              'FORT WORTH': ['FDFW'],
+              'HOUSTON': ['HHOU'],
+              'KANSAS CITY': ['MMKC'],
+              'LAS VEGAS': ['LLAS'],
+              'LONG BEACH': ['LLGB'],
+              'LOS ANGELES': ['LLAX'],
+              'MEMPHIS': ['MMEM'],
+              'MIAMI': ['MMIA'],
+              'MILWAUKEE': ['MMKE'],
+              'MINNEAPOLIS': ['MMSP'],
+              'MONTREAL': ['YYMQ'],
+              'NASHVILLE': ['BBNA'],
+              'NEW YORK': ['NNYC'],
+              'NEWARK': ['JNYC'],
+              'OAKLAND': ['OOAK'],
+              'ONTARIO': ['OONT'],
+              'ORLANDO': ['OORL'],
+              'PHILADELPHIA': ['PPHL'],
+              'PHOENIX': ['PPHX'],
+              'PITTSBURGH': ['PPIT'],
+              'SALT LAKE CITY': ['SSLC'],
+              'SAN DIEGO': ['SSAN'],
+              'SAN FRANCISCO': ['SSFO'],
+              'SAN JOSE': ['SSJC'],
+              'SEATTLE': ['SSEA'],
+              'ST. LOUIS': ['SSTL'],
+              'ST. PAUL': ['SMSP'],
+              'ST. PETERSBURG': ['STPA'],
+              'TACOMA': ['TSEA'],
+              'TAMPA': ['TTPA'],
+              'TORONTO': ['YYTO'],
+              'WASHINGTON': ['WWAS'],
+              'WESTCHESTER COUNTY': ['HHPN']}
+
 MONTH_NUMBERS = {'january': 1,
                  'february': 2,
                  'march': 3,
@@ -230,6 +308,15 @@ MONTH_NUMBERS = {'january': 1,
                  'october': 10,
                  'november': 11,
                  'december': 12}
+
+GROUND_SERVICE = {'air taxi': ['AIR TAXI OPERATION'],
+                  'car': ['RENTAL CAR'],
+                  'limo': ['LIMOUSINE'],
+                  'rapid': ['RAPID TRANSIT'],
+                  'rental': ['RENTAL CAR'],
+                  'taxi': ['TAXI']}
+
+MISC_STR = {"every day" : ["DAILY"]}
 
 DAY_NUMBERS = {'first': 1,
                'second': 2,
@@ -326,8 +413,82 @@ TABLES_WITH_STRINGS = {'airline' : ['airline_code', 'airline_name'],
 
 DAY_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
 
+FARE_BASIS_CODE = ['B', 'BH', 'BHW', 'BHX', 'BL', 'BLW', 'BLX', 'BN', 'BOW', 'BOX',
+                   'BW', 'BX', 'C', 'CN', 'F', 'FN', 'H', 'HH', 'HHW', 'HHX', 'HL', 'HLW', 'HLX',
+                   'HOW', 'HOX', 'J', 'K', 'KH', 'KL', 'KN', 'LX', 'M', 'MH', 'ML', 'MOW', 'P',
+                   'Q', 'QH', 'QHW', 'QHX', 'QLW', 'QLX', 'QO', 'QOW', 'QOX', 'QW', 'QX', 'S',
+                   'U', 'V', 'VHW', 'VHX', 'VW', 'VX', 'Y', 'YH', 'YL', 'YN', 'YW', 'YX']
+MEALS = ['BREAKFAST', 'LUNCH', 'SNACK', 'DINNER']
+RESTRICT_CODES = ['AP/2', 'AP/6', 'AP/12', 'AP/20', 'AP/21', 'AP/57', 'AP/58', 'AP/60',
+                  'AP/75', 'EX/9', 'EX/13', 'EX/14', 'EX/17', 'EX/19']
+STATES = ['ARIZONA', 'CALIFORNIA', 'COLORADO', 'DISTRICT OF COLUMBIA',
+          'FLORIDA', 'GEORGIA', 'ILLINOIS', 'INDIANA', 'MASSACHUSETTS',
+          'MARYLAND', 'MICHIGAN', 'MINNESOTA', 'MISSOURI', 'NORTH CAROLINA',
+          'NEW JERSEY', 'NEVADA', 'NEW YORK', 'OHIO', 'ONTARIO', 'PENNSYLVANIA',
+          'QUEBEC', 'TENNESSEE', 'TEXAS', 'UTAH', 'WASHINGTON', 'WISCONSIN']
+STATE_CODES = ['TN', 'MA', 'CA', 'MD', 'IL', 'OH', 'NC', 'CO', 'TX', 'MI', 'NY',
+               'IN', 'NJ', 'NV', 'GA', 'FL', 'MO', 'WI', 'MN', 'PA', 'AZ', 'WA',
+               'UT', 'DC', 'PQ', 'ON']
+
+DAY_OF_WEEK_DICT = {'weekdays' : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']}
+YES_NO = {'one way': ['NO'],
+          'economy': ['YES']}
+CITY_AIRPORT_CODES = {'atlanta' : ['ATL'],
+                      'boston' : ['BOS'],
+                      'baltimore': ['BWI'],
+                      'charlotte': ['CLT'],
+                      'dallas': ['DFW'],
+                      'detroit': ['DTW'],
+                      'la guardia': ['LGA'],
+                      'oakland': ['OAK'],
+                      'philadelphia': ['PHL'],
+                      'pittsburgh': ['PIT'],
+                      'san francisco': ['SFO'],
+                      'toronto': ['YYZ']}
+AIRPORT_CODES = ['ATL', 'NA', 'OS', 'UR', 'WI', 'CLE', 'CLT', 'CMH',
+                 'CVG', 'DAL', 'DCA', 'DEN', 'DET', 'DFW', 'DTW',
+                 'EWR', 'HOU', 'HPN', 'IAD', 'IAH', 'IND', 'JFK',
+                 'LAS', 'LAX', 'LGA', 'LG', 'MCI', 'MCO', 'MDW', 'MEM',
+                 'MIA', 'MKE', 'MSP', 'OAK', 'ONT', 'ORD', 'PHL', 'PHX',
+                 'PIE', 'PIT', 'SAN', 'SEA', 'SFO', 'SJC', 'SLC',
+                 'STL', 'TPA', 'YKZ', 'YMX', 'YTZ', 'YUL', 'YYZ']
+AIRLINE_CODE_LIST = ['AR', '3J', 'AC', '9X', 'ZW', 'AS', '7V',
+                     'AA', 'TZ', 'HP', 'DH', 'EV', 'BE', 'BA',
+                     'HQ', 'CP', 'KW', 'SX', '9L', 'OH', 'CO',
+                     'OK', 'DL', '9E', 'QD', 'LH', 'XJ', 'MG',
+                     'YX', 'NX', '2V', 'NW', 'RP', 'AT', 'SN',
+                     'OO', 'WN', 'TG', 'FF', '9N', 'TW', 'RZ',
+                     'UA', 'US', 'OE']
+CITIES = ['NASHVILLE', 'BOSTON', 'BURBANK', 'BALTIMORE', 'CHICAGO', 'CLEVELAND',
+          'CHARLOTTE', 'COLUMBUS', 'CINCINNATI', 'DENVER', 'DALLAS', 'DETROIT',
+          'FORT WORTH', 'HOUSTON', 'WESTCHESTER COUNTY', 'INDIANAPOLIS', 'NEWARK',
+          'LAS VEGAS', 'LOS ANGELES', 'LONG BEACH', 'ATLANTA', 'MEMPHIS', 'MIAMI',
+          'KANSAS CITY', 'MILWAUKEE', 'MINNEAPOLIS', 'NEW YORK', 'OAKLAND', 'ONTARIO',
+          'ORLANDO', 'PHILADELPHIA', 'PHOENIX', 'PITTSBURGH', 'ST. PAUL', 'SAN DIEGO',
+          'SEATTLE', 'SAN FRANCISCO', 'SAN JOSE', 'SALT LAKE CITY', 'ST. LOUIS',
+          'ST. PETERSBURG', 'TACOMA', 'TAMPA', 'WASHINGTON', 'MONTREAL', 'TORONTO']
+CITY_CODE_LIST = ['BBNA', 'BBOS', 'BBUR', 'BBWI', 'CCHI', 'CCLE', 'CCLT', 'CCMH', 'CCVG', 'DDEN',
+                  'DDFW', 'DDTT', 'FDFW', 'HHOU', 'HHPN', 'IIND', 'JNYC', 'LLAS', 'LLAX', 'LLGB',
+                  'MATL', 'MMEM', 'MMIA', 'MMKC', 'MMKE', 'MMSP', 'NNYC', 'OOAK', 'OONT', 'OORL',
+                  'PPHL', 'PPHX', 'PPIT', 'SMSP', 'SSAN', 'SSEA', 'SSFO', 'SSJC', 'SSLC', 'SSTL',
+                  'STPA', 'TSEA', 'TTPA', 'WWAS', 'YYMQ', 'YYTO']
+CLASS = ['COACH', 'BUSINESS', 'FIRST', 'THRIST', 'STANDARD', 'SHUTTLE']
+
 DAY_OF_WEEK_INDEX = {idx : [day] for idx, day in enumerate(DAY_OF_WEEK)}
 
-NUMBER_TRIGGER_DICT: Dict[str, List[str]] = get_trigger_dict([], [convert_to_string_list_value_dict(MONTH_NUMBERS),
-                                                                  convert_to_string_list_value_dict(DAY_NUMBERS),
-                                                                  MISC_TIME_TRIGGERS])
+TRIGGER_LISTS = [CITIES, AIRPORT_CODES,
+                 STATES, STATE_CODES,
+                 FARE_BASIS_CODE, CLASS,
+                 AIRLINE_CODE_LIST, DAY_OF_WEEK,
+                 CITY_CODE_LIST, MEALS,
+                 RESTRICT_CODES]
+TRIGGER_DICTS = [CITY_AIRPORT_CODES,
+                 AIRLINE_CODES,
+                 CITY_CODES,
+                 GROUND_SERVICE,
+                 DAY_OF_WEEK_DICT,
+                 YES_NO,
+                 MISC_STR]
+ATIS_TRIGGER_DICT = get_trigger_dict(TRIGGER_LISTS, TRIGGER_DICTS)
+
+NUMBER_TRIGGER_DICT: Dict[str, List[str]] = get_trigger_dict([], [MISC_TIME_TRIGGERS])

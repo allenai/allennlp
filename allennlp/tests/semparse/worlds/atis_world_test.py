@@ -323,11 +323,7 @@ class TestAtisWorld(AllenNlpTestCase):
         assert set(world.valid_actions['number']) == \
                 {'number -> ["0"]',
                  'number -> ["1"]',
-                 'number -> ["9"]',
-                 'number -> ["8"]',
-                 'number -> ["6"]',
-                 'number -> ["5"]',
-                 'number -> ["26"]',
+                 'number -> ["800"]',
                  'number -> ["2200"]',
                  'number -> ["1991"]',
                  'number -> ["1200"]',
@@ -1372,11 +1368,9 @@ class TestAtisWorld(AllenNlpTestCase):
              'where_clause -> ["WHERE", conditions]']
 
     def test_atis_debug(self): # pylint: disable=no-self-use
-        world = AtisWorld(['flights from nashville to orlando daily'],
+        world = AtisWorld(['which of those flights departs after 6pm'],
                               database_directory=str(self.database_directory))
         print(world.valid_actions)
-        action_sequence = world.get_action_sequence("( SELECT DISTINCT flight.flight_id FROM flight WHERE ( flight.flight_days = 'DAILY' AND ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'NASHVILLE' )) AND flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'ORLANDO' )) ) )   ) ;")
-        print(action_sequence)
 
 
 
