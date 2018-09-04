@@ -4,7 +4,7 @@ from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, TextField, SequenceLabelField, MetadataField, AdjacencyField
+from allennlp.data.fields import Field, TextField, AdjacencyField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token
 from allennlp.data.instance import Instance
@@ -32,7 +32,6 @@ def parse_sentence(sentence: str):
             if arg != "_":
                 arc_indices.append((line_idx, preds[pred_idx]))
                 arc_labels.append(arg)
-    print(arc_indices, arc_labels)
     return annotated_sentence, arc_indices, arc_labels
 
 
