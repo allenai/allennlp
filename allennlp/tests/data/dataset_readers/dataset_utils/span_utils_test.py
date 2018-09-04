@@ -141,3 +141,45 @@ class SpanUtilsTest(AllenNlpTestCase):
         with self.assertRaises(span_utils.InvalidTagSequence):
             tag_sequence = ['O', 'I-PER', 'B-PER', 'I-PER', 'I-PER', 'B-PER']
             bioul_sequence = span_utils.to_bioul(tag_sequence, encoding="BIO")
+
+    def test_bmes_tags_to_spans_extracts_correct_spans(self):
+        tag_sequence = ["B-ARG1", "M-ARG1", "E-ARG1", "B-ARG2", "E-ARG2", "S-ARG3"]
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("ARG1", (0, 2)), ("ARG2", (3, 4)), ("ARG3", (5, 5))}
+
+        tag_sequence = ["S-ARG1", "B-ARG2", "E-ARG2", "S-ARG3"]
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("ARG1", (0, 0)), ("ARG2", (1, 2)), ("ARG3", (3, 3))}
+
+        # Check that it raises when labels are not correct.
+        tag_sequence = ["B-ARG1", "M-ARG2", "E-ARG1"]
+        with self.assertRaises(span_utils.InvalidTagSequence):
+            spans = span_utils.bmes_tags_to_spans(tag_sequence)
+
+        # Check that it raises when tag transitions are not correct.
+        tag_sequence = ["B-ARG1", "B-ARG1"]
+        with self.assertRaises(span_utils.InvalidTagSequence):
+            spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        tag_sequence = ["B-ARG1", "S-ARG1"]
+        with self.assertRaises(span_utils.InvalidTagSequence):
+            spans = span_utils.bmes_tags_to_spans(tag_sequence)
+
+    def test_bmes_tags_to_spans_extracts_correct_spans_without_labels(self):
+        tag_sequence = ["B", "M", "E", "B", "E", "S"]
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("", (0, 2)), ("", (3, 4)), ("", (5, 5))}
+
+        tag_sequence = ["S", "B", "E", "S"]
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("", (0, 0)), ("", (1, 2)), ("", (3, 3))}
+
+        # Check that it raises when tag transitions are not correct.
+        tag_sequence = ["B", "B"]
+        with self.assertRaises(span_utils.InvalidTagSequence):
+            spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        tag_sequence = ["B", "S"]
+        with self.assertRaises(span_utils.InvalidTagSequence):
+            spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        tag_sequence = ["B", "E", "M"]
+        with self.assertRaises(span_utils.InvalidTagSequence):
+            spans = span_utils.bmes_tags_to_spans(tag_sequence)

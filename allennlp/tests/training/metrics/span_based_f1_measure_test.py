@@ -31,6 +31,12 @@ class SpanBasedF1Test(AllenNlpTestCase):
         vocab.add_token_to_namespace("B-ARGM-ADJ", "tags")
         vocab.add_token_to_namespace("I-ARGM-ADJ", "tags")
 
+        # BMES.
+        vocab.add_token_to_namespace("B", "bmes_tags")
+        vocab.add_token_to_namespace("M", "bmes_tags")
+        vocab.add_token_to_namespace("E", "bmes_tags")
+        vocab.add_token_to_namespace("S", "bmes_tags")
+
         self.vocab = vocab
 
     def test_span_metrics_are_computed_correcly_with_prediction_map(self):
@@ -166,6 +172,40 @@ class SpanBasedF1Test(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(metric_dict["recall-overall"], 0.5)
         numpy.testing.assert_almost_equal(metric_dict["precision-overall"], 0.5)
         numpy.testing.assert_almost_equal(metric_dict["f1-measure-overall"], 0.5)
+
+    def test_bmes_span_metrics_are_computed_correctly(self):
+        # (bmes_tags) B:0, M:1, E:2, S:3.
+        # [S, B, M, E, S]
+        # [S, S, S, S, S]
+        gold_indices = [[3, 0, 1, 2, 3],
+                        [3, 3, 3, 3, 3]]
+        gold_tensor = torch.Tensor(gold_indices)
+
+        prediction_tensor = torch.rand([2, 5, 4])
+        # [S, B, E, S, S]
+        # TP: 2, FP: 2, FN: 1.
+        prediction_tensor[0, 0, 3] = 1 # (True positive)
+        prediction_tensor[0, 1, 0] = 1 # (False positive
+        prediction_tensor[0, 2, 2] = 1 # *)
+        prediction_tensor[0, 3, 3] = 1 # (False positive)
+        prediction_tensor[0, 4, 3] = 1 # (True positive)
+        # [B, E, S, B, E]
+        # TP: 1, FP: 2, FN: 4.
+        prediction_tensor[1, 0, 0] = 1 # (False positive
+        prediction_tensor[1, 1, 2] = 1 # *)
+        prediction_tensor[1, 2, 3] = 1 # (True positive)
+        prediction_tensor[1, 3, 0] = 1 # (False positive
+        prediction_tensor[1, 4, 2] = 1 # *)
+
+        metric = SpanBasedF1Measure(self.vocab, "bmes_tags", label_encoding="BMES")
+        metric(prediction_tensor, gold_tensor)
+
+        # TP: 3, FP: 4, FN: 5.
+        metric_dict = metric.get_metric()
+
+        numpy.testing.assert_almost_equal(metric_dict["recall-overall"], 0.375)
+        numpy.testing.assert_almost_equal(metric_dict["precision-overall"], 0.428, decimal=3)
+        numpy.testing.assert_almost_equal(metric_dict["f1-measure-overall"], 0.4)
 
     def test_span_f1_can_build_from_params(self):
         params = Params({"type": "span_f1", "tag_namespace": "tags", "ignore_classes": ["V"]})

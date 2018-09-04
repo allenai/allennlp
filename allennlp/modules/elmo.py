@@ -66,6 +66,9 @@ class Elmo(torch.nn.Module):
         indices of shape (batch_size, timesteps) to forward, instead
         of character indices. If you use this option and pass a word which
         wasn't pre-cached, this will break.
+    keep_sentence_boundaries : ``bool``, optional, (default=False)
+        If True, the representation of the sentence boundary tokens are
+        not removed.
     module : ``torch.nn.Module``, optional, (default = None).
         If provided, then use this module instead of the pre-trained ELMo biLM.
         If using this option, then pass ``None`` for both ``options_file``
@@ -83,6 +86,7 @@ class Elmo(torch.nn.Module):
                  do_layer_norm: bool = False,
                  dropout: float = 0.5,
                  vocab_to_cache: List[str] = None,
+                 keep_sentence_boundaries: bool = False,
                  module: torch.nn.Module = None) -> None:
         super(Elmo, self).__init__()
 
@@ -98,6 +102,7 @@ class Elmo(torch.nn.Module):
                                         requires_grad=requires_grad,
                                         vocab_to_cache=vocab_to_cache)
         self._has_cached_vocab = vocab_to_cache is not None
+        self._keep_sentence_boundaries = keep_sentence_boundaries
         self._dropout = Dropout(p=dropout)
         self._scalar_mixes: Any = []
         for k in range(num_output_representations):
@@ -159,22 +164,27 @@ class Elmo(torch.nn.Module):
         for i in range(len(self._scalar_mixes)):
             scalar_mix = getattr(self, 'scalar_mix_{}'.format(i))
             representation_with_bos_eos = scalar_mix(layer_activations, mask_with_bos_eos)
-            representation_without_bos_eos, mask_without_bos_eos = remove_sentence_boundaries(
-                    representation_with_bos_eos, mask_with_bos_eos
-            )
-            representations.append(self._dropout(representation_without_bos_eos))
+            if self._keep_sentence_boundaries:
+                processed_representation = representation_with_bos_eos
+                processed_mask = mask_with_bos_eos
+            else:
+                representation_without_bos_eos, mask_without_bos_eos = remove_sentence_boundaries(
+                        representation_with_bos_eos, mask_with_bos_eos)
+                processed_representation = representation_without_bos_eos
+                processed_mask = mask_without_bos_eos
+            representations.append(self._dropout(processed_representation))
 
         # reshape if necessary
         if word_inputs is not None and len(original_word_size) > 2:
-            mask = mask_without_bos_eos.view(original_word_size)
+            mask = processed_mask.view(original_word_size)
             elmo_representations = [representation.view(original_word_size + (-1, ))
                                     for representation in representations]
         elif len(original_shape) > 3:
-            mask = mask_without_bos_eos.view(original_shape[:-1])
+            mask = processed_mask.view(original_shape[:-1])
             elmo_representations = [representation.view(original_shape[:-1] + (-1, ))
                                     for representation in representations]
         else:
-            mask = mask_without_bos_eos
+            mask = processed_mask
             elmo_representations = representations
 
         return {'elmo_representations': elmo_representations, 'mask': mask}
@@ -191,6 +201,7 @@ class Elmo(torch.nn.Module):
         requires_grad = params.pop('requires_grad', False)
         num_output_representations = params.pop('num_output_representations')
         do_layer_norm = params.pop_bool('do_layer_norm', False)
+        keep_sentence_boundaries = params.pop_bool('keep_sentence_boundaries', False)
         dropout = params.pop_float('dropout', 0.5)
         params.assert_empty(cls.__name__)
 
@@ -199,6 +210,7 @@ class Elmo(torch.nn.Module):
                    num_output_representations=num_output_representations,
                    requires_grad=requires_grad,
                    do_layer_norm=do_layer_norm,
+                   keep_sentence_boundaries=keep_sentence_boundaries,
                    dropout=dropout)
 
 
