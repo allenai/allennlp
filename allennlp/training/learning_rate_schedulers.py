@@ -158,6 +158,12 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
         The ratio of the smallest to the (largest) base learning rate.
     gradual_unfreezing: ``bool``, optional (default = False).
         Whether gradual unfreezing should be used.
+    discriminative_fine_tuning: ``bool``, optional (default = False).
+        Whether discriminative fine-tuning (different learning rates per layer)
+        are used.
+    decay_factor: ``float``, optional (default = 0.38).
+        The decay factor by which the learning rate is reduced with
+        discriminative fine-tuning when going a layer deeper.
     """
     def __init__(self,
                  optimizer: torch.optim.Optimizer,
@@ -167,7 +173,9 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
                  ratio: int = 32,
                  lr: float = 0.01,
                  last_epoch: int = -1,
-                 gradual_unfreezing: bool = False) -> None:
+                 gradual_unfreezing: bool = False,
+                 discriminative_fine_tuning: bool = False,
+                 decay_factor: float = 0.38) -> None:
         self.num_epochs = num_epochs
         self.num_steps_per_epoch = num_steps_per_epoch
         self.cut_frac = cut_frac
@@ -176,6 +184,12 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
         self.gradual_unfreezing = gradual_unfreezing
         self.freezing_current = self.gradual_unfreezing
         self.first_epoch = True
+        if discriminative_fine_tuning:
+            # skip the last param_group if it is has no parameters
+            param_groups = (optimizer.param_groups if optimizer.param_groups[-1]['params']
+                            else optimizer.param_groups[:-1])
+            for i, param_group in enumerate(reversed(param_groups)):
+                param_group['lr'] = self.rate * decay_factor ** i
         super().__init__(optimizer, last_epoch=last_epoch)
 
     def step(self, epoch=None):

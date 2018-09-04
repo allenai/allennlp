@@ -985,30 +985,14 @@ class Trainer:
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
-        fine_tuning = params.pop("fine-tuning", None)
         optimizer_params = params.pop("optimizer")
-        if fine_tuning == "discriminative" or \
-                (lr_scheduler_params is not None and "freeze" in lr_scheduler_params):
-            if "parameter_groups" in optimizer_params:
-                modules = [group[0] for group in optimizer_params["parameter_groups"]]
-            else:
-                # split up parameters in groups based on modules
-                modules = [[m] for m in model._modules]
-            if fine_tuning == "discriminative":
-                # use a different learning rate for every parameter group
-                assert "lr" in optimizer_params, \
-                    "Error: A base learning rate is required for " \
-                    "discriminative fine-tuning."
-                rate = optimizer_params["lr"]
-                decay_factor = 0.38
-                # use the caret to match module only at the start
-                groups = [[[f"^{m}" for m in mod], {"lr": rate*decay_factor**i}]
-                          for i, mod in enumerate(reversed(modules))]
-            else:
-                # use the default learning rate across all layers
-                groups = [[[f"^{m}" for m in mod], {}] for mod in reversed(modules)]
-            groups = [g for g in reversed(groups)]  # set original order again
-            optimizer_params["parameter_groups"] = groups
+
+        if "parameter_groups" in optimizer_params:
+            optimizer_params["parameter_groups"] = [[[f"^{group[0]}"], {}] for group in
+                                                    optimizer_params["parameter_groups"]]
+        else:
+            # split up parameters in groups based on modules
+            optimizer_params["parameter_groups"] = [[[f"^{m}"], {}] for m in model._modules]
 
         if cuda_device >= 0:
             model = model.cuda(cuda_device)
