@@ -36,9 +36,9 @@ class DagParser(Model):
         The encoder (with its own internal stacking) that we will use to generate representations
         of tokens.
     tag_representation_dim : ``int``, required.
-        The dimension of the MLPs used for dependency tag prediction.
+        The dimension of the MLPs used for arc tag prediction.
     arc_representation_dim : ``int``, required.
-        The dimension of the MLPs used for head arc prediction.
+        The dimension of the MLPs used for arc prediction.
     tag_feedforward : ``FeedForward``, optional, (default = None).
         The feedforward network used to produce tag representations.
         By default, a 1 layer feedforward network with an elu activation is used.
@@ -129,11 +129,8 @@ class DagParser(Model):
         ----------
         tokens : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``.
-        pos_tags : ``torch.LongTensor``, required.
+        pos_tags : ``torch.LongTensor``, optional, (default = None).
             The output of a ``SequenceLabelField`` containing POS tags.
-            POS tags are required regardless of whether they are used in the model,
-            because they are used to filter the evaluation metric to only consider
-            heads of words which are not punctuation.
         arc_labels : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of integer indices denoting the parent of every
             word in the dependency parse. Has shape ``(batch_size, sequence_length, sequence_length)``.
@@ -242,7 +239,7 @@ class DagParser(Model):
             a distribution over edge tags for a given edge.
         arc_tags : ``torch.Tensor``, required.
             A tensor of shape (batch_size, sequence_length, sequence_length).
-            The dependency labels of the heads for every word.
+            The labels for every arc.
         mask : ``torch.Tensor``, required.
             A mask of shape (batch_size, sequence_length), denoting unpadded
             elements in the sequence.
@@ -255,13 +252,14 @@ class DagParser(Model):
             The negative log likelihood from the arc tag loss.
         """
         float_mask = mask.float()
-        head_indices = (arc_tags != -1).float()
-        # Make the head tags not have negative values anywhere.
-        arc_tags = arc_tags * head_indices
-        arc_nll = self._arc_loss(attended_arcs, head_indices) * float_mask.unsqueeze(1) * float_mask.unsqueeze(2)
+        arc_indices = (arc_tags != -1).float()
+        # Make the arc tags not have negative values anywhere
+        # (by default, no edge is indicated with -1).
+        arc_tags = arc_tags * arc_indices
+        arc_nll = self._arc_loss(attended_arcs, arc_indices) * float_mask.unsqueeze(1) * float_mask.unsqueeze(2)
         # We want the mask for the tags to only include the unmasked words
         # and we only care about the loss with respect to the gold arcs.
-        tag_mask = float_mask.unsqueeze(1) * float_mask.unsqueeze(2) * head_indices
+        tag_mask = float_mask.unsqueeze(1) * float_mask.unsqueeze(2) * arc_indices
 
         batch_size, sequence_length, _, num_tags = arc_tag_logits.size()
         original_shape = [batch_size, sequence_length, sequence_length]
@@ -269,8 +267,6 @@ class DagParser(Model):
         reshaped_tags = arc_tags.view(-1)
         tag_nll = self._tag_loss(reshaped_logits, reshaped_tags.long()).view(original_shape) * tag_mask
 
-        # The number of valid positions is equal to the number of unmasked elements minus
-        # 1 per sequence in the batch, to account for the symbolic HEAD token.
         valid_positions = mask.sum()
 
         arc_nll = arc_nll.sum() / valid_positions.float()
@@ -306,12 +302,12 @@ class DagParser(Model):
             A tensor of shape (batch_size, sequence_length, sequence_length, sequence_length)
             representing the distribution over edge tags for a given edge.
         """
-        # Mask the diagonal, because the head of a word can't be itself.
+        # Mask the diagonal, because we don't self edges.
         inf_diagonal_mask = torch.diag(attended_arcs.new(mask.size(1)).fill_(-numpy.inf))
         attended_arcs = attended_arcs + inf_diagonal_mask
         # shape (batch_size, sequence_length, sequence_length, num_tags)
         arc_tag_logits = arc_tag_logits + inf_diagonal_mask.unsqueeze(0).unsqueeze(-1)
-        # Mask padded tokens, because we only want to consider actual words as heads.
+        # Mask padded tokens, because we only want to consider actual word -> word edges.
         if mask is not None:
             minus_mask = (1 - mask).byte().unsqueeze(2)
             attended_arcs.masked_fill_(minus_mask, -numpy.inf)
