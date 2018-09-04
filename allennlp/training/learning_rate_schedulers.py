@@ -192,10 +192,10 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
                 self.step_batch(1)
                 self.first_epoch = False
             if num_layers_to_unfreeze >= len(self.optimizer.param_groups)-1:
-                print('Gradual unfreezing finished. Training all layers.')
+                logger.info('Gradual unfreezing finished. Training all layers.')
                 self.freezing_current = False
             else:
-                print(f'Gradual unfreezing. Training only the top {num_layers_to_unfreeze} layers.')
+                logger.info(f'Gradual unfreezing. Training only the top {num_layers_to_unfreeze} layers.')
             for i, param_group in enumerate(reversed(self.optimizer.param_groups)):
                 for param in param_group["params"]:
                     # i = 0 is the default group; we care about i > 0
@@ -220,8 +220,6 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
             num_steps = self.num_epochs * self.num_steps_per_epoch - steps_while_frozen
             step = max(self.last_epoch, 1) - steps_while_frozen
         cut = int(num_steps * self.cut_frac)
-        if cut == step:
-            print()
         prop = step / cut if step < cut else 1 - (step - cut) / (num_steps - cut)
         lrs = [lr * (1 + prop * (self.ratio - 1)) / self.ratio for lr in self.base_lrs]
         return [max(lr, 0.0) for lr in lrs]
