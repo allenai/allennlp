@@ -146,9 +146,6 @@ class DagParser(Model):
         -------
         An output dictionary.
         """
-        # TODO(Mark): Remove this
-        head_tags = arc_labels
-
         embedded_text_input = self.text_field_embedder(tokens)
         if pos_tags is not None and self._pos_tag_embedding is not None:
             embedded_pos_tags = self._pos_tag_embedding(pos_tags)
@@ -166,10 +163,10 @@ class DagParser(Model):
         # Concatenate the head sentinel onto the sentence representation.
         encoded_text = torch.cat([head_sentinel, encoded_text], 1)
         mask = torch.cat([mask.new_ones(batch_size, 1), mask], 1)
-        if head_tags is not None:
-            new_zeros = head_tags.new_zeros(batch_size, 1, 1)
-            head_tags = torch.cat([new_zeros.expand(batch_size, 1, sequence_length), head_tags], 1)
-            head_tags = torch.cat([new_zeros.expand(batch_size, sequence_length + 1, 1), head_tags], 2)
+        if arc_labels is not None:
+            new_padding = - arc_labels.new_ones(batch_size, 1, 1)
+            arc_labels = torch.cat([new_padding.expand(batch_size, 1, sequence_length), arc_labels], 1)
+            arc_labels = torch.cat([new_padding.expand(batch_size, sequence_length + 1, 1), arc_labels], 2)
         float_mask = mask.float()
         encoded_text = self._dropout(encoded_text)
 
@@ -200,10 +197,10 @@ class DagParser(Model):
                 "mask": mask,
                 }
 
-        if head_tags is not None:
+        if arc_labels is not None:
             arc_nll, tag_nll = self._construct_loss(attended_arcs=attended_arcs,
                                                     head_tag_logits=head_tag_logits,
-                                                    head_tags=head_tags,
+                                                    head_tags=arc_labels,
                                                     mask=mask)
             output_dict["loss"] = arc_nll + tag_nll
             output_dict["arc_loss"] = arc_nll
@@ -268,12 +265,15 @@ class DagParser(Model):
         # and we only care about the loss with respect to the gold arcs.
         tag_mask = float_mask.unsqueeze(1) * float_mask.unsqueeze(2) * head_indices
 
-        original_size = list(head_tag_logits.size())
-        tag_nll = self._tag_loss(head_tag_logits.view(-1, original_size[-1]), head_tags.long().view(-1)).view(original_size[:-1]) * tag_mask
+        batch_size, sequence_length, _, num_tags = head_tag_logits.size()
+        original_shape = [batch_size, sequence_length, sequence_length]
+        reshaped_logits = head_tag_logits.view(-1, num_tags)
+        reshaped_tags = head_tags.view(-1)
+        tag_nll = self._tag_loss(reshaped_logits, reshaped_tags.long()).view(original_shape) * tag_mask
 
         # We don't care about predictions for the symbolic ROOT token's head,
         # so we remove it from the loss.
-        arc_nll = arc_nll[:, 1:]
+        arc_nll = arc_nll[:, 0:]
         tag_nll = tag_nll[:, 1:]
 
         # The number of valid positions is equal to the number of unmasked elements minus
@@ -315,8 +315,6 @@ class DagParser(Model):
         """
         # Mask the diagonal, because the head of a word can't be itself.
         inf_diagonal_mask = torch.diag(attended_arcs.new(mask.size(1)).fill_(-numpy.inf))
-        print(inf_diagonal_mask.size())
-        print(head_tag_logits.size())
         attended_arcs = attended_arcs + inf_diagonal_mask
         # shape (batch_size, sequence_length, sequence_length, num_tags)
         head_tag_logits = head_tag_logits + inf_diagonal_mask.unsqueeze(0).unsqueeze(-1)
