@@ -114,7 +114,7 @@ class AdjacencyField(Field[torch.Tensor]):
     def empty_field(self) -> 'AdjacencyField':  # pylint: disable=no-self-use
         # pylint: disable=protected-access
         # The empty_list here is needed for mypy
-        empty_list: List[str] = []
+        empty_list: List[Tuple[int, int]] = []
         adjacency_field = AdjacencyField(empty_list,
                                          self.sequence_field.empty_field(),
                                          padding_value=self._padding_value)

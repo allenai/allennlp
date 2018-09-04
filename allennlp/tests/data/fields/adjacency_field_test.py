@@ -1,3 +1,4 @@
+# pylint: disable=invalid-name
 import pytest
 import numpy
 from allennlp.common.checks import ConfigurationError
