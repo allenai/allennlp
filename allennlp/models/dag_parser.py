@@ -183,6 +183,7 @@ class DagParser(Model):
                 "arc_probs": arc_probs,
                 "arc_tag_probs": arc_tag_probs,
                 "mask": mask,
+                "tokens": [meta["tokens"] for meta in metadata],
                 }
 
         if arc_labels is not None:
@@ -199,9 +200,9 @@ class DagParser(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
 
-        arc_tag_probs = output_dict.pop("arc_tag_probs").cpu().detach().numpy()
-        arc_probs = output_dict.pop("arc_probs").cpu().detach().numpy()
-        mask = output_dict.pop("mask")
+        arc_tag_probs = output_dict["arc_tag_probs"].cpu().detach().numpy()
+        arc_probs = output_dict["arc_probs"].cpu().detach().numpy()
+        mask = output_dict["mask"]
         lengths = get_lengths_from_binary_sequence_mask(mask)
         arcs = []
         arc_tags = []

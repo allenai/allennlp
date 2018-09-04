@@ -16,3 +16,13 @@ class DagParserTest(ModelTestCase):
 
     def test_batch_predictions_are_consistent(self):
         self.ensure_batch_predictions_are_consistent()
+
+    def test_model_can_decode(self):
+        self.model.eval()
+        training_tensors = self.dataset.as_tensor_dict()
+        output_dict = self.model(**training_tensors)
+        decode_output_dict = self.model.decode(output_dict)
+
+        assert set(decode_output_dict.keys()) == set(['arc_loss', 'tag_loss', 'loss',
+                                                      'arcs', 'arc_tags', 'arc_tag_probs',
+                                                      'arc_probs', 'tokens', 'mask'])

@@ -4,7 +4,7 @@ from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, TextField, AdjacencyField
+from allennlp.data.fields import Field, TextField, AdjacencyField, MetadataField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token
 from allennlp.data.instance import Instance
@@ -84,10 +84,10 @@ class SemanticDependenciesDatasetReader(DatasetReader):
                          arc_labels: List[str] = None) -> Instance:
 
         fields: Dict[str, Field] = {}
-        tokens = TextField([Token(t) for t in tokens], self._token_indexers)
-        fields["tokens"] = tokens
-
+        token_field = TextField([Token(t) for t in tokens], self._token_indexers)
+        fields["tokens"] = token_field
+        fields["metadata"] = MetadataField({"tokens": tokens})
         if arc_indices is not None and arc_labels is not None:
-            fields["arc_labels"] = AdjacencyField(arc_indices, tokens, arc_labels)
+            fields["arc_labels"] = AdjacencyField(arc_indices, token_field, arc_labels)
 
         return Instance(fields)
