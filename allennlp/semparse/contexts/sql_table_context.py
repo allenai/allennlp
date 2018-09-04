@@ -13,6 +13,9 @@ from parsimonious.expressions import Sequence, OneOf, Literal
 from parsimonious.nodes import Node, NodeVisitor
 from parsimonious.grammar import Grammar
 
+from allennlp.data.tokenizers import WordTokenizer
+from allennlp.semparse.contexts.atis_tables import *
+
 # This is the base definition of the SQL grammar written in a simplified sort of
 # EBNF notation. The notation here is of the form:
 #    nonterminal = right hand side
@@ -80,11 +83,11 @@ def generate_one_of_string(nonterminal: str,
             return  f"\n{nonterminal} \t\t = " + " / ".join([f'"{literal}"' for literal in literals]) + "\n"
     return  f'\n{nonterminal} \t\t = ""'
 
-def format_action(nonterminal: str, right_hand_side: str) -> str:
+def format_action(nonterminal: str, right_hand_side: str, is_string=False) -> str:
     if right_hand_side.upper() in KEYWORDS:
         right_hand_side = right_hand_side.upper()
 
-    if nonterminal == 'string':
+    if is_string:
         return f'{nonterminal} -> ["\'{right_hand_side}\'"]'
 
     elif nonterminal == 'number':
@@ -116,19 +119,22 @@ class SqlTableContext():
     def __init__(self,
                  all_tables: Dict[str, List[str]] = None,
                  tables_with_strings: Dict[str, List[str]] = None,
-                 database_directory: str = None) -> None:
+                 database_directory: str = None,
+                 utterances: List[str] = None) -> None:
+        self.utterances = utterances 
+        self.tokenizer = WordTokenizer()
         self.all_tables = all_tables
         self.tables_with_strings = tables_with_strings
         if database_directory:
             self.database_directory = database_directory
-            database_directory = "/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db"
+            # database_directory = "/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db"
             self.connection = sqlite3.connect(database_directory)
             self.cursor = self.connection.cursor()
 
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)
         self.valid_actions: Dict[str, List[str]] = self.initialize_valid_actions()
-
+        
     def initialize_valid_actions(self) -> Dict[str, List[str]]:
         """
         We initialize the valid actions with the global actions. These include the
@@ -155,7 +161,7 @@ class SqlTableContext():
             # A string literal, eg. "A"
             elif isinstance(rhs, Literal):
                 if rhs.literal != "":
-                    valid_actions[key].add(format_action(key, rhs.literal))
+                    valid_actions[key].add(format_action(key, repr(rhs.literal)))
                 else:
                     valid_actions[key] = set()
 
@@ -164,6 +170,7 @@ class SqlTableContext():
 
     def initialize_grammar_str(self):
         grammar_str = SQL_GRAMMAR_STR
+        
 
         if self.all_tables:
             column_right_hand_sides = ['"*"']
@@ -183,7 +190,6 @@ class SqlTableContext():
                     grammar_str += generate_one_of_string(nonterminal=f'{table}_{column}_string',
                                                           literals=[row[0] for row in self.cursor.fetchall()],
                                                           is_string=True)
-
         grammar_str += 'biexpr = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ' + \
                        f'{" / ".join(sorted(biexprs, reverse=True))}\n'
         return grammar_str
