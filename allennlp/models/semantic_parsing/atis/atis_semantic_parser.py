@@ -2,9 +2,11 @@ from typing import Any, Dict, List, Tuple
 import re
 import difflib
 import sqlite3
+from copy import deepcopy
 
 from overrides import overrides
 import torch
+from pprint import pprint
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
@@ -29,6 +31,10 @@ from allennlp.semparse.worlds import AtisWorld
 from allennlp.training.metrics import Average
 
 def action_sequence_to_sql(action_sequences: List[str]) -> str:
+    """
+    Convert an action sequence like ['statement -> [query, ";"]', ...] to a the
+    SQL string.
+    """
     query = []
     for action in action_sequences:
         nonterminal, right_hand_side = action.split(' -> ')
@@ -87,8 +93,7 @@ class AtisSemanticParser(Model):
                  training_beam_size: int = None,
                  dropout: float = 0.0,
                  rule_namespace: str = 'rule_labels',
-                 # tables_directory='./atis/atis.db') -> None:
-                 tables_directory='./allennlp/models/semantic_parsing/atis/atis.db') -> None:
+                 tables_directory='/atis/atis.db') -> None:
         # Atis semantic parser init
         super(AtisSemanticParser, self).__init__(vocab)
         self._utterance_embedder = utterance_embedder
@@ -107,10 +112,10 @@ class AtisSemanticParser(Model):
         self._denotation_accuracy = Average()
         
         # Initialize a cursor to our sqlite database, so we can execute logical forms for denotation accuracy.
-        tables_directory = "/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db"
+        # tables_directory = "/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db"
         self._tables_directory = tables_directory
-        self._connection = sqlite3.connect(self._tables_directory)
-        self._cursor = self._connection.cursor() 
+        # self._connection = sqlite3.connect(self._tables_directory)
+        # self._cursor = self._connection.cursor() 
 
         self._action_padding_index = -1  # the padding value used by IndexField
         num_actions = vocab.get_vocab_size(self._rule_namespace)
@@ -133,7 +138,7 @@ class AtisSemanticParser(Model):
                                "entity word average embedding dim", "utterance embedding dim")
 
         self._num_entity_types = 2  # TODO(mattg): get this in a more principled way somehow?
-        self._num_start_types = 1  # TODO(mattg): get this in a more principled way somehow? Only one type in SQL
+        self._num_start_types = 1  # TODO(mattg): get this in a more principled way somehow?
         self._embedding_dim = utterance_embedder.get_output_dim()
         # self._entity_type_encoder_embedding = Embedding(self._num_entity_types, self._embedding_dim)
         self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
@@ -153,10 +158,9 @@ class AtisSemanticParser(Model):
                                       utterance: Dict[str, torch.LongTensor],
                                       world: List[AtisWorld],
                                       actions: List[List[ProductionRuleArray]],
-                                      atis_linking_scores: torch.Tensor,
+                                      linking_scores: torch.Tensor,
                                       add_world_to_initial_state: bool = False,
                                       checklist_states: List[ChecklistState] = None) -> Dict:
-
         embedded_utterance = self._utterance_embedder(utterance)
         utterance_mask = util.get_text_field_mask(utterance).float()
 
@@ -167,8 +171,7 @@ class AtisSemanticParser(Model):
 
         num_entities = 0
         for w in world:
-            # num_entities = max(len(w.valid_actions['string']) + len(w.valid_actions['number']), num_entities)
-            num_entities = max(len(w.valid_actions['number']), num_entities)
+            num_entities = max(len(w.entities), num_entities)
         # entity_types: one-hot tensor with shape (batch_size, num_entities, num_types)
         # Actually, I think entity_types might be of shape (batch_size, num_entities)
         entity_types, entity_type_dict = self._get_type_vector(world, num_entities, embedded_utterance)
@@ -209,7 +212,7 @@ class AtisSemanticParser(Model):
 
         initial_grammar_state = [self._create_grammar_state(world[i],
                                                             actions[i],
-                                                            atis_linking_scores,
+                                                            linking_scores[i],
                                                             entity_types[i])
                                  for i in range(batch_size)]
 
@@ -252,9 +255,9 @@ class AtisSemanticParser(Model):
 
         for batch_index, world in enumerate(worlds):
             types = []
-
-            entities = [('number', num) for num in world.valid_actions['number']]
-                       # [('string', string) for string in world.valid_actions['string']]
+            
+            entities = [('number', entity) if 'number' in entity else ('string', entity)
+                        for entity in world.entities] 
 
             for entity_index, entity in enumerate(entities):
                 # We need numbers to be first, then cells, then parts, then row, because our
@@ -289,15 +292,15 @@ class AtisSemanticParser(Model):
         # Return 1 if the predicted sequence is anywhere in the list of targets.
         return torch.max(torch.min(targets_trimmed.eq(predicted_tensor), dim=1)[0]).item()
    
-    def preprocess_query_sqlite(self, query: str):
+    def postprocess_query_sqlite(self, query: str):
         query = query.strip()
         if query.startswith('('):
             return query[1:query.rfind(')')] + ';'
         return query
 
     def _sql_result_match(self, predicted: str, target: str) -> int:
-        predicted = self.preprocess_query_sqlite(predicted) 
-        target = self.preprocess_query_sqlite(target) 
+        predicted = self.postprocess_query_sqlite(predicted) 
+        target = self.postprocess_query_sqlite(target) 
         
         try:
             print('predicted:', predicted)
@@ -348,7 +351,7 @@ class AtisSemanticParser(Model):
                 'lf_percent': self._has_logical_form.get_metric(reset),
                 'action_similarity': self._action_similarity.get_metric(reset)
                 }
-
+    
     def _create_grammar_state(self,
                               world: Dict[str, List[str]],
                               possible_actions: List[ProductionRuleArray],
@@ -376,7 +379,6 @@ class AtisSemanticParser(Model):
         entity_types : ``torch.Tensor``
             Assumed to have shape ``(num_entities,)`` (i.e., there is no batch dimension).
         """
-
         action_map = {}
         for action_index, action in enumerate(possible_actions):
             action_string = action[0]
@@ -385,9 +387,8 @@ class AtisSemanticParser(Model):
         
         valid_actions = world.valid_actions
         entity_map = {}
-        # entities = valid_actions['string'] + valid_actions['number']
-        entities = valid_actions['number']
 
+        entities = world.entities 
 
         for entity_index, entity in enumerate(entities):
             entity_map[entity] = entity_index
@@ -398,7 +399,6 @@ class AtisSemanticParser(Model):
             # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid
             # productions of that non-terminal.  We'll first split those productions by global vs.
             # linked action.
-
 
             new_action_strings = []
 
@@ -429,12 +429,9 @@ class AtisSemanticParser(Model):
                 linked_rules, linked_action_ids = zip(*linked_actions)
                 entities = linked_rules
                 entity_ids = [entity_map[entity] for entity in entities]
-
-                entity_linking_scores = linking_scores[0][entity_ids] # Check the shape here
-
+                entity_linking_scores = linking_scores[entity_ids]
                 entity_type_tensor = entity_types[entity_ids]
                 entity_type_embeddings = self._entity_type_decoder_embedding(entity_type_tensor)
-               
                 entity_type_embeddings = entity_types.new_tensor(entity_type_embeddings, dtype=torch.float)
                 translated_valid_actions[key]['linked'] = (entity_linking_scores,
                                                            entity_type_embeddings,
@@ -508,9 +505,9 @@ class AtisSemanticParser(Model):
         utterance : Dict[str, torch.LongTensor]
            The output of ``TextField.as_array()`` applied on the utterance ``TextField``. This will
            be passed through a ``TextFieldEmbedder`` and then through an encoder.
-        world : ``List[WikiTablesWorld]``
+        world : ``List[AtisWorld]``
             We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
-            how ``MetadataField`` works, this gets passed to us as a ``List[WikiTablesWorld]``,
+            how ``MetadataField`` works, this gets passed to us as a ``List[AtisWorld]``,
         actions : ``List[List[ProductionRuleArray]]``
             A list of all possible actions for each ``World`` in the batch, indexed into a
             ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
@@ -585,8 +582,10 @@ class AtisSemanticParser(Model):
                                           for action_index in best_action_indices]
                     if example_sql_query:
                         predicted_sql_query = action_sequence_to_sql(action_strings)
+                        '''
                         self._denotation_accuracy(self._sql_result_match(predicted_sql_query,
                                                                          example_sql_query[i]))
+                        '''
                         outputs['example_sql_query'].append(example_sql_query[0])
                         outputs['utterance'].append(world[i].utterances[-1])
 
