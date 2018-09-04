@@ -122,6 +122,7 @@ class TestFileUtils(AllenNlpTestCase):
             split_s3_path("s3://myfile.txt")
             split_s3_path("myfile.txt")
 
+    @pytest.mark.skip(reason="moto mock library is broken: https://github.com/spulec/moto/issues/1793")
     @mock_s3
     def test_s3_bucket(self):
         """This just ensures the bucket gets set up correctly."""
@@ -131,6 +132,7 @@ class TestFileUtils(AllenNlpTestCase):
         assert len(buckets) == 1
         assert buckets[0]["Name"] == "my-bucket"
 
+    @pytest.mark.skip(reason="moto mock library is broken: https://github.com/spulec/moto/issues/1793")
     @mock_s3
     def test_s3_request_wrapper(self):
         set_up_s3_bucket(s3_objects=[(str(self.glove_file), "embeddings/glove.txt.gz")])
@@ -148,6 +150,7 @@ class TestFileUtils(AllenNlpTestCase):
         with pytest.raises(FileNotFoundError):
             get_file_info("s3://my-bucket/missing_file.txt")
 
+    @pytest.mark.skip(reason="moto mock library is broken: https://github.com/spulec/moto/issues/1793")
     @mock_s3
     def test_s3_etag(self):
         set_up_s3_bucket(s3_objects=[(str(self.glove_file), "embeddings/glove.txt.gz")])
@@ -160,6 +163,7 @@ class TestFileUtils(AllenNlpTestCase):
         with pytest.raises(FileNotFoundError):
             s3_etag("s3://my-bucket/missing_file.txt")
 
+    @pytest.mark.skip(reason="moto mock library is broken: https://github.com/spulec/moto/issues/1793")
     @mock_s3
     def test_s3_get(self):
         set_up_s3_bucket(s3_objects=[(str(self.glove_file), "embeddings/glove.txt.gz")])
