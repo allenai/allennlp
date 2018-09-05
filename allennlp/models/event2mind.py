@@ -97,7 +97,12 @@ class Event2Mind(Model):
             )
 
     class StateDecoder:
-        def __init__(self, name, event2mind, num_classes, input_dim, output_dim):
+        def __init__(self,
+                     name: str,
+                     event2mind: Event2Mind,
+                     num_classes: int,
+                     input_dim: int,
+                     output_dim: int) -> None:
             self.embedder = Embedding(num_classes, input_dim)
             event2mind.add_module("{}_embedder".format(name), self.embedder)
             self.decoder_cell = GRUCell(input_dim, output_dim)
@@ -106,7 +111,10 @@ class Event2Mind(Model):
             event2mind.add_module("{}_output_project_layer".format(name), self.output_projection_layer)
             self.recall = UnigramRecall()
 
-    def _update_recall(self, all_top_k_predictions, target_tokens, target_recall):
+    def _update_recall(self,
+                       all_top_k_predictions: torch.Tensor,
+                       target_tokens: Dict[str, torch.LongTensor],
+                       target_recall: UnigramRecall) -> None:
         targets = target_tokens["tokens"]
         target_mask = get_text_field_mask(target_tokens)
         # See comment in _get_loss.
@@ -120,7 +128,8 @@ class Event2Mind(Model):
                 self._end_index
         )
 
-    def _get_num_decoding_steps(self, target_tokens):
+    def _get_num_decoding_steps(self,
+                                target_tokens: Dict[str, torch.LongTensor]) -> int:
         if target_tokens:
             targets = target_tokens["tokens"]
             target_sequence_length = targets.size()[1]
@@ -199,13 +208,12 @@ class Event2Mind(Model):
         return output_dict
 
     # Returns the loss.
-    def greedy_search(
-            self,
-            final_encoder_output,
-            target_tokens,
-            target_embedder,
-            decoder_cell,
-            output_projection_layer):
+    def greedy_search(self,
+                      final_encoder_output: torch.LongTensor,
+                      target_tokens: Dict[str, torch.LongTensor],
+                      target_embedder: Embedding,
+                      decoder_cell: GRUCell,
+                      output_projection_layer: Linear) -> torch.FloatTensor:
         targets = target_tokens["tokens"]
         target_sequence_length = targets.size()[1]
         # The last input from the target is either padding or the end symbol. Either way, we
@@ -237,10 +245,10 @@ class Event2Mind(Model):
                     k: int,
                     num_decoding_steps: int,
                     batch_size: int,
-                    source_mask,
-                    target_embedder,
-                    decoder_cell,
-                    output_projection_layer) -> Tuple[torch.Tensor, torch.Tensor]:
+                    source_mask: torch.LongTensor,
+                    target_embedder: Embedding,
+                    decoder_cell: GRUCell,
+                    output_projection_layer: Linear) -> Tuple[torch.Tensor, torch.Tensor]:
         # List of (batchsize, k) tensors. One for each time step. Does not
         # include the start symbols, which are implicit.
         predictions = []
@@ -345,7 +353,7 @@ class Event2Mind(Model):
     @staticmethod
     def _get_loss(logits: torch.LongTensor,
                   targets: torch.LongTensor,
-                  target_mask: torch.LongTensor) -> torch.LongTensor:
+                  target_mask: torch.LongTensor) -> torch.FloatTensor:
         """
         Takes logits (unnormalized outputs from the decoder) of size (batch_size,
         num_decoding_steps, num_classes), target indices of size (batch_size, num_decoding_steps+1)
