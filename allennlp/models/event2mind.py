@@ -99,16 +99,16 @@ class Event2Mind(Model):
     class StateDecoder:
         def __init__(self,
                      name: str,
-                     event2mind: Event2Mind,
+                     event2mind,
                      num_classes: int,
                      input_dim: int,
                      output_dim: int) -> None:
             self.embedder = Embedding(num_classes, input_dim)
-            event2mind.add_module("{}_embedder".format(name), self.embedder)
+            event2mind.add_module(f"{name}_embedder", self.embedder)
             self.decoder_cell = GRUCell(input_dim, output_dim)
-            event2mind.add_module("{}_decoder_cell".format(name), self.decoder_cell)
+            event2mind.add_module(f"{name}_decoder_cell", self.decoder_cell)
             self.output_projection_layer = Linear(output_dim, num_classes)
-            event2mind.add_module("{}_output_project_layer".format(name), self.output_projection_layer)
+            event2mind.add_module(f"{name}_output_project_layer", self.output_projection_layer)
             self.recall = UnigramRecall()
 
     def _update_recall(self,
@@ -142,17 +142,17 @@ class Event2Mind(Model):
     @overrides
     def forward(self,  # type: ignore
                 source: Dict[str, torch.LongTensor],
-                **target_tokens) -> Dict[str, torch.Tensor]:
+                **target_tokens: Dict[str, Dict[str, torch.LongTensor]]) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Decoder logic for producing the target sequences.
 
         Parameters
         ----------
-        source : Dict[str, torch.LongTensor]
+        source : ``Dict[str, torch.LongTensor]``
            The output of ``TextField.as_array()`` applied on the source ``TextField``. This will be
            passed through a ``TextFieldEmbedder`` and then through an encoder.
-        target_tokens :
+        target_tokens : ``Dict[str, Dict[str, torch.LongTensor]]``:
            Dictionary from name to output of ``Textfield.as_array()`` applied on target
            ``TextField``. We assume that the target tokens are also represented as a ``TextField``.
         """
@@ -169,9 +169,8 @@ class Event2Mind(Model):
             if target_tokens.keys() != self._states.keys():
                 target_only = target_tokens.keys() - self._states.keys()
                 states_only = self._states.keys() - target_tokens.keys()
-                raise Exception("Mismatch between target_tokens and self._states. Keys in " +
-                                "targets only: {} Keys in states only: {}".format(
-                                        target_only, states_only))
+                raise Exception(f"Mismatch between target_tokens and self._states. Keys in " +
+                                "targets only: {target_only} Keys in states only: {states_only}")
             total_loss = 0
             for name, state in self._states.items():
                 loss = self.greedy_search(
@@ -181,7 +180,7 @@ class Event2Mind(Model):
                         state.decoder_cell,
                         state.output_projection_layer)
                 total_loss += loss
-                output_dict["{}_loss".format(name)] = loss
+                output_dict[f"{name}_loss"] = loss
 
             # Average loss for interpretability.
             output_dict["loss"] = total_loss / len(self._states)
@@ -202,8 +201,8 @@ class Event2Mind(Model):
                 )
                 if target_tokens:
                     self._update_recall(all_top_k_predictions, target_tokens[name], state.recall)
-                output_dict["{}_top_k_predictions".format(name)] = all_top_k_predictions
-                output_dict["{}_top_k_log_probabilities".format(name)] = log_probabilities
+                output_dict[f"{name}_top_k_predictions"] = all_top_k_predictions
+                output_dict[f"{name}_top_k_log_probabilities"] = log_probabilities
 
         return output_dict
 
@@ -407,8 +406,8 @@ class Event2Mind(Model):
         corresponding tokens, and adds fields for the tokens to the ``output_dict``.
         """
         for name in self._states:
-            top_k_predicted_indices = output_dict["{}_top_k_predictions".format(name)][0]
-            output_dict["{}_top_k_predicted_tokens".format(name)] = [self.decode_all(top_k_predicted_indices)]
+            top_k_predicted_indices = output_dict[f"{name}_top_k_predictions"][0]
+            output_dict[f"{name}_top_k_predicted_tokens"] = [self.decode_all(top_k_predicted_indices)]
 
         return output_dict
 
