@@ -173,16 +173,3 @@ class WikiTablesVariableFreeWorld(World):
         for agenda_item in set(agenda_items):
             agenda.append(self.terminal_productions[agenda_item])
         return agenda
-
-    def execute(self, logical_form: str) -> Union[List[str], int]:
-        if not logical_form.starts_with("("):
-            logical_form = f"({logical_form})"
-        logical_form = logical_form.replace(",", " ")
-        expression_as_list = semparse_util.lisp_to_nested_expression(logical_form)
-        result = self.handle_expression(expression_as_list)
-        if isinstance(result, int):
-            return result
-        return str(result)
-
-    def handle_expression(self, expression_list: List[str]):
-        raise NotImplementedError
