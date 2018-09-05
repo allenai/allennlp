@@ -704,11 +704,15 @@ class _ElmoSoftmax(torch.nn.Module):
         The .hdf5 file for the softmax weights.
     vocab_file : ``str``, required
         The .txt file for the vocabulary used for training ELMo.
+    chunk_size : ``int``, optional, (default 256)
+        The chunk size of the softmax layer. The default (256) takes about
+        10GB of memory!
     """
 
     def __init__(self,
                  softmax_weight_file: str,
-                 vocab_file: str):
+                 vocab_file: str,
+                 chunk_size: int = 256):
 
         super(_ElmoSoftmax, self).__init__()
 
@@ -718,6 +722,8 @@ class _ElmoSoftmax(torch.nn.Module):
         self.vocab = self._load_vocab(self.vocab_file)
         self.fc_layer = self._load_softmax_weights(
             self.softmax_weight_file, self.vocab.get_vocab_size())
+
+        self.chunk_size = chunk_size
 
         # TODO: do we add CUDA code here?
 
@@ -744,8 +750,7 @@ class _ElmoSoftmax(torch.nn.Module):
 
     def _chunked_log_probs(self,
                            activation: torch.Tensor,
-                           word_targets: torch.Tensor,
-                           chunk_size: int = 256) -> torch.Tensor:
+                           word_targets: torch.Tensor) -> torch.Tensor:
         """
         Do the softmax in chunks so the gpu ram doesn't explode.
 
@@ -755,15 +760,13 @@ class _ElmoSoftmax(torch.nn.Module):
             Results of the ELMo embedder.
         word_targets : ``torch.Tensor``, required
             The word_ids returned from `batch_to_ids`.
-        chunk_size : ``int``, optional
-            Size of the chunk.
 
         Returns
         -------
         ``torch.Tensor`` with all of the log probabilities.
         """
         all_logprobs = []
-        num_chunks = (activation.size(0) - 1) // chunk_size + 1
+        num_chunks = (activation.size(0) - 1) // self.chunk_size + 1
         for activation_chunk, target_chunk in zip(
                 torch.chunk(activation, num_chunks, dim=0),
                 torch.chunk(word_targets, num_chunks, dim=0)):

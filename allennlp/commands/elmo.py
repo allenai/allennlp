@@ -73,13 +73,16 @@ from allennlp.common.util import lazy_groups_of, prepare_global_logging
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.nn.util import remove_sentence_boundaries
-from allennlp.modules.elmo import _ElmoBiLm, batch_to_ids
+from allennlp.modules.elmo import _ElmoBiLm, _ElmoSoftmax, batch_to_ids
 from allennlp.commands.subcommand import Subcommand
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_OPTIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json" # pylint: disable=line-too-long
 DEFAULT_WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5" # pylint: disable=line-too-long
+# TODO: add softmax as an option to the elmo command
+DEFAULT_SOFTMAX_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_softmax_weights.hdf5"  # pylint: disable=line-too-long
+DEFAULT_VOCAB_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/vocab-2016-09-10.txt"  # pylint: disable=line-too-long
 DEFAULT_BATCH_SIZE = 64
 
 
@@ -116,6 +119,17 @@ class Elmo(Subcommand):
                 type=str,
                 default=DEFAULT_WEIGHT_FILE,
                 help='The path to the ELMo weight file.')
+        subparser.add_argument(
+                '--softmax-weight-file',
+                type=str,
+                default=None,  # DEFAULT_SOFTMAX_FILE,
+                help='The path to the ELMo Softmax weight file.')
+        subparser.add_argument(
+                '--vocab-file',
+                type=str,
+                default=None,  # DEFAULT_VOCAB_FILE,
+                help='The path to the ELMo vocab file.')
+        subparser.add_argument('--chunk-size', type=int, default=16, help='The chunk size for the softmax layer.')
         subparser.add_argument('--batch-size', type=int, default=DEFAULT_BATCH_SIZE, help='The batch size to use.')
         subparser.add_argument('--file-friendly-logging', default=False, action='store_true',
                                help='outputs tqdm status on separate lines and slows tqdm refresh rate.')
@@ -143,11 +157,19 @@ class Elmo(Subcommand):
 def empty_embedding() -> numpy.ndarray:
     return numpy.zeros((3, 0, 1024))
 
+
+def empty_probabilities() -> numpy.ndarray:
+    return numpy.zeros((1, 0, ))
+
+
 class ElmoEmbedder():
     def __init__(self,
                  options_file: str = DEFAULT_OPTIONS_FILE,
                  weight_file: str = DEFAULT_WEIGHT_FILE,
-                 cuda_device: int = -1) -> None:
+                 softmax_weight_file: str = None,
+                 vocab_file: str = None,
+                 cuda_device: int = -1,
+                 chunk_size: int = 16) -> None:
         """
         Parameters
         ----------
@@ -155,15 +177,29 @@ class ElmoEmbedder():
             A path or URL to an ELMo options file.
         weight_file : ``str``, optional
             A path or URL to an ELMo weights file.
+        softmax_weight_file : ``str``, optional
+            A path or URL to an ELMo softmax weights file.
+        vocab_file : ``str``, optional
+            A path or URL to an ELMo vocab file.
         cuda_device : ``int``, optional, (default=-1)
             The GPU device to run on.
+        chunk_size : ``int``, optional, (default=16)
+            The chunk size of the softmax layer.
         """
         self.indexer = ELMoTokenCharactersIndexer()
 
         logger.info("Initializing ELMo.")
         self.elmo_bilm = _ElmoBiLm(options_file, weight_file)
+        if softmax_weight_file and vocab_file:
+            logger.info("Initializing ELMo Softmax.")
+            self.elmo_softmax = _ElmoSoftmax(softmax_weight_file, vocab_file,
+                                             chunk_size=chunk_size)
+        else:
+            self.elmo_softmax = None
         if cuda_device >= 0:
             self.elmo_bilm = self.elmo_bilm.cuda(device=cuda_device)
+            if self.elmo_softmax:
+                self.elmo_softmax = self.elmo_softmax.cuda(device=cuda_device)
 
         self.cuda_device = cuda_device
 
@@ -179,13 +215,30 @@ class ElmoEmbedder():
             A tuple of tensors, the first representing activations (batch_size, 3, num_timesteps, 1024) and
         the second a mask (batch_size, num_timesteps).
         """
-        character_ids = batch_to_ids(batch)
+        if self.elmo_softmax:
+            character_ids, word_ids = batch_to_ids(
+                batch, self.elmo_softmax.vocab)
+        else:
+            character_ids = batch_to_ids(batch)
         if self.cuda_device >= 0:
             character_ids = character_ids.cuda(device=self.cuda_device)
+            if self.elmo_softmax:
+                word_ids = word_ids.cuda(device=self.cuda_device)
 
         bilm_output = self.elmo_bilm(character_ids)
         layer_activations = bilm_output['activations']
         mask_with_bos_eos = bilm_output['mask']
+        if self.elmo_softmax:
+            # bow and eos already shaved off
+            softmax_log_probs, softmax_mask = self.elmo_softmax(
+                bilm_output, word_ids, aggregation_fun='mean')
+            # return the probabilities instead of the activations
+            # if we load the softmax layer
+
+            # add a dimension to make it compatible
+            softmax_log_probs = softmax_log_probs.unsqueeze(1)
+            softmax_mask = softmax_mask.unsqueeze(1)
+            return softmax_log_probs, softmax_mask
 
         # without_bos_eos is a 3 element list of (activation, mask) tensor pairs,
         # each with size (batch_size, num_timesteps, dim and (batch_size, num_timesteps)
@@ -246,9 +299,16 @@ class ElmoEmbedder():
                 length = int(mask[i, :].sum())
                 # Slicing the embedding :0 throws an exception so we need to special case for empty sentences.
                 if length == 0:
-                    elmo_embeddings.append(empty_embedding())
+                    if self.elmo_softmax:
+                        elmo_embeddings.append(empty_probabilities())
+                    else:
+                        elmo_embeddings.append(empty_embedding())
                 else:
-                    elmo_embeddings.append(embeddings[i, :, :length, :].detach().cpu().numpy())
+                    if self.elmo_softmax:
+                        embeddings_slice = embeddings[i, :, :length]
+                    else:
+                        embeddings_slice = embeddings[i, :, :length, :]
+                    elmo_embeddings.append(embeddings_slice.detach().cpu().numpy())
 
         return elmo_embeddings
 
@@ -364,7 +424,11 @@ class ElmoEmbedder():
         input_file.close()
 
 def elmo_command(args):
-    elmo_embedder = ElmoEmbedder(args.options_file, args.weight_file, args.cuda_device)
+    elmo_embedder = ElmoEmbedder(
+        options_file=args.options_file, weight_file=args.weight_file,
+        softmax_weight_file=args.softmax_weight_file, vocab_file=args.vocab_file,
+        cuda_device=args.cuda_device, chunk_size=args.chunk_size,
+    )
     output_format = ""
     if args.all:
         output_format = "all"
