@@ -34,6 +34,8 @@ class Event2Mind(Model):
         be specified as ``target_namespace``.
     source_embedder : ``TextFieldEmbedder``, required
         Embedder for source side sequences.
+    embedding_dropout: float, required
+        The amount of dropout to apply after the source tokens have been embedded.
     encoder : ``Seq2VecEncoder``, required
         The encoder of the "encoder/decoder" model.
     max_decoding_steps : int, required
@@ -49,23 +51,30 @@ class Event2Mind(Model):
     def __init__(self,
                  vocab: Vocabulary,
                  source_embedder: TextFieldEmbedder,
+                 embedding_dropout: float,
                  encoder: Seq2VecEncoder,
                  max_decoding_steps: int,
                  target_namespace: str = "tokens",
                  target_embedding_dim: int = None) -> None:
         super(Event2Mind, self).__init__(vocab)
-        # TODO(brendanr): Hack the embeddings here like initWEmb in modeling/utils/preprocess.py?
+        # Note: The original tweaks the embeddings for "personx" to be the mean
+        # across the embeddings for "he", "she", "him" and "her". Similarly for
+        # "personx's" and so forth. We could consider that here as a well.
         self._source_embedder = source_embedder
+        self._embedding_dropout = nn.Dropout(embedding_dropout)
         self._encoder = encoder
         self._max_decoding_steps = max_decoding_steps
         self._target_namespace = target_namespace
-        # TODO(brendanr): Revisit dropout.
-        self._embedding_dropout = nn.Dropout(0.2)
 
         # We need the start symbol to provide as the input at the first timestep of decoding, and
         # end symbol as a way to indicate the end of the decoded sequence.
         self._start_index = self.vocab.get_token_index(START_SYMBOL, self._target_namespace)
         self._end_index = self.vocab.get_token_index(END_SYMBOL, self._target_namespace)
+        # Warning: The different decoders share a vocabulary! This may be
+        # counterintuitive, but consider the case of xreact and oreact. A
+        # reaction of "happy" could easily apply to both the subject of the
+        # event and others. This could become less appropriate as more decoders
+        # are added.
         num_classes = self.vocab.get_vocab_size(self._target_namespace)
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with that of the final hidden states of the encoder.
