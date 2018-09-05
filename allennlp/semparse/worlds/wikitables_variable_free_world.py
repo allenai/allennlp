@@ -7,13 +7,12 @@ an executor for the variable-free logical forms.
 """
 # TODO(pradeep): Merge this class with the `WikiTablesWorld` class, and move all the
 # language-specific functionality into type declarations.
-from typing import Dict, List, Set, Union
+from typing import Dict, List, Set
 import re
 
 from nltk.sem.logic import Type
 from overrides import overrides
 
-from allennlp.semparse import util as semparse_util
 from allennlp.semparse.worlds.world import ParsingError, World
 from allennlp.semparse.type_declarations import wikitables_variable_free as types
 from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
