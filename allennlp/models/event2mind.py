@@ -248,8 +248,9 @@ class Event2Mind(Model):
                     decoder_cell: GRUCell,
                     output_projection_layer: Linear) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Uses beam search to compute the top-``k`` highest probability sequences for the given ``decoder_cell``.
-        Returns the tuple consisting of the sequences themselves and their log probabilities.
+        Uses beam search to compute the top-``k`` highest probability sequences
+        for the given ``decoder_cell``.  Returns the tuple consisting of the
+        sequences themselves and their log probabilities.
 
         Parameters
         ----------
