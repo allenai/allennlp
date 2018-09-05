@@ -171,7 +171,6 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
                  num_steps_per_epoch: int,
                  cut_frac: float = 0.1,
                  ratio: int = 32,
-                 lr: float = 0.01,
                  last_epoch: int = -1,
                  gradual_unfreezing: bool = False,
                  discriminative_fine_tuning: bool = False,
@@ -180,17 +179,19 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
         self.num_steps_per_epoch = num_steps_per_epoch
         self.cut_frac = cut_frac
         self.ratio = ratio
-        self.rate = lr
         self.gradual_unfreezing = gradual_unfreezing
         self.freezing_current = self.gradual_unfreezing
-        self.first_epoch = True
+        self.is_first_epoch = True
+        super().__init__(optimizer, last_epoch=last_epoch)
         if discriminative_fine_tuning:
             # skip the last param_group if it is has no parameters
-            param_groups = (optimizer.param_groups if optimizer.param_groups[-1]['params']
-                            else optimizer.param_groups[:-1])
-            for i, param_group in enumerate(reversed(param_groups)):
-                param_group['lr'] = self.rate * decay_factor ** i
-        super().__init__(optimizer, last_epoch=last_epoch)
+            exponent = 0
+            for i in range(len(self.base_lrs)-1, -1, -1):
+                param_group = optimizer.param_groups[i]
+                if param_group['params']:
+                    param_group['lr'] = self.base_lrs[i] * decay_factor ** exponent
+                    self.base_lrs[i] = param_group['lr']
+                    exponent += 1
 
     def step(self, epoch=None):
         if self.gradual_unfreezing:
@@ -201,10 +202,9 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
             # epoch; so the first time, with epoch id 0, we want to set
             # up for epoch #1; the second time, still with epoch id 0,
             # we want to set up for epoch #2, etc.
-            num_layers_to_unfreeze = epoch+1 if self.first_epoch else epoch+2
-            if self.first_epoch:
-                self.step_batch(1)
-                self.first_epoch = False
+            num_layers_to_unfreeze = epoch + 1 if self.is_first_epoch else epoch + 2
+            if self.is_first_epoch:
+                self.is_first_epoch = False
             if num_layers_to_unfreeze >= len(self.optimizer.param_groups)-1:
                 logger.info('Gradual unfreezing finished. Training all layers.')
                 self.freezing_current = False
@@ -226,17 +226,15 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
         if self.freezing_current:
             # if we still freeze, we restrict the schedule to the current epoch
             num_steps = self.num_steps_per_epoch
-            step = max(self.last_epoch, 1) % self.num_steps_per_epoch
+            step = self.last_epoch % num_steps
         else:
             # otherwise we use the schedule for the rest of training
-            # steps_while_frozen = (len(self.optimizer.param_groups)-1) * self.num_steps_per_epoch
-            steps_while_frozen = max((len(self.optimizer.param_groups) - 2) * self.num_steps_per_epoch, 0)
-            num_steps = self.num_epochs * self.num_steps_per_epoch - steps_while_frozen
-            step = max(self.last_epoch, 1) - steps_while_frozen
+            frozen_steps = 0 if not self.gradual_unfreezing else (len(self.optimizer.param_groups) - 2) * self.num_steps_per_epoch
+            num_steps = self.num_epochs * self.num_steps_per_epoch - frozen_steps
+            step = (self.last_epoch - frozen_steps) % num_steps
         cut = int(num_steps * self.cut_frac)
         prop = step / cut if step < cut else 1 - (step - cut) / (num_steps - cut)
-        lrs = [lr * (1 + prop * (self.ratio - 1)) / self.ratio for lr in self.base_lrs]
-        return [max(lr, 0.0) for lr in lrs]
+        return [lr * (1 + prop * (self.ratio - 1)) / self.ratio for lr in self.base_lrs]
 
 
 class CosineWithRestarts(torch.optim.lr_scheduler._LRScheduler):  # pylint: disable=protected-access
