@@ -24,7 +24,8 @@ class Event2Mind(Model):
     sequence, encodes it, and then uses the encoded representation to decode
     several mental state sequences.
 
-    It is based on `the paper by Rashkin et al. <https://www.semanticscholar.org/paper/Event2Mind/b89f8a9b2192a8f2018eead6b135ed30a1f2144d>`_
+    It is based on `the paper by Rashkin et al.
+    <https://www.semanticscholar.org/paper/Event2Mind/b89f8a9b2192a8f2018eead6b135ed30a1f2144d>`_
 
     Parameters
     ----------
@@ -154,8 +155,8 @@ class Event2Mind(Model):
             if target_tokens.keys() != self._states.keys():
                 target_only = target_tokens.keys() - self._states.keys()
                 states_only = self._states.keys() - target_tokens.keys()
-                raise Exception(f"Mismatch between target_tokens and self._states. Keys in " +
-                                "targets only: {target_only} Keys in states only: {states_only}")
+                raise Exception("Mismatch between target_tokens and self._states. Keys in " +
+                                f"targets only: {target_only} Keys in states only: {states_only}")
             total_loss = 0
             for name, state in self._states.items():
                 loss = self.greedy_search(
