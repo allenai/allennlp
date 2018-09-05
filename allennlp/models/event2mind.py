@@ -86,30 +86,15 @@ class Event2Mind(Model):
                 "xreact",
                 "oreact"
         ]
-        self._states: Dict[str, Event2Mind.StateDecoder] = {}
+        self._states: Dict[str, StateDecoder] = {}
         for name in state_names:
-            self._states[name] = self.StateDecoder(
+            self._states[name] = StateDecoder(
                     name,
                     self,
                     num_classes,
                     target_embedding_dim,
                     self._decoder_output_dim
             )
-
-    class StateDecoder:
-        def __init__(self,
-                     name: str,
-                     event2mind,
-                     num_classes: int,
-                     input_dim: int,
-                     output_dim: int) -> None:
-            self.embedder = Embedding(num_classes, input_dim)
-            event2mind.add_module(f"{name}_embedder", self.embedder)
-            self.decoder_cell = GRUCell(input_dim, output_dim)
-            event2mind.add_module(f"{name}_decoder_cell", self.decoder_cell)
-            self.output_projection_layer = Linear(output_dim, num_classes)
-            event2mind.add_module(f"{name}_output_project_layer", self.output_projection_layer)
-            self.recall = UnigramRecall()
 
     def _update_recall(self,
                        all_top_k_predictions: torch.Tensor,
@@ -194,7 +179,6 @@ class Event2Mind(Model):
                         10,
                         self._get_num_decoding_steps(target_tokens.get(name)),
                         batch_size,
-                        source_mask,
                         state.embedder,
                         state.decoder_cell,
                         state.output_projection_layer
@@ -206,13 +190,29 @@ class Event2Mind(Model):
 
         return output_dict
 
-    # Returns the loss.
     def greedy_search(self,
                       final_encoder_output: torch.LongTensor,
                       target_tokens: Dict[str, torch.LongTensor],
                       target_embedder: Embedding,
                       decoder_cell: GRUCell,
                       output_projection_layer: Linear) -> torch.FloatTensor:
+        """
+        Greedily produces a sequence using the provided ``decoder_cell``.
+        Returns the cross entropy between this sequence and ``target_tokens``.
+
+        Parameters
+        ----------
+        final_encoder_output : ``torch.LongTensor``, required
+            Vector produced by ``self._encoder``.
+        target_tokens : ``Dict[str, torch.LongTensor]``, required
+           The output of ``TextField.as_array()`` applied on some target ``TextField``.
+        target_embedder : ``Embedding``, required
+           Used to embed the target tokens.
+        decoder_cell: ``GRUCell``, required
+           The recurrent cell used at each time step.
+        output_projection_layer: ``Linear``, required
+           Linear layer mapping to the desired number of classes.
+        """
         targets = target_tokens["tokens"]
         target_sequence_length = targets.size()[1]
         # The last input from the target is either padding or the end symbol. Either way, we
@@ -244,10 +244,30 @@ class Event2Mind(Model):
                     k: int,
                     num_decoding_steps: int,
                     batch_size: int,
-                    source_mask: torch.LongTensor,
                     target_embedder: Embedding,
                     decoder_cell: GRUCell,
                     output_projection_layer: Linear) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Uses beam search to compute the top-``k`` highest probability sequences for the given ``decoder_cell``.
+        Returns the tuple consisting of the sequences themselves and their log probabilities.
+
+        Parameters
+        ----------
+        final_encoder_output : ``torch.LongTensor``, required
+            Vector produced by ``self._encoder``.
+        k : ``int``, required
+            Size of the beam.
+        num_decoding_steps : ``int``, required
+            Maximum sequence length.
+        batch_size : ``int``, required
+            Size of the batch, which is distinct from the size of the beam.
+        target_embedder : ``Embedding``, required
+           Used to embed the token predicted at the previous time step.
+        decoder_cell: ``GRUCell``, required
+           The recurrent cell used at each time step.
+        output_projection_layer: ``Linear``, required
+           Linear layer mapping to the desired number of classes.
+        """
         # List of (batchsize, k) tensors. One for each time step. Does not
         # include the start symbols, which are implicit.
         predictions = []
@@ -257,7 +277,9 @@ class Event2Mind(Model):
         backpointers = []
 
         # Timestep 1
-        start_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index)
+        start_predictions = final_encoder_output.new_full(
+                (batch_size,), fill_value=self._start_index, dtype=torch.long
+        )
         start_decoder_input = target_embedder(start_predictions)
         start_decoder_hidden = decoder_cell(start_decoder_input, final_encoder_output)
         start_output_projections = output_projection_layer(start_decoder_hidden)
@@ -419,3 +441,21 @@ class Event2Mind(Model):
             for name, state in self._states.items():
                 all_metrics[name] = state.recall.get_metric(reset=reset)
         return all_metrics
+
+class StateDecoder:
+    """
+    Simple struct-like class for internal use.
+    """
+    def __init__(self,
+                 name: str,
+                 event2mind: Event2Mind,
+                 num_classes: int,
+                 input_dim: int,
+                 output_dim: int) -> None:
+        self.embedder = Embedding(num_classes, input_dim)
+        event2mind.add_module(f"{name}_embedder", self.embedder)
+        self.decoder_cell = GRUCell(input_dim, output_dim)
+        event2mind.add_module(f"{name}_decoder_cell", self.decoder_cell)
+        self.output_projection_layer = Linear(output_dim, num_classes)
+        event2mind.add_module(f"{name}_output_project_layer", self.output_projection_layer)
+        self.recall = UnigramRecall()
