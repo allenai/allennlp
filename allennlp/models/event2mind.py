@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import numpy
 from overrides import overrides
@@ -404,7 +404,7 @@ class Event2Mind(Model):
         loss = sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask)
         return loss
 
-    def decode_all(self, predicted_indices: torch.Tensor):
+    def decode_all(self, predicted_indices: torch.Tensor) -> List[List[str]]:
         if not isinstance(predicted_indices, numpy.ndarray):
             predicted_indices = predicted_indices.detach().cpu().numpy()
         all_predicted_tokens = []
@@ -419,7 +419,7 @@ class Event2Mind(Model):
         return all_predicted_tokens
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, List[List[str]]]:
         """
         This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
         time, to finalize predictions. The logic for the decoder part of the encoder-decoder lives

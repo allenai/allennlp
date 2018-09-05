@@ -24,7 +24,11 @@ class Event2MindDatasetReader(DatasetReader):
     This dataset is CSV and has the columns:
     Source,Event,Xintent,Xemotion,Otheremotion,Xsent,Osent
 
-    The Xintent, Xemotion, and Otheremotion columns are JSON arrays.
+    Source is the provenance of the given instance. Event is free-form English
+    text. The Xintent, Xemotion, and Otheremotion columns are JSON arrays
+    containing the intention of "person x", the reaction to the event by
+    "person x" and the reaction to the event by others. The remaining columns
+    are not used.
 
     For instance:
     rocstory,PersonX talks to PersonX's mother,"[""to keep in touch""]","[""accomplished""]","[""loved""]",5.0,5.0
@@ -70,7 +74,7 @@ class Event2MindDatasetReader(DatasetReader):
             logger.info("Reading instances from lines in file at: %s", file_path)
             reader = csv.reader(data_file)
             # Skip header
-            reader.__next__()
+            next(reader)
 
             for (line_num, line_parts) in enumerate(reader):
                 if len(line_parts) != 7:
@@ -88,8 +92,12 @@ class Event2MindDatasetReader(DatasetReader):
     @staticmethod
     def _preprocess_string(tokenizer, string: str) -> str:
         """
-        Taken from:
-        https://github.com/maartensap/event2mind-internal/blob/master/code/modeling/utils/preprocess.py#L80.
+        Ad-hoc preprocessing code borrowed directly from the original implementation.
+
+        It performs the following operations:
+        1. Fuses "person y" into "persony".
+        2. Removes "to" and "to be" from the start of the string.
+        3. Converts empty strings into the string literal "none".
         """
         word_tokens = tokenizer.tokenize(string.lower())
         words = [token.text for token in word_tokens]
@@ -131,12 +139,11 @@ class Event2MindDatasetReader(DatasetReader):
         return TextField(tokenized_target, self._target_token_indexers)
 
     @overrides
-    def text_to_instance(  # type: ignore
-            self,
-            source_string: str,
-            xintent_string: str = None,
-            xreact_string: str = None,
-            oreact_string: str = None) -> Instance:
+    def text_to_instance(self,  # type: ignore
+                         source_string: str,
+                         xintent_string: str = None,
+                         xreact_string: str = None,
+                         oreact_string: str = None) -> Instance:
         # pylint: disable=arguments-differ
         processed = self._preprocess_string(self._source_tokenizer, source_string)
         tokenized_source = self._source_tokenizer.tokenize(processed)
