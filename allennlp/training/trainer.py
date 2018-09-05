@@ -25,7 +25,7 @@ from tensorboardX import SummaryWriter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import peak_memory_mb, gpu_memory_mb
+from allennlp.common.util import peak_memory_mb, gpu_memory_mb, dump_metrics
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -154,6 +154,27 @@ def str_to_time(time_str: str) -> datetime.datetime:
     """
     pieces: Any = [int(piece) for piece in time_str.split('-')]
     return datetime.datetime(*pieces)
+
+def make_metrics(train_metrics: Dict[str, Any],
+                 val_metrics: Dict[str, Any],
+                 training_start_time: datetime.time,
+                 epoch_counter: int,
+                 epochs_trained: int) -> Dict[str, Any]:
+    """
+    Combine the training and validation metrics into a single dict.
+    """
+    training_elapsed_time = time.time() - training_start_time
+    metrics = {
+            "training_duration": time.strftime("%H:%M:%S", time.gmtime(training_elapsed_time)),
+            "training_start_epoch": epoch_counter,
+            "training_epochs": epochs_trained
+    }
+    for key, value in train_metrics.items():
+        metrics["training_" + key] = value
+    for key, value in val_metrics.items():
+        metrics["validation_" + key] = value
+
+    return metrics
 
 
 class Trainer:
@@ -713,6 +734,7 @@ class Trainer:
         train_metrics: Dict[str, float] = {}
         val_metrics: Dict[str, float] = {}
         best_epoch_val_metrics: Dict[str, float] = {}
+        best_metrics: Dict[str, float] = {}
         epochs_trained = 0
         training_start_time = time.time()
         for epoch in range(epoch_counter, self._num_epochs):
@@ -747,6 +769,13 @@ class Trainer:
             self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
             self._metrics_to_console(train_metrics, val_metrics)
+
+            if is_best_so_far:
+                best_metrics = make_metrics(train_metrics, val_metrics,
+                                            training_start_time, epoch_counter, epochs_trained)
+                if self._serialization_dir:
+                    dump_metrics(os.path.join(self._serialization_dir, 'metrics.json'), best_metrics)
+
             for index, param_group in enumerate(self._optimizer.param_groups):
                 learning_rate = param_group.get("lr")
                 if learning_rate is not None:
@@ -770,27 +799,16 @@ class Trainer:
 
             epochs_trained += 1
 
-        training_elapsed_time = time.time() - training_start_time
-        metrics = {
-                "training_duration": time.strftime("%H:%M:%S", time.gmtime(training_elapsed_time)),
-                "training_start_epoch": epoch_counter,
-                "training_epochs": epochs_trained
-        }
-        for key, value in train_metrics.items():
-            metrics["training_" + key] = value
-        for key, value in val_metrics.items():
-            metrics["validation_" + key] = value
-
         if validation_metric_per_epoch:
             # We may not have had validation data, so we need to hide this behind an if.
             if self._validation_metric_decreases:
                 best_validation_metric = min(validation_metric_per_epoch)
             else:
                 best_validation_metric = max(validation_metric_per_epoch)
-            metrics.update({f"best_validation_{k}": v for k, v in best_epoch_val_metrics.items()})
-            metrics['best_epoch'] = [i for i, value in enumerate(validation_metric_per_epoch)
-                                     if value == best_validation_metric][-1]
-        return metrics
+            best_metrics.update({f"best_validation_{k}": v for k, v in best_epoch_val_metrics.items()})
+            best_metrics['best_epoch'] = [i for i, value in enumerate(validation_metric_per_epoch)
+                                          if value == best_validation_metric][-1]
+        return best_metrics
 
     def _is_best_so_far(self,
                         this_epoch_val_metric: float,
