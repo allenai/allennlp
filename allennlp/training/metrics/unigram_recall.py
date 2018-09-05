@@ -61,14 +61,10 @@ class UnigramRecall(Metric):
             for word in cleaned_gold:
                 stillsearch = True
                 for beam in beams:
-                    if mask is not None:
-                        masked_beam = beam * mask[i]
-                    else:
-                        masked_beam = beam
                     # word is from cleaned gold which doesn't have 0 or
                     # end_index, so we don't need to explicitly remove those
-                    # from masked_beam.
-                    if stillsearch and (word in masked_beam):
+                    # from beam.
+                    if stillsearch and (word in beam):
                         retval += 1./float(len(cleaned_gold))
                         stillsearch = False
             correct += retval
