@@ -74,7 +74,7 @@ class Event2MindDatasetReader(DatasetReader):
             logger.info("Reading instances from lines in file at: %s", file_path)
             reader = csv.reader(data_file)
             # Skip header
-            next(reader)
+            next(reader) # pylint: disable=stop-iteration-return
 
             for (line_num, line_parts) in enumerate(reader):
                 if len(line_parts) != 7:
