@@ -1,12 +1,14 @@
 import json
 import logging
-from typing import Union, List, Dict, Any
+from typing import Union, List, Dict, Any, Tuple
 import warnings
 
 import torch
 from torch.nn.modules import Dropout
+from torch.nn import functional as F
 
 import numpy
+
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
@@ -21,6 +23,7 @@ from allennlp.modules.highway import Highway
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids, get_device_of
 from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper, ELMoTokenCharactersIndexer
+from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.dataset import Batch
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField
@@ -214,7 +217,7 @@ class Elmo(torch.nn.Module):
                    dropout=dropout)
 
 
-def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
+def batch_to_ids(batch: List[List[str]], vocab: Vocabulary = None) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Converts a batch of tokenized sentences to a tensor representing the sentences with encoded characters
     (len(batch), max sentence length, max word length).
@@ -223,24 +226,40 @@ def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
     ----------
     batch : ``List[List[str]]``, required
         A list of tokenized sentences.
+    vocab : ``Vocabulary``, optional
+        Include a vocab of words if you need to return word ids.
 
     Returns
     -------
-        A tensor of padded character ids.
+        If vocab is present, returns a tuple of char ids and word ids as
+        a tensor. If not, it returns a tensor of char ids.
     """
     instances = []
-    indexer = ELMoTokenCharactersIndexer()
+    char_indexer = ELMoTokenCharactersIndexer()
+    if vocab:
+        token_indexer = SingleIdTokenIndexer(
+                    namespace='tokens', lowercase_tokens=False)
+    else:
+        token_indexer = None
     for sentence in batch:
         tokens = [Token(token) for token in sentence]
-        field = TextField(tokens,
-                          {'character_ids': indexer})
-        instance = Instance({"elmo": field})
+        if vocab:
+            field = TextField(tokens, {
+                'character_ids': char_indexer,
+                'word_ids': token_indexer,
+            })
+        else:
+            field = TextField(tokens, {'character_ids': char_indexer})
+        instance = Instance({'elmo': field})
         instances.append(instance)
 
     dataset = Batch(instances)
-    vocab = Vocabulary()
     dataset.index_instances(vocab)
-    return dataset.as_tensor_dict()['elmo']['character_ids']
+    elmo_tensor_dict = dataset.as_tensor_dict()['elmo']
+    if vocab:
+        return elmo_tensor_dict['character_ids'], elmo_tensor_dict['word_ids']
+    else:
+        return elmo_tensor_dict['character_ids']
 
 
 class _ElmoCharacterEncoder(torch.nn.Module):
@@ -670,3 +689,148 @@ class _ElmoBiLm(torch.nn.Module):
                                          weight=embedding.data,
                                          trainable=self._requires_grad,
                                          padding_index=0)
+
+
+class _ElmoSoftmax(torch.nn.Module):
+    """
+    Given a word :class:`Vocabulary` and the weights for the softmax
+    layer, return the log probabilities from the ELMo model. The `forward()`
+    method requires you to run :class:`_ElmoBiLm` and `batch_to_ids`
+    beforehand to calculate the probabilities.
+
+    Parameters
+    ----------
+    softmax_weight_file : ``str``, required
+        The .hdf5 file for the softmax weights.
+    vocab_file : ``str``, required
+        The .txt file for the vocabulary used for training ELMo.
+    """
+
+    def __init__(self,
+                 softmax_weight_file: str,
+                 vocab_file: str):
+
+        super(_ElmoSoftmax, self).__init__()
+
+        self.softmax_weight_file = softmax_weight_file
+        self.vocab_file = vocab_file
+
+        self.vocab = self._load_vocab(self.vocab_file)
+        self.fc_layer = self._load_softmax_weights(
+            self.softmax_weight_file, self.vocab.get_vocab_size())
+
+        # TODO: do we add CUDA code here?
+
+    @staticmethod
+    def _load_vocab(vocab_file: str) -> Vocabulary:
+        vocab = Vocabulary()
+        vocab._oov_token = '<UNK>'
+        vocab.set_from_file(cached_path(vocab_file), is_padded=False)
+        return vocab
+
+    @staticmethod
+    def _load_softmax_weights(
+            softmax_weight_file: str,
+            vocab_size: int) -> torch.Tensor:
+        fc_layer = torch.nn.Linear(512, vocab_size)
+
+        with h5py.File(cached_path(softmax_weight_file), 'r') as fin:
+            fc_layer.weight.data.copy_(
+                torch.FloatTensor(numpy.array(fin['softmax']['W'])))
+            fc_layer.bias.data.copy_(
+                torch.FloatTensor(numpy.array(fin['softmax']['b'])))
+
+        return fc_layer
+
+    def _chunked_log_probs(self,
+                           activation: torch.Tensor,
+                           word_targets: torch.Tensor,
+                           chunk_size: int = 256) -> torch.Tensor:
+        """
+        Do the softmax in chunks so the gpu ram doesn't explode.
+
+        Parameters
+        ----------
+        activation : ``torch.Tensor``, required
+            Results of the ELMo embedder.
+        word_targets : ``torch.Tensor``, required
+            The word_ids returned from `batch_to_ids`.
+        chunk_size : ``int``, optional
+            Size of the chunk.
+
+        Returns
+        -------
+        ``torch.Tensor`` with all of the log probabilities.
+        """
+        all_logprobs = []
+        num_chunks = (activation.size(0) - 1) // chunk_size + 1
+        for activation_chunk, target_chunk in zip(
+                torch.chunk(activation, num_chunks, dim=0),
+                torch.chunk(word_targets, num_chunks, dim=0)):
+
+            assert activation_chunk.size()[:2] == target_chunk.size()[:2]
+            targets_flat = target_chunk.view(-1)
+            time_indexer = torch.arange(
+                0, targets_flat.size(0),
+                out=target_chunk.data.new(
+                    targets_flat.size(0))) % target_chunk.size(1)
+            batch_indexer = torch.arange(
+                0, targets_flat.size(0),
+                out=target_chunk.data.new(
+                    targets_flat.size(0))) / target_chunk.size(1)
+            all_logprobs.append(
+                F.log_softmax(self.fc_layer(activation_chunk), 2)[
+                batch_indexer, time_indexer, targets_flat].view(
+                    *target_chunk.size()))
+
+        return torch.cat(all_logprobs, 0)
+
+    def forward(self,
+                bilm_inputs: Dict[str, Union[torch.Tensor, List[torch.Tensor]]],
+                word_inputs: torch.Tensor,
+                aggregation_fun: str = None) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Passes the ELMo embeddings to a softmax layer and calculates
+        the
+
+        Parameters
+        ----------
+        bilm_inputs : ``Dict[str, Union[torch.Tensor, List[torch.Tensor]]]``, required
+            The output from `_ElmoBiLm`.
+        word_inputs : ``torch.Tensor``, required
+            The output from `batch_to_ids` when `
+        aggregation_fun : ``str``, optional
+            An aggregation function that aggregates the forward and backward
+            tensors. Default is `None` where no aggregation is done.
+
+        Returns
+        -------
+        A tuple of `log_probs` and `mask_without_bos_eos`.
+        """
+
+        activations = bilm_inputs['activations']
+        mask = bilm_inputs['mask']
+
+        activations = activations[-1]  # (batch, BOS + L + EOS, [fwd, bwd])
+
+        # get rid of predicting, or conditioning on EOS for the forward
+        # activation, and BOS for the reverse activation.
+        mask_without_bos_eos = mask[:, 2:]
+
+        # NOTE: can this be replaced by allennlp.util.masked_softmax ?
+        fwd_log_probs = self._chunked_log_probs(
+            activations[:, :-2, :512], word_inputs)
+        bwd_log_probs = self._chunked_log_probs(
+            activations[:, 2:, 512:], word_inputs)
+
+        # [B, (fwd, bwd), L]
+        log_probs = torch.stack((fwd_log_probs, bwd_log_probs), 1)
+        log_probs *= mask_without_bos_eos[:, None].float()
+
+        # aggregate, otherwise return both the backward and forward embeddings
+        if aggregation_fun == 'mean':
+            log_probs = torch.mean(log_probs, 1)
+        elif aggregation_fun == 'max':
+            log_probs = torch.max(log_probs, 1)
+
+        return log_probs, mask_without_bos_eos
