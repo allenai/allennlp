@@ -119,8 +119,10 @@ class Event2Mind(Model):
         if target_tokens:
             targets = target_tokens["tokens"]
             target_sequence_length = targets.size()[1]
-            # The last input from the target is either padding or the end symbol. Either way, we
-            # don't have to process it.
+            # The last input from the target is either padding or the end
+            # symbol.  Either way, we don't have to process it. (To be clear,
+            # we do still output and compare against the end symbol, but there
+            # is no need to take the end symbol as input to the decoder.)
             return target_sequence_length - 1
         else:
             return self._max_decoding_steps
@@ -178,7 +180,11 @@ class Event2Mind(Model):
                 (all_top_k_predictions, log_probabilities) = self.beam_search(
                         final_encoder_output,
                         10,
-                        self._get_num_decoding_steps(target_tokens.get(name)),
+                        # We always use the max here instead of passing in the
+                        # length of the longest target to avoid biasing the
+                        # search. Whether this problem would manifest otherwise
+                        # would depend on the metric being used.
+                        self._max_decoding_steps,
                         batch_size,
                         state.embedder,
                         state.decoder_cell,
@@ -216,12 +222,10 @@ class Event2Mind(Model):
         """
         targets = target_tokens["tokens"]
         target_sequence_length = targets.size()[1]
-        # The last input from the target is either padding or the end symbol. Either way, we
-        # don't have to process it.
-        # TODO(brendanr): Something about this is suspicious. As in will we
-        # maybe have difficulty learning to output the end symbol? Maybe
-        # it's fine since this will make num_decoding_steps the length of
-        # the longest sequence and most targets will be shorter? Still...
+        # The last input from the target is either padding or the end symbol.
+        # Either way, we don't have to process it. (To be clear, we do still
+        # output and compare against the end symbol, but there is no need to
+        # take the end symbol as input to the decoder.)
         num_decoding_steps = target_sequence_length - 1
 
         decoder_hidden = final_encoder_output
