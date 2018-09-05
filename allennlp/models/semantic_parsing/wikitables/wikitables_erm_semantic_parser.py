@@ -12,7 +12,7 @@ from allennlp.models.archival import load_archive, Archive
 from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
 from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
-from allennlp.semparse.type_declarations import wikitables_type_declaration as types
+from allennlp.semparse.type_declarations import wikitables_lambda_dcs as types
 from allennlp.semparse.worlds import WikiTablesWorld
 from allennlp.state_machines.states import CoverageState, ChecklistStatelet
 from allennlp.state_machines.trainers import ExpectedRiskMinimization

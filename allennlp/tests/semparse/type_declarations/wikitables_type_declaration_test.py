@@ -5,7 +5,7 @@ from allennlp.semparse.type_declarations.type_declaration import (
         ComplexType,
         ANY_TYPE,
         )
-from allennlp.semparse.type_declarations.wikitables_type_declaration import (
+from allennlp.semparse.type_declarations.wikitables_lambda_dcs import (
         ARG_EXTREME_TYPE,
         ArgExtremeType,
         CELL_TYPE,
