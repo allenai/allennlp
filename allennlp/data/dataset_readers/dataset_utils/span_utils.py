@@ -1,4 +1,4 @@
-from typing import Callable, List, Set, Tuple, TypeVar, Optional
+from typing import Callable, Dict, List, Set, Tuple, TypeVar, Optional, Union
 import warnings
 
 
@@ -436,14 +436,14 @@ def bmes_tags_to_spans(tag_sequence: List[str],
         return state[key_bmes_tag]
 
     # State transision operations.
-    def append_and_keep_span(spans, state, **kwargs):
+    def append_and_keep_span(spans, state, **kwargs):  # pylint: disable=W0613
         append_span(state, **kwargs)
 
     def append_and_close_span(spans, state, **kwargs):
         append_span(state, **kwargs)
         close_span(state, spans)
 
-    def create_and_keep_span(spans, state, **kwargs):
+    def create_and_keep_span(spans, state, **kwargs):  # pylint: disable=W0613
         create_span(state, **kwargs)
 
     def create_and_close_span(spans, state, **kwargs):
@@ -498,8 +498,9 @@ def bmes_tags_to_spans(tag_sequence: List[str],
             ('S', 'S'): create_and_close_span,  # O
             }
 
-    spans = []
-    state = {}
+    spans: List[TypedStringSpan] = []
+    state: Dict[str, Union[str, int, bool]] = {}
+
     for index, raw_tag in enumerate(tag_sequence):
         cur_bmes_tag, cur_label = extract_bmes_tag_label(raw_tag)
         # Only BMES tags are accepted.
