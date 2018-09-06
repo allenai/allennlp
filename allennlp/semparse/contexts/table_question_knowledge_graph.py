@@ -85,9 +85,11 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
                  entities: Set[str],
                  neighbors: Dict[str, List[str]],
                  entity_text: Dict[str, str],
-                 question_tokens: List[Token]) -> None:
+                 question_tokens: List[Token],
+                 table_data: List[Dict[str, str]]) -> None:
         super().__init__(entities, neighbors, entity_text)
         self.question_tokens = question_tokens
+        self.table_data = table_data
         self._entity_prefixes: Dict[str, List[str]] = defaultdict(list)
         for entity, text in self.entity_text.items():
             parts = text.split()
@@ -138,6 +140,8 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
         """
         entity_text: Dict[str, str] = {}
         neighbors: DefaultDict[str, List[str]] = defaultdict(list)
+        # Stores all the rows in the order they appear in the table.
+        table_data: List[Dict[str, str]] = []
 
         # Getting number entities first.  Number entities don't have any neighbors, and their
         # "entity text" is the text from the question that evoked the number.
@@ -189,6 +193,8 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
                     cell_id_mapping[cell_string] = normalized_string
                 row_cell_ids.append(normalized_string)
                 entity_text[normalized_string] = cell_string
+            table_data.append({column_id: row_cell_id
+                               for column_id, row_cell_id in zip(column_ids, row_cell_ids)})
             for column_id, cell_id in zip(column_ids, row_cell_ids):
                 neighbors[column_id].append(cell_id)
                 neighbors[cell_id].append(column_id)
@@ -199,7 +205,7 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
                     for part_entity, part_string in cls._get_cell_parts(cell_string):
                         neighbors[part_entity] = []
                         entity_text[part_entity] = part_string
-        return cls(set(neighbors.keys()), dict(neighbors), entity_text, question_tokens)
+        return cls(set(neighbors.keys()), dict(neighbors), entity_text, question_tokens, table_data)
 
     @staticmethod
     def _normalize_string(string: str) -> str:

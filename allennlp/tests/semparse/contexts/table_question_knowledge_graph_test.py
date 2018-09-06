@@ -35,6 +35,19 @@ class TestTableQuestionKnowledgeGraph(AllenNlpTestCase):
         assert graph.entity_text['0'] == '0'
         assert graph.entity_text['1'] == '1'
 
+    def test_read_from_json_makes_correct_table_data(self):
+        json = {
+                'question': [Token(x) for x in ['where', 'is', 'mersin', '?']],
+                'columns': ['Name in English', 'Location'],
+                'cells': [['Paradeniz', 'Mersin'],
+                          ['Lake Gala', 'Edirne']]
+                }
+        graph = TableQuestionKnowledgeGraph.read_from_json(json)
+        assert graph.table_data == [{'fb:row.row.name_in_english': 'fb:cell.paradeniz',
+                                     'fb:row.row.location': 'fb:cell.mersin'},
+                                    {'fb:row.row.name_in_english': 'fb:cell.lake_gala',
+                                     'fb:row.row.location': 'fb:cell.edirne'}]
+
     def test_read_from_json_replaces_newlines(self):
         # The csv -> tsv conversion renders '\n' as r'\n' (with a literal slash character), that
         # gets read in a two characters instead of one.  We need to make sure we convert it back to
