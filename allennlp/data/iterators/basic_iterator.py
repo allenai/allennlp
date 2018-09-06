@@ -25,6 +25,9 @@ class BasicIterator(DataIterator):
             iterator = iter(instance_list)
             # Then break each memory-sized list into batches.
             for batch_instances in lazy_groups_of(iterator, self._batch_size):
+                if self.vocab is not None:
+                    for instance in batch_instances:
+                        instance.index_fields(self.vocab)
                 for possibly_smaller_batches in self._ensure_batch_is_sufficiently_small(batch_instances):
                     batch = Batch(possibly_smaller_batches)
                     yield batch
