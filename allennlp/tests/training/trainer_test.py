@@ -98,11 +98,11 @@ class TestTrainer(AllenNlpTestCase):
             def forward(self, **kwargs):
                 assert 'metadata' in kwargs and 'tags' in kwargs, \
                     f'tokens and metadata must be provided. Got {kwargs.keys()} instead.'
-                batch_size = kwargs['tokens'].values()[0].size()[0]
+                batch_size = kwargs['tokens']['tokens'].size()[0]
                 assert len(kwargs['metadata']) == batch_size, \
                     f'metadata must be split appropriately. Expected {batch_size} elements, ' \
                     f"got {len(kwargs['metadata'])} elements."
-                self.model.forward(**kwargs)
+                return self.model.forward(**kwargs)
 
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(self.vocab)
