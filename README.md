@@ -185,8 +185,7 @@ state of the art models with high quality engineering.
 
 ## Docker images
 
-AllenNLP releases Docker images to Docker Hub for each release.  For information on how to run these releases, see
-[Installing using Docker](#installing-using-docker).
+AllenNLP releases Docker images to [Docker Hub](https://hub.docker.com/r/allennlp/) for each release.  For information on how to run these releases, see [Installing using Docker](#installing-using-docker).
 
 ### Building a Docker image
 
