@@ -51,6 +51,12 @@ sentences around, using the `--include-sentence-indices` flag will write a
 JSON-serialized string with a mapping from sentences to line indices to the
 `"sentence_indices"` key.
 
+If you'd like to write ELMo probabilities to disk, add the paths to the softmax
+weight file (`--softmax-weight-file`), and softmax vocab file (`--softmax-vocab-file`).
+This will load the `_ElmoSoftmax` class and calculate the probabilities. Note:
+running the softmax layer will be a lot slower than running the ELMo representations.
+The softmax layer is also memory-intensive so tune the `--chunk-size` as necessary.
+
 For more details, see `allennlp elmo -h`. 
 
 ## Using ELMo programmatically

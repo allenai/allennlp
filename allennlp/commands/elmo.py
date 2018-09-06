@@ -80,7 +80,6 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_OPTIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json" # pylint: disable=line-too-long
 DEFAULT_WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5" # pylint: disable=line-too-long
-# TODO: add softmax as an option to the elmo command
 DEFAULT_SOFTMAX_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_softmax_weights.hdf5"  # pylint: disable=line-too-long
 DEFAULT_VOCAB_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/vocab-2016-09-10.txt"  # pylint: disable=line-too-long
 DEFAULT_BATCH_SIZE = 64
@@ -125,7 +124,7 @@ class Elmo(Subcommand):
                 default=None,  # DEFAULT_SOFTMAX_FILE,
                 help='The path to the ELMo Softmax weight file.')
         subparser.add_argument(
-                '--vocab-file',
+                '--softmax-vocab-file',
                 type=str,
                 default=None,  # DEFAULT_VOCAB_FILE,
                 help='The path to the ELMo vocab file.')
@@ -167,7 +166,7 @@ class ElmoEmbedder():
                  options_file: str = DEFAULT_OPTIONS_FILE,
                  weight_file: str = DEFAULT_WEIGHT_FILE,
                  softmax_weight_file: str = None,
-                 vocab_file: str = None,
+                 softmax_vocab_file: str = None,
                  cuda_device: int = -1,
                  chunk_size: int = 16) -> None:
         """
@@ -179,7 +178,7 @@ class ElmoEmbedder():
             A path or URL to an ELMo weights file.
         softmax_weight_file : ``str``, optional
             A path or URL to an ELMo softmax weights file.
-        vocab_file : ``str``, optional
+        softmax_vocab_file : ``str``, optional
             A path or URL to an ELMo vocab file.
         cuda_device : ``int``, optional, (default=-1)
             The GPU device to run on.
@@ -190,9 +189,9 @@ class ElmoEmbedder():
 
         logger.info("Initializing ELMo.")
         self.elmo_bilm = _ElmoBiLm(options_file, weight_file)
-        if softmax_weight_file and vocab_file:
+        if softmax_weight_file and softmax_vocab_file:
             logger.info("Initializing ELMo Softmax.")
-            self.elmo_softmax = _ElmoSoftmax(softmax_weight_file, vocab_file,
+            self.elmo_softmax = _ElmoSoftmax(softmax_weight_file, softmax_vocab_file,
                                              chunk_size=chunk_size)
         else:
             self.elmo_softmax = None
@@ -426,7 +425,7 @@ class ElmoEmbedder():
 def elmo_command(args):
     elmo_embedder = ElmoEmbedder(
         options_file=args.options_file, weight_file=args.weight_file,
-        softmax_weight_file=args.softmax_weight_file, vocab_file=args.vocab_file,
+        softmax_weight_file=args.softmax_weight_file, softmax_vocab_file=args.softmax_vocab_file,
         cuda_device=args.cuda_device, chunk_size=args.chunk_size,
     )
     output_format = ""

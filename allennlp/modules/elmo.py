@@ -702,7 +702,7 @@ class _ElmoSoftmax(torch.nn.Module):
     ----------
     softmax_weight_file : ``str``, required
         The .hdf5 file for the softmax weights.
-    vocab_file : ``str``, required
+    softmax_vocab_file : ``str``, required
         The .txt file for the vocabulary used for training ELMo.
     chunk_size : ``int``, optional, (default 256)
         The chunk size of the softmax layer. The default (256) takes about
@@ -711,15 +711,15 @@ class _ElmoSoftmax(torch.nn.Module):
 
     def __init__(self,
                  softmax_weight_file: str,
-                 vocab_file: str,
+                 softmax_vocab_file: str,
                  chunk_size: int = 256):
 
         super(_ElmoSoftmax, self).__init__()
 
         self.softmax_weight_file = softmax_weight_file
-        self.vocab_file = vocab_file
+        self.softmax_vocab_file = softmax_vocab_file
 
-        self.vocab = self._load_vocab(self.vocab_file)
+        self.vocab = self._load_vocab(self.softmax_vocab_file)
         self.fc_layer = self._load_softmax_weights(
             self.softmax_weight_file, self.vocab.get_vocab_size())
 
@@ -728,10 +728,10 @@ class _ElmoSoftmax(torch.nn.Module):
         # TODO: do we add CUDA code here?
 
     @staticmethod
-    def _load_vocab(vocab_file: str) -> Vocabulary:
+    def _load_vocab(softmax_vocab_file: str) -> Vocabulary:
         vocab = Vocabulary()
         vocab._oov_token = '<UNK>'
-        vocab.set_from_file(cached_path(vocab_file), is_padded=False)
+        vocab.set_from_file(cached_path(softmax_vocab_file), is_padded=False)
         return vocab
 
     @staticmethod
@@ -794,7 +794,7 @@ class _ElmoSoftmax(torch.nn.Module):
                 aggregation_fun: str = None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Passes the ELMo embeddings to a softmax layer and calculates
-        the
+        the log probabilities.
 
         Parameters
         ----------
