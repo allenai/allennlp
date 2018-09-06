@@ -742,7 +742,6 @@ class _ElmoSoftmax(torch.nn.Module):
             softmax_weight_file: str,
             vocab_size: int,
             hidden_size: int) -> torch.Tensor:
-        # TODO: set size
         fc_layer = torch.nn.Linear(hidden_size, vocab_size)
 
         with h5py.File(cached_path(softmax_weight_file), 'r') as fin:
