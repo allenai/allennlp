@@ -5,7 +5,7 @@
     "train_data_path": "allennlp/tests/fixtures/data/dm.sdp",
     "validation_data_path": "allennlp/tests/fixtures/data/dm.sdp",
     "model": {
-      "type": "dag_parser",
+      "type": "graph_parser",
       "text_field_embedder": {
         "tokens": {
           "type": "embedding",

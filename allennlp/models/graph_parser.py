@@ -21,10 +21,10 @@ from allennlp.training.metrics import AttachmentScores
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@Model.register("dag_parser")
-class DagParser(Model):
+@Model.register("graph_parser")
+class GraphParser(Model):
     """
-    A Parser for arbitrary DAG stuctures.
+    A Parser for arbitrary graph stuctures.
 
     Parameters
     ----------
@@ -69,7 +69,7 @@ class DagParser(Model):
                  input_dropout: float = 0.0,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(DagParser, self).__init__(vocab, regularizer)
+        super(GraphParser, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.encoder = encoder
@@ -315,7 +315,7 @@ class DagParser(Model):
         # shape (batch_size, sequence_length, sequence_length)
         arc_probs = attended_arcs.sigmoid()
         # shape (batch_size, sequence_length, sequence_length, num_tags)
-        arc_tag_probs = torch.nn.functional.softmax(arc_tag_logits)
+        arc_tag_probs = torch.nn.functional.softmax(arc_tag_logits, dim=-1)
         return arc_probs, arc_tag_probs
 
     @overrides
