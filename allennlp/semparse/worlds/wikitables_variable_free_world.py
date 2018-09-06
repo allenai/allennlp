@@ -1,5 +1,5 @@
 """
-We store the information related to execution of context sensitive execution of logical forms here.
+We store the information related to context sensitive execution of logical forms here.
 We assume that the logical forms are written in the variable-free language described in the paper
 'Memory Augmented Policy Optimization for Program Synthesis with Generalization' by Liang et al.
 The language is the main difference between this class and `WikiTablesWorld`. Also, this class defines
@@ -77,20 +77,13 @@ class WikiTablesVariableFreeWorld(World):
         """
         return entity_name in self._entity_set
 
+    @overrides
     def _get_curried_functions(self) -> Dict[Type, int]:
         return WikiTablesVariableFreeWorld.curried_functions
 
     @overrides
     def get_basic_types(self) -> Set[Type]:
         return types.BASIC_TYPES
-
-    @overrides
-    def get_valid_actions(self) -> Dict[str, List[str]]:
-        if self._valid_actions:
-            return self._valid_actions
-        valid_actions = super().get_valid_actions()
-        self._valid_actions = valid_actions
-        return valid_actions
 
     @overrides
     def get_valid_starting_types(self) -> Set[Type]:

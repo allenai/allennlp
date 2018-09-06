@@ -5,7 +5,7 @@ Memory Augmented Policy Optimization for Program Synthesis with Generalization.
 """
 
 
-from allennlp.semparse.type_declarations.type_declaration import NamedBasicType, ComplexType
+from allennlp.semparse.type_declarations.type_declaration import Type, NamedBasicType, ComplexType
 
 
 # Basic types
@@ -31,6 +31,9 @@ SELECT_TYPE = ComplexType(ROW_TYPE, ComplexType(COLUMN_TYPE, STRING_TYPE))
 
 # Type for filtering rows given a column. "argmax", "argmin" and "same_as" (select all rows with the
 # same value under the given column as the given row does under the given column)
+# Note that the values used for comparison in "argmax" and "argmin" can only come from column
+# lookups in this language. In LambdaDCS, there's a lambda function that is applied to the rows to
+# get the values, but here, we simply have a column name.
 ROW_FILTER_WITH_COLUMN = ComplexType(ROW_TYPE, ComplexType(COLUMN_TYPE, ROW_TYPE))
 
 # "filter_number_greater", "filter_number_equals" etc.
@@ -50,6 +53,7 @@ ROW_FILTER_WITH_COLUMN_AND_STRING = ComplexType(ROW_TYPE,
 
 ROW_FILTER = ComplexType(ROW_TYPE, ROW_TYPE)  # first, last, previous, next etc.
 
+# This language lets you count only rows!
 COUNT_TYPE = ComplexType(ROW_TYPE, NUMBER_TYPE)
 
 # Numerical operations on numbers in the given column. "max", "min", "sum", "average" etc.
@@ -68,7 +72,7 @@ COMMON_NAME_MAPPING = {}
 COMMON_TYPE_SIGNATURE = {}
 
 
-def add_common_name_with_type(name, mapping, type_signature):
+def add_common_name_with_type(name: str, mapping: str, type_signature: Type) -> None:
     COMMON_NAME_MAPPING[name] = mapping
     COMMON_TYPE_SIGNATURE[mapping] = type_signature
 
