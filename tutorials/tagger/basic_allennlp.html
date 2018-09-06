@@ -1,0 +1,342 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"
+   "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+  <title></title>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <style type="text/css">
+td.linenos { background-color: #f0f0f0; padding-right: 10px; }
+span.lineno { background-color: #f0f0f0; padding: 0 5px 0 5px; }
+pre { line-height: 125%; }
+body .hll { background-color: #ffffcc }
+body  { background: #f8f8f8; }
+body .c { color: #408080; font-style: italic } /* Comment */
+body .err { border: 1px solid #FF0000 } /* Error */
+body .k { color: #008000; font-weight: bold } /* Keyword */
+body .o { color: #666666 } /* Operator */
+body .ch { color: #408080; font-style: italic } /* Comment.Hashbang */
+body .cm { color: #408080; font-style: italic } /* Comment.Multiline */
+body .cp { color: #BC7A00 } /* Comment.Preproc */
+body .cpf { color: #408080; font-style: italic } /* Comment.PreprocFile */
+body .c1 { color: #408080; font-style: italic } /* Comment.Single */
+body .cs { color: #408080; font-style: italic } /* Comment.Special */
+body .gd { color: #A00000 } /* Generic.Deleted */
+body .ge { font-style: italic } /* Generic.Emph */
+body .gr { color: #FF0000 } /* Generic.Error */
+body .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+body .gi { color: #00A000 } /* Generic.Inserted */
+body .go { color: #888888 } /* Generic.Output */
+body .gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+body .gs { font-weight: bold } /* Generic.Strong */
+body .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+body .gt { color: #0044DD } /* Generic.Traceback */
+body .kc { color: #008000; font-weight: bold } /* Keyword.Constant */
+body .kd { color: #008000; font-weight: bold } /* Keyword.Declaration */
+body .kn { color: #008000; font-weight: bold } /* Keyword.Namespace */
+body .kp { color: #008000 } /* Keyword.Pseudo */
+body .kr { color: #008000; font-weight: bold } /* Keyword.Reserved */
+body .kt { color: #B00040 } /* Keyword.Type */
+body .m { color: #666666 } /* Literal.Number */
+body .s { color: #BA2121 } /* Literal.String */
+body .na { color: #7D9029 } /* Name.Attribute */
+body .nb { color: #008000 } /* Name.Builtin */
+body .nc { color: #0000FF; font-weight: bold } /* Name.Class */
+body .no { color: #880000 } /* Name.Constant */
+body .nd { color: #AA22FF } /* Name.Decorator */
+body .ni { color: #999999; font-weight: bold } /* Name.Entity */
+body .ne { color: #D2413A; font-weight: bold } /* Name.Exception */
+body .nf { color: #0000FF } /* Name.Function */
+body .nl { color: #A0A000 } /* Name.Label */
+body .nn { color: #0000FF; font-weight: bold } /* Name.Namespace */
+body .nt { color: #008000; font-weight: bold } /* Name.Tag */
+body .nv { color: #19177C } /* Name.Variable */
+body .ow { color: #AA22FF; font-weight: bold } /* Operator.Word */
+body .w { color: #bbbbbb } /* Text.Whitespace */
+body .mb { color: #666666 } /* Literal.Number.Bin */
+body .mf { color: #666666 } /* Literal.Number.Float */
+body .mh { color: #666666 } /* Literal.Number.Hex */
+body .mi { color: #666666 } /* Literal.Number.Integer */
+body .mo { color: #666666 } /* Literal.Number.Oct */
+body .sa { color: #BA2121 } /* Literal.String.Affix */
+body .sb { color: #BA2121 } /* Literal.String.Backtick */
+body .sc { color: #BA2121 } /* Literal.String.Char */
+body .dl { color: #BA2121 } /* Literal.String.Delimiter */
+body .sd { color: #BA2121; font-style: italic } /* Literal.String.Doc */
+body .s2 { color: #BA2121 } /* Literal.String.Double */
+body .se { color: #BB6622; font-weight: bold } /* Literal.String.Escape */
+body .sh { color: #BA2121 } /* Literal.String.Heredoc */
+body .si { color: #BB6688; font-weight: bold } /* Literal.String.Interpol */
+body .sx { color: #008000 } /* Literal.String.Other */
+body .sr { color: #BB6688 } /* Literal.String.Regex */
+body .s1 { color: #BA2121 } /* Literal.String.Single */
+body .ss { color: #19177C } /* Literal.String.Symbol */
+body .bp { color: #008000 } /* Name.Builtin.Pseudo */
+body .fm { color: #0000FF } /* Name.Function.Magic */
+body .vc { color: #19177C } /* Name.Variable.Class */
+body .vg { color: #19177C } /* Name.Variable.Global */
+body .vi { color: #19177C } /* Name.Variable.Instance */
+body .vm { color: #19177C } /* Name.Variable.Magic */
+body .il { color: #666666 } /* Literal.Number.Integer.Long */
+
+td:first-child { white-space: pre; line-height: 125%; font-family: monospace; width: 80ch; }
+
+  </style>
+</head>
+<body>
+
+<div class="intro">
+    <h2>Welcome!</h2>
+        Welcome to AllenNLP! This tutorial will walk you through the basics of building and training an AllenNLP model.
+        Before we get started, make sure you have a clean Python 3.6 or 3.7 virtual environment, and then run
+
+        <pre>pip install allennlp</pre>
+
+        to install the AllenNLP library.
+
+        In this tutorial we'll implement a slightly enhanced version of the PyTorch
+        <a href = "https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html#example-an-lstm-for-part-of-speech-tagging">LSTM for Part-of-Speech Tagging</a> tutorial,
+        adding some features that make it a slightly more realistic task (and that also showcase some of the benefits of AllenNLP):
+
+    <ol>
+        <li>read data from files (rather than having it hardcoded)</li>
+        <li>use a validation dataset that's distinct from the training dataset</li>
+        <li>use tqdm to track the training progress (and corresponding loss metric)</li>
+        <li>implement early stopping based on validation loss</li>
+        <li>track accuracy during training and validation</li>
+    </ol>
+
+    <h2>The Problem</h2>
+    Given a sentence (e.g. "The dog ate the apple") we want to predict part-of-speech tags for each word (e.g ["DET", "NN", "V", "DET", "NN"]).
+
+    As in the PyTorch tutorial, we'll embed each word in a low-dimensional space, pass them through an LSTM to get a sequence of encodings, and use a feedforward layer to transform those into a sequence of logits (corresponding to the possible part-of-speech tags).
+
+    The code is simple enough that we'll just annotate it as we go.
+</div>
+
+<table>
+
+    <tr><td>
+<span class="c1"># pylint: disable=invalid-name,arguments-differ,redefined-outer-name</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span>
+    </td><td>
+        We use type annotations all over our code, so we have to import a few things here.
+    </td></tr>
+
+    <tr><td>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.optim</span> <span class="kn">as</span> <span class="nn">optim</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+    </td><td>
+        AllenNLP is built on PyTorch, so we'll import a few of its features to use directly.
+    </td></tr>
+
+    <tr><td>
+<span class="kn">from</span> <span class="nn">allennlp.data</span> <span class="kn">import</span> <span class="n">Instance</span>
+<span class="kn">from</span> <span class="nn">allennlp.data.fields</span> <span class="kn">import</span> <span class="n">TextField</span><span class="p">,</span> <span class="n">SequenceLabelField</span>
+    </td><td>
+        In AllenNLP we represent each training example as an <code>Instance</code> consisting of <code>Field</code>s of various types.
+        Here each example is a sentence (which we store in a <code>TextField</code>) with corresponding part-of-speech tags
+        (which we store in a <code>SequenceLabelField</code>.)
+    </td></tr>
+
+    <tr><td>
+
+
+<span class="kn">from</span> <span class="nn">allennlp.data.dataset_readers</span> <span class="kn">import</span> <span class="n">DatasetReader</span>
+<span class="kn">from</span> <span class="nn">allennlp.data.iterators</span> <span class="kn">import</span> <span class="n">BasicIterator</span>
+<span class="kn">from</span> <span class="nn">allennlp.data.token_indexers</span> <span class="kn">import</span> <span class="n">TokenIndexer</span><span class="p">,</span> <span class="n">SingleIdTokenIndexer</span>
+<span class="kn">from</span> <span class="nn">allennlp.data.tokenizers</span> <span class="kn">import</span> <span class="n">Token</span>
+<span class="kn">from</span> <span class="nn">allennlp.data.vocabulary</span> <span class="kn">import</span> <span class="n">Vocabulary</span>
+<span class="kn">from</span> <span class="nn">allennlp.models</span> <span class="kn">import</span> <span class="n">Model</span>
+<span class="kn">from</span> <span class="nn">allennlp.modules.feedforward</span> <span class="kn">import</span> <span class="n">FeedForward</span>
+<span class="kn">from</span> <span class="nn">allennlp.modules.text_field_embedders</span> <span class="kn">import</span> <span class="n">TextFieldEmbedder</span><span class="p">,</span> <span class="n">BasicTextFieldEmbedder</span>
+<span class="kn">from</span> <span class="nn">allennlp.modules.token_embedders</span> <span class="kn">import</span> <span class="n">Embedding</span>
+<span class="kn">from</span> <span class="nn">allennlp.modules.seq2seq_encoders</span> <span class="kn">import</span> <span class="n">Seq2SeqEncoder</span><span class="p">,</span> <span class="n">PytorchSeq2SeqWrapper</span>
+<span class="kn">from</span> <span class="nn">allennlp.nn.util</span> <span class="kn">import</span> <span class="n">get_text_field_mask</span><span class="p">,</span> <span class="n">sequence_cross_entropy_with_logits</span>
+<span class="kn">from</span> <span class="nn">allennlp.predictors</span> <span class="kn">import</span> <span class="n">SentenceTaggerPredictor</span>
+<span class="kn">from</span> <span class="nn">allennlp.training.metrics</span> <span class="kn">import</span> <span class="n">CategoricalAccuracy</span>
+<span class="kn">from</span> <span class="nn">allennlp.training.trainer</span> <span class="kn">import</span> <span class="n">Trainer</span>
+    </td><td>
+    </td></tr>
+
+    <tr><td>
+<span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    </td><td>
+    </td></tr>
+
+    <tr><td>
+<span class="k">class</span> <span class="nc">PosDatasetReader</span><span class="p">(</span><span class="n">DatasetReader</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    DatasetReader for PoS tagging data, one sentence per line, like</span>
+
+<span class="sd">        The###DET dog###NN ate###V the###DET apple###NN</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">token_indexers</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">TokenIndexer</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">lazy</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">token_indexers</span> <span class="o">=</span> <span class="n">token_indexers</span> <span class="ow">or</span> <span class="p">{</span><span class="s2">&quot;tokens&quot;</span><span class="p">:</span> <span class="n">SingleIdTokenIndexer</span><span class="p">()}</span>
+    </td><td>
+        </td></tr>
+
+        <tr><td>
+    <span class="k">def</span> <span class="nf">text_to_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tokens</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Token</span><span class="p">],</span> <span class="n">tags</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Instance</span><span class="p">:</span>
+        <span class="n">sentence_field</span> <span class="o">=</span> <span class="n">TextField</span><span class="p">(</span><span class="n">tokens</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">token_indexers</span><span class="p">)</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;sentence&quot;</span><span class="p">:</span> <span class="n">sentence_field</span><span class="p">}</span>
+    </td><td>
+        </td></tr>
+
+        <tr><td>
+
+        <span class="k">if</span> <span class="n">tags</span><span class="p">:</span>
+            <span class="n">label_field</span> <span class="o">=</span> <span class="n">SequenceLabelField</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="n">tags</span><span class="p">,</span> <span class="n">sequence_field</span><span class="o">=</span><span class="n">sentence_field</span><span class="p">)</span>
+            <span class="n">fields</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">label_field</span>
+        </td><td>
+            </td></tr>
+
+            <tr><td>
+
+        <span class="k">return</span> <span class="n">Instance</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span>
+    </td><td>
+        </td></tr>
+
+        <tr><td>
+
+    <span class="k">def</span> <span class="nf">_read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Instance</span><span class="p">]:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">pairs</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="n">sentence</span><span class="p">,</span> <span class="n">tags</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">pair</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;###&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">pairs</span><span class="p">))</span>
+                <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">text_to_instance</span><span class="p">([</span><span class="n">Token</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">sentence</span><span class="p">],</span> <span class="n">tags</span><span class="p">)</span>
+            </td><td>
+                </td></tr>
+
+                <tr><td>
+
+<span class="n">reader</span> <span class="o">=</span> <span class="n">PosDatasetReader</span><span class="p">()</span>
+<span class="n">train_dataset</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="s1">&#39;tutorials/tagger/training.txt&#39;</span><span class="p">)</span>
+<span class="n">validation_dataset</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="s1">&#39;tutorials/tagger/validation.txt&#39;</span><span class="p">)</span>
+<span class="n">vocab</span> <span class="o">=</span> <span class="n">Vocabulary</span><span class="o">.</span><span class="n">from_instances</span><span class="p">(</span><span class="n">train_dataset</span> <span class="o">+</span> <span class="n">validation_dataset</span><span class="p">)</span>
+</td><td>
+    </td></tr>
+
+    <tr><td>
+
+<span class="n">EMBEDDING_DIM</span> <span class="o">=</span> <span class="mi">6</span>
+<span class="n">HIDDEN_DIM</span> <span class="o">=</span> <span class="mi">6</span>
+</td><td>
+    </td></tr>
+
+    <tr><td>
+
+<span class="k">class</span> <span class="nc">LstmTagger</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">word_embeddings</span><span class="p">:</span> <span class="n">TextFieldEmbedder</span><span class="p">,</span>
+                 <span class="n">encoder</span><span class="p">:</span> <span class="n">Seq2SeqEncoder</span><span class="p">,</span>
+                 <span class="n">vocab</span><span class="p">:</span> <span class="n">Vocabulary</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">vocab</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">word_embeddings</span> <span class="o">=</span> <span class="n">word_embeddings</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">encoder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hidden2tag</span> <span class="o">=</span> <span class="n">FeedForward</span><span class="p">(</span><span class="n">input_dim</span><span class="o">=</span><span class="n">encoder</span><span class="o">.</span><span class="n">get_output_dim</span><span class="p">(),</span>
+                                      <span class="n">num_layers</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                      <span class="n">hidden_dims</span><span class="o">=</span><span class="n">vocab</span><span class="o">.</span><span class="n">get_vocab_size</span><span class="p">(</span><span class="s1">&#39;labels&#39;</span><span class="p">),</span>
+                                      <span class="n">activations</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span> <span class="o">=</span> <span class="n">CategoricalAccuracy</span><span class="p">()</span>
+    </td><td>
+        </td></tr>
+
+        <tr><td>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sentence</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">labels</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+        <span class="n">embeddings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">word_embeddings</span><span class="p">(</span><span class="n">sentence</span><span class="p">)</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">get_text_field_mask</span><span class="p">(</span><span class="n">sentence</span><span class="p">)</span>
+        <span class="n">encoder_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">embeddings</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span>
+        <span class="n">tag_logits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hidden2tag</span><span class="p">(</span><span class="n">encoder_out</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;tag_logits&quot;</span><span class="p">:</span> <span class="n">tag_logits</span><span class="p">}</span>
+    </td><td>
+        </td></tr>
+
+        <tr><td>
+
+        <span class="k">if</span> <span class="n">labels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span><span class="p">(</span><span class="n">tag_logits</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span>
+            <span class="n">output</span><span class="p">[</span><span class="s2">&quot;loss&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sequence_cross_entropy_with_logits</span><span class="p">(</span><span class="n">tag_logits</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span>
+        </td><td>
+            </td></tr>
+
+            <tr><td>
+
+        <span class="k">return</span> <span class="n">output</span>
+    </td><td>
+        </td></tr>
+
+        <tr><td>
+
+    <span class="k">def</span> <span class="nf">get_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reset</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="bp">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;accuracy&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">accuracy</span><span class="o">.</span><span class="n">get_metric</span><span class="p">(</span><span class="n">reset</span><span class="p">)}</span>
+
+    </td><td>
+        </td></tr>
+
+        <tr><td>
+
+<span class="n">token_embedding</span> <span class="o">=</span> <span class="n">Embedding</span><span class="p">(</span><span class="n">num_embeddings</span><span class="o">=</span><span class="n">vocab</span><span class="o">.</span><span class="n">get_vocab_size</span><span class="p">(</span><span class="s1">&#39;tokens&#39;</span><span class="p">),</span>
+                            <span class="n">embedding_dim</span><span class="o">=</span><span class="n">EMBEDDING_DIM</span><span class="p">)</span>
+<span class="n">word_embeddings</span> <span class="o">=</span> <span class="n">BasicTextFieldEmbedder</span><span class="p">({</span><span class="s2">&quot;tokens&quot;</span><span class="p">:</span> <span class="n">token_embedding</span><span class="p">})</span>
+<span class="n">lstm</span> <span class="o">=</span> <span class="n">PytorchSeq2SeqWrapper</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">LSTM</span><span class="p">(</span><span class="n">EMBEDDING_DIM</span><span class="p">,</span> <span class="n">HIDDEN_DIM</span><span class="p">,</span> <span class="n">batch_first</span><span class="o">=</span><span class="bp">True</span><span class="p">))</span>
+</td><td>
+    </td></tr>
+
+    <tr><td>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">LstmTagger</span><span class="p">(</span><span class="n">word_embeddings</span><span class="p">,</span> <span class="n">lstm</span><span class="p">,</span> <span class="n">vocab</span><span class="p">)</span>
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+</td><td>
+    </td></tr>
+
+    <tr><td>
+
+<span class="n">iterator</span> <span class="o">=</span> <span class="n">BasicIterator</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">iterator</span><span class="o">.</span><span class="n">index_with</span><span class="p">(</span><span class="n">vocab</span><span class="p">)</span>
+</td><td>
+    </td></tr>
+
+    <tr><td>
+
+<span class="n">trainer</span> <span class="o">=</span> <span class="n">Trainer</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                  <span class="n">optimizer</span><span class="o">=</span><span class="n">optimizer</span><span class="p">,</span>
+                  <span class="n">iterator</span><span class="o">=</span><span class="n">iterator</span><span class="p">,</span>
+                  <span class="n">train_dataset</span><span class="o">=</span><span class="n">train_dataset</span><span class="p">,</span>
+                  <span class="n">validation_dataset</span><span class="o">=</span><span class="n">validation_dataset</span><span class="p">,</span>
+                  <span class="n">patience</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                  <span class="n">num_epochs</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+                </td><td>
+                    </td></tr>
+
+                    <tr><td>
+
+<span class="c1"># No need to see what the scores are before training,</span>
+<span class="c1"># our trainer will show the loss over time.</span>
+</td><td>
+    </td></tr>
+
+    <tr><td>
+
+<span class="c1"># Train</span>
+<span class="n">trainer</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+</td><td>
+    </td></tr>
+
+    <tr><td>
+
+<span class="c1"># See what the scores are after training</span>
+<span class="c1"># Make predictions</span>
+<span class="n">predictor</span> <span class="o">=</span> <span class="n">SentenceTaggerPredictor</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">dataset_reader</span><span class="o">=</span><span class="n">reader</span><span class="p">)</span>
+<span class="n">tag_scores</span> <span class="o">=</span> <span class="n">predictor</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="s2">&quot;The dog ate the apple&quot;</span><span class="p">)[</span><span class="s1">&#39;tag_logits&#39;</span><span class="p">]</span>
+<span class="k">print</span><span class="p">(</span><span class="n">tag_scores</span><span class="p">)</span>
+<span class="n">tag_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">tag_scores</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">print</span><span class="p">([</span><span class="n">model</span><span class="o">.</span><span class="n">vocab</span><span class="o">.</span><span class="n">get_token_from_index</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;labels&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">tag_ids</span><span class="p">])</span>
+</td><td>
+    </td></tr>
+</table>
+</body>
+</html>
