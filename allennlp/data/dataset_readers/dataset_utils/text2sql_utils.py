@@ -3,7 +3,7 @@
 Utility functions for reading the standardised text2sql datasets presented in
 `"Improving Text to SQL Evaluation Methodology" <https://arxiv.org/abs/1806.09029>`_
 """
-from typing import List, Dict, Tuple, NamedTuple
+from typing import List, Dict, Tuple, NamedTuple, Iterable
 import json
 
 from allennlp.common import JsonDict
@@ -67,11 +67,16 @@ def clean_and_split_sql(sql: str) -> List[str]:
 def process_sql_data_blob(data: JsonDict,
                           use_all_sql: bool = False,
                           use_question_split: bool = False,
-                          cross_validation_split: int = None) -> Tuple[str, SqlData]:
+                          cross_validation_split: int = None) -> Iterable[Tuple[str, SqlData]]:
     # If we're splitting based on SQL queries,
     # we assign whole splits of questions which
     # have a similar SQL template to the same split.
     dataset_split: str = data['query-split']
+
+    # TODO(Mark): currently this does not filter for duplicate _sentences_
+    # which have the same sql query. Really it should, because these instances
+    # are literally identical, so just magnify errors etc. However, doing this
+    # would make it really hard to compare to previous work. Sad times.
     for sent_info in data['sentences']:
         # Instead, if we're using the question split,
         # we take the split according to the individual question.
@@ -110,7 +115,6 @@ def process_sql_data_blob(data: JsonDict,
             # By default, we just use the first one. TODO(Mark): Use the shortest?
             if not use_all_sql:
                 break
-
 
 def get_split(filename: str,
               dataset_split: str,
