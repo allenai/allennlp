@@ -36,10 +36,12 @@ class KnowledgeGraph:
     def __init__(self,
                  entities: Set[str],
                  neighbors: Dict[str, List[str]],
-                 entity_text: Dict[str, str] = None) -> None:
+                 entity_text: Dict[str, str] = None,
+                 entity2in_prototype: Dict[str, bool] = None) -> None:
         self.entities = sorted(entities)
         self.neighbors = neighbors
         self.entity_text = entity_text
+        self.entity2in_prototype =entity2in_prototype
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):

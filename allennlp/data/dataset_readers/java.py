@@ -36,7 +36,7 @@ STOPS = set(stopwords.words("english"))
 class JavaDatasetReader(DatasetReader):
     def __init__(self,
                  utterance_indexers: Dict[str, TokenIndexer],
-                 type_indexers: Dict[str, TokenIndexer],
+                 # type_indexers: Dict[str, TokenIndexer],
                  min_identifier_count: int,
                  num_dataset_instances: int,
                  tokenizer: Tokenizer = None,
@@ -44,7 +44,7 @@ class JavaDatasetReader(DatasetReader):
                  lazy: bool = False) -> None:
         super().__init__(lazy)
         self._utterance_indexers = utterance_indexers
-        self._type_indexers = type_indexers
+        # self._type_indexers = type_indexers
 
         self._environment_token_indexers = {"tokens": SingleIdTokenIndexer()}
 
@@ -97,22 +97,23 @@ class JavaDatasetReader(DatasetReader):
 
         logger.info("Reading file at %s", file_path)
         with open(file_path) as dataset_file:
-            # dataset = json.load(dataset_file)
-            p2methods = json.load(dataset_file)
+            dataset = json.load(dataset_file)
+            # p2methods = json.load(dataset_file)
 
-        dataset = []
-        for _, methods in p2methods.items():
-            dataset += methods
-            if self._num_dataset_instances != -1:
-                if len(dataset) > self._num_dataset_instances:
-                    break
-        # if self._num_dataset_instances != -1:
-        #     dataset = dataset[:self._num_dataset_instances]
-        # print("Dataset lenght", len(dataset))
+        # for _, methods in p2methods.items():
+        #     dataset += methods
+        #     if self._num_dataset_instances != -1:
+        #         if len(dataset) > self._num_dataset_instances:
+        #             break
+        if self._num_dataset_instances != -1:
+            dataset = dataset[:self._num_dataset_instances]
 
         modified_rules = self.split_identifier_rule_into_multiple(
             [d['rules'] for d in dataset]
         )
+
+        print('---------------------')
+        print(dataset[0].keys())
 
         og_prototype_rules = [d['prototype_rules'] for d in dataset]
         prototype_rules = self.split_identifier_rule_into_multiple(
@@ -574,18 +575,18 @@ class JavaDatasetReader(DatasetReader):
         lazy = params.pop('lazy', False)
         tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
         # todo(rajas): utterance indexer should be renamed to identifier indexer
-        utterance_indexers = TokenIndexer.dict_from_params(params.pop('utterance_indexers'))
+        # utterance_indexers = SingleIdTokenIndexer.from_params(params.pop('utterance_indexers'))
+        utterance_indexers = SingleIdTokenIndexer.from_params(params.pop('utterance_indexers'))
         min_identifier_count = params.pop_int('min_identifier_count')
         num_dataset_instances = params.pop_int('num_dataset_instances', -1)
         linking_feature_extracters = params.pop('linking_feature_extractors', None)
-        # identifier_indexers = TokenIndexer.dict_from_params(params.pop('identifier_indexers'))
-        type_indexers = TokenIndexer.dict_from_params(params.pop('type_indexers'))
-        params.assert_empty(cls.__name__)
+        # identifier_indexers = TokenIndexer.from_params(params.pop('identifier_indexers'))
+        # type_indexers = TokenIndexer.from_params(params.pop('type_indexers'))
         return cls(utterance_indexers=utterance_indexers,
                    min_identifier_count=min_identifier_count,
                    num_dataset_instances=num_dataset_instances,
                    linking_feature_extractors=linking_feature_extracters,
                    # identifier_indexers=identifier_indexers,
-                   type_indexers=type_indexers,
+                   # type_indexers=type_indexers,
                    tokenizer=tokenizer,
                    lazy=lazy)
