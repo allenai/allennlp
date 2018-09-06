@@ -354,7 +354,7 @@ def is_lazy(iterable: Iterable[A]) -> bool:
     """
     return not isinstance(iterable, list)
 
-def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> List[int]:
+def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> Union[int, List[int]]:
     """
     Disambiguates single GPU and multiple GPU settings for cuda_device param
     """
