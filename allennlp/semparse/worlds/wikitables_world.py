@@ -65,9 +65,6 @@ class WikiTablesWorld(World):
                 signature = self.global_type_signatures[mapped_name]
                 self.terminal_productions[predicate] = f"{signature} -> {predicate}"
 
-        # We don't need to recompute this ever; let's just compute it once and cache it.
-        self._valid_actions: Dict[str, List[str]] = None
-
     def is_table_entity(self, entity_name: str) -> bool:
         """
         Returns ``True`` if the given entity is one of the entities in the table.

@@ -105,7 +105,7 @@ class World:
                                                           type_signatures=self.global_type_signatures)
         self._right_side_indexed_actions: Dict[str, List[Tuple[str, str]]] = None
         # Caching this to avoid recompting it every time `get_valid_actions` is called.
-        self._valid_actions = None
+        self._valid_actions: Dict[str, List[str]] = None
 
     def get_name_mapping(self) -> Dict[str, str]:
         # Python 3.5 syntax for merging two dictionaries.
