@@ -61,9 +61,6 @@ just run `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.6.1` to get an e
 
 You can now test your installation with `./scripts/verify.py`.
 
-Our Docker image contains the AllenNLP source rather than a `pip` installation. Consequently, the `allennlp` commandline tool is not
-installed and you will have to use `./allennlp/run.py` instead.
-
 ### Installing from source
 
 You can also install AllenNLP by cloning our git repository:
