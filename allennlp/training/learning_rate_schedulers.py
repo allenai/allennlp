@@ -182,6 +182,13 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
         self.gradual_unfreezing = gradual_unfreezing
         self.freezing_current = self.gradual_unfreezing
         self.is_first_epoch = True
+        if self.gradual_unfreezing:
+            assert not optimizer.param_groups[-1]["params"], \
+                "The default group should be empty."
+        if self.gradual_unfreezing or discriminative_fine_tuning:
+            assert len(optimizer.param_groups) > 2, \
+                "There should be at least 3 param_groups (2 + empty default group)" \
+                " for gradual unfreezing / discriminative fine-tuning to make sense."
         super().__init__(optimizer, last_epoch=last_epoch)
         if discriminative_fine_tuning:
             # skip the last param_group if it is has no parameters
@@ -195,8 +202,6 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
 
     def step(self, epoch=None):
         if self.gradual_unfreezing:
-            assert not self.optimizer.param_groups[-1]["params"], \
-                "The default group should be empty."
             # the method is called once when initialising before the
             # first epoch (epoch 0) and then always at the end of each
             # epoch; so the first time, with epoch id 0, we want to set
