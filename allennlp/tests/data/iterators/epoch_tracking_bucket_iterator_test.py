@@ -8,6 +8,7 @@ class EpochTrackingBucketIteratorTest(IteratorTest):
         # TextFields.
         super(EpochTrackingBucketIteratorTest, self).setUp()
         self.iterator = EpochTrackingBucketIterator(sorting_keys=[["text", "num_tokens"]])
+        self.iterator.index_with(self.vocab)
         # We'll add more to create a second dataset.
         self.more_instances = [
                 self.create_instance(["this", "is", "a", "sentence"]),
