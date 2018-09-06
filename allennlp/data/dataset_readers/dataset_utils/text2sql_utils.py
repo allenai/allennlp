@@ -3,122 +3,71 @@
 Utility functions for reading the standardised text2sql datasets presented in
 `"Improving Text to SQL Evaluation Methodology" <https://arxiv.org/abs/1806.09029>`_
 """
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, NamedTuple
 import json
 
 from allennlp.common import JsonDict
 
 
-def get_template(sql_tokens: List[str],
-                 sql_variables: Dict[str, str],
-                 sent_variables: Dict[str, str]):
+class SqlData(NamedTuple):
     """
+    A utility class for reading in text2sql data.
+
     Parameters
     ----------
-    sentence : ``List[str]``, required.
-        The tokens in the sentence.
-    sentence_variables : ``Dict[str, str]``, required.
-        The variable in the sentence and it's actual string. e.g {'var0': 'texas'}.
-    sql_variables : ``Dict[str, str]``, required.
-        The variables extracted from the sentence and sql query.
-        e.g. {'example': 'arizona', 'location': 'both', 'name': 'var0', 'type': 'state'}
-
-    Returns
-    -------
-    A string template with keywords replaced with variables coresponding to column names
-    in some SQL table.
+    text : ``List[str]``
+        The tokens in the text of the query.
+    text_with_variables : ``List[str]``
+        The tokens in the text of the query with variables
+        mapped to table names/abstract variables.
+    sql : ``List[str]``
+        The tokens in the SQL query which corresponds to the text.
+    text_variables : ``Dict[str, str]``
+        A dictionary of variables associated with the text, e.g. {"city_name0": "san fransisco"}
+    sql_variables : ``Dict[str, str]``
+        A dictionary of variables associated with the sql query.
     """
-    template = []
-    for token in sql_tokens:
-        if (token not in sent_variables) and (token not in sql_variables):
-            template.append(token)
-        elif token in sent_variables:
-            # This is the case that we have the variable
-            # in the sql variables but not the sentence variables.
-            # Apparently this is denoted with a "".
-            if sent_variables[token] == '':
-                template.append(sql_variables[token])
-            else:
-                template.append(token)
-        elif token in sql_variables:
-            template.append(sql_variables[token])
-    return " ".join(template)
+    text: List[str]
+    text_with_variables: List[str]
+    sql: List[str]
+    text_variables: Dict[str, str]
+    sql_variables: Dict[str, str]
 
-def get_tokens_and_tags(sentence: List[str],
-                        sentence_variables: Dict[str, str],
-                        replace_all_variables: bool = False) -> Tuple[List[str], List[str]]:
+
+def get_tokens(sentence: List[str],
+               sentence_variables: Dict[str, str]) -> List[str]:
     """
-    Parameters
-    ----------
-    sentence : ``List[str]``, required.
-        The tokens in the sentence.
-    sentence_variables : ``Dict[str, str]``, required.
-        The variable in the sentence and it's actual string. e.g {'var0': 'texas'}.
-    replace_all_variables : ``bool``, optional (default = False)
-        Whether to replace all the variables in the sentence with their corresponding text.
-
-    Returns
-    -------
-    tokens : ``List[str]``
-        The tokens in the sentence with (possibly) variables replaced.
-    tags : ``List[str]``
-        The tags in the sentence denoting variables.
+    Replaces abstract variables in text with their concrete counterparts.
     """
     tokens = []
-    tags = []
     for token in sentence:
-        if (token not in sentence_variables) or replace_all_variables:
+        if token not in sentence_variables:
             tokens.append(token)
-            tags.append("O")
         else:
             for word in sentence_variables[token].split():
                 tokens.append(word)
-                tags.append(token)
-    return tokens, tags
+    return tokens
 
-def insert_variables(sql: str,
-                     sql_variables: List[Dict[str, str]],
-                     sentence: str,
-                     sentence_variables: Dict[str, str]) -> Tuple[List[str], List[str], str]:
+def clean_and_split_sql(sql: str) -> List[str]:
     """
-    Parameters
-    ----------
-    sql : ``str``, required.
-        The string sql query.
-    sql_variables : ``List[Dict[str, str]]``, required.
-        The variables extracted from the sentence and sql query.
-        e.g. [{'example': 'arizona', 'location': 'both', 'name': 'var0', 'type': 'state'}]
-    sentence : ``str``, required.
-        The string of the sentence.
-    sentence_variables : ``Dict[str, str]``, required.
-        The variable in the sentence and it's actual string. e.g {'var0': 'texas'}.
-
-    Returns
-    -------
-    The tokens in the sentence, tags denoting variable keywords in the sentence
-    and a template to fill.
-
+    Cleans up and unifies a SQL query. This involves removing uncessary quotes
+    and spliting brackets which aren't formatted consistently in the data.
     """
-    split_sentence = sentence.strip().split()
-    tokens, tags = get_tokens_and_tags(split_sentence, sentence_variables)
-
     sql_tokens = []
     for token in sql.strip().split():
-        token = token.replace('"', "'").replace("%", "")
+        token = token.replace('"', "").replace('"', "").replace("%", "")
         if token.endswith("(") and len(token) > 1:
             sql_tokens.append(token[:-1])
             sql_tokens.append(token[-1])
         else:
             sql_tokens.append(token)
+    return sql_tokens
 
-    template = get_template(sql_tokens, sql_variables, sentence_variables)
 
-    return (tokens, tags, template)
-
-def get_tagged_data_for_query(data: JsonDict,
-                              use_all_sql: bool = False,
-                              use_question_split: bool = False,
-                              cross_validation_split: int = None):
+def process_sql_data_blob(data: JsonDict,
+                          use_all_sql: bool = False,
+                          use_question_split: bool = False,
+                          cross_validation_split: int = None) -> Tuple[str, SqlData]:
     # If we're splitting based on SQL queries,
     # we assign whole splits of questions which
     # have a similar SQL template to the same split.
@@ -128,25 +77,34 @@ def get_tagged_data_for_query(data: JsonDict,
         # we take the split according to the individual question.
         if use_question_split:
             dataset_split = sent_info['question-split']
-
         # We are observing the split we're meant to use for cross-validation.
-        # set the dataset split to be test.
+        # set the dataset split to be test. NOTE: This was _incorrect_ in the
+        # original repo, causing test leakage in datasets which used cross-validation.
         if cross_validation_split is not None:
             if str(cross_validation_split) == str(dataset_split):
-                dataset_split = "test"
+                dataset_bucket = "test"
             else:
-                dataset_split = "train"
-
+                dataset_bucket = "train"
+        else:
+            dataset_bucket = dataset_split
         # Loop over the different sql statements with "equivelent" semantics
         for sql in data["sql"]:
             sql_variables = {}
             for variable in data['variables']:
                 sql_variables[variable['name']] = variable['example']
 
-            text = sent_info['text']
+            text_with_variables = sent_info['text'].strip().split()
             text_vars = sent_info['variables']
 
-            yield (dataset_split, insert_variables(sql, sql_variables, text, text_vars))
+            query_tokens = get_tokens(text_with_variables, text_vars)
+            sql_tokens = clean_and_split_sql(sql)
+
+            sql_data = SqlData(text=query_tokens,
+                               text_with_variables=text_with_variables,
+                               sql=sql_tokens,
+                               text_variables=text_vars,
+                               sql_variables=sql_variables)
+            yield (dataset_bucket, sql_data)
 
             # Some questions might have multiple equivelent SQL statements.
             # By default, we just use the first one. TODO(Mark): Use the shortest?
@@ -165,10 +123,10 @@ def get_split(filename: str,
         if not isinstance(data, list):
             data = [data]
         for example in data:
-            tagged_example = get_tagged_data_for_query(example,
-                                                       use_all_sql,
-                                                       use_question_split,
-                                                       cross_validation_split)
+            tagged_example = process_sql_data_blob(example,
+                                                   use_all_sql,
+                                                   use_question_split,
+                                                   cross_validation_split)
             for dataset, instance in tagged_example:
                 if dataset == dataset_split:
                     instances.append(instance)
