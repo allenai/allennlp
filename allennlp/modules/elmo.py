@@ -707,23 +707,26 @@ class _ElmoSoftmax(torch.nn.Module):
     chunk_size : ``int``, optional, (default 256)
         The chunk size of the softmax layer. The default (256) takes about
         10GB of memory!
+    hidden_size : ``int``, optional, (default 512)
+        The hidden vector size of the softmax layer.
     """
 
     def __init__(self,
                  softmax_weight_file: str,
                  softmax_vocab_file: str,
-                 chunk_size: int = 256):
+                 chunk_size: int = 256,
+                 hidden_size: int = 512):
 
         super(_ElmoSoftmax, self).__init__()
 
         self.softmax_weight_file = softmax_weight_file
         self.softmax_vocab_file = softmax_vocab_file
+        self.chunk_size = chunk_size
+        self.hidden_size = hidden_size
 
         self.vocab = self._load_vocab(self.softmax_vocab_file)
         self.fc_layer = self._load_softmax_weights(
-            self.softmax_weight_file, self.vocab.get_vocab_size())
-
-        self.chunk_size = chunk_size
+            self.softmax_weight_file, self.vocab.get_vocab_size(), self.hidden_size)
 
         # TODO: do we add CUDA code here?
 
@@ -737,8 +740,10 @@ class _ElmoSoftmax(torch.nn.Module):
     @staticmethod
     def _load_softmax_weights(
             softmax_weight_file: str,
-            vocab_size: int) -> torch.Tensor:
-        fc_layer = torch.nn.Linear(512, vocab_size)
+            vocab_size: int,
+            hidden_size: int) -> torch.Tensor:
+        # TODO: set size
+        fc_layer = torch.nn.Linear(hidden_size, vocab_size)
 
         with h5py.File(cached_path(softmax_weight_file), 'r') as fin:
             fc_layer.weight.data.copy_(
@@ -822,9 +827,9 @@ class _ElmoSoftmax(torch.nn.Module):
 
         # NOTE: can this be replaced by allennlp.util.masked_softmax ?
         fwd_log_probs = self._chunked_log_probs(
-            activations[:, :-2, :512], word_inputs)
+            activations[:, :-2, :self.hidden_size], word_inputs)
         bwd_log_probs = self._chunked_log_probs(
-            activations[:, 2:, 512:], word_inputs)
+            activations[:, 2:, self.hidden_size:], word_inputs)
 
         # [B, (fwd, bwd), L]
         log_probs = torch.stack((fwd_log_probs, bwd_log_probs), 1)
@@ -834,6 +839,6 @@ class _ElmoSoftmax(torch.nn.Module):
         if aggregation_fun == 'mean':
             log_probs = torch.mean(log_probs, 1)
         elif aggregation_fun == 'max':
-            log_probs = torch.max(log_probs, 1)
+            log_probs, _ = torch.max(log_probs, 1)
 
         return log_probs, mask_without_bos_eos

@@ -16,7 +16,7 @@ from allennlp.data.token_indexers.single_id_token_indexer import SingleIdTokenIn
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.dataset import Batch
 from allennlp.data.iterators import BasicIterator
-from allennlp.modules.elmo import _ElmoBiLm, Elmo, _ElmoCharacterEncoder
+from allennlp.modules.elmo import _ElmoBiLm, _ElmoSoftmax, Elmo, _ElmoCharacterEncoder, batch_to_ids
 from allennlp.modules.token_embedders import ElmoTokenEmbedder
 from allennlp.data.fields import TextField
 from allennlp.nn.util import remove_sentence_boundaries
@@ -30,6 +30,9 @@ class ElmoTestCase(AllenNlpTestCase):
         self.weight_file = str(self.elmo_fixtures_path / 'lm_weights.hdf5')
         self.sentences_json_file = str(self.elmo_fixtures_path / 'sentences.json')
         self.sentences_txt_file = str(self.elmo_fixtures_path / 'sentences.txt')
+        self.elmo_token_embeddings_path = str(self.elmo_fixtures_path / 'elmo_token_embeddings.hdf5')
+        self.elmo_softmax_weight_path = str(self.elmo_fixtures_path / 'elmo_softmax_weights.hdf5')
+        self.elmo_softmax_vocab_path = str(self.elmo_fixtures_path / 'vocab_test.txt')
 
     def _load_sentences_embeddings(self):
         """
@@ -359,3 +362,45 @@ class TestElmoTokenRepresentation(ElmoTestCase):
             indices = torch.from_numpy(numpy.array(indices["correct"])).view(1, 1, -1)
             embeddings = elmo_token_embedder(indices)['token_embedding']
             assert numpy.allclose(embeddings[0, correct_index, :].data.numpy(), embeddings[0, 1, :].data.numpy())
+
+
+class TestElmoSoftmax(ElmoTestCase):
+
+    def setUp(self):
+        super(TestElmoSoftmax, self).setUp()
+
+        self.elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file)
+
+        self.elmo_softmax = _ElmoSoftmax(
+            self.elmo_softmax_weight_path, self.elmo_softmax_vocab_path, hidden_size=16)
+
+        self.sentences = [
+            'How are you ?',
+            'how are you ?',
+            'How are you .',
+            'You are how ?',
+        ]
+
+    @staticmethod
+    def _tokenize(text):
+        return text.split()
+
+    def test_elmo_softmax(self):
+        sentences = [self._tokenize(i) for i in self.sentences]
+
+        char_ids, word_ids = batch_to_ids(sentences, self.elmo_softmax.vocab)
+
+        bilm_outputs = self.elmo_bilm(char_ids)
+
+        softmax_log_probs, softmax_mask = self.elmo_softmax(
+            bilm_outputs, word_ids, aggregation_fun='mean')
+        assert list(softmax_log_probs.shape) == [4, 4], list(softmax_log_probs.shape)
+        assert list(softmax_mask.shape) == [4, 4], list(softmax_mask.shape)
+        softmax_log_probs, softmax_mask = self.elmo_softmax(
+            bilm_outputs, word_ids, aggregation_fun='max')
+        assert list(softmax_log_probs.shape) == [4, 4], list(softmax_log_probs.shape)
+        assert list(softmax_mask.shape) == [4, 4], list(softmax_mask.shape)
+        softmax_log_probs, softmax_mask = self.elmo_softmax(
+            bilm_outputs, word_ids)
+        assert list(softmax_log_probs.shape) == [4, 2, 4], list(softmax_log_probs.shape)
+        assert list(softmax_mask.shape) == [4, 4], list(softmax_mask.shape)
