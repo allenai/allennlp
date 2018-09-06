@@ -91,6 +91,10 @@ class TestTrainer(AllenNlpTestCase):
     def test_trainer_can_run_multiple_gpu(self):
 
         class MetaDataCheckWrapper(Model):
+            """
+            Checks that the metadata field has been correctly split across the batch dimension
+            when running on multiple gpus.
+            """
             def __init__(self, model):
                 super().__init__(model.vocab)
                 self.model = model
