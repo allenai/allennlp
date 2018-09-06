@@ -2,8 +2,6 @@ from typing import Dict, Optional, Tuple, Union
 import torch
 
 from allennlp.common.registrable import Registrable
-from allennlp.common.params import Params
-from allennlp.data.vocabulary import Vocabulary
 
 
 class Metric(Registrable):
@@ -39,13 +37,6 @@ class Metric(Registrable):
         Reset any accumulators or internal state.
         """
         raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, params: Params, vocab: Optional[Vocabulary] = None):
-        metric_type = params.pop_choice("type", cls.list_available())
-        if vocab:
-            params["vocabulary"] = vocab
-        return cls.by_name(metric_type)(**params.as_dict())  # type: ignore
 
     @staticmethod
     def unwrap_to_tensors(*tensors: torch.Tensor):

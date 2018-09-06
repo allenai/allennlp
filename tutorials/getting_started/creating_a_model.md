@@ -198,7 +198,7 @@ you would need to load the modules where you've defined your classes.
 Otherwise they never get registered and then AllenNLP is unable to
 instantiate them based on the configuration file.
 
-You can specify one more more extra packages using the
+You can specify one or more extra packages using the
 `--include-packages` flag. For example, imagine that
 your model is in the module `myallennlp.model`
 and your dataset reader is in the module `myallennlp.dataset_reader`.

@@ -5,7 +5,6 @@ from typing import List, Tuple, Iterable, cast, Dict
 from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common import Params
 from allennlp.common.util import lazy_groups_of, add_noise_to_dict_values
 from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
@@ -116,8 +115,10 @@ class BucketIterator(DataIterator):
                                             self.vocab,
                                             self._padding_noise)
 
-            batches = [Batch(batch_instances)
-                       for batch_instances in lazy_groups_of(iter(instance_list), self._batch_size)]
+            batches = []
+            for batch_instances in lazy_groups_of(iter(instance_list), self._batch_size):
+                for possibly_smaller_batches in self._ensure_batch_is_sufficiently_small(batch_instances):
+                    batches.append(Batch(possibly_smaller_batches))
 
             move_to_front = self._biggest_batch_first and len(batches) > 1
             if move_to_front:
@@ -134,26 +135,3 @@ class BucketIterator(DataIterator):
                 batches.insert(0, last_batch)
 
             yield from batches
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'BucketIterator':
-        sorting_keys = params.pop('sorting_keys')
-        padding_noise = params.pop_float('padding_noise', 0.1)
-        biggest_batch_first = params.pop_bool('biggest_batch_first', False)
-        batch_size = params.pop_int('batch_size', 32)
-        instances_per_epoch = params.pop_int('instances_per_epoch', None)
-        max_instances_in_memory = params.pop_int('max_instances_in_memory', None)
-        maximum_samples_per_batch = params.pop("maximum_samples_per_batch", None)
-        cache_instances = params.pop_bool('cache_instances', False)
-        track_epoch = params.pop_bool('track_epoch', False)
-        params.assert_empty(cls.__name__)
-
-        return cls(sorting_keys=sorting_keys,
-                   padding_noise=padding_noise,
-                   biggest_batch_first=biggest_batch_first,
-                   batch_size=batch_size,
-                   instances_per_epoch=instances_per_epoch,
-                   max_instances_in_memory=max_instances_in_memory,
-                   cache_instances=cache_instances,
-                   track_epoch=track_epoch,
-                   maximum_samples_per_batch=maximum_samples_per_batch)

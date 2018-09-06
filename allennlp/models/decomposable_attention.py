@@ -2,7 +2,6 @@ from typing import Dict, Optional, List, Any
 
 import torch
 
-from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
@@ -10,7 +9,7 @@ from allennlp.modules import FeedForward
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
-from allennlp.nn.util import get_text_field_mask, last_dim_softmax, weighted_sum
+from allennlp.nn.util import get_text_field_mask, masked_softmax, weighted_sum
 from allennlp.training.metrics import CategoricalAccuracy
 
 
@@ -140,12 +139,12 @@ class DecomposableAttention(Model):
         similarity_matrix = self._matrix_attention(projected_premise, projected_hypothesis)
 
         # Shape: (batch_size, premise_length, hypothesis_length)
-        p2h_attention = last_dim_softmax(similarity_matrix, hypothesis_mask)
+        p2h_attention = masked_softmax(similarity_matrix, hypothesis_mask)
         # Shape: (batch_size, premise_length, embedding_dim)
         attended_hypothesis = weighted_sum(embedded_hypothesis, p2h_attention)
 
         # Shape: (batch_size, hypothesis_length, premise_length)
-        h2p_attention = last_dim_softmax(similarity_matrix.transpose(1, 2).contiguous(), premise_mask)
+        h2p_attention = masked_softmax(similarity_matrix.transpose(1, 2).contiguous(), premise_mask)
         # Shape: (batch_size, hypothesis_length, embedding_dim)
         attended_premise = weighted_sum(embedded_premise, h2p_attention)
 
@@ -186,39 +185,3 @@ class DecomposableAttention(Model):
         return {
                 'accuracy': self._accuracy.get_metric(reset),
                 }
-
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'DecomposableAttention':
-        embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-
-        premise_encoder_params = params.pop("premise_encoder", None)
-        if premise_encoder_params is not None:
-            premise_encoder = Seq2SeqEncoder.from_params(premise_encoder_params)
-        else:
-            premise_encoder = None
-
-        hypothesis_encoder_params = params.pop("hypothesis_encoder", None)
-        if hypothesis_encoder_params is not None:
-            hypothesis_encoder = Seq2SeqEncoder.from_params(hypothesis_encoder_params)
-        else:
-            hypothesis_encoder = None
-
-        attend_feedforward = FeedForward.from_params(params.pop('attend_feedforward'))
-        similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
-        compare_feedforward = FeedForward.from_params(params.pop('compare_feedforward'))
-        aggregate_feedforward = FeedForward.from_params(params.pop('aggregate_feedforward'))
-        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
-        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
-
-        params.assert_empty(cls.__name__)
-        return cls(vocab=vocab,
-                   text_field_embedder=text_field_embedder,
-                   attend_feedforward=attend_feedforward,
-                   similarity_function=similarity_function,
-                   compare_feedforward=compare_feedforward,
-                   aggregate_feedforward=aggregate_feedforward,
-                   premise_encoder=premise_encoder,
-                   hypothesis_encoder=hypothesis_encoder,
-                   initializer=initializer,
-                   regularizer=regularizer)

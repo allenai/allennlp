@@ -36,7 +36,7 @@ class ArrayField(Field[numpy.ndarray]):
         slicing_shape = list(self.array.shape)
         if len(self.array.shape) < len(max_shape):
             slicing_shape = slicing_shape + [0 for _ in range(len(max_shape) - len(self.array.shape))]
-        slices = [slice(0, x) for x in slicing_shape]
+        slices = tuple([slice(0, x) for x in slicing_shape])
         return_array[slices] = self.array
         tensor = torch.from_numpy(return_array)
         return tensor if cuda_device == -1 else tensor.cuda(cuda_device)

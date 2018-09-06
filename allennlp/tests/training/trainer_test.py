@@ -38,7 +38,7 @@ class TestTrainer(AllenNlpTestCase):
                         "num_layers": 2
                         }
                 })
-        self.model = SimpleTagger.from_params(self.vocab, self.model_params)
+        self.model = SimpleTagger.from_params(vocab=self.vocab, params=self.model_params)
         self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01)
         self.iterator = BasicIterator(batch_size=2)
         self.iterator.index_with(vocab)
@@ -53,6 +53,10 @@ class TestTrainer(AllenNlpTestCase):
         metrics = trainer.train()
         assert 'best_validation_loss' in metrics
         assert isinstance(metrics['best_validation_loss'], float)
+        assert 'best_validation_accuracy' in metrics
+        assert isinstance(metrics['best_validation_accuracy'], float)
+        assert 'best_validation_accuracy3' in metrics
+        assert isinstance(metrics['best_validation_accuracy3'], float)
         assert 'best_epoch' in metrics
         assert isinstance(metrics['best_epoch'], int)
 
@@ -67,6 +71,10 @@ class TestTrainer(AllenNlpTestCase):
         metrics = trainer.train()
         assert 'best_validation_loss' in metrics
         assert isinstance(metrics['best_validation_loss'], float)
+        assert 'best_validation_accuracy' in metrics
+        assert isinstance(metrics['best_validation_accuracy'], float)
+        assert 'best_validation_accuracy3' in metrics
+        assert isinstance(metrics['best_validation_accuracy3'], float)
         assert 'best_epoch' in metrics
         assert isinstance(metrics['best_epoch'], int)
 
@@ -196,7 +204,6 @@ class TestTrainer(AllenNlpTestCase):
                         patience=patience, validation_metric="+test")
 
     def test_trainer_can_run_with_lr_scheduler(self):
-
         lr_params = Params({"type": "reduce_on_plateau"})
         lr_scheduler = LearningRateScheduler.from_params(self.optimizer, lr_params)
         trainer = Trainer(model=self.model,
@@ -208,6 +215,33 @@ class TestTrainer(AllenNlpTestCase):
                           validation_dataset=self.instances,
                           num_epochs=2)
         trainer.train()
+
+    def test_trainer_can_resume_with_lr_scheduler(self):
+        # pylint: disable=protected-access
+        lr_scheduler = LearningRateScheduler.from_params(
+                self.optimizer, Params({"type": "exponential", "gamma": 0.5}))
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          learning_rate_scheduler=lr_scheduler,
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=2, serialization_dir=self.TEST_DIR)
+        trainer.train()
+
+        new_lr_scheduler = LearningRateScheduler.from_params(
+                self.optimizer, Params({"type": "exponential", "gamma": 0.5}))
+        new_trainer = Trainer(model=self.model,
+                              optimizer=self.optimizer,
+                              iterator=self.iterator,
+                              learning_rate_scheduler=new_lr_scheduler,
+                              train_dataset=self.instances,
+                              validation_dataset=self.instances,
+                              num_epochs=4, serialization_dir=self.TEST_DIR)
+        epoch, _ = new_trainer._restore_checkpoint()
+        assert epoch == 2
+        assert new_trainer._learning_rate_scheduler.lr_scheduler.last_epoch == 1
+        new_trainer.train()
 
     def test_trainer_raises_on_model_with_no_loss_key(self):
         class FakeModel(torch.nn.Module):

@@ -8,11 +8,16 @@ import importlib
 import logging
 import pkgutil
 import random
-import resource
 import subprocess
 import sys
 import os
 import re
+
+try:
+    import resource
+except ImportError:
+    # resource doesn't exist on Windows systems
+    resource = None
 
 import torch
 import numpy
@@ -268,11 +273,14 @@ def import_submodules(package_name: str) -> None:
     """
     importlib.invalidate_caches()
 
+    # Import at top level
     module = importlib.import_module(package_name)
-    path = getattr(module, '__path__', '')
+    path = getattr(module, '__path__', [])
 
+    # walk_packages only finds immediate children, so need to recurse.
     for _, name, _ in pkgutil.walk_packages(path):
-        importlib.import_module(package_name + '.' + name)
+        subpackage = f"{package_name}.{name}"
+        import_submodules(subpackage)
 
 
 def peak_memory_mb() -> float:
@@ -284,7 +292,7 @@ def peak_memory_mb() -> float:
 
     Only works on OSX and Linux, returns 0.0 otherwise.
     """
-    if sys.platform not in ('linux', 'darwin'):
+    if resource is None or sys.platform not in ('linux', 'darwin'):
         return 0.0
 
     # TODO(joelgrus): For whatever, our pinned version 0.521 of mypy does not like
@@ -367,3 +375,12 @@ def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> List[int]:
     else:
         return int(cuda_device)
 
+def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
+    frozen_parameter_names = []
+    tunable_parameter_names = []
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            frozen_parameter_names.append(name)
+        else:
+            tunable_parameter_names.append(name)
+    return [frozen_parameter_names, tunable_parameter_names]

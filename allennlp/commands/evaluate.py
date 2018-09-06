@@ -6,22 +6,24 @@ and report any metrics calculated by the model.
 .. code-block:: bash
 
     $ allennlp evaluate --help
-    usage: allennlp [command] evaluate [-h] --evaluation-data-file
-                                            EVALUATION_DATA_FILE
-                                            [--cuda-device CUDA_DEVICE]
-                                            [-o OVERRIDES]
-                                            [--include-package INCLUDE_PACKAGE]
-                                            archive_file
+    usage: allennlp evaluate [-h] [--output-file OUTPUT_FILE]
+                             [--weights-file WEIGHTS_FILE]
+                             [--cuda-device CUDA_DEVICE] [-o OVERRIDES]
+                             [--include-package INCLUDE_PACKAGE]
+                             archive_file input_file
 
     Evaluate the specified model + dataset
 
     positional arguments:
     archive_file          path to an archived trained model
+    input_file            path to the file containing the evaluation data
 
     optional arguments:
     -h, --help            show this help message and exit
-    --evaluation-data-file EVALUATION_DATA_FILE
-                            path to the file containing the evaluation data
+    --output-file OUTPUT_FILE
+                            path to output file to save metrics
+    --weights-file WEIGHTS_FILE
+                            a path that overrides which weights file to use
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
     -o OVERRIDES, --overrides OVERRIDES
@@ -33,6 +35,7 @@ and report any metrics calculated by the model.
 from typing import Dict, Any, Iterable
 import argparse
 import logging
+import json
 
 import torch
 
@@ -58,10 +61,10 @@ class Evaluate(Subcommand):
 
         subparser.add_argument('archive_file', type=str, help='path to an archived trained model')
 
-        evaluation_data_file = subparser.add_mutually_exclusive_group(required=True)
-        evaluation_data_file.add_argument('--evaluation-data-file',
-                                          type=str,
-                                          help='path to the file containing the evaluation data')
+        subparser.add_argument('input_file', type=str, help='path to the file containing the evaluation data')
+
+        subparser.add_argument('--output-file', type=str, help='path to output file')
+
         subparser.add_argument('--weights-file',
                                type=str,
                                help='a path that overrides which weights file to use')
@@ -91,7 +94,10 @@ def evaluate(model: Model,
     with torch.no_grad():
         model.eval()
 
-        iterator = data_iterator(instances, num_epochs=1, cuda_device=cuda_device)
+        iterator = data_iterator(instances,
+                                 num_epochs=1,
+                                 shuffle=False,
+                                 cuda_device=cuda_device)
         logger.info("Iterating over dataset")
         generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
         for batch in generator_tqdm:
@@ -131,11 +137,14 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
     else:
         dataset_reader = DatasetReader.from_params(config.pop('dataset_reader'))
-    evaluation_data_path = args.evaluation_data_file
+    evaluation_data_path = args.input_file
     logger.info("Reading evaluation data from %s", evaluation_data_path)
     instances = dataset_reader.read(evaluation_data_path)
 
-    iterator = DataIterator.from_params(config.pop("iterator"))
+    iterator_params = config.pop("validation_iterator", None)
+    if iterator_params is None:
+        iterator_params = config.pop("iterator")
+    iterator = DataIterator.from_params(iterator_params)
     iterator.index_with(model.vocab)
 
     metrics = evaluate(model, instances, iterator, args.cuda_device)
@@ -145,4 +154,8 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     for key, metric in metrics.items():
         logger.info("%s: %s", key, metric)
 
+    output_file = args.output_file
+    if output_file:
+        with open(output_file, "w") as file:
+            json.dump(metrics, file, indent=4)
     return metrics

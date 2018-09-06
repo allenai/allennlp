@@ -6,6 +6,7 @@ Typically you might create a configuration file specifying the model and
 training parameters and then use :mod:`~allennlp.commands.train`
 rather than instantiating a ``Trainer`` yourself.
 """
+# pylint: disable=too-many-lines
 
 import logging
 import os
@@ -22,7 +23,6 @@ from torch.nn.parallel import replicate, parallel_apply
 from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
 from tensorboardX import SummaryWriter
 
-
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import peak_memory_mb, gpu_memory_mb, parse_cuda_device
@@ -33,6 +33,7 @@ from allennlp.models.model import Model
 from allennlp.nn import util
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.optimizers import Optimizer
+
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -164,6 +165,8 @@ class Trainer:
                  validation_dataset: Optional[Iterable[Instance]] = None,
                  patience: Optional[int] = None,
                  validation_metric: str = "-loss",
+                 validation_iterator: DataIterator = None,
+                 shuffle: bool = True,
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
                  num_serialized_models_to_keep: int = 20,
@@ -200,6 +203,11 @@ class Trainer:
             and whether to serialize an ``is_best`` model each epoch. The metric name
             must be prepended with either "+" or "-", which specifies whether the metric
             is an increasing or decreasing function.
+        validation_iterator : ``DataIterator``, optional (default=None)
+            An iterator to use for the validation set.  If ``None``, then
+            use the training `iterator`.
+        shuffle: ``bool``, optional (default=True)
+            Whether to shuffle the instances in the iterator or not.
         num_epochs : int, optional (default = 20)
             Number of training epochs.
         serialization_dir : str, optional (default=None)
@@ -252,6 +260,8 @@ class Trainer:
         """
         self._model = model
         self._iterator = iterator
+        self._validation_iterator = validation_iterator
+        self._shuffle = shuffle
         self._optimizer = optimizer
         self._train_data = train_dataset
         self._validation_data = validation_dataset
@@ -288,8 +298,8 @@ class Trainer:
             raise ConfigurationError("Expected an int or list for cuda_device, got {}".format(cuda_device))
 
         if isinstance(cuda_device, list):
-            logger.info(f"WARNING: Multiple GPU support is experimental not recommended for use. "
-                        "In some cases it may lead to incorrect results or undefined behavior.")
+            logger.warning(f"Multiple GPU support is experimental not recommended for use. "
+                           "In some cases it may lead to incorrect results or undefined behavior.")
             self._multiple_gpu = True
             self._cuda_devices = cuda_device
             # data_parallel will take care of transfering to cuda devices,
@@ -460,10 +470,9 @@ class Trainer:
         # Get tqdm for the training batches
         train_generator = self._iterator(self._train_data,
                                          num_epochs=1,
+                                         shuffle=self._shuffle,
                                          cuda_device=self._iterator_device)
         num_training_batches = self._iterator.get_num_batches(self._train_data)
-        train_generator_tqdm = Tqdm.tqdm(train_generator,
-                                         total=num_training_batches)
         self._last_log = time.time()
         last_save_time = time.time()
 
@@ -475,6 +484,8 @@ class Trainer:
             histogram_parameters = set(self._model.get_parameters_for_histogram_tensorboard_logging())
 
         logger.info("Training")
+        train_generator_tqdm = Tqdm.tqdm(train_generator,
+                                         total=num_training_batches)
         for batch in train_generator_tqdm:
             batches_this_epoch += 1
             self._batch_num_total += 1
@@ -507,7 +518,7 @@ class Trainer:
                 for name, param in self._model.named_parameters():
                     param_updates[name].sub_(param.detach().cpu())
                     update_norm = torch.norm(param_updates[name].view(-1, ))
-                    param_norm = torch.norm(param.view(-1, ))
+                    param_norm = torch.norm(param.view(-1, )).cpu()
                     self._tensorboard.add_train_scalar("gradient_update/" + name,
                                                        update_norm / (param_norm + 1e-7),
                                                        batch_num_total)
@@ -631,23 +642,28 @@ class Trainer:
         Logs all of the train metrics (and validation metrics, if provided) to the console.
         """
         val_metrics = val_metrics or {}
-        dual_message_template = "Training %s : %3f    Validation %s : %3f "
-        message_template = "%s %s : %3f "
+        dual_message_template = "%s |  %8.3f  |  %8.3f"
+        no_val_message_template = "%s |  %8.3f  |  %8s"
+        no_train_message_template = "%s |  %8s  |  %8.3f"
+        header_template = "%s |  %-10s"
 
         metric_names = set(train_metrics.keys())
         if val_metrics:
             metric_names.update(val_metrics.keys())
 
+        name_length = max([len(x) for x in metric_names])
+
+        logger.info(header_template, "Training".rjust(name_length + 13), "Validation")
         for name in metric_names:
             train_metric = train_metrics.get(name)
             val_metric = val_metrics.get(name)
 
             if val_metric is not None and train_metric is not None:
-                logger.info(dual_message_template, name, train_metric, name, val_metric)
+                logger.info(dual_message_template, name.ljust(name_length), train_metric, val_metric)
             elif val_metric is not None:
-                logger.info(message_template, "Validation", name, val_metric)
+                logger.info(no_train_message_template, name.ljust(name_length), "N/A", val_metric)
             elif train_metric is not None:
-                logger.info(message_template, "Training", name, train_metric)
+                logger.info(no_val_message_template, name.ljust(name_length), train_metric, "N/A")
 
     def _validation_loss(self) -> Tuple[float, int]:
         """
@@ -657,10 +673,16 @@ class Trainer:
 
         self._model.eval()
 
-        val_generator = self._iterator(self._validation_data,
-                                       num_epochs=1,
-                                       cuda_device=self._iterator_device)
-        num_validation_batches = self._iterator.get_num_batches(self._validation_data)
+        if self._validation_iterator is not None:
+            val_iterator = self._validation_iterator
+        else:
+            val_iterator = self._iterator
+
+        val_generator = val_iterator(self._validation_data,
+                                     num_epochs=1,
+                                     shuffle=False,
+                                     cuda_device=self._iterator_device)
+        num_validation_batches = val_iterator.get_num_batches(self._validation_data)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
         batches_this_epoch = 0
@@ -703,6 +725,7 @@ class Trainer:
 
         train_metrics: Dict[str, float] = {}
         val_metrics: Dict[str, float] = {}
+        best_epoch_val_metrics: Dict[str, float] = {}
         epochs_trained = 0
         training_start_time = time.time()
         for epoch in range(epoch_counter, self._num_epochs):
@@ -720,7 +743,8 @@ class Trainer:
 
                     # Check validation metric to see if it's the best so far
                     is_best_so_far = self._is_best_so_far(this_epoch_val_metric, validation_metric_per_epoch)
-
+                    if is_best_so_far:
+                        best_epoch_val_metrics = val_metrics.copy()
                     validation_metric_per_epoch.append(this_epoch_val_metric)
                     if self._should_stop_early(validation_metric_per_epoch):
                         logger.info("Ran out of patience.  Stopping training.")
@@ -730,16 +754,23 @@ class Trainer:
                 # No validation set, so just assume it's the best so far.
                 is_best_so_far = True
                 val_metrics = {}
+                best_epoch_val_metrics = {}
                 this_epoch_val_metric = None
 
-            self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
             self._metrics_to_console(train_metrics, val_metrics)
+            for index, param_group in enumerate(self._optimizer.param_groups):
+                learning_rate = param_group.get("lr")
+                if learning_rate is not None:
+                    self._tensorboard.add_train_scalar(
+                            f"learning_rate/param_group{index:d}", learning_rate, epoch)
 
             if self._learning_rate_scheduler:
                 # The LRScheduler API is agnostic to whether your schedule requires a validation metric -
                 # if it doesn't, the validation metric passed here is ignored.
                 self._learning_rate_scheduler.step(this_epoch_val_metric, epoch)
+
+            self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", time.strftime("%H:%M:%S", time.gmtime(epoch_elapsed_time)))
@@ -748,7 +779,7 @@ class Trainer:
                 training_elapsed_time = time.time() - training_start_time
                 estimated_time_remaining = training_elapsed_time * \
                     ((self._num_epochs - epoch_counter) / float(epoch - epoch_counter + 1) - 1)
-                formatted_time = time.strftime("%H:%M:%S", time.gmtime(estimated_time_remaining))
+                formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
                 logger.info("Estimated training time remaining: %s", formatted_time)
 
             epochs_trained += 1
@@ -770,7 +801,7 @@ class Trainer:
                 best_validation_metric = min(validation_metric_per_epoch)
             else:
                 best_validation_metric = max(validation_metric_per_epoch)
-            metrics[f"best_validation_{self._validation_metric}"] = best_validation_metric
+            metrics.update({f"best_validation_{k}": v for k, v in best_epoch_val_metrics.items()})
             metrics['best_epoch'] = [i for i, value in enumerate(validation_metric_per_epoch)
                                      if value == best_validation_metric][-1]
         return metrics
@@ -821,6 +852,9 @@ class Trainer:
                               'val_metric_per_epoch': val_metric_per_epoch,
                               'optimizer': self._optimizer.state_dict(),
                               'batch_num_total': self._batch_num_total}
+            if self._learning_rate_scheduler is not None:
+                training_state["learning_rate_scheduler"] = \
+                    self._learning_rate_scheduler.lr_scheduler.state_dict()
             training_path = os.path.join(self._serialization_dir,
                                          "training_state_epoch_{}.th".format(epoch))
             torch.save(training_state, training_path)
@@ -925,6 +959,9 @@ class Trainer:
         training_state = torch.load(training_state_path, map_location=util.device_mapping(-1))
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
+        if self._learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
+            self._learning_rate_scheduler.lr_scheduler.load_state_dict(
+                    training_state["learning_rate_scheduler"])
         move_optimizer_to_cuda(self._optimizer)
 
         # We didn't used to save `validation_metric_per_epoch`, so we can't assume
@@ -949,6 +986,7 @@ class Trainer:
 
         return epoch_to_return, val_metric_per_epoch
 
+    # Requires custom from_params.
     @classmethod
     def from_params(cls,
                     model: Model,
@@ -956,10 +994,12 @@ class Trainer:
                     iterator: DataIterator,
                     train_data: Iterable[Instance],
                     validation_data: Optional[Iterable[Instance]],
-                    params: Params) -> 'Trainer':
+                    params: Params,
+                    validation_iterator: DataIterator = None) -> 'Trainer':
 
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
+        shuffle = params.pop_bool("shuffle", True)
         num_epochs = params.pop_int("num_epochs", 20)
         cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
         grad_norm = params.pop_float("grad_norm", None)
@@ -986,6 +1026,8 @@ class Trainer:
                        train_data, validation_data,
                        patience=patience,
                        validation_metric=validation_metric,
+                       validation_iterator=validation_iterator,
+                       shuffle=shuffle,
                        num_epochs=num_epochs,
                        serialization_dir=serialization_dir,
                        cuda_device=cuda_device,

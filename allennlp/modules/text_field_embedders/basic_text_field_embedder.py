@@ -1,4 +1,5 @@
 from typing import Dict, List
+import warnings
 
 import torch
 from overrides import overrides
@@ -38,16 +39,22 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         same text. Note that the list of token indexer names is `ordered`, meaning
         that the tensors produced by the indexers will be passed to the embedders
         in the order you specify in this list.
+    allow_unmatched_keys : ``bool``, optional (default = False)
+        If True, then don't enforce the keys of the ``text_field_input`` to
+        match those in ``token_embedders`` (useful if the mapping is specified
+        via ``embedder_to_indexer_map``).
     """
     def __init__(self,
                  token_embedders: Dict[str, TokenEmbedder],
-                 embedder_to_indexer_map: Dict[str, List[str]] = None) -> None:
+                 embedder_to_indexer_map: Dict[str, List[str]] = None,
+                 allow_unmatched_keys: bool = False) -> None:
         super(BasicTextFieldEmbedder, self).__init__()
         self._token_embedders = token_embedders
         self._embedder_to_indexer_map = embedder_to_indexer_map
         for key, embedder in token_embedders.items():
             name = 'token_embedder_%s' % key
             self.add_module(name, embedder)
+        self._allow_unmatched_keys = allow_unmatched_keys
 
     @overrides
     def get_output_dim(self) -> int:
@@ -58,9 +65,10 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
 
     def forward(self, text_field_input: Dict[str, torch.Tensor], num_wrapping_dims: int = 0) -> torch.Tensor:
         if self._token_embedders.keys() != text_field_input.keys():
-            message = "Mismatched token keys: %s and %s" % (str(self._token_embedders.keys()),
-                                                            str(text_field_input.keys()))
-            raise ConfigurationError(message)
+            if not self._allow_unmatched_keys:
+                message = "Mismatched token keys: %s and %s" % (str(self._token_embedders.keys()),
+                                                                str(text_field_input.keys()))
+                raise ConfigurationError(message)
         embedded_representations = []
         keys = sorted(self._token_embedders.keys())
         for key in keys:
@@ -81,17 +89,45 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             embedded_representations.append(token_vectors)
         return torch.cat(embedded_representations, dim=-1)
 
+    # This is some unusual logic, it needs a custom from_params.
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BasicTextFieldEmbedder':
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BasicTextFieldEmbedder':  # type: ignore
+        # pylint: disable=arguments-differ,bad-super-call
+
+        # The original `from_params` for this class was designed in a way that didn't agree
+        # with the constructor. The constructor wants a 'token_embedders' parameter that is a
+        # `Dict[str, TokenEmbedder]`, but the original `from_params` implementation expected those
+        # key-value pairs to be top-level in the params object.
+        #
+        # This breaks our 'configuration wizard' and configuration checks. Hence, going forward,
+        # the params need a 'token_embedders' key so that they line up with what the constructor wants.
+        # For now, the old behavior is still supported, but produces a DeprecationWarning.
+
         embedder_to_indexer_map = params.pop("embedder_to_indexer_map", None)
         if embedder_to_indexer_map is not None:
             embedder_to_indexer_map = embedder_to_indexer_map.as_dict(quiet=True)
+        allow_unmatched_keys = params.pop_bool("allow_unmatched_keys", False)
 
-        token_embedders = {}
-        keys = list(params.keys())
-        for key in keys:
-            embedder_params = params.pop(key)
-            token_embedders[key] = TokenEmbedder.from_params(vocab, embedder_params)
+        token_embedder_params = params.pop('token_embedders', None)
+
+        if token_embedder_params is not None:
+            # New way: explicitly specified, so use it.
+            token_embedders = {
+                    name: TokenEmbedder.from_params(subparams, vocab=vocab)
+                    for name, subparams in token_embedder_params.items()
+            }
+
+        else:
+            # Warn that the original behavior is deprecated
+            warnings.warn(DeprecationWarning("the token embedders for BasicTextFieldEmbedder should now "
+                                             "be specified as a dict under the 'token_embedders' key, "
+                                             "not as top-level key-value pairs"))
+
+            token_embedders = {}
+            keys = list(params.keys())
+            for key in keys:
+                embedder_params = params.pop(key)
+                token_embedders[key] = TokenEmbedder.from_params(vocab=vocab, params=embedder_params)
 
         params.assert_empty(cls.__name__)
-        return cls(token_embedders, embedder_to_indexer_map)
+        return cls(token_embedders, embedder_to_indexer_map, allow_unmatched_keys)

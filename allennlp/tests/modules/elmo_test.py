@@ -204,6 +204,23 @@ class TestElmo(ElmoTestCase):
         assert list(elmo_representations[1].size()) == [2, 7, 32]
         assert list(mask.size()) == [2, 7]
 
+    def test_elmo_keep_sentence_boundaries(self):
+        sentences = [['The', 'sentence', '.'],
+                     ['ELMo', 'helps', 'disambiguate', 'ELMo', 'from', 'Elmo', '.']]
+        elmo = Elmo(self.options_file, self.weight_file, 2, dropout=0.0,
+                    keep_sentence_boundaries=True)
+        character_ids = self._sentences_to_ids(sentences)
+        output = elmo(character_ids)
+        elmo_representations = output['elmo_representations']
+        mask = output['mask']
+
+        assert len(elmo_representations) == 2
+        # Add 2 to the lengths because we're keeping the start and end of sentence tokens.
+        assert list(elmo_representations[0].size()) == [2, 7+2, 32]
+        assert list(elmo_representations[1].size()) == [2, 7+2, 32]
+        assert list(mask.size()) == [2, 7+2]
+
+
     def test_elmo_4D_input(self):
         sentences = [[['The', 'sentence', '.'],
                       ['ELMo', 'helps', 'disambiguate', 'ELMo', 'from', 'Elmo', '.']],
@@ -296,17 +313,21 @@ class TestElmoTokenRepresentation(ElmoTestCase):
     def test_elmo_token_representation(self):
         # Load the test words and convert to char ids
         with open(os.path.join(self.elmo_fixtures_path, 'vocab_test.txt'), 'r') as fin:
-            tokens = fin.read().strip().split('\n')
+            words = fin.read().strip().split('\n')
 
+        vocab = Vocabulary()
         indexer = ELMoTokenCharactersIndexer()
-        indices = [indexer.token_to_indices(Token(token), Vocabulary()) for token in tokens]
+        tokens = [Token(word) for word in words]
+
+        indices = indexer.tokens_to_indices(tokens, vocab, "elmo")
         # There are 457 tokens. Reshape into 10 batches of 50 tokens.
         sentences = []
         for k in range(10):
+            char_indices = indices["elmo"][(k * 50):((k + 1) * 50)]
             sentences.append(
                     indexer.pad_token_sequence(
-                            indices[(k * 50):((k + 1) * 50)], desired_num_tokens=50, padding_lengths={}
-                    )
+                            {'key': char_indices}, desired_num_tokens={'key': 50}, padding_lengths={}
+                    )['key']
             )
         batch = torch.from_numpy(numpy.array(sentences))
 
@@ -334,7 +355,7 @@ class TestElmoTokenRepresentation(ElmoTestCase):
         elmo_token_embedder = _ElmoCharacterEncoder(self.options_file, self.weight_file)
 
         for correct_index, token in [[0, '<S>'], [2, '</S>']]:
-            indices = indexer.token_to_indices(Token(token), Vocabulary())
-            indices = torch.from_numpy(numpy.array(indices)).view(1, 1, -1)
+            indices = indexer.tokens_to_indices([Token(token)], Vocabulary(), "correct")
+            indices = torch.from_numpy(numpy.array(indices["correct"])).view(1, 1, -1)
             embeddings = elmo_token_embedder(indices)['token_embedding']
             assert numpy.allclose(embeddings[0, correct_index, :].data.numpy(), embeddings[0, 1, :].data.numpy())

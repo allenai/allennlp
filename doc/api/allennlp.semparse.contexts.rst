@@ -15,3 +15,13 @@ allennlp.semparse.contexts
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.semparse.contexts.atis_tables
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.semparse.contexts.sql_table_context
+   :members:
+   :undoc-members:
+   :show-inheritance:

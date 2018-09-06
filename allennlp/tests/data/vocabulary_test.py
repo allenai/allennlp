@@ -640,3 +640,50 @@ class TestVocabulary(AllenNlpTestCase):
         assert 'a' in words
         assert 'b' in words
         assert 'c' not in words
+
+    def test_registrability(self):
+
+        @Vocabulary.register('my-vocabulary')
+        class MyVocabulary:
+            @classmethod
+            def from_params(cls, params, instances=None):
+                # pylint: disable=unused-argument
+                return MyVocabulary()
+
+
+        params = Params({'type': 'my-vocabulary'})
+
+        instance = Instance(fields={})
+
+        vocab = Vocabulary.from_params(params=params, instances=[instance])
+
+        assert isinstance(vocab, MyVocabulary)
+
+    def test_max_vocab_size_dict(self):
+        params = Params({
+                "max_vocab_size": {
+                        "tokens": 1,
+                        "characters": 20
+                }
+        })
+
+        vocab = Vocabulary.from_params(params=params, instances=self.dataset)
+        words = vocab.get_index_to_token_vocabulary().values()
+        # Additional 2 tokens are '@@PADDING@@' and '@@UNKNOWN@@' by default
+        assert len(words) == 3
+
+    def test_max_vocab_size_partial_dict(self):
+        indexers = {"tokens": SingleIdTokenIndexer(), "token_characters": TokenCharactersIndexer()}
+        instance = Instance({
+                'text': TextField([Token(w) for w in 'Abc def ghi jkl mno pqr stu vwx yz'.split(' ')], indexers)
+        })
+        dataset = Batch([instance])
+        params = Params({
+                "max_vocab_size": {
+                        "tokens": 1
+                }
+        })
+
+        vocab = Vocabulary.from_params(params=params, instances=dataset)
+        assert len(vocab.get_index_to_token_vocabulary("tokens").values()) == 3 # 1 + 2
+        assert len(vocab.get_index_to_token_vocabulary("token_characters").values()) == 28 # 26 + 2

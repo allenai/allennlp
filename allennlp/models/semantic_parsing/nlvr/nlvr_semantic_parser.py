@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
 
 from overrides import overrides
 
@@ -8,6 +8,7 @@ import torch
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
+from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
 from allennlp.nn import util
 from allennlp.nn.decoding import GrammarState, RnnState
@@ -92,8 +93,8 @@ class NlvrSemanticParser(Model):
                                                              sentence_mask,
                                                              self._encoder.is_bidirectional())
         memory_cell = encoder_outputs.new_zeros(batch_size, self._encoder.get_output_dim())
-        attended_sentence = self._decoder_step.attend_on_sentence(final_encoder_output,
-                                                                  encoder_outputs, sentence_mask)
+        attended_sentence, _ = self._decoder_step.attend_on_question(final_encoder_output,
+                                                                     encoder_outputs, sentence_mask)
         encoder_outputs_list = [encoder_outputs[i] for i in range(batch_size)]
         sentence_mask_list = [sentence_mask[i] for i in range(batch_size)]
         initial_rnn_state = []
@@ -162,73 +163,44 @@ class NlvrSemanticParser(Model):
         return all_denotations
 
     @staticmethod
-    def _check_denotation(best_action_sequence: List[str],
+    def _check_denotation(action_sequence: List[str],
                           labels: List[str],
                           worlds: List[NlvrWorld]) -> List[bool]:
         is_correct = []
         for world, label in zip(worlds, labels):
-            logical_form = world.get_logical_form(best_action_sequence)
+            logical_form = world.get_logical_form(action_sequence)
             denotation = world.execute(logical_form)
             is_correct.append(str(denotation).lower() == label)
         return is_correct
 
-    @staticmethod
-    def _create_grammar_state(world: NlvrWorld,
+    def _create_grammar_state(self,
+                              world: NlvrWorld,
                               possible_actions: List[ProductionRuleArray]) -> GrammarState:
         valid_actions = world.get_valid_actions()
         action_mapping = {}
         for i, action in enumerate(possible_actions):
             action_mapping[action[0]] = i
-        translated_valid_actions = {}
+        translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
         for key, action_strings in valid_actions.items():
-            translated_valid_actions[key] = [action_mapping[action_string]
-                                             for action_string in action_strings]
+            translated_valid_actions[key] = {}
+            # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid
+            # productions of that non-terminal.
+            action_indices = [action_mapping[action_string] for action_string in action_strings]
+            # All actions in NLVR are global actions.
+            global_actions = [(possible_actions[index][2], index) for index in action_indices]
+
+            # Then we get the embedded representations of the global actions.
+            global_action_tensors, global_action_ids = zip(*global_actions)
+            global_action_tensor = torch.cat(global_action_tensors, dim=0)
+            global_input_embeddings = self._action_embedder(global_action_tensor)
+            translated_valid_actions[key]['global'] = (global_input_embeddings,
+                                                       global_input_embeddings,
+                                                       list(global_action_ids))
         return GrammarState([START_SYMBOL],
                             {},
                             translated_valid_actions,
-                            action_mapping,
+                            {},
                             type_declaration.is_nonterminal)
-
-    def _embed_actions(self, actions: List[List[ProductionRuleArray]]) -> Tuple[torch.Tensor,
-                                                                                Dict[Tuple[int, int], int]]:
-        """
-        Given all of the possible actions for all batch instances, produce an embedding for them.
-        There will be significant overlap in this list, as the production rules from the grammar
-        are shared across all batch instances.  Our returned tensor has an embedding for each
-        `unique` action, so we also need to return a mapping from the original ``(batch_index,
-        action_index)`` to our new ``global_action_index``, so that we can get the right action
-        embedding during decoding.
-
-        Returns
-        -------
-        action_embeddings : ``torch.Tensor``
-            Has shape ``(num_unique_actions, action_embedding_dim)``.
-        action_map : ``Dict[Tuple[int, int], int]``
-            Maps ``(batch_index, action_index)`` in the input action list to ``action_index`` in
-            the ``action_embeddings`` tensor.
-        """
-        # TODO(mattg): This whole action pipeline might be a whole lot more complicated than it
-        # needs to be.  We used to embed actions differently (using some crazy ideas about
-        # embedding the LHS and RHS separately); we could probably get away with simplifying things
-        # further now that we're just doing a simple embedding for global actions.  But I'm leaving
-        # it like this for now to have a minimal change to go from the LHS/RHS embedding to a
-        # single action embedding.
-        embedded_actions = self._action_embedder.weight
-
-        # Now we just need to make a map from `(batch_index, action_index)` to
-        # `global_action_index`.  global_action_ids has the list of all unique actions; here we're
-        # going over all of the actions for each batch instance so we can map them to the global
-        # action ids.
-        action_vocab = self.vocab.get_token_to_index_vocabulary(self._rule_namespace)
-        action_map: Dict[Tuple[int, int], int] = {}
-        for batch_index, instance_actions in enumerate(actions):
-            for action_index, action in enumerate(instance_actions):
-                if not action[0]:
-                    # This rule is padding.
-                    continue
-                global_action_id = action_vocab[action[0]]
-                action_map[(batch_index, action_index)] = global_action_id
-        return embedded_actions, action_map
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -252,7 +224,7 @@ class NlvrSemanticParser(Model):
         output_dict["logical_form"] = logical_forms
         return output_dict
 
-    def _check_state_denotations(self, state) -> List[bool]:
+    def _check_state_denotations(self, state: GrammarBasedDecoderState, worlds: List[NlvrWorld]) -> List[bool]:
         """
         Returns whether action history in the state evaluates to the correct denotations over all
         worlds. Only defined when the state is finished.
@@ -260,8 +232,7 @@ class NlvrSemanticParser(Model):
         assert state.is_finished(), "Cannot compute denotations for unfinished states!"
         # Since this is a finished state, its group size must be 1.
         batch_index = state.batch_indices[0]
-        worlds = state.worlds[batch_index]
-        instance_label_strings = state.label_strings[batch_index]
+        instance_label_strings = state.extras[batch_index]
         history = state.action_history[0]
         all_actions = state.possible_actions[0]
         action_sequence = [all_actions[action][0] for action in history]

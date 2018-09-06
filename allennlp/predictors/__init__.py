@@ -8,7 +8,9 @@ a ``Predictor`` that wraps it.
 """
 from allennlp.predictors.predictor import Predictor
 from allennlp.predictors.bidaf import BidafPredictor
+from allennlp.predictors.dialog_qa import DialogQAPredictor
 from allennlp.predictors.constituency_parser import ConstituencyParserPredictor
+from allennlp.predictors.biaffine_dependency_parser import BiaffineDependencyParserPredictor
 from allennlp.predictors.coref import CorefPredictor
 from allennlp.predictors.decomposable_attention import DecomposableAttentionPredictor
 from allennlp.predictors.semantic_role_labeler import SemanticRoleLabelerPredictor

@@ -8,7 +8,7 @@ the models [available on our website](http://allennlp.org/models).
 
 [The models page on the website](http://allennlp.org/models) lists all the models in AllenNLP,
 as well as examples for how to run the model on the command line.  For example, under the
-[Named Entity Recognition model](http://allennlp.org/models/#named-entity-recognition) there
+[Named Entity Recognition model](https://allennlp.org/models#named-entity-recognition) there
 is a "Prediction" button that reveals the following example.
 
 ```bash
@@ -39,7 +39,7 @@ the JSON fields in the example, and they vary by the particular predictor.  The 
 uses the default predictor (`sentence-tagger`) for the NER model.
 
 ```python
-from allennlp.service.predictors import Predictor
+from allennlp.predictors import Predictor
 predictor = Predictor.from_path("https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.26.tar.gz")
 results = predictor.predict(sentence="Did Uriah honestly think he could beat The Legend of Zelda in under three hours?")
 for word, tag in zip(results["words"], results["tags"]):

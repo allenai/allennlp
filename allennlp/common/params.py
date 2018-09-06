@@ -5,14 +5,26 @@ logging and validation.
 """
 
 from typing import Any, Dict, List
-from collections import MutableMapping
+from collections import MutableMapping, OrderedDict
 import copy
 import json
 import logging
 import os
 
 from overrides import overrides
-import _jsonnet
+
+# _jsonnet doesn't work on Windows, so we have to use fakes.
+try:
+    from _jsonnet import evaluate_file, evaluate_snippet
+except ImportError:
+    def evaluate_file(filename: str, **_kwargs) -> str:
+        logger.warning(f"_jsonnet not loaded, treating {filename} as json")
+        with open(filename, 'r') as evaluation_file:
+            return evaluation_file.read()
+
+    def evaluate_snippet(_filename: str, expr: str, **_kwargs) -> str:
+        logger.warning(f"_jsonnet not loaded, treating snippet as json")
+        return expr
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
@@ -77,7 +89,7 @@ def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[s
 def parse_overrides(serialized_overrides: str) -> Dict[str, Any]:
     if serialized_overrides:
         ext_vars = dict(os.environ)
-        return unflatten(json.loads(_jsonnet.evaluate_snippet("", serialized_overrides, ext_vars=ext_vars)))
+        return unflatten(json.loads(evaluate_snippet("", serialized_overrides, ext_vars=ext_vars)))
     else:
         return {}
 
@@ -347,12 +359,53 @@ class Params(MutableMapping):
         params_file = cached_path(params_file)
         ext_vars = dict(os.environ)
 
-        file_dict = json.loads(_jsonnet.evaluate_file(params_file, ext_vars=ext_vars))
+        file_dict = json.loads(evaluate_file(params_file, ext_vars=ext_vars))
 
         overrides_dict = parse_overrides(params_overrides)
         param_dict = with_fallback(preferred=overrides_dict, fallback=file_dict)
 
         return Params(param_dict)
+
+    def to_file(self, params_file: str, preference_orders: List[List[str]] = None) -> None:
+        with open(params_file, "w") as handle:
+            json.dump(self.as_ordered_dict(preference_orders), handle, indent=4)
+
+    def as_ordered_dict(self, preference_orders: List[List[str]] = None) -> OrderedDict:
+        """
+        Returns Ordered Dict of Params from list of partial order preferences.
+
+        Parameters
+        ----------
+        preference_orders: List[List[str]], optional
+            ``preference_orders`` is list of partial preference orders. ["A", "B", "C"] means
+            "A" > "B" > "C". For multiple preference_orders first will be considered first.
+            Keys not found, will have last but alphabetical preference. Default Preferences:
+            ``[["dataset_reader", "iterator", "model", "train_data_path", "validation_data_path",
+            "test_data_path", "trainer", "vocabulary"], ["type"]]``
+        """
+        params_dict = self.as_dict(quiet=True)
+        if not preference_orders:
+            preference_orders = []
+            preference_orders.append(["dataset_reader", "iterator", "model",
+                                      "train_data_path", "validation_data_path", "test_data_path",
+                                      "trainer", "vocabulary"])
+            preference_orders.append(["type"])
+
+        def order_func(key):
+            # Makes a tuple to use for ordering.  The tuple is an index into each of the `preference_orders`,
+            # followed by the key itself.  This gives us integer sorting if you have a key in one of the
+            # `preference_orders`, followed by alphabetical ordering if not.
+            order_tuple = [order.index(key) if key in order else len(order) for order in preference_orders]
+            return order_tuple + [key]
+
+        def order_dict(dictionary, order_func):
+            # Recursively orders dictionary according to scoring order_func
+            result = OrderedDict()
+            for key, val in sorted(dictionary.items(), key=lambda item: order_func(item[0])):
+                result[key] = order_dict(val, order_func) if isinstance(val, dict) else val
+            return result
+
+        return order_dict(params_dict, order_func)
 
 
 def pop_choice(params: Dict[str, Any],

@@ -7,7 +7,8 @@ import logging
 import string
 from typing import Any, Dict, List, Tuple
 
-from allennlp.data.fields import Field, TextField, IndexField, MetadataField
+from allennlp.data.fields import Field, TextField, IndexField, \
+    MetadataField, LabelField, ListField, SequenceLabelField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.tokenizers import Token
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 # scripts.
 IGNORED_TOKENS = {'a', 'an', 'the'}
 STRIPPED_CHARACTERS = string.punctuation + ''.join([u"‘", u"’", u"´", u"`", "_"])
+
 
 def normalize_text(text: str) -> str:
     """
@@ -187,12 +189,9 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     passage_field = TextField(passage_tokens, token_indexers)
     fields['passage'] = passage_field
     fields['question'] = TextField(question_tokens, token_indexers)
-    metadata = {
-            'original_passage': passage_text,
-            'token_offsets': passage_offsets,
-            'question_tokens': [token.text for token in question_tokens],
-            'passage_tokens': [token.text for token in passage_tokens],
-            }
+    metadata = {'original_passage': passage_text, 'token_offsets': passage_offsets,
+                'question_tokens': [token.text for token in question_tokens],
+                'passage_tokens': [token.text for token in passage_tokens], }
     if answer_texts:
         metadata['answer_texts'] = answer_texts
 
@@ -213,3 +212,160 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)
+
+
+def make_reading_comprehension_instance_quac(question_list_tokens: List[List[Token]],
+                                             passage_tokens: List[Token],
+                                             token_indexers: Dict[str, TokenIndexer],
+                                             passage_text: str,
+                                             token_span_lists: List[List[Tuple[int, int]]] = None,
+                                             yesno_list: List[int] = None,
+                                             followup_list: List[int] = None,
+                                             additional_metadata: Dict[str, Any] = None,
+                                             num_context_answers: int = 0) -> Instance:
+    """
+    Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
+    in a reading comprehension model.
+
+    Creates an ``Instance`` with at least these fields: ``question`` and ``passage``, both
+    ``TextFields``; and ``metadata``, a ``MetadataField``.  Additionally, if both ``answer_texts``
+    and ``char_span_starts`` are given, the ``Instance`` has ``span_start`` and ``span_end``
+    fields, which are both ``IndexFields``.
+
+    Parameters
+    ----------
+    question_list_tokens : ``List[List[Token]]``
+        An already-tokenized list of questions. Each dialog have multiple questions.
+    passage_tokens : ``List[Token]``
+        An already-tokenized passage that contains the answer to the given question.
+    token_indexers : ``Dict[str, TokenIndexer]``
+        Determines how the question and passage ``TextFields`` will be converted into tensors that
+        get input to a model.  See :class:`TokenIndexer`.
+    passage_text : ``str``
+        The original passage text.  We need this so that we can recover the actual span from the
+        original passage that the model predicts as the answer to the question.  This is used in
+        official evaluation scripts.
+    token_spans_lists : ``List[List[Tuple[int, int]]]``, optional
+        Indices into ``passage_tokens`` to use as the answer to the question for training.  This is
+        a list of list, first because there is multiple questions per dialog, and
+        because there might be several possible correct answer spans in the passage.
+        Currently, we just select the last span in this list (i.e., QuAC has multiple
+        annotations on the dev set; this will select the last span, which was given by the original annotator).
+    yesno_list : ``List[int]``
+        List of the affirmation bit for each question answer pairs.
+    followup_list : ``List[int]``
+        List of the continuation bit for each question answer pairs.
+    num_context_answers : ``int``, optional
+        How many answers to encode into the passage.
+    additional_metadata : ``Dict[str, Any]``, optional
+        The constructed ``metadata`` field will by default contain ``original_passage``,
+        ``token_offsets``, ``question_tokens``, ``passage_tokens``, and ``answer_texts`` keys.  If
+        you want any other metadata to be associated with each instance, you can pass that in here.
+        This dictionary will get added to the ``metadata`` dictionary we already construct.
+    """
+    additional_metadata = additional_metadata or {}
+    fields: Dict[str, Field] = {}
+    passage_offsets = [(token.idx, token.idx + len(token.text)) for token in passage_tokens]
+    # This is separate so we can reference it later with a known type.
+    passage_field = TextField(passage_tokens, token_indexers)
+    fields['passage'] = passage_field
+    fields['question'] = ListField([TextField(q_tokens, token_indexers) for q_tokens in question_list_tokens])
+    metadata = {'original_passage': passage_text,
+                'token_offsets': passage_offsets,
+                'question_tokens': [[token.text for token in question_tokens] \
+                                    for question_tokens in question_list_tokens],
+                'passage_tokens': [token.text for token in passage_tokens], }
+    p1_answer_marker_list: List[Field] = []
+    p2_answer_marker_list: List[Field] = []
+    p3_answer_marker_list: List[Field] = []
+
+    def get_tag(i, i_name):
+        # Generate a tag to mark previous answer span in the passage.
+        return "<{0:d}_{1:s}>".format(i, i_name)
+
+    def mark_tag(span_start, span_end, passage_tags, prev_answer_distance):
+        try:
+            assert span_start >= 0
+            assert span_end >= 0
+        except:
+            raise ValueError("Previous {0:d}th answer span should have been updated!".format(prev_answer_distance))
+        # Modify "tags" to mark previous answer span.
+        if span_start == span_end:
+            passage_tags[prev_answer_distance][span_start] = get_tag(prev_answer_distance, "")
+        else:
+            passage_tags[prev_answer_distance][span_start] = get_tag(prev_answer_distance, "start")
+            passage_tags[prev_answer_distance][span_end] = get_tag(prev_answer_distance, "end")
+            for passage_index in range(span_start + 1, span_end):
+                passage_tags[prev_answer_distance][passage_index] = get_tag(prev_answer_distance, "in")
+
+    if token_span_lists:
+        span_start_list: List[Field] = []
+        span_end_list: List[Field] = []
+        p1_span_start, p1_span_end, p2_span_start = -1, -1, -1
+        p2_span_end, p3_span_start, p3_span_end = -1, -1, -1
+        # Looping each <<answers>>.
+        for question_index, answer_span_lists in enumerate(token_span_lists):
+            span_start, span_end = answer_span_lists[-1]  # Last one is the original answer
+            span_start_list.append(IndexField(span_start, passage_field))
+            span_end_list.append(IndexField(span_end, passage_field))
+            prev_answer_marker_lists = [["O"] * len(passage_tokens), ["O"] * len(passage_tokens),
+                                        ["O"] * len(passage_tokens), ["O"] * len(passage_tokens)]
+            if question_index > 0 and num_context_answers > 0:
+                mark_tag(p1_span_start, p1_span_end, prev_answer_marker_lists, 1)
+                if question_index > 1 and num_context_answers > 1:
+                    mark_tag(p2_span_start, p2_span_end, prev_answer_marker_lists, 2)
+                    if question_index > 2 and num_context_answers > 2:
+                        mark_tag(p3_span_start, p3_span_end, prev_answer_marker_lists, 3)
+                    p3_span_start = p2_span_start
+                    p3_span_end = p2_span_end
+                p2_span_start = p1_span_start
+                p2_span_end = p1_span_end
+            p1_span_start = span_start
+            p1_span_end = span_end
+            if num_context_answers > 2:
+                p3_answer_marker_list.append(SequenceLabelField(prev_answer_marker_lists[3],
+                                                                passage_field,
+                                                                label_namespace="answer_tags"))
+            if num_context_answers > 1:
+                p2_answer_marker_list.append(SequenceLabelField(prev_answer_marker_lists[2],
+                                                                passage_field,
+                                                                label_namespace="answer_tags"))
+            if num_context_answers > 0:
+                p1_answer_marker_list.append(SequenceLabelField(prev_answer_marker_lists[1],
+                                                                passage_field,
+                                                                label_namespace="answer_tags"))
+        fields['span_start'] = ListField(span_start_list)
+        fields['span_end'] = ListField(span_end_list)
+        if num_context_answers > 0:
+            fields['p1_answer_marker'] = ListField(p1_answer_marker_list)
+            if num_context_answers > 1:
+                fields['p2_answer_marker'] = ListField(p2_answer_marker_list)
+                if num_context_answers > 2:
+                    fields['p3_answer_marker'] = ListField(p3_answer_marker_list)
+        fields['yesno_list'] = ListField( \
+            [LabelField(yesno, label_namespace="yesno_labels") for yesno in yesno_list])
+        fields['followup_list'] = ListField([LabelField(followup, label_namespace="followup_labels") \
+                                             for followup in followup_list])
+    metadata.update(additional_metadata)
+    fields['metadata'] = MetadataField(metadata)
+    return Instance(fields)
+
+
+def handle_cannot(reference_answers: List[str]):
+    """
+    Process a list of reference answers.
+    If equal or more than half of the reference answers are "CANNOTANSWER", take it as gold.
+    Otherwise, return answers that are not "CANNOTANSWER".
+    """
+    num_cannot = 0
+    num_spans = 0
+    for ref in reference_answers:
+        if ref == 'CANNOTANSWER':
+            num_cannot += 1
+        else:
+            num_spans += 1
+    if num_cannot >= num_spans:
+        reference_answers = ['CANNOTANSWER']
+    else:
+        reference_answers = [x for x in reference_answers if x != 'CANNOTANSWER']
+    return reference_answers

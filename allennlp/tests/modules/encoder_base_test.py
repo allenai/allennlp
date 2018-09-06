@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,protected-access,invalid-name
 import numpy
 import torch
-from torch.nn import LSTM
+from torch.nn import LSTM, RNN
 
 from allennlp.modules.encoder_base import _EncoderBase
 from allennlp.common.testing import AllenNlpTestCase
@@ -13,6 +13,7 @@ class TestEncoderBase(AllenNlpTestCase):
     def setUp(self):
         super(TestEncoderBase, self).setUp()
         self.lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
+        self.rnn = RNN(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
         self.encoder_base = _EncoderBase(stateful=True)
 
         tensor = torch.rand([5, 7, 3])
@@ -183,3 +184,20 @@ class TestEncoderBase(AllenNlpTestCase):
                                          index_selected_initial_states[0][:, 4, :].data.numpy())
         numpy.testing.assert_array_equal(self.encoder_base._states[1][:, 4, :].data.numpy(),
                                          index_selected_initial_states[1][:, 4, :].data.numpy())
+
+    def test_non_contiguous_input_states_handled(self):
+        # Check that the encoder is robust to non-contiguous input states.
+
+        # A transposition will make the tensors non-contiguous, start them off at the wrong shape
+        # and transpose them into the right shape.
+        encoder_base = _EncoderBase(stateful=False)
+        initial_states = (torch.randn(5, 6, 7).permute(1, 0, 2),
+                          torch.randn(5, 6, 7).permute(1, 0, 2))
+        assert not initial_states[0].is_contiguous() and not initial_states[1].is_contiguous()
+        assert initial_states[0].size() == torch.Size([6, 5, 7])
+        assert initial_states[1].size() == torch.Size([6, 5, 7])
+
+        # We'll pass them through an LSTM encoder and a vanilla RNN encoder to make sure it works
+        # whether the initial states are a tuple of tensors or just a single tensor.
+        encoder_base.sort_and_run_forward(self.lstm, self.tensor, self.mask, initial_states)
+        encoder_base.sort_and_run_forward(self.rnn, self.tensor, self.mask, initial_states[0])

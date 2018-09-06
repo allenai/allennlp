@@ -55,21 +55,6 @@ Its constructor takes a `lazy` parameter and passes it to the superclass constru
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 ```
 
-And its `from_params` looks for a `lazy` configuration parameter
-(defaulting to `False` if it's not specified):
-
-```python
-    @classmethod
-    def from_params(cls, params: Params) -> 'SnliReader':
-        tokenizer = Tokenizer.from_params(params.pop('tokenizer', {}))
-        token_indexers = TokenIndexer.dict_from_params(params.pop('token_indexers', {}))
-        lazy = params.pop('lazy', False)
-        params.assert_empty(cls.__name__)
-        return SnliReader(tokenizer=tokenizer,
-                          token_indexers=token_indexers,
-                          lazy=lazy)
-```
-
 Any dataset reader that you want to handle lazy datasets should behave likewise.
 
 ## Laziness in `DatasetReader.read`

@@ -113,17 +113,25 @@ def _read_pretrained_tokens(embeddings_file_uri: str) -> Set[str]:
     return tokens
 
 
-class RegistrableVocabulary(Registrable):
-    default_implementation = "vocabulary"
+def pop_max_vocab_size(params: Params) -> Union[int, Dict[str, int]]:
+    """
+    max_vocab_size is allowed to be either an int or a Dict[str, int] (or nothing).
+    But it could also be a string representing an int (in the case of environment variable
+    substitution). So we need some complex logic to handle it.
+    """
+    size = params.pop("max_vocab_size", None)
 
-    @classmethod
-    def from_params(cls, params: Params, instances: Iterable['adi.Instance'] = None):
-        choice = params.pop_choice('type', cls.list_available(), default_to_first_choice=True)
-        return cls.by_name(choice).from_params(params, instances)
+    if isinstance(size, Params):
+        # This is the Dict[str, int] case.
+        return size.as_dict()
+    elif size is not None:
+        # This is the int / str case.
+        return int(size)
+    else:
+        return None
 
 
-@RegistrableVocabulary.register("vocabulary")
-class Vocabulary(RegistrableVocabulary):
+class Vocabulary(Registrable):
     """
     A Vocabulary maps strings to integers, allowing for strings to be mapped to an
     out-of-vocabulary token.
@@ -206,6 +214,7 @@ class Vocabulary(RegistrableVocabulary):
         self._index_to_token = _IndexToTokenDefaultDict(self._non_padded_namespaces,
                                                         self._padding_token,
                                                         self._oov_token)
+        self._retained_counter: Optional[Dict[str, Dict[str, int]]] = None
         # Made an empty vocabulary, now extend it.
         self._extend(counter,
                      min_count,
@@ -351,8 +360,9 @@ class Vocabulary(RegistrableVocabulary):
                           only_include_pretrained_words=only_include_pretrained_words,
                           tokens_to_add=tokens_to_add)
 
+    # There's enough logic here to require a custom from_params.
     @classmethod
-    def from_params(cls, params: Params, instances: Iterable['adi.Instance'] = None):
+    def from_params(cls, params: Params, instances: Iterable['adi.Instance'] = None):  # type: ignore
         """
         There are two possible ways to build a vocabulary; from a
         collection of instances, using :func:`Vocabulary.from_instances`, or
@@ -378,6 +388,17 @@ class Vocabulary(RegistrableVocabulary):
         -------
         A ``Vocabulary``.
         """
+        # pylint: disable=arguments-differ
+
+        # Vocabulary is ``Registrable`` so that you can configure a custom subclass,
+        # but (unlike most of our registrables) almost everyone will want to use the
+        # base implementation. So instead of having an abstract ``VocabularyBase`` or
+        # such, we just add the logic for instantiating a registered subclass here,
+        # so that most users can continue doing what they were doing.
+        vocab_type = params.pop("type", None)
+        if vocab_type is not None:
+            return cls.by_name(vocab_type).from_params(params=params, instances=instances)
+
         extend = params.pop("extend", False)
         vocabulary_directory = params.pop("directory_path", None)
         if not vocabulary_directory and not instances:
@@ -403,7 +424,7 @@ class Vocabulary(RegistrableVocabulary):
             vocab.extend_from_instances(params, instances=instances)
             return vocab
         min_count = params.pop("min_count", None)
-        max_vocab_size = params.pop_int("max_vocab_size", None)
+        max_vocab_size = pop_max_vocab_size(params)
         non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
         pretrained_files = params.pop("pretrained_files", {})
         only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
@@ -440,6 +461,7 @@ class Vocabulary(RegistrableVocabulary):
         counter = counter or {}
         tokens_to_add = tokens_to_add or {}
 
+        self._retained_counter = counter
         # Make sure vocabulary extension is safe.
         current_namespaces = {*self._token_to_index}
         extension_namespaces = {*counter, *tokens_to_add}
@@ -468,7 +490,10 @@ class Vocabulary(RegistrableVocabulary):
                 pretrained_list = None
             token_counts = list(counter[namespace].items())
             token_counts.sort(key=lambda x: x[1], reverse=True)
-            max_vocab = max_vocab_size[namespace]
+            try:
+                max_vocab = max_vocab_size[namespace]
+            except KeyError:
+                max_vocab = None
             if max_vocab:
                 token_counts = token_counts[:max_vocab]
             for token, count in token_counts:
@@ -492,7 +517,7 @@ class Vocabulary(RegistrableVocabulary):
         Extends an already generated vocabulary using a collection of instances.
         """
         min_count = params.pop("min_count", None)
-        max_vocab_size = params.pop_int("max_vocab_size", None)
+        max_vocab_size = pop_max_vocab_size(params)
         non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
         pretrained_files = params.pop("pretrained_files", {})
         only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
@@ -567,3 +592,31 @@ class Vocabulary(RegistrableVocabulary):
         namespaces = [f"\tNamespace: {name}, Size: {self.get_vocab_size(name)} \n"
                       for name in self._index_to_token]
         return " ".join([base_string, non_padded_namespaces] + namespaces)
+
+    def print_statistics(self) -> None:
+        if self._retained_counter:
+            logger.info("Printed vocabulary statistics are only for the part of the vocabulary generated " \
+                        "from instances. If vocabulary is constructed by extending saved vocabulary with " \
+                        "dataset instances, the directly loaded portion won't be considered here.")
+            print("\n\n----Vocabulary Statistics----\n")
+            # Since we don't saved counter info, it is impossible to consider pre-saved portion.
+            for namespace in self._retained_counter:
+                tokens_with_counts = list(self._retained_counter[namespace].items())
+                tokens_with_counts.sort(key=lambda x: x[1], reverse=True)
+                print(f"\nTop 10 most frequent tokens in namespace '{namespace}':")
+                for token, freq in tokens_with_counts[:10]:
+                    print(f"\tToken: {token}\t\tFrequency: {freq}")
+                # Now sort by token length, not frequency
+                tokens_with_counts.sort(key=lambda x: len(x[0]), reverse=True)
+
+                print(f"\nTop 10 longest tokens in namespace '{namespace}':")
+                for token, freq in tokens_with_counts[:10]:
+                    print(f"\tToken: {token}\t\tlength: {len(token)}\tFrequency: {freq}")
+
+                print(f"\nTop 10 shortest tokens in namespace '{namespace}':")
+                for token, freq in reversed(tokens_with_counts[-10:]):
+                    print(f"\tToken: {token}\t\tlength: {len(token)}\tFrequency: {freq}")
+        else:
+            # _retained_counter would be set only if instances were used for vocabulary construction.
+            logger.info("Vocabulary statistics cannot be printed since " \
+                        "dataset instances were not used for its construction.")
