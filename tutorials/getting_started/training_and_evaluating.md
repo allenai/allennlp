@@ -3,7 +3,7 @@
 ### Training a Model
 
 In this tutorial we'll train a simple part-of-speech tagger using AllenNLP.
-The model is defined in [allennlp/models/simple_tagger.py](https://github.com/allenai/allennlp/blob/master/allennlp/models/simple_tagger.py).
+The model is defined in [allennlp/models/simple_tagger.py](../../allennlp/models/simple_tagger.py).
 It consists of a word embedding layer followed by an LSTM.
 
 Our dataset will be a subset of the [Brown Corpus](http://www.nltk.org/nltk_data/).
@@ -11,10 +11,10 @@ In particular, we will train a model on 4000 randomly chosen sentences (`sentenc
 as the validation set (`sentences.small.dev`).
 
 One of the key design principles behind AllenNLP is that
-you configure experiments using JSON files. (More specifically, [Jsonnet](https://jsonnet.org/) files.)
+you configure experiments using [Jsonnet](https://jsonnet.org/) files (a superset of JSON).
 
 Our tagging experiment is defined in
-[tutorials/getting_started/simple_tagger.json](https://github.com/allenai/allennlp/blob/master/tutorials/getting_started/simple_tagger.json).
+[tutorials/getting_started/simple_tagger.json](../../tutorials/getting_started/simple_tagger.json).
 You can peek at it now if you want; we'll go through it in detail in the next tutorial.
 Right at this instant you might care about the `trainer` section, which specifies how we want to train our model:
 
@@ -119,7 +119,7 @@ When you run this it will load the archived model, download and cache the evalua
 2017-08-23 19:49:26,228 - INFO - allennlp.commands.evaluate - accuracy3: 0.9681496714651151
 ```
 
-There is also a command line option to use a GPU, if you have one.
+There is also a command line option to use a GPU (`--cuda-device`), if you have one.
 
 ### Making Predictions
 
