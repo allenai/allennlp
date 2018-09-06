@@ -513,9 +513,28 @@ class TestNnUtil(AllenNlpTestCase):
 
         loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights)
 
-        vector_loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, batch_average=False)
+        vector_loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, average=None)
         # Batch has one completely padded row, so divide by 4.
         assert loss.data.numpy() == vector_loss.data.sum() / 4
+
+    def test_sequence_cross_entropy_with_logits_averages_token_correctly(self):
+        # test token average is the same as multiplying the per-batch loss
+        # with the per-batch weights and dividing by the total weight
+        tensor = torch.rand([5, 7, 4])
+        tensor[0, 3:, :] = 0
+        tensor[1, 4:, :] = 0
+        tensor[2, 2:, :] = 0
+        tensor[3, :, :] = 0
+        weights = (tensor != 0.0)[:, :, 0].long().squeeze(-1)
+        targets = torch.LongTensor(numpy.random.randint(0, 3, [5, 7]))
+        targets *= weights
+
+        loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, average="token")
+
+        vector_loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, batch_average=False)
+        total_token_loss = (vector_loss * weights.float().sum(dim=-1)).sum()
+        average_token_loss = (total_token_loss / weights.float().sum()).detach()
+        assert_almost_equal(loss.detach()[0], average_token_loss[0])
 
     def test_replace_masked_values_replaces_masked_values_with_finite_value(self):
         tensor = torch.FloatTensor([[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]])

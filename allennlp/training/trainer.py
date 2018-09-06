@@ -744,7 +744,6 @@ class Trainer:
                 best_epoch_val_metrics = {}
                 this_epoch_val_metric = None
 
-            self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
             self._metrics_to_console(train_metrics, val_metrics)
             for index, param_group in enumerate(self._optimizer.param_groups):
@@ -757,6 +756,8 @@ class Trainer:
                 # The LRScheduler API is agnostic to whether your schedule requires a validation metric -
                 # if it doesn't, the validation metric passed here is ignored.
                 self._learning_rate_scheduler.step(this_epoch_val_metric, epoch)
+
+            self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", time.strftime("%H:%M:%S", time.gmtime(epoch_elapsed_time)))
@@ -838,6 +839,9 @@ class Trainer:
                               'val_metric_per_epoch': val_metric_per_epoch,
                               'optimizer': self._optimizer.state_dict(),
                               'batch_num_total': self._batch_num_total}
+            if self._learning_rate_scheduler is not None:
+                training_state["learning_rate_scheduler"] = \
+                    self._learning_rate_scheduler.lr_scheduler.state_dict()
             training_path = os.path.join(self._serialization_dir,
                                          "training_state_epoch_{}.th".format(epoch))
             torch.save(training_state, training_path)
@@ -942,6 +946,9 @@ class Trainer:
         training_state = torch.load(training_state_path, map_location=util.device_mapping(-1))
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
+        if self._learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
+            self._learning_rate_scheduler.lr_scheduler.load_state_dict(
+                    training_state["learning_rate_scheduler"])
         move_optimizer_to_cuda(self._optimizer)
 
         # We didn't used to save `validation_metric_per_epoch`, so we can't assume
