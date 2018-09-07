@@ -185,10 +185,17 @@ class SemanticRoleLabeler(Model):
         return output_dict
 
     def get_metrics(self, reset: bool = False):
-        metric_dict = self.span_metric.get_metric(reset=reset)
-        # This can be a lot of metrics, as there are 3 per class.
-        # we only really care about the overall metrics, so we filter for them here.
-        return {x: y for x, y in metric_dict.items() if "overall" in x}
+        if self.ignore_span_metric:
+            # Return an empty dictionary if ignoring the
+            # span metric
+            return dict()
+
+        else:
+            metric_dict = self.span_metric.get_metric(reset=reset)
+
+            # This can be a lot of metrics, as there are 3 per class.
+            # we only really care about the overall metrics, so we filter for them here.
+            return {x: y for x, y in metric_dict.items() if "overall" in x}
 
     def get_viterbi_pairwise_potentials(self):
         """
