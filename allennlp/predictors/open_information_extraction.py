@@ -11,7 +11,7 @@ from allennlp.service.predictors.predictor import Predictor
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.data.tokenizers import Token
 
-@Predictor.register('openie_predictor')
+@Predictor.register('open-information-extraction')
 class OpenIePredictor(Predictor):
     """
     Predictor for the :class: `models.OpenIEModel` model.
