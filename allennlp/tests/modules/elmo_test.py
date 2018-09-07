@@ -372,7 +372,7 @@ class TestElmoSoftmax(ElmoTestCase):
         self.elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file)
 
         self.elmo_softmax = _ElmoSoftmax(
-            self.elmo_softmax_weight_path, self.elmo_softmax_vocab_path, hidden_size=16)
+            self.elmo_softmax_weight_path, self.elmo_softmax_vocab_path)
 
         self.sentences = [
             'How are you ?',

@@ -151,6 +151,44 @@ class TestElmoCommand(ElmoTestCase):
             assert (json.loads(h5py_file.get("sentence_to_index")[0]) ==
                     {sentences[i]: str(i) for i in range(len(sentences))})
 
+    def test_batch_embedding_works_w_softmax(self):
+        sentences = [
+                "Michael went to the store to buy some eggs .",
+                "Joel rolled down the street on his skateboard .",
+                "test / this is a first sentence",
+                "Take a look , then , at Tuesday 's elections in New York City , New Jersey and Virginia :"
+        ]
+
+        with open(self.sentences_path, 'w') as f:
+            for line in sentences:
+                f.write(line + '\n')
+
+        sys.argv = ["run.py",  # executable
+                    "elmo",  # command
+                    self.sentences_path,
+                    self.output_path,
+                    "--all",
+                    "--options-file",
+                    self.options_file,
+                    "--weight-file",
+                    self.weight_file,
+                    "--softmax-weight-file",
+                    self.elmo_softmax_weight_path,
+                    "--softmax-vocab-file",
+                    self.elmo_softmax_vocab_path]
+
+        main()
+
+        assert os.path.exists(self.output_path)
+
+        with h5py.File(self.output_path, 'r') as h5py_file:
+            assert set(h5py_file.keys()) == {"0", "1", "2", "3", "sentence_to_index"}
+            # The vectors in the test configuration are smaller (32 length)
+            for sentence_id, sentence in zip(["0", "1", "2", "3"], sentences):
+                assert h5py_file.get(sentence_id).shape == (1, len(sentence.split()))
+            assert (json.loads(h5py_file.get("sentence_to_index")[0]) ==
+                    {sentences[i]: str(i) for i in range(len(sentences))})
+
     def test_batch_embedding_works_with_sentences_as_keys(self):
         sentences = [
                 "Michael went to the store to buy some eggs .",
@@ -304,6 +342,14 @@ class TestElmoEmbedder(ElmoTestCase):
 
     def test_embed_batch_contains_empty_sentence(self):
         embedder = ElmoEmbedder(options_file=self.options_file, weight_file=self.weight_file)
+        embeddings = list(embedder.embed_sentences(["This is a test".split(), []]))
+
+        assert len(embeddings) == 2
+
+    def test_embed_batch_contains_empty_sentence_w_softmax(self):
+        embedder = ElmoEmbedder(options_file=self.options_file, weight_file=self.weight_file,
+                                softmax_weight_file=self.elmo_softmax_weight_path,
+                                softmax_vocab_file=self.elmo_softmax_vocab_path)
         embeddings = list(embedder.embed_sentences(["This is a test".split(), []]))
 
         assert len(embeddings) == 2
