@@ -3,8 +3,7 @@
 Utility functions for reading the standardised text2sql datasets presented in
 `"Improving Text to SQL Evaluation Methodology" <https://arxiv.org/abs/1806.09029>`_
 """
-from typing import List, Dict, Tuple, NamedTuple, Iterable
-import json
+from typing import List, Dict, NamedTuple, Iterable
 
 from allennlp.common import JsonDict
 
@@ -65,11 +64,11 @@ def clean_and_split_sql(sql: str) -> List[str]:
 
 
 def process_sql_data_blob(data: JsonDict,
-                          use_all_sql: bool = False,
-                          use_question_split: bool = False,
-                          cross_validation_split: int = None) -> Iterable[Tuple[str, SqlData]]:
+                          use_all_sql: bool = False) -> Iterable[SqlData]:
     """
-    A utility function for reading in text2sql data blobs.
+    A utility function for reading in text2sql data blobs. The blob is
+    the result of loading the json from a file produced by the script
+    ``scripts/reformat_text2sql_data.py``.
 
     Parameters
     ----------
@@ -77,36 +76,12 @@ def process_sql_data_blob(data: JsonDict,
     use_all_sql : ``bool``, optional (default = False)
         Whether to use all of the sql queries which have identical semantics,
         or whether to just use the first one.
-    use_question_split : ``bool``, optional (default = False)
-        Whether to split the dataset based on questions, rather than SQL queries.
-    cross_validation_split : ``bool``, optional, (default = None)
-        Some of the datasets require a cross validation split, because they are small.
-        The integer value passed here will be the split used for cross validation.
     """
-    # If we're splitting based on SQL queries,
-    # we assign whole splits of questions which
-    # have a similar SQL template to the same split.
-    dataset_split: str = data['query-split']
-
     # TODO(Mark): currently this does not filter for duplicate _sentences_
     # which have the same sql query. Really it should, because these instances
     # are literally identical, so just magnify errors etc. However, doing this
     # would make it really hard to compare to previous work. Sad times.
     for sent_info in data['sentences']:
-        # Instead, if we're using the question split,
-        # we take the split according to the individual question.
-        if use_question_split:
-            dataset_split = sent_info['question-split']
-        # We are observing the split we're meant to use for cross-validation.
-        # set the dataset split to be test. NOTE: This was _incorrect_ in the
-        # original repo, causing test leakage in datasets which used cross-validation.
-        if cross_validation_split is not None:
-            if str(cross_validation_split) == str(dataset_split):
-                dataset_bucket = "test"
-            else:
-                dataset_bucket = "train"
-        else:
-            dataset_bucket = dataset_split
         # Loop over the different sql statements with "equivalent" semantics
         for sql in data["sql"]:
             sql_variables = {}
@@ -124,29 +99,9 @@ def process_sql_data_blob(data: JsonDict,
                                sql=sql_tokens,
                                text_variables=text_vars,
                                sql_variables=sql_variables)
-            yield (dataset_bucket, sql_data)
+            yield sql_data
 
             # Some questions might have multiple equivalent SQL statements.
             # By default, we just use the first one. TODO(Mark): Use the shortest?
             if not use_all_sql:
                 break
-
-def get_split(filename: str,
-              dataset_split: str,
-              use_all_sql: bool = False,
-              use_question_split: bool = False,
-              cross_validation_split: int = None):
-    instances = []
-    with open(filename) as input_file:
-        data = json.load(input_file)
-        if not isinstance(data, list):
-            data = [data]
-        for example in data:
-            tagged_example = process_sql_data_blob(example,
-                                                   use_all_sql,
-                                                   use_question_split,
-                                                   cross_validation_split)
-            for dataset, instance in tagged_example:
-                if dataset == dataset_split:
-                    instances.append(instance)
-    return instances
