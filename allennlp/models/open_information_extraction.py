@@ -59,7 +59,7 @@ class NeuralOie(Model):
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None,
                  label_smoothing: float = None) -> None:
-        super(SemanticRoleLabeler, self).__init__(vocab, regularizer)
+        super(NeuralOie, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")
