@@ -1,5 +1,4 @@
 from typing import List
-from typing import Tuple
 
 from overrides import overrides
 
@@ -10,8 +9,6 @@ from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.data.tokenizers import Token
-
-
 
 def join_mwp(tags: List[str]) -> List[str]:
     """
@@ -36,7 +33,6 @@ def join_mwp(tags: List[str]) -> List[str]:
             verb_flag = False
 
     return ret
-
 
 def make_oie_string(tokens: List[Token], tags: List[str]) -> str:
     """
@@ -66,8 +62,6 @@ def make_oie_string(tokens: List[Token], tags: List[str]) -> str:
         frame.append("[" + " ".join(chunk) + "]")
 
     return " ".join(frame)
-
-
 
 @Predictor.register('open-information-extraction')
 class OpenIePredictor(Predictor):
