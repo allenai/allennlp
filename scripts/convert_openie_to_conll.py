@@ -34,7 +34,7 @@ Element = namedtuple("Element",    # An element (predicate or argument) in an Op
 
 def main(inp_fn: str,
          domain: str,
-         out_fn: str):
+         out_fn: str) -> None:
     """
     inp_fn: str, required.
        Path to file from which to read Open IE extractions in Open IE4's format.
@@ -59,7 +59,7 @@ def safe_zip(*args):
     return zip(*args)
 
 def char_to_word_index(char_ind: int,
-                       sent: str):
+                       sent: str) -> int:
     """
     Convert a character index to
     word index in the given sentence.
@@ -67,7 +67,7 @@ def char_to_word_index(char_ind: int,
     return sent[: char_ind].count(' ')
 
 def element_from_span(span: List[int],
-                      span_type: str):
+                      span_type: str) -> Element:
     """
     Return an Element from span (list of spacy toks)
     """
@@ -76,7 +76,7 @@ def element_from_span(span: List[int],
                     span[-1].idx + len(span[-1])],
                    ' '.join(map(str, span)))
 
-def split_predicate(ex):
+def split_predicate(ex: Extraction) -> Extraction:
     """
     Ensure single word predicate
     by adding "before-predicate" and "after-predicate"
@@ -108,7 +108,7 @@ def split_predicate(ex):
 
     return Extraction(ex.sent, ex.toks, ex.arg1, rel_parts, ex.args2, ex.confidence)
 
-def extraction_to_conll(ex: Extraction):
+def extraction_to_conll(ex: Extraction) -> List[str]:
     """
     Return a conll representation of a given input Extraction.
     """
@@ -132,7 +132,7 @@ def extraction_to_conll(ex: Extraction):
         ret[cur_end_ind] += ')'
     return ret
 
-def interpret_span(text_spans: str):
+def interpret_span(text_spans: str) -> List[int]:
     """
     Return an integer tuple from
     textual representation of closed / open spans.
@@ -174,7 +174,7 @@ def interpret_span(text_spans: str):
 
     return ret[0]
 
-def interpret_element(element_type: str, text: str, span: str):
+def interpret_element(element_type: str, text: str, span: str) -> Element:
     """
     Construct an Element instance from regexp
     groups.
@@ -183,7 +183,7 @@ def interpret_element(element_type: str, text: str, span: str):
                    interpret_span(span),
                    text)
 
-def parse_element(raw_element: str):
+def parse_element(raw_element: str) -> List[Element]:
     """
     Parse a raw element into text and indices (integers).
     """
@@ -196,7 +196,7 @@ def parse_element(raw_element: str):
             if elem]
 
 
-def read(fn: str):
+def read(fn: str) -> List[Extraction]:
     tokenizer = WordTokenizer(word_splitter = SpacyWordSplitter(pos_tags=True))
     prev_sent = []
 
@@ -234,7 +234,7 @@ def read(fn: str):
         # Yield last element
         yield prev_sent
 
-def convert_sent_to_conll(sent_ls):
+def convert_sent_to_conll(sent_ls: List[Extraction]):
     """
     Given a list of extractions for a single sentence -
     convert it to conll representation.
@@ -243,16 +243,13 @@ def convert_sent_to_conll(sent_ls):
     assert(len(set([ex.sent for ex in sent_ls])) == 1)
     toks = sent_ls[0].sent.split(' ')
 
-    try:
-        return safe_zip(*[range(len(toks)),
-                          toks] + \
-                        [extraction_to_conll(ex)
-                         for ex in sent_ls])
-    except AssertionError as e:
-        pdb.set_trace()
+    return safe_zip(*[range(len(toks)),
+                      toks] + \
+                    [extraction_to_conll(ex)
+                     for ex in sent_ls])
 
 
-def pad_line_to_ontonotes(line, domain):
+def pad_line_to_ontonotes(line, domain) -> List[str]:
     """
     Pad line to conform to ontonotes representation.
     """
@@ -262,10 +259,10 @@ def pad_line_to_ontonotes(line, domain):
     line_num = 0
     parse = "-"
     lemma = "-"
-    return (domain, line_num, word_ind, word, pos, parse, lemma, '-',\
-            '-', '-', '*') + oie_tags + ('-', )
+    return [domain, line_num, word_ind, word, pos, parse, lemma, '-',\
+            '-', '-', '*'] + list(oie_tags) + ['-', ]
 
-def convert_sent_dict_to_conll(sent_dic, domain):
+def convert_sent_dict_to_conll(sent_dic, domain) -> str:
     """
     Given a dictionary from sentence -> extractions,
     return a corresponding CoNLL representation.
