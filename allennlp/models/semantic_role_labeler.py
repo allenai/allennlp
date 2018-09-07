@@ -46,6 +46,8 @@ class SemanticRoleLabeler(Model):
         If provided, will be used to calculate the regularization penalty during training.
     label_smoothing : ``float``, optional (default = 0.0)
         Whether or not to use label smoothing on the labels when computing cross entropy loss.
+    ignore_span_metric: ``bool``, optional (default = False)
+        Whether to calculate span loss, which is irrelevant when predicting BIO for Open Information Extraction.
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
@@ -54,7 +56,8 @@ class SemanticRoleLabeler(Model):
                  embedding_dropout: float = 0.0,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None,
-                 label_smoothing: float = None) -> None:
+                 label_smoothing: float = None,
+                 ignore_span_metric: bool = False) -> None:
         super(SemanticRoleLabeler, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
@@ -71,6 +74,7 @@ class SemanticRoleLabeler(Model):
                                                            self.num_classes))
         self.embedding_dropout = Dropout(p=embedding_dropout)
         self._label_smoothing = label_smoothing
+        self.ignore_span_metric = ignore_span_metric
 
         check_dimensions_match(text_field_embedder.get_output_dim() + binary_feature_dim,
                                encoder.get_input_dim(),
@@ -141,7 +145,8 @@ class SemanticRoleLabeler(Model):
                                                       tags,
                                                       mask,
                                                       label_smoothing=self._label_smoothing)
-            self.span_metric(class_probabilities, tags, mask)
+            if not self.ignore_span_metric:
+                self.span_metric(class_probabilities, tags, mask)
             output_dict["loss"] = loss
 
         # We need to retain the mask in the output dictionary
