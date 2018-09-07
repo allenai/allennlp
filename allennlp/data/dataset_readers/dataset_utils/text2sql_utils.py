@@ -3,7 +3,7 @@
 Utility functions for reading the standardised text2sql datasets presented in
 `"Improving Text to SQL Evaluation Methodology" <https://arxiv.org/abs/1806.09029>`_
 """
-from typing import List, Dict, NamedTuple, Iterable
+from typing import List, Dict, NamedTuple, Iterable, Tuple
 
 from allennlp.common import JsonDict
 
@@ -19,6 +19,10 @@ class SqlData(NamedTuple):
     text_with_variables : ``List[str]``
         The tokens in the text of the query with variables
         mapped to table names/abstract variables.
+    variable_tags : ``List[str]``
+        Labels for each word in ``text`` which correspond to
+        which variable in the sql the token is linked to. "O"
+        is used to denote no tag.
     sql : ``List[str]``
         The tokens in the SQL query which corresponds to the text.
     text_variables : ``Dict[str, str]``
@@ -28,24 +32,28 @@ class SqlData(NamedTuple):
     """
     text: List[str]
     text_with_variables: List[str]
+    variable_tags: List[str]
     sql: List[str]
     text_variables: Dict[str, str]
     sql_variables: Dict[str, str]
 
 
 def replace_variables(sentence: List[str],
-                      sentence_variables: Dict[str, str]) -> List[str]:
+                      sentence_variables: Dict[str, str]) -> Tuple[List[str], List[str]]:
     """
     Replaces abstract variables in text with their concrete counterparts.
     """
     tokens = []
+    tags = []
     for token in sentence:
         if token not in sentence_variables:
             tokens.append(token)
+            tags.append("O")
         else:
             for word in sentence_variables[token].split():
                 tokens.append(word)
-    return tokens
+                tags.append(token)
+    return tokens, tags
 
 def clean_and_split_sql(sql: str) -> List[str]:
     """
@@ -91,11 +99,12 @@ def process_sql_data_blob(data: JsonDict,
             text_with_variables = sent_info['text'].strip().split()
             text_vars = sent_info['variables']
 
-            query_tokens = replace_variables(text_with_variables, text_vars)
+            query_tokens, tags = replace_variables(text_with_variables, text_vars)
             sql_tokens = clean_and_split_sql(sql)
 
             sql_data = SqlData(text=query_tokens,
                                text_with_variables=text_with_variables,
+                               variable_tags=tags,
                                sql=sql_tokens,
                                text_variables=text_vars,
                                sql_variables=sql_variables)

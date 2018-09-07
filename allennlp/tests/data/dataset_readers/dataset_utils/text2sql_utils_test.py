@@ -76,8 +76,9 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
     def test_replace_variables(self):
         sentence = ['how', 'many', 'name0', 'are', 'there', 'in', 'city_name0', '?']
         sentence_variables = {'city_name0': 'san francisco', 'name0': 'buttercup kitchen'}
-        assert text2sql_utils.replace_variables(sentence, sentence_variables) == ['how', 'many', 'buttercup', 'kitchen',
-                                                                                  'are', 'there', 'in', 'san', 'francisco', '?']
+        tokens, tags = text2sql_utils.replace_variables(sentence, sentence_variables)
+        assert tokens == ['how', 'many', 'buttercup', 'kitchen', 'are', 'there', 'in', 'san', 'francisco', '?']
+        assert tags == ['O', 'O', 'name0', 'name0', 'O', 'O', 'O', 'city_name0', 'city_name0', 'O']
 
     def test_clean_and_split_sql(self):
         sql = "SELECT COUNT( * ) FROM LOCATION AS LOCATIONalias0 , RESTAURANT AS RESTAURANTalias0 WHERE LOCATIONalias0.CITY_NAME " \
