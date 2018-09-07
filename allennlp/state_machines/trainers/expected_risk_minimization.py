@@ -96,7 +96,7 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
                                                sort_states=True)
         return finished_states
 
-    # TODO(pradeep): Move this method to nn.decoding.util
+    # TODO(pradeep): Move this method to state_machines.util
     @staticmethod
     def _prune_beam(states: List[State],
                     beam_size: int,
