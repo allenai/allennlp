@@ -188,7 +188,7 @@ class SemanticRoleLabeler(Model):
         if self.ignore_span_metric:
             # Return an empty dictionary if ignoring the
             # span metric
-            return dict()
+            return {}
 
         else:
             metric_dict = self.span_metric.get_metric(reset=reset)
