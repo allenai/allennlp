@@ -121,3 +121,4 @@ class MultiprocessDatasetReader(DatasetReader):
         logger.info("done reading, joining processes")
         for process in processes:
             process.join()
+        processes.clear()
