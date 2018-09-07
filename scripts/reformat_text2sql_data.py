@@ -70,8 +70,7 @@ def main(output_directory: int, data: str) -> None:
     output_directory : str, required.
         The output directory.
     data: str, default = None
-        The data to evaluate on. By default, we use the validation data from
-        the original experiment.
+        The path to the data director of https://github.com/jkkummerfeld/text2sql-data.
     """
     json_files = glob.glob(os.path.join(data, "*.json"))
 
