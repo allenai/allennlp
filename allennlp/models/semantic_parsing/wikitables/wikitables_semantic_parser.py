@@ -8,15 +8,14 @@ from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
 from allennlp.modules import Embedding, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, TimeDistributed
 from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
 from allennlp.nn import util
-from allennlp.nn.decoding import GrammarState, RnnState
 from allennlp.semparse import ParsingError
 from allennlp.semparse.type_declarations import type_declaration
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import WikiTablesWorld
+from allennlp.state_machines.states import GrammarBasedState, GrammarStatelet, RnnStatelet
 from allennlp.training.metrics import Average, WikiTablesAccuracy
 
 
@@ -141,10 +140,11 @@ class WikiTablesSemanticParser(Model):
                                            table: Dict[str, torch.LongTensor],
                                            world: List[WikiTablesWorld],
                                            actions: List[List[ProductionRuleArray]],
-                                           outputs: Dict[str, Any]) -> Tuple[List[RnnState], List[GrammarState]]:
+                                           outputs: Dict[str, Any]) -> Tuple[List[RnnStatelet],
+                                                                             List[GrammarStatelet]]:
         """
         Encodes the question and table, computes a linking between the two, and constructs an
-        initial RnnState and GrammarState for each batch instance to pass to the decoder.
+        initial RnnStatelet and GrammarStatelet for each batch instance to pass to the decoder.
 
         We take ``outputs`` as a parameter here and `modify` it, adding things that we want to
         visualize in a demo.
@@ -272,12 +272,12 @@ class WikiTablesSemanticParser(Model):
         question_mask_list = [question_mask[i] for i in range(batch_size)]
         initial_rnn_state = []
         for i in range(batch_size):
-            initial_rnn_state.append(RnnState(final_encoder_output[i],
-                                              memory_cell[i],
-                                              self._first_action_embedding,
-                                              self._first_attended_question,
-                                              encoder_output_list,
-                                              question_mask_list))
+            initial_rnn_state.append(RnnStatelet(final_encoder_output[i],
+                                                 memory_cell[i],
+                                                 self._first_action_embedding,
+                                                 self._first_attended_question,
+                                                 encoder_output_list,
+                                                 question_mask_list))
         initial_grammar_state = [self._create_grammar_state(world[i],
                                                             actions[i],
                                                             linking_scores[i],
@@ -511,9 +511,9 @@ class WikiTablesSemanticParser(Model):
                               world: WikiTablesWorld,
                               possible_actions: List[ProductionRuleArray],
                               linking_scores: torch.Tensor,
-                              entity_types: torch.Tensor) -> GrammarState:
+                              entity_types: torch.Tensor) -> GrammarStatelet:
         """
-        This method creates the GrammarState object that's used for decoding.  Part of creating
+        This method creates the GrammarStatelet object that's used for decoding.  Part of creating
         that is creating the `valid_actions` dictionary, which contains embedded representations of
         all of the valid actions.  So, we create that here as well.
 
@@ -600,15 +600,15 @@ class WikiTablesSemanticParser(Model):
                 output_embedding = self._output_action_embedder(action[2])
                 context_actions[action[0]] = (input_embedding, output_embedding, action_id)
 
-        return GrammarState([START_SYMBOL],
-                            {},
-                            translated_valid_actions,
-                            context_actions,
-                            type_declaration.is_nonterminal)
+        return GrammarStatelet([START_SYMBOL],
+                               {},
+                               translated_valid_actions,
+                               context_actions,
+                               type_declaration.is_nonterminal)
 
     def _compute_validation_outputs(self,
                                     actions: List[List[ProductionRuleArray]],
-                                    best_final_states: Mapping[int, Sequence[GrammarBasedDecoderState]],
+                                    best_final_states: Mapping[int, Sequence[GrammarBasedState]],
                                     world: List[WikiTablesWorld],
                                     example_lisp_string: List[str],
                                     metadata: List[Dict[str, Any]],
@@ -663,7 +663,7 @@ class WikiTablesSemanticParser(Model):
         """
         This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
         time, to finalize predictions.  This is (confusingly) a separate notion from the "decoder"
-        in "encoder/decoder", where that decoder logic lives in ``WikiTablesDecoderStep``.
+        in "encoder/decoder", where that decoder logic lives in the ``TransitionFunction``.
 
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.

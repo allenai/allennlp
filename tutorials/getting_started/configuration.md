@@ -56,10 +56,8 @@ model = Model.by_name(model_name).from_params(model_params)
 Because a class doesn't get registered until it's loaded, any code that uses
 `BaseClass.by_name('subclass_name')` must have already imported the code for the subclass.
 In particular, this means that once you start creating your own named models and helper classes,
-the included `allennlp.run` command will not be aware of them. However, `allennlp.run` is simply
-a wrapper around the `allennlp.commands.main` function,
-which means you just need to create your own script
-that imports all of your custom classes and then calls `allennlp.commands.main()`.
+the `allennlp` command will not be aware of them unless you specify them with `--include-package`.
+You can also create your own script that imports your custom classes and then calls `allennlp.commands.main()`.
 
 ## Datasets and Instances and Fields
 
@@ -108,13 +106,11 @@ The first section of our configuration file defines the `dataset_reader`:
 Here we've specified that we want to use the `DatasetReader` subclass that's registered
 under the name `"sequence_tagging"`. Unsurprisingly, this is the
 [`SequenceTaggingDatasetReader`](http://docs.allennlp.org/en/latest/api/allennlp.data.dataset_readers.html#allennlp.data.dataset_readers.sequence_tagging.SequenceTaggingDatasetReader)
-subclass. This reader assumes a text file of newline-separated sentences, where each sentence looks like
+subclass. This reader assumes a text file of newline-separated sentences, where each sentence looks like the following for some "word tag delimiter" `{wtd}` and some "token delimiter" `{td}`.
 
 ```
 word1{wtd}tag1{td}word2{wtd}tag2{td}...{td}wordn{wtd}tagn
 ```
-
-For some "word tag delimiter" `{wtd}` and some "token delimiter" `{td}`.
 
 _Our_ data files look like
 
@@ -206,25 +202,27 @@ into logits representing the probabilities of predicted tags.
 Let's first look at the text field embedder configuration:
 
 ```js
-    "text_field_embedder": {
-            "tokens": {
-                    "type": "embedding",
-                    "embedding_dim": 50
-            },
-            "token_characters": {
-              "type": "character_encoding",
-              "embedding": {
-                "embedding_dim": 8
-              },
-              "encoder": {
-                "type": "cnn",
-                "embedding_dim": 8,
-                "num_filters": 50,
-                "ngram_filter_sizes": [5]
-              },
-              "dropout": 0.2
-            }
+  "text_field_embedder": {
+    "tokens": {
+      "type": "embedding",
+      "embedding_dim": 50
     },
+    "token_characters": {
+      "type": "character_encoding",
+      "embedding": {
+        "embedding_dim": 8
+      },
+      "encoder": {
+        "type": "cnn",
+        "embedding_dim": 8,
+        "num_filters": 50,
+        "ngram_filter_sizes": [
+          5
+        ]
+      },
+      "dropout": 0.2
+    }
+  },
 ```
 
 You can see that it has an entry for each of the named encodings in our `TextField`.
@@ -265,12 +263,12 @@ which needs to be a
 
 ```js
     "encoder": {
-            "type": "lstm",
-            "input_size": 100,
-            "hidden_size": 100,
-            "num_layers": 2,
-            "dropout": 0.5,
-            "bidirectional": true
+      "type": "lstm",
+      "input_size": 100,
+      "hidden_size": 100,
+      "num_layers": 2,
+      "dropout": 0.5,
+      "bidirectional": true
     }
 ```
 
