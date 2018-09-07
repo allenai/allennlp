@@ -1,6 +1,7 @@
-import logging
-
 from typing import List
+from typing import Tuple
+
+from overrides import overrides
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
@@ -8,12 +9,7 @@ from allennlp.data.tokenizers import WordTokenizer
 from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
-from overrides import overrides
-from typing import Tuple
 from allennlp.data.tokenizers import Token
-from collections import defaultdict
-
-logger = logging.getLogger(__name__)
 
 @Predictor.register('openie_predictor')
 class OpenIePredictor(Predictor):
@@ -23,8 +19,7 @@ class OpenIePredictor(Predictor):
     """
     def __init__(self,
                  model: Model,
-                 dataset_reader: DatasetReader
-                 ) -> None:
+                 dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)
         self._tokenizer = WordTokenizer(word_splitter=SpacyWordSplitter(pos_tags=True))
 
@@ -39,7 +34,7 @@ class OpenIePredictor(Predictor):
         for tag in tags:
             if "V" in tag:
                 # Create a continuous 'V' BIO span
-                prefix, suffix = tag.split("-")
+                prefix, _ = tag.split("-")
 
                 if verb_flag:
                     # Continue a verb label across the different predicate parts
@@ -96,9 +91,9 @@ class OpenIePredictor(Predictor):
         return self._dataset_reader.text_to_instance(tokens, verb_labels)
 
     @overrides
-    def predict_json(self, inputs: JsonDict, cuda_device: int = -1) -> JsonDict:
+    def predict_json(self, inputs: JsonDict) -> JsonDict:
         """
-        Create instance(s) after predicting the format. One sentence containing multiple verbs 
+        Create instance(s) after predicting the format. One sentence containing multiple verbs
         will lead to multiple instances.
 
         Expects JSON that looks like ``{"sentence": "..."}``
@@ -110,7 +105,6 @@ class OpenIePredictor(Predictor):
                                                          ...}]}
         """
         sent_tokens = self._tokenizer.tokenize(inputs["sentence"])
-        sentence_token_text = [t.text for t in sent_tokens]
 
         # Find all verbs in the input sentence
         pred_ids = [i for (i, t)
@@ -123,13 +117,8 @@ class OpenIePredictor(Predictor):
                      for pred_id in pred_ids]
 
         # Run model
-        try:
-            outputs = [self._model.forward_on_instance(instance)["tags"]
-                       for instance in instances]
-        except:
-            # We do not want notorious GUI sentences to break the system.
-            logger.error(f"Exception in OpenIE input: {inputs}")
-            outputs = None
+        outputs = [self._model.forward_on_instance(instance)["tags"]
+                   for instance in instances]
 
         # Build and return output dictionary
         results = {"verbs": [], "words": sent_tokens}
@@ -149,4 +138,3 @@ class OpenIePredictor(Predictor):
             })
 
         return sanitize(results)
-

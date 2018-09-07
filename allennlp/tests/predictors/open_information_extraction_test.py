@@ -3,25 +3,24 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 
-import pdb
-
 class TestOpenIePredictor(AllenNlpTestCase):
     def test_uses_named_inputs(self):
         """
         Tests whether the model outputs conform to the expected format.
         """
         inputs = {
-                "sentence": "Angela Merkel met and spoke to her EU counterparts during the climate summit in Paris."
+                "sentence": "Angela Merkel met and spoke to her EU counterparts during the climate summit."
         }
 
-        archive = load_archive(self.FIXTURES_ROOT / 'open_information_extraction' / 'serialization' / 'model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / \
+                               'open_information_extraction' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'openie_predictor')
 
         result = predictor.predict_json(inputs)
 
         words = result.get("words")
         assert words == ["Angela", "Merkel", "met", "and", "spoke", "to", "her", "EU", "counterparts",
-                         "during", "the", "climate", "summit", "in", "Paris", "."]
+                         "during", "the", "climate", "summit", "."]
         num_words = len(words)
 
         verbs = result.get("verbs")
@@ -44,7 +43,8 @@ class TestOpenIePredictor(AllenNlpTestCase):
         Tests whether the model copes with sentences without verbs.
         """
         input1 = {"sentence": "Blah no verb sentence."}
-        archive = load_archive(self.FIXTURES_ROOT / 'open_information_extraction' / 'serialization' / 'model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / \
+                               'open_information_extraction' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'openie_predictor')
 
         result = predictor.predict_json(input1)
