@@ -21,3 +21,4 @@ from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.models.esim import ESIM
 from allennlp.models.bimpm import BiMpm
+from allennlp.models.open_information_extraction import NeuralOie
