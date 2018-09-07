@@ -11,7 +11,7 @@ class TestOpenIePredictor(AllenNlpTestCase):
         Tests whether the model outputs conform to the expected format.
         """
         inputs = {
-                "sentence": "Angela Merkel met and spoke to her EU counterparts during the climate submit in Paris."
+                "sentence": "Angela Merkel met and spoke to her EU counterparts during the climate summit in Paris."
         }
 
         archive = load_archive(self.FIXTURES_ROOT / 'open_information_extraction' / 'serialization' / 'model.tar.gz')
@@ -21,7 +21,7 @@ class TestOpenIePredictor(AllenNlpTestCase):
 
         words = result.get("words")
         assert words == ["Angela", "Merkel", "met", "and", "spoke", "to", "her", "EU", "counterparts",
-                         "during", "the", "climate", "submit", "in", "Paris", "."]
+                         "during", "the", "climate", "summit", "in", "Paris", "."]
         num_words = len(words)
 
         verbs = result.get("verbs")
