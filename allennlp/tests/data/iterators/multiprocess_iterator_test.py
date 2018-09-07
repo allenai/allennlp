@@ -39,7 +39,7 @@ class TestMultiprocessIterator(IteratorTest):
         iterator = MultiprocessIterator(num_workers=2, batch_size=32)
         iterator.index_with(vocab)
 
-        instances = [instance for instance in reader.read(glob)]
+        instances = reader.read(glob)
 
         tensor_dicts = iterator(instances, num_epochs=1)
         sizes = [len(tensor_dict['tags']) for tensor_dict in tensor_dicts]
