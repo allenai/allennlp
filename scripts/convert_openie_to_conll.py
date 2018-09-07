@@ -32,6 +32,25 @@ Element = namedtuple("Element",    # An element (predicate or argument) in an Op
                       "text"]      # The textual representation of this element
 )
 
+def main(inp_fn: str,
+         domain: str,
+         out_fn: str):
+    """
+    inp_fn: str, required.
+       Path to file from which to read Open IE extractions in Open IE4's format.
+    domain: str, required.
+       Domain to be used when writing CoNLL format.
+    out_fn: str, required.
+       Path to file to which to write the CoNLL format Open IE extractions.
+    """
+    with open(out_fn, 'w') as fout:
+        for sent_ls in read(inp_fn):
+            fout.write("{}\n\n".format('\n'.join(['\t'.join(map(str,
+                                                                pad_line_to_ontonotes(line,
+                                                                                      domain)))
+                                                  for line
+                                                  in convert_sent_to_conll(sent_ls)])))
+
 def safe_zip(*args):
     """
     Zip which ensures all lists are of same size.
@@ -256,32 +275,11 @@ def convert_sent_dict_to_conll(sent_dic, domain):
                         for sent_ls
                         in sent_dic.iteritems()])
 
-
-def main(inp_fn: str,
-         domain: str,
-         out_fn: str):
-    """
-    inp_fn: str, required.
-       Path to file from which to read Open IE extractions in Open IE4's format.
-    domain: str, required.
-       Domain to be used when writing CoNLL format.
-    out_fn: str, required.
-       Path to file to which to write the CoNLL format Open IE extractions.
-    """
-    with open(out_fn, 'w') as fout:
-        for sent_ls in read(inp_fn):
-            fout.write("{}\n\n".format('\n'.join(['\t'.join(map(str,
-                                                                pad_line_to_ontonotes(line,
-                                                                                      domain)))
-                                                  for line
-                                                  in convert_sent_to_conll(sent_ls)])))
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert Open IE4 extractions to CoNLL (ontonotes) format.")
-    parser.add_argument("--inp", type=str, help="input file from which to read Open IE extractions.")
-    parser.add_argument("--domain", type=str, help="domain to use when writing the ontonotes file.")
-    parser.add_argument("--out", type=str, help="path to the output file, where CoNLL format should be written.")
+    parser.add_argument("--inp", type=str, help="input file from which to read Open IE extractions.", required = True)
+    parser.add_argument("--domain", type=str, help="domain to use when writing the ontonotes file.", required = True)
+    parser.add_argument("--out", type=str, help="path to the output file, where CoNLL format should be written.", required = True)
     args = parser.parse_args()
     main(args.inp, args.domain, args.out)
 
