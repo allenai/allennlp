@@ -707,26 +707,23 @@ class _ElmoSoftmax(torch.nn.Module):
     chunk_size : ``int``, optional, (default 256)
         The chunk size of the softmax layer. The default (256) takes about
         10GB of memory!
-    hidden_size : ``int``, optional, (default 512)
-        The hidden vector size of the softmax layer.
     """
 
     def __init__(self,
                  softmax_weight_file: str,
                  softmax_vocab_file: str,
-                 chunk_size: int = 256,
-                 hidden_size: int = 512):
+                 chunk_size: int = 256):
 
         super(_ElmoSoftmax, self).__init__()
 
         self.softmax_weight_file = softmax_weight_file
         self.softmax_vocab_file = softmax_vocab_file
         self.chunk_size = chunk_size
-        self.hidden_size = hidden_size
 
         self.vocab = self._load_vocab(self.softmax_vocab_file)
         self.fc_layer = self._load_softmax_weights(
-            self.softmax_weight_file, self.vocab.get_vocab_size(), self.hidden_size)
+            self.softmax_weight_file, self.vocab.get_vocab_size())
+        self.hidden_size = self.fc_layer.in_features
 
         # TODO: do we add CUDA code here?
 
@@ -740,15 +737,19 @@ class _ElmoSoftmax(torch.nn.Module):
     @staticmethod
     def _load_softmax_weights(
             softmax_weight_file: str,
-            vocab_size: int,
-            hidden_size: int) -> torch.Tensor:
-        fc_layer = torch.nn.Linear(hidden_size, vocab_size)
+            vocab_size: int) -> torch.nn.Linear:
 
         with h5py.File(cached_path(softmax_weight_file), 'r') as fin:
-            fc_layer.weight.data.copy_(
-                torch.FloatTensor(numpy.array(fin['softmax']['W'])))
-            fc_layer.bias.data.copy_(
-                torch.FloatTensor(numpy.array(fin['softmax']['b'])))
+            W = numpy.array(fin['softmax']['W'])
+            b = numpy.array(fin['softmax']['b'])
+
+        hidden_size = W.shape[1]
+        fc_layer = torch.nn.Linear(hidden_size, vocab_size)
+
+        fc_layer.weight.data.copy_(
+            torch.FloatTensor(W))
+        fc_layer.bias.data.copy_(
+            torch.FloatTensor(b))
 
         return fc_layer
 
