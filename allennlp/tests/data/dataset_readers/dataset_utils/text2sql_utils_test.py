@@ -17,7 +17,7 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
 
         # All of these data points are the same. This is weird, but currently correct.
         for split, sql_data in dataset:
-            # This should test because in the data, the cross validation split is == 1.
+            # This should be test because in the data, the cross validation split is == 1.
             assert split == "test"
             assert sql_data.text == ['how', 'many', 'buttercup', 'kitchen', 'are', 'there', 'in', 'san', 'francisco', '?']
             assert sql_data.text_with_variables == ['how', 'many', 'name0', 'are', 'there', 'in', 'city_name0', '?']
@@ -76,10 +76,10 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
             assert sql_data.text == correct_text[i][0]
             assert sql_data.text_with_variables == correct_text[i][1]
 
-    def test_get_tokens(self):
+    def test_replace_variables(self):
         sentence = ['how', 'many', 'name0', 'are', 'there', 'in', 'city_name0', '?']
         sentence_variables = {'city_name0': 'san francisco', 'name0': 'buttercup kitchen'}
-        assert text2sql_utils.get_tokens(sentence, sentence_variables) == ['how', 'many', 'buttercup', 'kitchen',
+        assert text2sql_utils.replace_variables(sentence, sentence_variables) == ['how', 'many', 'buttercup', 'kitchen',
                                                                            'are', 'there', 'in', 'san', 'francisco', '?']
 
     def test_clean_and_split_sql(self):

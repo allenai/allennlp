@@ -34,8 +34,8 @@ class SqlData(NamedTuple):
     sql_variables: Dict[str, str]
 
 
-def get_tokens(sentence: List[str],
-               sentence_variables: Dict[str, str]) -> List[str]:
+def replace_variables(sentence: List[str],
+                      sentence_variables: Dict[str, str]) -> List[str]:
     """
     Replaces abstract variables in text with their concrete counterparts.
     """
@@ -50,12 +50,12 @@ def get_tokens(sentence: List[str],
 
 def clean_and_split_sql(sql: str) -> List[str]:
     """
-    Cleans up and unifies a SQL query. This involves removing uncessary quotes
-    and spliting brackets which aren't formatted consistently in the data.
+    Cleans up and unifies a SQL query. This involves removing unnecessary quotes
+    and splitting brackets which aren't formatted consistently in the data.
     """
     sql_tokens = []
     for token in sql.strip().split():
-        token = token.replace('"', "").replace('"', "").replace("%", "")
+        token = token.replace('"', "").replace("'", "").replace("%", "")
         if token.endswith("(") and len(token) > 1:
             sql_tokens.append(token[:-1])
             sql_tokens.append(token[-1])
@@ -68,6 +68,21 @@ def process_sql_data_blob(data: JsonDict,
                           use_all_sql: bool = False,
                           use_question_split: bool = False,
                           cross_validation_split: int = None) -> Iterable[Tuple[str, SqlData]]:
+    """
+    A utility function for reading in text2sql data blobs.
+
+    Parameters
+    ----------
+    data : ``JsonDict``
+    use_all_sql : ``bool``, optional (default = False)
+        Whether to use all of the sql queries which have identical semantics,
+        or whether to just use the first one.
+    use_question_split : ``bool``, optional (default = False)
+        Whether to split the dataset based on questions, rather than SQL queries.
+    cross_validation_split : ``bool``, optional, (default = None)
+        Some of the datasets require a cross validation split, because they are small.
+        The integer value passed here will be the split used for cross validation.
+    """
     # If we're splitting based on SQL queries,
     # we assign whole splits of questions which
     # have a similar SQL template to the same split.
@@ -92,7 +107,7 @@ def process_sql_data_blob(data: JsonDict,
                 dataset_bucket = "train"
         else:
             dataset_bucket = dataset_split
-        # Loop over the different sql statements with "equivelent" semantics
+        # Loop over the different sql statements with "equivalent" semantics
         for sql in data["sql"]:
             sql_variables = {}
             for variable in data['variables']:
@@ -101,7 +116,7 @@ def process_sql_data_blob(data: JsonDict,
             text_with_variables = sent_info['text'].strip().split()
             text_vars = sent_info['variables']
 
-            query_tokens = get_tokens(text_with_variables, text_vars)
+            query_tokens = replace_variables(text_with_variables, text_vars)
             sql_tokens = clean_and_split_sql(sql)
 
             sql_data = SqlData(text=query_tokens,
@@ -111,7 +126,7 @@ def process_sql_data_blob(data: JsonDict,
                                sql_variables=sql_variables)
             yield (dataset_bucket, sql_data)
 
-            # Some questions might have multiple equivelent SQL statements.
+            # Some questions might have multiple equivalent SQL statements.
             # By default, we just use the first one. TODO(Mark): Use the shortest?
             if not use_all_sql:
                 break
