@@ -24,12 +24,12 @@ def move_to_device(obj, cuda_device: int):
 
     if isinstance(obj, torch.Tensor):
         return obj.cuda(cuda_device)
+    elif isinstance(obj, dict):
+        return {key: move_to_device(value, cuda_device) for key, value in obj.items()}
     elif isinstance(obj, list):
         return [move_to_device(item, cuda_device) for item in obj]
     elif isinstance(obj, tuple):
         return tuple([move_to_device(item, cuda_device) for item in obj])
-    elif isinstance(obj, dict):
-        return {key: move_to_device(value, cuda_device) for key, value in obj.items()}
     else:
         return obj
 
