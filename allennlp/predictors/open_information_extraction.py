@@ -21,11 +21,9 @@ def join_mwp(tags: List[str]) -> List[str]:
         if "V" in tag:
             # Create a continuous 'V' BIO span
             prefix, _ = tag.split("-")
-
             if verb_flag:
                 # Continue a verb label across the different predicate parts
                 prefix = 'I'
-
             ret.append(f"{prefix}-V")
             verb_flag = True
         else:
@@ -42,7 +40,6 @@ def make_oie_string(tokens: List[Token], tags: List[str]) -> str:
     """
     frame = []
     chunk = []
-
     words = [token.text for token in tokens]
 
     for (token, tag) in zip(words, tags):
