@@ -13,7 +13,7 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
     def test_process_sql_data_blob(self):
 
         data = json.load(open(str(self.data)))
-        dataset = text2sql_utils.process_sql_data_blob(data[0])
+        dataset = text2sql_utils.process_sql_data([data[0]])
 
         # All of these data points are the same. This is weird, but currently correct.
         for sql_data in dataset:
@@ -28,7 +28,7 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
 
 
         # This section of the dataset should be in the train set because it's not used for cross validation.
-        dataset = text2sql_utils.process_sql_data_blob(data[1])
+        dataset = text2sql_utils.process_sql_data([data[1]])
 
         correct_text = [
                 [['how', 'many', 'chinese', 'restaurants', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],

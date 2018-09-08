@@ -51,7 +51,8 @@ class TemplateText2SqlDatasetReader(DatasetReader):
     @overrides
     def _read(self, file_path: str):
         """
-        This dataset reader consumes the data from https://github.com/jkkummerfeld/text2sql-data/tree/master/data
+        This dataset reader consumes the data from
+        https://github.com/jkkummerfeld/text2sql-data/tree/master/data
         formatted using ``scripts/reformat_text2sql_data.py``.
 
         Parameters
@@ -69,7 +70,7 @@ class TemplateText2SqlDatasetReader(DatasetReader):
             with open(cached_path(path), "r") as data_file:
                 data = json.load(data_file)
 
-            for sql_data in text2sql_utils.process_sql_data_blob(data, self._use_all_sql):
+            for sql_data in text2sql_utils.process_sql_data(data, self._use_all_sql):
                 template = " ".join(sql_data.sql)
                 yield self.text_to_instance(sql_data.text, sql_data.variable_tags, template)
 
@@ -79,7 +80,6 @@ class TemplateText2SqlDatasetReader(DatasetReader):
                          slot_tags: List[str] = None,
                          sql_template: str = None) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
-
         fields: Dict[str, Field] = {}
         tokens = TextField([Token(t) for t in query], self._token_indexers)
         fields["tokens"] = tokens

@@ -71,10 +71,11 @@ def clean_and_split_sql(sql: str) -> List[str]:
     return sql_tokens
 
 
-def process_sql_data_blob(data: JsonDict,
-                          use_all_sql: bool = False) -> Iterable[SqlData]:
+def process_sql_data(data: JsonDict,
+                     use_all_sql: bool = False,
+                     use_unique_queries: bool = True) -> Iterable[SqlData]:
     """
-    A utility function for reading in text2sql data blobs. The blob is
+    A utility function for reading in text2sql data. The blob is
     the result of loading the json from a file produced by the script
     ``scripts/reformat_text2sql_data.py``.
 
@@ -84,33 +85,42 @@ def process_sql_data_blob(data: JsonDict,
     use_all_sql : ``bool``, optional (default = False)
         Whether to use all of the sql queries which have identical semantics,
         or whether to just use the first one.
+    use_all_queries : ``bool``, (default = False)
+        Whether or not to enforce query sentence uniqueness. If false,
+        duplicated queries will occur in the dataset as separate instances,
+        as for a given SQL query, not only are there multiple queries with
+        the same template, but there are also duplicate queries.
     """
-    # TODO(Mark): currently this does not filter for duplicate _sentences_
-    # which have the same sql query. Really it should, because these instances
-    # are literally identical, so just magnify errors etc. However, doing this
-    # would make it really hard to compare to previous work. Sad times.
-    for sent_info in data['sentences']:
-        # Loop over the different sql statements with "equivalent" semantics
-        for sql in data["sql"]:
-            sql_variables = {}
-            for variable in data['variables']:
-                sql_variables[variable['name']] = variable['example']
+    for example in data:
+        seen_sentences = set()
+        for sent_info in example['sentences']:
+            # Loop over the different sql statements with "equivalent" semantics
+            for sql in example["sql"]:
+                text_with_variables = sent_info['text'].strip().split()
+                text_vars = sent_info['variables']
 
-            text_with_variables = sent_info['text'].strip().split()
-            text_vars = sent_info['variables']
+                query_tokens, tags = replace_variables(text_with_variables, text_vars)
+                if use_unique_queries:
+                    key = " ".join(query_tokens)
+                    if key in seen_sentences:
+                        continue
+                    else:
+                        seen_sentences.add(key)
 
-            query_tokens, tags = replace_variables(text_with_variables, text_vars)
-            sql_tokens = clean_and_split_sql(sql)
+                sql_tokens = clean_and_split_sql(sql)
+                sql_variables = {}
+                for variable in example['variables']:
+                    sql_variables[variable['name']] = variable['example']
 
-            sql_data = SqlData(text=query_tokens,
-                               text_with_variables=text_with_variables,
-                               variable_tags=tags,
-                               sql=sql_tokens,
-                               text_variables=text_vars,
-                               sql_variables=sql_variables)
-            yield sql_data
+                sql_data = SqlData(text=query_tokens,
+                                   text_with_variables=text_with_variables,
+                                   variable_tags=tags,
+                                   sql=sql_tokens,
+                                   text_variables=text_vars,
+                                   sql_variables=sql_variables)
+                yield sql_data
 
-            # Some questions might have multiple equivalent SQL statements.
-            # By default, we just use the first one. TODO(Mark): Use the shortest?
-            if not use_all_sql:
-                break
+                # Some questions might have multiple equivalent SQL statements.
+                # By default, we just use the first one. TODO(Mark): Use the shortest?
+                if not use_all_sql:
+                    break
