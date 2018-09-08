@@ -1,0 +1,3 @@
+from allennlp.state_machines.trainers.decoder_trainer import DecoderTrainer
+from allennlp.state_machines.trainers.expected_risk_minimization import ExpectedRiskMinimization
+from allennlp.state_machines.trainers.maximum_marginal_likelihood import MaximumMarginalLikelihood

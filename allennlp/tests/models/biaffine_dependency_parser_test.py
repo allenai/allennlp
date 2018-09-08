@@ -3,7 +3,7 @@
 import torch
 
 from allennlp.common.testing.model_test_case import ModelTestCase
-from allennlp.nn.decoding.chu_liu_edmonds import decode_mst
+from allennlp.nn.chu_liu_edmonds import decode_mst
 
 class BiaffineDependencyParserTest(ModelTestCase):
 
