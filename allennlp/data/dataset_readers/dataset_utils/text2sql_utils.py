@@ -3,7 +3,7 @@
 Utility functions for reading the standardised text2sql datasets presented in
 `"Improving Text to SQL Evaluation Methodology" <https://arxiv.org/abs/1806.09029>`_
 """
-from typing import List, Dict, NamedTuple, Iterable, Tuple
+from typing import List, Dict, NamedTuple, Iterable, Tuple, Set
 
 from allennlp.common import JsonDict
 
@@ -71,7 +71,7 @@ def clean_and_split_sql(sql: str) -> List[str]:
     return sql_tokens
 
 
-def process_sql_data(data: JsonDict,
+def process_sql_data(data: List[JsonDict],
                      use_all_sql: bool = False,
                      use_unique_queries: bool = True) -> Iterable[SqlData]:
     """
@@ -92,7 +92,7 @@ def process_sql_data(data: JsonDict,
         the same template, but there are also duplicate queries.
     """
     for example in data:
-        seen_sentences = set()
+        seen_sentences: Set[str] = set()
         for sent_info in example['sentences']:
             # Loop over the different sql statements with "equivalent" semantics
             for sql in example["sql"]:

@@ -75,10 +75,10 @@ class TemplateText2SqlDatasetReader(DatasetReader):
                 yield self.text_to_instance(sql_data.text, sql_data.variable_tags, template)
 
     @overrides
-    def text_to_instance(self,
+    def text_to_instance(self,  # type: ignore
                          query: List[str],
                          slot_tags: List[str] = None,
-                         sql_template: str = None) -> Instance:  # type: ignore
+                         sql_template: str = None) -> Instance:
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
         tokens = TextField([Token(t) for t in query], self._token_indexers)
