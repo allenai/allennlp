@@ -30,9 +30,9 @@ MODULES_THAT_NEED_NO_DOCS: Set[str] = {
         # module is removed (probably in version 0.8).
         'allennlp.modules.span_pruner',
         # Moved to dataset_readers/semantic_parsing. TODO(Mark): remove in version 0.8.
-        'allennlp.modules.data.dataset_readers.atis',
-        'allennlp.modules.data.dataset_readers.nlvr',
-        'allennlp.modules.data.dataset_readers.wikitables',
+        'allennlp.data.dataset_readers.atis',
+        'allennlp.data.dataset_readers.nlvr',
+        'allennlp.data.dataset_readers.wikitables',
         # Deprecated in favor of allennlp.predictors.
         'allennlp.service.predictors.*',
 }
