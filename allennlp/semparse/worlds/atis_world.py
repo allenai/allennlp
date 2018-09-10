@@ -3,6 +3,7 @@ from typing import List, Dict, Tuple
 import numpy
 from pprint import pprint
 import sqlite3
+from nltk import ngrams
 
 from parsimonious.grammar import Grammar
 
@@ -18,15 +19,23 @@ def get_strings_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, Li
     that map to lists of the token indices that they are linked to.
     """
     string_linking_scores: Dict[str, List[int]] = defaultdict(list)
-    for index, (first_token, second_token) in enumerate(zip(tokenized_utterance, tokenized_utterance[1:])):
-        for string in ATIS_TRIGGER_DICT.get(first_token.text.lower(), []):
+
+    for index, token in enumerate(tokenized_utterance):
+        for string in ATIS_TRIGGER_DICT.get(token.text.lower(), []):
             string_linking_scores[string].append(index)
-        bigram = f"{first_token.text} {second_token.text}".lower()
-        for string in ATIS_TRIGGER_DICT.get(bigram, []):
-            string_linking_scores[string].extend([index, index + 1])
-    if tokenized_utterance[-1].text.lower() in ATIS_TRIGGER_DICT:
-        for string in ATIS_TRIGGER_DICT[tokenized_utterance[-1].text.lower()]:
-            string_linking_scores[string].append(len(tokenized_utterance)-1)
+
+    bigrams = ngrams([token.text for token in tokenized_utterance], 2)
+    for index, bigram in enumerate(bigrams):
+        for string in ATIS_TRIGGER_DICT.get(' '.join(bigram).lower(), []):
+            string_linking_scores[string].extend([index,
+                                                  index + 1])
+
+    trigrams = ngrams([token.text for token in tokenized_utterance], 3)
+    for index, trigram in enumerate(trigrams):
+        for string in ATIS_TRIGGER_DICT.get(' '.join(trigram).lower(), []):
+            string_linking_scores[string].extend([index, 
+                                                  index + 1,
+                                                  index + 2])
     return string_linking_scores
 
 
@@ -56,7 +65,7 @@ class AtisWorld():
         self.tables_with_strings = TABLES_WITH_STRINGS 
         if database_directory:
             self.database_directory = database_directory
-            # database_directory = "/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db"
+            database_directory = "/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db"
             self.connection = sqlite3.connect(database_directory)
             self.cursor = self.connection.cursor()
 
@@ -79,6 +88,9 @@ class AtisWorld():
         self.grammar_str: str = self.get_grammar_str()
         self.grammar_with_context: Grammar = Grammar(self.grammar_str)
         all_possible_actions = self.all_possible_actions()
+
+        if database_directory:
+            self.connection.close()
         
 
     def get_valid_actions(self) -> Dict[str, List[str]]:
@@ -129,17 +141,20 @@ class AtisWorld():
             for table, columns in self.tables_with_strings.items():
                 for column in columns:
                     self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
-                    strings_list.extend([(format_action(f"{table}_{column}_string", row[0]), row[0])
+                    strings_list.extend([(format_action(f"{table}_{column}_string", row[0], True), row[0])
                                                 for row in self.cursor.fetchall()])
         strings_list = sorted(strings_list, key=lambda string_tuple: string_tuple[0]) 
         # We construct the linking scores for strings from the ``string_linking_dict`` here.
+
         string_linking_scores = []
+
         for string in strings_list:
             entity_linking = [0 for token in current_tokenized_utterance]
             # string_linking_dict has the strings and linking scores from the last utterance.
             # If the string is not in the last utterance, then the linking scores will be all 0.
             for token_index in string_linking_dict.get(string[1], []):
                 entity_linking[token_index] = 1
+
             string_linking_scores.append(entity_linking)
         linking_scores.extend(string_linking_scores)
 
