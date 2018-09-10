@@ -127,7 +127,7 @@ class BucketIterator(DataIterator):
                 penultimate_batch = batches.pop()
             if shuffle:
                 # NOTE: if shuffle is false, the data will still be in a different order
-                # because of the bucket sorting
+                # because of the bucket sorting.
                 random.shuffle(batches)
             if move_to_front:
                 batches.insert(0, penultimate_batch)
