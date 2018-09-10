@@ -243,6 +243,8 @@ class DataIterator(Registrable):
         padding_length = -1
         list_batch_instances = list(batch_instances)
         for instance in list_batch_instances:
+            if self.vocab is not None:
+                instance.index_fields(self.vocab)
             field_lengths = instance.get_padding_lengths()
             for _, lengths in field_lengths.items():
                 try:
