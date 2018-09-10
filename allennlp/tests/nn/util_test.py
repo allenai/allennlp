@@ -789,6 +789,9 @@ class TestNnUtil(AllenNlpTestCase):
         assert has_tensor(["a", 10, tensor])
         assert not has_tensor(["a", 10])
 
+        assert has_tensor(("a", 10, tensor))
+        assert not has_tensor(("a", 10))
+
         assert has_tensor({"a": tensor, "b": 1})
         assert not has_tensor({"a": 10, "b": 1})
 
