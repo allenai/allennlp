@@ -15,7 +15,7 @@ These tutorials relate to the version of AllenNLP at the git commit SHA you are 
 
 ### A Complete Example: Predicitng Paper Venues
 
-* [Part 1 - Datasets and Models](getting_started/predicting_paper_venues/predicting_paper_venues_pt2.md)
+* [Part 1 - Datasets and Models](getting_started/predicting_paper_venues/predicting_paper_venues_pt1.md)
 * [Part 2 - Predictions and Demos](getting_started/predicting_paper_venues/predicting_paper_venues_pt2.md)
 
 ## How-to
