@@ -1,13 +1,37 @@
-# Using pre-trained ELMo representations
+# ELMo: Deep contextualized word representations
 
-Pre-trained contextual representations from large scale bidirectional
-language models provide large improvements for nearly all supervised
-NLP tasks.
+Pre-trained contextual representations of words from large scale bidirectional
+language models provide large improvements over GloVe/word2vec baselines
+for many supervised NLP tasks including question answering, coreference,
+semantic role labeling, classification, and syntactic parsing.
 
-This document describes how to add ELMo representations to your model using `allennlp`.
+This document describes how to add ELMo representations to your model using pytorch and `allennlp`.
 We also have a [tensorflow implementation](https://github.com/allenai/bilm-tf).
 
-For more detail about ELMo, please see the publication ["Deep contextualized word representations"](http://arxiv.org/abs/1802.05365).
+For more detail about ELMo, please see the publication ["Deep contextualized word representations", NAACL 2018](http://www.aclweb.org/anthology/N18-1202).
+
+Citations:
+
+```
+@inproceedings{Peters:2018,
+  author={Peters, Matthew E. and  Neumann, Mark and Iyyer, Mohit and Gardner, Matt and Clark, Christopher and Lee, Kenton and Zettlemoyer, Luke},
+  title={Deep contextualized word representations},
+  booktitle={Proc. of NAACL},
+  year={2018}
+}
+```
+
+```
+@inproceedings{Gardner2017AllenNLP,
+  title={{AllenNLP}: A Deep Semantic Natural Language Processing Platform},
+  author={Matt Gardner and Joel Grus and Mark Neumann and Oyvind Tafjord
+    and Pradeep Dasigi and Nelson F. Liu and Matthew Peters and
+    Michael Schmitz and Luke S. Zettlemoyer},
+  year={2018},
+  booktitle={ACL workshop for NLP Open Source Software}
+}
+```
+
 
 ## Writing contextual representations to disk
 
@@ -153,3 +177,25 @@ There are a few practical implications of this:
 * Due to the statefulness, the ELMo vectors are not deterministic and running the same batch multiple times will result in slightly different embeddings.
 * After loading the pre-trained model, the first few batches will be negatively impacted until the biLM can reset its internal states.  You may want to run a few batches through the model to warm up the states before making predictions (although we have not worried about this issue in practice).
 * It is important to always add the `<S>` and `</S>` tokens to each sentence.  The `allennlp` code handles this behind the scenes, but if you are handing padding and indexing in a different manner then take care to ensure this is handled appropriately.
+
+
+# Reproducing the results from <i>Deep contextualized word representations</i>
+
+This section provides details on reproducing the results in Table 1
+of the [ELMo paper](http://www.aclweb.org/anthology/N18-1202).
+
+For context, all of the experiments for the ELMo paper were done before AllenNLP existed, and almost all of the models in AllenNLP are re-implementations of things that were typically originally written in tensorflow code (the SRL model is the only exception).
+In some cases, we haven't had the resources to tune the AllenNLP implementations to match the existing performance numbers yet; if you are able to do this for some of the models and submit back a tuned model, we (and many others) would greatly appreciate it.
+
+For the tasks in Table 1, this table lists the corresponding AllenNLP config files in cases where we have a re-implementation, and notes about reproducing the results in cases where we do not.
+The config files are in the [training_config/](../../training_config) folder.
+
+|Task |    Configs |  Notes
+|-----|------------|-------|
+|SQuAD|   N/A | The SQuAD model is from [Clark and Gardner, 2018](https://www.semanticscholar.org/paper/Simple-and-Effective-Multi-Paragraph-Reading-Clark-Gardner/b95f7399861dd08d4f057bcbe2d6e21a9c543ddc). Tensorflow code to reproduce the results is [here](https://github.com/allenai/document-qa/tree/master/docqa/elmo).|
+|SNLI| esim.json / esim_elmo.json  | This configuration is modified slightly from the one used in the ELMo paper, but performance is comparable. AllenNLP re-implementation has test accuracy 88.5% (original 88.7 +/- 0.17).  See the comment in esim_elmo.json for more details.|
+|SRL | semantic_role_labeler.jsonnet /  semantic_role_labeler_elmo.jsonnet    | There's also a config that uses the ELMo trained on 5.5B tokens. Note: the SRL model is exceedingly slow to train. There is a faster version with a custom CUDA kernel available, but it is being depreciated and is incompatible with newer allennlp releases.  See [this discussion](https://github.com/allenai/allennlp/pull/1626#issuecomment-416697726) for details.  Also, the SRL metric implementation (`SpanF1Measure`) does not exactly track the output of the official PERL script (is typically 1-1.5 F1 below), and reported results used the official evaluation script.|
+|Coref | coref.jsonnet  / NA | The allennlp re-implementation is missing some features of the original tensorflow version and performance is a few percent below the original result. See [Tensorflow code](https://github.com/kentonl/e2e-coref) for running the original experiments (baseline and with ELMo) and extentions reported in [Lee et al. 2018, "Higher-order Coreference Resolution with Coarse-to-fine Inference"](https://arxiv.org/abs/1804.05392).|
+|NER | ner.jsonnet  / ner_elmo.jsonnet  | AllenNLP baseline has F1 of 89.91 +/- 0.35 (Keras original is 90.15). AllenNLP with ELMo single run F1 is 92.51 (original 92.22 +/- 0.10), see ner_elmo.jsonnnet for details.|
+|SST-5 | biattentive_classification_network.json / biattentive_classification_network_elmo.json  | AllenNLP baseline single random seed test accuracy is 51.3 (original 51.4), with ELMo accuracy is 54.7 (original is 54.7 +/- 0.5).  See biattentive_classification_network_elmo.json for details.|
+
