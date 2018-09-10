@@ -14,6 +14,8 @@ from allennlp.semparse.type_declarations.type_declaration import Type, NamedBasi
 # cells, and the executor can process them accordingly, but the grammar does not differentiate
 # between them. Also note that columns are basic types in this grammar.
 ROW_TYPE = NamedBasicType("ROW")
+# TODO(pradeep): Add different column types for string, number, and date columns, and may be a
+# generic column type.
 # "LCOLUMN" to ensure the signature will be "l", to avoid confusion with cell. I decided to omit the
 # cell type eventually, and the decision to call this "LCOLUMN" is not relevant any more. But I'm
 # not changing it for now, because I might end up adding the cell type back later.
