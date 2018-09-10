@@ -244,6 +244,9 @@ class DataIterator(Registrable):
         list_batch_instances = list(batch_instances)
         for instance in list_batch_instances:
             if self.vocab is not None:
+                # we index here to ensure that shape information is available,
+                # as in some cases (with self._maximum_samples_per_batch)
+                # we need access to shaping information before batches are constructed)
                 instance.index_fields(self.vocab)
             field_lengths = instance.get_padding_lengths()
             for _, lengths in field_lengths.items():
