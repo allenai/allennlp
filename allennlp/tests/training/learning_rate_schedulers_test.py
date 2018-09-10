@@ -230,8 +230,8 @@ class SlantedTriangularTest(AllenNlpTestCase):
     def setUp(self):
         super(SlantedTriangularTest, self).setUp()
         self.model = torch.nn.Sequential(OrderedDict([
-            ('lin1', torch.nn.Linear(10, 10)),
-            ('lin2', torch.nn.Linear(10, 10))
+                ('lin1', torch.nn.Linear(10, 10)),
+                ('lin2', torch.nn.Linear(10, 10))
         ]))
 
     def _get_optimizer(self, lr: float = 1.0):
@@ -242,12 +242,12 @@ class SlantedTriangularTest(AllenNlpTestCase):
     def test_from_params(self):
         optim = self._get_optimizer()
         sched = LearningRateScheduler.from_params(
-            optim, Params({"type": "slanted_triangular",
-                           "num_epochs": 5,
-                           "num_steps_per_epoch": 10,
-                           "gradual_unfreezing": True,
-                           "discriminative_fine_tuning": True,
-                           "decay_factor": 0.5})).lr_scheduler
+                optim, Params({"type": "slanted_triangular",
+                               "num_epochs": 5,
+                               "num_steps_per_epoch": 10,
+                               "gradual_unfreezing": True,
+                               "discriminative_fine_tuning": True,
+                               "decay_factor": 0.5})).lr_scheduler
 
         assert sched.num_epochs == 5
         assert sched.num_steps_per_epoch == 10
@@ -263,58 +263,60 @@ class SlantedTriangularTest(AllenNlpTestCase):
         with self.assertRaises(TypeError):
             # num_epochs and num_steps_per_epoch are required
             LearningRateScheduler.from_params(optim, Params({"type": "slanted_triangular", "num_epochs": 5}))
-            LearningRateScheduler.from_params(optim, Params({"type": "slanted_triangular", "num_steps_epochs": 10}))
+            LearningRateScheduler.from_params(
+                    optim,
+                    Params({"type": "slanted_triangular", "num_steps_epochs": 10}))
 
     def test_schedules(self):
         slanted_triangular_cases: List[Tuple[Dict[str, Any], List[Tuple[int, float]]]] = [
-            (
-                    {"num_epochs": 5,
-                     "num_steps_per_epoch": 10,
-                     "gradual_unfreezing": True},  # parameters
-                    [(0, 1, 0.03125),  # iteration, layer, learning rate
-                     (0, 0, 0.03125),
-                     (1, 1, 1.0),
-                     (1, 0, 1.0),
-                     (9, 1, 0.138888),
-                     (9, 0, 0.138888),  # end of the first epoch
-                     (10, 1, 0.03125),
-                     (10, 0, 0.03125),
-                     (14, 1, 1.0),
-                     (14, 0, 1.0),
-                     (49, 1, 0.05815972),
-                     (49, 0, 0.05815972)]
-            ),
-            (
-                {"num_epochs": 5,
-                 "num_steps_per_epoch": 10,
-                 "discriminative_fine_tuning": True,
-                 "decay_factor": 0.5},  # parameters
-                [(0, 1, 0.03125),  # iteration, layer, learning rate
-                 (0, 0, 0.015625),
-                 (5, 1, 1.0),
-                 (5, 0, 0.5),
-                 (49, 1, 0.052777),
-                 (49, 0, 0.026388)]
-            ),
-            (
-                {"num_epochs": 5,
-                 "num_steps_per_epoch": 10,
-                 "gradual_unfreezing": True,
-                 "discriminative_fine_tuning": True,
-                 "decay_factor": 0.5},  # parameters
-                [(0, 1, 0.03125),  # iteration, layer, learning rate
-                 (0, 0, 0.015625),
-                 (1, 1, 1.0),
-                 (1, 0, 0.5),
-                 (9, 1, 0.138888),
-                 (9, 0, 0.069444),  # end of the first epoch
-                 (10, 1, 0.03125),
-                 (10, 0, 0.015625),
-                 (14, 1, 1.0),
-                 (14, 0, 0.5),
-                 (49, 1, 0.0581597222),
-                 (49, 0, 0.0290798611)]
-            )
+                (
+                        {"num_epochs": 5,
+                         "num_steps_per_epoch": 10,
+                         "gradual_unfreezing": True},  # parameters
+                        [(0, 1, 0.03125),  # iteration, layer, learning rate
+                         (0, 0, 0.03125),
+                         (1, 1, 1.0),
+                         (1, 0, 1.0),
+                         (9, 1, 0.138888),
+                         (9, 0, 0.138888),  # end of the first epoch
+                         (10, 1, 0.03125),
+                         (10, 0, 0.03125),
+                         (14, 1, 1.0),
+                         (14, 0, 1.0),
+                         (49, 1, 0.05815972),
+                         (49, 0, 0.05815972)]
+                ),
+                (
+                        {"num_epochs": 5,
+                         "num_steps_per_epoch": 10,
+                         "discriminative_fine_tuning": True,
+                         "decay_factor": 0.5},  # parameters
+                        [(0, 1, 0.03125),  # iteration, layer, learning rate
+                         (0, 0, 0.015625),
+                         (5, 1, 1.0),
+                         (5, 0, 0.5),
+                         (49, 1, 0.052777),
+                         (49, 0, 0.026388)]
+                ),
+                (
+                        {"num_epochs": 5,
+                         "num_steps_per_epoch": 10,
+                         "gradual_unfreezing": True,
+                         "discriminative_fine_tuning": True,
+                         "decay_factor": 0.5},  # parameters
+                        [(0, 1, 0.03125),  # iteration, layer, learning rate
+                         (0, 0, 0.015625),
+                         (1, 1, 1.0),
+                         (1, 0, 0.5),
+                         (9, 1, 0.138888),
+                         (9, 0, 0.069444),  # end of the first epoch
+                         (10, 1, 0.03125),
+                         (10, 0, 0.015625),
+                         (14, 1, 1.0),
+                         (14, 0, 0.5),
+                         (49, 1, 0.0581597222),
+                         (49, 0, 0.0290798611)]
+                )
         ]
         for params, lr_checks in slanted_triangular_cases:
             optimizer = self._get_optimizer()
@@ -323,7 +325,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
             lrs = []
 
             for epoch in range(params["num_epochs"]):
-                for batch in range(params["num_steps_per_epoch"]):
+                for _ in range(params["num_steps_per_epoch"]):
                     scheduler.step_batch()
                     lrs.append([param_group["lr"] for param_group in optimizer.param_groups])
                     if "gradual_unfreezing" in params and epoch == 0:

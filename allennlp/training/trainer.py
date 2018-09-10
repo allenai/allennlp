@@ -992,12 +992,11 @@ class Trainer:
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
-        optimizer_params = params.pop("optimizer")
 
         if cuda_device >= 0:
             model = model.cuda(cuda_device)
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
-        optimizer = Optimizer.from_params(parameters, optimizer_params)
+        optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
         if lr_scheduler_params:
             scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)

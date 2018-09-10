@@ -139,11 +139,13 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
     Implements the Slanted Triangular Learning Rate schedule with optional gradual
     unfreezing. The schedule corresponds to first linearly increasing the learning
     rate and annealing the learning based on a fixed ratio.
+
     If we gradually unfreeze, then in the first epoch of training, only the top
     layer is trained; in the second epoch, the top two layers are trained, etc.
     During freezing, the learning rate is increased and annealed over one epoch.
     After freezing finished, the learning rate is increased and annealed over
     the remaining training iterations.
+
     Note that with this schedule, early stopping should typically be avoided.
 
     Parameters
@@ -234,7 +236,10 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
             step = self.last_epoch % num_steps
         else:
             # otherwise we use the schedule for the rest of training
-            frozen_steps = 0 if not self.gradual_unfreezing else (len(self.optimizer.param_groups) - 2) * self.num_steps_per_epoch
+            if not self.gradual_unfreezing:
+                frozen_steps = 0
+            else:
+                frozen_steps = (len(self.optimizer.param_groups) - 2) * self.num_steps_per_epoch
             num_steps = self.num_epochs * self.num_steps_per_epoch - frozen_steps
             step = (self.last_epoch - frozen_steps) % num_steps
         cut = int(num_steps * self.cut_frac)
@@ -334,5 +339,5 @@ Registrable._registry[LearningRateScheduler] = {   # pylint: disable=protected-a
         "reduce_on_plateau": torch.optim.lr_scheduler.ReduceLROnPlateau,
         "cosine": CosineWithRestarts,
         "noam": NoamLR,
-        "slanted_triangular": SlantedTriangular
+        "slanted_triangular": SlantedTriangular,
 }
