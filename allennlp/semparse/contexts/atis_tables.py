@@ -106,16 +106,16 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
     indices_of_words_preceding_time = {index for index, token in enumerate(tokenized_utterance)
                                        if token.text in WORDS_PRECEDING_TIME}
 
+    indices_of_am_pm = {index for index, token in enumerate(tokenized_utterance)
+                        if token.text in {'am', 'pm'}}
+
     number_linking_dict: Dict[str, List[int]] = defaultdict(list)
 
     for token_index, token in enumerate(tokenized_utterance):
         if token.text.isdigit():
-            if token_index - 1 in indices_of_words_preceding_time:
+            if token_index - 1 in indices_of_words_preceding_time and token_index + 1 not in indices_of_am_pm:
                 for time in digit_to_query_time(token.text):
                     number_linking_dict[str(time)].append(token_index)
-            else:
-                number_linking_dict[token.text].append(token_index)
-
     times_linking_dict = get_times_from_utterance(utterance,
                                                   char_offset_to_token_index,
                                                   indices_of_approximate_words)
@@ -183,7 +183,8 @@ def _time_regex_match(regex: str,
         query_values.extend(approximate_times)
         if match.start() in char_offset_to_token_index:
             for query_value in query_values:
-                linking_scores_dict[str(query_value)].append(char_offset_to_token_index[match.start()])
+                linking_scores_dict[str(query_value)].extend([char_offset_to_token_index[match.start()],
+                                                              char_offset_to_token_index[match.start()] + 1])
     return linking_scores_dict
 
 def get_trigger_dict(trigger_lists: List[List[str]],
