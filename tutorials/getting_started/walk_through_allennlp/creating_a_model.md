@@ -189,7 +189,7 @@ which means we can just use `allennlp train`:
 
 ```bash
 $ allennlp train \
-    tutorials/getting_started/crf_tagger.json \
+    tutorials/getting_started/walk_through_allennlp/crf_tagger.json \
     -s /tmp/crf_model
 ```
 

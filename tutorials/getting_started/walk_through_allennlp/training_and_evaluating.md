@@ -3,7 +3,7 @@
 ### Training a Model
 
 In this tutorial we'll train a simple part-of-speech tagger using AllenNLP.
-The model is defined in [allennlp/models/simple_tagger.py](../../allennlp/models/simple_tagger.py).
+The model is defined in [allennlp/models/simple_tagger.py](../../../allennlp/models/simple_tagger.py).
 It consists of a word embedding layer followed by an LSTM.
 
 Our dataset will be a subset of the [Brown Corpus](http://www.nltk.org/nltk_data/).
@@ -14,7 +14,7 @@ One of the key design principles behind AllenNLP is that
 you configure experiments using [Jsonnet](https://jsonnet.org/) files (a superset of JSON).
 
 Our tagging experiment is defined in
-[tutorials/getting_started/simple_tagger.json](../../tutorials/getting_started/simple_tagger.json).
+[tutorials/getting_started/walk_through_allennlp/simple_tagger.json](simple_tagger.json).
 You can peek at it now if you want; we'll go through it in detail in the next tutorial.
 Right at this instant you might care about the `trainer` section, which specifies how we want to train our model:
 
