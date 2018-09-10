@@ -204,6 +204,23 @@ class TestElmo(ElmoTestCase):
         assert list(elmo_representations[1].size()) == [2, 7, 32]
         assert list(mask.size()) == [2, 7]
 
+    def test_elmo_keep_sentence_boundaries(self):
+        sentences = [['The', 'sentence', '.'],
+                     ['ELMo', 'helps', 'disambiguate', 'ELMo', 'from', 'Elmo', '.']]
+        elmo = Elmo(self.options_file, self.weight_file, 2, dropout=0.0,
+                    keep_sentence_boundaries=True)
+        character_ids = self._sentences_to_ids(sentences)
+        output = elmo(character_ids)
+        elmo_representations = output['elmo_representations']
+        mask = output['mask']
+
+        assert len(elmo_representations) == 2
+        # Add 2 to the lengths because we're keeping the start and end of sentence tokens.
+        assert list(elmo_representations[0].size()) == [2, 7+2, 32]
+        assert list(elmo_representations[1].size()) == [2, 7+2, 32]
+        assert list(mask.size()) == [2, 7+2]
+
+
     def test_elmo_4D_input(self):
         sentences = [[['The', 'sentence', '.'],
                       ['ELMo', 'helps', 'disambiguate', 'ELMo', 'from', 'Elmo', '.']],

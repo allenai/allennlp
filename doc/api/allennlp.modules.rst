@@ -30,7 +30,7 @@ allennlp.modules
    allennlp.modules.token_embedders
    allennlp.modules.scalar_mix
    allennlp.modules.layer_norm
-   allennlp.modules.span_pruner
+   allennlp.modules.pruner
    allennlp.modules.maxout
    allennlp.modules.input_variational_dropout
    allennlp.modules.bimpm_matching
