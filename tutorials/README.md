@@ -5,12 +5,18 @@ These tutorials relate to the version of AllenNLP at the git commit SHA you are 
 ## Getting Started
 
 * [Installation](../README.md#installation)
-* [Training and Evaluating Models](getting_started/training_and_evaluating.md)
-* [Configuring Experiments](getting_started/configuration.md)
-* [Creating a Model](getting_started/creating_a_model.md)
-* [Using AllenNLP as a Library (Part 1) - Datasets and Models](getting_started/using_as_a_library_pt1.md)
-* [Using AllenNLP as a Library (Part 2) - Predictions and Demos](getting_started/using_as_a_library_pt2.md)
 * [Laziness in AllenNLP](getting_started/laziness.md)
+
+### A Walk Through AllenNLP
+
+* [Training and Evaluating Models](getting_started/walk_through_allennlp/training_and_evaluating.md)
+* [Configuring Experiments](getting_started/walk_through_allennlp/configuration.md)
+* [Creating a Model](getting_started/walk_through_allennlp/creating_a_model.md)
+
+### A Complete Example: Predicitng Paper Venues
+
+* [Part 1 - Datasets and Models](getting_started/predicting_paper_venues/predicting_paper_venues_pt2.md)
+* [Part 2 - Predictions and Demos](getting_started/predicting_paper_venues/predicting_paper_venues_pt2.md)
 
 ## How-to
 
