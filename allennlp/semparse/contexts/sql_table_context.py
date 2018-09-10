@@ -127,13 +127,15 @@ class SqlTableContext():
         self.tables_with_strings = tables_with_strings
         if database_directory:
             self.database_directory = database_directory
-            # database_directory = "/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db"
+            database_directory = "/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db"
             self.connection = sqlite3.connect(database_directory)
             self.cursor = self.connection.cursor()
 
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)
         self.valid_actions: Dict[str, List[str]] = self.initialize_valid_actions()
+        if database_directory:
+            self.connection.close()
         
     def initialize_valid_actions(self) -> Dict[str, List[str]]:
         """

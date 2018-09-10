@@ -2,6 +2,8 @@ from typing import Any, Dict, List, Tuple
 import re
 import difflib
 import sqlite3
+import multiprocessing
+import time
 from copy import deepcopy
 
 from overrides import overrides
@@ -112,10 +114,10 @@ class AtisSemanticParser(Model):
         self._denotation_accuracy = Average()
         
         # Initialize a cursor to our sqlite database, so we can execute logical forms for denotation accuracy.
-        # tables_directory = "/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db"
+        tables_directory = "/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db"
         self._tables_directory = tables_directory
-        # self._connection = sqlite3.connect(self._tables_directory)
-        # self._cursor = self._connection.cursor() 
+        self._connection = sqlite3.connect(self._tables_directory)
+        self._cursor = self._connection.cursor() 
 
         self._action_padding_index = -1  # the padding value used by IndexField
         num_actions = vocab.get_vocab_size(self._rule_namespace)
@@ -306,21 +308,26 @@ class AtisSemanticParser(Model):
             print('predicted:', predicted)
             self._cursor.execute(predicted)
             predicted_rows = self._cursor.fetchall()
+            print('got predicted')
             self._has_logical_form(1.0)
-        except sqlite3.OperationalError:
-            print("Operation error when executing predicted")
+        except sqlite3.Error as e:
+            print("error when executing predicted")
+            print(e)
             self._has_logical_form(0.0)
-            return 0
+            exit(0)
         
         try:
             print('target: ', target)
             self._cursor.execute(target)
+            print('got target')
             target_rows = self._cursor.fetchall()
-        except sqlite3.OperationalError:
-            print("Operation error when executing target")
-            return 0
-        
-        return predicted_rows == target_rows
+        except sqlite3.Error as e:
+            print("error when executing target")
+            print(e)
+            exit(0)
+        print('return from sql result') 
+        # return predicted_rows == target_rows
+        exit(predicted_rows == target_rows)
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
@@ -464,6 +471,8 @@ class AtisSemanticParser(Model):
         action_mapping = output_dict['action_mapping']
         best_actions = output_dict["best_action_sequence"]
         debug_infos = output_dict['debug_info']
+        print('debug_infos')
+        print(debug_infos)
         batch_action_info = []
         for batch_index, (predicted_actions, debug_info) in enumerate(zip(best_actions, debug_infos)):
             instance_action_info = []
@@ -480,7 +489,7 @@ class AtisSemanticParser(Model):
                 considered_actions, probabilities = zip(*actions)
                 action_info['considered_actions'] = considered_actions
                 action_info['action_probabilities'] = probabilities
-                action_info['utterance_attention'] = action_debug_info.get('utterance_attention', [])
+                action_info['utterance_attention'] = action_debug_info.get('question_attention', [])
                 instance_action_info.append(action_info)
             batch_action_info.append(instance_action_info)
         output_dict["predicted_actions"] = batch_action_info
@@ -542,6 +551,7 @@ class AtisSemanticParser(Model):
                 for action_index, action in enumerate(batch_actions):
                     action_mapping[(batch_index, action_index)] = action[0]
             outputs: Dict[str, Any] = {'action_mapping': action_mapping}
+            outputs['linking_scores'] = linking_scores
             if target_action_sequence is not None:
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
                                                                self._decoder_step,
@@ -560,6 +570,7 @@ class AtisSemanticParser(Model):
             outputs['logical_form'] = []
             outputs['example_sql_query'] = []
             outputs['utterance'] = []
+            outputs['tokenized_utterance'] = []
             
             for i in range(batch_size):
                 # Decoding may not have terminated with any completed logical forms, if `num_steps`
@@ -567,6 +578,11 @@ class AtisSemanticParser(Model):
                 # infinite action loop).
                 if i in best_final_states:
                     best_action_indices = best_final_states[i][0].action_history[0]
+
+                    action_strings = [action_mapping[(i, action_index)]
+                                          for action_index in best_action_indices]
+                    predicted_sql_query = action_sequence_to_sql(action_strings)
+
                     if target_action_sequence is not None:
                         # Use a Tensor, not a Variable, to avoid a memory leak.
                         targets = target_action_sequence[i].data
@@ -578,18 +594,32 @@ class AtisSemanticParser(Model):
                         similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
                         self._action_similarity(similarity.ratio())
 
-                        action_strings = [action_mapping[(i, action_index)]
-                                          for action_index in best_action_indices]
                     if example_sql_query:
-                        predicted_sql_query = action_sequence_to_sql(action_strings)
-                        '''
-                        self._denotation_accuracy(self._sql_result_match(predicted_sql_query,
-                                                                         example_sql_query[i]))
-                        '''
+
+                        # Since the query might hang, we run in another process and kill it if it
+                        # takes too long.
+                        p = multiprocessing.Process(target=self._sql_result_match,
+                                                   args=(predicted_sql_query, example_sql_query[i]))
+                        p.start()
+
+                        # Wait 10 seconds for the query to finish
+                        p.join(10)
+                        denotation_correct = p.exitcode 
+                        if denotation_correct == None:
+                            denotation_correct = 0
+
+                        if p.is_alive():
+                            print("Evaluating query took over 10 seconds, skipping query")
+                            p.terminate()
+                            p.join()
+
+                        self._denotation_accuracy(denotation_correct)
                         outputs['example_sql_query'].append(example_sql_query[0])
-                        outputs['utterance'].append(world[i].utterances[-1])
-
-
+                    
+                    outputs['utterance'].append(world[i].utterances[-1])
+                    outputs['tokenized_utterance'].append(world[i].tokenized_utterances[-1])
+                    outputs['entities'].append(world[i].entities)
+   
                     outputs['best_action_sequence'].append(action_strings)
                     outputs['logical_form'].append(predicted_sql_query)
                     outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
