@@ -70,8 +70,7 @@ class Instance:
         return lengths
 
     def as_tensor_dict(self,
-                       padding_lengths: Dict[str, Dict[str, int]] = None,
-                       cuda_device: int = -1) -> Dict[str, DataArray]:
+                       padding_lengths: Dict[str, Dict[str, int]] = None) -> Dict[str, DataArray]:
         """
         Pads each ``Field`` in this instance to the lengths given in ``padding_lengths`` (which is
         keyed by field name, then by padding key, the same as the return value in
@@ -83,8 +82,7 @@ class Instance:
         padding_lengths = padding_lengths or self.get_padding_lengths()
         tensors = {}
         for field_name, field in self.fields.items():
-            tensors[field_name] = field.as_tensor(padding_lengths[field_name],
-                                                  cuda_device=cuda_device)
+            tensors[field_name] = field.as_tensor(padding_lengths[field_name])
         return tensors
 
 
