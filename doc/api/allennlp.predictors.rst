@@ -18,6 +18,8 @@ allennlp.predictors
 * :ref:`SimpleSeq2SeqPredictor<simple-seq2seq>`
 * :ref:`WikiTablesParserPredictor<wikitables-parser>`
 * :ref:`NlvrParserPredictor<nlvr-parser>`
+* :ref:`OpenIePredictor<open-information-extraction>`
+
 
 .. _predictor:
 .. automodule:: allennlp.predictors.predictor
@@ -87,6 +89,12 @@ allennlp.predictors
 
 .. _biaffine-dependency-parser:
 .. automodule:: allennlp.predictors.biaffine_dependency_parser
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _open-information-extraction:
+.. automodule:: allennlp.predictors.open_information_extraction
    :members:
    :undoc-members:
    :show-inheritance:
