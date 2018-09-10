@@ -36,7 +36,7 @@ class TemplateText2SqlDatasetReader(DatasetReader):
     cross_validation_split_to_exclude : ``int``, optional (default = None)
         Some of the text2sql datasets are very small, so you may need to do cross validation.
         Here, you can specify a integer corresponding to a split_{int}.json file not to include
-        int the training set.
+        in the training set.
     """
     def __init__(self,
                  use_all_sql: bool = False,
@@ -58,7 +58,7 @@ class TemplateText2SqlDatasetReader(DatasetReader):
         Parameters
         ----------
         file_path : ``str``, required.
-            For this dataset reader, file_path can either be a path to a file _or_ a
+            For this dataset reader, file_path can either be a path to a file `or` a
             path to a directory containing json files. The reason for this is because
             some of the text2sql datasets require cross validation, which means they are split
             up into many small files, for which you only want to exclude one.

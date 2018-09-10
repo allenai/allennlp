@@ -53,7 +53,7 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
 
     def test_process_sql_data_can_yield_all_queries(self):
         data = json.load(open(str(self.data)))
-        dataset = text2sql_utils.process_sql_data([data[0]], use_unique_queries=False)
+        dataset = text2sql_utils.process_sql_data([data[0]], use_all_queries=True)
         dataset = list(dataset)
         assert len(dataset) == 3
 

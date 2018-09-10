@@ -73,7 +73,7 @@ def clean_and_split_sql(sql: str) -> List[str]:
 
 def process_sql_data(data: List[JsonDict],
                      use_all_sql: bool = False,
-                     use_unique_queries: bool = True) -> Iterable[SqlData]:
+                     use_all_queries: bool = False) -> Iterable[SqlData]:
     """
     A utility function for reading in text2sql data. The blob is
     the result of loading the json from a file produced by the script
@@ -100,7 +100,7 @@ def process_sql_data(data: List[JsonDict],
                 text_vars = sent_info['variables']
 
                 query_tokens, tags = replace_variables(text_with_variables, text_vars)
-                if use_unique_queries:
+                if not use_all_queries:
                     key = " ".join(query_tokens)
                     if key in seen_sentences:
                         continue
