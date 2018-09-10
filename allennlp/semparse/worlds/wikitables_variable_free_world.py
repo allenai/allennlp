@@ -359,3 +359,36 @@ class WikiTablesVariableFreeWorld(World):
             if cell_value != filter_value:
                 return_list.append(row)
         return return_list
+
+    #TODO(pradeep): Add date filtering functions
+    def _filter_in(self, expression_list: List[str]) -> List[Dict[str, str]]:
+        """
+        Takes a list of rows, a column, and a string value (decoded from `expression_list`) and
+        returns all the rows where the value in that column contains the given string.
+        """
+        row_list, column_name = self._get_row_list_and_column_name(expression_list)
+        if not row_list:
+            return []
+        # Assuming filter value has underscores for spaces.
+        filter_value = expression_list[2]
+        result_list = []
+        for row in row_list:
+            if filter_value in row[column_name].replace("fb:cell.", ""):
+                result_list.append(row)
+        return result_list
+
+    def _filter_not_in(self, expression_list: List[str]) -> List[Dict[str, str]]:
+        """
+        Takes a list of rows, a column, and a string value (decoded from `expression_list`) and
+        returns all the rows where the value in that column does not contain the given string.
+        """
+        row_list, column_name = self._get_row_list_and_column_name(expression_list)
+        if not row_list:
+            return []
+        # Assuming filter value has underscores for spaces.
+        filter_value = expression_list[2]
+        result_list = []
+        for row in row_list:
+            if filter_value not in row[column_name].replace("fb:cell.", ""):
+                result_list.append(row)
+        return result_list
