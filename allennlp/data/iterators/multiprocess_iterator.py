@@ -16,7 +16,6 @@ def _create_tensor_dicts(input_queue: Queue,
                          output_queue: Queue,
                          max_instances_in_memory: int,
                          batch_size: int,
-                         cuda_device: int,
                          vocab: Vocabulary) -> None:
     """
     Pulls at most ``max_instances_in_memory`` from the input_queue,
@@ -33,8 +32,7 @@ def _create_tensor_dicts(input_queue: Queue,
                 batch.index_instances(vocab)
 
             padding_lengths = batch.get_padding_lengths()
-            tensor_dict = batch.as_tensor_dict(padding_lengths,
-                                               cuda_device=cuda_device)
+            tensor_dict = batch.as_tensor_dict(padding_lengths)
 
             output_queue.put(tensor_dict)
         instances.clear()
@@ -72,10 +70,26 @@ def _queuer(instances: Iterable[Instance],
 
 @DataIterator.register("multiprocess")
 class MultiprocessIterator(DataIterator):
+    """
+    A ``DataIterator`` that uses ``torch.multiprocessing`` to generate tensor dicts
+    using multiple processes.
+
+    Parameters
+    ----------
+    batch_size : ``int``, optional, (default = 32)
+        The size of each batch of instances yielded when calling the iterator.
+    num_workers : ``int``, optional (default = 1)
+        The number of processes used for generating tensor dicts.
+    max_instances_in_memory : ``int``, optional, (default = 1024)
+        Each tensor-dict-generating process will wait until it has this many
+        instances, then batch and tensorize them. It's probably a good idea
+        to have this be a multiple of ``batch_size``, otherwise you'll end up
+        with a lot of half-full batches.
+    """
     def __init__(self,
+                 batch_size: int = 32,
                  num_workers: int = 1,
-                 max_instances_in_memory: int = 1000,
-                 batch_size: int = 32) -> None:
+                 max_instances_in_memory: int = 1024) -> None:
         super().__init__()
         self.num_workers = num_workers
         self.batch_size = batch_size
@@ -91,8 +105,7 @@ class MultiprocessIterator(DataIterator):
     def __call__(self,
                  instances: Iterable[Instance],
                  num_epochs: int = None,
-                 shuffle: bool = True,
-                 cuda_device: int = -1) -> Iterator[TensorDict]:
+                 shuffle: bool = True) -> Iterator[TensorDict]:
 
         # If you run it forever, the multiprocesses won't shut down correctly.
         # TODO(joelgrus) find a solution for this
@@ -106,7 +119,7 @@ class MultiprocessIterator(DataIterator):
         # Start the tensor-dict workers.
         for _ in range(self.num_workers):
             args = (input_queue, output_queue,
-                    self.max_instances_in_memory, self.batch_size, cuda_device, self.vocab)
+                    self.max_instances_in_memory, self.batch_size, self.vocab)
 
             process = Process(target=_create_tensor_dicts, args=args)
             process.start()
@@ -122,7 +135,7 @@ class MultiprocessIterator(DataIterator):
             if item is None:
                 # finished
                 num_finished += 1
-                print(num_finished, self.num_workers)
+                logger.info(f"{num_finished} / {self.num_workers} workers finished")
             else:
                 yield item
 
