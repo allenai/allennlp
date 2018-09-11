@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy
 from overrides import overrides
@@ -41,6 +41,8 @@ class Event2Mind(Model):
         The encoder of the "encoder/decoder" model.
     max_decoding_steps : int, required
         Length of decoded sequences.
+    target_names: ``List[str]``, optional
+        Names of the target fields matching those in the ``Instance`` objects.
     target_namespace : str, optional (default = 'tokens')
         If the target side vocabulary is different from the source side's, you need to specify the
         target's namespace here. If not, we'll assume it is "tokens", which is also the default
@@ -55,6 +57,7 @@ class Event2Mind(Model):
                  embedding_dropout: float,
                  encoder: Seq2VecEncoder,
                  max_decoding_steps: int,
+                 target_names: List[str] = ["xintent", "xreact", "oreact"],
                  target_namespace: str = "tokens",
                  target_embedding_dim: int = None) -> None:
         super(Event2Mind, self).__init__(vocab)
@@ -82,13 +85,8 @@ class Event2Mind(Model):
         self._decoder_output_dim = self._encoder.get_output_dim()
         target_embedding_dim = target_embedding_dim or self._source_embedder.get_output_dim()
 
-        state_names = [
-                "xintent",
-                "xreact",
-                "oreact"
-        ]
         self._states: Dict[str, StateDecoder] = {}
-        for name in state_names:
+        for name in target_names:
             self._states[name] = StateDecoder(
                     name,
                     self,
@@ -115,7 +113,7 @@ class Event2Mind(Model):
         )
 
     def _get_num_decoding_steps(self,
-                                target_tokens: Dict[str, torch.LongTensor]) -> int:
+                                target_tokens: Optional[Dict[str, torch.LongTensor]]) -> int:
         if target_tokens:
             targets = target_tokens["tokens"]
             target_sequence_length = targets.size()[1]
@@ -170,7 +168,7 @@ class Event2Mind(Model):
                 total_loss += loss
                 output_dict[f"{name}_loss"] = loss
 
-            # Average loss for interpretability.
+            # Use mean loss (instead of the sum of the losses) to be comparable to the paper.
             output_dict["loss"] = total_loss / len(self._states)
 
         # Perform beam search to obtain the predictions.
@@ -220,14 +218,8 @@ class Event2Mind(Model):
         output_projection_layer: ``Linear``, required
            Linear layer mapping to the desired number of classes.
         """
+        num_decoding_steps = self._get_num_decoding_steps(target_tokens)
         targets = target_tokens["tokens"]
-        target_sequence_length = targets.size()[1]
-        # The last input from the target is either padding or the end symbol.
-        # Either way, we don't have to process it. (To be clear, we do still
-        # output and compare against the end symbol, but there is no need to
-        # take the end symbol as input to the decoder.)
-        num_decoding_steps = target_sequence_length - 1
-
         decoder_hidden = final_encoder_output
         step_logits = []
         for timestep in range(num_decoding_steps):
