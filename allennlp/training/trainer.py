@@ -773,6 +773,7 @@ class Trainer:
             if is_best_so_far:
                 best_metrics = make_metrics(train_metrics, val_metrics,
                                             training_start_time, epoch_counter, epochs_trained)
+                best_metrics['best_epoch'] = epoch
                 if self._serialization_dir:
                     dump_metrics(os.path.join(self._serialization_dir, 'metrics.json'), best_metrics)
 
@@ -799,15 +800,6 @@ class Trainer:
 
             epochs_trained += 1
 
-        if validation_metric_per_epoch:
-            # We may not have had validation data, so we need to hide this behind an if.
-            if self._validation_metric_decreases:
-                best_validation_metric = min(validation_metric_per_epoch)
-            else:
-                best_validation_metric = max(validation_metric_per_epoch)
-            best_metrics.update({f"best_validation_{k}": v for k, v in best_epoch_val_metrics.items()})
-            best_metrics['best_epoch'] = [i for i, value in enumerate(validation_metric_per_epoch)
-                                          if value == best_validation_metric][-1]
         return best_metrics
 
     def _is_best_so_far(self,
