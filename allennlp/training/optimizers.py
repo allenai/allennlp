@@ -55,8 +55,8 @@ class Optimizer(Registrable):
             #
             # groups contains something like:
             #"parameter_groups": [
-            #       [["regex1", "regex2"], {"lr": 1e-3},
-            #        ["regex3"], {"lr": 1e-4}]
+            #       [["regex1", "regex2"], {"lr": 1e-3}],
+            #       [["regex3"], {"lr": 1e-4}]
             #]
             #(note that the allennlp config files require double quotes ", and will
             # fail (sometimes silently) with single quotes ').
@@ -134,7 +134,6 @@ Registrable._registry[Optimizer] = {   # pylint: disable=protected-access
         "adamax": torch.optim.Adamax,
         "averaged_sgd": torch.optim.ASGD,
 }
-
 
 
 @Optimizer.register('dense_sparse_adam')

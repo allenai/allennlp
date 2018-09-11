@@ -780,3 +780,37 @@ class TestNnUtil(AllenNlpTestCase):
         assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
                             [[5 * 2 * 4 + 5 * 3 * 5, 2 * 2 * 4 + 2 * 3 * 5],
                              [4 * 1 * 4 + 4 * 1 * 5, 3 * 1 * 4 + 3 * 1 * 5]])
+
+    def test_has_tensor(self):
+        # pylint: disable=bad-continuation
+        has_tensor = util.has_tensor
+        tensor = torch.tensor([1, 2, 3])
+
+        assert has_tensor(["a", 10, tensor])
+        assert not has_tensor(["a", 10])
+
+        assert has_tensor(("a", 10, tensor))
+        assert not has_tensor(("a", 10))
+
+        assert has_tensor({"a": tensor, "b": 1})
+        assert not has_tensor({"a": 10, "b": 1})
+
+        assert has_tensor(tensor)
+        assert not has_tensor(3)
+
+        assert has_tensor({
+            "x": [
+                0,
+                {
+                    "inside": {
+                        "double_inside": [
+                            3,
+                            [
+                                10,
+                                tensor
+                            ]
+                        ]
+                    }
+                }
+            ]
+        })

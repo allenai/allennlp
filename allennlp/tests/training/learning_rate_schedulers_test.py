@@ -1,6 +1,7 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
 
-from typing import Dict, Any
+from typing import Dict, List, Tuple, Any
+from collections import OrderedDict
 
 import torch
 
@@ -222,3 +223,116 @@ class CosineWithRestartsTest(AllenNlpTestCase):
 
             for it, lr in lr_checks:
                 assert lrs[it] == lr
+
+
+class SlantedTriangularTest(AllenNlpTestCase):
+
+    def setUp(self):
+        super(SlantedTriangularTest, self).setUp()
+        self.model = torch.nn.Sequential(OrderedDict([
+                ('lin1', torch.nn.Linear(10, 10)),
+                ('lin2', torch.nn.Linear(10, 10))
+        ]))
+
+    def _get_optimizer(self, lr: float = 1.0):
+        optimizer_params = Params({"type": "sgd", "lr": lr})
+        optimizer_params["parameter_groups"] = [[[f"^{m}"], {}] for m in self.model._modules]
+        return Optimizer.from_params(self.model.named_parameters(), optimizer_params)
+
+    def test_from_params(self):
+        optim = self._get_optimizer()
+        sched = LearningRateScheduler.from_params(
+                optim, Params({"type": "slanted_triangular",
+                               "num_epochs": 5,
+                               "num_steps_per_epoch": 10,
+                               "gradual_unfreezing": True,
+                               "discriminative_fine_tuning": True,
+                               "decay_factor": 0.5})).lr_scheduler
+
+        assert sched.num_epochs == 5
+        assert sched.num_steps_per_epoch == 10
+        assert sched.gradual_unfreezing is True
+        assert sched.freezing_current is True
+
+        assert len(optim.param_groups) == 3
+        # The default parameter group in the Optimizer is empty
+        assert not optim.param_groups[-1]["params"]
+        assert optim.param_groups[-2]["lr"] == 1.0
+        assert optim.param_groups[-3]["lr"] == 0.5
+
+        with self.assertRaises(TypeError):
+            # num_epochs and num_steps_per_epoch are required
+            LearningRateScheduler.from_params(optim, Params({"type": "slanted_triangular", "num_epochs": 5}))
+            LearningRateScheduler.from_params(
+                    optim,
+                    Params({"type": "slanted_triangular", "num_steps_epochs": 10}))
+
+    def test_schedules(self):
+        slanted_triangular_cases: List[Tuple[Dict[str, Any], List[Tuple[int, float]]]] = [
+                (
+                        {"num_epochs": 5,
+                         "num_steps_per_epoch": 10,
+                         "gradual_unfreezing": True},  # parameters
+                        [(0, 1, 0.03125),  # iteration, layer, learning rate
+                         (0, 0, 0.03125),
+                         (1, 1, 1.0),
+                         (1, 0, 1.0),
+                         (9, 1, 0.138888),
+                         (9, 0, 0.138888),  # end of the first epoch
+                         (10, 1, 0.03125),
+                         (10, 0, 0.03125),
+                         (14, 1, 1.0),
+                         (14, 0, 1.0),
+                         (49, 1, 0.05815972),
+                         (49, 0, 0.05815972)]
+                ),
+                (
+                        {"num_epochs": 5,
+                         "num_steps_per_epoch": 10,
+                         "discriminative_fine_tuning": True,
+                         "decay_factor": 0.5},  # parameters
+                        [(0, 1, 0.03125),  # iteration, layer, learning rate
+                         (0, 0, 0.015625),
+                         (5, 1, 1.0),
+                         (5, 0, 0.5),
+                         (49, 1, 0.052777),
+                         (49, 0, 0.026388)]
+                ),
+                (
+                        {"num_epochs": 5,
+                         "num_steps_per_epoch": 10,
+                         "gradual_unfreezing": True,
+                         "discriminative_fine_tuning": True,
+                         "decay_factor": 0.5},  # parameters
+                        [(0, 1, 0.03125),  # iteration, layer, learning rate
+                         (0, 0, 0.015625),
+                         (1, 1, 1.0),
+                         (1, 0, 0.5),
+                         (9, 1, 0.138888),
+                         (9, 0, 0.069444),  # end of the first epoch
+                         (10, 1, 0.03125),
+                         (10, 0, 0.015625),
+                         (14, 1, 1.0),
+                         (14, 0, 0.5),
+                         (49, 1, 0.0581597222),
+                         (49, 0, 0.0290798611)]
+                )
+        ]
+        for params, lr_checks in slanted_triangular_cases:
+            optimizer = self._get_optimizer()
+            params["type"] = "slanted_triangular"
+            scheduler = LearningRateScheduler.from_params(optimizer, Params(params)).lr_scheduler
+            lrs = []
+
+            for epoch in range(params["num_epochs"]):
+                for _ in range(params["num_steps_per_epoch"]):
+                    scheduler.step_batch()
+                    lrs.append([param_group["lr"] for param_group in optimizer.param_groups])
+                    if "gradual_unfreezing" in params and epoch == 0:
+                        assert scheduler.freezing_current
+                scheduler.step(epoch)
+
+            for it, layer, lr in lr_checks:
+                lr_check = round(lr, 5)
+                lr = round(lrs[it][layer], 5)
+                assert lr == lr_check, f'Learning rate {lr} at iteration {it} at layer {layer} != {lr_check}.'

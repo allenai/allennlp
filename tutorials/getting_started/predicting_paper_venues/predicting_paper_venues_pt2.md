@@ -7,7 +7,7 @@ for something. In this tutorial we'll cover both
 * How to run a web demonstration of your model
 
 Here we'll be working with the paper classification model
-we developed in [Part 1](./using_as_a_library_pt1.md) of this
+we developed in [Part 1](./predicting_paper_venues_pt2.md) of this
 tutorial. All the code for that model is [on GitHub](https://github.com/allenai/allennlp-as-a-library-example/tree/master).
 You can either train it yourself or download a
 [trained model](https://s3-us-west-2.amazonaws.com/allennlp/models/tutorial-s2-classification-model-2018-02-01.tar.gz),

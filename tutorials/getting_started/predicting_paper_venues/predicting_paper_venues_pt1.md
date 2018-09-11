@@ -31,7 +31,7 @@ necessary.)
 
 ## Step two: organize your modules
 
-As explained in the [tutorial on creating models](creating_a_model.md), there are two pieces of
+As explained in the [tutorial on creating models](../walk_through_allennlp/creating_a_model.md), there are two pieces of
 code that you have to write when you're building a model in AllenNLP: a `DatasetReader` and a
 `Model`.  So the next thing we do is [set up our library to hold this
 code](https://github.com/allenai/allennlp-as-a-library-example/tree/master/my_library).  We called
@@ -87,7 +87,7 @@ class TestSemanticScholarDatasetReader(AllenNlpTestCase):
 ```
 
 Then we just want to make sure that the resulting dataset looks like we expect.  We'll refer you to
-the [dataset tutorial](../notebooks/data_pipeline.ipynb) for a deeper dive on the `Dataset`,
+the [dataset tutorial](../../notebooks/data_pipeline.ipynb) for a deeper dive on the `Dataset`,
 `Instance`, and `Field` classes; for now, just remember that we want each paper to have a title, an
 abstract, and a venue. The paper itself is an `Instance` inside of the `Dataset`, and the title, abstract
 and venue are all `Fields` inside the `Instance`.  We can make sure that the dataset got read correctly
@@ -217,7 +217,7 @@ To get different tokenization behavior or different word representations, you ju
 different objects when you construct the `DatasetReader`.
 
 Typically, though, you would not be constructing the `SemanticScholarDatasetReader` yourself.
-Instead, you specify a [JSON configuration file](configuration.md), and AllenNLP uses that
+Instead, you specify a [JSON configuration file](../walk_through_allennlp/configuration.md), and AllenNLP uses that
 configuration file to construct your `DatasetReader` and your `Model` for you (among other things).
 In order for the library to be able to construct your objects from the JSON in your configuration,
 you need to _register_ your objects with our library, so that
@@ -438,7 +438,7 @@ Now let's train it on some real data!
 
 ## Step five: train the model
 
-As per our [getting started tutorial](training_and_evaluating.md),
+As per our [getting started tutorial](../walk_through_allennlp/training_and_evaluating.md),
 you can use `allennlp train` to train a model.
 
 To do that, we need a configuration file.  You can see the full file
@@ -574,5 +574,5 @@ allennlp train \
 When we do this, we get to around 80% validation accuracy after a few epochs of training.
 
 To see how to make predictions and build a demo for our new model, see the
-[Making Predictions and Creating a Demo](using_as_a_library_pt2.md) tutorial, which continues
+[Making Predictions and Creating a Demo](predicting_paper_venues_pt2.md) tutorial, which continues
 where this tutorial leaves off.
