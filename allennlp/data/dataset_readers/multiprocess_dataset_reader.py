@@ -1,16 +1,15 @@
 from typing import List, Iterable
 import glob
 import logging
-import queue
 import random
 
-from torch.multiprocessing import Process, Queue
+from torch.multiprocessing import Process, Queue, log_to_stderr
 
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 
-logger = logging.getLogger(__file__)  # pylint: disable=invalid-name
-
+logger = log_to_stderr()  # pylint: disable=invalid-name
+logger.setLevel(logging.INFO)
 
 def _worker(reader: DatasetReader,
             input_queue: Queue,
@@ -21,17 +20,13 @@ def _worker(reader: DatasetReader,
     When there are no filenames left on the input queue, it puts ``None``
     on the output queue and doesn't do anything else.
     """
-    # Keep going as long as there are things on the queue
+    # Keep going until you get a file_path that's None.
     while True:
-        try:
-            # All of the possible files are put on the queue before
-            # any workers are even started, so if the queue is empty
-            # it really means there's no more work to do. Which means
-            # that ``get_nowait`` and breaking out of the loop are correct.
-            file_path = input_queue.get_nowait()
-        except queue.Empty:
+        file_path = input_queue.get()
+        if file_path is None:
             break
 
+        logger.info(f"reading instances from {file_path}")
         for instance in reader.read(file_path):
             output_queue.put(instance)
 
@@ -92,6 +87,10 @@ class MultiprocessDatasetReader(DatasetReader):
             random.shuffle(shards)
             for shard in shards:
                 input_queue.put(shard)
+
+        # Then put a None per worker to signify no more files.
+        for _ in range(self.num_workers):
+            input_queue.put(None)
 
         # TODO(joelgrus): where does this number come from?
         output_queue = Queue(1000)

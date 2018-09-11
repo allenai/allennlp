@@ -1,7 +1,7 @@
 from typing import Iterable, Iterator, List, Optional
 import logging
 
-from torch.multiprocessing import Process, Queue
+from torch.multiprocessing import Process, Queue, get_logger
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import lazy_groups_of
@@ -10,7 +10,8 @@ from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.data.dataset import Batch
 from allennlp.data.vocabulary import Vocabulary
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = get_logger()  # pylint: disable=invalid-name
+logger.setLevel(logging.INFO)
 
 def _create_tensor_dicts(input_queue: Queue,
                          output_queue: Queue,
@@ -40,7 +41,9 @@ def _create_tensor_dicts(input_queue: Queue,
     while True:
         instance = input_queue.get()
         if instance is None:
-            # no more instances, create one last batch, and stick None there.
+            # This means there are no more instances, so
+            # create one last batch (if necessary),
+            # put None on the queue, and then break out of the loop.
             if instances:
                 make_batches()
             output_queue.put(None)
@@ -64,7 +67,8 @@ def _queuer(instances: Iterable[Instance],
         for instance in instances:
             input_queue.put(instance)
 
-    # now put a None for each worker
+    # Now put a None for each worker, since each needs to receive one
+    # to know that it's done.
     for _ in range(num_workers):
         input_queue.put(None)
 
@@ -72,7 +76,8 @@ def _queuer(instances: Iterable[Instance],
 class MultiprocessIterator(DataIterator):
     """
     A ``DataIterator`` that uses ``torch.multiprocessing`` to generate tensor dicts
-    using multiple processes.
+    using multiple processes. It's currently less full-featured than some of our
+    other data iterators.
 
     Parameters
     ----------
@@ -84,7 +89,7 @@ class MultiprocessIterator(DataIterator):
         Each tensor-dict-generating process will wait until it has this many
         instances, then batch and tensorize them. It's probably a good idea
         to have this be a multiple of ``batch_size``, otherwise you'll end up
-        with a lot of half-full batches.
+        with a lot of partially-full batches.
     """
     def __init__(self,
                  batch_size: int = 32,
