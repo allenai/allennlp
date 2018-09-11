@@ -27,7 +27,10 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
                  encoder: Dict[str, int] = None,
                  byte_pairs: List[Tuple[str, str]] = None,
                  n_ctx: int = 512,
-                 model_path: str = None) -> None:
+                 model_path: str = None,
+                 namespace: str = 'openai_transformer') -> None:
+        self._namespace = namespace
+        self._added_to_vocabulary = False
 
         too_much_information = model_path and (encoder or byte_pairs)
         too_little_information = not model_path and not (encoder and byte_pairs)
@@ -143,12 +146,21 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
         self.cache[text] = word
         return word
 
+    def _add_encoding_to_vocabulary(self, vocabulary: Vocabulary) -> None:
+        # pylint: disable=protected-access
+        for word, idx in self.encoder.items():
+            vocabulary._token_to_index[self._namespace][word] = idx
+            vocabulary._index_to_token[self._namespace][idx] = word
 
     @overrides
     def tokens_to_indices(self,
                           tokens: List[Token],
-                          _vocabulary: Vocabulary,
+                          vocabulary: Vocabulary,
                           index_name: str) -> Dict[str, List[int]]:
+        if not self._added_to_vocabulary:
+            self._add_encoding_to_vocabulary(vocabulary)
+            self._added_to_vocabulary = True
+
         text_tokens = []
         offsets = []
         offset = -1

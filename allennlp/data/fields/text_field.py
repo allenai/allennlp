@@ -118,9 +118,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         return len(self.tokens)
 
     @overrides
-    def as_tensor(self,
-                  padding_lengths: Dict[str, int],
-                  cuda_device: int = -1) -> Dict[str, torch.Tensor]:
+    def as_tensor(self, padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
         tensors = {}
         num_tokens = padding_lengths.get('num_tokens')
         for indexer_name, indexer in self._token_indexers.items():
@@ -146,9 +144,6 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
             # add a class method to TokenIndexer to tell us the type?  But we can worry about that
             # when there's a compelling use case for it.
             indexer_tensors = {key: torch.LongTensor(array) for key, array in padded_array.items()}
-            if cuda_device > -1:
-                for key in indexer_tensors.keys():
-                    indexer_tensors[key] = indexer_tensors[key].cuda(cuda_device)
             tensors.update(indexer_tensors)
         return tensors
 

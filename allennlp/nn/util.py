@@ -14,6 +14,37 @@ from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+def has_tensor(obj) -> bool:
+    """
+    Given a possibly complex data structure,
+    check if it has any torch.Tensors in it.
+    """
+    if isinstance(obj, torch.Tensor):
+        return True
+    elif isinstance(obj, dict):
+        return any(has_tensor(value) for value in obj.values())
+    elif isinstance(obj, (list, tuple)):
+        return any(has_tensor(item) for item in obj)
+    else:
+        return False
+
+def move_to_device(obj, cuda_device: int):
+    """
+    Given a structure (possibly) containing Tensors on the CPU,
+    move all the Tensors to the specified GPU (or do nothing, if they should be on the CPU).
+    """
+    if cuda_device < 0 or not has_tensor(obj):
+        return obj
+    elif isinstance(obj, torch.Tensor):
+        return obj.cuda(cuda_device)
+    elif isinstance(obj, dict):
+        return {key: move_to_device(value, cuda_device) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [move_to_device(item, cuda_device) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple([move_to_device(item, cuda_device) for item in obj])
+    else:
+        return obj
 
 def batch_tensor_dicts(tensor_dicts: List[Dict[str, torch.Tensor]],
                        remove_trailing_dimension: bool = False) -> Dict[str, torch.Tensor]:
@@ -511,7 +542,8 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
 def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        targets: torch.LongTensor,
                                        weights: torch.FloatTensor,
-                                       batch_average: bool = True,
+                                       batch_average: bool = None,
+                                       average: str = "batch",
                                        label_smoothing: float = None) -> torch.FloatTensor:
     """
     Computes the cross entropy loss of a sequence, weighted with respect to
@@ -530,9 +562,19 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         index of the true class for each corresponding step.
     weights : ``torch.FloatTensor``, required.
         A ``torch.FloatTensor`` of size (batch, sequence_length)
-    batch_average : bool, optional, (default = True).
+    batch_average : bool, optional, (default = None).
         A bool indicating whether the loss should be averaged across the batch,
         or returned as a vector of losses per batch element.
+
+        .. deprecated:: 0.6.2
+           ``batch_average`` was deprecated and replaced with
+           the more general ``average`` in version 0.6.2. It will be removed
+           in version 0.8.
+
+    average: str, optional (default = "batch")
+        If "batch", average the loss across the batches. If "token", average
+        the loss across each item in the input. If ``None``, return a vector
+        of losses per batch element.
     label_smoothing : ``float``, optional (default = None)
         Whether or not to apply label smoothing to the cross-entropy loss.
         For example, with a label smoothing value of 0.2, a 4 class classifcation
@@ -542,10 +584,26 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     Returns
     -------
     A torch.FloatTensor representing the cross entropy loss.
-    If ``batch_average == True``, the returned loss is a scalar.
-    If ``batch_average == False``, the returned loss is a vector of shape (batch_size,).
+    If ``average=="batch"`` or ``average=="token"``, the returned loss is a scalar.
+    If ``average is None``, the returned loss is a vector of shape (batch_size,).
 
     """
+    if batch_average is not None:
+        # Maintain old behavior
+        if batch_average:
+            warnings.warn("batch_average=True was deprecated and replaced "
+                          "with average='batch' in version 0.6.2. It will be "
+                          "removed in version 0.8.", DeprecationWarning)
+            average = "batch"
+        else:
+            warnings.warn("batch_average=False was deprecated and replaced "
+                          "with average=None in version 0.6.2. It will be "
+                          "removed in version 0.8.", DeprecationWarning)
+            average = None
+    if average not in {None, "token", "batch"}:
+        raise ValueError("Got average f{average}, expected one of "
+                         "None, 'token', or 'batch'")
+
     # shape : (batch * sequence_length, num_classes)
     logits_flat = logits.view(-1, logits.size(-1))
     # shape : (batch * sequence_length, num_classes)
@@ -571,13 +629,18 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     negative_log_likelihood = negative_log_likelihood_flat.view(*targets.size())
     # shape : (batch, sequence_length)
     negative_log_likelihood = negative_log_likelihood * weights.float()
-    # shape : (batch_size,)
-    per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1).float() + 1e-13)
 
-    if batch_average:
+    if average == "batch":
+        # shape : (batch_size,)
+        per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1).float() + 1e-13)
         num_non_empty_sequences = ((weights.sum(1) > 0).float().sum() + 1e-13)
         return per_batch_loss.sum() / num_non_empty_sequences
-    return per_batch_loss
+    elif average == "token":
+        return negative_log_likelihood.sum() / (weights.sum().float() + 1e-13)
+    else:
+        # shape : (batch_size,)
+        per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1).float() + 1e-13)
+        return per_batch_loss
 
 
 def replace_masked_values(tensor: torch.Tensor, mask: torch.Tensor, replace_with: float) -> torch.Tensor:

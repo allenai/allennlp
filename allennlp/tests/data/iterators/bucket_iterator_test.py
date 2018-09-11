@@ -11,6 +11,7 @@ class TestBucketIterator(IteratorTest):
     # pylint: disable=protected-access
     def test_create_batches_groups_correctly(self):
         iterator = BucketIterator(batch_size=2, padding_noise=0, sorting_keys=[('text', 'num_tokens')])
+        iterator.index_with(self.vocab)
         batches = list(iterator._create_batches(self.instances, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[4], self.instances[2]],
@@ -26,6 +27,7 @@ class TestBucketIterator(IteratorTest):
                                   padding_noise=0,
                                   sorting_keys=[('text', 'num_tokens')],
                                   max_instances_in_memory=3)
+        iterator.index_with(self.vocab)
         for test_instances in (self.instances, self.lazy_instances):
             batches = list(iterator._create_batches(test_instances, shuffle=False))
             grouped_instances = [batch.instances for batch in batches]
@@ -38,6 +40,7 @@ class TestBucketIterator(IteratorTest):
                                   padding_noise=0,
                                   sorting_keys=[('text', 'num_tokens')],
                                   biggest_batch_first=True)
+        iterator.index_with(self.vocab)
         batches = list(iterator._create_batches(self.instances, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
         assert grouped_instances == [[self.instances[3]],
@@ -79,6 +82,7 @@ class TestBucketIterator(IteratorTest):
                 sorting_keys=[('text', 'num_tokens')],
                 maximum_samples_per_batch=['num_tokens', 9]
         )
+        iterator.index_with(self.vocab)
         batches = list(iterator._create_batches(self.instances, shuffle=False))
 
         # ensure all instances are in a batch
