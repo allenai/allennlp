@@ -183,7 +183,6 @@ class Event2Mind(Model):
                         # search. Whether this problem would manifest otherwise
                         # would depend on the metric being used.
                         self._max_decoding_steps,
-                        batch_size,
                         state.embedder,
                         state.decoder_cell,
                         state.output_projection_layer
@@ -264,7 +263,6 @@ class Event2Mind(Model):
                     final_encoder_output: torch.LongTensor,
                     k: int,
                     num_decoding_steps: int,
-                    batch_size: int,
                     target_embedder: Embedding,
                     decoder_cell: GRUCell,
                     output_projection_layer: Linear) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -281,8 +279,6 @@ class Event2Mind(Model):
             Size of the beam.
         num_decoding_steps : ``int``, required
             Maximum sequence length.
-        batch_size : ``int``, required
-            Size of the batch, which is distinct from the size of the beam.
         target_embedder : ``Embedding``, required
            Used to embed the token predicted at the previous time step.
         decoder_cell: ``GRUCell``, required
@@ -290,6 +286,7 @@ class Event2Mind(Model):
         output_projection_layer: ``Linear``, required
            Linear layer mapping to the desired number of classes.
         """
+        batch_size = final_encoder_output.size()[0]
         # List of (batchsize, k) tensors. One for each time step. Does not
         # include the start symbols, which are implicit.
         predictions = []

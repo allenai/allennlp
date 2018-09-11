@@ -33,10 +33,25 @@ class Event2MindTest(ModelTestCase):
         final_encoder_output = model._encoder(embedded_input, source_mask)
 
         state = model._states["xintent"]
-        prediction = model.greedy_predict(final_encoder_output,
-                                          state.embedder,
-                                          state.decoder_cell,
-                                          state.output_projection_layer)
-        tokens = model.decode_all(prediction)
-        print(tokens)
+        greedy_prediction = model.greedy_predict(final_encoder_output,
+                                                 state.embedder,
+                                                 state.decoder_cell,
+                                                 state.output_projection_layer)
+        print(greedy_prediction.size())
+        greedy_tokens = model.decode_all(greedy_prediction)
+        print(greedy_tokens)
+
+        (beam_predictions, _) = model.beam_search(
+                final_encoder_output,
+                1,
+                model._max_decoding_steps,
+                state.embedder,
+                state.decoder_cell,
+                state.output_projection_layer
+        )
+        beam_prediction = beam_predictions[0]
+        print(beam_prediction.size())
+        beam_tokens = model.decode_all(beam_prediction)
+        print(beam_tokens)
+
         raise Exception("fdskjfkdj")
