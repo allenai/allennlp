@@ -163,19 +163,20 @@ class OpenIePredictor(Predictor):
         # Merge predicates
         pred_dict = {}
         merged_outputs = list(map(join_mwp, outputs))
-        for tags1 in merged_outputs:
+        predicate_texts = [get_predicate_text(sent_tokens, tags)
+                           for tags in merged_outputs]
+
+        for pred1_text, tags1 in zip(predicate_texts, merged_outputs):
             # A flag indicating whether to add tags1 to predictions
             add_to_prediction = True
-            pred1_text = get_predicate_text(sent_tokens, tags1)
             if pred1_text in pred_dict:
                 # We already added this predicate
                 continue
 
-            # Else - see if this predicate was subsumed by another predicate
-            for tags2 in outputs:
+            # Else - check if this predicate if subsumed by another predicate
+            for pred2_text, tags2 in zip(predicate_texts, merged_outputs):
                 if (tags1 != tags2) and check_predicates_subsumed(tags1, tags2):
                     # tags1 is contained in tags2
-                    pred2_text = get_predicate_text(sent_tokens, tags2)
                     pred_dict[pred2_text] = merge_predictions(tags1, tags2)
                     add_to_prediction = False
 
