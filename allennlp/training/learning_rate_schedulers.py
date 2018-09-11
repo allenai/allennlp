@@ -224,7 +224,7 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
         self.step_batch(0)
 
     def step(self, epoch=None):
-        if len(self.batch_num_total_epoch_end) == 0:
+        if len(self.batch_num_total_epoch_end) == 0: # pylint: disable=len-as-condition
             self.batch_num_total_epoch_end.append(0)
         else:
             self.batch_num_total_epoch_end.append(self.last_batch_num_total)

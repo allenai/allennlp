@@ -298,8 +298,8 @@ class SlantedTriangularTest(AllenNlpTestCase):
         assert is_hat_shaped([float(k) for k in range(10)] +
                              [float(10 - k) for k in range(10)])
         assert not is_hat_shaped([float(k) for k in range(10)] +
-                             [float(10 - k) for k in range(10)] +
-                             [float(k) for k in range(10)])
+                                 [float(10 - k) for k in range(10)] +
+                                 [float(k) for k in range(10)])
 
     def test_from_params(self):
         optim = self._get_optimizer()
@@ -403,8 +403,6 @@ class SlantedTriangularTest(AllenNlpTestCase):
                     first_layer_lrs = [rates[0] for rates in lrs]
                     second_layer_lrs = [rates[1] for rates in lrs]
 
-                    print(gradual_unfreezing, discriminative_fine_tuning, num_actual_steps_per_epoch, first_layer_lrs, second_layer_lrs)
-
                     if gradual_unfreezing:
                         assert max(first_layer_lrs[:num_actual_steps_per_epoch]) < 1e-8
                         assert min(first_layer_lrs[:num_actual_steps_per_epoch]) > -1e-8
@@ -414,5 +412,3 @@ class SlantedTriangularTest(AllenNlpTestCase):
                     else:
                         assert is_hat_shaped(first_layer_lrs)
                         assert is_hat_shaped(second_layer_lrs)
-
-
