@@ -13,54 +13,32 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
     def test_process_sql_data_blob(self):
 
         data = json.load(open(str(self.data)))
-        dataset = text2sql_utils.process_sql_data_blob(data[0])
+        dataset = text2sql_utils.process_sql_data([data[0]])
+        dataset = list(dataset)
+        sql_data = dataset[0]
+        # Check that question de-duplication happens by default
+        # (otherwise there would be more than 1 dataset element).
+        assert len(dataset) == 1
+        assert sql_data.text == ['how', 'many', 'buttercup', 'kitchen', 'are', 'there', 'in', 'san', 'francisco', '?']
+        assert sql_data.text_with_variables == ['how', 'many', 'name0', 'are', 'there', 'in', 'city_name0', '?']
+        assert sql_data.sql == ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', 'AS', 'LOCATIONalias0', ',',
+                                'RESTAURANT', 'AS', 'RESTAURANTalias0', 'WHERE', 'LOCATIONalias0.CITY_NAME', '=',
+                                'city_name0', 'AND', 'RESTAURANTalias0.ID', '=', 'LOCATIONalias0.RESTAURANT_ID',
+                                'AND', 'RESTAURANTalias0.NAME', '=', 'name0', ';']
+        assert sql_data.text_variables == {'city_name0': 'san francisco', 'name0': 'buttercup kitchen'}
+        assert sql_data.sql_variables == {'city_name0': 'san francisco', 'name0': 'buttercup kitchen'}
 
-        # All of these data points are the same. This is weird, but currently correct.
-        for sql_data in dataset:
-            assert sql_data.text == ['how', 'many', 'buttercup', 'kitchen', 'are', 'there', 'in', 'san', 'francisco', '?']
-            assert sql_data.text_with_variables == ['how', 'many', 'name0', 'are', 'there', 'in', 'city_name0', '?']
-            assert sql_data.sql == ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', 'AS', 'LOCATIONalias0', ',',
-                                    'RESTAURANT', 'AS', 'RESTAURANTalias0', 'WHERE', 'LOCATIONalias0.CITY_NAME', '=',
-                                    'city_name0', 'AND', 'RESTAURANTalias0.ID', '=', 'LOCATIONalias0.RESTAURANT_ID',
-                                    'AND', 'RESTAURANTalias0.NAME', '=', 'name0', ';']
-            assert sql_data.text_variables == {'city_name0': 'san francisco', 'name0': 'buttercup kitchen'}
-            assert sql_data.sql_variables == {'city_name0': 'san francisco', 'name0': 'buttercup kitchen'}
 
-
-        # This section of the dataset should be in the train set because it's not used for cross validation.
-        dataset = text2sql_utils.process_sql_data_blob(data[1])
-
+        dataset = text2sql_utils.process_sql_data([data[1]])
         correct_text = [
                 [['how', 'many', 'chinese', 'restaurants', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],
                  ['how', 'many', 'food_type0', 'restaurants', 'are', 'there', 'in', 'the', 'region0', '?']],
-                [['how', 'many', 'chinese', 'restaurants', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],
-                 ['how', 'many', 'food_type0', 'restaurants', 'are', 'there', 'in', 'the', 'region0', '?']],
                 [['how', 'many', 'places', 'for', 'chinese', 'food', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],
                  ['how', 'many', 'places', 'for', 'food_type0', 'food', 'are', 'there', 'in', 'the', 'region0', '?']],
                 [['how', 'many', 'chinese', 'places', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],
                  ['how', 'many', 'food_type0', 'places', 'are', 'there', 'in', 'the', 'region0', '?']],
                 [['how', 'many', 'places', 'for', 'chinese', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],
                  ['how', 'many', 'places', 'for', 'food_type0', 'are', 'there', 'in', 'the', 'region0', '?']],
-                [['how', 'many', 'chinese', 'restaurants', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],
-                 ['how', 'many', 'food_type0', 'restaurants', 'are', 'there', 'in', 'the', 'region0', '?']],
-                [['how', 'many', 'chinese', 'restaurants', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],
-                 ['how', 'many', 'food_type0', 'restaurants', 'are', 'there', 'in', 'the', 'region0', '?']],
-                [['how', 'many', 'places', 'for', 'chinese', 'food', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],
-                 ['how', 'many', 'places', 'for', 'food_type0', 'food', 'are', 'there', 'in', 'the', 'region0', '?']],
-                [['how', 'many', 'chinese', 'places', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],
-                 ['how', 'many', 'food_type0', 'places', 'are', 'there', 'in', 'the', 'region0', '?']],
-                [['how', 'many', 'places', 'for', 'chinese', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],
-                 ['how', 'many', 'places', 'for', 'food_type0', 'are', 'there', 'in', 'the', 'region0', '?']],
-                [['how', 'many', 'chinese', 'restaurants', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],
-                 ['how', 'many', 'food_type0', 'restaurants', 'are', 'there', 'in', 'the', 'region0', '?']],
-                [['how', 'many', 'chinese', 'restaurants', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],
-                 ['how', 'many', 'food_type0', 'restaurants', 'are', 'there', 'in', 'the', 'region0', '?']],
-                [['how', 'many', 'places', 'for', 'chinese', 'food', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],
-                 ['how', 'many', 'places', 'for', 'food_type0', 'food', 'are', 'there', 'in', 'the', 'region0', '?']],
-                [['how', 'many', 'chinese', 'places', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],
-                 ['how', 'many', 'food_type0', 'places', 'are', 'there', 'in', 'the', 'region0', '?']],
-                [['how', 'many', 'places', 'for', 'chinese', 'are', 'there', 'in', 'the', 'bay', 'area', '?'],
-                 ['how', 'many', 'places', 'for', 'food_type0', 'are', 'there', 'in', 'the', 'region0', '?']]
         ]
 
         for i, sql_data in enumerate(dataset):
@@ -73,11 +51,18 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
             assert sql_data.text == correct_text[i][0]
             assert sql_data.text_with_variables == correct_text[i][1]
 
+    def test_process_sql_data_can_yield_all_queries(self):
+        data = json.load(open(str(self.data)))
+        dataset = text2sql_utils.process_sql_data([data[0]], use_all_queries=True)
+        dataset = list(dataset)
+        assert len(dataset) == 3
+
     def test_replace_variables(self):
         sentence = ['how', 'many', 'name0', 'are', 'there', 'in', 'city_name0', '?']
         sentence_variables = {'city_name0': 'san francisco', 'name0': 'buttercup kitchen'}
-        assert text2sql_utils.replace_variables(sentence, sentence_variables) == ['how', 'many', 'buttercup', 'kitchen',
-                                                                                  'are', 'there', 'in', 'san', 'francisco', '?']
+        tokens, tags = text2sql_utils.replace_variables(sentence, sentence_variables)
+        assert tokens == ['how', 'many', 'buttercup', 'kitchen', 'are', 'there', 'in', 'san', 'francisco', '?']
+        assert tags == ['O', 'O', 'name0', 'name0', 'O', 'O', 'O', 'city_name0', 'city_name0', 'O']
 
     def test_clean_and_split_sql(self):
         sql = "SELECT COUNT( * ) FROM LOCATION AS LOCATIONalias0 , RESTAURANT AS RESTAURANTalias0 WHERE LOCATIONalias0.CITY_NAME " \
