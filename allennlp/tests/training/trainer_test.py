@@ -1,5 +1,6 @@
 # pylint: disable=invalid-name
 import glob
+import json
 import os
 import re
 import time
@@ -251,6 +252,25 @@ class TestTrainer(AllenNlpTestCase):
             epochs = [int(re.search(r"_([0-9])\.th", fname).group(1))
                       for fname in file_names]
             assert sorted(epochs) == [2, 3, 4]
+
+    def test_trainer_saves_metrics_every_epoch(self):
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=5,
+                          serialization_dir=self.TEST_DIR,
+                          num_serialized_models_to_keep=3)
+        trainer.train()
+
+        for epoch in range(5):
+            epoch_file = self.TEST_DIR / f'metrics_epoch_{epoch}.json'
+            assert epoch_file.exists()
+            metrics = json.load(open(epoch_file))
+            assert "validation_loss" in metrics
+            assert "best_validation_loss" in metrics
+            assert metrics.get("epoch") == epoch
 
     def test_trainer_respects_keep_serialized_model_every_num_seconds(self):
         # To test:

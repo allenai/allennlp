@@ -731,8 +731,6 @@ class Trainer:
 
                     # Check validation metric to see if it's the best so far
                     is_best_so_far = self._is_best_so_far(this_epoch_val_metric, validation_metric_per_epoch)
-                    if is_best_so_far:
-                        best_epoch_val_metrics = val_metrics.copy()
                     validation_metric_per_epoch.append(this_epoch_val_metric)
                     if self._should_stop_early(validation_metric_per_epoch):
                         logger.info("Ran out of patience.  Stopping training.")
@@ -742,7 +740,6 @@ class Trainer:
                 # No validation set, so just assume it's the best so far.
                 is_best_so_far = True
                 val_metrics = {}
-                best_epoch_val_metrics = {}
                 this_epoch_val_metric = None
 
             self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
@@ -754,6 +751,7 @@ class Trainer:
             metrics["training_duration"] = time.strftime("%H:%M:%S", time.gmtime(training_elapsed_time))
             metrics["training_start_epoch"] = epoch_counter,
             metrics["training_epochs"] = epochs_trained
+            metrics["epoch"] = epoch
 
             for key, value in train_metrics.items():
                 metrics["training_" + key] = value
@@ -766,7 +764,7 @@ class Trainer:
                     metrics["best_validation_" + key] = value
 
             if self._serialization_dir:
-                dump_metrics(os.path.join(self._serialization_dir, f'metrics_{epoch}.json'), metrics)
+                dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), metrics)
 
             for index, param_group in enumerate(self._optimizer.param_groups):
                 learning_rate = param_group.get("lr")
