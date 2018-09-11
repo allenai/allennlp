@@ -179,7 +179,7 @@ class Trainer:
                  summary_interval: int = 100,
                  histogram_interval: int = None,
                  should_log_parameter_statistics: bool = True,
-                 should_log_learning_rate: bool = True) -> None:
+                 should_log_learning_rate: bool = False) -> None:
         """
         Parameters
         ----------
@@ -262,7 +262,7 @@ class Trainer:
         should_log_parameter_statistics : ``bool``, optional, (default = True)
             Whether to send parameter statistics (mean and standard deviation
             of parameters and gradients) to tensorboard.
-        should_log_learning_rate : ``bool``, optional, (default = True)
+        should_log_learning_rate : ``bool``, optional, (default = False)
             Whether to send parameter specific learning rate to tensorboard.
         """
         self._model = model
