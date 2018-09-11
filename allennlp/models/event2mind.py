@@ -236,6 +236,30 @@ class Event2Mind(Model):
         target_mask = get_text_field_mask(target_tokens)
         return self._get_loss(logits, targets, target_mask)
 
+    def greedy_predict(self,
+                      final_encoder_output: torch.LongTensor,
+                      target_embedder: Embedding,
+                      decoder_cell: GRUCell,
+                      output_projection_layer: Linear) -> torch.Tensor:
+        num_decoding_steps = self._max_decoding_steps
+        decoder_hidden = final_encoder_output
+        step_logits = []
+        # Put this elsewhere.
+        batch_size = final_encoder_output.size()[0]
+        predictions = [final_encoder_output.new_full(
+            (batch_size,), fill_value=self._start_index, dtype=torch.long
+        )]
+        for timestep in range(num_decoding_steps):
+            input_choices = predictions[-1]
+            decoder_input = target_embedder(input_choices)
+            decoder_hidden = decoder_cell(decoder_input, decoder_hidden)
+            # (batch_size, num_classes)
+            output_projections = output_projection_layer(decoder_hidden)
+            class_probabilities = F.softmax(output_projections, dim=-1)
+            _, predicted_classes = torch.max(class_probabilities, 1)
+            predictions.append(predicted_classes)
+        return torch.cat([ps.unsqueeze(1) for ps in predictions], 1)
+
     def beam_search(self,
                     final_encoder_output: torch.LongTensor,
                     k: int,
