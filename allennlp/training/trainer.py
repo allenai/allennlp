@@ -302,13 +302,9 @@ class Trainer:
                            "In some cases it may lead to incorrect results or undefined behavior.")
             self._multiple_gpu = True
             self._cuda_devices = cuda_device
-            # data_parallel will take care of transfering to cuda devices,
-            # so the iterator keeps data on CPU.
-            self._iterator_device = -1
         else:
             self._multiple_gpu = False
             self._cuda_devices = [cuda_device]
-            self._iterator_device = cuda_device
 
         if self._cuda_devices[0] != -1:
             self._model = self._model.cuda(self._cuda_devices[0])
@@ -417,6 +413,7 @@ class Trainer:
         if self._multiple_gpu:
             output_dict = self._data_parallel(batch)
         else:
+            batch = util.move_to_device(batch, self._cuda_devices[0])
             output_dict = self._model(**batch)
 
         try:
@@ -457,8 +454,7 @@ class Trainer:
         # Get tqdm for the training batches
         train_generator = self._iterator(self._train_data,
                                          num_epochs=1,
-                                         shuffle=self._shuffle,
-                                         cuda_device=self._iterator_device)
+                                         shuffle=self._shuffle)
         num_training_batches = self._iterator.get_num_batches(self._train_data)
         self._last_log = time.time()
         last_save_time = time.time()
@@ -667,8 +663,7 @@ class Trainer:
 
         val_generator = val_iterator(self._validation_data,
                                      num_epochs=1,
-                                     shuffle=False,
-                                     cuda_device=self._iterator_device)
+                                     shuffle=False)
         num_validation_batches = val_iterator.get_num_batches(self._validation_data)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)

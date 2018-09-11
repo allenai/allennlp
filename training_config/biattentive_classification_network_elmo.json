@@ -1,4 +1,9 @@
 {
+  // Slightly modified version of the bi-attentative classification model with ELMo
+  // from "Deep contextualized word representations" (http://www.aclweb.org/anthology/N18-1202),
+  // trained on 5-class Stanford Sentiment Treebank.
+  // There is a trained model available at https://s3-us-west-2.amazonaws.com/allennlp/models/sst-5-elmo-biattentive-classification-network-2018.09.04.tar.gz
+  // with test accuracy of 54.7%.
   "dataset_reader":{
     "type": "sst_tokens",
     "use_subtrees": true,
@@ -44,7 +49,7 @@
         }
       }
     },
-    "embedding_dropout": 0.25,
+    "embedding_dropout": 0.5,
     "pre_encode_feedforward": {
         "input_dim": 1324,
         "num_layers": 1,
@@ -71,13 +76,13 @@
       "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
       "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
       "do_layer_norm": false,
-      "dropout": 0.5,
-      "num_output_representations": 2
+      "dropout": 0.0,
+      "num_output_representations": 1
     },
     "use_input_elmo": true,
-    "use_integrator_output_elmo": true,
+    "use_integrator_output_elmo": false,
     "output_layer": {
-        "input_dim": 6496,
+        "input_dim": 2400,
         "num_layers": 3,
         "output_dims": [1200, 600, 5],
         "pool_sizes": 4,
