@@ -155,27 +155,6 @@ def str_to_time(time_str: str) -> datetime.datetime:
     pieces: Any = [int(piece) for piece in time_str.split('-')]
     return datetime.datetime(*pieces)
 
-def make_metrics(train_metrics: Dict[str, Any],
-                 val_metrics: Dict[str, Any],
-                 training_start_time: datetime.time,
-                 epoch_counter: int,
-                 epochs_trained: int) -> Dict[str, Any]:
-    """
-    Combine the training and validation metrics into a single dict.
-    """
-    training_elapsed_time = time.time() - training_start_time
-    metrics = {
-            "training_duration": time.strftime("%H:%M:%S", time.gmtime(training_elapsed_time)),
-            "training_start_epoch": epoch_counter,
-            "training_epochs": epochs_trained
-    }
-    for key, value in train_metrics.items():
-        metrics["training_" + key] = value
-    for key, value in val_metrics.items():
-        metrics["validation_" + key] = value
-
-    return metrics
-
 
 class Trainer:
     def __init__(self,
@@ -733,9 +712,10 @@ class Trainer:
 
         train_metrics: Dict[str, float] = {}
         val_metrics: Dict[str, float] = {}
-        best_metrics: Dict[str, float] = {}
+        metrics: Dict[str, float] = {}
         epochs_trained = 0
         training_start_time = time.time()
+
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
@@ -769,12 +749,24 @@ class Trainer:
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
             self._metrics_to_console(train_metrics, val_metrics)
 
+            # Create overall metrics dict
+            training_elapsed_time = time.time() - training_start_time
+            metrics["training_duration"] = time.strftime("%H:%M:%S", time.gmtime(training_elapsed_time))
+            metrics["training_start_epoch"] = epoch_counter,
+            metrics["training_epochs"] = epochs_trained
+
+            for key, value in train_metrics.items():
+                metrics["training_" + key] = value
+            for key, value in val_metrics.items():
+                metrics["validation_" + key] = value
+
             if is_best_so_far:
-                best_metrics = make_metrics(train_metrics, val_metrics,
-                                            training_start_time, epoch_counter, epochs_trained)
-                best_metrics['best_epoch'] = epoch
-                if self._serialization_dir:
-                    dump_metrics(os.path.join(self._serialization_dir, 'metrics.json'), best_metrics)
+                metrics['best_epoch'] = epoch
+                for key, value in val_metrics.items():
+                    metrics["best_validation_" + key] = value
+
+            if self._serialization_dir:
+                dump_metrics(os.path.join(self._serialization_dir, f'metrics_{epoch}.json'), metrics)
 
             for index, param_group in enumerate(self._optimizer.param_groups):
                 learning_rate = param_group.get("lr")
@@ -799,7 +791,7 @@ class Trainer:
 
             epochs_trained += 1
 
-        return best_metrics
+        return metrics
 
     def _is_best_so_far(self,
                         this_epoch_val_metric: float,
