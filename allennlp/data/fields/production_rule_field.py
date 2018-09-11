@@ -86,14 +86,10 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
         return {}
 
     @overrides
-    def as_tensor(self,
-                  padding_lengths: Dict[str, int],
-                  cuda_device: int = -1) -> ProductionRuleArray:
+    def as_tensor(self, padding_lengths: Dict[str, int]) -> ProductionRuleArray:
         # pylint: disable=unused-argument
         if self.is_global_rule:
             tensor = torch.LongTensor([self._rule_id])
-            if cuda_device != -1:
-                tensor = tensor.cuda(cuda_device)
         else:
             tensor = None
         return (self.rule, self.is_global_rule, tensor)
