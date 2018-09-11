@@ -31,7 +31,7 @@ In addition, AllenNLP also provides a Noam schedule and `cosine with restarts
 #       scheduler.step(validation_metrics, epoch)
 
 import logging
-from typing import Optional
+from typing import Optional, List
 
 import numpy as np
 import torch.optim.lr_scheduler
@@ -201,7 +201,7 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
         self.freezing_current = self.gradual_unfreezing
         self.is_first_epoch = True
         # track the actual number of steps for each epoch
-        self.batch_num_total_epoch_end = []
+        self.batch_num_total_epoch_end: List[int] = []
         if self.gradual_unfreezing:
             assert not optimizer.param_groups[-1]["params"], \
                 "The default group should be empty."
