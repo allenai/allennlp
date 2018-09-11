@@ -257,8 +257,8 @@ class SlantedTriangularTest(AllenNlpTestCase):
         assert len(optim.param_groups) == 3
         # The default parameter group in the Optimizer is empty
         assert not optim.param_groups[-1]["params"]
-        assert optim.param_groups[-2]["lr"] == 1.0 / 32
-        assert optim.param_groups[-3]["lr"] == 0.5 / 32
+        assert optim.param_groups[-2]["lr"] == 1.0 / sched.ratio
+        assert optim.param_groups[-3]["lr"] == 0.5 / sched.ratio
 
         with self.assertRaises(TypeError):
             # num_epochs and num_steps_per_epoch are required
