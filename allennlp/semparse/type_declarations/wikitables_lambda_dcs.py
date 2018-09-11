@@ -1,5 +1,5 @@
 """
-Defines all the types in the WikitablesQuestions domain.
+Defines all the types in the LambdaDCS language for WikitablesQuestions in Pasupat and Liang (2015).
 """
 from typing import List, Optional, Set
 from overrides import overrides
