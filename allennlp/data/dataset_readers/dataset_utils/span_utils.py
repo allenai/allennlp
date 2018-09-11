@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Set, Tuple, TypeVar, Optional, Union
+from typing import Callable, List, Set, Tuple, TypeVar, Optional
 import warnings
 
 
@@ -398,144 +398,34 @@ def bmes_tags_to_spans(tag_sequence: List[str],
         The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
         Note that the label `does not` contain any BIO tag prefixes.
     """
+
     def extract_bmes_tag_label(text):
         bmes_tag = text[0]
         label = text[2:]
         return bmes_tag, label
 
-    # Basic span state transition functions.
-    key_bmes_tag = 'bmes_tag'
-    key_label = 'label'
-    key_start_index = 'start_idx'
-    key_end_index = 'end_idx'
-    key_is_closed = 'is_closed'
-
-    def append_span(state, **kwargs):
-        state[key_bmes_tag] = kwargs['bmes_tag']
-        state[key_end_index] = kwargs['index']
-
-    def create_span(state, **kwargs):
-        state[key_label] = kwargs['label']
-        state[key_start_index] = kwargs['index']
-        state[key_is_closed] = False
-        append_span(state, **kwargs)
-
-    def close_span(state, spans):
-        spans.append(
-                (state[key_label], (state[key_start_index], state[key_end_index]))
-                )
-        state[key_is_closed] = True
-
-    def span_is_close(state):
-        return state[key_is_closed]
-
-    def span_label(state):
-        return state[key_label]
-
-    def span_last_bmes_tag(state):
-        return state[key_bmes_tag]
-
-    # State transision operations.
-    def append_and_keep_span(spans, state, **kwargs):  # pylint: disable=W0613
-        append_span(state, **kwargs)
-
-    def append_and_close_span(spans, state, **kwargs):
-        append_span(state, **kwargs)
-        close_span(state, spans)
-
-    def create_and_keep_span(spans, state, **kwargs):  # pylint: disable=W0613
-        create_span(state, **kwargs)
-
-    def create_and_close_span(spans, state, **kwargs):
-        create_span(state, **kwargs)
-        close_span(state, spans)
-
-    def close_then_create_span(spans, state, **kwargs):
-        close_span(state, spans)
-        create_span(state, **kwargs)
-
-    def close_then_create_and_close_span(spans, state, **kwargs):
-        close_span(state, spans)
-        create_span(state, **kwargs)
-        close_span(state, spans)
-
-    # Key x: the first tag.
-    # Val: handling func.
-    init_op = {
-            'B': create_and_keep_span,
-            'M': create_and_keep_span,
-            'E': create_and_close_span,
-            'S': create_and_close_span,
-            }
-    # Key (x, y): transition from x to y.
-    # Val (fun_label_match, fun_label_mismatch): ops for label match/mismatch case.
-    # if fun_label_mismatch is, then fun_label_match will be executed anyway.
-    from_bm_op = {
-            # Transision from B.
-            ('B', 'B'): (close_then_create_span, None),                             # (X, X)
-            ('B', 'M'): (append_and_keep_span, close_then_create_span),             # (O, X)
-            ('B', 'E'): (append_and_close_span, close_then_create_and_close_span),  # (O, X)
-            ('B', 'S'): (close_then_create_and_close_span, None),                   # (X, X)
-            # Transision from M.
-            ('M', 'B'): (close_then_create_span, None),                             # (X, X)
-            ('M', 'M'): (append_and_keep_span, close_then_create_span),             # (O, X)
-            ('M', 'E'): (append_and_close_span, close_then_create_and_close_span),  # (O, X)
-            ('M', 'S'): (close_then_create_and_close_span, None),                   # (X, X)
-            }
-    # Key (x, y): transition from x to y.
-    # Val func: op for transition from x to y.
-    # We don't need to consider label mismatch issue here.
-    from_es_op = {
-            # Transision from E.
-            ('E', 'B'): create_and_keep_span,   # O
-            ('E', 'M'): create_and_keep_span,   # X
-            ('E', 'E'): create_and_close_span,  # X
-            ('E', 'S'): create_and_close_span,  # O
-            # Transision from S.
-            ('S', 'B'): create_and_keep_span,   # O
-            ('S', 'M'): create_and_keep_span,   # X
-            ('S', 'E'): create_and_close_span,  # X
-            ('S', 'S'): create_and_close_span,  # O
-            }
-
-    spans: List[TypedStringSpan] = []
-    state: Dict[str, Union[str, int, bool]] = {}
-
-    for index, raw_tag in enumerate(tag_sequence):
-        cur_bmes_tag, cur_label = extract_bmes_tag_label(raw_tag)
-        # Only BMES tags are accepted.
-        if cur_bmes_tag not in ('B', 'M', 'E', 'S'):
-            raise InvalidTagSequence(tag_sequence)
-
-        kwargs = {
-                'bmes_tag': cur_bmes_tag,
-                'label': cur_label,
-                'index': index,
-                }
-
-        # The first element, create a span anyway.
-        if index == 0:
-            func = init_op[cur_bmes_tag]
-            func(spans, state, **kwargs)
-            continue
-
-        last_label = span_label(state)
-        last_bmes_tag = span_last_bmes_tag(state)
-        op_key = (last_bmes_tag, cur_bmes_tag)
-
-        if last_bmes_tag in ('B', 'M'):
-            func_match, func_mismatch = from_bm_op[op_key]
-            if func_mismatch and last_label != cur_label:
-                func_mismatch(spans, state, **kwargs)
-            else:
-                func_match(spans, state, **kwargs)
+    spans: List[str, List[int, int]] = []
+    prev_bmes_tag: Optional[str] = None
+    for index, tag in enumerate(tag_sequence):
+        bmes_tag, label = extract_bmes_tag_label(tag)
+        if bmes_tag in ('B', 'S'):
+            # Regardless of tag, we start a new span when reaching B & S.
+            spans.append([label, [index, index]])
+        elif bmes_tag in ('M', 'E') and prev_bmes_tag in ('B', 'M') and spans[-1][0] == label:
+            # Only expand the span if
+            # 1. Valid transition: B/M -> M/E.
+            # 2. Matched label.
+            spans[-1][1][1] = index
         else:
-            func = from_es_op[op_key]
-            func(spans, state, **kwargs)
-
-    # Last span is not closed.
-    if not span_is_close(state):
-        close_span(state, spans)
+            # Best effort split for invalid span.
+            spans.append([label, [index, index]])
+        # update previous BMES tag.
+        prev_bmes_tag = bmes_tag
 
     classes_to_ignore = classes_to_ignore or []
-    return [span for span in spans if span[0] not in classes_to_ignore]
+    return [
+            # to tuple.
+            (span[0], (span[1][0], span[1][1]))
+            for span in spans
+            if span[0] not in classes_to_ignore
+            ]
