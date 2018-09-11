@@ -140,7 +140,11 @@ def parse_dataset(filename: str, filter_by: str = None, verbose: bool = False):
                 print()
                 print(e)
                 print(" ".join(sql_data.text))
-                print(sql_string)
+                try:
+                    import sqlparse
+                    print(sqlparse.format(sql_string, reindent=True))
+                except Exception:
+                    print(sql_string)
 
         if (i + 1) % 500 == 0:
             print(f"\tProcessed {i + 1} queries.")
