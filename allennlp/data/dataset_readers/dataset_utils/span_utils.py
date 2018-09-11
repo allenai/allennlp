@@ -411,8 +411,8 @@ def bmes_tags_to_spans(tag_sequence: List[str],
         if bmes_tag in ('B', 'S'):
             # Regardless of tag, we start a new span when reaching B & S.
             spans.append(
-                (label, [index, index])
-                )
+                    (label, [index, index])
+                    )
         elif bmes_tag in ('M', 'E') and prev_bmes_tag in ('B', 'M') and spans[-1][0] == label:
             # Only expand the span if
             # 1. Valid transition: B/M -> M/E.
@@ -421,8 +421,8 @@ def bmes_tags_to_spans(tag_sequence: List[str],
         else:
             # Best effort split for invalid span.
             spans.append(
-                (label, [index, index])
-                )
+                    (label, [index, index])
+                    )
         # update previous BMES tag.
         prev_bmes_tag = bmes_tag
 
