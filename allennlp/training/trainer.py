@@ -177,7 +177,9 @@ class Trainer:
                  grad_clipping: Optional[float] = None,
                  learning_rate_scheduler: Optional[LearningRateScheduler] = None,
                  summary_interval: int = 100,
-                 histogram_interval: int = None) -> None:
+                 histogram_interval: int = None,
+                 should_log_parameter_statistics: bool = True,
+                 should_log_learning_rate: bool = False) -> None:
         """
         Parameters
         ----------
@@ -257,6 +259,11 @@ class Trainer:
             slow, so we recommend logging histograms relatively infrequently.
             Note: only Modules that return tensors, tuples of tensors or dicts
             with tensors as values currently support activation logging.
+        should_log_parameter_statistics : ``bool``, optional, (default = True)
+            Whether to send parameter statistics (mean and standard deviation
+            of parameters and gradients) to tensorboard.
+        should_log_learning_rate : ``bool``, optional, (default = False)
+            Whether to send parameter specific learning rate to tensorboard.
         """
         self._model = model
         self._iterator = iterator
@@ -302,13 +309,9 @@ class Trainer:
                            "In some cases it may lead to incorrect results or undefined behavior.")
             self._multiple_gpu = True
             self._cuda_devices = cuda_device
-            # data_parallel will take care of transfering to cuda devices,
-            # so the iterator keeps data on CPU.
-            self._iterator_device = -1
         else:
             self._multiple_gpu = False
             self._cuda_devices = [cuda_device]
-            self._iterator_device = cuda_device
 
         if self._cuda_devices[0] != -1:
             self._model = self._model.cuda(self._cuda_devices[0])
@@ -317,6 +320,9 @@ class Trainer:
         self._summary_interval = summary_interval
         self._histogram_interval = histogram_interval
         self._log_histograms_this_batch = False
+        self._should_log_parameter_statistics = should_log_parameter_statistics
+        self._should_log_learning_rate = should_log_learning_rate
+
         # We keep the total batch number as a class variable because it
         # is used inside a closure for the hook which logs activations in
         # ``_enable_activation_logging``.
@@ -417,6 +423,7 @@ class Trainer:
         if self._multiple_gpu:
             output_dict = self._data_parallel(batch)
         else:
+            batch = util.move_to_device(batch, self._cuda_devices[0])
             output_dict = self._model(**batch)
 
         try:
@@ -457,8 +464,7 @@ class Trainer:
         # Get tqdm for the training batches
         train_generator = self._iterator(self._train_data,
                                          num_epochs=1,
-                                         shuffle=self._shuffle,
-                                         cuda_device=self._iterator_device)
+                                         shuffle=self._shuffle)
         num_training_batches = self._iterator.get_num_batches(self._train_data)
         self._last_log = time.time()
         last_save_time = time.time()
@@ -520,7 +526,10 @@ class Trainer:
 
             # Log parameter values to Tensorboard
             if batch_num_total % self._summary_interval == 0:
-                self._parameter_and_gradient_statistics_to_tensorboard(batch_num_total, batch_grad_norm)
+                if self._should_log_parameter_statistics:
+                    self._parameter_and_gradient_statistics_to_tensorboard(batch_num_total, batch_grad_norm)
+                if self._should_log_learning_rate:
+                    self._learning_rates_to_tensorboard(batch_num_total)
                 self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"], batch_num_total)
                 self._metrics_to_tensorboard(batch_num_total,
                                              {"epoch_metrics/" + k: v for k, v in metrics.items()})
@@ -591,6 +600,26 @@ class Trainer:
             self._tensorboard.add_train_scalar("gradient_norm",
                                                batch_grad_norm,
                                                epoch)
+
+    def _learning_rates_to_tensorboard(self, batch_num_total: int):
+        """
+        Send current parameter specific learning rates to tensorboard
+        """
+        # optimizer stores lr info keyed by parameter tensor
+        # we want to log with parameter name
+        names = {param: name for name, param in self._model.named_parameters()}
+        for group in self._optimizer.param_groups:
+            if 'lr' not in group:
+                continue
+            rate = group['lr']
+            for param in group['params']:
+                # check whether params has requires grad or not
+                effective_rate = rate * float(param.requires_grad)
+                self._tensorboard.add_train_scalar(
+                        "learning_rate/" + names[param],
+                        effective_rate,
+                        batch_num_total
+                )
 
     def _histograms_to_tensorboard(self, epoch: int, histogram_parameters: Set[str]) -> None:
         """
@@ -667,8 +696,7 @@ class Trainer:
 
         val_generator = val_iterator(self._validation_data,
                                      num_epochs=1,
-                                     shuffle=False,
-                                     cuda_device=self._iterator_device)
+                                     shuffle=False)
         num_validation_batches = val_iterator.get_num_batches(self._validation_data)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
@@ -742,7 +770,6 @@ class Trainer:
                 val_metrics = {}
                 this_epoch_val_metric = None
 
-            self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
             self._metrics_to_console(train_metrics, val_metrics)
 
@@ -776,6 +803,8 @@ class Trainer:
                 # The LRScheduler API is agnostic to whether your schedule requires a validation metric -
                 # if it doesn't, the validation metric passed here is ignored.
                 self._learning_rate_scheduler.step(this_epoch_val_metric, epoch)
+
+            self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", time.strftime("%H:%M:%S", time.gmtime(epoch_elapsed_time)))
@@ -837,6 +866,9 @@ class Trainer:
                               'val_metric_per_epoch': val_metric_per_epoch,
                               'optimizer': self._optimizer.state_dict(),
                               'batch_num_total': self._batch_num_total}
+            if self._learning_rate_scheduler is not None:
+                training_state["learning_rate_scheduler"] = \
+                    self._learning_rate_scheduler.lr_scheduler.state_dict()
             training_path = os.path.join(self._serialization_dir,
                                          "training_state_epoch_{}.th".format(epoch))
             torch.save(training_state, training_path)
@@ -941,6 +973,9 @@ class Trainer:
         training_state = torch.load(training_state_path, map_location=util.device_mapping(-1))
         self._model.load_state_dict(model_state)
         self._optimizer.load_state_dict(training_state["optimizer"])
+        if self._learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
+            self._learning_rate_scheduler.lr_scheduler.load_state_dict(
+                    training_state["learning_rate_scheduler"])
         move_optimizer_to_cuda(self._optimizer)
 
         # We didn't used to save `validation_metric_per_epoch`, so we can't assume

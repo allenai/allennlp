@@ -47,12 +47,10 @@ class SpanField(Field[torch.Tensor]):
         return {}
 
     @overrides
-    def as_tensor(self,
-                  padding_lengths: Dict[str, int],
-                  cuda_device: int = -1) -> torch.Tensor:
+    def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
         # pylint: disable=unused-argument
         tensor = torch.LongTensor([self.span_start, self.span_end])
-        return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
+        return tensor
 
     @overrides
     def empty_field(self):

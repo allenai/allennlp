@@ -10,7 +10,7 @@ from nltk.sem.logic import Type
 from overrides import overrides
 
 from allennlp.semparse.worlds.world import ParsingError, World
-from allennlp.semparse.type_declarations import wikitables_type_declaration as types
+from allennlp.semparse.type_declarations import wikitables_lambda_dcs as types
 from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
 
 
@@ -65,15 +65,13 @@ class WikiTablesWorld(World):
                 signature = self.global_type_signatures[mapped_name]
                 self.terminal_productions[predicate] = f"{signature} -> {predicate}"
 
-        # We don't need to recompute this ever; let's just compute it once and cache it.
-        self._valid_actions: Dict[str, List[str]] = None
-
     def is_table_entity(self, entity_name: str) -> bool:
         """
         Returns ``True`` if the given entity is one of the entities in the table.
         """
         return entity_name in self._entity_set
 
+    @overrides
     def _get_curried_functions(self) -> Dict[Type, int]:
         return WikiTablesWorld.curried_functions
 
@@ -83,45 +81,44 @@ class WikiTablesWorld(World):
 
     @overrides
     def get_valid_actions(self) -> Dict[str, List[str]]:
-        if self._valid_actions:
-            return self._valid_actions
-        valid_actions = super().get_valid_actions()
+        if not self._valid_actions:
+            valid_actions = super().get_valid_actions()
 
-        # We need to add a few things here that don't get added by our world-general logic, and
-        # remove some things that are technically possible in our type system, but not present in
-        # the original SEMPRE grammar.
+            # We need to add a few things here that don't get added by our world-general logic, and
+            # remove some things that are technically possible in our type system, but not present in
+            # the original SEMPRE grammar.
 
-        # These are possible because of `reverse`.
-        valid_actions['c'].append('c -> [<r,c>, r]')
-        valid_actions['d'].append('d -> [<c,d>, c]')
-        valid_actions['n'].append('n -> [<r,n>, r]')
-        valid_actions['n'].append('n -> [<c,n>, c]')
-        valid_actions['p'].append('p -> [<c,p>, c]')
-        valid_actions['<p,n>'] = ["<p,n> -> ['lambda x', n]"]
+            # These are possible because of `reverse`.
+            valid_actions['c'].append('c -> [<r,c>, r]')
+            valid_actions['d'].append('d -> [<c,d>, c]')
+            valid_actions['n'].append('n -> [<r,n>, r]')
+            valid_actions['n'].append('n -> [<c,n>, c]')
+            valid_actions['p'].append('p -> [<c,p>, c]')
+            valid_actions['<p,n>'] = ["<p,n> -> ['lambda x', n]"]
 
-        # These get added when we do our ANY_TYPE substitution with basic types, but we don't
-        # actually need them.
-        del valid_actions['<c,c>']
-        del valid_actions['<d,p>']
-        del valid_actions['<p,d>']
-        del valid_actions['<p,p>']
-        del valid_actions['<p,r>']
+            # These get added when we do our ANY_TYPE substitution with basic types, but we don't
+            # actually need them.
+            del valid_actions['<c,c>']
+            del valid_actions['<d,p>']
+            del valid_actions['<p,d>']
+            del valid_actions['<p,p>']
+            del valid_actions['<p,r>']
 
-        # The argmax type generates an action that takes a date as an argument, which it turns out
-        # we don't need for parts.
-        self._remove_action_from_type(valid_actions, 'p', lambda x: '<d,p>' in x)
+            # The argmax type generates an action that takes a date as an argument, which it turns out
+            # we don't need for parts.
+            self._remove_action_from_type(valid_actions, 'p', lambda x: '<d,p>' in x)
 
-        # Our code that generates lambda productions similarly creates more than we need.
-        for type_ in ['<c,p>', '<c,r>', '<d,c>', '<d,r>', '<n,c>', '<n,p>', '<n,r>', '<p,c>',
-                      '<r,c>', '<r,r>']:
-            self._remove_action_from_type(valid_actions, type_, lambda x: 'lambda' in x)
+            # Our code that generates lambda productions similarly creates more than we need.
+            for type_ in ['<c,p>', '<c,r>', '<d,c>', '<d,r>', '<n,c>', '<n,p>', '<n,r>', '<p,c>',
+                          '<r,c>', '<r,r>']:
+                self._remove_action_from_type(valid_actions, type_, lambda x: 'lambda' in x)
 
-        # And we don't need `reverse` productions everywhere they are added, either.
-        for type_ in ['<c,r>', '<p,c>', '<r,d>']:
-            self._remove_action_from_type(valid_actions, type_, lambda x: '<<#1,#2>,<#2,#1>>' in x)
+            # And we don't need `reverse` productions everywhere they are added, either.
+            for type_ in ['<c,r>', '<p,c>', '<r,d>']:
+                self._remove_action_from_type(valid_actions, type_, lambda x: '<<#1,#2>,<#2,#1>>' in x)
 
-        self._valid_actions = valid_actions
-        return valid_actions
+            self._valid_actions = valid_actions
+        return self._valid_actions
 
     @staticmethod
     def _remove_action_from_type(valid_actions: Dict[str, List[str]],

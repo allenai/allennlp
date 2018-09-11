@@ -378,7 +378,9 @@ def bmes_tags_to_spans(tag_sequence: List[str],
     """
     Given a sequence corresponding to BMES tags, extracts spans.
     Spans are inclusive and can be of zero length, representing a single word span.
-    Ill-formed spans are not allowed and will raise ``InvalidTagSequence``.
+    Ill-formed spans are also included (i.e those which do not start with a "B-LABEL"),
+    as otherwise it is possible to get a perfect precision score whilst still predicting
+    ill-formed spans in addition to the correct spans.
     This function works properly when the spans are unlabeled (i.e., your labels are
     simply "B", "M", "E" and "S").
 
@@ -396,47 +398,38 @@ def bmes_tags_to_spans(tag_sequence: List[str],
         The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
         Note that the label `does not` contain any BIO tag prefixes.
     """
+
     def extract_bmes_tag_label(text):
         bmes_tag = text[0]
         label = text[2:]
         return bmes_tag, label
 
-    spans = []
-    classes_to_ignore = classes_to_ignore or []
-    invalid = False
-    index = 0
-    while index < len(tag_sequence) and not invalid:
-        start_bmes_tag, start_label = extract_bmes_tag_label(tag_sequence[index])
-        start_index = index
-
-        if start_bmes_tag == 'B':
-            index += 1
-            while index < len(tag_sequence):
-                bmes_tag, label = extract_bmes_tag_label(tag_sequence[index])
-                # Stop conditions.
-                if label != start_label or bmes_tag not in ('M', 'E'):
-                    invalid = True
-                    break
-                if bmes_tag == 'E':
-                    break
-                # bmes_tag == 'M', move to next.
-                index += 1
-
-            if index >= len(tag_sequence):
-                invalid = True
-            if not invalid:
-                spans.append((start_label, (start_index, index)))
-
-        elif start_bmes_tag == 'S':
-            spans.append((start_label, (start_index, start_index)))
-
+    spans: List[Tuple[str, List[int]]] = []
+    prev_bmes_tag: Optional[str] = None
+    for index, tag in enumerate(tag_sequence):
+        bmes_tag, label = extract_bmes_tag_label(tag)
+        if bmes_tag in ('B', 'S'):
+            # Regardless of tag, we start a new span when reaching B & S.
+            spans.append(
+                    (label, [index, index])
+                    )
+        elif bmes_tag in ('M', 'E') and prev_bmes_tag in ('B', 'M') and spans[-1][0] == label:
+            # Only expand the span if
+            # 1. Valid transition: B/M -> M/E.
+            # 2. Matched label.
+            spans[-1][1][1] = index
         else:
-            invalid = True
+            # Best effort split for invalid span.
+            spans.append(
+                    (label, [index, index])
+                    )
+        # update previous BMES tag.
+        prev_bmes_tag = bmes_tag
 
-        # Move to next span.
-        index += 1
-
-    if invalid:
-        raise InvalidTagSequence(tag_sequence)
-
-    return [span for span in spans if span[0] not in classes_to_ignore]
+    classes_to_ignore = classes_to_ignore or []
+    return [
+            # to tuple.
+            (span[0], (span[1][0], span[1][1]))
+            for span in spans
+            if span[0] not in classes_to_ignore
+            ]

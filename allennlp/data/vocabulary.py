@@ -389,7 +389,6 @@ class Vocabulary(Registrable):
         A ``Vocabulary``.
         """
         # pylint: disable=arguments-differ
-
         # Vocabulary is ``Registrable`` so that you can configure a custom subclass,
         # but (unlike most of our registrables) almost everyone will want to use the
         # base implementation. So instead of having an abstract ``VocabularyBase`` or

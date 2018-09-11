@@ -1,0 +1,186 @@
+train/train/01	0	0	$	XX	-	-	-	-	-	*	(ARG0*	-
+train/train/01	0	1	100	XX	-	-	-	-	-	*	*	-
+train/train/01	0	2	million	XX	-	-	-	-	-	*	*	-
+train/train/01	0	3	issue	XX	-	-	-	-	-	*	*	-
+train/train/01	0	4	of	XX	-	-	-	-	-	*	*	-
+train/train/01	0	5	collateralized	XX	-	-	-	-	-	*	*	-
+train/train/01	0	6	mortgage	XX	-	-	-	-	-	*	*	-
+train/train/01	0	7	obligations	XX	-	-	-	-	-	*	*)	-
+train/train/01	0	8	is	XX	-	-	-	-	-	*	(V*	-
+train/train/01	0	9	being	XX	-	-	-	-	-	*	*	-
+train/train/01	0	10	offered	XX	-	-	-	-	-	*	*)	-
+train/train/01	0	11	in	XX	-	-	-	-	-	*	*	-
+train/train/01	0	12	four	XX	-	-	-	-	-	*	*	-
+train/train/01	0	13	classes	XX	-	-	-	-	-	*	*	-
+train/train/01	0	14	by	XX	-	-	-	-	-	*	(ARG1*	-
+train/train/01	0	15	a	XX	-	-	-	-	-	*	*	-
+train/train/01	0	16	Morgan	XX	-	-	-	-	-	*	*	-
+train/train/01	0	17	Stanley	XX	-	-	-	-	-	*	*	-
+train/train/01	0	18	group	XX	-	-	-	-	-	*	*)	-
+train/train/01	0	19	.	XX	-	-	-	-	-	*	*	-
+
+train/train/01	0	0	$	XX	-	-	-	-	-	*	(ARG0*	-
+train/train/01	0	1	251	XX	-	-	-	-	-	*	*	-
+train/train/01	0	2	million	XX	-	-	-	-	-	*	*	-
+train/train/01	0	3	of	XX	-	-	-	-	-	*	*	-
+train/train/01	0	4	notes	XX	-	-	-	-	-	*	*)	-
+train/train/01	0	5	,	XX	-	-	-	-	-	*	*	-
+train/train/01	0	6	due	XX	-	-	-	-	-	*	*	-
+train/train/01	0	7	Nov.	XX	-	-	-	-	-	*	*	-
+train/train/01	0	8	1	XX	-	-	-	-	-	*	*	-
+train/train/01	0	9	,	XX	-	-	-	-	-	*	*	-
+train/train/01	0	10	1997	XX	-	-	-	-	-	*	*	-
+train/train/01	0	11	,	XX	-	-	-	-	-	*	*	-
+train/train/01	0	12	was	XX	-	-	-	-	-	*	(V*	-
+train/train/01	0	13	priced	XX	-	-	-	-	-	*	*)	-
+train/train/01	0	14	in	XX	-	-	-	-	-	*	(ARG1*	-
+train/train/01	0	15	a	XX	-	-	-	-	-	*	*	-
+train/train/01	0	16	two	XX	-	-	-	-	-	*	*	-
+train/train/01	0	17	-	XX	-	-	-	-	-	*	*	-
+train/train/01	0	18	part	XX	-	-	-	-	-	*	*	-
+train/train/01	0	19	offering	XX	-	-	-	-	-	*	*	-
+train/train/01	0	20	through	XX	-	-	-	-	-	*	*	-
+train/train/01	0	21	underwriters	XX	-	-	-	-	-	*	*	-
+train/train/01	0	22	at	XX	-	-	-	-	-	*	*	-
+train/train/01	0	23	Salomon	XX	-	-	-	-	-	*	*	-
+train/train/01	0	24	Brothers	XX	-	-	-	-	-	*	*	-
+train/train/01	0	25	Inc	XX	-	-	-	-	-	*	*)	-
+train/train/01	0	26	.	XX	-	-	-	-	-	*	*	-
+
+train/train/01	0	0	$	XX	-	-	-	-	-	*	(ARG0*	(ARG0*	*	-
+train/train/01	0	1	350	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	2	million	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	3	of	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	4	JCP	XX	-	-	-	-	-	*	*	*	(ARG1*)	-
+train/train/01	0	5	Master	XX	-	-	-	-	-	*	*	*	(V*	-
+train/train/01	0	6	Credit	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	7	Card	XX	-	-	-	-	-	*	*	*	*)	-
+train/train/01	0	8	Trust	XX	-	-	-	-	-	*	*	*	(ARG0*	-
+train/train/01	0	9	asset	XX	-	-	-	-	-	*	*	*	*)	-
+train/train/01	0	10	-	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	11	backed	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	12	certificates	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	13	,	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	14	Series	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	15	B	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	16	,	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	17	with	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	18	a	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	19	final	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	20	stated	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	21	maturity	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	22	of	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	23	Oct.	XX	-	-	-	-	-	*	*)	*)	*	-
+train/train/01	0	24	15	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	25	,	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	26	2001	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	27	,	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	28	was	XX	-	-	-	-	-	*	(V*	*	*	-
+train/train/01	0	29	priced	XX	-	-	-	-	-	*	*)	*	*	-
+train/train/01	0	30	at	XX	-	-	-	-	-	*	(ARG1*	*	*	-
+train/train/01	0	31	99.1875	XX	-	-	-	-	-	*	*)	*	*	-
+train/train/01	0	32	to	XX	-	-	-	-	-	*	(ARG2*	(V*	*	-
+train/train/01	0	33	yield	XX	-	-	-	-	-	*	*	*)	*	-
+train/train/01	0	34	9.192	XX	-	-	-	-	-	*	*	(ARG1*	*	-
+train/train/01	0	35	%	XX	-	-	-	-	-	*	*	*)	*	-
+train/train/01	0	36	with	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	37	a	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	38	coupon	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	39	of	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	40	8.95	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	41	%	XX	-	-	-	-	-	*	*)	*	*	-
+train/train/01	0	42	.	XX	-	-	-	-	-	*	*	*	*	-
+
+train/train/01	0	0	$	XX	-	-	-	-	-	*	(ARG0*	-
+train/train/01	0	1	100	XX	-	-	-	-	-	*	*	-
+train/train/01	0	2	million	XX	-	-	-	-	-	*	*	-
+train/train/01	0	3	issue	XX	-	-	-	-	-	*	*	-
+train/train/01	0	4	of	XX	-	-	-	-	-	*	*	-
+train/train/01	0	5	collateralized	XX	-	-	-	-	-	*	*	-
+train/train/01	0	6	mortgage	XX	-	-	-	-	-	*	*	-
+train/train/01	0	7	obligations	XX	-	-	-	-	-	*	*)	-
+train/train/01	0	8	is	XX	-	-	-	-	-	*	(V*	-
+train/train/01	0	9	being	XX	-	-	-	-	-	*	*	-
+train/train/01	0	10	offered	XX	-	-	-	-	-	*	*)	-
+train/train/01	0	11	in	XX	-	-	-	-	-	*	*	-
+train/train/01	0	12	four	XX	-	-	-	-	-	*	*	-
+train/train/01	0	13	classes	XX	-	-	-	-	-	*	*	-
+train/train/01	0	14	by	XX	-	-	-	-	-	*	(ARG1*	-
+train/train/01	0	15	a	XX	-	-	-	-	-	*	*	-
+train/train/01	0	16	Morgan	XX	-	-	-	-	-	*	*	-
+train/train/01	0	17	Stanley	XX	-	-	-	-	-	*	*	-
+train/train/01	0	18	group	XX	-	-	-	-	-	*	*)	-
+train/train/01	0	19	.	XX	-	-	-	-	-	*	*	-
+
+train/train/01	0	0	$	XX	-	-	-	-	-	*	(ARG0*	-
+train/train/01	0	1	251	XX	-	-	-	-	-	*	*	-
+train/train/01	0	2	million	XX	-	-	-	-	-	*	*	-
+train/train/01	0	3	of	XX	-	-	-	-	-	*	*	-
+train/train/01	0	4	notes	XX	-	-	-	-	-	*	*)	-
+train/train/01	0	5	,	XX	-	-	-	-	-	*	*	-
+train/train/01	0	6	due	XX	-	-	-	-	-	*	*	-
+train/train/01	0	7	Nov.	XX	-	-	-	-	-	*	*	-
+train/train/01	0	8	1	XX	-	-	-	-	-	*	*	-
+train/train/01	0	9	,	XX	-	-	-	-	-	*	*	-
+train/train/01	0	10	1997	XX	-	-	-	-	-	*	*	-
+train/train/01	0	11	,	XX	-	-	-	-	-	*	*	-
+train/train/01	0	12	was	XX	-	-	-	-	-	*	(V*	-
+train/train/01	0	13	priced	XX	-	-	-	-	-	*	*)	-
+train/train/01	0	14	in	XX	-	-	-	-	-	*	(ARG1*	-
+train/train/01	0	15	a	XX	-	-	-	-	-	*	*	-
+train/train/01	0	16	two	XX	-	-	-	-	-	*	*	-
+train/train/01	0	17	-	XX	-	-	-	-	-	*	*	-
+train/train/01	0	18	part	XX	-	-	-	-	-	*	*	-
+train/train/01	0	19	offering	XX	-	-	-	-	-	*	*	-
+train/train/01	0	20	through	XX	-	-	-	-	-	*	*	-
+train/train/01	0	21	underwriters	XX	-	-	-	-	-	*	*	-
+train/train/01	0	22	at	XX	-	-	-	-	-	*	*	-
+train/train/01	0	23	Salomon	XX	-	-	-	-	-	*	*	-
+train/train/01	0	24	Brothers	XX	-	-	-	-	-	*	*	-
+train/train/01	0	25	Inc	XX	-	-	-	-	-	*	*)	-
+train/train/01	0	26	.	XX	-	-	-	-	-	*	*	-
+
+train/train/01	0	0	$	XX	-	-	-	-	-	*	(ARG0*	(ARG0*	*	-
+train/train/01	0	1	350	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	2	million	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	3	of	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	4	JCP	XX	-	-	-	-	-	*	*	*	(ARG1*)	-
+train/train/01	0	5	Master	XX	-	-	-	-	-	*	*	*	(V*	-
+train/train/01	0	6	Credit	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	7	Card	XX	-	-	-	-	-	*	*	*	*)	-
+train/train/01	0	8	Trust	XX	-	-	-	-	-	*	*	*	(ARG0*	-
+train/train/01	0	9	asset	XX	-	-	-	-	-	*	*	*	*)	-
+train/train/01	0	10	-	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	11	backed	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	12	certificates	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	13	,	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	14	Series	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	15	B	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	16	,	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	17	with	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	18	a	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	19	final	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	20	stated	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	21	maturity	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	22	of	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	23	Oct.	XX	-	-	-	-	-	*	*)	*)	*	-
+train/train/01	0	24	15	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	25	,	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	26	2001	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	27	,	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	28	was	XX	-	-	-	-	-	*	(V*	*	*	-
+train/train/01	0	29	priced	XX	-	-	-	-	-	*	*)	*	*	-
+train/train/01	0	30	at	XX	-	-	-	-	-	*	(ARG1*	*	*	-
+train/train/01	0	31	99.1875	XX	-	-	-	-	-	*	*)	*	*	-
+train/train/01	0	32	to	XX	-	-	-	-	-	*	(ARG2*	(V*	*	-
+train/train/01	0	33	yield	XX	-	-	-	-	-	*	*	*)	*	-
+train/train/01	0	34	9.192	XX	-	-	-	-	-	*	*	(ARG1*	*	-
+train/train/01	0	35	%	XX	-	-	-	-	-	*	*	*)	*	-
+train/train/01	0	36	with	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	37	a	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	38	coupon	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	39	of	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	40	8.95	XX	-	-	-	-	-	*	*	*	*	-
+train/train/01	0	41	%	XX	-	-	-	-	-	*	*)	*	*	-
+train/train/01	0	42	.	XX	-	-	-	-	-	*	*	*	*	-
+

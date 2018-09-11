@@ -92,11 +92,11 @@ class ModelTestCase(AllenNlpTestCase):
         # the same result out.
         model_dataset = reader.read(params['validation_data_path'])
         iterator.index_with(model.vocab)
-        model_batch = next(iterator(model_dataset, shuffle=False, cuda_device=cuda_device))
+        model_batch = next(iterator(model_dataset, shuffle=False))
 
         loaded_dataset = reader.read(params['validation_data_path'])
         iterator2.index_with(loaded_model.vocab)
-        loaded_batch = next(iterator2(loaded_dataset, shuffle=False, cuda_device=cuda_device))
+        loaded_batch = next(iterator2(loaded_dataset, shuffle=False))
 
         # Check gradients are None for non-trainable parameters and check that
         # trainable parameters receive some gradient if they are trainable.
