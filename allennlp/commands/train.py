@@ -347,6 +347,6 @@ def train_model(params: Params,
         logger.info("To evaluate on the test set after training, pass the "
                     "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
 
-    dump_metrics(os.path.join(serialization_dir, "metrics.json"), metrics)
+    dump_metrics(os.path.join(serialization_dir, "metrics.json"), metrics, log=True)
 
     return best_model

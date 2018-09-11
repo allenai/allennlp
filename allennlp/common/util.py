@@ -364,8 +364,9 @@ def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
             tunable_parameter_names.append(name)
     return [frozen_parameter_names, tunable_parameter_names]
 
-def dump_metrics(file_path: str, metrics: Dict[str, Any]) -> None:
+def dump_metrics(file_path: str, metrics: Dict[str, Any], log: bool = False) -> None:
     metrics_json = json.dumps(metrics, indent=2)
     with open(file_path, "w") as metrics_file:
         metrics_file.write(metrics_json)
-    logger.info("Metrics: %s", metrics_json)
+    if log:
+        logger.info("Metrics: %s", metrics_json)
