@@ -28,3 +28,4 @@ allennlp.data.dataset_readers
   allennlp.data.dataset_readers.wikitables
   allennlp.data.dataset_readers.universal_dependencies
   allennlp.data.dataset_readers.quora_paraphrase
+  allennlp.data.dataset_readers.semantic_dependency_parsing

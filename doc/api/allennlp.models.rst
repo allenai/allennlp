@@ -24,4 +24,5 @@ allennlp.models
   allennlp.models.biaffine_dependency_parser
   allennlp.models.esim
   allennlp.models.bimpm
+  allennlp.models.graph_parser
 
