@@ -177,7 +177,9 @@ class Trainer:
                  grad_clipping: Optional[float] = None,
                  learning_rate_scheduler: Optional[LearningRateScheduler] = None,
                  summary_interval: int = 100,
-                 histogram_interval: int = None) -> None:
+                 histogram_interval: int = None,
+                 should_log_parameter_statistics: bool = True,
+                 should_log_learning_rate: bool = False) -> None:
         """
         Parameters
         ----------
@@ -257,6 +259,11 @@ class Trainer:
             slow, so we recommend logging histograms relatively infrequently.
             Note: only Modules that return tensors, tuples of tensors or dicts
             with tensors as values currently support activation logging.
+        should_log_parameter_statistics : ``bool``, optional, (default = True)
+            Whether to send parameter statistics (mean and standard deviation
+            of parameters and gradients) to tensorboard.
+        should_log_learning_rate : ``bool``, optional, (default = False)
+            Whether to send parameter specific learning rate to tensorboard.
         """
         self._model = model
         self._iterator = iterator
@@ -313,6 +320,9 @@ class Trainer:
         self._summary_interval = summary_interval
         self._histogram_interval = histogram_interval
         self._log_histograms_this_batch = False
+        self._should_log_parameter_statistics = should_log_parameter_statistics
+        self._should_log_learning_rate = should_log_learning_rate
+
         # We keep the total batch number as a class variable because it
         # is used inside a closure for the hook which logs activations in
         # ``_enable_activation_logging``.
@@ -516,7 +526,10 @@ class Trainer:
 
             # Log parameter values to Tensorboard
             if batch_num_total % self._summary_interval == 0:
-                self._parameter_and_gradient_statistics_to_tensorboard(batch_num_total, batch_grad_norm)
+                if self._should_log_parameter_statistics:
+                    self._parameter_and_gradient_statistics_to_tensorboard(batch_num_total, batch_grad_norm)
+                if self._should_log_learning_rate:
+                    self._learning_rates_to_tensorboard(batch_num_total)
                 self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"], batch_num_total)
                 self._metrics_to_tensorboard(batch_num_total,
                                              {"epoch_metrics/" + k: v for k, v in metrics.items()})
@@ -587,6 +600,26 @@ class Trainer:
             self._tensorboard.add_train_scalar("gradient_norm",
                                                batch_grad_norm,
                                                epoch)
+
+    def _learning_rates_to_tensorboard(self, batch_num_total: int):
+        """
+        Send current parameter specific learning rates to tensorboard
+        """
+        # optimizer stores lr info keyed by parameter tensor
+        # we want to log with parameter name
+        names = {param: name for name, param in self._model.named_parameters()}
+        for group in self._optimizer.param_groups:
+            if 'lr' not in group:
+                continue
+            rate = group['lr']
+            for param in group['params']:
+                # check whether params has requires grad or not
+                effective_rate = rate * float(param.requires_grad)
+                self._tensorboard.add_train_scalar(
+                        "learning_rate/" + names[param],
+                        effective_rate,
+                        batch_num_total
+                )
 
     def _histograms_to_tensorboard(self, epoch: int, histogram_parameters: Set[str]) -> None:
         """
@@ -741,11 +774,6 @@ class Trainer:
 
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
             self._metrics_to_console(train_metrics, val_metrics)
-            for index, param_group in enumerate(self._optimizer.param_groups):
-                learning_rate = param_group.get("lr")
-                if learning_rate is not None:
-                    self._tensorboard.add_train_scalar(
-                            f"learning_rate/param_group{index:d}", learning_rate, epoch)
 
             if self._learning_rate_scheduler:
                 # The LRScheduler API is agnostic to whether your schedule requires a validation metric -

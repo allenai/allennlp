@@ -309,6 +309,18 @@ class TestTrainer(AllenNlpTestCase):
             # epoch N has N-1 in file name
             assert sorted(epochs) == [1, 3, 4, 5]
 
+    def test_trainer_can_log_learning_rates_tensorboard(self):
+        iterator = BasicIterator(batch_size=4)
+        iterator.index_with(self.vocab)
+
+        trainer = Trainer(self.model, self.optimizer,
+                          iterator, self.instances, num_epochs=2,
+                          serialization_dir=self.TEST_DIR,
+                          should_log_learning_rate=True,
+                          summary_interval=2)
+
+        trainer.train()
+
     def test_trainer_saves_models_at_specified_interval(self):
         iterator = BasicIterator(batch_size=4)
         iterator.index_with(self.vocab)
