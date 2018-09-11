@@ -106,16 +106,14 @@ class MultiLabelField(Field[torch.Tensor]):
         return {}
 
     @overrides
-    def as_tensor(self,
-                  padding_lengths: Dict[str, int],
-                  cuda_device: int = -1) -> torch.Tensor:
+    def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
         # pylint: disable=unused-argument
 
         tensor = torch.zeros(self._num_labels)  # vector of zeros
         if self._label_ids:
             tensor.scatter_(0, torch.LongTensor(self._label_ids), 1)
 
-        return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
+        return tensor
 
     @overrides
     def empty_field(self):

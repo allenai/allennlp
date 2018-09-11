@@ -48,6 +48,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
+from allennlp.nn import util
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -96,11 +97,11 @@ def evaluate(model: Model,
 
         iterator = data_iterator(instances,
                                  num_epochs=1,
-                                 shuffle=False,
-                                 cuda_device=cuda_device)
+                                 shuffle=False)
         logger.info("Iterating over dataset")
         generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
         for batch in generator_tqdm:
+            batch = util.move_to_device(batch, cuda_device)
             model(**batch)
             metrics = model.get_metrics()
             if (not _warned_tqdm_ignores_underscores and

@@ -23,9 +23,7 @@ class ArrayField(Field[numpy.ndarray]):
                 for i, shape in enumerate(self.array.shape)}
 
     @overrides
-    def as_tensor(self,
-                  padding_lengths: Dict[str, int],
-                  cuda_device: int = -1) -> torch.Tensor:
+    def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
         max_shape = [padding_lengths["dimension_{}".format(i)]
                      for i in range(len(padding_lengths))]
 
@@ -39,7 +37,7 @@ class ArrayField(Field[numpy.ndarray]):
         slices = tuple([slice(0, x) for x in slicing_shape])
         return_array[slices] = self.array
         tensor = torch.from_numpy(return_array)
-        return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
+        return tensor
 
     @overrides
     def empty_field(self):  # pylint: disable=no-self-use
