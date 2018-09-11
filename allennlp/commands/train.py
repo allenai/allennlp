@@ -33,7 +33,6 @@ which to write the results.
 """
 from typing import Dict, Iterable
 import argparse
-import json
 import logging
 import os
 import re
