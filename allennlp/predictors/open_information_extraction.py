@@ -73,26 +73,60 @@ def get_predicate_text(sent_tokens: List[Token], tags: List[str]) -> str:
     return " ".join([sent_tokens[pred_id].text
                      for pred_id in get_predicate_indices(tags)])
 
-def predicate_are_subsumed(tags1: List[str], tags2: List[str]) -> bool:
+def predicates_overlap(tags1: List[str], tags2: List[str]) -> bool:
     """
     Tests whether the predicate in BIO tags1 are subsumed in
     those of tags2.
     """
     # Get predicate word indices from both predictions
-    pred_ind = get_predicate_indices(tags1)
+    pred_ind1 = get_predicate_indices(tags1)
     pred_ind2 = get_predicate_indices(tags2)
 
     # Return if pred_ind1 is contained in pred_ind2
-    return set(pred_ind1) < set(pred_ind2)
+    return any(set.intersection(set(pred_ind1), set(pred_ind2)))
 
-def merge_predictions(tags1: List[str], tags2: List[str]) -> List[str]:
+def get_coherent_next_tag(prev_label: str, cur_label: str) -> str:
+    """
+    Generate a coherent tag, given previous tag and current label.
+    """
+    if cur_label == "O":
+        # Don't need to add prefix to an "O" label
+        return "O"
+
+    if prev_label == cur_label:
+        return f"I-{cur_label}"
+    else:
+        return f"B-{cur_label}"
+
+def merge_overlapping_predictions(tags1: List[str], tags2: List[str]) -> List[str]:
     """
     Merge two predictions into one. Assumes the predicate in tags1 are contained in
     the predicate of tags2.
     """
-    # Allow tags1 to add elements to tags2
-    return [tag2 if tag2 != 'O' else tag1
-            for (tag1, tag2) in zip(tags1, tags2)]
+    ret_sequence = []
+    prev_label = "O"
+
+    # Build a coherent sequence out of two
+    # spans which predicates' overlap
+    for tag1, tag2 in zip(tags1, tags2):
+        label1 = tag1.split('-')[-1]
+        label2 = tag2.split('-')[-1]
+        if (label1 == 'V') or (label2 == 'V'):
+            # Construct maximal predicate length -
+            # add predicate tag if any of the sequence predict it
+            cur_label = 'V'
+
+        # Else - prefer an argument over 'O' label
+        elif label1 != 'O':
+            cur_label = label1
+        else:
+            cur_label = label2
+
+        # Append cur tag to the returned sequence
+        prev_label = cur_label
+        cur_tag = get_coherent_next_tag(prev_label, cur_label)
+        ret_sequence.append(cur_tag)
+    return ret_sequence
 
 def consolidate_predictions(outputs: List[List[str]], sent_tokens: List[Token]) -> Dict[str, List[str]]:
     """
@@ -108,17 +142,15 @@ def consolidate_predictions(outputs: List[List[str]], sent_tokens: List[Token]) 
     for pred1_text, tags1 in zip(predicate_texts, merged_outputs):
         # A flag indicating whether to add tags1 to predictions
         add_to_prediction = True
-        if pred1_text in pred_dict:
-            # We already added this predicate
-            continue
 
-        # Else - check if this predicate if subsumed by another predicate
-        for pred2_text, tags2 in zip(predicate_texts, merged_outputs):
-            if (tags1 != tags2) and predicate_are_subsumed(tags1, tags2):
-                # tags1 is contained in tags2
-                pred_dict[pred2_text] = merge_predictions(tags1, tags2)
+        #  Check if this predicate overlaps another predicate
+        for pred2_text, tags2 in pred_dict.items():
+            if predicates_overlap(tags1, tags2):
+                # tags1 overlaps tags2
+                pred_dict[pred2_text] = merge_overlapping_predictions(tags1, tags2)
                 add_to_prediction = False
 
+        # This predicate doesn't overlap - add as a new predicate
         if add_to_prediction:
             pred_dict[pred1_text] = tags1
 
@@ -189,7 +221,7 @@ class OpenIePredictor(Predictor):
         # Build and return output dictionary
         results = {"verbs": [], "words": sent_tokens}
 
-        for pred_text, tags in pred_dict.items():
+        for tags in pred_dict.values():
             # Join multi-word predicates
             tags = join_mwp(tags)
 
@@ -198,7 +230,7 @@ class OpenIePredictor(Predictor):
 
             # Add a predicate prediction to the return dictionary.
             results["verbs"].append({
-                    "verb": pred_text,
+                    "verb": get_predicate_text(sent_tokens, tags),
                     "description": description,
                     "tags": tags,
             })

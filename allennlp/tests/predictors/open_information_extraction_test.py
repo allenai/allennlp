@@ -2,7 +2,7 @@
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
-from allennlp.predictors.open_information_extraction import consolidate_predictions
+from allennlp.predictors.open_information_extraction import consolidate_predictions, get_predicate_text
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
@@ -68,4 +68,28 @@ class TestOpenIePredictor(AllenNlpTestCase):
         pred_dict = consolidate_predictions(predictions, sent_tokens)
 
         # Check that only "decided to join" is left
-        assert list(pred_dict.keys()) == ["decided to join"]
+        assert(len(pred_dict) == 1)
+        tags = list(pred_dict.values())[0]
+        assert get_predicate_text(sent_tokens, tags) == "decided to join"
+
+    def test_more_than_two_overlapping_predicates(self):
+        """
+        Test whether the predictor can correctly consolidate multiword
+        predicates.
+        """
+        tokenizer = WordTokenizer(word_splitter=SpacyWordSplitter(pos_tags=True))
+
+        sent_tokens = tokenizer.tokenize("John refused to consider joining the club.")
+
+        # Emulate predications - for "refused" and "consider" and "joining"
+        predictions = [['B-ARG0', 'B-V', 'B-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O'],\
+                       ['B-ARG0', 'B-BV', 'I-BV', 'B-V', 'B-ARG1', 'I-ARG1', 'I-ARG1', 'O'],\
+                       ['B-ARG0', 'B-BV', 'I-BV', 'I-BV', 'B-V', 'B-ARG1', 'I-ARG1', 'O']]
+
+        # Consolidate
+        pred_dict = consolidate_predictions(predictions, sent_tokens)
+
+        # Check that only "decided to join" is left
+        assert(len(pred_dict) == 1)
+        tags = list(pred_dict.values())[0]
+        assert get_predicate_text(sent_tokens, tags) == "refused to consider joining"
