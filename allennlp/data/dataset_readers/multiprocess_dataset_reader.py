@@ -54,6 +54,9 @@ class MultiprocessDatasetReader(DatasetReader):
         multiple-process case, it's possible that you'd want finished workers to continue on to the
         next epoch even while others are still finishing the previous epoch. Passing in a value
         larger than 1 allows that to happen.
+    output_queue_size: ``int``, (optional, default=1000)
+        The size of the queue on which read instances are placed to be yielded.
+        You might need to increase this if you're generating instances too quickly.
     lazy : ``bool``, (optional, default=True)
         Most of our dataset readers are eager by default; however, if you're using this one
         it's probably because you have a lot of data (and in particular don't want to load it
@@ -63,12 +66,14 @@ class MultiprocessDatasetReader(DatasetReader):
                  base_reader: DatasetReader,
                  num_workers: int,
                  epochs_per_read: int = 1,
+                 output_queue_size: int = 1000,
                  lazy: bool = True) -> None:
         super().__init__(lazy=lazy)
 
         self.reader = base_reader
         self.num_workers = num_workers
         self.epochs_per_read = epochs_per_read
+        self.output_queue_size = output_queue_size
 
     def text_to_instance(self, *args, **kwargs) -> Instance:
         """
@@ -92,8 +97,7 @@ class MultiprocessDatasetReader(DatasetReader):
         for _ in range(self.num_workers):
             input_queue.put(None)
 
-        # TODO(joelgrus): where does this number come from?
-        output_queue = Queue(1000)
+        output_queue = Queue(self.output_queue_size)
 
         processes: List[Process] = []
         num_finished = 0

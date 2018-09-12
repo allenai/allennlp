@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader, MultiprocessDatasetReader
-from allennlp.data.iterators import MultiprocessIterator
+from allennlp.data.iterators import BasicIterator, MultiprocessIterator
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
@@ -28,7 +28,8 @@ class TestMultiprocessIterator(IteratorTest):
 
     def test_yield_one_epoch_iterates_over_the_data_once(self):
         for test_instances in (self.instances, self.lazy_instances):
-            iterator = MultiprocessIterator(num_workers=4, batch_size=2)
+            base_iterator = BasicIterator(batch_size=2, max_instances_in_memory=1024)
+            iterator = MultiprocessIterator(base_iterator, num_workers=4)
             iterator.index_with(self.vocab)
             batches = list(iterator(test_instances, num_epochs=1))
             # We just want to get the single-token array for the text field in the instance.
@@ -40,8 +41,9 @@ class TestMultiprocessIterator(IteratorTest):
     def test_multiprocess_reader_with_multiprocess_iterator(self):
         # use SequenceTaggingDatasetReader as the base reader
         reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=2)
+        base_iterator = BasicIterator(batch_size=32, max_instances_in_memory=1024)
 
-        iterator = MultiprocessIterator(num_workers=2, batch_size=32)
+        iterator = MultiprocessIterator(base_iterator, num_workers=2)
         iterator.index_with(self.vocab)
 
         instances = reader.read(self.glob)
@@ -49,3 +51,17 @@ class TestMultiprocessIterator(IteratorTest):
         tensor_dicts = iterator(instances, num_epochs=1)
         sizes = [len(tensor_dict['tags']) for tensor_dict in tensor_dicts]
         assert sum(sizes) == 400
+
+    # def test_multiprocess_reader_with_multiprocess_iterator_with_queue(self):
+    #     # use SequenceTaggingDatasetReader as the base reader
+    #     reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=2)
+    #     base_iterator = BasicIterator(batch_size=32, max_instances_in_memory=1024)
+
+    #     iterator = MultiprocessIterator(base_iterator, num_workers=2, read_from_queue=True)
+    #     iterator.index_with(self.vocab)
+
+    #     instances = reader.read(self.glob)
+
+    #     tensor_dicts = iterator(instances, num_epochs=1)
+    #     sizes = [len(tensor_dict['tags']) for tensor_dict in tensor_dicts]
+    #     assert sum(sizes) == 400

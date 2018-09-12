@@ -1,10 +1,10 @@
 from typing import Iterable, Iterator, List, Optional
+import copy
 import logging
 
 from torch.multiprocessing import Process, Queue, get_logger
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.data.dataset import Batch
@@ -15,43 +15,22 @@ logger.setLevel(logging.INFO)
 
 def _create_tensor_dicts(input_queue: Queue,
                          output_queue: Queue,
-                         max_instances_in_memory: int,
-                         batch_size: int,
-                         vocab: Vocabulary) -> None:
+                         iterator: DataIterator) -> None:
     """
     Pulls at most ``max_instances_in_memory`` from the input_queue,
     groups them into batches of size ``batch_size``, converts them
     to ``TensorDict`` s, and puts them on the ``output_queue``.
     """
-    instances: List[Instance] = []
-
-    def make_batches() -> None:
-        for batch_instances in lazy_groups_of(iter(instances), batch_size):
-            batch = Batch(batch_instances)
-
-            if vocab is not None:
-                batch.index_instances(vocab)
-
-            padding_lengths = batch.get_padding_lengths()
-            tensor_dict = batch.as_tensor_dict(padding_lengths)
-
-            output_queue.put(tensor_dict)
-        instances.clear()
-
-    while True:
+    def instances() -> Iterator[Instance]:
         instance = input_queue.get()
-        if instance is None:
-            # This means there are no more instances, so
-            # create one last batch (if necessary),
-            # put None on the queue, and then break out of the loop.
-            if instances:
-                make_batches()
-            output_queue.put(None)
-            break
-        else:
-            instances.append(instance)
-            if len(instances) >= max_instances_in_memory:
-                make_batches()
+        while instance is not None:
+            yield instance
+            instance = input_queue.get()
+
+    for tensor_dict in iterator(instances(), num_epochs=1, shuffle=False):
+        output_queue.put(tensor_dict)
+
+    output_queue.put(None)
 
 def _queuer(instances: Iterable[Instance],
             input_queue: Queue,
@@ -81,31 +60,35 @@ class MultiprocessIterator(DataIterator):
 
     Parameters
     ----------
-    batch_size : ``int``, optional, (default = 32)
-        The size of each batch of instances yielded when calling the iterator.
+    iterator : ``DataIterator``
+        The ``DataIterator`` for generating tensor dicts. It will be cloned
+        once per worker.
     num_workers : ``int``, optional (default = 1)
         The number of processes used for generating tensor dicts.
-    max_instances_in_memory : ``int``, optional, (default = 1024)
-        Each tensor-dict-generating process will wait until it has this many
-        instances, then batch and tensorize them. It's probably a good idea
-        to have this be a multiple of ``batch_size``, otherwise you'll end up
-        with a lot of partially-full batches.
+    output_queue_size: ``int``
+        The size of the output queue on which tensor dicts are placed to be consumed.
+        You might need to increase this if you're generating tensor dicts too quickly.
     """
     def __init__(self,
-                 batch_size: int = 32,
+                 iterator: DataIterator,
                  num_workers: int = 1,
-                 max_instances_in_memory: int = 1024) -> None:
+                 output_queue_size: int = 1000,
+                 read_from_queue: bool = False) -> None:
         super().__init__()
         self.num_workers = num_workers
-        self.batch_size = batch_size
-        self.max_instances_in_memory = max_instances_in_memory
-        self.vocab: Vocabulary = None
+        self.batch_size = iterator._batch_size  # pylint: disable=protected-access
+        self.output_queue_size = output_queue_size
+        self.iterators = [copy.deepcopy(iterator) for _ in range(num_workers)]
 
         self.processes: List[Process] = []
         self.queuer: Optional[Process] = None
 
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         raise RuntimeError("MultiprocessIterator doesn't use create_batches")
+
+    def index_with(self, vocab: Vocabulary):
+        for iterator in self.iterators:
+            iterator.index_with(vocab)
 
     def __call__(self,
                  instances: Iterable[Instance],
@@ -117,15 +100,12 @@ class MultiprocessIterator(DataIterator):
         if num_epochs is None:
             raise ConfigurationError("Multiprocess Iterator must be run for a fixed number of epochs")
 
-        # TODO(joelgrus) are these the right sizes?
-        input_queue = Queue(1000)
-        output_queue = Queue(1000)
+        input_queue = Queue(self.output_queue_size * self.batch_size)
+        output_queue = Queue(self.output_queue_size)
 
         # Start the tensor-dict workers.
-        for _ in range(self.num_workers):
-            args = (input_queue, output_queue,
-                    self.max_instances_in_memory, self.batch_size, self.vocab)
-
+        for iterator in self.iterators:
+            args = (input_queue, output_queue, iterator)
             process = Process(target=_create_tensor_dicts, args=args)
             process.start()
             self.processes.append(process)
