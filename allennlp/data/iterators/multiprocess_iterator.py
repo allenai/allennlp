@@ -72,8 +72,7 @@ class MultiprocessIterator(DataIterator):
     def __init__(self,
                  iterator: DataIterator,
                  num_workers: int = 1,
-                 output_queue_size: int = 1000,
-                 read_from_queue: bool = False) -> None:
+                 output_queue_size: int = 1000) -> None:
         super().__init__()
         self.num_workers = num_workers
         self.batch_size = iterator._batch_size  # pylint: disable=protected-access
