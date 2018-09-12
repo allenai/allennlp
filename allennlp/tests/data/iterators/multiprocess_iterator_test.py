@@ -51,17 +51,3 @@ class TestMultiprocessIterator(IteratorTest):
         tensor_dicts = iterator(instances, num_epochs=1)
         sizes = [len(tensor_dict['tags']) for tensor_dict in tensor_dicts]
         assert sum(sizes) == 400
-
-    # def test_multiprocess_reader_with_multiprocess_iterator_with_queue(self):
-    #     # use SequenceTaggingDatasetReader as the base reader
-    #     reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=2)
-    #     base_iterator = BasicIterator(batch_size=32, max_instances_in_memory=1024)
-
-    #     iterator = MultiprocessIterator(base_iterator, num_workers=2, read_from_queue=True)
-    #     iterator.index_with(self.vocab)
-
-    #     instances = reader.read(self.glob)
-
-    #     tensor_dicts = iterator(instances, num_epochs=1)
-    #     sizes = [len(tensor_dict['tags']) for tensor_dict in tensor_dicts]
-    #     assert sum(sizes) == 400

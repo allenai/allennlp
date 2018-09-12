@@ -1,4 +1,4 @@
-from typing import List, Iterable
+from typing import List, Iterable, Iterator
 import glob
 import logging
 import random
@@ -13,25 +13,26 @@ logger.setLevel(logging.INFO)
 
 def _worker(reader: DatasetReader,
             input_queue: Queue,
-            output_queue: Queue) -> None:
+            output_queue: Queue,
+            index: int) -> None:
     """
     A worker that pulls filenames off the input queue, uses the dataset reader
     to read them, and places the generated instances on the output queue.
-    When there are no filenames left on the input queue, it puts ``None``
+    When there are no filenames left on the input queue, it puts its ``index``
     on the output queue and doesn't do anything else.
     """
     # Keep going until you get a file_path that's None.
     while True:
         file_path = input_queue.get()
         if file_path is None:
+            # Put my index on the queue to signify that I'm finished
+            output_queue.put(index)
             break
 
         logger.info(f"reading instances from {file_path}")
         for instance in reader.read(file_path):
             output_queue.put(instance)
 
-    # Put None on the queue to signify that we've finished
-    output_queue.put(None)
 
 
 @DatasetReader.register('multiprocess')
@@ -57,18 +58,14 @@ class MultiprocessDatasetReader(DatasetReader):
     output_queue_size: ``int``, (optional, default=1000)
         The size of the queue on which read instances are placed to be yielded.
         You might need to increase this if you're generating instances too quickly.
-    lazy : ``bool``, (optional, default=True)
-        Most of our dataset readers are eager by default; however, if you're using this one
-        it's probably because you have a lot of data (and in particular don't want to load it
-        all into memory), so laziness is the default.
     """
     def __init__(self,
                  base_reader: DatasetReader,
                  num_workers: int,
                  epochs_per_read: int = 1,
-                 output_queue_size: int = 1000,
-                 lazy: bool = True) -> None:
-        super().__init__(lazy=lazy)
+                 output_queue_size: int = 1000) -> None:
+        # Multiprocess reader is intrinsically lazy.
+        super().__init__(lazy=True)
 
         self.reader = base_reader
         self.num_workers = num_workers
@@ -83,6 +80,35 @@ class MultiprocessDatasetReader(DatasetReader):
         return self.reader.text_to_instance(*args, **kwargs)
 
     def _read(self, file_path: str) -> Iterable[Instance]:
+        raise RuntimeError("Multiprocess reader implements read() directly.")
+
+    def read(self, file_path: str) -> Iterable[Instance]:
+        outer_self = self
+
+        class QIterable(Iterable[Instance]):
+            """
+            You can't set attributes on Iterators, so this is just a dumb wrapper
+            that exposes the output_queue. Currently you probably shouldn't touch
+            the output queue, but this is done with an eye toward implementing
+            a data iterator that can read directly from the queue (instead of having
+            to use the _instances iterator we define here.)
+            """
+            def __init__(self) -> None:
+                self.output_queue = Queue(outer_self.output_queue_size)
+                self.num_workers = outer_self.num_workers
+
+            def __iter__(self) -> Iterator[Instance]:
+                # pylint: disable=protected-access
+                return outer_self._instances(file_path, self.output_queue)
+
+        return QIterable()
+
+    def _instances(self, file_path: str, output_queue: Queue) -> Iterator[Instance]:
+        """
+        A generator that reads instances off the output queue and yields them up
+        until none are left (signified by all ``num_workers`` workers putting their
+        ids into the queue).
+        """
         shards = glob.glob(file_path)
         num_shards = len(shards)
 
@@ -97,14 +123,12 @@ class MultiprocessDatasetReader(DatasetReader):
         for _ in range(self.num_workers):
             input_queue.put(None)
 
-        output_queue = Queue(self.output_queue_size)
-
         processes: List[Process] = []
         num_finished = 0
 
         for worker_id in range(self.num_workers):
             process = Process(target=_worker,
-                              args=(self.reader, input_queue, output_queue))
+                              args=(self.reader, input_queue, output_queue, worker_id))
             logger.info(f"starting worker {worker_id}")
             process.start()
             processes.append(process)
@@ -112,16 +136,12 @@ class MultiprocessDatasetReader(DatasetReader):
         # Keep going as long as not all the workers have finished.
         while num_finished < self.num_workers:
             item = output_queue.get()
-            if item is None:
-                # None means a worker has finished, so increment the finished count.
+            if isinstance(item, int):
+                # Means a worker has finished, so increment the finished count.
                 num_finished += 1
-                logger.info(f"{num_finished}/{self.num_workers} finished")
+                logger.info(f"worker {item} finished ({num_finished}/{self.num_workers})")
+                processes[item].join()
+                processes[item] = None
             else:
                 # Otherwise it's an ``Instance``, so yield it up.
                 yield item
-
-        # Once we know all the workers are done, join all the processes.
-        logger.info("done reading, joining processes")
-        for process in processes:
-            process.join()
-        processes.clear()

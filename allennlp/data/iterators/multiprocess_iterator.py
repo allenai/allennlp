@@ -15,7 +15,8 @@ logger.setLevel(logging.INFO)
 
 def _create_tensor_dicts(input_queue: Queue,
                          output_queue: Queue,
-                         iterator: DataIterator) -> None:
+                         iterator: DataIterator,
+                         index: int) -> None:
     """
     Pulls at most ``max_instances_in_memory`` from the input_queue,
     groups them into batches of size ``batch_size``, converts them
@@ -30,7 +31,7 @@ def _create_tensor_dicts(input_queue: Queue,
     for tensor_dict in iterator(instances(), num_epochs=1, shuffle=False):
         output_queue.put(tensor_dict)
 
-    output_queue.put(None)
+    output_queue.put(index)
 
 def _queuer(instances: Iterable[Instance],
             input_queue: Queue,
@@ -65,7 +66,7 @@ class MultiprocessIterator(DataIterator):
         once per worker.
     num_workers : ``int``, optional (default = 1)
         The number of processes used for generating tensor dicts.
-    output_queue_size: ``int``
+    output_queue_size: ``int``, optional (default = 1000)
         The size of the output queue on which tensor dicts are placed to be consumed.
         You might need to increase this if you're generating tensor dicts too quickly.
     """
@@ -99,33 +100,31 @@ class MultiprocessIterator(DataIterator):
         if num_epochs is None:
             raise ConfigurationError("Multiprocess Iterator must be run for a fixed number of epochs")
 
-        input_queue = Queue(self.output_queue_size * self.batch_size)
         output_queue = Queue(self.output_queue_size)
+        input_queue = Queue(self.output_queue_size * self.batch_size)
+
+        # Start process that populates the queue.
+        self.queuer = Process(target=_queuer, args=(instances, input_queue, self.num_workers, num_epochs))
+        self.queuer.start()
 
         # Start the tensor-dict workers.
-        for iterator in self.iterators:
-            args = (input_queue, output_queue, iterator)
+        for i, iterator in enumerate(self.iterators):
+            args = (input_queue, output_queue, iterator, i)
             process = Process(target=_create_tensor_dicts, args=args)
             process.start()
             self.processes.append(process)
 
-        # Start the queue-populating worker.
-        self.queuer = Process(target=_queuer, args=(instances, input_queue, self.num_workers, num_epochs))
-        self.queuer.start()
-
         num_finished = 0
         while num_finished < self.num_workers:
             item = output_queue.get()
-            if item is None:
-                # finished
+            if isinstance(item, int):
                 num_finished += 1
-                logger.info(f"{num_finished} / {self.num_workers} workers finished")
+                logger.info(f"worker {item} finished ({num_finished} / {self.num_workers})")
+                self.processes[item].join()
+                self.processes[item] = None
             else:
                 yield item
 
-        self.queuer.join()
-        self.queuer = None
-
-        for process in self.processes:
-            process.join()
-        self.processes.clear()
+        if self.queuer is not None:
+            self.queuer.join()
+            self.queuer = None
