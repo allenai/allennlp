@@ -27,4 +27,3 @@ allennlp.data.dataset_readers
   allennlp.data.dataset_readers.snli
   allennlp.data.dataset_readers.stanford_sentiment_tree_bank
   allennlp.data.dataset_readers.universal_dependencies
-  allennlp.data.dataset_readers.wikitables
