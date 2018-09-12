@@ -201,6 +201,8 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
                     param_group['lr'] = self.base_lrs[i] * decay_factor ** exponent
                     self.base_lrs[i] = param_group['lr']
                     exponent += 1
+        # set up for the first batch
+        self.step_batch(0)
 
     def step(self, epoch=None):
         if self.gradual_unfreezing:
