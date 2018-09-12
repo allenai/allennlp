@@ -64,8 +64,7 @@ def get_predicate_indices(tags: List[str]) -> List[int]:
     """
     Return the word indices of a predicate in BIO tags.
     """
-    return [ind for (ind, tag)
-            in enumerate(tags) if 'V' in tag]
+    return [ind for ind, tag in enumerate(tags) if 'V' in tag]
 
 def get_predicate_text(sent_tokens: List[Token], tags: List[str]) -> str:
     """
@@ -74,14 +73,14 @@ def get_predicate_text(sent_tokens: List[Token], tags: List[str]) -> str:
     return " ".join([sent_tokens[pred_id].text
                      for pred_id in get_predicate_indices(tags)])
 
-def check_predicates_subsumed(tags1: List[str], tags2: List[str]) -> bool:
+def predicate_are_subsumed(tags1: List[str], tags2: List[str]) -> bool:
     """
     Tests whether the predicate in BIO tags1 are subsumed in
     those of tags2.
     """
     # Get predicate word indices from both predictions
-    pred_ind1, pred_ind2 = map(get_predicate_indices,
-                               [tags1, tags2])
+    pred_ind = get_predicate_indices(tags1)
+    pred_ind2 = get_predicate_indices(tags2)
 
     # Return if pred_ind1 is contained in pred_ind2
     return set(pred_ind1) < set(pred_ind2)
@@ -92,8 +91,7 @@ def merge_predictions(tags1: List[str], tags2: List[str]) -> List[str]:
     the predicate of tags2.
     """
     # Allow tags1 to add elements to tags2
-    return [tag2 if (tag2 != 'O')\
-            else tag1
+    return [tag2 if tag2 != 'O' else tag1
             for (tag1, tag2) in zip(tags1, tags2)]
 
 def consolidate_predictions(outputs: List[List[str]], sent_tokens: List[Token]) -> Dict[str, List[str]]:
@@ -103,7 +101,7 @@ def consolidate_predictions(outputs: List[List[str]], sent_tokens: List[Token]) 
     the embedded predicate ("run").
     """
     pred_dict: Dict[str, List[str]] = {}
-    merged_outputs = list(map(join_mwp, outputs))
+    merged_outputs = [join_mwp(output) for output in outputs]
     predicate_texts = [get_predicate_text(sent_tokens, tags)
                        for tags in merged_outputs]
 
@@ -116,7 +114,7 @@ def consolidate_predictions(outputs: List[List[str]], sent_tokens: List[Token]) 
 
         # Else - check if this predicate if subsumed by another predicate
         for pred2_text, tags2 in zip(predicate_texts, merged_outputs):
-            if (tags1 != tags2) and check_predicates_subsumed(tags1, tags2):
+            if (tags1 != tags2) and predicate_are_subsumed(tags1, tags2):
                 # tags1 is contained in tags2
                 pred_dict[pred2_text] = merge_predictions(tags1, tags2)
                 add_to_prediction = False
