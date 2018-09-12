@@ -236,10 +236,10 @@ class Event2Mind(Model):
         return self._get_loss(logits, targets, target_mask)
 
     def greedy_predict(self,
-                      final_encoder_output: torch.LongTensor,
-                      target_embedder: Embedding,
-                      decoder_cell: GRUCell,
-                      output_projection_layer: Linear) -> torch.Tensor:
+                       final_encoder_output: torch.LongTensor,
+                       target_embedder: Embedding,
+                       decoder_cell: GRUCell,
+                       output_projection_layer: Linear) -> torch.Tensor:
         num_decoding_steps = self._max_decoding_steps
         decoder_hidden = final_encoder_output
         step_logits = []
@@ -257,7 +257,9 @@ class Event2Mind(Model):
             class_probabilities = F.softmax(output_projections, dim=-1)
             _, predicted_classes = torch.max(class_probabilities, 1)
             predictions.append(predicted_classes)
-        return torch.cat([ps.unsqueeze(1) for ps in predictions], 1)
+        all_predictions = torch.cat([ps.unsqueeze(1) for ps in predictions], 1)
+        # Drop start symbol and return.
+        return all_predictions[:, 1:]
 
     def beam_search(self,
                     final_encoder_output: torch.LongTensor,
