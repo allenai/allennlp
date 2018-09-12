@@ -109,15 +109,15 @@ def merge_overlapping_predictions(tags1: List[str], tags2: List[str]) -> List[st
     # Build a coherent sequence out of two
     # spans which predicates' overlap
     for tag1, tag2 in zip(tags1, tags2):
-        label1 = tag1.split('-')[-1]
-        label2 = tag2.split('-')[-1]
-        if (label1 == 'V') or (label2 == 'V'):
+        label1 = tag1.split("-")[-1]
+        label2 = tag2.split("-")[-1]
+        if (label1 == "V") or (label2 == "V"):
             # Construct maximal predicate length -
             # add predicate tag if any of the sequence predict it
-            cur_label = 'V'
+            cur_label = "V"
 
         # Else - prefer an argument over 'O' label
-        elif label1 != 'O':
+        elif label1 != "O":
             cur_label = label1
         else:
             cur_label = label2
