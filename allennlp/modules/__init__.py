@@ -15,7 +15,7 @@ from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
-from allennlp.modules.span_pruner import SpanPruner
+from allennlp.modules.pruner import Pruner
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders import TokenEmbedder, Embedding
@@ -23,3 +23,9 @@ from allennlp.modules.matrix_attention import MatrixAttention
 from allennlp.modules.attention import Attention
 from allennlp.modules.input_variational_dropout import InputVariationalDropout
 from allennlp.modules.bimpm_matching import BiMpmMatching
+
+def SpanPruner(*args, **kwargs) -> Pruner:  # pylint: disable=invalid-name
+    import warnings
+    warnings.warn("``SpanPruner`` was renamed to ``Pruner`` in version 0.6.2.  It will be removed "
+                  "in version 0.8.", DeprecationWarning)
+    return Pruner(*args, **kwargs)

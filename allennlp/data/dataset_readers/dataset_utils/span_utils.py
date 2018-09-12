@@ -371,3 +371,65 @@ def to_bioul(tag_sequence: List[str], encoding: str = "IOB1") -> List[str]:
         process_stack(stack, bioul_sequence)
 
     return bioul_sequence
+
+
+def bmes_tags_to_spans(tag_sequence: List[str],
+                       classes_to_ignore: List[str] = None) -> List[TypedStringSpan]:
+    """
+    Given a sequence corresponding to BMES tags, extracts spans.
+    Spans are inclusive and can be of zero length, representing a single word span.
+    Ill-formed spans are also included (i.e those which do not start with a "B-LABEL"),
+    as otherwise it is possible to get a perfect precision score whilst still predicting
+    ill-formed spans in addition to the correct spans.
+    This function works properly when the spans are unlabeled (i.e., your labels are
+    simply "B", "M", "E" and "S").
+
+    Parameters
+    ----------
+    tag_sequence : List[str], required.
+        The integer class labels for a sequence.
+    classes_to_ignore : List[str], optional (default = None).
+        A list of string class labels `excluding` the bio tag
+        which should be ignored when extracting spans.
+
+    Returns
+    -------
+    spans : List[TypedStringSpan]
+        The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
+        Note that the label `does not` contain any BIO tag prefixes.
+    """
+
+    def extract_bmes_tag_label(text):
+        bmes_tag = text[0]
+        label = text[2:]
+        return bmes_tag, label
+
+    spans: List[Tuple[str, List[int]]] = []
+    prev_bmes_tag: Optional[str] = None
+    for index, tag in enumerate(tag_sequence):
+        bmes_tag, label = extract_bmes_tag_label(tag)
+        if bmes_tag in ('B', 'S'):
+            # Regardless of tag, we start a new span when reaching B & S.
+            spans.append(
+                    (label, [index, index])
+                    )
+        elif bmes_tag in ('M', 'E') and prev_bmes_tag in ('B', 'M') and spans[-1][0] == label:
+            # Only expand the span if
+            # 1. Valid transition: B/M -> M/E.
+            # 2. Matched label.
+            spans[-1][1][1] = index
+        else:
+            # Best effort split for invalid span.
+            spans.append(
+                    (label, [index, index])
+                    )
+        # update previous BMES tag.
+        prev_bmes_tag = bmes_tag
+
+    classes_to_ignore = classes_to_ignore or []
+    return [
+            # to tuple.
+            (span[0], (span[1][0], span[1][1]))
+            for span in spans
+            if span[0] not in classes_to_ignore
+            ]

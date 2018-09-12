@@ -65,9 +65,7 @@ class ListField(SequenceField[DataArray]):
         return len(self.field_list)
 
     @overrides
-    def as_tensor(self,
-                  padding_lengths: Dict[str, int],
-                  cuda_device: int = -1) -> DataArray:
+    def as_tensor(self, padding_lengths: Dict[str, int]) -> DataArray:
         padded_field_list = pad_sequence_to_length(self.field_list,
                                                    padding_lengths['num_fields'],
                                                    self.field_list[0].empty_field)
@@ -76,7 +74,7 @@ class ListField(SequenceField[DataArray]):
         child_padding_lengths = {key.replace('list_', '', 1): value
                                  for key, value in padding_lengths.items()
                                  if key.startswith('list_')}
-        padded_fields = [field.as_tensor(child_padding_lengths, cuda_device)
+        padded_fields = [field.as_tensor(child_padding_lengths)
                          for field in padded_field_list]
         return self.field_list[0].batch_tensors(padded_fields)
 

@@ -7,15 +7,15 @@ import torch
 
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
-from allennlp.nn import Activation
-from allennlp.nn.decoding import BeamSearch
-from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
 from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.nlvr.nlvr_semantic_parser import NlvrSemanticParser
-from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
-from allennlp.models.semantic_parsing.wikitables.basic_transition_function import BasicTransitionFunction
+from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.nn import Activation
 from allennlp.semparse.worlds import NlvrWorld
+from allennlp.state_machines import BeamSearch
+from allennlp.state_machines.states import GrammarBasedState
+from allennlp.state_machines.trainers import MaximumMarginalLikelihood
+from allennlp.state_machines.transition_functions import BasicTransitionFunction
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -41,7 +41,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         Passed to super-class.
     attention : ``Attention``
         We compute an attention over the input question at each step of the decoder, using the
-        decoder hidden state as the query.  Passed to the DecoderStep.
+        decoder hidden state as the query.  Passed to the TransitionFunction.
     decoder_beam_search : ``BeamSearch``
         Beam search used to retrieve best sequences after training.
     max_decoding_steps : ``int``
@@ -99,13 +99,13 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         initial_grammar_state = [self._create_grammar_state(worlds[i][0], actions[i]) for i in
                                  range(batch_size)]
 
-        initial_state = GrammarBasedDecoderState(batch_indices=list(range(batch_size)),
-                                                 action_history=[[] for _ in range(batch_size)],
-                                                 score=initial_score_list,
-                                                 rnn_state=initial_rnn_state,
-                                                 grammar_state=initial_grammar_state,
-                                                 possible_actions=actions,
-                                                 extras=label_strings)
+        initial_state = GrammarBasedState(batch_indices=list(range(batch_size)),
+                                          action_history=[[] for _ in range(batch_size)],
+                                          score=initial_score_list,
+                                          rnn_state=initial_rnn_state,
+                                          grammar_state=initial_grammar_state,
+                                          possible_actions=actions,
+                                          extras=label_strings)
 
         if target_action_sequences is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).
