@@ -60,9 +60,16 @@ def get_times_from_utterance(utterance: str,
                                             char_offset_to_token_index,
                                             lambda match: digit_to_query_time(match.rstrip("o'clock")),
                                             indices_of_approximate_words)
+    
+    hours_linking_dict = _time_regex_match(r"\d+\shours",
+                                            utterance,
+                                            char_offset_to_token_index,
+                                            lambda match: [int(match.rstrip("hours"))],
+                                            indices_of_approximate_words)
+
 
     times_linking_dict: Dict[str, List[int]] = defaultdict(list)
-    linking_dicts = [pm_linking_dict, am_linking_dict, oclock_linking_dict]
+    linking_dicts = [pm_linking_dict, am_linking_dict, oclock_linking_dict, hours_linking_dict]
 
     for linking_dict in linking_dicts:
         for key, value in linking_dict.items():
@@ -187,7 +194,9 @@ def digit_to_query_time(digit: str) -> List[int]:
     """
     Given a digit in the utterance, return a list of the times that it corresponds to.
     """
-    if int(digit) % 12 == 0:
+    if len(digit) > 2:
+        return [int(digit), int(digit) + TWELVE_TO_TWENTY_FOUR]
+    elif int(digit) % 12 == 0:
         return [0, 1200, 2400]
     return [int(digit) * HOUR_TO_TWENTY_FOUR,
             (int(digit) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR) % HOURS_IN_DAY]
@@ -473,7 +482,7 @@ TABLES_WITH_STRINGS = {'airline' : ['airline_code', 'airline_name'],
                        'flight_stop' : ['stop_airport'],
                        'airport' : ['airport_code'],
                        'state' : ['state_name'],
-                       'fare_basis' : ['fare_basis_code', 'class_type'],
+                       'fare_basis' : ['fare_basis_code', 'class_type', 'economy'],
                        'class_of_service' : ['booking_class'],
                        'aircraft' : ['basic_type', 'manufacturer'],
                        'restriction' : ['restriction_code'],
