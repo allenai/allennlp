@@ -740,7 +740,7 @@ class Trainer:
 
         train_metrics: Dict[str, float] = {}
         val_metrics: Dict[str, float] = {}
-        metrics: Dict[str, float] = {}
+        metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()
 
