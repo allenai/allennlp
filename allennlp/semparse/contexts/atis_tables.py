@@ -1,5 +1,6 @@
 from typing import List, Dict, Callable, Set
 from datetime import datetime
+from datetime import timedelta 
 import re
 from nltk import ngrams
 from pprint import pprint
@@ -11,9 +12,28 @@ TWELVE_TO_TWENTY_FOUR = 1200
 HOUR_TO_TWENTY_FOUR = 100
 HOURS_IN_DAY = 2400
 AROUND_RANGE = 30
+MINS_IN_HOUR = 60
 
 APPROX_WORDS = ['about', 'around', 'approximately']
 WORDS_PRECEDING_TIME = ['at', 'between', 'to', 'before', 'after']
+
+def pm_map_match_to_query_value(match: str):
+    if len(match.rstrip('pm')) < 3: # This will match something like ``5pm``.
+        if match.startswith('12'):
+            return [int(match.rstrip('pm')) * HOUR_TO_TWENTY_FOUR]
+        else:
+            return [int(match.rstrip('pm')) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR]
+    else: # This will match something like ``530pm``.
+        if match.startswith('12'):
+            return [int(match.rstrip('pm'))]
+        else:
+            return [int(match.rstrip('pm')) + TWELVE_TO_TWENTY_FOUR]
+
+def am_map_match_to_query_value(match: str):
+    if len(match.rstrip('am')) < 3:
+        return [int(match.rstrip('am')) * HOUR_TO_TWENTY_FOUR]
+    else:
+        return [int(match.rstrip('am'))]
 
 def get_times_from_utterance(utterance: str,
                              char_offset_to_token_index: Dict[int, int],
@@ -26,16 +46,13 @@ def get_times_from_utterance(utterance: str,
     pm_linking_dict = _time_regex_match(r'\d+pm',
                                         utterance,
                                         char_offset_to_token_index,
-                                        lambda match: [int(match.rstrip('pm'))
-                                                       * HOUR_TO_TWENTY_FOUR +
-                                                       TWELVE_TO_TWENTY_FOUR],
+                                        pm_map_match_to_query_value,
                                         indices_of_approximate_words)
 
     am_linking_dict = _time_regex_match(r'\d+am',
                                         utterance,
                                         char_offset_to_token_index,
-                                        lambda match: [int(match.rstrip('am'))
-                                                       * HOUR_TO_TWENTY_FOUR],
+                                        am_map_match_to_query_value,
                                         indices_of_approximate_words)
 
     oclock_linking_dict = _time_regex_match(r"\d+\so'clock",
@@ -124,8 +141,47 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
 
     for index, token in enumerate(tokenized_utterance):
         for number in NUMBER_TRIGGER_DICT.get(token.text, []):
-            number_linking_dict[number].append(index)
+            if index - 1 in indices_of_approximate_words:
+                for approx_time in get_approximate_times([int(number)]):
+                    number_linking_dict[str(approx_time)].append(index)
+            else:
+                number_linking_dict[number].append(index)
     return number_linking_dict
+
+def get_time_range_start_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
+    late_indices = {index for index, token in enumerate(tokenized_utterance)
+                        if token.text == 'late'}
+
+    time_range_start_linking_dict: Dict[str, List[int]] = defaultdict(list)
+    for token_index, token in enumerate(tokenized_utterance):
+        for time in TIME_RANGE_START_DICT.get(token.text, []):
+            if token_index - 1 not in late_indices:
+                time_range_start_linking_dict[str(time)].append(token_index)
+    
+    bigrams = ngrams([token.text for token in tokenized_utterance], 2)
+    for bigram_index, bigram in enumerate(bigrams):
+        for time in TIME_RANGE_START_DICT.get(' '.join(bigram), []):
+            time_range_start_linking_dict[str(time)].extend([bigram_index, bigram_index + 1])
+
+    return time_range_start_linking_dict 
+
+def get_time_range_end_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
+    early_indices = {index for index, token in enumerate(tokenized_utterance)
+                        if token.text == 'early'}
+
+    time_range_end_linking_dict: Dict[str, List[int]] = defaultdict(list)
+    for token_index, token in enumerate(tokenized_utterance):
+        for time in TIME_RANGE_END_DICT.get(token.text, []):
+            if token_index - 1 not in early_indices:
+                time_range_end_linking_dict[str(time)].append(token_index)
+
+    bigrams = ngrams([token.text for token in tokenized_utterance], 2)
+    for bigram_index, bigram in enumerate(bigrams):
+        for time in TIME_RANGE_END_DICT.get(' '.join(bigram), []):
+            time_range_end_linking_dict[str(time)].extend([bigram_index, bigram_index + 1])
+
+    return time_range_end_linking_dict 
+
 
 def digit_to_query_time(digit: str) -> List[int]:
     """
@@ -145,10 +201,16 @@ def get_approximate_times(times: List[int]) -> List[int]:
     """
     approximate_times = []
     for time in times:
-        approximate_times.append((time + AROUND_RANGE) % HOURS_IN_DAY)
-        # The number system is not base 10 here, there are 60 minutes
-        # in an hour, so we can't simply add time - AROUND_RANGE.
-        approximate_times.append((time - HOUR_TO_TWENTY_FOUR + AROUND_RANGE) % HOURS_IN_DAY)
+        hour = int(time/HOUR_TO_TWENTY_FOUR) % 24 
+        minute = time % HOUR_TO_TWENTY_FOUR
+        approximate_time = datetime.now()
+        approximate_time = approximate_time.replace(hour = hour, minute = minute)
+        
+        start_time_range = approximate_time - timedelta(minutes=30)
+        end_time_range = approximate_time + timedelta(minutes=30)
+        approximate_times.extend([start_time_range.hour * HOUR_TO_TWENTY_FOUR + start_time_range.minute,
+                                  end_time_range.hour * HOUR_TO_TWENTY_FOUR + end_time_range.minute])
+
     return approximate_times
 
 def _time_regex_match(regex: str,
@@ -352,16 +414,22 @@ DAY_NUMBERS = {'first': 1,
                'thirty first': 31}
 
 
-MISC_TIME_TRIGGERS = {'morning': ['0', '1200', '800'],
-                      'afternoon': ['1200', '1800'],
-                      'early afternoon' : ['1200', '1400'],
-                      'after': ['1200', '1800'],
-                      'evening': ['1800', '2200'],
-                      'late evening': ['2000', '2200'],
-                      'lunch': ['1400'],
+MISC_TIME_TRIGGERS = {'lunch': ['1400'],
                       'noon': ['1200']}
 
-ALL_TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
+TIME_RANGE_START_DICT = {'morning': ['0'],
+                         'afternoon': ['1200'],
+                         'late afternoon': ['1600'],
+                         'evening': ['1800'],
+                         'late evening': ['2000']}
+
+TIME_RANGE_END_DICT = {'early morning': ['800'],
+                       'morning': ['1200'],
+                       'early afternoon': ['1400'],
+                       'afternoon': ['1800'],
+                       'evening': ['2200']}
+
+ALL_TABLES = {'aircraft': ['aircraft_code', 'aircraft_description', 'capacity',
                            'manufacturer', 'basic_type', 'propulsion',
                            'wide_body', 'pressurized'],
               'airline': ['airline_name', 'airline_code'],
@@ -399,9 +467,10 @@ ALL_TABLES = {'aircraft': ['aircraft_code', 'aircraft_description',
               'state': ['state_code', 'state_name', 'country_name']}
 
 TABLES_WITH_STRINGS = {'airline' : ['airline_code', 'airline_name'],
-                       'city' : ['city_name', 'state_code'],
-                       'fare' : ['round_trip_required'],
-                       'flight' : ['airline_code', 'flight_days'],
+                       'city' : ['city_name', 'state_code', 'city_code'],
+                       'fare' : ['round_trip_required', 'fare_basis_code'],
+                       'flight' : ['airline_code', 'flight_days', 'flight_number'],
+                       'flight_stop' : ['stop_airport'],
                        'airport' : ['airport_code'],
                        'state' : ['state_name'],
                        'fare_basis' : ['fare_basis_code', 'class_type'],
