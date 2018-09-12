@@ -292,7 +292,7 @@ class Event2Mind(Model):
 
         Returns
         -------
-        all_predictions : ``torch.LongTensor``
+        predictions : ``torch.LongTensor``
             Tensor of shape (batch_size, width, num_decoding_steps) with the predicted indices.
         log_probabilities : ``torch.FloatTensor``
             Tensor of shape (batch_size, width) with the log probability of the
@@ -307,7 +307,12 @@ class Event2Mind(Model):
         # predictions[t-1][i][n], that it came from.
         backpointers = []
 
-        # Timestep 1
+        # Calculate the first timestep. This is done outside the main loop
+        # because we are going from a single decoder input (the output from the
+        # encoder) to the top ``width`` decoder outputs. On the other hand,
+        # within the main loop we are going from the ``width`` elements of the
+        # beam to ``width``^2 candidates from which we will select the top
+        # ``width`` elements for the next iteration.
         start_predictions = final_encoder_output.new_full(
                 (batch_size,), fill_value=self._start_index, dtype=torch.long
         )
@@ -319,7 +324,7 @@ class Event2Mind(Model):
 
         # Set starting values
         # The log probabilities for the last time step. (batch_size, width)
-        log_probabilities = start_top_log_probabilities
+        last_log_probabilities = start_top_log_probabilities
         # [(batch_size, width)]
         predictions.append(start_predicted_classes)
         # Set the same hidden state for each element in beam.
@@ -348,31 +353,43 @@ class Event2Mind(Model):
             class_log_probabilities = F.log_softmax(output_projections, dim=-1)
 
             # (batch_size * width, num_classes)
-            last_predictions_expanded = last_predictions.unsqueeze(-1).expand(batch_size * width, num_classes)
+            last_predictions_expanded = last_predictions.unsqueeze(-1).expand(
+                    batch_size * width,
+                    num_classes
+            )
+            # Here we are finding any beams where we predicted the end token in
+            # the previous timestep and replacing the distribution with a
+            # one-hot distribution, forcing the beam to predict the end token
+            # this timestep as well.
             cleaned_log_probabilities = torch.where(
                     last_predictions_expanded == self._end_index,
                     log_probs_after_end,
                     class_log_probabilities
             )
 
+            # Note: We could consider normalizing for length here, but the
+            # original implementation does not do so.
+
             # (batch_size * width, width), (batch_size * width, width)
             top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(width)
-            # TODO(brendanr): Normalize for length?
-            # (batch_size * width, width)
-            expanded_last_log_probabilities = log_probabilities.\
+            # Here we expand the last log probabilities to (batch_size * width,
+            # width) so that we can add them to the current log probs for this
+            # timestep. This lets us maintain the log probability of each
+            # element on the beam.
+            expanded_last_log_probabilities = last_log_probabilities.\
                 unsqueeze(2).\
                 expand(batch_size, width, width).\
                 reshape(batch_size * width, width)
             summed_top_log_probabilities = top_log_probabilities + expanded_last_log_probabilities
 
-            reshaped_top_log_probabilities = summed_top_log_probabilities.reshape(batch_size, width * width)
+            reshaped_summed = summed_top_log_probabilities.reshape(batch_size, width * width)
             reshaped_predicted_classes = predicted_classes.reshape(batch_size, width * width)
-            restricted_beam_log_probs, restricted_beam_indices = reshaped_top_log_probabilities.topk(width)
+            restricted_beam_log_probs, restricted_beam_indices = reshaped_summed.topk(width)
             # TODO(brendanr): Something about this is weird. Why do
             # restricted_predicted_classes == restricted_beam_indices?
             restricted_predicted_classes = reshaped_predicted_classes.gather(1, restricted_beam_indices)
 
-            log_probabilities = restricted_beam_log_probs
+            last_log_probabilities = restricted_beam_log_probs
             predictions.append(restricted_predicted_classes)
             backpointer = restricted_beam_indices / width
             backpointers.append(backpointer)
@@ -400,7 +417,7 @@ class Event2Mind(Model):
         # We don't add the start tokens here. They are implicit.
 
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
-        return (all_predictions, log_probabilities)
+        return (all_predictions, last_log_probabilities)
 
     @staticmethod
     def _get_loss(logits: torch.LongTensor,
