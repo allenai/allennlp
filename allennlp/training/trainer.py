@@ -776,7 +776,7 @@ class Trainer:
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
             metrics["training_duration"] = time.strftime("%H:%M:%S", time.gmtime(training_elapsed_time))
-            metrics["training_start_epoch"] = epoch_counter,
+            metrics["training_start_epoch"] = epoch_counter
             metrics["training_epochs"] = epochs_trained
             metrics["epoch"] = epoch
 
@@ -786,18 +786,14 @@ class Trainer:
                 metrics["validation_" + key] = value
 
             if is_best_so_far:
+                # Update all the best_ metrics.
+                # (Otherwise they just stay the same as they were.)
                 metrics['best_epoch'] = epoch
                 for key, value in val_metrics.items():
                     metrics["best_validation_" + key] = value
 
             if self._serialization_dir:
                 dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), metrics)
-
-            for index, param_group in enumerate(self._optimizer.param_groups):
-                learning_rate = param_group.get("lr")
-                if learning_rate is not None:
-                    self._tensorboard.add_train_scalar(
-                            f"learning_rate/param_group{index:d}", learning_rate, epoch)
 
             if self._learning_rate_scheduler:
                 # The LRScheduler API is agnostic to whether your schedule requires a validation metric -
