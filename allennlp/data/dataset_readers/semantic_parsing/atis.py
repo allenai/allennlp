@@ -128,7 +128,7 @@ class AtisDatasetReader(DatasetReader):
 
         for production_rule in world.all_possible_actions():
             lhs, _ = production_rule.split(' ->')
-            is_global_rule = 'number' not in lhs and 'string' not in lhs
+            is_global_rule = 'number' not in lhs and 'string' not in lhs and 'time_range' not in lhs
             # The whitespaces are not semantically meaningful, so we filter them out.
             production_rule = ' '.join([token for token in production_rule.split(' ') if token != 'ws'])
             field = ProductionRuleField(production_rule, is_global_rule)

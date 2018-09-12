@@ -114,7 +114,6 @@ class AtisSemanticParser(Model):
         self._denotation_accuracy = Average()
         
         # Initialize a cursor to our sqlite database, so we can execute logical forms for denotation accuracy.
-        tables_directory = "/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db"
         self._tables_directory = tables_directory
         self._connection = sqlite3.connect(self._tables_directory)
         self._cursor = self._connection.cursor() 
@@ -305,10 +304,8 @@ class AtisSemanticParser(Model):
         target = self.postprocess_query_sqlite(target) 
         
         try:
-            print('predicted:', predicted)
             self._cursor.execute(predicted)
             predicted_rows = self._cursor.fetchall()
-            print('got predicted')
             self._has_logical_form(1.0)
         except sqlite3.Error as e:
             print("error when executing predicted")
@@ -317,15 +314,12 @@ class AtisSemanticParser(Model):
             exit(0)
         
         try:
-            print('target: ', target)
             self._cursor.execute(target)
-            print('got target')
             target_rows = self._cursor.fetchall()
         except sqlite3.Error as e:
             print("error when executing target")
             print(e)
             exit(0)
-        print('return from sql result') 
         # return predicted_rows == target_rows
         exit(predicted_rows == target_rows)
 
@@ -437,6 +431,7 @@ class AtisSemanticParser(Model):
                 entities = linked_rules
                 entity_ids = [entity_map[entity] for entity in entities]
                 entity_linking_scores = linking_scores[entity_ids]
+                
                 entity_type_tensor = entity_types[entity_ids]
                 entity_type_embeddings = self._entity_type_decoder_embedding(entity_type_tensor)
                 entity_type_embeddings = entity_types.new_tensor(entity_type_embeddings, dtype=torch.float)
@@ -471,8 +466,6 @@ class AtisSemanticParser(Model):
         action_mapping = output_dict['action_mapping']
         best_actions = output_dict["best_action_sequence"]
         debug_infos = output_dict['debug_info']
-        print('debug_infos')
-        print(debug_infos)
         batch_action_info = []
         for batch_index, (predicted_actions, debug_info) in enumerate(zip(best_actions, debug_infos)):
             instance_action_info = []

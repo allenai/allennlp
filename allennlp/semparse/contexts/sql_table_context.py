@@ -68,6 +68,8 @@ SQL_GRAMMAR_STR = r"""
     conj                = "AND" / "OR" 
     distinct            = ("DISTINCT") / ("")
     number              =  ""
+    time_range_start    = ""
+    time_range_end      = ""
 """
 
 KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"', '"IN"', '"LIKE"',
@@ -83,14 +85,14 @@ def generate_one_of_string(nonterminal: str,
             return  f"\n{nonterminal} \t\t = " + " / ".join([f'"{literal}"' for literal in literals]) + "\n"
     return  f'\n{nonterminal} \t\t = ""'
 
-def format_action(nonterminal: str, right_hand_side: str, is_string=False) -> str:
+def format_action(nonterminal: str, right_hand_side: str, is_string=False, is_number=False) -> str:
     if right_hand_side.upper() in KEYWORDS:
         right_hand_side = right_hand_side.upper()
 
     if is_string:
         return f'{nonterminal} -> ["\'{right_hand_side}\'"]'
 
-    elif nonterminal == 'number':
+    elif is_number: 
         return f'{nonterminal} -> ["{right_hand_side}"]'
 
     else:
@@ -127,7 +129,6 @@ class SqlTableContext():
         self.tables_with_strings = tables_with_strings
         if database_directory:
             self.database_directory = database_directory
-            database_directory = "/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db"
             self.connection = sqlite3.connect(database_directory)
             self.cursor = self.connection.cursor()
 
@@ -190,10 +191,11 @@ class SqlTableContext():
                 for column in columns:
                     self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
                     grammar_str += generate_one_of_string(nonterminal=f'{table}_{column}_string',
-                                                          literals=[row[0] for row in self.cursor.fetchall()],
-                                                          is_string=True)
-        grammar_str += 'biexpr = ( col_ref ws binaryop ws value) / (value ws binaryop ws value) / ' + \
-                       f'{" / ".join(sorted(biexprs, reverse=True))}\n'
+                                                          literals=sorted([str(row[0]) for row in self.cursor.fetchall()], reverse=True),
+                                                          is_string=not column.endswith('number'))
+        grammar_str += 'biexpr = ' + \
+                       f'{" / ".join(sorted(biexprs, reverse=True))}\n' +  \
+                        '/ ( col_ref ws binaryop ws value) / (value ws binaryop ws value)'
         return grammar_str
 
 class SqlVisitor(NodeVisitor):
