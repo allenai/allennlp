@@ -136,11 +136,13 @@ class Event2Mind(Model):
         Parameters
         ----------
         source : ``Dict[str, torch.LongTensor]``
-           The output of ``TextField.as_array()`` applied on the source ``TextField``. This will be
-           passed through a ``TextFieldEmbedder`` and then through an encoder.
+            The output of ``TextField.as_array()`` applied on the source
+            ``TextField``. This will be passed through a ``TextFieldEmbedder``
+            and then through an encoder.
         target_tokens : ``Dict[str, Dict[str, torch.LongTensor]]``:
-           Dictionary from name to output of ``Textfield.as_array()`` applied on target
-           ``TextField``. We assume that the target tokens are also represented as a ``TextField``.
+            Dictionary from name to output of ``Textfield.as_array()`` applied
+            on target ``TextField``. We assume that the target tokens are also
+            represented as a ``TextField``.
         """
         # (batch_size, input_sequence_length, embedding_dim)
         embedded_input = self._embedding_dropout(self._source_embedder(source))
@@ -209,13 +211,13 @@ class Event2Mind(Model):
         final_encoder_output : ``torch.LongTensor``, required
             Vector produced by ``self._encoder``.
         target_tokens : ``Dict[str, torch.LongTensor]``, required
-           The output of ``TextField.as_array()`` applied on some target ``TextField``.
+            The output of ``TextField.as_array()`` applied on some target ``TextField``.
         target_embedder : ``Embedding``, required
-           Used to embed the target tokens.
+            Used to embed the target tokens.
         decoder_cell: ``GRUCell``, required
-           The recurrent cell used at each time step.
+            The recurrent cell used at each time step.
         output_projection_layer: ``Linear``, required
-           Linear layer mapping to the desired number of classes.
+            Linear layer mapping to the desired number of classes.
         """
         num_decoding_steps = self._get_num_decoding_steps(target_tokens)
         targets = target_tokens["tokens"]
@@ -282,11 +284,19 @@ class Event2Mind(Model):
         num_decoding_steps : ``int``, required
             Maximum sequence length.
         target_embedder : ``Embedding``, required
-           Used to embed the token predicted at the previous time step.
+            Used to embed the token predicted at the previous time step.
         decoder_cell: ``GRUCell``, required
-           The recurrent cell used at each time step.
+            The recurrent cell used at each time step.
         output_projection_layer: ``Linear``, required
-           Linear layer mapping to the desired number of classes.
+            Linear layer mapping to the desired number of classes.
+
+        Returns
+        -------
+        all_predictions : ``torch.LongTensor``
+            Tensor of shape (batch_size, width, num_decoding_steps) with the predicted indices.
+        log_probabilities : ``torch.FloatTensor``
+            Tensor of shape (batch_size, width) with the log probability of the
+            corresponding prediction.
         """
         batch_size = final_encoder_output.size()[0]
         # List of (batch_size, width) tensors. One for each time step. Does not
