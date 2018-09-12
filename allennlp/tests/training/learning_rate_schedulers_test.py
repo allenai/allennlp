@@ -257,8 +257,8 @@ class SlantedTriangularTest(AllenNlpTestCase):
         assert len(optim.param_groups) == 3
         # The default parameter group in the Optimizer is empty
         assert not optim.param_groups[-1]["params"]
-        assert optim.param_groups[-2]["lr"] == 1.0
-        assert optim.param_groups[-3]["lr"] == 0.5
+        assert optim.param_groups[-2]["lr"] == 1.0 / sched.ratio
+        assert optim.param_groups[-3]["lr"] == 0.5 / sched.ratio
 
         with self.assertRaises(TypeError):
             # num_epochs and num_steps_per_epoch are required
@@ -274,11 +274,11 @@ class SlantedTriangularTest(AllenNlpTestCase):
                          "num_steps_per_epoch": 10,
                          "gradual_unfreezing": True},  # parameters
                         [(0, 1, 0.03125),  # iteration, layer, learning rate
-                         (0, 0, 0.03125),
+                         (0, 0, 0.0),
                          (1, 1, 1.0),
-                         (1, 0, 1.0),
+                         (1, 0, 0.0),
                          (9, 1, 0.138888),
-                         (9, 0, 0.138888),  # end of the first epoch
+                         (9, 0, 0.0),      # end of the first epoch
                          (10, 1, 0.03125),
                          (10, 0, 0.03125),
                          (14, 1, 1.0),
@@ -305,11 +305,11 @@ class SlantedTriangularTest(AllenNlpTestCase):
                          "discriminative_fine_tuning": True,
                          "decay_factor": 0.5},  # parameters
                         [(0, 1, 0.03125),  # iteration, layer, learning rate
-                         (0, 0, 0.015625),
+                         (0, 0, 0.0),
                          (1, 1, 1.0),
-                         (1, 0, 0.5),
+                         (1, 0, 0.0),
                          (9, 1, 0.138888),
-                         (9, 0, 0.069444),  # end of the first epoch
+                         (9, 0, 0.0),      # end of the first epoch
                          (10, 1, 0.03125),
                          (10, 0, 0.015625),
                          (14, 1, 1.0),
@@ -321,16 +321,22 @@ class SlantedTriangularTest(AllenNlpTestCase):
         for params, lr_checks in slanted_triangular_cases:
             optimizer = self._get_optimizer()
             params["type"] = "slanted_triangular"
-            scheduler = LearningRateScheduler.from_params(optimizer, Params(params)).lr_scheduler
+            scheduler = LearningRateScheduler.from_params(optimizer, Params(params))
             lrs = []
 
+            batch_num_total = 0
             for epoch in range(params["num_epochs"]):
                 for _ in range(params["num_steps_per_epoch"]):
-                    scheduler.step_batch()
-                    lrs.append([param_group["lr"] for param_group in optimizer.param_groups])
+                    batch_num_total += 1
+                    # allennlp trainer calls step_batch after updating parameters
+                    # so collect lr at time of parameter update
+                    lrs.append([param_group["lr"] * float(param_group['params'][0].requires_grad)
+                                for param_group in optimizer.param_groups[:2]])
+                    scheduler.step_batch(batch_num_total)
                     if "gradual_unfreezing" in params and epoch == 0:
-                        assert scheduler.freezing_current
-                scheduler.step(epoch)
+                        assert scheduler.lr_scheduler.freezing_current
+                # step() takes two arguments: validation metric and epoch
+                scheduler.step(None, epoch)
 
             for it, layer, lr in lr_checks:
                 lr_check = round(lr, 5)
