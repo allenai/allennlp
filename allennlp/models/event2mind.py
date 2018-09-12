@@ -384,16 +384,23 @@ class Event2Mind(Model):
 
             reshaped_summed = summed_top_log_probabilities.reshape(batch_size, width * width)
             reshaped_predicted_classes = predicted_classes.reshape(batch_size, width * width)
+            # Keep only the top ``width`` beam indices.
             restricted_beam_log_probs, restricted_beam_indices = reshaped_summed.topk(width)
-            # TODO(brendanr): Something about this is weird. Why do
-            # restricted_predicted_classes == restricted_beam_indices?
+            # Use the beam indices to extract the corresponding classes.
             restricted_predicted_classes = reshaped_predicted_classes.gather(1, restricted_beam_indices)
 
             last_log_probabilities = restricted_beam_log_probs
             predictions.append(restricted_predicted_classes)
+            # The beam indices come from a width * width dimension where the
+            # indices with a common ancestor are grouped together. Hence
+            # dividing by width gives the ancestor. (Note that this is integer
+            # division as the tensor is a LongTensor.)
             backpointer = restricted_beam_indices / width
             backpointers.append(backpointer)
+            # For the gather below.
             expanded_backpointer = backpointer.unsqueeze(2).expand(batch_size, width, self._decoder_output_dim)
+            # Keep only the pieces of the hidden state corresponding to the
+            # ancestors created this iteration.
             decoder_hidden = decoder_hidden.\
                     reshape(batch_size, width, self._decoder_output_dim).\
                     gather(1, expanded_backpointer).\
