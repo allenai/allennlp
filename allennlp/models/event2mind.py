@@ -51,6 +51,7 @@ class Event2Mind(Model):
         You can specify an embedding dimensionality for the target side. If not, we'll use the same
         value as the source embedder's.
     """
+    # pylint: disable=dangerous-default-value
     def __init__(self,
                  vocab: Vocabulary,
                  source_embedder: TextFieldEmbedder,
@@ -146,7 +147,6 @@ class Event2Mind(Model):
         """
         # (batch_size, input_sequence_length, embedding_dim)
         embedded_input = self._embedding_dropout(self._source_embedder(source))
-        batch_size, _, _ = embedded_input.size()
         source_mask = get_text_field_mask(source)
         # (batch_size, encoder_output_dim)
         final_encoder_output = self._encoder(embedded_input, source_mask)
@@ -242,15 +242,28 @@ class Event2Mind(Model):
                        target_embedder: Embedding,
                        decoder_cell: GRUCell,
                        output_projection_layer: Linear) -> torch.Tensor:
+        """
+        Greedily produces a sequence using the provided ``decoder_cell``.
+        Returns the predicted sequence.
+
+        Parameters
+        ----------
+        final_encoder_output : ``torch.LongTensor``, required
+            Vector produced by ``self._encoder``.
+        target_embedder : ``Embedding``, required
+            Used to embed the target tokens.
+        decoder_cell: ``GRUCell``, required
+            The recurrent cell used at each time step.
+        output_projection_layer: ``Linear``, required
+            Linear layer mapping to the desired number of classes.
+        """
         num_decoding_steps = self._max_decoding_steps
         decoder_hidden = final_encoder_output
-        step_logits = []
-        # Put this elsewhere.
         batch_size = final_encoder_output.size()[0]
         predictions = [final_encoder_output.new_full(
-            (batch_size,), fill_value=self._start_index, dtype=torch.long
+                (batch_size,), fill_value=self._start_index, dtype=torch.long
         )]
-        for timestep in range(num_decoding_steps):
+        for _ in range(num_decoding_steps):
             input_choices = predictions[-1]
             decoder_input = target_embedder(input_choices)
             decoder_hidden = decoder_cell(decoder_input, decoder_hidden)

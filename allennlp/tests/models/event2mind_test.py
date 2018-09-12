@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name,protected-access
 from allennlp.commands.train import train_model_from_file
 from allennlp.common.testing import ModelTestCase
 from allennlp.nn.util import get_text_field_mask
@@ -23,8 +23,8 @@ class Event2MindTest(ModelTestCase):
             cur_text_field = instance.fields["source"]
             text = [token.text for token in cur_text_field.tokens]
             if text == ["@start@", "personx", "calls", "personx", "'s", "brother", "@end@"]:
-              sample_text_field = cur_text_field
-              break
+                sample_text_field = cur_text_field
+                break
         print(sample_text_field)
         source = sample_text_field.as_tensor(sample_text_field.get_padding_lengths())
         source['tokens'] = source['tokens'].unsqueeze(0)
