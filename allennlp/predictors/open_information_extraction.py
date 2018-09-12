@@ -102,7 +102,7 @@ def consolidate_predictions(outputs: List[List[str]], sent_tokens: List[Token]) 
     (e.g., "decided to run") in which case, we don't need to return
     the embedded predicate ("run").
     """
-    pred_dict = {}
+    pred_dict: Dict[str, List[str]] = {}
     merged_outputs = list(map(join_mwp, outputs))
     predicate_texts = [get_predicate_text(sent_tokens, tags)
                        for tags in merged_outputs]
