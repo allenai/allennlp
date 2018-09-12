@@ -7,16 +7,16 @@ an executor for the variable-free logical forms.
 """
 # TODO(pradeep): Merge this class with the `WikiTablesWorld` class, and move all the
 # language-specific functionality into type declarations.
-from typing import Dict, List, Set, Union, Tuple
+from typing import Dict, List, Set, Union
 import re
 import logging
 
 from nltk.sem.logic import Type
 from overrides import overrides
 
-from allennlp.semparse import util as semparse_util
-from allennlp.semparse.worlds.world import ParsingError, ExecutionError, World
+from allennlp.semparse.worlds.world import ParsingError, World
 from allennlp.semparse.type_declarations import wikitables_variable_free as types
+from allennlp.semparse.executors import WikiTablesVariableFreeExecutor
 from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -52,6 +52,8 @@ class WikiTablesVariableFreeWorld(World):
                          global_type_signatures=types.COMMON_TYPE_SIGNATURE,
                          global_name_mapping=types.COMMON_NAME_MAPPING)
         self.table_graph = table_graph
+
+        self._executor = WikiTablesVariableFreeExecutor(self.table_graph.table_data)
 
         # For every new Sempre column name seen, we update this counter to map it to a new NLTK name.
         self._column_counter = 0
@@ -171,224 +173,4 @@ class WikiTablesVariableFreeWorld(World):
         return agenda
 
     def execute(self, logical_form: str) -> Union[List[str], int]:
-        if not logical_form.startswith("("):
-            logical_form = f"({logical_form})"
-        logical_form = logical_form.replace(",", " ")
-        expression_as_list = semparse_util.lisp_to_nested_expression(logical_form)
-        # Expression list has an additional level of nesting at the top. For example, if the logical
-        # for is "(select all_rows fb:row.row.league)", the expression list will be
-        # [['select', 'all_rows', 'fb:row.row.league']].
-        # Removing the top most level of nesting.
-        result = self.handle_expression(expression_as_list[0])
-        return result
-
-    def handle_expression(self, expression_list: Union[List[str], str]):
-        if isinstance(expression_list, list):
-            # This is a function application.
-            function_name = expression_list[0]
-            expression_is_application = True
-        else:
-            # This is a constant (likst "all_rows")
-            function_name = expression_list
-            expression_is_application = False
-        try:
-            function = getattr(self, f"_{function_name}")
-            return function(expression_list[1:]) if expression_is_application else function()
-        except AttributeError:
-            logger.error("Function not found: %s", function_name)
-            raise ExecutionError(f"Function not found: {function_name}")
-
-    def _get_row_list_and_column_name(self, expression_list: List[str]) -> Tuple[List[Dict[str,
-                                                                                           str]],
-                                                                                 str]:
-        """
-        Utility function for computing the initial row list and a column name from an expression for
-        all functions that need these operations, like "select", "argmax", "argmin", etc.
-        """
-        row_list: List[Dict[str, str]] = self.handle_expression(expression_list[0])
-        column_name = expression_list[1]
-        if not (isinstance(column_name, str) and column_name.startswith("fb:row.row.")):
-            logger.error("Invalid column for selection: %s", column_name)
-            raise ExecutionError(f"Invalid column for selection: {column_name}")
-        if column_name not in row_list[0]:
-            logger.error("Input list of rows do not contain column: %s", column_name)
-            raise ExecutionError(f"Input list of rows do not contain column: {column_name}")
-        return row_list, column_name
-
-    def _all_rows(self) -> List[Dict[str, str]]:
-        return self.table_graph.table_data
-
-    def _select(self, expression_list: List[str]) -> List[str]:
-        """
-        Select function takes a list of rows and a column (decoded from the `expression_list`) and
-        returns a list of cell values as strings.
-        """
-        row_list, column_name = self._get_row_list_and_column_name(expression_list)
-        if not row_list:
-            return []
-        return [row[column_name] for row in row_list]
-
-    def _argmax(self, expression_list: List[str]) -> List[Dict[str, str]]:
-        """
-        Takes a list of rows and a column (decoded from the `expression_list`) and returns a list
-        containing a single row (dict from columns to cells) that has the maximum numerical value in
-        the given column. We return a list instead of a single dict to be consistent with the return
-        type of `_select` and `_all_rows`.
-        """
-        # TODO(pradeep): Deal with dates as well.
-        row_list, column_name = self._get_row_list_and_column_name(expression_list)
-        if not row_list:
-            return []
-        try:
-            cell_row_pairs = [(float(row[column_name].replace('fb:cell.', '')), row) for row in row_list]
-        except ValueError:
-            # This means that at least one of the cells is not numerical.
-            return []
-        # Returns a list containing the row with the max cell value.
-        return [sorted(cell_row_pairs, reverse=True)[0][1]]
-
-    def _argmin(self, expression_list: List[str]) -> List[Dict[str, str]]:
-        """
-        Takes a list of rows and a column (decoded from the `expression_list`) and returns a list
-        containing a single row (dict from columns to cells) that has the minimum numerical value in
-        the given column. We return a list instead of a single dict to be consistent with the return
-        type of `_select` and `_all_rows`.
-        """
-        # TODO(pradeep): Deal with dates as well.
-        row_list, column_name = self._get_row_list_and_column_name(expression_list)
-        if not row_list:
-            return []
-        try:
-            cell_row_pairs = [(float(row[column_name].replace('fb:cell.', '')), row) for row in row_list]
-        except ValueError:
-            # This means that at least one of the cells is not numerical.
-            return []
-        # Returns a list containing the row with the min cell value.
-        return [sorted(cell_row_pairs)[0][1]]
-
-    def _get_numbers_row_pairs_to_filter(self, expression_list: List[str]) -> Tuple[List[Tuple[float,
-                                                                                               Dict[str, str]]],
-                                                                                    float]:
-
-        row_list, column_name = self._get_row_list_and_column_name(expression_list)
-        if not row_list:
-            return []
-        try:
-            # Note: This restricts the logical forms to only contain numbers as the second arguments
-            # of filter functions. That is, we cannot evaluate something like
-            # `(filter_* all_rows fb:row.row.number (count all_rows))`.
-            filter_value = float(expression_list[2])
-        except ValueError:
-            logger.error("Invalid filter value: %s", expression_list[2])
-            raise ExecutionError(f"Invalid filter value: {expression_list[2]}")
-        try:
-            cell_row_pairs = [(float(row[column_name].replace('fb:cell.', '')), row) for row in row_list]
-        except ValueError:
-            # This means that at least one of the cells is not numerical.
-            return []
-        return cell_row_pairs, filter_value
-
-    def _filter_number_greater(self, expression_list: List[str]) -> List[Dict[str, str]]:
-        """
-        Takes a list of rows, a column, and a numerical value (decoded from `expression_list`) and
-        returns all the rows where the value in that column is greater than the given value.
-        """
-        return_list = []
-        cell_row_pairs, filter_value = self._get_numbers_row_pairs_to_filter(expression_list)
-        for cell_value, row in cell_row_pairs:
-            if cell_value > filter_value:
-                return_list.append(row)
-        return return_list
-
-    def _filter_number_greater_equals(self, expression_list: List[str]) -> List[Dict[str, str]]:
-        """
-        Takes a list of rows, a column, and a numerical value (decoded from `expression_list`) and
-        returns all the rows where the value in that column is greater than or equal to the given value.
-        """
-        return_list = []
-        cell_row_pairs, filter_value = self._get_numbers_row_pairs_to_filter(expression_list)
-        for cell_value, row in cell_row_pairs:
-            if cell_value >= filter_value:
-                return_list.append(row)
-        return return_list
-
-    def _filter_number_lesser(self, expression_list: List[str]) -> List[Dict[str, str]]:
-        """
-        Takes a list of rows, a column, and a numerical value (decoded from `expression_list`) and
-        returns all the rows where the value in that column is lesser than the given value.
-        """
-        return_list = []
-        cell_row_pairs, filter_value = self._get_numbers_row_pairs_to_filter(expression_list)
-        for cell_value, row in cell_row_pairs:
-            if cell_value < filter_value:
-                return_list.append(row)
-        return return_list
-
-    def _filter_number_lesser_equals(self, expression_list: List[str]) -> List[Dict[str, str]]:
-        """
-        Takes a list of rows, a column, and a numerical value (decoded from `expression_list`) and
-        returns all the rows where the value in that column is lesser than or equal to the given value.
-        """
-        return_list = []
-        cell_row_pairs, filter_value = self._get_numbers_row_pairs_to_filter(expression_list)
-        for cell_value, row in cell_row_pairs:
-            if cell_value <= filter_value:
-                return_list.append(row)
-        return return_list
-
-    def _filter_number_equals(self, expression_list: List[str]) -> List[Dict[str, str]]:
-        """
-        Takes a list of rows, a column, and a numerical value (decoded from `expression_list`) and
-        returns all the rows where the value in that column equals the given value.
-        """
-        return_list = []
-        cell_row_pairs, filter_value = self._get_numbers_row_pairs_to_filter(expression_list)
-        for cell_value, row in cell_row_pairs:
-            if cell_value == filter_value:
-                return_list.append(row)
-        return return_list
-
-    def _filter_number_not_equals(self, expression_list: List[str]) -> List[Dict[str, str]]:
-        """
-        Takes a list of rows, a column, and a numerical value (decoded from `expression_list`) and
-        returns all the rows where the value in that column is not equal to the given value.
-        """
-        return_list = []
-        cell_row_pairs, filter_value = self._get_numbers_row_pairs_to_filter(expression_list)
-        for cell_value, row in cell_row_pairs:
-            if cell_value != filter_value:
-                return_list.append(row)
-        return return_list
-
-    #TODO(pradeep): Add date filtering functions
-    def _filter_in(self, expression_list: List[str]) -> List[Dict[str, str]]:
-        """
-        Takes a list of rows, a column, and a string value (decoded from `expression_list`) and
-        returns all the rows where the value in that column contains the given string.
-        """
-        row_list, column_name = self._get_row_list_and_column_name(expression_list)
-        if not row_list:
-            return []
-        # Assuming filter value has underscores for spaces.
-        filter_value = expression_list[2]
-        result_list = []
-        for row in row_list:
-            if filter_value in row[column_name].replace("fb:cell.", ""):
-                result_list.append(row)
-        return result_list
-
-    def _filter_not_in(self, expression_list: List[str]) -> List[Dict[str, str]]:
-        """
-        Takes a list of rows, a column, and a string value (decoded from `expression_list`) and
-        returns all the rows where the value in that column does not contain the given string.
-        """
-        row_list, column_name = self._get_row_list_and_column_name(expression_list)
-        if not row_list:
-            return []
-        # Assuming filter value has underscores for spaces.
-        filter_value = expression_list[2]
-        result_list = []
-        for row in row_list:
-            if filter_value not in row[column_name].replace("fb:cell.", ""):
-                result_list.append(row)
-        return result_list
+        return self._executor.execute(logical_form)

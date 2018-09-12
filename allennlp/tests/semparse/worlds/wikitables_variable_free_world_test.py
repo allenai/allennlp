@@ -214,3 +214,11 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         logical_form = "(select (argmax all_rows fb:row.row.avg_attendance) fb:row.row.league)"
         cell_list = self.world.execute(logical_form)
         assert cell_list == ['fb:cell.usl_a_league']
+
+    def test_execute_works_with_filter_greater(self):
+        # Selecting cell values from all rows that have attendance greater than the min value of
+        # attendance.
+        logical_form = """(select (filter_number_greater all_rows fb:row.row.avg_attendance
+                                   (min all_rows fb:row.row.avg_attendance)) fb:row.row.league)"""
+        cell_value_list = self.world.execute(logical_form)
+        assert cell_value_list == ['fb:cell.usl_a_league']
