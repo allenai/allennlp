@@ -174,7 +174,7 @@ class Event2Mind(Model):
         # Perform beam search to obtain the predictions.
         if not self.training:
             for name, state in self._states.items():
-                # (batch_size, k, num_decoding_steps)
+                # (batch_size, 10, num_decoding_steps)
                 (all_top_k_predictions, log_probabilities) = self.beam_search(
                         final_encoder_output,
                         10,
@@ -263,21 +263,21 @@ class Event2Mind(Model):
 
     def beam_search(self,
                     final_encoder_output: torch.LongTensor,
-                    k: int,
+                    width: int,
                     num_decoding_steps: int,
                     target_embedder: Embedding,
                     decoder_cell: GRUCell,
                     output_projection_layer: Linear) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Uses beam search to compute the top-``k`` highest probability sequences
-        for the given ``decoder_cell``.  Returns the tuple consisting of the
-        sequences themselves and their log probabilities.
+        Uses beam search to compute the highest probability sequences for the
+        ``decoder_cell`` that fit within the given``width``.  Returns the tuple
+        consisting of the sequences themselves and their log probabilities.
 
         Parameters
         ----------
         final_encoder_output : ``torch.LongTensor``, required
             Vector produced by ``self._encoder``.
-        k : ``int``, required
+        width : ``int``, required
             Size of the beam.
         num_decoding_steps : ``int``, required
             Maximum sequence length.
@@ -289,10 +289,10 @@ class Event2Mind(Model):
            Linear layer mapping to the desired number of classes.
         """
         batch_size = final_encoder_output.size()[0]
-        # List of (batchsize, k) tensors. One for each time step. Does not
+        # List of (batch_size, width) tensors. One for each time step. Does not
         # include the start symbols, which are implicit.
         predictions = []
-        # List of (batchsize, k) tensors. One for each time step. None for
+        # List of (batch_size, width) tensors. One for each time step. None for
         # the first.  Stores the index n for the parent prediction, i.e.
         # predictions[t-1][i][n], that it came from.
         backpointers = []
@@ -305,72 +305,72 @@ class Event2Mind(Model):
         start_decoder_hidden = decoder_cell(start_decoder_input, final_encoder_output)
         start_output_projections = output_projection_layer(start_decoder_hidden)
         start_class_log_probabilities = F.log_softmax(start_output_projections, dim=-1)
-        start_top_log_probabilities, start_predicted_classes = start_class_log_probabilities.topk(k)
+        start_top_log_probabilities, start_predicted_classes = start_class_log_probabilities.topk(width)
 
         # Set starting values
-        # The log probabilities for the last time step. (batch_size, k)
+        # The log probabilities for the last time step. (batch_size, width)
         log_probabilities = start_top_log_probabilities
-        # [(batch_size, k)]
+        # [(batch_size, width)]
         predictions.append(start_predicted_classes)
         # Set the same hidden state for each element in beam.
-        # (batch_size * k, _decoder_output_dim)
+        # (batch_size * width, _decoder_output_dim)
         decoder_hidden = start_decoder_hidden.\
-            unsqueeze(1).expand(batch_size, k, self._decoder_output_dim).\
-            reshape(batch_size * k, self._decoder_output_dim)
+            unsqueeze(1).expand(batch_size, width, self._decoder_output_dim).\
+            reshape(batch_size * width, self._decoder_output_dim)
 
         # Log probability tensor that mandates that the end token is selected.
         num_classes = self.vocab.get_vocab_size(self._target_namespace)
         log_probs_after_end = start_class_log_probabilities.new_full(
-                (batch_size * k, num_classes),
+                (batch_size * width, num_classes),
                 float("-inf")
         )
         log_probs_after_end[:, self._end_index] = 0.0
 
         for timestep in range(num_decoding_steps - 1):
-            # (batch_size * k,)
-            last_predictions = predictions[-1].reshape(batch_size * k)
+            # (batch_size * width,)
+            last_predictions = predictions[-1].reshape(batch_size * width)
             decoder_input = target_embedder(last_predictions)
             decoder_hidden = decoder_cell(decoder_input, decoder_hidden)
-            # (batch_size * k, num_classes)
+            # (batch_size * width, num_classes)
             output_projections = output_projection_layer(decoder_hidden)
 
-            # (batch_size * k, num_classes)
+            # (batch_size * width, num_classes)
             class_log_probabilities = F.log_softmax(output_projections, dim=-1)
 
-            # (batch_size * k, num_classes)
-            last_predictions_expanded = last_predictions.unsqueeze(-1).expand(batch_size * k, num_classes)
+            # (batch_size * width, num_classes)
+            last_predictions_expanded = last_predictions.unsqueeze(-1).expand(batch_size * width, num_classes)
             cleaned_log_probabilities = torch.where(
                     last_predictions_expanded == self._end_index,
                     log_probs_after_end,
                     class_log_probabilities
             )
 
-            # (batch_size * k, k), (batch_size * k, k)
-            top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(k)
+            # (batch_size * width, width), (batch_size * width, width)
+            top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(width)
             # TODO(brendanr): Normalize for length?
-            # (batch_size * k, k)
+            # (batch_size * width, width)
             expanded_last_log_probabilities = log_probabilities.\
                 unsqueeze(2).\
-                expand(batch_size, k, k).\
-                reshape(batch_size * k, k)
+                expand(batch_size, width, width).\
+                reshape(batch_size * width, width)
             summed_top_log_probabilities = top_log_probabilities + expanded_last_log_probabilities
 
-            reshaped_top_log_probabilities = summed_top_log_probabilities.reshape(batch_size, k * k)
-            reshaped_predicted_classes = predicted_classes.reshape(batch_size, k * k)
-            restricted_beam_log_probs, restricted_beam_indices = reshaped_top_log_probabilities.topk(k)
+            reshaped_top_log_probabilities = summed_top_log_probabilities.reshape(batch_size, width * width)
+            reshaped_predicted_classes = predicted_classes.reshape(batch_size, width * width)
+            restricted_beam_log_probs, restricted_beam_indices = reshaped_top_log_probabilities.topk(width)
             # TODO(brendanr): Something about this is weird. Why do
             # restricted_predicted_classes == restricted_beam_indices?
             restricted_predicted_classes = reshaped_predicted_classes.gather(1, restricted_beam_indices)
 
             log_probabilities = restricted_beam_log_probs
             predictions.append(restricted_predicted_classes)
-            backpointer = restricted_beam_indices / k
+            backpointer = restricted_beam_indices / width
             backpointers.append(backpointer)
-            expanded_backpointer = backpointer.unsqueeze(2).expand(batch_size, k, self._decoder_output_dim)
+            expanded_backpointer = backpointer.unsqueeze(2).expand(batch_size, width, self._decoder_output_dim)
             decoder_hidden = decoder_hidden.\
-                    reshape(batch_size, k, self._decoder_output_dim).\
+                    reshape(batch_size, width, self._decoder_output_dim).\
                     gather(1, expanded_backpointer).\
-                    reshape(batch_size * k, self._decoder_output_dim)
+                    reshape(batch_size * width, self._decoder_output_dim)
 
         if len(predictions) != num_decoding_steps:
             raise RuntimeError("len(predictions) not equal to num_decoding_steps")
