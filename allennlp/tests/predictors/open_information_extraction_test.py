@@ -2,6 +2,9 @@
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
+from allennlp.predictors.open_information_extraction import consolidate_predictions
+from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
 class TestOpenIePredictor(AllenNlpTestCase):
     def test_uses_named_inputs(self):
@@ -27,9 +30,6 @@ class TestOpenIePredictor(AllenNlpTestCase):
         assert verbs is not None
         assert isinstance(verbs, list)
 
-        predicates = [verb["verb"] for verb in verbs]
-        assert predicates == ["met", "spoke"]
-
         for verb in verbs:
             tags = verb.get("tags")
             assert tags is not None
@@ -49,3 +49,23 @@ class TestOpenIePredictor(AllenNlpTestCase):
 
         result = predictor.predict_json(input1)
         assert result == {'words': ['Blah', 'no', 'verb', 'sentence', '.'], 'verbs': []}
+
+    def test_predicate_consolidation(self):
+        """
+        Test whether the predictor can correctly consolidate multiword
+        predicates.
+        """
+        tokenizer = WordTokenizer(word_splitter=SpacyWordSplitter(pos_tags=True))
+
+        sent_tokens = tokenizer.tokenize("In December, John decided to join the party.")
+
+        # Emulate predications - for both "decided" and "join"
+        predictions = [['B-ARG2', 'I-ARG2', 'O', 'B-ARG0', 'B-V', 'B-ARG1', 'I-ARG1', \
+                        'I-ARG1', 'I-ARG1', 'O'],
+                       ['O', 'O', 'O', 'B-ARG0', 'B-BV', 'I-BV', 'B-V', 'B-ARG1', \
+                        'I-ARG1', 'O']]
+        # Consolidate
+        pred_dict = consolidate_predictions(predictions, sent_tokens)
+
+        # Check that only "decided to join" is left
+        assert list(pred_dict.keys()) == ["decided to join"]

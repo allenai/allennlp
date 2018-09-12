@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 
 from overrides import overrides
 
@@ -9,8 +9,6 @@ from allennlp.models import Model
 from allennlp.service.predictors.predictor import Predictor
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.data.tokenizers import Token
-
-import pdb
 
 def join_mwp(tags: List[str]) -> List[str]:
     """
@@ -86,7 +84,7 @@ def check_predicates_subsumed(tags1: List[str], tags2: List[str]) -> bool:
                                [tags1, tags2])
 
     # Return if pred_ind1 is contained in pred_ind2
-    return (set(pred_ind1) < set(pred_ind2))
+    return set(pred_ind1) < set(pred_ind2)
 
 def merge_predictions(tags1: List[str], tags2: List[str]) -> List[str]:
     """
@@ -97,6 +95,36 @@ def merge_predictions(tags1: List[str], tags2: List[str]) -> List[str]:
     return [tag2 if (tag2 != 'O')\
             else tag1
             for (tag1, tag2) in zip(tags1, tags2)]
+
+def consolidate_predictions(outputs: List[List[str]], sent_tokens: List[Token]) -> Dict[str, List[str]]:
+    """
+    Identify that certain predicates are part of a multiword predicate
+    (e.g., "decided to run") in which case, we don't need to return
+    the embedded predicate ("run").
+    """
+    pred_dict = {}
+    merged_outputs = list(map(join_mwp, outputs))
+    predicate_texts = [get_predicate_text(sent_tokens, tags)
+                       for tags in merged_outputs]
+
+    for pred1_text, tags1 in zip(predicate_texts, merged_outputs):
+        # A flag indicating whether to add tags1 to predictions
+        add_to_prediction = True
+        if pred1_text in pred_dict:
+            # We already added this predicate
+            continue
+
+        # Else - check if this predicate if subsumed by another predicate
+        for pred2_text, tags2 in zip(predicate_texts, merged_outputs):
+            if (tags1 != tags2) and check_predicates_subsumed(tags1, tags2):
+                # tags1 is contained in tags2
+                pred_dict[pred2_text] = merge_predictions(tags1, tags2)
+                add_to_prediction = False
+
+        if add_to_prediction:
+            pred_dict[pred1_text] = tags1
+
+    return pred_dict
 
 @Predictor.register('open-information-extraction')
 class OpenIePredictor(Predictor):
@@ -157,31 +185,11 @@ class OpenIePredictor(Predictor):
         outputs = [self._model.forward_on_instance(instance)["tags"]
                    for instance in instances]
 
+        # Consolidate predictions
+        pred_dict = consolidate_predictions(outputs, sent_tokens)
+
         # Build and return output dictionary
         results = {"verbs": [], "words": sent_tokens}
-
-        # Merge predicates
-        pred_dict = {}
-        merged_outputs = list(map(join_mwp, outputs))
-        predicate_texts = [get_predicate_text(sent_tokens, tags)
-                           for tags in merged_outputs]
-
-        for pred1_text, tags1 in zip(predicate_texts, merged_outputs):
-            # A flag indicating whether to add tags1 to predictions
-            add_to_prediction = True
-            if pred1_text in pred_dict:
-                # We already added this predicate
-                continue
-
-            # Else - check if this predicate if subsumed by another predicate
-            for pred2_text, tags2 in zip(predicate_texts, merged_outputs):
-                if (tags1 != tags2) and check_predicates_subsumed(tags1, tags2):
-                    # tags1 is contained in tags2
-                    pred_dict[pred2_text] = merge_predictions(tags1, tags2)
-                    add_to_prediction = False
-
-            if add_to_prediction:
-                pred_dict[pred1_text] = tags1
 
         for pred_text, tags in pred_dict.items():
             # Join multi-word predicates
@@ -192,9 +200,9 @@ class OpenIePredictor(Predictor):
 
             # Add a predicate prediction to the return dictionary.
             results["verbs"].append({
-                "verb": pred_text,
-                "description": description,
-                "tags": tags,
+                    "verb": pred_text,
+                    "description": description,
+                    "tags": tags,
             })
 
         return sanitize(results)
