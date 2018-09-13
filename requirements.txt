@@ -1,5 +1,7 @@
 # Library dependencies for the python code.  You need to install these with
 # `pip install -r requirements.txt` before you can run this.
+# NOTE: all essential packages must be placed under a section named 'ESSENTIAL ...'
+# so that the script `./scripts/check_requirements_and_setup.py` can find them.
 
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
 
@@ -55,7 +57,7 @@ unidecode
 # Used by semantic parsing code to parse SQL
 parsimonious==0.8.0
 
-#### LIBRARIES USED IN SCRIPTS ####
+#### ESSENTIAL LIBRARIES USED IN SCRIPTS ####
 # Used for downloading datasets over HTTP
 requests>=2.18
 
@@ -71,6 +73,9 @@ h5py
 # For timezone utilities
 pytz==2017.3
 
+# Reads Universal Dependencies files.
+conllu==0.11
+
 #### ESSENTIAL TESTING-RELATED PACKAGES ####
 
 # We'll use pytest to run our tests; this isn't really necessary to run the code, but it is to run
@@ -83,8 +88,8 @@ flaky
 # Required to mock out `requests` calls
 responses>=0.7
 
-# Reads Universal Dependencies files.
-conllu==0.11
+# For mocking s3.
+moto==1.3.4
 
 #### TESTING-RELATED PACKAGES ####
 
@@ -106,9 +111,6 @@ codecov
 
 # Required to run sanic tests
 aiohttp
-
-# For mocking s3.
-moto==1.3.4
 
 #### DOC-RELATED PACKAGES ####
 
