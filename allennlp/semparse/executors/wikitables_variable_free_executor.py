@@ -24,6 +24,30 @@ class Date:
         day_is_same = self.day == -1 or other.day == -1 or self.day == other.day
         return year_is_same and month_is_same and day_is_same
 
+    def __gt__(self, other) -> bool:
+        # pylint: disable=too-many-return-statements
+        if not isinstance(other, Date):
+            return False
+        if self.year == -1 or other.year == -1:
+            return False
+        if self.year != other.year:
+            return self.year > other.year
+        # The years are equal and not -1
+        if self.month == -1 or other.month == -1:
+            return False
+        if self.month != other.month:
+            return self.month > other.month
+        # The months and years are equal and not -1
+        if self.day == -1 or other.day == -1:
+            return False
+        return self.day > other.day
+
+    def __ge__(self, other) -> bool:
+        if not isinstance(other, Date):
+            return False
+        return self > other or self == other
+
+
 
 class WikiTablesVariableFreeExecutor(Executor):
     def __init__(self, table_data: List[Dict[str, str]]) -> None:
@@ -33,16 +57,18 @@ class WikiTablesVariableFreeExecutor(Executor):
     @overrides
     def _handle_expression(self, expression_list: NestedList):
         if isinstance(expression_list, list) and len(expression_list) == 1:
-            expression_list = expression_list[0]
-        if isinstance(expression_list, list):
+            expression = expression_list[0]
+        else:
+            expression = expression_list
+        if isinstance(expression, list):
             # This is a function application.
-            function_name = expression_list[0]
+            function_name = expression[0]
         else:
             # This is a constant (like "all_rows" or "2005")
-            return self._handle_constant(str(expression_list))
+            return self._handle_constant(str(expression))
         try:
             function = getattr(self, f"_{function_name}")
-            return function(expression_list[1:])
+            return function(expression[1:])
         except AttributeError:
             logger.error("Function not found: %s", function_name)
             raise ExecutionError(f"Function not found: {function_name}")
@@ -90,6 +116,8 @@ class WikiTablesVariableFreeExecutor(Executor):
         if not row_list:
             return []
         try:
+            # TODO(pradeep): Deal with dates as well. All the "filter_number_*" functions will work
+            # with dates too then, and we can merge them with "filter_date_*" functions.
             cell_row_pairs = [(float(row[column_name].replace('fb:cell.', '')), row) for row in row_list]
         except ValueError:
             # This means that at least one of the cells is not numerical.
@@ -103,7 +131,6 @@ class WikiTablesVariableFreeExecutor(Executor):
         the given column. We return a list instead of a single dict to be consistent with the return
         type of `_select` and `_all_rows`.
         """
-        # TODO(pradeep): Deal with dates as well.
         cell_row_pairs = self._get_numbers_row_pairs_to_filter(expression_list)
         if not cell_row_pairs:
             return []
@@ -117,7 +144,6 @@ class WikiTablesVariableFreeExecutor(Executor):
         the given column. We return a list instead of a single dict to be consistent with the return
         type of `_select` and `_all_rows`.
         """
-        # TODO(pradeep): Deal with dates as well.
         cell_row_pairs = self._get_numbers_row_pairs_to_filter(expression_list)
         if not cell_row_pairs:
             return []
@@ -220,7 +246,6 @@ class WikiTablesVariableFreeExecutor(Executor):
                 return_list.append(row)
         return return_list
 
-    #TODO(pradeep): Add date filtering functions
     def _filter_in(self, expression_list: NestedList) -> List[Dict[str, str]]:
         """
         Takes a list of rows, a column, and a string value (decoded from `expression_list`) and
