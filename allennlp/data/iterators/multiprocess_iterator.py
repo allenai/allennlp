@@ -1,5 +1,4 @@
 from typing import Iterable, Iterator, List, Optional
-import copy
 import logging
 
 from torch.multiprocessing import Process, Queue, get_logger
@@ -16,6 +15,7 @@ logger.setLevel(logging.INFO)
 def _create_tensor_dicts(input_queue: Queue,
                          output_queue: Queue,
                          iterator: DataIterator,
+                         shuffle: bool,
                          index: int) -> None:
     """
     Pulls at most ``max_instances_in_memory`` from the input_queue,
@@ -28,7 +28,7 @@ def _create_tensor_dicts(input_queue: Queue,
             yield instance
             instance = input_queue.get()
 
-    for tensor_dict in iterator(instances(), num_epochs=1, shuffle=False):
+    for tensor_dict in iterator(instances(), num_epochs=1, shuffle=shuffle):
         output_queue.put(tensor_dict)
 
     output_queue.put(index)
@@ -117,7 +117,7 @@ class MultiprocessIterator(DataIterator):
 
         # Start the tensor-dict workers.
         for i in range(self.num_workers):
-            args = (input_queue, output_queue, self.iterator, i)
+            args = (input_queue, output_queue, self.iterator, shuffle, i)
             process = Process(target=_create_tensor_dicts, args=args)
             process.start()
             self.processes.append(process)
