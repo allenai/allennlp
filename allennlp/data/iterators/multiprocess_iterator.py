@@ -74,11 +74,20 @@ class MultiprocessIterator(DataIterator):
                  iterator: DataIterator,
                  num_workers: int = 1,
                  output_queue_size: int = 1000) -> None:
+        # pylint: disable=protected-access
         super().__init__()
         self.num_workers = num_workers
         self.batch_size = iterator._batch_size  # pylint: disable=protected-access
         self.output_queue_size = output_queue_size
-        self.iterators = [copy.deepcopy(iterator) for _ in range(num_workers)]
+
+        # These two options make the iterator stateful, which means it can't be shared
+        # across multiple processes.
+        if iterator._cache_instances:
+            raise ConfigurationError("cannot use Multiprocess iterator with cache_instances")
+        if iterator._instances_per_epoch:
+            raise ConfigurationError("cannot use instances_per_epoch with Multiprocess iterator")
+
+        self.iterator = iterator
 
         self.processes: List[Process] = []
         self.queuer: Optional[Process] = None
@@ -87,8 +96,7 @@ class MultiprocessIterator(DataIterator):
         raise RuntimeError("MultiprocessIterator doesn't use create_batches")
 
     def index_with(self, vocab: Vocabulary):
-        for iterator in self.iterators:
-            iterator.index_with(vocab)
+        self.iterator.index_with(vocab)
 
     def __call__(self,
                  instances: Iterable[Instance],
@@ -108,8 +116,8 @@ class MultiprocessIterator(DataIterator):
         self.queuer.start()
 
         # Start the tensor-dict workers.
-        for i, iterator in enumerate(self.iterators):
-            args = (input_queue, output_queue, iterator, i)
+        for i in range(self.num_workers):
+            args = (input_queue, output_queue, self.iterator, i)
             process = Process(target=_create_tensor_dicts, args=args)
             process.start()
             self.processes.append(process)
