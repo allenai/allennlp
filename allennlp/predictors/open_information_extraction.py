@@ -108,6 +108,7 @@ def merge_overlapping_predictions(tags1: List[str], tags2: List[str]) -> List[st
 
     # Build a coherent sequence out of two
     # spans which predicates' overlap
+
     for tag1, tag2 in zip(tags1, tags2):
         label1 = tag1.split("-")[-1]
         label2 = tag2.split("-")[-1]
@@ -123,8 +124,8 @@ def merge_overlapping_predictions(tags1: List[str], tags2: List[str]) -> List[st
             cur_label = label2
 
         # Append cur tag to the returned sequence
-        prev_label = cur_label
         cur_tag = get_coherent_next_tag(prev_label, cur_label)
+        prev_label = cur_label
         ret_sequence.append(cur_tag)
     return ret_sequence
 
@@ -155,6 +156,19 @@ def consolidate_predictions(outputs: List[List[str]], sent_tokens: List[Token]) 
             pred_dict[pred1_text] = tags1
 
     return pred_dict
+
+
+def sanitize_label(label: str) -> str:
+    """
+    Sanitize a BIO label - this deals with OIE
+    labels sometimes having some noise, as parentheses.
+    """
+    if "-" in label:
+        prefix, suffix = label.split("-")
+        suffix = suffix.split("(")[-1]
+        return f"{prefix}-{suffix}"
+    else:
+        return label
 
 @Predictor.register('open-information-extraction')
 class OpenIePredictor(Predictor):
@@ -212,7 +226,7 @@ class OpenIePredictor(Predictor):
                      for pred_id in pred_ids]
 
         # Run model
-        outputs = [self._model.forward_on_instance(instance)["tags"]
+        outputs = [[sanitize_label(label) for label in self._model.forward_on_instance(instance)["tags"]]
                    for instance in instances]
 
         # Consolidate predictions
