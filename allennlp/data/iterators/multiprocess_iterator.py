@@ -120,10 +120,12 @@ class MultiprocessIterator(DataIterator):
             if isinstance(item, int):
                 num_finished += 1
                 logger.info(f"worker {item} finished ({num_finished} / {self.num_workers})")
-                self.processes[item].join()
-                self.processes[item] = None
             else:
                 yield item
+
+        for process in self.processes:
+            process.join()
+        self.processes.clear()
 
         if self.queuer is not None:
             self.queuer.join()

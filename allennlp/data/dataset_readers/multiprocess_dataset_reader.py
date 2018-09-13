@@ -140,8 +140,10 @@ class MultiprocessDatasetReader(DatasetReader):
                 # Means a worker has finished, so increment the finished count.
                 num_finished += 1
                 logger.info(f"worker {item} finished ({num_finished}/{self.num_workers})")
-                processes[item].join()
-                processes[item] = None
             else:
                 # Otherwise it's an ``Instance``, so yield it up.
                 yield item
+
+        for process in processes:
+            process.join()
+        processes.clear()
