@@ -9,7 +9,7 @@ from parsimonious.grammar import Grammar
 
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
 from allennlp.semparse.contexts.sql_table_context import \
-        SqlTableContext, SqlVisitor, generate_one_of_string, format_action
+        SqlTableContext, SqlVisitor, format_action
 
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
@@ -73,6 +73,8 @@ class AtisWorld():
                                                  TABLES_WITH_STRINGS,
                                                  database_directory,
                                                  utterances=utterances) if database_directory else None
+
+        self.grammar_dictionary = deepcopy(self.sql_table_context.grammar_dictionary)
 
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
@@ -144,7 +146,6 @@ class AtisWorld():
             action = format_action('time_range_end', time, is_number=True)
             valid_actions['time_range_end'].append(action)
         
-        
         numbers = {'0', '1'}
         number_linking_dict: Dict[str, List[int]] = {}
 
@@ -205,6 +206,7 @@ class AtisWorld():
         Generate a string that can be used to instantiate a ``Grammar`` object. The string is a sequence of
         rules that define the grammar.
         """
+
         grammar_str_with_context = self.sql_table_context.grammar_str
         grammar_str_lines = [line for line in grammar_str_with_context.split('\n') if line]
 
@@ -212,18 +214,21 @@ class AtisWorld():
         for tokenized_utterance in self.tokenized_utterances:
             dates.extend(get_date_from_utterance(tokenized_utterance))
         if dates:
-            grammar_str_lines[-1] += f' / ("date_day" ws "." ws "year" ws binaryop ws "{dates[0].year}")'
+            self.grammar_dictionary['biexpr'].append(f'("date_day" ws "." ws "year" ws binaryop ws "{dates[0].year}")')
+
             for date in dates:
-                grammar_str_lines[-1] += f' / ("date_day" ws "." ws "month_number" ws binaryop ws "{date.month}")' \
-                                         f' / ("date_day" ws "." ws "day_number" ws binaryop ws "{date.day}")'
+                self.grammar_dictionary['biexpr'].extend([f'("date_day" ws "." ws "month_number" ws binaryop ws "{date.month}")',
+                                                f'("date_day" ws "." ws "day_number" ws binaryop ws "{date.day}")'])
+
                 for biexpr_rule in [f'biexpr -> ["date_day", ".", "year", binaryop, "{date.year}"]',
                                     f'biexpr -> ["date_day", ".", "month_number", binaryop, "{date.month}"]',
                                     f'biexpr -> ["date_day", ".", "day_number", binaryop, "{date.day}"]']:
                     if biexpr_rule not in self.valid_actions:
                         self.valid_actions['biexpr'].append(biexpr_rule)
         # add ternary expression 
-        grammar_str_lines.append('ternaryexpr = (col_ref ws "not" ws "BETWEEN" ws time_range_start ws "AND" ws time_range_end ws) / (col_ref ws "NOT" ws "BETWEEN" ws time_range_start  ws "AND" ws time_range_end ws) /  \
-                          (col_ref ws "BETWEEN" ws time_range_start ws "AND" ws time_range_end ws)\n')
+        self.grammar_dictionary['ternaryexpr'] = ['(col_ref ws "not" ws "BETWEEN" ws time_range_start ws "AND" ws time_range_end ws)',
+                                                  '(col_ref ws "NOT" ws "BETWEEN" ws time_range_start  ws "AND" ws time_range_end ws)',
+                                                  '(col_ref ws "BETWEEN" ws time_range_start ws "AND" ws time_range_end ws)\n']
 
         self.valid_actions['ternaryexpr'] = ['ternaryexpr -> [col_ref, "BETWEEN", time_range_start, "AND", time_range_end]', 'ternaryexpr -> [col_ref, "NOT", "BETWEEN", time_range_start, "AND", time_range_end]']
 
@@ -231,17 +236,19 @@ class AtisWorld():
 
         numbers = [number.split(" -> ")[1].lstrip('["').rstrip('"]') for \
                    number in sorted(self.valid_actions['number'], reverse=True)]
-
-        grammar_str_with_context += generate_one_of_string("number", numbers)
+        
+        self.grammar_dictionary['number'] = [f'"{number}"' for number in numbers]
 
         time_range_start = [time.split(" -> ")[1].lstrip('["').rstrip('"]') for \
                    time in sorted(self.valid_actions['time_range_start'], reverse=True)]
-        grammar_str_with_context += generate_one_of_string("time_range_start", time_range_start)
+        self.grammar_dictionary['time_range_start'] = [f'"{time}"' for time in time_range_start]
 
         time_range_end = [time.split(" -> ")[1].lstrip('["').rstrip('"]') for \
                    time in sorted(self.valid_actions['time_range_end'], reverse=True)]
-        grammar_str_with_context += generate_one_of_string("time_range_end", time_range_end)
-        return grammar_str_with_context
+        self.grammar_dictionary['time_range_end'] = [f'"{time}"' for time in time_range_end]
+
+        return '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
+                          for nonterminal, right_hand_side in self.grammar_dictionary.items()])
 
 
     def get_action_sequence(self, query: str) -> List[str]:
