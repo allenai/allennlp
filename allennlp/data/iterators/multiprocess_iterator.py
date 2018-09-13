@@ -60,7 +60,7 @@ class MultiprocessIterator(DataIterator):
 
     Parameters
     ----------
-    iterator : ``DataIterator``
+    base_iterator : ``DataIterator``
         The ``DataIterator`` for generating tensor dicts. It will be shared among
         processes, so it should not be stateful in any way.
     num_workers : ``int``, optional (default = 1)
@@ -70,23 +70,23 @@ class MultiprocessIterator(DataIterator):
         You might need to increase this if you're generating tensor dicts too quickly.
     """
     def __init__(self,
-                 iterator: DataIterator,
+                 base_iterator: DataIterator,
                  num_workers: int = 1,
                  output_queue_size: int = 1000) -> None:
         # pylint: disable=protected-access
         super().__init__()
         self.num_workers = num_workers
-        self.batch_size = iterator._batch_size  # pylint: disable=protected-access
+        self.batch_size = base_iterator._batch_size
         self.output_queue_size = output_queue_size
 
         # These two options make the iterator stateful, which means it can't be shared
         # across multiple processes.
-        if iterator._cache_instances:
+        if base_iterator._cache_instances:
             raise ConfigurationError("cannot use Multiprocess iterator with cache_instances")
-        if iterator._instances_per_epoch:
+        if base_iterator._instances_per_epoch:
             raise ConfigurationError("cannot use instances_per_epoch with Multiprocess iterator")
 
-        self.iterator = iterator
+        self.iterator = base_iterator
 
         self.processes: List[Process] = []
         self.queuer: Optional[Process] = None
