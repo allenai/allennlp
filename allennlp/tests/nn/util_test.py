@@ -795,8 +795,8 @@ class TestNnUtil(AllenNlpTestCase):
         result = util.combine_tensors_and_multiply(combination, [t1.unsqueeze(2), t2.unsqueeze(1)], weight)
 
         assert_almost_equal(
-            result.size(),
-            [1, seq_len_1, seq_len_2]
+                result.size(),
+                [1, seq_len_1, seq_len_2]
         )
 
     def test_has_tensor(self):

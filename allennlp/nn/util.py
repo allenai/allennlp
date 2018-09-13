@@ -1,18 +1,20 @@
 """
 Assorted utilities for working with neural networks in AllenNLP.
 """
+# pylint: disable=too-many-lines
+from collections import defaultdict
+from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar
 import logging
 import math
 import warnings
-# pylint: disable=too-many-lines
-from collections import defaultdict
-from typing import Dict, List, Optional, Any, Tuple
 
 import torch
 
 from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+T = TypeVar('T')
 
 
 def has_tensor(obj) -> bool:
@@ -744,20 +746,25 @@ def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tens
     return torch.cat(to_concatenate, dim=-1)
 
 
-def _rindex(vector: torch.Size, obj: int):
+def _rindex(sequence: Sequence[T], obj: T) -> int:
     """
-    Return zero-based index in the vector of the last item whose value is equal to obj.
-    Raises a ValueError if there is no such item.
+    Return zero-based index in the sequence of the last item whose value is equal to obj.  Raises a
+    ValueError if there is no such item.
 
-    :param vector: torch.Size() vector
-    :param obj: element to look for
-    :return: zero-based index associated to the position of the last item equal to obj
+    Parameters
+    ----------
+    sequence : ``Sequence[T]``
+    obj : ``T``
+
+    Returns
+    -------
+    zero-based index associated to the position of the last item equal to obj
     """
-    for i in range(len(vector) - 1, -1, -1):
-        if vector[i] == obj:
+    for i in range(len(sequence) - 1, -1, -1):
+        if sequence[i] == obj:
             return i
 
-    raise ValueError("Unable to find {} in vector {}.".format(obj, vector))
+    raise ValueError(f"Unable to find {obj} in sequence {sequence}.")
 
 
 def _get_combination(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
