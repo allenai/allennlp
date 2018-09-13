@@ -586,28 +586,28 @@ class AtisSemanticParser(Model):
                         targets_list = [target.item() for target in targets[0]]
                         similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
                         self._action_similarity(similarity.ratio())
+                     
+                    if example_sql_query[i]:
+                        denotation_correct = 0
+                        for query in example_sql_query[i]:
+                            # Since the query might hang, we run in another process and kill it if it
+                            # takes too long.
+                            p = multiprocessing.Process(target=self._sql_result_match,
+                                                       args=(predicted_sql_query, query))
+                            p.start()
 
-                    if example_sql_query:
+                            # Wait 10 seconds for the query to finish
+                            p.join(10)
+                            denotation_correct = denotation_correct | p.exitcode 
+                            if p.is_alive():
+                                print("Evaluating query took over 10 seconds, skipping query")
+                                p.terminate()
+                                p.join()
 
-                        # Since the query might hang, we run in another process and kill it if it
-                        # takes too long.
-                        p = multiprocessing.Process(target=self._sql_result_match,
-                                                   args=(predicted_sql_query, example_sql_query[i]))
-                        p.start()
-
-                        # Wait 10 seconds for the query to finish
-                        p.join(10)
-                        denotation_correct = p.exitcode 
                         if denotation_correct == None:
                             denotation_correct = 0
-
-                        if p.is_alive():
-                            print("Evaluating query took over 10 seconds, skipping query")
-                            p.terminate()
-                            p.join()
-
                         self._denotation_accuracy(denotation_correct)
-                        outputs['example_sql_query'].append(example_sql_query[0])
+                        outputs['example_sql_query'].append(example_sql_query[i])
                     
                     outputs['utterance'].append(world[i].utterances[-1])
                     outputs['tokenized_utterance'].append(world[i].tokenized_utterances[-1])
