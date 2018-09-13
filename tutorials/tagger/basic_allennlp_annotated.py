@@ -1,33 +1,28 @@
 """
-<h2>Welcome</h2>
-
-Welcome to AllenNLP! This tutorial will walk you through the basics of building and training an AllenNLP model.
-
-Before we get started, make sure you have a clean Python 3.6 or 3.7 virtual environment, and then run
-
-<pre>pip install allennlp</pre>
-
-to install the AllenNLP library.
-
-In this tutorial we'll implement a slightly enhanced version of the PyTorch
-<a href = "https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html#example-an-lstm-for-part-of-speech-tagging">LSTM for Part-of-Speech Tagging</a>() tutorial,
-adding some features that make it a slightly more realistic task (and that also showcase some of the benefits of AllenNLP):
-
-<ol>
-    <li>We'll read our data from files. (The tutorial example uses data that's given as part of the Python code.)</li>
-    <li>We'll use a separate validation dataset to check our performance. (The tutorial example trains and evaluates on the same dataset.)</li>
-    <li>We'll use <a href="https://github.com/tqdm/tqdm">tqdm</a> to track the progress of our training.</li>
-    <li>We'll implement <a href="https://en.wikipedia.org/wiki/Early_stopping">early stopping</a> based on the loss on the validation dataset.</li>
-    <li>We'll track accuracy on both the training and validation sets as we train the model.</li>
+<h1>Welcome</h1>
+<p>Welcome to AllenNLP! This tutorial will walk you through the basics of building and training an AllenNLP model.</p>
+ {% include more-tutorials.html %}
+ <p>Before we get started, make sure you have a clean Python 3.6 or 3.7 virtual environment, and then run the following command to install the AllenNLP library:</p>
+ {% highlight bash %}
+pip install allennlp
+{% endhighlight %}
+ <hr />
+ <p>In this tutorial we'll implement a slightly enhanced version of the PyTorch
+<a href = "https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html#example-an-lstm-for-part-of-speech-tagging">LSTM for Part-of-Speech Tagging</a> tutorial,
+adding some features that make it a slightly more realistic task (and that also showcase some of the benefits of AllenNLP):</p>
+ <ol class="formatted">
+  <li>We'll read our data from files. (The tutorial example uses data that's given as part of the Python code.)</li>
+  <li>We'll use a separate validation dataset to check our performance. (The tutorial example trains and evaluates on the same dataset.)</li>
+  <li>We'll use <a href="https://github.com/tqdm/tqdm" target="_blank">tqdm</a> to track the progress of our training.</li>
+  <li>We'll implement <a href="https://en.wikipedia.org/wiki/Early_stopping" target="_blank">early stopping</a> based on the loss on the validation dataset.</li>
+  <li>We'll track accuracy on both the training and validation sets as we train the model.</li>
 </ol>
-
-<h2>The Problem</h2>
-
-Given a sentence (e.g. "The dog ate the apple") we want to predict part-of-speech tags for each word (e.g ["DET", "NN", "V", "DET", "NN"]).
-
-As in the PyTorch tutorial, we'll embed each word in a low-dimensional space, pass them through an LSTM to get a sequence of encodings, and use a feedforward layer to transform those into a sequence of logits (corresponding to the possible part-of-speech tags).
-
-Below is the annotated code for accomplishing this.
+ <hr />
+ <h2>The Problem</h2>
+ <p>Given a sentence (e.g. <code>"The dog ate the apple"</code>) we want to predict part-of-speech tags for each word<br />(e.g <code>["DET", "NN", "V", "DET", "NN"]</code>).</p>
+ <p>As in the PyTorch tutorial, we'll embed each word in a low-dimensional space, pass them through an LSTM to get a sequence of encodings, and use a feedforward layer to transform those into a sequence of logits (corresponding to the possible part-of-speech tags).</p>
+ <p>Below is the annotated code for accomplishing this.</p>
+ <!-- Annotated Code -->
 """
 #### In AllenNLP we use type annotations for just about everything.
 from typing import Iterator, List, Dict
@@ -132,7 +127,7 @@ class LstmTagger(Model):
     def forward(self, sentence: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
         #### AllenNLP is designed to operate on batched inputs, but different input sequences have different lengths. Behind the scenes AllenNLP is padding the shorter inputs so that the batch has uniform shape, which means our computations need to use a mask to exclude the padding. Here we just use the utility function <code>get_text_field_mask</code>, which returns a tensor of 0s and 1s corresponding to the padded and unpadded locations.
         mask = get_text_field_mask(sentence)
-        #### We start by passing the <code>sentence</code> tensor (each sentence a sequence of token ids) to the <code>word_embeddings<code> module, which converts each sentence into a sequence of embedded tensors.
+        #### We start by passing the <code>sentence</code> tensor (each sentence a sequence of token ids) to the <code>word_embeddings</code> module, which converts each sentence into a sequence of embedded tensors.
         embeddings = self.word_embeddings(sentence)
         #### We next pass the embedded tensors (and the mask) to the LSTM, which produces a sequence of encoded outputs.
         encoder_out = self.encoder(embeddings, mask)

@@ -8,33 +8,46 @@ comment_regex = r"[ ]*(####.*)\n"
 
 parts = re.split(comment_regex, full_text)
 
-HTML = parts[0] + '\n<table class="annotated-code">'
+# remove newlines, then triple quotes, then more newlines
+HTML = parts[0].strip().strip('"""').strip()
 
 parts = parts[1:]
 num_parts = len(parts) // 2
 
-for i in range(num_parts):
-    comment = parts[2 * i]
-    comment = comment.replace("####", "").strip()
-    code = parts[2 * i + 1]
-    code = code.rstrip("\n")
+comments = parts[::2]
+codes = parts[1::2]
 
-    row = f"""
-    <tr>
-        <td class="code">
+HTML += """<div id="annotated-code">
+  <!-- Code Blocks -->
+  <div class="annotated-code__pane annotated-code__pane--code-container">
+"""
+
+for i, code in enumerate(codes):
+    code = code.rstrip("\n")
+    HTML += f"""<div class="annotated-code__code-block" id="c{i}">
 {{% highlight python %}}
 {code}
 {{% endhighlight %}}
-        </td>
-        <td class="desc">
-            {comment}
-        </td>
-    </tr>
-    """
+</div>
+"""
 
-    HTML += row
+HTML += """</div>
+    <!-- END Code Blocks -->
 
-HTML += "</table>"
+    <!-- Annotations -->
+    <div class="annotated-code__pane annotated-code__pane--annotations-container">
+        <ul id="annotated-code__annotations">
+"""
 
-with open('tutorials/tagger/table.html', 'w') as f:
+for i, comment in enumerate(comments):
+    HTML += f"""<li class="annotation" id="a{i}">{comment}</li>
+"""
+
+HTML += """</ul>
+  </div><!-- END Annotations -->
+</div><!-- END Annotated Code -->
+ {% include more-tutorials.html %}
+"""
+
+with open('tutorials/tagger/default-tutorial.html', 'w') as f:
     f.write(HTML)
