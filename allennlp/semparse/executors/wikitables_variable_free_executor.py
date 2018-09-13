@@ -1,4 +1,4 @@
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Union
 from collections import defaultdict
 import logging
 
@@ -16,7 +16,9 @@ class Date:
         self.month = month
         self.day = day
 
-    def __eq__(self, other: 'Date') -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Date):
+            return False
         year_is_same = self.year == -1 or other.year == -1 or self.year == other.year
         month_is_same = self.month == -1 or other.month == -1 or self.month == other.month
         day_is_same = self.day == -1 or other.day == -1 or self.day == other.day
@@ -30,17 +32,17 @@ class WikiTablesVariableFreeExecutor(Executor):
 
     @overrides
     def _handle_expression(self, expression_list: NestedList):
+        if isinstance(expression_list, list) and len(expression_list) == 1:
+            expression_list = expression_list[0]
         if isinstance(expression_list, list):
             # This is a function application.
             function_name = expression_list[0]
-            expression_is_application = True
         else:
-            # This is a constant (likst "all_rows")
-            function_name = expression_list
-            expression_is_application = False
+            # This is a constant (like "all_rows" or "2005")
+            return self._handle_constant(str(expression_list))
         try:
             function = getattr(self, f"_{function_name}")
-            return function(expression_list[1:]) if expression_is_application else function()
+            return function(expression_list[1:])
         except AttributeError:
             logger.error("Function not found: %s", function_name)
             raise ExecutionError(f"Function not found: {function_name}")
@@ -57,13 +59,19 @@ class WikiTablesVariableFreeExecutor(Executor):
         if not (isinstance(column_name, str) and column_name.startswith("fb:row.row.")):
             logger.error("Invalid column for selection: %s", column_name)
             raise ExecutionError(f"Invalid column for selection: {column_name}")
-        if column_name not in row_list[0]:
+        if row_list and column_name not in row_list[0]:
             logger.error("Input list of rows do not contain column: %s", column_name)
             raise ExecutionError(f"Input list of rows do not contain column: {column_name}")
         return row_list, column_name
 
-    def _all_rows(self) -> List[Dict[str, str]]:
-        return self._table_data
+    def _handle_constant(self, constant: str) -> Union[List[Dict[str, str]], float]:
+        if constant == "all_rows":
+            return self._table_data
+        try:
+            return float(constant)
+        except ValueError:
+            logger.error(f"Cannot handle constant: {constant}")
+            raise ExecutionError(f"Cannot handle constant: {constant}")
 
     def _select(self, expression_list: NestedList) -> List[str]:
         """
@@ -221,8 +229,9 @@ class WikiTablesVariableFreeExecutor(Executor):
         row_list, column_name = self._get_row_list_and_column_name(expression_list)
         if not row_list:
             return []
-        # TODO(pradeep): Assuming filter value is a simple string.
-        filter_value = expression_list[2]
+        # Assuming filter value is a simple string with underscores for spaces. The cell values also
+        # have underscores for spaces, so we do not need to replace them here.
+        filter_value = str(expression_list[2])
         result_list = []
         for row in row_list:
             if filter_value in row[column_name].replace("fb:cell.", ""):
@@ -237,8 +246,9 @@ class WikiTablesVariableFreeExecutor(Executor):
         row_list, column_name = self._get_row_list_and_column_name(expression_list)
         if not row_list:
             return []
-        # TODO(pradeep): Assuming filter value is a simple string.
-        filter_value = expression_list[2]
+        # Assuming filter value is a simple string with underscores for spaces. The cell values also
+        # have underscores for spaces, so we do not need to replace them here.
+        filter_value = str(expression_list[2])
         result_list = []
         for row in row_list:
             if filter_value not in row[column_name].replace("fb:cell.", ""):
@@ -372,7 +382,7 @@ class WikiTablesVariableFreeExecutor(Executor):
             return []
         value_frequencies: Dict[str, int] = defaultdict(int)
         max_frequency = 0
-        most_frequent_list = []
+        most_frequent_list: List[str] = []
         for row in row_list:
             cell_value = row[column_name]
             value_frequencies[cell_value] += 1
@@ -397,7 +407,7 @@ class WikiTablesVariableFreeExecutor(Executor):
                            f"{expression_list[0]}")
         cell_value = row_list[0][column_name]
         return_list = []
-        for row in row_list:
+        for row in self._table_data:
             if row[column_name] == cell_value:
                 return_list.append(row)
         return return_list
@@ -421,7 +431,9 @@ class WikiTablesVariableFreeExecutor(Executor):
         first_row = first_row_list[0]
         second_row = second_row_list[0]
         try:
-            return float(first_row[column_name]) - float(second_row[column_name])
+            first_value = float(first_row[column_name].replace("fb:cell.", ""))
+            second_value = float(second_row[column_name].replace("fb:cell.", ""))
+            return first_value - second_value
         except ValueError:
             logger.error("Invalid column for diff: %s", column_name)
             raise ExecutionError(f"Invalid column for diff: {column_name}")
@@ -433,9 +445,9 @@ class WikiTablesVariableFreeExecutor(Executor):
         year, month, and day are the three numbers in that order.
         """
         try:
-            year = int(expression_list[0])
-            month = int(expression_list[1])
-            day = int(expression_list[2])
+            year = int(str(expression_list[0]))
+            month = int(str(expression_list[1]))
+            day = int(str(expression_list[2]))
             return Date(year, month, day)
         except ValueError:
             logger.error("Invalid date: %s", expression_list)

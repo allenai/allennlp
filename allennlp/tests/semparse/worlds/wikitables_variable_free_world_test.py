@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,too-many-public-methods
 from typing import List
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -215,10 +215,134 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         cell_list = self.world.execute(logical_form)
         assert cell_list == ['fb:cell.usl_a_league']
 
-    def test_execute_works_with_filter_greater(self):
+    def test_execute_works_with_argmin(self):
+        logical_form = "(select (argmin all_rows fb:row.row.avg_attendance) fb:row.row.year)"
+        cell_list = self.world.execute(logical_form)
+        assert cell_list == ['fb:cell.2005']
+
+    def test_execute_works_with_filter_number_greater(self):
         # Selecting cell values from all rows that have attendance greater than the min value of
         # attendance.
         logical_form = """(select (filter_number_greater all_rows fb:row.row.avg_attendance
                                    (min all_rows fb:row.row.avg_attendance)) fb:row.row.league)"""
         cell_value_list = self.world.execute(logical_form)
         assert cell_value_list == ['fb:cell.usl_a_league']
+
+    def test_execute_works_with_filter_number_greater_equals(self):
+        # Counting rows that have attendance greater than or equal to the min value of attendance.
+        logical_form = """(count (filter_number_greater_equals all_rows fb:row.row.avg_attendance
+                                  (min all_rows fb:row.row.avg_attendance)))"""
+        count_result = self.world.execute(logical_form)
+        assert count_result == 2
+
+    def test_execute_works_with_filter_number_lesser(self):
+        # Selecting cell values from all rows that have year lesser than 2005.
+        logical_form = """(select (filter_number_lesser all_rows fb:row.row.year 2005)
+                           fb:row.row.league)"""
+        cell_value_list = self.world.execute(logical_form)
+        assert cell_value_list == ['fb:cell.usl_a_league']
+
+    def test_execute_works_with_filter_number_lesser_equals(self):
+        # Counting rows that have year lesser than or equal to 2005.
+        logical_form = """(count (filter_number_lesser_equals all_rows fb:row.row.year 2005))"""
+        count_result = self.world.execute(logical_form)
+        assert count_result == 2
+
+    def test_execute_works_with_filter_number_not_equals(self):
+        # Counting rows that have year not equal to 2010.
+        logical_form = """(count (filter_number_not_equals all_rows fb:row.row.year 2010))"""
+        count_result = self.world.execute(logical_form)
+        assert count_result == 2
+
+    def test_execute_works_with_filter_in(self):
+        # Selecting "regular season" from rows that have "did not qualify" in "open cup" column.
+        logical_form = """(select (filter_in all_rows fb:row.row.open_cup did_not_qualify)
+                                  fb:row.row.regular_season)"""
+        cell_list = self.world.execute(logical_form)
+        assert cell_list == ["fb:cell.4th_western"]
+
+    def test_execute_works_with_filter_not_in(self):
+        # Selecting "regular season" from rows that do not have "did not qualify" in "open cup" column.
+        logical_form = """(select (filter_not_in all_rows fb:row.row.open_cup did_not_qualify)
+                                   fb:row.row.regular_season)"""
+        cell_list = self.world.execute(logical_form)
+        assert cell_list == ["fb:cell.5th"]
+
+    def test_execute_works_with_first(self):
+        # Selecting "regular season" from the first row.
+        logical_form = """(select (first all_rows) fb:row.row.regular_season)"""
+        cell_list = self.world.execute(logical_form)
+        assert cell_list == ["fb:cell.4th_western"]
+
+    def test_execute_works_with_last(self):
+        # Selecting "regular season" from the last row where year is not equal to 2010.
+        logical_form = """(select (last (filter_number_not_equals all_rows fb:row.row.year 2010))
+                                  fb:row.row.regular_season)"""
+        cell_list = self.world.execute(logical_form)
+        assert cell_list == ["fb:cell.5th"]
+
+    def test_execute_works_with_previous(self):
+        # Selecting "regular season" from the row before last where year is not equal to 2010.
+        logical_form = """(select (previous (last (filter_number_not_equals
+                                                    all_rows fb:row.row.year 2010)))
+                                  fb:row.row.regular_season)"""
+        cell_list = self.world.execute(logical_form)
+        assert cell_list == ["fb:cell.4th_western"]
+
+    def test_execute_works_with_next(self):
+        # Selecting "regular season" from the row after first where year is not equal to 2010.
+        logical_form = """(select (next (first (filter_number_not_equals
+                                                    all_rows fb:row.row.year 2010)))
+                                  fb:row.row.regular_season)"""
+        cell_list = self.world.execute(logical_form)
+        assert cell_list == ["fb:cell.5th"]
+
+    def test_execute_works_with_mode(self):
+        # Most frequent division value.
+        logical_form = """(mode all_rows fb:row.row.division)"""
+        cell_list = self.world.execute(logical_form)
+        assert cell_list == ["fb:cell.2"]
+        # If we used selec instead, we should get a list of two values.
+        logical_form = """(select all_rows fb:row.row.division)"""
+        cell_list = self.world.execute(logical_form)
+        assert cell_list == ["fb:cell.2", "fb:cell.2"]
+
+    def test_execute_works_with_same_as(self):
+        # Select the "league" from all the rows that have the same value under "playoffs" as the
+        # row that has the string "a league" under "league".
+        logical_form = """(select (same_as (filter_in all_rows fb:row.row.league a_league)
+                                   fb:row.row.playoffs)
+                           fb:row.row.league)"""
+        cell_list = self.world.execute(logical_form)
+        assert cell_list == ["fb:cell.usl_a_league", "fb:cell.usl_first_division"]
+
+    def test_execute_works_with_sum(self):
+        # Get total "avg attendance".
+        logical_form = """(sum all_rows fb:row.row.avg_attendance)"""
+        sum_value = self.world.execute(logical_form)
+        assert sum_value == 13197
+        # Total "avg attendance" where "playoffs" has "quarterfinals"
+        logical_form = """(sum (filter_in all_rows fb:row.row.playoffs quarterfinals)
+                                fb:row.row.avg_attendance)"""
+        sum_value = self.world.execute(logical_form)
+        assert sum_value == 13197
+
+    def test_execute_works_with_average(self):
+        # Get average "avg attendance".
+        logical_form = """(average all_rows fb:row.row.avg_attendance)"""
+        avg_value = self.world.execute(logical_form)
+        assert avg_value == 6598.5
+        # Average "avg attendance" where "playoffs" has "quarterfinals"
+        logical_form = """(average (filter_in all_rows fb:row.row.playoffs quarterfinals)
+                                fb:row.row.avg_attendance)"""
+        avg_value = self.world.execute(logical_form)
+        assert avg_value == 6598.5
+
+    def test_execute_works_with_diff(self):
+        # Difference in "avg attendance" between rows with "usl_a_league" and "usl_first_division"
+        # in "league" columns.
+        logical_form = """(diff (filter_in all_rows fb:row.row.league usl_a_league)
+                                (filter_in all_rows fb:row.row.league usl_first_division)
+                                fb:row.row.avg_attendance)"""
+        avg_value = self.world.execute(logical_form)
+        assert avg_value == 1141
