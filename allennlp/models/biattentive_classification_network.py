@@ -204,7 +204,7 @@ class BiattentiveClassificationNetwork(Model):
         text_mask = util.get_text_field_mask(tokens).float()
         # Pop elmo tokens, since elmo embedder should not be present.
         elmo_tokens = tokens.pop("elmo", None)
-        if len(tokens) > 0:
+        if tokens:
             embedded_text = self._text_field_embedder(tokens)
         else:
             # only using "elmo" for input
