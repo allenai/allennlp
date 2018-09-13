@@ -61,6 +61,25 @@ NUMBER_WORDS = {
         **MONTH_NUMBERS,
         }
 
+
+
+class QuestionEntityExtractor():
+    def __init__(self, 
+                 table : TableQuestionKnowledgeGraph) -> None:
+        self.table = table
+
+    def _expand_entities(self, entity_bitmap):
+        raise NotImplementedError
+
+    def get_entities_from_question(self, question, stop_words = set()):
+        entity_bitmap = [0]*len(question)
+        for i, token in enumerate(question):
+            if token in stop_words: continue
+            if _present_in_table(TableQuestionKnowledgeGraph.normalize(token), self.table):
+                entity_bitmap[i] = 1
+
+        return _expand_entities(entity_bitmap)
+
 class TableQuestionKnowledgeGraph(KnowledgeGraph):
     """
     A ``TableQuestionKnowledgeGraph`` represents the linkable entities in a table and a question
