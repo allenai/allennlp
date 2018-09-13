@@ -55,15 +55,14 @@ def _queuer(instances: Iterable[Instance],
 @DataIterator.register("multiprocess")
 class MultiprocessIterator(DataIterator):
     """
-    A ``DataIterator`` that uses ``torch.multiprocessing`` to generate tensor dicts
-    using multiple processes. It's currently less full-featured than some of our
-    other data iterators.
+    Wraps another ```DataIterator``` and uses it to generate tensor dicts
+    using multiple processes.
 
     Parameters
     ----------
     iterator : ``DataIterator``
-        The ``DataIterator`` for generating tensor dicts. It will be cloned
-        once per worker.
+        The ``DataIterator`` for generating tensor dicts. It will be shared among
+        processes, so it should not be stateful in any way.
     num_workers : ``int``, optional (default = 1)
         The number of processes used for generating tensor dicts.
     output_queue_size: ``int``, optional (default = 1000)
