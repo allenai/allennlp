@@ -8,7 +8,7 @@ semantic role labeling, classification, and syntactic parsing.
 This document describes how to add ELMo representations to your model using pytorch and `allennlp`.
 We also have a [tensorflow implementation](https://github.com/allenai/bilm-tf).
 
-For more detail about ELMo, please see the publication ["Deep contextualized word representations", NAACL 2018](http://www.aclweb.org/anthology/N18-1202).
+For more detail about ELMo, please see the publication ["Deep contextualized word representations", NAACL 2018](http://www.aclweb.org/anthology/N18-1202) or the [ELMo section of the AllenNLP website](https://allennlp.org/elmo).
 
 Citations:
 
@@ -32,7 +32,6 @@ Citations:
 }
 ```
 
-
 ## Writing contextual representations to disk
 
 You can write ELMo representations to disk with the `elmo` command.  The `elmo`
@@ -53,7 +52,27 @@ JSON-serialized string with a mapping from sentences to line indices to the
 
 For more details, see `allennlp elmo -h`. 
 
-## Using ELMo programmatically
+## Using ELMo interactively
+
+You can use ELMo interactively (or programatically) with iPython.  The `allennlp.commands.elmo.ElmoEmbedder` class provides an easy way to process one or many sentences with ELMo.
+
+```
+$ ipython
+> from allennlp.commands.elmo import ElmoEmbedder
+> elmo = ElmoEmbedder()
+> tokens = ["I", "ate", "an", "apple", "for", "breakfast"]
+> vectors = elmo.embed_sentence(tokens)
+
+> assert(len(vectors) == 3) # one for each layer in the ELMo output
+> assert(len(vectors[0]) == len(tokens)) # the vector elements correspond with the input tokens
+
+> import scipy
+> vectors2 = elmo.embed_sentence(["I", "ate", "a", "carrot", "for", "breakfast"])
+> scipy.spatial.distance.cosine(vectors[2][3], vectors2[2][3]) # cosine distance between "ate" and "carrot" in the last layer
+0.18020617961883545
+```
+
+## Using ELMo as a PyTorch `Module`
 
 If you need to include ELMo at multiple layers in a task model or you have other advanced use cases, you will need to create ELMo vectors programatically.
 This is easily done with the `Elmo` class [(API doc)](https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L27), which provides a mechanism to compute the weighted ELMo representations (Equation (1) in the paper).
