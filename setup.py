@@ -132,7 +132,13 @@ setup(name='allennlp',
       ],
       scripts=["bin/allennlp"],
       setup_requires=setup_requirements,
-      tests_require=['pytest', 'flaky', 'responses>=0.7', 'jupyter'],
+      tests_require=[
+          'pytest',
+          'flaky',
+          'responses>=0.7',
+          'moto==1.3.4',
+          'jupyter'
+      ],
       include_package_data=True,
       python_requires='>=3.6.1',
       zip_safe=False)
