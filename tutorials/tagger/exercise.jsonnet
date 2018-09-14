@@ -10,8 +10,8 @@ local batch_size = 2;
 local learning_rate = 0.1;
 
 {
-    "train_data_path": 'tutorials/tagger/training.txt',
-    "validation_data_path": 'tutorials/tagger/validation.txt',
+    "train_data_path": 'https://raw.githubusercontent.com/allenai/allennlp/master/tutorials/tagger/training.txt',
+    "validation_data_path": 'https://raw.githubusercontent.com/allenai/allennlp/master/tutorials/tagger/validation.txt',
     "dataset_reader": {
         "type": "pos-tutorial",
         "token_indexers": {
@@ -47,8 +47,9 @@ local learning_rate = 0.1;
         }
     },
     "iterator": {
-        "type": "basic",
-        "batch_size": batch_size
+        "type": "bucket",
+        "batch_size": batch_size,
+        "sorting_keys": [["sentence", "num_tokens"]]
     },
     "trainer": {
         "num_epochs": num_epochs,

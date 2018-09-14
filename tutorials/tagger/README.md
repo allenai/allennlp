@@ -35,8 +35,8 @@ As in the PyTorch tutorial, we'll embed each word in a low-dimensional space, pa
 
 The PyTorch tutorial example is extremely simple, so we'll add a few small twists to make it slightly more realistic:
 
-1. We'll read our data from files. (The tutorial example uses data that's given as part of the Python code.)
-2. We'll use a separate validation dataset to check our performance. (The tutorial example trains and evaluates on the same dataset.)
+1. We'll read our data from files. (The PyTorch example uses data that's given as part of the Python code.)
+2. We'll use a separate validation dataset to check our performance. (The PyTorch example trains and evaluates on the same dataset.)
 3. We'll use [`tqdm`](https://github.com/tqdm/tqdm) to track the progress of our training.
 4. We'll implement [early stopping](https://en.wikipedia.org/wiki/Early_stopping) based on the loss on the validation dataset.
 5. We'll track accuracy on both the training and validation sets as we train the model.
@@ -192,10 +192,8 @@ class LstmTagger(Model):
         super().__init__(vocab)
         self.word_embeddings = word_embeddings
         self.encoder = encoder
-        self.hidden2tag = FeedForward(input_dim=encoder.get_output_dim(),
-                                      num_layers=1,
-                                      hidden_dims=vocab.get_vocab_size('labels'),
-                                      activations=lambda x: x)
+        self.hidden2tag = torch.nn.Linear(in_features=encoder.get_output_dim(),
+                                          out_features=vocab.get_vocab_size('labels'))
         self.accuracy = CategoricalAccuracy()
 ```
 
@@ -227,16 +225,18 @@ Because of the dependency injection, that's all we have to do to construct the m
 
 Next we need to implement `forward`, which is where the actual computation happens.
 Each `Instance` in your dataset will get (batched with other instances and) fed into
-`forward`. As mentioned above, `forward` expects tensors as input,
+`forward`. As mentioned above, `forward` expects dicts of tensors as input,
 and it expects their names to be the names of the fields in your `Instance`.
 
 In this case we have a `sentence` field and (possibly) a `labels` field,
 so we'll construct our `forward` accordingly:
 
 ```python
-    def forward(self, sentence: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
-        embeddings = self.word_embeddings(sentence)
+    def forward(self,
+                sentence: Dict[str, torch.Tensor],
+                labels: Dict[str, torch.Tensor] = None) -> torch.Tensor:
         mask = get_text_field_mask(sentence)
+        embeddings = self.word_embeddings(sentence)
         encoder_out = self.encoder(embeddings, mask)
         tag_logits = self.hidden2tag(encoder_out)
         output = {"tag_logits": tag_logits}
@@ -287,12 +287,15 @@ Now that we've implemented the `DatasetReader` and the `Model`, we're ready to t
 
 ### Reading the Data
 
-We'll start off by reading the data:
+We'll start off by reading the data. Here we read them from URLs, but
+you could also read them from local files if you had the data locally.
 
 ```python
 reader = PosDatasetReader()
-train_dataset = reader.read('tutorials/tagger/training.txt')
-validation_dataset = reader.read('tutorials/tagger/validation.txt')
+train_dataset = reader.read('https://raw.githubusercontent.com/allenai/allennlp'
+                            '/master/tutorials/tagger/training.txt')
+validation_dataset = reader.read('https://raw.githubusercontent.com/allenai/allennlp'
+                                 '/master/tutorials/tagger/validation.txt')
 vocab = Vocabulary.from_instances(train_dataset + validation_dataset)
 ```
 
@@ -412,16 +415,16 @@ It has a `predict` method that just needs a sentence
 and that returns (a JSON-serializable version of) the output dict from `Model.forward`:
 
 ```python
-tag_scores = predictor.predict("The dog ate the apple")['tag_logits']
+tag_logits = predictor.predict("The dog ate the apple")['tag_logits']
 ```
 
-Here `tag_scores` will be a `(5, 3)` array of logits,
+Here `tag_logits` will be a `(5, 3)` array of logits,
 where each row represents the scores for one word for the three tag choices.
 
 To get the actual "predictions", we can first find the highest score in each row:
 
 ```python
-tag_ids = np.argmax(tag_scores, axis=-1)
+tag_ids = np.argmax(tag_logits, axis=-1)
 ```
 
 And then use our `Vocabulary` to find the corresponding tags:

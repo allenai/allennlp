@@ -58,19 +58,18 @@ class LstmTagger(Model):
         super().__init__(vocab)
         self.word_embeddings = word_embeddings
         self.encoder = encoder
-        self.hidden2tag = FeedForward(input_dim=encoder.get_output_dim(),
-                                      num_layers=1,
-                                      hidden_dims=vocab.get_vocab_size('labels'),
-                                      activations=lambda x: x)
+        self.hidden2tag = torch.nn.Linear(in_features=encoder.get_output_dim(),
+                                          out_features=vocab.get_vocab_size('labels'))
 
         self.accuracy = CategoricalAccuracy()
 
-    def forward(self, sentence: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
-        embeddings = self.word_embeddings(sentence)
+    def forward(self,
+                sentence: Dict[str, torch.Tensor],
+                labels: Dict[str, torch.Tensor] = None) -> torch.Tensor:        embeddings = self.word_embeddings(sentence)
         mask = get_text_field_mask(sentence)
+        embeddings = self.word_embeddings(sentence)
         encoder_out = self.encoder(embeddings, mask)
         tag_logits = self.hidden2tag(encoder_out)
-        output = {"tag_logits": tag_logits}
 
         if labels is not None:
             self.accuracy(tag_logits, labels, mask)
@@ -91,9 +90,9 @@ if __name__ == "__main__":
 
     # Make predictions
     predictor = SentenceTaggerPredictor(model, dataset_reader=PosDatasetReader())
-    tag_scores = predictor.predict("The dog ate the apple")['tag_logits']
-    print(tag_scores)
-    tag_ids = np.argmax(tag_scores, axis=-1)
+    tag_logits = predictor.predict("The dog ate the apple")['tag_logits']
+    print(tag_logits)
+    tag_ids = np.argmax(tag_logits, axis=-1)
     print([model.vocab.get_token_from_index(i, 'labels') for i in tag_ids])
 
     shutil.rmtree(serialization_dir)

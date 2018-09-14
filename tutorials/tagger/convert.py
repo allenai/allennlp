@@ -1,6 +1,6 @@
 import re
 
-FILENAME = 'tutorials/tagger/basic_allennlp_annotated.py'
+FILENAME = 'tutorials/tagger/basic_allennlp.py'
 
 full_text = open(FILENAME).read()
 
@@ -40,6 +40,7 @@ HTML += """</div>
 """
 
 for i, comment in enumerate(comments):
+    comment = comment.strip("####").strip()
     HTML += f"""<li class="annotation" id="a{i}">{comment}</li>
 """
 
