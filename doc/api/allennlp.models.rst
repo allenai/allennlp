@@ -10,18 +10,19 @@ allennlp.models
 
   allennlp.models.model
   allennlp.models.archival
+  allennlp.models.biaffine_dependency_parser
   allennlp.models.biattentive_classification_network
+  allennlp.models.bimpm
   allennlp.models.constituency_parser
   allennlp.models.coreference_resolution
   allennlp.models.crf_tagger
   allennlp.models.decomposable_attention
   allennlp.models.encoder_decoders
   allennlp.models.ensemble
+  allennlp.models.esim
+  allennlp.models.event2mind
   allennlp.models.reading_comprehension
   allennlp.models.semantic_parsing
   allennlp.models.semantic_role_labeler
   allennlp.models.simple_tagger
-  allennlp.models.biaffine_dependency_parser
-  allennlp.models.esim
-  allennlp.models.bimpm
 
