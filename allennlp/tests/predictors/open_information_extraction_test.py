@@ -89,7 +89,7 @@ class TestOpenIePredictor(AllenNlpTestCase):
         # Consolidate
         pred_dict = consolidate_predictions(predictions, sent_tokens)
 
-        # Check that only "decided to join" is left
+        # Check that only "refused to consider to join" is left
         assert len(pred_dict) == 1
         tags = list(pred_dict.values())[0]
         assert get_predicate_text(sent_tokens, tags) == "refused to consider joining"

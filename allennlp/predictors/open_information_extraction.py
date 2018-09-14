@@ -75,14 +75,14 @@ def get_predicate_text(sent_tokens: List[Token], tags: List[str]) -> str:
 
 def predicates_overlap(tags1: List[str], tags2: List[str]) -> bool:
     """
-    Tests whether the predicate in BIO tags1 are subsumed in
-    those of tags2.
+    Tests whether the predicate in BIO tags1 overlap
+    with those of tags2.
     """
     # Get predicate word indices from both predictions
     pred_ind1 = get_predicate_indices(tags1)
     pred_ind2 = get_predicate_indices(tags2)
 
-    # Return if pred_ind1 is contained in pred_ind2
+    # Return if pred_ind1 pred_ind2 overlap
     return any(set.intersection(set(pred_ind1), set(pred_ind2)))
 
 def get_coherent_next_tag(prev_label: str, cur_label: str) -> str:
@@ -100,7 +100,7 @@ def get_coherent_next_tag(prev_label: str, cur_label: str) -> str:
 
 def merge_overlapping_predictions(tags1: List[str], tags2: List[str]) -> List[str]:
     """
-    Merge two predictions into one. Assumes the predicate in tags1 are contained in
+    Merge two predictions into one. Assumes the predicate in tags1 overlap with
     the predicate of tags2.
     """
     ret_sequence = []
