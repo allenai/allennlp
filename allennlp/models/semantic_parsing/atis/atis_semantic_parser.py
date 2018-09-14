@@ -306,11 +306,9 @@ class AtisSemanticParser(Model):
         try:
             self._cursor.execute(predicted)
             predicted_rows = self._cursor.fetchall()
-            self._has_logical_form(1.0)
         except sqlite3.Error as e:
             print("error when executing predicted")
             print(e)
-            self._has_logical_form(0.0)
             exit(0)
         
         try:
@@ -320,8 +318,11 @@ class AtisSemanticParser(Model):
             print("error when executing target")
             print(e)
             exit(0)
-        # return predicted_rows == target_rows
-        exit(predicted_rows == target_rows)
+
+        if predicted_rows == target_rows:
+            exit(1)
+        else:
+            exit(0)
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
@@ -431,26 +432,17 @@ class AtisSemanticParser(Model):
                 entities = linked_rules
                 entity_ids = [entity_map[entity] for entity in entities]
                 entity_linking_scores = linking_scores[entity_ids]
-                
                 entity_type_tensor = entity_types[entity_ids]
                 entity_type_embeddings = self._entity_type_decoder_embedding(entity_type_tensor)
                 entity_type_embeddings = entity_types.new_tensor(entity_type_embeddings, dtype=torch.float)
                 translated_valid_actions[key]['linked'] = (entity_linking_scores,
                                                            entity_type_embeddings,
                                                            list(linked_action_ids))
-
-        # Lastly, we need to also create embedded representations of context-specific actions.  In
-        # this case, those are only variable productions, like "r -> x".
-        context_actions = {}
-        for action_id, action in enumerate(possible_actions):
-            if action[0].endswith(" -> x"):
-                input_embedding = self._action_embedder(action[2])
-                output_embedding = self._output_action_embedder(action[2])
-                context_actions[action[0]] = (input_embedding, output_embedding, action_id)
+        
         return AtisGrammarState(['statement'],
                                 {},
                                 translated_valid_actions,
-                                context_actions,
+                                {},
                                 is_nonterminal)
 
     @overrides
@@ -495,7 +487,7 @@ class AtisSemanticParser(Model):
                 actions: List[List[ProductionRuleArray]],
                 linking_scores: torch.Tensor,
                 target_action_sequence: torch.LongTensor = None,
-                example_sql_query: str = None) -> Dict[str, torch.Tensor]:
+                example_sql_query: List[str] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         In this method we encode the table entities, link them to words in the utterance, then
@@ -590,6 +582,7 @@ class AtisSemanticParser(Model):
                     if example_sql_query[i]:
                         denotation_correct = 0
                         for query in example_sql_query[i]:
+                            print('processing query', query)
                             # Since the query might hang, we run in another process and kill it if it
                             # takes too long.
                             p = multiprocessing.Process(target=self._sql_result_match,
@@ -598,7 +591,7 @@ class AtisSemanticParser(Model):
 
                             # Wait 10 seconds for the query to finish
                             p.join(10)
-                            denotation_correct = denotation_correct | p.exitcode 
+                            denotation_correct = max(denotation_correct, p.exitcode)
                             if p.is_alive():
                                 print("Evaluating query took over 10 seconds, skipping query")
                                 p.terminate()
