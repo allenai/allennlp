@@ -781,6 +781,24 @@ class TestNnUtil(AllenNlpTestCase):
                             [[5 * 2 * 4 + 5 * 3 * 5, 2 * 2 * 4 + 2 * 3 * 5],
                              [4 * 1 * 4 + 4 * 1 * 5, 3 * 1 * 4 + 3 * 1 * 5]])
 
+    def test_combine_tensors_and_multiply_with_batch_size_one(self):
+        seq_len_1 = 10
+        seq_len_2 = 5
+        embedding_dim = 8
+
+        combination = "x,y,x*y"
+        t1 = torch.randn(1, seq_len_1, embedding_dim)
+        t2 = torch.randn(1, seq_len_2, embedding_dim)
+        combined_dim = util.get_combined_dim(combination, [embedding_dim, embedding_dim])
+        weight = torch.Tensor(combined_dim)
+
+        result = util.combine_tensors_and_multiply(combination, [t1.unsqueeze(2), t2.unsqueeze(1)], weight)
+
+        assert_almost_equal(
+                result.size(),
+                [1, seq_len_1, seq_len_2]
+        )
+
     def test_has_tensor(self):
         # pylint: disable=bad-continuation
         has_tensor = util.has_tensor
