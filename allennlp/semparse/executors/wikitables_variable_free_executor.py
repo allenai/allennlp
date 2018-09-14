@@ -5,6 +5,7 @@ import logging
 from overrides import overrides
 
 from allennlp.semparse.worlds.world import ExecutionError
+from allennlp.semparse.contexts.table_question_knowledge_graph import MONTH_NUMBERS
 from allennlp.semparse.executors.executor import Executor, NestedList
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -109,20 +110,58 @@ class WikiTablesVariableFreeExecutor(Executor):
             return []
         return [row[column_name] for row in row_list]
 
-    def _get_numbers_row_pairs_to_filter(self, expression_list: NestedList) -> List[Tuple[float,
-                                                                                          Dict[str, str]]]:
-
+    def _get_number_row_pairs_to_filter(self, expression_list: NestedList) -> List[Tuple[Union[float, Date],
+                                                                                         Dict[str, str]]]:
+        """
+        Helper method that takes an expression that evaluates to a row list and a column name, and
+        returns a list of tuples, each containing as the first element a number or a date taken from
+        that column, and the corresponding row as the second element. The output can be used to
+        compare rows based on the numbers or the dates.
+        """
         row_list, column_name = self._get_row_list_and_column_name(expression_list)
         if not row_list:
             return []
-        try:
-            # TODO(pradeep): Deal with dates as well. All the "filter_number_*" functions will work
-            # with dates too then, and we can merge them with "filter_date_*" functions.
-            cell_row_pairs = [(float(row[column_name].replace('fb:cell.', '')), row) for row in row_list]
-        except ValueError:
-            # This means that at least one of the cells is not numerical.
-            return []
+        # We try to figure out if the values being compared are simple numbers or dates. We use
+        # simple rules here: that the string contains less than 4 parts, and one of the parts is a
+        # month name. Note that this will not consider strings with just years as dates. That's fine
+        # because we can compare them as numbers.
+        # TODO (pradeep): This will be unnecessary when we have column types identified.
+        values_are_dates = False
+        # Apply rules on the first cell only, and assume the decision applies to the remaining cells
+        # as well.
+        cell_value_parts = row_list[0][column_name].replace('fb:cell.', '').split('_')
+        # Check if the number of parts in the string are 3 or fewer. If not, it's probably neither a
+        # date nor a number.
+        if len(cell_value_parts) <= 3:
+            for part in cell_value_parts:
+                if part in MONTH_NUMBERS:
+                    values_are_dates = True
+        if values_are_dates:
+            cell_row_pairs = [(self._make_date(row[column_name].replace('fb:cell.', '')), row)
+                              for row in row_list]
+        else:
+            try:
+                cell_row_pairs = [(float(row[column_name].replace('fb:cell.', '')), row) for row in row_list]
+            except ValueError:
+                # This means that at least one of the cells is not numerical.
+                return []
         return cell_row_pairs
+
+    @staticmethod
+    def _make_date(cell_string: str) -> Date:
+        string_parts = cell_string.split("_")
+        year = -1
+        month = -1
+        day = -1
+        for part in string_parts:
+            if part.isdigit():
+                if len(part) == 4:
+                    year = int(part)
+                else:
+                    day = int(part)
+            elif part in MONTH_NUMBERS:
+                month = MONTH_NUMBERS[part]
+        return Date(year, month, day)
 
     def _argmax(self, expression_list: NestedList) -> List[Dict[str, str]]:
         """
@@ -131,7 +170,7 @@ class WikiTablesVariableFreeExecutor(Executor):
         the given column. We return a list instead of a single dict to be consistent with the return
         type of `_select` and `_all_rows`.
         """
-        cell_row_pairs = self._get_numbers_row_pairs_to_filter(expression_list)
+        cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         if not cell_row_pairs:
             return []
         # Returns a list containing the row with the max cell value.
@@ -144,7 +183,7 @@ class WikiTablesVariableFreeExecutor(Executor):
         the given column. We return a list instead of a single dict to be consistent with the return
         type of `_select` and `_all_rows`.
         """
-        cell_row_pairs = self._get_numbers_row_pairs_to_filter(expression_list)
+        cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         if not cell_row_pairs:
             return []
         # Returns a list containing the row with the min cell value.
@@ -156,9 +195,9 @@ class WikiTablesVariableFreeExecutor(Executor):
         returns all the rows where the value in that column is greater than the given value.
         """
         return_list = []
-        cell_row_pairs = self._get_numbers_row_pairs_to_filter(expression_list)
+        cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         filter_value = self._handle_expression(expression_list[2])
-        if not isinstance(filter_value, float):
+        if not isinstance(filter_value, (float, Date)):
             logger.error("Invalid filter value: %s", expression_list[2])
             raise ExecutionError(f"Invalid filter value: {expression_list[2]}")
         for cell_value, row in cell_row_pairs:
@@ -172,7 +211,7 @@ class WikiTablesVariableFreeExecutor(Executor):
         returns all the rows where the value in that column is greater than or equal to the given value.
         """
         return_list = []
-        cell_row_pairs = self._get_numbers_row_pairs_to_filter(expression_list)
+        cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         filter_value = self._handle_expression(expression_list[2])
         if not isinstance(filter_value, float):
             logger.error("Invalid filter value: %s", expression_list[2])
@@ -188,7 +227,7 @@ class WikiTablesVariableFreeExecutor(Executor):
         returns all the rows where the value in that column is lesser than the given value.
         """
         return_list = []
-        cell_row_pairs = self._get_numbers_row_pairs_to_filter(expression_list)
+        cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         filter_value = self._handle_expression(expression_list[2])
         if not isinstance(filter_value, float):
             logger.error("Invalid filter value: %s", expression_list[2])
@@ -204,7 +243,7 @@ class WikiTablesVariableFreeExecutor(Executor):
         returns all the rows where the value in that column is lesser than or equal to the given value.
         """
         return_list = []
-        cell_row_pairs = self._get_numbers_row_pairs_to_filter(expression_list)
+        cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         filter_value = self._handle_expression(expression_list[2])
         if not isinstance(filter_value, float):
             logger.error("Invalid filter value: %s", expression_list[2])
@@ -220,7 +259,7 @@ class WikiTablesVariableFreeExecutor(Executor):
         returns all the rows where the value in that column equals the given value.
         """
         return_list = []
-        cell_row_pairs = self._get_numbers_row_pairs_to_filter(expression_list)
+        cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         filter_value = self._handle_expression(expression_list[2])
         if not isinstance(filter_value, float):
             logger.error("Invalid filter value: %s", expression_list[2])
@@ -236,7 +275,7 @@ class WikiTablesVariableFreeExecutor(Executor):
         returns all the rows where the value in that column is not equal to the given value.
         """
         return_list = []
-        cell_row_pairs = self._get_numbers_row_pairs_to_filter(expression_list)
+        cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         filter_value = self._handle_expression(expression_list[2])
         if not isinstance(filter_value, float):
             logger.error("Invalid filter value: %s", expression_list[2])
@@ -362,7 +401,7 @@ class WikiTablesVariableFreeExecutor(Executor):
         Takes an expression list that evaluates to a  list of rows and a column, and returns the max
         of the values under that column in those rows.
         """
-        cell_row_pairs = self._get_numbers_row_pairs_to_filter(expression_list)
+        cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         if not cell_row_pairs:
             return 0.0
         return max([value for value, _ in cell_row_pairs])
@@ -372,7 +411,7 @@ class WikiTablesVariableFreeExecutor(Executor):
         Takes an expression list that evaluates to a  list of rows and a column, and returns the min
         of the values under that column in those rows.
         """
-        cell_row_pairs = self._get_numbers_row_pairs_to_filter(expression_list)
+        cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         if not cell_row_pairs:
             return 0.0
         return min([value for value, _ in cell_row_pairs])
@@ -382,7 +421,7 @@ class WikiTablesVariableFreeExecutor(Executor):
         Takes an expression list that evaluates to a  list of rows and a column, and returns the sum
         of the values under that column in those rows.
         """
-        cell_row_pairs = self._get_numbers_row_pairs_to_filter(expression_list)
+        cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         if not cell_row_pairs:
             return 0.0
         return sum([value for value, _ in cell_row_pairs])
@@ -392,7 +431,7 @@ class WikiTablesVariableFreeExecutor(Executor):
         Takes an expression list that evaluates to a  list of rows and a column, and returns the mean
         of the values under that column in those rows.
         """
-        cell_row_pairs = self._get_numbers_row_pairs_to_filter(expression_list)
+        cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         if not cell_row_pairs:
             return 0.0
         return sum([value for value, _ in cell_row_pairs]) / len(cell_row_pairs)

@@ -19,6 +19,9 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         self.table_file = self.FIXTURES_ROOT / 'data' / 'wikitables' / 'sample_table.tsv'
         self.table_kg = TableQuestionKnowledgeGraph.read_from_file(self.table_file, question_tokens)
         self.world = WikiTablesVariableFreeWorld(self.table_kg)
+        table_file_with_date = self.FIXTURES_ROOT / 'data' / 'wikitables' / 'sample_table_with_date.tsv'
+        table_kg_with_date = TableQuestionKnowledgeGraph.read_from_file(table_file_with_date, question_tokens)
+        self.world_with_date = WikiTablesVariableFreeWorld(table_kg_with_date)
 
     def test_get_valid_actions_returns_correct_set(self):
         # This test is long, but worth it.  These are all of the valid actions in the grammar, and
@@ -215,6 +218,11 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         cell_list = self.world.execute(logical_form)
         assert cell_list == ['fb:cell.usl_a_league']
 
+    def test_execute_works_with_argmax_on_dates(self):
+        logical_form = "(select (argmax all_rows fb:row.row.year) fb:row.row.league)"
+        cell_list = self.world.execute(logical_form)
+        assert cell_list == ['fb:cell.usl_first_division']
+
     def test_execute_works_with_argmin(self):
         logical_form = "(select (argmin all_rows fb:row.row.avg_attendance) fb:row.row.year)"
         cell_list = self.world.execute(logical_form)
@@ -227,6 +235,14 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
                                    (min all_rows fb:row.row.avg_attendance)) fb:row.row.league)"""
         cell_value_list = self.world.execute(logical_form)
         assert cell_value_list == ['fb:cell.usl_a_league']
+
+    def test_execute_works_with_filter_greater_with_date(self):
+        # Selecting cell values from all rows that have attendance greater than the min value of
+        # attendance.
+        logical_form = """(select (filter_number_greater all_rows fb:row.row.date
+                                   (date 2002 -1 -1)) fb:row.row.league)"""
+        cell_value_list = self.world_with_date.execute(logical_form)
+        assert cell_value_list == ['fb:cell.usl_first_division']
 
     def test_execute_works_with_filter_number_greater_equals(self):
         # Counting rows that have attendance greater than or equal to the min value of attendance.
