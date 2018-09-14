@@ -48,7 +48,7 @@ AllenNLP installs a script when you install the python package, meaning you can 
 
 You can now test your installation with `./scripts/verify.py`.
 
-_`pip` currently installs Pytorch for CUDA 8 only (or no GPU). If you require a newer version,
+_`pip` currently installs Pytorch for CUDA 9 only (or no GPU). If you require an older version,
 please visit http://pytorch.org/ and install the relevant pytorch binary._
 
 ### Installing using Docker

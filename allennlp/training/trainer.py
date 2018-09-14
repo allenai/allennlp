@@ -25,7 +25,7 @@ from tensorboardX import SummaryWriter
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import peak_memory_mb, gpu_memory_mb
+from allennlp.common.util import peak_memory_mb, gpu_memory_mb, dump_metrics
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -740,9 +740,10 @@ class Trainer:
 
         train_metrics: Dict[str, float] = {}
         val_metrics: Dict[str, float] = {}
-        best_epoch_val_metrics: Dict[str, float] = {}
+        metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()
+
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
@@ -758,8 +759,6 @@ class Trainer:
 
                     # Check validation metric to see if it's the best so far
                     is_best_so_far = self._is_best_so_far(this_epoch_val_metric, validation_metric_per_epoch)
-                    if is_best_so_far:
-                        best_epoch_val_metrics = val_metrics.copy()
                     validation_metric_per_epoch.append(this_epoch_val_metric)
                     if self._should_stop_early(validation_metric_per_epoch):
                         logger.info("Ran out of patience.  Stopping training.")
@@ -769,11 +768,32 @@ class Trainer:
                 # No validation set, so just assume it's the best so far.
                 is_best_so_far = True
                 val_metrics = {}
-                best_epoch_val_metrics = {}
                 this_epoch_val_metric = None
 
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
             self._metrics_to_console(train_metrics, val_metrics)
+
+            # Create overall metrics dict
+            training_elapsed_time = time.time() - training_start_time
+            metrics["training_duration"] = time.strftime("%H:%M:%S", time.gmtime(training_elapsed_time))
+            metrics["training_start_epoch"] = epoch_counter
+            metrics["training_epochs"] = epochs_trained
+            metrics["epoch"] = epoch
+
+            for key, value in train_metrics.items():
+                metrics["training_" + key] = value
+            for key, value in val_metrics.items():
+                metrics["validation_" + key] = value
+
+            if is_best_so_far:
+                # Update all the best_ metrics.
+                # (Otherwise they just stay the same as they were.)
+                metrics['best_epoch'] = epoch
+                for key, value in val_metrics.items():
+                    metrics["best_validation_" + key] = value
+
+            if self._serialization_dir:
+                dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), metrics)
 
             if self._learning_rate_scheduler:
                 # The LRScheduler API is agnostic to whether your schedule requires a validation metric -
@@ -794,26 +814,6 @@ class Trainer:
 
             epochs_trained += 1
 
-        training_elapsed_time = time.time() - training_start_time
-        metrics = {
-                "training_duration": time.strftime("%H:%M:%S", time.gmtime(training_elapsed_time)),
-                "training_start_epoch": epoch_counter,
-                "training_epochs": epochs_trained
-        }
-        for key, value in train_metrics.items():
-            metrics["training_" + key] = value
-        for key, value in val_metrics.items():
-            metrics["validation_" + key] = value
-
-        if validation_metric_per_epoch:
-            # We may not have had validation data, so we need to hide this behind an if.
-            if self._validation_metric_decreases:
-                best_validation_metric = min(validation_metric_per_epoch)
-            else:
-                best_validation_metric = max(validation_metric_per_epoch)
-            metrics.update({f"best_validation_{k}": v for k, v in best_epoch_val_metrics.items()})
-            metrics['best_epoch'] = [i for i, value in enumerate(validation_metric_per_epoch)
-                                     if value == best_validation_metric][-1]
         return metrics
 
     def _is_best_so_far(self,
@@ -1032,6 +1032,8 @@ class Trainer:
         model_save_interval = params.pop_float("model_save_interval", None)
         summary_interval = params.pop_int("summary_interval", 100)
         histogram_interval = params.pop_int("histogram_interval", None)
+        should_log_parameter_statistics = params.pop_bool("should_log_parameter_statistics", True)
+        should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
 
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
@@ -1050,4 +1052,6 @@ class Trainer:
                        keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
                        model_save_interval=model_save_interval,
                        summary_interval=summary_interval,
-                       histogram_interval=histogram_interval)
+                       histogram_interval=histogram_interval,
+                       should_log_parameter_statistics=should_log_parameter_statistics,
+                       should_log_learning_rate=should_log_learning_rate)
