@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,protected-access
 import json
 import tarfile
 
@@ -7,6 +7,7 @@ import pytest
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token
 from allennlp.data.token_indexers import OpenaiTransformerBytePairIndexer
+from allennlp.data.vocabulary import Vocabulary
 
 
 class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
@@ -39,6 +40,7 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
             tf.add(bpe_path, 'model/vocab_40000.bpe')
 
         self.indexer = OpenaiTransformerBytePairIndexer(encoding, byte_pairs)
+        self.vocab = Vocabulary(non_padded_namespaces=['openai_transformer'])
 
     def test_bpe(self):
 
@@ -63,7 +65,17 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
     def test_tokens_to_indices(self):
         tokens = [Token('ewoe'), Token('woe'), Token('ewe'), Token('ee')]
 
-        indices = self.indexer.tokens_to_indices(tokens, None, 'test')
+        # vocab should be empty initially
+        assert 'openai_transformer' not in self.vocab._index_to_token
+        assert 'openai_transformer' not in self.vocab._token_to_index
+
+        indices = self.indexer.tokens_to_indices(tokens, self.vocab, 'test')
+
+        # vocab should be full now
+        i2t = self.vocab._index_to_token.get('openai_transformer')
+        t2i = self.vocab._token_to_index.get('openai_transformer')
+        assert len(i2t) == 5 * 5 * 2
+        assert len(t2i) == 5 * 5 * 2
 
         assert set(indices.keys()) == {"test", "test-offsets", "mask"}
 
@@ -86,4 +98,4 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
         tokens = [Token('a') for _ in range(513)]
 
         with pytest.raises(RuntimeError):
-            self.indexer.tokens_to_indices(tokens, None, 'should-fail')
+            self.indexer.tokens_to_indices(tokens, self.vocab, 'should-fail')

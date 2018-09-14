@@ -513,9 +513,28 @@ class TestNnUtil(AllenNlpTestCase):
 
         loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights)
 
-        vector_loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, batch_average=False)
+        vector_loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, average=None)
         # Batch has one completely padded row, so divide by 4.
         assert loss.data.numpy() == vector_loss.data.sum() / 4
+
+    def test_sequence_cross_entropy_with_logits_averages_token_correctly(self):
+        # test token average is the same as multiplying the per-batch loss
+        # with the per-batch weights and dividing by the total weight
+        tensor = torch.rand([5, 7, 4])
+        tensor[0, 3:, :] = 0
+        tensor[1, 4:, :] = 0
+        tensor[2, 2:, :] = 0
+        tensor[3, :, :] = 0
+        weights = (tensor != 0.0)[:, :, 0].long().squeeze(-1)
+        targets = torch.LongTensor(numpy.random.randint(0, 3, [5, 7]))
+        targets *= weights
+
+        loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, average="token")
+
+        vector_loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, batch_average=False)
+        total_token_loss = (vector_loss * weights.float().sum(dim=-1)).sum()
+        average_token_loss = (total_token_loss / weights.float().sum()).detach()
+        assert_almost_equal(loss.detach()[0], average_token_loss[0])
 
     def test_replace_masked_values_replaces_masked_values_with_finite_value(self):
         tensor = torch.FloatTensor([[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]])
@@ -761,3 +780,55 @@ class TestNnUtil(AllenNlpTestCase):
         assert_almost_equal(util.combine_tensors_and_multiply(combination, tensors, weight),
                             [[5 * 2 * 4 + 5 * 3 * 5, 2 * 2 * 4 + 2 * 3 * 5],
                              [4 * 1 * 4 + 4 * 1 * 5, 3 * 1 * 4 + 3 * 1 * 5]])
+
+    def test_combine_tensors_and_multiply_with_batch_size_one(self):
+        seq_len_1 = 10
+        seq_len_2 = 5
+        embedding_dim = 8
+
+        combination = "x,y,x*y"
+        t1 = torch.randn(1, seq_len_1, embedding_dim)
+        t2 = torch.randn(1, seq_len_2, embedding_dim)
+        combined_dim = util.get_combined_dim(combination, [embedding_dim, embedding_dim])
+        weight = torch.Tensor(combined_dim)
+
+        result = util.combine_tensors_and_multiply(combination, [t1.unsqueeze(2), t2.unsqueeze(1)], weight)
+
+        assert_almost_equal(
+                result.size(),
+                [1, seq_len_1, seq_len_2]
+        )
+
+    def test_has_tensor(self):
+        # pylint: disable=bad-continuation
+        has_tensor = util.has_tensor
+        tensor = torch.tensor([1, 2, 3])
+
+        assert has_tensor(["a", 10, tensor])
+        assert not has_tensor(["a", 10])
+
+        assert has_tensor(("a", 10, tensor))
+        assert not has_tensor(("a", 10))
+
+        assert has_tensor({"a": tensor, "b": 1})
+        assert not has_tensor({"a": 10, "b": 1})
+
+        assert has_tensor(tensor)
+        assert not has_tensor(3)
+
+        assert has_tensor({
+            "x": [
+                0,
+                {
+                    "inside": {
+                        "double_inside": [
+                            3,
+                            [
+                                10,
+                                tensor
+                            ]
+                        ]
+                    }
+                }
+            ]
+        })

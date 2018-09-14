@@ -88,8 +88,7 @@ class DataIterator(Registrable):
     def __call__(self,
                  instances: Iterable[Instance],
                  num_epochs: int = None,
-                 shuffle: bool = True,
-                 cuda_device: int = -1) -> Iterator[TensorDict]:
+                 shuffle: bool = True) -> Iterator[TensorDict]:
         """
         Returns a generator that yields batches over the given dataset
         for the given number of epochs. If ``num_epochs`` is not specified,
@@ -108,9 +107,6 @@ class DataIterator(Registrable):
         shuffle : ``bool``, optional (default=``True``)
             If ``True``, we will shuffle the instances in ``dataset`` before constructing batches
             and iterating over the data.
-        cuda_device : ``int``
-            If cuda_device >= 0, GPUs are available and Pytorch was compiled with CUDA support, the
-            tensor will be copied to the cuda_device specified.
         """
         # Instances is likely to be a list, which cannot be used as a key,
         # so we take the object id instead.
@@ -154,8 +150,7 @@ class DataIterator(Registrable):
                     padding_lengths = batch.get_padding_lengths()
                     logger.debug("Batch padding lengths: %s", str(padding_lengths))
                     logger.debug("Batch size: %d", len(batch.instances))
-                    tensor_dict = batch.as_tensor_dict(padding_lengths,
-                                                       cuda_device=cuda_device)
+                    tensor_dict = batch.as_tensor_dict(padding_lengths)
 
                     if add_to_cache:
                         self._cache[key].append(tensor_dict)
@@ -243,6 +238,11 @@ class DataIterator(Registrable):
         padding_length = -1
         list_batch_instances = list(batch_instances)
         for instance in list_batch_instances:
+            if self.vocab is not None:
+                # we index here to ensure that shape information is available,
+                # as in some cases (with self._maximum_samples_per_batch)
+                # we need access to shaping information before batches are constructed)
+                instance.index_fields(self.vocab)
             field_lengths = instance.get_padding_lengths()
             for _, lengths in field_lengths.items():
                 try:
