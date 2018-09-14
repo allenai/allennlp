@@ -49,9 +49,19 @@ allennlp elmo sentences.txt elmo_layers.hdf5 --all
 If you'd like to use the ELMo embeddings without keeping the original dataset of
 sentences around, using the `--include-sentence-indices` flag will write a
 JSON-serialized string with a mapping from sentences to line indices to the
-`"sentence_indices"` key.
+`"sentence_indices"` key.  For more details on command-line arguments, see 
+`allennlp elmo -h`. 
 
-For more details, see `allennlp elmo -h`. 
+Once you've written out ELMo vectors to HDF5, you can read them with various HDF5
+libraries, such as h5py:
+
+```
+> import h5py
+> h5py_file = h5py.File("elmo_layers.hdf5", 'r')
+> embedding = h5py_file.get("0")
+> assert(len(embedding) == 3) # one layer for each vector
+> assert(len(embedding[0]) == 16) # one entry for each word in the source sentence
+```
 
 ## Using ELMo programmatically
 
