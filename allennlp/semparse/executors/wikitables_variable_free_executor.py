@@ -110,41 +110,37 @@ class WikiTablesVariableFreeExecutor(Executor):
             return []
         return [row[column_name] for row in row_list]
 
-    def _get_number_row_pairs_to_filter(self, expression_list: NestedList) -> List[Tuple[Union[float, Date],
+    def _get_number_row_pairs_to_filter(self, expression_list: NestedList) -> List[Tuple[float,
                                                                                          Dict[str, str]]]:
         """
         Helper method that takes an expression that evaluates to a row list and a column name, and
-        returns a list of tuples, each containing as the first element a number or a date taken from
+        returns a list of tuples, each containing as the first element a number taken from
         that column, and the corresponding row as the second element. The output can be used to
-        compare rows based on the numbers or the dates.
+        compare rows based on the numbers.
         """
         row_list, column_name = self._get_row_list_and_column_name(expression_list)
         if not row_list:
             return []
-        # We try to figure out if the values being compared are simple numbers or dates. We use
-        # simple rules here: that the string contains less than 4 parts, and one of the parts is a
-        # month name. Note that this will not consider strings with just years as dates. That's fine
-        # because we can compare them as numbers.
-        # TODO (pradeep): This will be unnecessary when we have column types identified.
-        values_are_dates = False
-        # Apply rules on the first cell only, and assume the decision applies to the remaining cells
-        # as well.
-        cell_value_parts = row_list[0][column_name].replace('fb:cell.', '').split('_')
-        # Check if the number of parts in the string are 3 or fewer. If not, it's probably neither a
-        # date nor a number.
-        if len(cell_value_parts) <= 3:
-            for part in cell_value_parts:
-                if part in MONTH_NUMBERS:
-                    values_are_dates = True
-        if values_are_dates:
-            cell_row_pairs = [(self._make_date(row[column_name].replace('fb:cell.', '')), row)
-                              for row in row_list]
-        else:
-            try:
-                cell_row_pairs = [(float(row[column_name].replace('fb:cell.', '')), row) for row in row_list]
-            except ValueError:
-                # This means that at least one of the cells is not numerical.
-                return []
+        try:
+            cell_row_pairs = [(float(row[column_name].replace('fb:cell.', '')), row) for row in row_list]
+        except ValueError:
+            # This means that at least one of the cells is not numerical.
+            return []
+        return cell_row_pairs
+
+    def _get_date_row_pairs_to_filter(self, expression_list: NestedList) -> List[Tuple[Date,
+                                                                                       Dict[str, str]]]:
+        """
+        Helper method that takes an expression that evaluates to a row list and a column name, and
+        returns a list of tuples, each containing as the first element a date taken from
+        that column, and the corresponding row as the second element. The output can be used to
+        compare rows based on the dates.
+        """
+        row_list, column_name = self._get_row_list_and_column_name(expression_list)
+        if not row_list:
+            return []
+        cell_row_pairs = [(self._make_date(row[column_name].replace('fb:cell.', '')), row)
+                          for row in row_list]
         return cell_row_pairs
 
     @staticmethod
@@ -163,6 +159,27 @@ class WikiTablesVariableFreeExecutor(Executor):
                 month = MONTH_NUMBERS[part]
         return Date(year, month, day)
 
+    def _values_look_like_dates(self, expression_list: NestedList) -> bool:
+        # TODO (pradeep): This will be unnecessary when we have column types identified.
+        row_list, column_name = self._get_row_list_and_column_name(expression_list)
+        if not row_list:
+            return False
+        # We try to figure out if the values being compared are simple numbers or dates. We use
+        # simple rules here: that the string contains less than 4 parts, and one of the parts is a
+        # month name. Note that this will not consider strings with just years as dates. That's fine
+        # because we can compare them as numbers.
+        values_are_dates = False
+        # Apply rules on the first cell only, and assume the decision applies to the remaining cells
+        # as well.
+        cell_value_parts = row_list[0][column_name].replace('fb:cell.', '').split('_')
+        # Check if the number of parts in the string are 3 or fewer. If not, it's probably neither a
+        # date nor a number.
+        if len(cell_value_parts) <= 3:
+            for part in cell_value_parts:
+                if part in MONTH_NUMBERS:
+                    values_are_dates = True
+        return values_are_dates
+
     def _argmax(self, expression_list: NestedList) -> List[Dict[str, str]]:
         """
         Takes a list of rows and a column (decoded from the `expression_list`) and returns a list
@@ -170,7 +187,10 @@ class WikiTablesVariableFreeExecutor(Executor):
         the given column. We return a list instead of a single dict to be consistent with the return
         type of `_select` and `_all_rows`.
         """
-        cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
+        if self._values_look_like_dates(expression_list):
+            cell_row_pairs = self._get_date_row_pairs_to_filter(expression_list)
+        else:
+            cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         if not cell_row_pairs:
             return []
         # Returns a list containing the row with the max cell value.
@@ -183,7 +203,10 @@ class WikiTablesVariableFreeExecutor(Executor):
         the given column. We return a list instead of a single dict to be consistent with the return
         type of `_select` and `_all_rows`.
         """
-        cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
+        if self._values_look_like_dates(expression_list):
+            cell_row_pairs = self._get_date_row_pairs_to_filter(expression_list)
+        else:
+            cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         if not cell_row_pairs:
             return []
         # Returns a list containing the row with the min cell value.
@@ -197,7 +220,7 @@ class WikiTablesVariableFreeExecutor(Executor):
         return_list = []
         cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         filter_value = self._handle_expression(expression_list[2])
-        if not isinstance(filter_value, (float, Date)):
+        if not isinstance(filter_value, float):
             logger.error("Invalid filter value: %s", expression_list[2])
             raise ExecutionError(f"Invalid filter value: {expression_list[2]}")
         for cell_value, row in cell_row_pairs:
@@ -278,6 +301,104 @@ class WikiTablesVariableFreeExecutor(Executor):
         cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
         filter_value = self._handle_expression(expression_list[2])
         if not isinstance(filter_value, float):
+            logger.error("Invalid filter value: %s", expression_list[2])
+            raise ExecutionError(f"Invalid filter value: {expression_list[2]}")
+        for cell_value, row in cell_row_pairs:
+            if cell_value != filter_value:
+                return_list.append(row)
+        return return_list
+
+    # Note that the following six methods are identical to the ones above, except that the filter
+    # values are obtained from `_get_date_row_pairs_to_filter`.
+    def _filter_date_greater(self, expression_list: NestedList) -> List[Dict[str, str]]:
+        """
+        Takes a list of rows, a column, and a date value (decoded from `expression_list`) and
+        returns all the rows where the value in that column is greater than the given value.
+        """
+        return_list = []
+        cell_row_pairs = self._get_date_row_pairs_to_filter(expression_list)
+        filter_value = self._handle_expression(expression_list[2])
+        if not isinstance(filter_value, Date):
+            logger.error("Invalid filter value: %s", expression_list[2])
+            raise ExecutionError(f"Invalid filter value: {expression_list[2]}")
+        for cell_value, row in cell_row_pairs:
+            if cell_value > filter_value:
+                return_list.append(row)
+        return return_list
+
+    def _filter_date_greater_equals(self, expression_list: NestedList) -> List[Dict[str, str]]:
+        """
+        Takes a list of rows, a column, and a date value (decoded from `expression_list`) and
+        returns all the rows where the value in that column is greater than or equal to the given value.
+        """
+        return_list = []
+        cell_row_pairs = self._get_date_row_pairs_to_filter(expression_list)
+        filter_value = self._handle_expression(expression_list[2])
+        if not isinstance(filter_value, Date):
+            logger.error("Invalid filter value: %s", expression_list[2])
+            raise ExecutionError(f"Invalid filter value: {expression_list[2]}")
+        for cell_value, row in cell_row_pairs:
+            if cell_value >= filter_value:
+                return_list.append(row)
+        return return_list
+
+    def _filter_date_lesser(self, expression_list: NestedList) -> List[Dict[str, str]]:
+        """
+        Takes a list of rows, a column, and a date value (decoded from `expression_list`) and
+        returns all the rows where the value in that column is lesser than the given value.
+        """
+        return_list = []
+        cell_row_pairs = self._get_date_row_pairs_to_filter(expression_list)
+        filter_value = self._handle_expression(expression_list[2])
+        if not isinstance(filter_value, Date):
+            logger.error("Invalid filter value: %s", expression_list[2])
+            raise ExecutionError(f"Invalid filter value: {expression_list[2]}")
+        for cell_value, row in cell_row_pairs:
+            if cell_value < filter_value:
+                return_list.append(row)
+        return return_list
+
+    def _filter_date_lesser_equals(self, expression_list: NestedList) -> List[Dict[str, str]]:
+        """
+        Takes a list of rows, a column, and a date value (decoded from `expression_list`) and
+        returns all the rows where the value in that column is lesser than or equal to the given value.
+        """
+        return_list = []
+        cell_row_pairs = self._get_date_row_pairs_to_filter(expression_list)
+        filter_value = self._handle_expression(expression_list[2])
+        if not isinstance(filter_value, Date):
+            logger.error("Invalid filter value: %s", expression_list[2])
+            raise ExecutionError(f"Invalid filter value: {expression_list[2]}")
+        for cell_value, row in cell_row_pairs:
+            if cell_value <= filter_value:
+                return_list.append(row)
+        return return_list
+
+    def _filter_date_equals(self, expression_list: NestedList) -> List[Dict[str, str]]:
+        """
+        Takes a list of rows, a column, and a date value (decoded from `expression_list`) and
+        returns all the rows where the value in that column equals the given value.
+        """
+        return_list = []
+        cell_row_pairs = self._get_date_row_pairs_to_filter(expression_list)
+        filter_value = self._handle_expression(expression_list[2])
+        if not isinstance(filter_value, Date):
+            logger.error("Invalid filter value: %s", expression_list[2])
+            raise ExecutionError(f"Invalid filter value: {expression_list[2]}")
+        for cell_value, row in cell_row_pairs:
+            if cell_value == filter_value:
+                return_list.append(row)
+        return return_list
+
+    def _filter_date_not_equals(self, expression_list: NestedList) -> List[Dict[str, str]]:
+        """
+        Takes a list of rows, a column, and a date value (decoded from `expression_list`) and
+        returns all the rows where the value in that column is not equal to the given value.
+        """
+        return_list = []
+        cell_row_pairs = self._get_date_row_pairs_to_filter(expression_list)
+        filter_value = self._handle_expression(expression_list[2])
+        if not isinstance(filter_value, Date):
             logger.error("Invalid filter value: %s", expression_list[2])
             raise ExecutionError(f"Invalid filter value: {expression_list[2]}")
         for cell_value, row in cell_row_pairs:
