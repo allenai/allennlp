@@ -5,6 +5,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import Token
 from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
 from allennlp.semparse.worlds import WikiTablesVariableFreeWorld
+from allennlp.semparse.executors.wikitables_variable_free_executor import Date
 
 
 def check_productions_match(actual_rules: List[str], expected_right_sides: List[str]):
@@ -219,14 +220,19 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         assert cell_list == ['fb:cell.usl_a_league']
 
     def test_execute_works_with_argmax_on_dates(self):
-        logical_form = "(select (argmax all_rows fb:row.row.year) fb:row.row.league)"
-        cell_list = self.world.execute(logical_form)
+        logical_form = "(select (argmax all_rows fb:row.row.date) fb:row.row.league)"
+        cell_list = self.world_with_date.execute(logical_form)
         assert cell_list == ['fb:cell.usl_first_division']
 
     def test_execute_works_with_argmin(self):
         logical_form = "(select (argmin all_rows fb:row.row.avg_attendance) fb:row.row.year)"
         cell_list = self.world.execute(logical_form)
         assert cell_list == ['fb:cell.2005']
+
+    def test_execute_works_with_argmin_on_dates(self):
+        logical_form = "(select (argmin all_rows fb:row.row.date) fb:row.row.league)"
+        cell_list = self.world_with_date.execute(logical_form)
+        assert cell_list == ['fb:cell.usl_a_league']
 
     def test_execute_works_with_filter_number_greater(self):
         # Selecting cell values from all rows that have attendance greater than the min value of
@@ -402,3 +408,9 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
                                 fb:row.row.avg_attendance)"""
         avg_value = self.world.execute(logical_form)
         assert avg_value == 1141
+
+    def test_date_comparison_works(self):
+        assert Date(2013, 12, 31) > Date(2013, 12, 30)
+        assert Date(2013, 12, 31) == Date(2013, 12, -1)
+        assert Date(2013, -1, -1) >= Date(2013, 12, 31)
+        assert Date(2013, 12, 31) != 2013
