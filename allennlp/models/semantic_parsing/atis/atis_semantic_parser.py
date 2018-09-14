@@ -141,7 +141,6 @@ class AtisSemanticParser(Model):
         self._num_entity_types = 2  # TODO(mattg): get this in a more principled way somehow?
         self._num_start_types = 1  # TODO(mattg): get this in a more principled way somehow?
         self._embedding_dim = utterance_embedder.get_output_dim()
-        # self._entity_type_encoder_embedding = Embedding(self._num_entity_types, self._embedding_dim)
         self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
         
         self._beam_search = decoder_beam_search
@@ -157,7 +156,7 @@ class AtisSemanticParser(Model):
 
     def _get_initial_state_and_scores(self,
                                       utterance: Dict[str, torch.LongTensor],
-                                      world: List[AtisWorld],
+                                      worlds: List[AtisWorld],
                                       actions: List[List[ProductionRuleArray]],
                                       linking_scores: torch.Tensor,
                                       add_world_to_initial_state: bool = False,
@@ -170,14 +169,10 @@ class AtisSemanticParser(Model):
 
         num_utterance_tokens = embedded_utterance.size(1)
 
-        num_entities = 0
-        for w in world:
-            num_entities = max(len(w.entities), num_entities)
-        # entity_types: one-hot tensor with shape (batch_size, num_entities, num_types)
-        # Actually, I think entity_types might be of shape (batch_size, num_entities)
-        entity_types, entity_type_dict = self._get_type_vector(world, num_entities, embedded_utterance)
-        # entity_type_embeddings = self._entity_type_encoder_embedding(entity_types)
-        # entity_embeddings = torch.nn.functional.tanh(entity_type_embeddings) # Maybe leave out embedding
+        num_entities = max([len(world.entities) for world in worlds])
+
+        # entity_types: tensor with shape (batch_size, num_entities)
+        entity_types, entity_type_dict = self._get_type_vector(worlds, num_entities, embedded_utterance)
 
         # (batch_size, num_utterance_tokens, embedding_dim)
         encoder_input = embedded_utterance
@@ -211,13 +206,13 @@ class AtisSemanticParser(Model):
                                               encoder_output_list,
                                               utterance_mask_list))
 
-        initial_grammar_state = [self._create_grammar_state(world[i],
+        initial_grammar_state = [self._create_grammar_state(worlds[i],
                                                             actions[i],
                                                             linking_scores[i],
                                                             entity_types[i])
                                  for i in range(batch_size)]
 
-        initial_state_world = world if add_world_to_initial_state else None
+        initial_state_world = worlds if add_world_to_initial_state else None
         initial_state = GrammarBasedDecoderState(batch_indices=list(range(batch_size)),
                                                  action_history=[[] for _ in range(batch_size)],
                                                  score=initial_score_list,
