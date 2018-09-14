@@ -40,6 +40,9 @@ from allennlp.data.fields import TextField, SequenceLabelField
 #### Typically to solve a problem like this using AllenNLP, you'll have to implement two classes. The first is a <a href ="https://allenai.github.io/allennlp-docs/api/allennlp.data.dataset_readers.html">DatasetReader</a>, which contains the logic for reading a file of data and producing a stream of <code>Instance</code>s.
 from allennlp.data.dataset_readers import DatasetReader
 
+#### Frequently we'll want to load datasets or models from URLs. The <code>cached_path</code> helper downloads such files, caches them locally, and returns the local path. It also accepts local file paths (which it just returns as-is).
+from allennlp.common.file_utils import cached_path
+
 #### There are various ways to represent a word as one or more indices. For example, you might maintain a vocabulary of unique words and give each word a corresponding id. Or you might have one id per character in the word and represent each word as a sequence of ids. AllenNLP uses a has a <code>TokenIndexer</code> abstraction for this representation.
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
@@ -124,7 +127,7 @@ class LstmTagger(Model):
     #### Next we need to implement <code>forward</code>, which is where the actual computation happens. Each <code>Instance</code> in your dataset will get (batched with other instances and) fed into <code>forward</code>. The <code>forward</code> method expects dicts of tensors as input, and it expects their names to be the names of the fields in your <code>Instance</code>. In this case we have a sentence field and (possibly) a labels field, so we'll construct our <code>forward</code> accordingly:
     def forward(self,
                 sentence: Dict[str, torch.Tensor],
-                labels: Dict[str, torch.Tensor] = None) -> torch.Tensor:
+                labels: torch.Tensor = None) -> torch.Tensor:
         #### AllenNLP is designed to operate on batched inputs, but different input sequences have different lengths. Behind the scenes AllenNLP is padding the shorter inputs so that the batch has uniform shape, which means our computations need to use a mask to exclude the padding. Here we just use the utility function <code>get_text_field_mask</code>, which returns a tensor of 0s and 1s corresponding to the padded and unpadded locations.
         mask = get_text_field_mask(sentence)
         #### We start by passing the <code>sentence</code> tensor (each sentence a sequence of token ids) to the <code>word_embeddings</code> module, which converts each sentence into a sequence of embedded tensors.
@@ -149,11 +152,13 @@ class LstmTagger(Model):
 
 #### Now that we've implemented a <code>DatasetReader</code> and <code>Model</code>, we're ready to train. We first need an instance of our dataset reader.
 reader = PosDatasetReader()
-#### Which we can use to read in the training data and validation data. Here we read them in from a URL, but you could read them in from local files if your data was local.
-train_dataset = reader.read('https://raw.githubusercontent.com/allenai/allennlp'
-                            '/master/tutorials/tagger/training.txt')
-validation_dataset = reader.read('https://raw.githubusercontent.com/allenai/allennlp'
-                                 '/master/tutorials/tagger/validation.txt')
+#### Which we can use to read in the training data and validation data. Here we read them in from a URL, but you could read them in from local files if your data was local. We use <code>cached_path</code> to cache the files locally (and to hand <code>reader.read</code> the path to the local cached version.)
+train_dataset = reader.read(cached_path(
+    'https://raw.githubusercontent.com/allenai/allennlp'
+    '/master/tutorials/tagger/training.txt'))
+validation_dataset = reader.read(cached_path(
+    'https://raw.githubusercontent.com/allenai/allennlp'
+    '/master/tutorials/tagger/validation.txt'))
 
 #### Once we've read in the datasets, we use them to create our <code>Vocabulary</code> (that is, the mapping[s] from tokens / labels to ids).
 vocab = Vocabulary.from_instances(train_dataset + validation_dataset)

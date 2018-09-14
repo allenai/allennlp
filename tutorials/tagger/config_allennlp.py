@@ -65,11 +65,12 @@ class LstmTagger(Model):
 
     def forward(self,
                 sentence: Dict[str, torch.Tensor],
-                labels: Dict[str, torch.Tensor] = None) -> torch.Tensor:        embeddings = self.word_embeddings(sentence)
+                labels: torch.Tensor = None) -> torch.Tensor:
         mask = get_text_field_mask(sentence)
         embeddings = self.word_embeddings(sentence)
         encoder_out = self.encoder(embeddings, mask)
         tag_logits = self.hidden2tag(encoder_out)
+        output = {"tag_logits": tag_logits}
 
         if labels is not None:
             self.accuracy(tag_logits, labels, mask)

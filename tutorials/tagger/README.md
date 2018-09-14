@@ -234,7 +234,7 @@ so we'll construct our `forward` accordingly:
 ```python
     def forward(self,
                 sentence: Dict[str, torch.Tensor],
-                labels: Dict[str, torch.Tensor] = None) -> torch.Tensor:
+                labels: torch.Tensor = None) -> torch.Tensor:
         mask = get_text_field_mask(sentence)
         embeddings = self.word_embeddings(sentence)
         encoder_out = self.encoder(embeddings, mask)
@@ -289,13 +289,17 @@ Now that we've implemented the `DatasetReader` and the `Model`, we're ready to t
 
 We'll start off by reading the data. Here we read them from URLs, but
 you could also read them from local files if you had the data locally.
+The `cached_path` helper downloads the files at the URLs to a local cache
+and returns the local path to them.
 
 ```python
 reader = PosDatasetReader()
-train_dataset = reader.read('https://raw.githubusercontent.com/allenai/allennlp'
-                            '/master/tutorials/tagger/training.txt')
-validation_dataset = reader.read('https://raw.githubusercontent.com/allenai/allennlp'
-                                 '/master/tutorials/tagger/validation.txt')
+train_dataset = reader.read(cached_path(
+    'https://raw.githubusercontent.com/allenai/allennlp'
+    '/master/tutorials/tagger/training.txt'))
+validation_dataset = reader.read(cached_path(
+    'https://raw.githubusercontent.com/allenai/allennlp'
+    '/master/tutorials/tagger/validation.txt'))
 vocab = Vocabulary.from_instances(train_dataset + validation_dataset)
 ```
 
