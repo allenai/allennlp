@@ -1,7 +1,7 @@
 from typing import Iterable, Iterator, List, Optional
 import logging
 
-from torch.multiprocessing import Process, Queue, get_logger
+from torch.multiprocessing import Manager, Process, Queue, get_logger
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.instance import Instance
@@ -107,8 +107,9 @@ class MultiprocessIterator(DataIterator):
         if num_epochs is None:
             raise ConfigurationError("Multiprocess Iterator must be run for a fixed number of epochs")
 
-        output_queue = Queue(self.output_queue_size)
-        input_queue = Queue(self.output_queue_size * self.batch_size)
+        manager = Manager()
+        output_queue = manager.Queue(self.output_queue_size)
+        input_queue = manager.Queue(self.output_queue_size * self.batch_size)
 
         # Start process that populates the queue.
         self.queuer = Process(target=_queuer, args=(instances, input_queue, self.num_workers, num_epochs))
