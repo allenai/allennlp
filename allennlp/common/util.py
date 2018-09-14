@@ -5,6 +5,7 @@ Various utilities that don't fit anwhere else.
 from itertools import zip_longest, islice
 from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator
 import importlib
+import json
 import logging
 import pkgutil
 import random
@@ -362,3 +363,10 @@ def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
         else:
             tunable_parameter_names.append(name)
     return [frozen_parameter_names, tunable_parameter_names]
+
+def dump_metrics(file_path: str, metrics: Dict[str, Any], log: bool = False) -> None:
+    metrics_json = json.dumps(metrics, indent=2)
+    with open(file_path, "w") as metrics_file:
+        metrics_file.write(metrics_json)
+    if log:
+        logger.info("Metrics: %s", metrics_json)

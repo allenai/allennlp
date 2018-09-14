@@ -15,6 +15,7 @@ from allennlp.data.dataset_readers.coreference_resolution import ConllCorefReade
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.event2mind import Event2MindDatasetReader
 from allennlp.data.dataset_readers.language_modeling import LanguageModelingReader
+from allennlp.data.dataset_readers.multiprocess_dataset_reader import MultiprocessDatasetReader
 from allennlp.data.dataset_readers.penn_tree_bank import PennTreeBankConstituencySpanDatasetReader
 from allennlp.data.dataset_readers.reading_comprehension import SquadReader, TriviaQaReader, QuACReader
 from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
