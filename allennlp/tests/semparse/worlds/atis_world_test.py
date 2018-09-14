@@ -1,14 +1,17 @@
 # pylint: disable=too-many-lines
 import json
+from pprint import pprint
 
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.atis_world import AtisWorld
 
+from parsimonious.exceptions import ParseError
+
 class TestAtisWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        test_filename = self.FIXTURES_ROOT / "data" / "atis" / "sample.json"
+        test_filename = self.FIXTURES_ROOT / "data" / "atis" / "dev.json"
         self.data = open(test_filename).readlines()
         self.database_directory = self.FIXTURES_ROOT / "data" / "atis" / "atis.db"
 
@@ -28,6 +31,7 @@ class TestAtisWorld(AllenNlpTestCase):
                                              'binaryop',
                                              'boolean',
                                              'city_city_name_string',
+                                             'city_city_code_string',
                                              'city_state_code_string',
                                              'class_of_service_booking_class_string',
                                              'col_ref',
@@ -38,9 +42,15 @@ class TestAtisWorld(AllenNlpTestCase):
                                              'days_day_name_string',
                                              'distinct',
                                              'fare_basis_class_type_string',
+                                             'fare_basis_economy_string',
                                              'fare_basis_fare_basis_code_string',
+                                             'fare_fare_basis_code_string',
                                              'fare_round_trip_required_string',
                                              'flight_airline_code_string',
+                                             'flight_flight_days_string',
+                                             'flight_flight_number_string',
+                                             'flight_stop_stop_airport_string',
+                                             'food_service_meal_description_string',
                                              'ground_service_transport_type_string',
                                              'in_clause',
                                              'number',
@@ -53,6 +63,8 @@ class TestAtisWorld(AllenNlpTestCase):
                                              'table_name',
                                              'table_refs',
                                              'ternaryexpr',
+                                             'time_range_end',
+                                             'time_range_start',
                                              'value',
                                              'where_clause'}
 
@@ -90,38 +102,50 @@ class TestAtisWorld(AllenNlpTestCase):
                  'condition -> [ternaryexpr]'}
         assert set(valid_actions['in_clause']) == \
                 {'in_clause -> [col_ref, "IN", query]'}
-        print(set(valid_actions['biexpr']))
         assert set(valid_actions['biexpr']) == \
-               {'biexpr -> ["aircraft", ".", "basic_type", binaryop, '
-                'aircraft_basic_type_string]',
-                'biexpr -> ["aircraft", ".", "manufacturer", binaryop, '
-                'aircraft_manufacturer_string]',
-                'biexpr -> ["airline", ".", "airline_code", binaryop, '
-                'airline_airline_code_string]',
-                'biexpr -> ["airline", ".", "airline_name", binaryop, '
-                'airline_airline_name_string]',
-                'biexpr -> ["airport", ".", "airport_code", binaryop, '
-                'airport_airport_code_string]',
-                'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
-                'biexpr -> ["city", ".", "state_code", binaryop, city_state_code_string]',
-                'biexpr -> ["class_of_service", ".", "booking_class", binaryop, '
-                'class_of_service_booking_class_string]',
-                'biexpr -> ["days", ".", "day_name", binaryop, days_day_name_string]',
-                'biexpr -> ["fare", ".", "round_trip_required", binaryop, '
-                'fare_round_trip_required_string]',
-                'biexpr -> ["fare_basis", ".", "class_type", binaryop, '
-                'fare_basis_class_type_string]',
-                'biexpr -> ["fare_basis", ".", "fare_basis_code", binaryop, '
-                'fare_basis_fare_basis_code_string]',
-                'biexpr -> ["flight", ".", "airline_code", binaryop, '
-                'flight_airline_code_string]',
-                'biexpr -> ["ground_service", ".", "transport_type", binaryop, '
-                'ground_service_transport_type_string]',
-                'biexpr -> ["restriction", ".", "restriction_code", binaryop, '
-                'restriction_restriction_code_string]',
-                'biexpr -> ["state", ".", "state_name", binaryop, state_state_name_string]',
-                'biexpr -> [col_ref, binaryop, value]',
-                'biexpr -> [value, binaryop, value]'}
+                {'biexpr -> ["aircraft", ".", "basic_type", binaryop, '
+                 'aircraft_basic_type_string]',
+                 'biexpr -> ["aircraft", ".", "manufacturer", binaryop, '
+                 'aircraft_manufacturer_string]',
+                 'biexpr -> ["airline", ".", "airline_code", binaryop, '
+                 'airline_airline_code_string]',
+                 'biexpr -> ["airline", ".", "airline_name", binaryop, '
+                 'airline_airline_name_string]',
+                 'biexpr -> ["airport", ".", "airport_code", binaryop, '
+                 'airport_airport_code_string]',
+                 'biexpr -> ["city", ".", "city_code", binaryop, city_city_code_string]',
+                 'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
+                 'biexpr -> ["city", ".", "state_code", binaryop, city_state_code_string]',
+                 'biexpr -> ["class_of_service", ".", "booking_class", binaryop, '
+                 'class_of_service_booking_class_string]',
+                 'biexpr -> ["days", ".", "day_name", binaryop, days_day_name_string]',
+                 'biexpr -> ["fare", ".", "fare_basis_code", binaryop, '
+                 'fare_fare_basis_code_string]',
+                 'biexpr -> ["fare", ".", "round_trip_required", binaryop, '
+                 'fare_round_trip_required_string]',
+                 'biexpr -> ["fare_basis", ".", "class_type", binaryop, '
+                 'fare_basis_class_type_string]',
+                 'biexpr -> ["fare_basis", ".", "economy", binaryop, '
+                 'fare_basis_economy_string]',
+                 'biexpr -> ["fare_basis", ".", "fare_basis_code", binaryop, '
+                 'fare_basis_fare_basis_code_string]',
+                 'biexpr -> ["flight", ".", "airline_code", binaryop, '
+                 'flight_airline_code_string]',
+                 'biexpr -> ["flight", ".", "flight_days", binaryop, '
+                 'flight_flight_days_string]',
+                 'biexpr -> ["flight", ".", "flight_number", binaryop, '
+                 'flight_flight_number_string]',
+                 'biexpr -> ["flight_stop", ".", "stop_airport", binaryop, '
+                 'flight_stop_stop_airport_string]',
+                 'biexpr -> ["food_service", ".", "meal_description", binaryop, '
+                 'food_service_meal_description_string]',
+                 'biexpr -> ["ground_service", ".", "transport_type", binaryop, '
+                 'ground_service_transport_type_string]',
+                 'biexpr -> ["restriction", ".", "restriction_code", binaryop, '
+                 'restriction_restriction_code_string]',
+                 'biexpr -> ["state", ".", "state_name", binaryop, state_state_name_string]',
+                 'biexpr -> [col_ref, binaryop, value]',
+                 'biexpr -> [value, binaryop, value]'}
         assert set(valid_actions['binaryop']) == \
                 {'binaryop -> ["*"]',
                  'binaryop -> ["+"]',
@@ -134,8 +158,9 @@ class TestAtisWorld(AllenNlpTestCase):
                  'binaryop -> [">="]',
                  'binaryop -> ["IS"]'}
         assert set(valid_actions['ternaryexpr']) == \
-                {'ternaryexpr -> [col_ref, "BETWEEN", value, "AND", value]',
-                 'ternaryexpr -> [col_ref, "NOT", "BETWEEN", value, "AND", value]'}
+                {'ternaryexpr -> [col_ref, "BETWEEN", time_range_start, "AND", time_range_end]',
+                 'ternaryexpr -> [col_ref, "NOT", "BETWEEN", time_range_start, "AND", '
+                 'time_range_end]'}
         assert set(valid_actions['value']) == \
                 {'value -> ["NOT", pos_value]',
                  'value -> [pos_value]'}
@@ -156,15 +181,17 @@ class TestAtisWorld(AllenNlpTestCase):
         assert set(valid_actions['conj']) == \
                 {'conj -> ["OR"]', 'conj -> ["AND"]'}
         assert set(valid_actions['distinct']) == \
-               {'distinct -> [""]', 'distinct -> ["DISTINCT"]'}
+                {'distinct -> [""]', 'distinct -> ["DISTINCT"]'}
         assert set(valid_actions['number']) == \
                 {'number -> ["0"]',
                  'number -> ["1"]'}
+        pprint(set(valid_actions['col_ref']))
         assert set(valid_actions['col_ref']) == \
                 {'col_ref -> ["*"]',
                  'col_ref -> ["aircraft", ".", "aircraft_code"]',
                  'col_ref -> ["aircraft", ".", "aircraft_description"]',
                  'col_ref -> ["aircraft", ".", "basic_type"]',
+                 'col_ref -> ["aircraft", ".", "capacity"]',
                  'col_ref -> ["aircraft", ".", "manufacturer"]',
                  'col_ref -> ["aircraft", ".", "pressurized"]',
                  'col_ref -> ["aircraft", ".", "propulsion"]',
@@ -192,9 +219,6 @@ class TestAtisWorld(AllenNlpTestCase):
                  'col_ref -> ["class_of_service", ".", "class_description"]',
                  'col_ref -> ["class_of_service", ".", "rank"]',
                  'col_ref -> ["date_day", ".", "day_name"]',
-                 'col_ref -> ["date_day", ".", "day_number"]',
-                 'col_ref -> ["date_day", ".", "month_number"]',
-                 'col_ref -> ["date_day", ".", "year"]',
                  'col_ref -> ["days", ".", "day_name"]',
                  'col_ref -> ["days", ".", "days_code"]',
                  'col_ref -> ["equipment_sequence", ".", "aircraft_code"]',
@@ -1368,11 +1392,34 @@ class TestAtisWorld(AllenNlpTestCase):
              'where_clause -> ["WHERE", conditions]']
 
     def test_atis_debug(self): # pylint: disable=no-self-use
-        world = AtisWorld(['which of those flights departs after 6pm'],
-                              database_directory=str(self.database_directory))
-        print(world.valid_actions)
+        world = AtisWorld(
+        ['nonstop flights san francisco to denver', 'flights departing after 6pm', 'flights before 8am in morning 1991 november seventh', 'flights departing before 8am', 'flights departing before 8am', 'flights departing in morning 1991 november seventh', 'round trip airfare coach', 'round trip airfare economy class'], database_directory="./atis/atis.db")
+        print(world.grammar_str)
+        action_sequence = world.get_action_sequence("( SELECT DISTINCT fare.fare_id FROM fare WHERE ( fare.round_trip_cost IS NOT NULL AND ( fare . fare_basis_code IN ( SELECT fare_basis . fare_basis_code FROM fare_basis WHERE fare_basis.economy = 'YES'  ) AND fare . fare_id IN ( SELECT flight_fare . fare_id FROM flight_fare WHERE flight_fare . flight_id IN ( SELECT flight . flight_id FROM flight WHERE ( flight.departure_time BETWEEN 0 AND 1200 AND ( flight . from_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'SAN FRANCISCO' )) AND flight . to_airport IN ( SELECT airport_service . airport_code FROM airport_service WHERE airport_service . city_code IN ( SELECT city . city_code FROM city WHERE city.city_name = 'DENVER' )) ) )  )) ) )   ) ;")
+        print(action_sequence)
 
 
+    def test_atis_parse_coverage(self):
+        num_queries = 0
+        num_parsed = 0
+
+        for idx, line in enumerate(self.data):
+            line = json.loads(line)
+            utterances = []
+            for current_interaction in line['interaction']:
+                utterances.append(current_interaction['utterance'])
+                world = AtisWorld(utterances, database_directory="./atis/atis.db")
+                try:
+                    num_queries += 1
+                    action_sequence = world.get_action_sequence(current_interaction['sql'].split('\n')[0])
+                    num_parsed+= 1
+                    print("Parsed {} out of {}, coverage: {}".format(num_parsed, num_queries, num_parsed/num_queries))
+
+                except ParseError as error:
+                    print('parse error')
+                    print(utterances)
+                    print(current_interaction['sql'])
+                    continue
 
 
      
