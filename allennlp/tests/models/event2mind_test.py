@@ -25,10 +25,8 @@ class Event2MindTest(ModelTestCase):
             if text == ["@start@", "personx", "calls", "personx", "'s", "brother", "@end@"]:
                 sample_text_field = cur_text_field
                 break
-        print(sample_text_field)
         source = sample_text_field.as_tensor(sample_text_field.get_padding_lengths())
         source['tokens'] = source['tokens'].unsqueeze(0)
-        print(source)
         embedded_input = self.trained_model._embedding_dropout(
                 self.trained_model._source_embedder(source)
         )
@@ -57,19 +55,21 @@ class Event2MindTest(ModelTestCase):
     def test_beam_search_matches_greedy(self):
         model = self.trained_model
         state = model._states["xintent"]
-        greedy_prediction = model.greedy_predict(self.get_sample_encoded_output(),
-                                                 state.embedder,
-                                                 state.decoder_cell,
-                                                 state.output_projection_layer)
+        greedy_prediction = model.greedy_predict(
+                final_encoder_output=self.get_sample_encoded_output(),
+                target_embedder=state.embedder,
+                decoder_cell=state.decoder_cell,
+                output_projection_layer=state.output_projection_layer
+        )
         greedy_tokens = model.decode_all(greedy_prediction)
 
         (beam_predictions, _) = model.beam_search(
-                self.get_sample_encoded_output(),
-                1,
-                model._max_decoding_steps,
-                state.embedder,
-                state.decoder_cell,
-                state.output_projection_layer
+                final_encoder_output=self.get_sample_encoded_output(),
+                width=1,
+                num_decoding_steps=model._max_decoding_steps,
+                target_embedder=state.embedder,
+                decoder_cell=state.decoder_cell,
+                output_projection_layer=state.output_projection_layer
         )
         beam_prediction = beam_predictions[0]
         beam_tokens = model.decode_all(beam_prediction)

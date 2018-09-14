@@ -162,11 +162,11 @@ class Event2Mind(Model):
             total_loss = 0
             for name, state in self._states.items():
                 loss = self.greedy_search(
-                        final_encoder_output,
-                        target_tokens[name],
-                        state.embedder,
-                        state.decoder_cell,
-                        state.output_projection_layer)
+                        final_encoder_output=final_encoder_output,
+                        target_tokens=target_tokens[name],
+                        target_embedder=state.embedder,
+                        decoder_cell=state.decoder_cell,
+                        output_projection_layer=state.output_projection_layer)
                 total_loss += loss
                 output_dict[f"{name}_loss"] = loss
 
@@ -178,16 +178,16 @@ class Event2Mind(Model):
             for name, state in self._states.items():
                 # (batch_size, 10, num_decoding_steps)
                 (all_top_k_predictions, log_probabilities) = self.beam_search(
-                        final_encoder_output,
-                        10,
+                        final_encoder_output=final_encoder_output,
+                        width=10,
                         # We always use the max here instead of passing in the
                         # length of the longest target to avoid biasing the
                         # search. Whether this problem would manifest otherwise
                         # would depend on the metric being used.
-                        self._max_decoding_steps,
-                        state.embedder,
-                        state.decoder_cell,
-                        state.output_projection_layer
+                        num_decoding_steps=self._max_decoding_steps,
+                        target_embedder=state.embedder,
+                        decoder_cell=state.decoder_cell,
+                        output_projection_layer=state.output_projection_layer
                 )
                 if target_tokens:
                     self._update_recall(all_top_k_predictions, target_tokens[name], state.recall)
@@ -419,11 +419,10 @@ class Event2Mind(Model):
                     gather(1, expanded_backpointer).\
                     reshape(batch_size * width, self._decoder_output_dim)
 
-        if len(predictions) != num_decoding_steps:
-            raise RuntimeError("len(predictions) not equal to num_decoding_steps")
-
-        if len(backpointers) != num_decoding_steps - 1:
-            raise RuntimeError("len(backpointers) not equal to num_decoding_steps")
+        assert len(predictions) == num_decoding_steps,\
+               "len(predictions) not equal to num_decoding_steps"
+        assert len(backpointers) == num_decoding_steps - 1,\
+               "len(backpointers) not equal to num_decoding_steps"
 
         # Reconstruct the sequences.
         reconstructed_predictions = [predictions[num_decoding_steps - 1].unsqueeze(2)]

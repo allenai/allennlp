@@ -30,11 +30,13 @@
   "model": {
     "type": "event2mind",
     "source_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "vocab_namespace": "source_tokens",
-        "embedding_dim": 10,
-        "trainable": true
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "vocab_namespace": "source_tokens",
+          "embedding_dim": 10,
+          "trainable": true
+        }
       }
     },
     "embedding_dropout": 0.2,
