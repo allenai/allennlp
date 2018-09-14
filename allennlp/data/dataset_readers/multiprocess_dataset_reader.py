@@ -3,7 +3,7 @@ import glob
 import logging
 import random
 
-from torch.multiprocessing import Process, Queue, log_to_stderr
+from torch.multiprocessing import Manager, Process, Queue, log_to_stderr
 
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
@@ -94,16 +94,17 @@ class MultiprocessDatasetReader(DatasetReader):
             to use the _instances iterator we define here.)
             """
             def __init__(self) -> None:
-                self.output_queue = Queue(outer_self.output_queue_size)
+                self.manager = Manager()
+                self.output_queue = self.manager.Queue(outer_self.output_queue_size)
                 self.num_workers = outer_self.num_workers
 
             def __iter__(self) -> Iterator[Instance]:
                 # pylint: disable=protected-access
-                return outer_self._instances(file_path, self.output_queue)
+                return outer_self._instances(file_path, self.manager, self.output_queue)
 
         return QIterable()
 
-    def _instances(self, file_path: str, output_queue: Queue) -> Iterator[Instance]:
+    def _instances(self, file_path: str, manager: Manager, output_queue: Queue) -> Iterator[Instance]:
         """
         A generator that reads instances off the output queue and yields them up
         until none are left (signified by all ``num_workers`` workers putting their
@@ -113,7 +114,7 @@ class MultiprocessDatasetReader(DatasetReader):
         num_shards = len(shards)
 
         # If we want multiple epochs per read, put shards in the queue multiple times.
-        input_queue = Queue(num_shards * self.epochs_per_read + self.num_workers)
+        input_queue = manager.Queue(num_shards * self.epochs_per_read + self.num_workers)
         for _ in range(self.epochs_per_read):
             random.shuffle(shards)
             for shard in shards:
