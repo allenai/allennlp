@@ -294,30 +294,30 @@ class AtisSemanticParser(Model):
             return query[1:query.rfind(')')] + ';'
         return query
 
-    def _sql_result_match(self, predicted: str, target: str) -> int:
-        predicted = self.postprocess_query_sqlite(predicted) 
-        target = self.postprocess_query_sqlite(target) 
+    def _sql_result_match(self, predicted_query: str, sql_query_labels: List[str]) -> int:
+        postprocessed_predicted_query = self.postprocess_query_sqlite(predicted_query) 
         
         try:
-            self._cursor.execute(predicted)
+            self._cursor.execute(postprocessed_predicted_query)
             predicted_rows = self._cursor.fetchall()
         except sqlite3.Error as e:
             print("error when executing predicted")
             print(e)
             exit(0)
         
-        try:
-            self._cursor.execute(target)
-            target_rows = self._cursor.fetchall()
-        except sqlite3.Error as e:
-            print("error when executing target")
-            print(e)
-            exit(0)
+        for sql_query_label in sql_query_labels:
+            postprocessed_sql_query_label = self.postprocess_query_sqlite(sql_query_label) 
+            try:
+                self._cursor.execute(postprocessed_sql_query_label)
+                target_rows = self._cursor.fetchall()
+            except sqlite3.Error as e:
+                print("error when executing target")
+                print(e)
+                pass
 
-        if predicted_rows == target_rows:
-            exit(1)
-        else:
-            exit(0)
+            if predicted_rows == target_rows:
+                exit(1)
+        exit(0)
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
@@ -575,25 +575,24 @@ class AtisSemanticParser(Model):
                         self._action_similarity(similarity.ratio())
                      
                     if example_sql_query[i]:
-                        denotation_correct = 0
-                        for query in example_sql_query[i]:
-                            print('processing query', query)
-                            # Since the query might hang, we run in another process and kill it if it
-                            # takes too long.
-                            p = multiprocessing.Process(target=self._sql_result_match,
-                                                       args=(predicted_sql_query, query))
-                            p.start()
+                        # Since the query might hang, we run in another process and kill it if it
+                        # takes too long.
+                        p = multiprocessing.Process(target=self._sql_result_match,
+                                                    args=(predicted_sql_query, example_sql_query[i]))
+                        p.start()
 
-                            # Wait 10 seconds for the query to finish
-                            p.join(10)
-                            denotation_correct = max(denotation_correct, p.exitcode)
-                            if p.is_alive():
-                                print("Evaluating query took over 10 seconds, skipping query")
-                                p.terminate()
-                                p.join()
+                        # Wait 10 seconds for the query to finish
+                        p.join(10)
+                        denotation_correct = p.exitcode 
+
+                        if p.is_alive():
+                            print("Evaluating query took over 10 seconds, skipping query")
+                            p.terminate()
+                            p.join()
 
                         if denotation_correct == None:
                             denotation_correct = 0
+
                         self._denotation_accuracy(denotation_correct)
                         outputs['example_sql_query'].append(example_sql_query[i])
                     
