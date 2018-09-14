@@ -188,13 +188,17 @@ class WikiTablesVariableFreeExecutor(Executor):
         type of `_select` and `_all_rows`.
         """
         if self._values_look_like_dates(expression_list):
-            cell_row_pairs = self._get_date_row_pairs_to_filter(expression_list)
+            date_row_pairs = self._get_date_row_pairs_to_filter(expression_list)
+            if not date_row_pairs:
+                return []
+            # Returns a list containing the row with the max cell value.
+            return [sorted(date_row_pairs, reverse=True)[0][1]]
         else:
-            cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
-        if not cell_row_pairs:
-            return []
-        # Returns a list containing the row with the max cell value.
-        return [sorted(cell_row_pairs, reverse=True)[0][1]]
+            number_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
+            if not number_row_pairs:
+                return []
+            # Returns a list containing the row with the max cell value.
+            return [sorted(number_row_pairs, reverse=True)[0][1]]
 
     def _argmin(self, expression_list: NestedList) -> List[Dict[str, str]]:
         """
@@ -204,13 +208,17 @@ class WikiTablesVariableFreeExecutor(Executor):
         type of `_select` and `_all_rows`.
         """
         if self._values_look_like_dates(expression_list):
-            cell_row_pairs = self._get_date_row_pairs_to_filter(expression_list)
+            date_row_pairs = self._get_date_row_pairs_to_filter(expression_list)
+            if not date_row_pairs:
+                return []
+            # Returns a list containing the row with the min cell value.
+            return [sorted(date_row_pairs)[0][1]]
         else:
-            cell_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
-        if not cell_row_pairs:
-            return []
-        # Returns a list containing the row with the min cell value.
-        return [sorted(cell_row_pairs)[0][1]]
+            number_row_pairs = self._get_number_row_pairs_to_filter(expression_list)
+            if not number_row_pairs:
+                return []
+            # Returns a list containing the row with the min cell value.
+            return [sorted(number_row_pairs)[0][1]]
 
     def _filter_number_greater(self, expression_list: NestedList) -> List[Dict[str, str]]:
         """

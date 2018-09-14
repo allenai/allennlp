@@ -259,8 +259,8 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
 
     def test_execute_works_with_filter_number_lesser(self):
         # Selecting cell values from all rows that have date lesser than 2005.
-        logical_form = """(select (filter_number_lesser all_rows fb:row.row.year 2005)
-                           fb:row.row.league)"""
+        logical_form = """(select (filter_number_lesser all_rows fb:row.row.year
+                                    (max all_rows fb:row.row.year)) fb:row.row.league)"""
         cell_value_list = self.world.execute(logical_form)
         assert cell_value_list == ['fb:cell.usl_a_league']
 
