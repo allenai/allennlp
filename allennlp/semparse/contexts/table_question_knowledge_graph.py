@@ -62,22 +62,29 @@ NUMBER_WORDS = {
         }
 
 
+class ColumnTyper():
+    """
+        Type table columns as <string> | <number> | <date> 
+    """
+    pass
+
+
 
 class QuestionEntityExtractor():
+    """
+    A Barebones implementation similar to https://github.com/crazydonkey200/neural-symbolic-machines/blob/master/table/wtq/preprocess.py
+    for extracting entities from a question given a table. 
+    """
     def __init__(self, 
                  table : TableQuestionKnowledgeGraph) -> None:
         self.table = table
 
-    @staticmethod
-    def tokens_contain(string_1, string_2):
-        tks_1 = nltk.tokenize.word_tokenize(string_1)
-        tks_2 = nltk.tokenize.word_tokenize(string_2)
-        return set(tks_2).issubset(set(tks_1))
 
-    def _string_in_table(self, candidate_str):
+    def _string_in_table(self, candidate_str) -> bool:
         for entity, text in self.table.entity_text:
+            # entity normalized text is followed after fb:cell.
             normalized_text = entity[8:]
-            if cls.tokens_contain(normalized_text, candidate_str): 
+            if normalized_text == candidate_str: 
                 return True
 
 
@@ -90,6 +97,7 @@ class QuestionEntityExtractor():
 
             while curr_en < len(question): 
                 next_tok = question[curr_en]
+                # use the same normalize function used by TableQuestionKnowledgeGraph for consistency
                 next_tok_normalized = TableQuestionKnowledgeGraph._normalize_string(next_tok) 
                 curr_tok_normalized = TableQuestionKnowledgeGraph._normalize_string(next_tok)
 
@@ -105,13 +113,11 @@ class QuestionEntityExtractor():
 
 
     def get_entities_from_question(self, question, stop_words = set()):
-        entity_bitmap = [0]*len(question)
         entity_dat = []
         for i, token in enumerate(question):
             if token in stop_words: continue
             normalized_token = TableQuestionKnowledgeGraph.normalize(token)
-            if _present_in_table(normalized_token, self.table):
-                entity_bitmap[i] = 1
+            if _string_in_table(normalized_token):
                 entity_dat.append(dict(value=normalized_token,
                                        token_start=i,
                                        token_end=i+1))
