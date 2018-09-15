@@ -55,7 +55,7 @@ GRAMMAR_DICTIONARY = {
     'condition'         :['in_clause', 'ternaryexpr', 'biexpr'],
     'in_clause'         :['(ws col_ref ws "IN" ws query ws)'],
     'biexpr'            :['( col_ref ws binaryop ws value)', '(value ws binaryop ws value)'],
-    'binaryop'          :['"+"' , '"-"' , '"*"', '","' , '"="',
+    'binaryop'          :['"+"' , '"-"' , '"*"', '"/"' , '"="',
                            '">="', '"<="', '">"', '"<"', '"is"', '"IS"'],
     'ternaryexpr'       :['(col_ref ws "not" ws "BETWEEN" ws value ws "AND" ws value ws)',
                            '(col_ref ws "NOT" ws "BETWEEN" ws value ws "AND" ws value ws)',
@@ -68,9 +68,7 @@ GRAMMAR_DICTIONARY = {
     'ws'                :['~"\s*"i'],
     'conj'              :['"AND"', '"OR"'],
     'distinct'          :['("DISTINCT")', '("")'],
-    'number'            :['""'],
-    'time_range_start'  :['""'],
-    'time_range_end'    :['""']}
+    'number'            :['""']}
 
 KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"', '"IN"', '"LIKE"',
             '"IS"', '"BETWEEN"', '"AND"', '"ALL"', '"ANY"', '"NULL"', '"OR"', '"DISTINCT"']
