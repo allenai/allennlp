@@ -1,4 +1,4 @@
-import re
+import re, itertools
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, List, Tuple, Union, Set
 
@@ -68,17 +68,56 @@ class QuestionEntityExtractor():
                  table : TableQuestionKnowledgeGraph) -> None:
         self.table = table
 
-    def _expand_entities(self, entity_bitmap):
-        raise NotImplementedError
+    @staticmethod
+    def tokens_contain(string_1, string_2):
+        tks_1 = nltk.tokenize.word_tokenize(string_1)
+        tks_2 = nltk.tokenize.word_tokenize(string_2)
+        return set(tks_2).issubset(set(tks_1))
+
+    def _string_in_table(self, candidate_str):
+        for entity, text in self.table.entity_text:
+            normalized_text = entity[8:]
+            if cls.tokens_contain(normalized_text, candidate_str): 
+                return True
+
+
+    def _expand_entities(self, question, entity_dat):
+        new_ents = []
+        for ent in entity_dat:
+            curr_st = ent['token_start']
+            curr_en = ent['token_end']
+            curr_tok = ent['value']
+
+            while curr_en < len(question): 
+                next_tok = question[curr_en]
+                next_tok_normalized = TableQuestionKnowledgeGraph._normalize_string(next_tok) 
+                curr_tok_normalized = TableQuestionKnowledgeGraph._normalize_string(next_tok)
+
+                for s, s1, s2 in itertools.product( [u' ', u'-', u''], [next_tok, next_tok_normalized], [curr_tok, curr_tok_normalized]):
+                    candidate = s.joint([s1,s2])
+                    if self._string_in_table(candidate):
+                        curr_en += 1
+                        curr_tok = candidate
+                        break
+            new_ents.append(dict(token_start=curr_st, token_end=curr_en, value=curr_tok))
+
+        return new_ents
+
 
     def get_entities_from_question(self, question, stop_words = set()):
         entity_bitmap = [0]*len(question)
+        entity_dat = []
         for i, token in enumerate(question):
             if token in stop_words: continue
-            if _present_in_table(TableQuestionKnowledgeGraph.normalize(token), self.table):
+            normalized_token = TableQuestionKnowledgeGraph.normalize(token)
+            if _present_in_table(normalized_token, self.table):
                 entity_bitmap[i] = 1
+                entity_dat.append(dict(value=normalized_token,
+                                       token_start=i,
+                                       token_end=i+1))
 
-        return _expand_entities(entity_bitmap)
+        return self._expand_entities(question, entity_dat)
+
 
 class TableQuestionKnowledgeGraph(KnowledgeGraph):
     """
