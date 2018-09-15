@@ -76,19 +76,19 @@ class QuestionEntityExtractor():
     for extracting entities from a question given a table. 
     """
     def __init__(self, 
-                 table : TableQuestionKnowledgeGraph) -> None:
-        self.table = table
+                 table_entity_text: Dict[str, str]) -> None:
+        self.table_entity_text = table_entity_text
 
 
     def _string_in_table(self, candidate_str) -> bool:
-        for entity, text in self.table.entity_text:
+        for entity, text in self.table_entity_text:
             # entity normalized text is followed after fb:cell.
             normalized_text = entity[8:]
             if normalized_text == candidate_str: 
                 return True
 
 
-    def _expand_entities(self, question, entity_dat):
+    def _expand_entities(self, question, entity_dat ):
         new_ents = []
         for ent in entity_dat:
             curr_st = ent['token_start']
@@ -112,7 +112,7 @@ class QuestionEntityExtractor():
         return new_ents
 
 
-    def get_entities_from_question(self, question, stop_words = set()):
+    def get_entities_from_question(self, question : List[str], stop_words = set()):
         entity_dat = []
         for i, token in enumerate(question):
             if token in stop_words: continue
@@ -152,6 +152,9 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
                  question_tokens: List[Token]) -> None:
         super().__init__(entities, neighbors, entity_text)
         self.question_tokens = question_tokens
+        entity_extractor = QuestionEntityExtractor(entity_text)
+        print(entity_extractor.get_entities_from_question(question_tokens))
+
         self._entity_prefixes: Dict[str, List[str]] = defaultdict(list)
         for entity, text in self.entity_text.items():
             parts = text.split()
