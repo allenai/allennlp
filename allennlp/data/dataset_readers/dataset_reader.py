@@ -70,8 +70,7 @@ class DatasetReader(Registrable):
         else:
             instances = self._read(file_path)
             if not isinstance(instances, list):
-                #instances = [instance for instance in Tqdm.tqdm(instances)]
-                instances = [instance for i,instance in enumerate(range(100), Tqdm.tqdm(instances)) ]
+                instances = [instance for instance in Tqdm.tqdm(instances)]
 
             if not instances:
                 raise ConfigurationError("No instances were read from the given filepath {}. "
