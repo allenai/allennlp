@@ -10,7 +10,7 @@ from allennlp.models.archival import Archive, load_archive
 
 # a mapping from model `type` to the default Predictor for that type
 DEFAULT_PREDICTORS = {
-        'biaffine_parser': 'biaffine-dependency-parser'
+        'biaffine_parser': 'biaffine-dependency-parser',
         'bidaf': 'machine-comprehension',
         'bidaf-ensemble': 'machine-comprehension',
         'constituency_parser': 'constituency-parser',
@@ -20,7 +20,7 @@ DEFAULT_PREDICTORS = {
         'dialog_qa': 'dialog_qa',
         'event2mind': 'event2mind',
         'simple_tagger': 'sentence-tagger',
-        'srl': 'semantic-role-labeling',
+        'srl': 'semantic-role-labeling'
 }
 
 class Predictor(Registrable):
