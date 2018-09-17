@@ -16,10 +16,15 @@ class Event2MindPredictor(Predictor):
         containing, for each target type, the top predicted sequences as
         indices, as tokens and the log probability of each.
 
-        To be more precise, the dictionary will have the following entries:
-          {target_type}_top_k_predictions: ``List[List[int]]``
-          {target_type}_top_k_predicted_tokens: ``List[List[str]]``
-          {target_type}_top_k_log_probabilities: ``List[float]``
+        The JSON dictionary looks like:
+
+        .. code-block:: js
+
+            {
+                `${target_type}_top_k_predictions`: [[1, 2, 3], [4, 5, 6], ...],
+                `${target_type}_top_k_predicted_tokens`: [["to", "feel", "brave"], ...],
+                `${target_type}_top_k_log_probabilities`: [-0.301, -0.046, ...]
+            }
 
         By default ``target_type`` can be xreact, oreact and xintent.
         """
