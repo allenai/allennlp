@@ -1,4 +1,4 @@
-import re, itertools
+import re, itertools,nltk, json
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, List, Tuple, Union, Set
 
@@ -76,21 +76,29 @@ class QuestionEntityExtractor():
     for extracting entities from a question given a table. 
     """
     def __init__(self, 
+                 stop_words_file : str,
                  table_entity_text: Dict[str, str]) -> None:
         self.table_entity_text = table_entity_text
+        with open(stop_words_file, 'r') as f:
+            stop_words_list = json.load(f)
+        self.stop_words = set(stop_words_list)
 
 
     def _string_in_table(self, candidate_str) -> bool:
-        for entity, text in self.table_entity_text:
+        for entity, text in self.table_entity_text.items():
             # entity normalized text is followed after fb:cell.
+            if entity.startswith('fb:cell.')
             normalized_text = entity[8:]
-            if normalized_text == candidate_str: 
+            if candidate_str in normalized_text: 
                 return True
+        return False
 
 
     def _expand_entities(self, question, entity_dat ):
         new_ents = []
         for ent in entity_dat:
+            # to ensure the same strings are not used over and over
+            if new_ents and ent['token_end'] <= new_ents[-1]['token_end']: continue
             curr_st = ent['token_start']
             curr_en = ent['token_end']
             curr_tok = ent['value']
@@ -101,23 +109,27 @@ class QuestionEntityExtractor():
                 next_tok_normalized = TableQuestionKnowledgeGraph._normalize_string(next_tok) 
                 curr_tok_normalized = TableQuestionKnowledgeGraph._normalize_string(next_tok)
 
-                for s, s1, s2 in itertools.product( [u' ', u'-', u''], [next_tok, next_tok_normalized], [curr_tok, curr_tok_normalized]):
-                    candidate = s.joint([s1,s2])
+                for s, s1, s2 in itertools.product( [' ', '-', '_', ''], [curr_tok, curr_tok_normalized] , [next_tok, next_tok_normalized]  ):
+                    if len(s1) == 0 or len(s2) == 0: continue
+                    candidate = s.join([s1,s2])
                     if self._string_in_table(candidate):
                         curr_en += 1
                         curr_tok = candidate
                         break
-            new_ents.append(dict(token_start=curr_st, token_end=curr_en, value=curr_tok))
+                else: break
+
+            new_ents.append(dict(token_start=curr_st, token_end=curr_en,value=curr_tok))
 
         return new_ents
 
 
-    def get_entities_from_question(self, question : List[str], stop_words = set()):
+    def get_entities_from_question(self, question : List[str]):
         entity_dat = []
         for i, token in enumerate(question):
-            if token in stop_words: continue
-            normalized_token = TableQuestionKnowledgeGraph.normalize(token)
-            if _string_in_table(normalized_token):
+            if token in self.stop_words: continue
+            normalized_token = TableQuestionKnowledgeGraph._normalize_string(token)
+            if len(normalized_token) == 0: continue
+            if self._string_in_table(normalized_token):
                 entity_dat.append(dict(value=normalized_token,
                                        token_start=i,
                                        token_end=i+1))
@@ -152,8 +164,9 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
                  question_tokens: List[Token]) -> None:
         super().__init__(entities, neighbors, entity_text)
         self.question_tokens = question_tokens
-        entity_extractor = QuestionEntityExtractor(entity_text)
-        print(entity_extractor.get_entities_from_question(question_tokens))
+        entity_extractor = QuestionEntityExtractor( '/u/murtyjay/allennlp_fork/stop_words.json',  entity_text)
+        print(entity_extractor.get_entities_from_question([x.text for x in question_tokens]),  question_tokens)
+
 
         self._entity_prefixes: Dict[str, List[str]] = defaultdict(list)
         for entity, text in self.entity_text.items():
