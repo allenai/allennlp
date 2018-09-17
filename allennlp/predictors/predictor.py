@@ -10,16 +10,17 @@ from allennlp.models.archival import Archive, load_archive
 
 # a mapping from model `type` to the default Predictor for that type
 DEFAULT_PREDICTORS = {
-        'srl': 'semantic-role-labeling',
-        'decomposable_attention': 'textual-entailment',
+        'biaffine_parser': 'biaffine-dependency-parser',
         'bidaf': 'machine-comprehension',
         'bidaf-ensemble': 'machine-comprehension',
-        'simple_tagger': 'sentence-tagger',
-        'crf_tagger': 'sentence-tagger',
-        'coref': 'coreference-resolution',
         'constituency_parser': 'constituency-parser',
+        'coref': 'coreference-resolution',
+        'crf_tagger': 'sentence-tagger',
+        'decomposable_attention': 'textual-entailment',
         'dialog_qa': 'dialog_qa',
-        'biaffine_parser': 'biaffine-dependency-parser'
+        'event2mind': 'event2mind',
+        'simple_tagger': 'sentence-tagger',
+        'srl': 'semantic-role-labeling'
 }
 
 class Predictor(Registrable):
