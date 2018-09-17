@@ -11,6 +11,18 @@ class Event2MindPredictor(Predictor):
     """
 
     def predict(self, source: str) -> JsonDict:
+        """
+        Given a source string of some event, returns a JSON dictionary
+        containing, for each target type, the top predicted sequences as
+        indices, as tokens and the log probability of each.
+
+        To be more precise, the dictionary will have the following entries:
+          {target_type}_top_k_predictions: ``List[List[int]]``
+          {target_type}_top_k_predicted_tokens: ``List[List[str]]``
+          {target_type}_top_k_log_probabilities: ``List[float]``
+
+        By default ``target_type`` can be xreact, oreact and xintent.
+        """
         return self.predict_json({"source" : source})
 
     @overrides
