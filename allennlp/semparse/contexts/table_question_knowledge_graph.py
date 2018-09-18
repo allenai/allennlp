@@ -77,22 +77,26 @@ class QuestionEntityExtractor():
     """
     def __init__(self, 
                  stop_words_file : str,
-                 table_entity_text: Dict[str, str]) -> None:
+                 table_entity_text: Dict[str, str],
+                 process_conjunction: bool = False) -> None:
         self.table_entity_text = table_entity_text
         with open(stop_words_file, 'r') as f:
             stop_words_list = json.load(f)
         self.stop_words = set(stop_words_list)
-
+        self.process_conjunction = process_conjunction
 
     def _string_in_table(self, candidate_str) -> bool:
         for entity, text in self.table_entity_text.items():
             # entity normalized text is followed after fb:cell.
-            if entity.startswith('fb:cell.')
-            normalized_text = entity[8:]
-            if candidate_str in normalized_text: 
-                return True
+            if entity.startswith('fb:cell.'):
+            	normalized_text = entity[8:]
+            	if candidate_str in normalized_text: 
+                    return True
         return False
 
+
+    def _process_conjunction(self, entity_dat):
+        raise NotImplementedError
 
     def _expand_entities(self, question, entity_dat ):
         new_ents = []
@@ -134,7 +138,8 @@ class QuestionEntityExtractor():
                                        token_start=i,
                                        token_end=i+1))
 
-        return self._expand_entities(question, entity_dat)
+        expanded_entities = self._expand_entities(question, entity_dat)
+        
 
 
 class TableQuestionKnowledgeGraph(KnowledgeGraph):
