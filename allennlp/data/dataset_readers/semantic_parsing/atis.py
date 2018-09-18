@@ -1,6 +1,7 @@
 import json
 from typing import Dict, List
 import logging
+from copy import deepcopy
 
 from overrides import overrides
 from parsimonious.exceptions import ParseError
@@ -83,10 +84,12 @@ class AtisDatasetReader(DatasetReader):
             for line in _lazy_parse(atis_file.read()):
                 utterances = []
                 for current_interaction in line['interaction']:
-                    if not current_interaction['utterance']:
+                    if not current_interaction['utterance'] or not current_interaction['sql']:
                         continue
                     utterances.append(current_interaction['utterance'])
-                    instance = self.text_to_instance(utterances, current_interaction['sql'])
+                    queries = [query for query in current_interaction['sql'].split('\n') if query]
+                    # query = min(queries, key=len)
+                    instance = self.text_to_instance(deepcopy(utterances), queries) 
                     if not instance:
                         continue
                     yield instance
@@ -94,14 +97,14 @@ class AtisDatasetReader(DatasetReader):
     @overrides
     def text_to_instance(self,  # type: ignore
                          utterances: List[str],
-                         sql_query: str = None) -> Instance:
+                         sql_query_labels: List[str] = None) -> Instance:
         # pylint: disable=arguments-differ
         """
         Parameters
         ----------
         utterances: ``List[str]``, required.
             List of utterances in the interaction, the last element is the current utterance.
-        sql_query: ``str``, optional
+        sql_query: ``List[str]``, optional
             The SQL query, given as label during training or validation.
         """
         utterance = utterances[-1]
@@ -113,7 +116,8 @@ class AtisDatasetReader(DatasetReader):
         world = AtisWorld(utterances=utterances,
                           database_directory=self._database_directory)
 
-        if sql_query:
+        if sql_query_labels:
+            sql_query = min(sql_query_labels, key=len)
             try:
                 action_sequence = world.get_action_sequence(sql_query)
             except ParseError:
@@ -126,7 +130,7 @@ class AtisDatasetReader(DatasetReader):
 
         for production_rule in world.all_possible_actions():
             lhs, _ = production_rule.split(' ->')
-            is_global_rule = not lhs in ['number', 'string']
+            is_global_rule = 'number' not in lhs and 'string' not in lhs and 'time_range' not in lhs
             # The whitespaces are not semantically meaningful, so we filter them out.
             production_rule = ' '.join([token for token in production_rule.split(' ') if token != 'ws'])
             field = ProductionRuleField(production_rule, is_global_rule)
@@ -141,8 +145,9 @@ class AtisDatasetReader(DatasetReader):
                   'actions' : action_field,
                   'world' : world_field,
                   'linking_scores' : ArrayField(world.linking_scores)}
-
-        if sql_query:
+        
+        if sql_query_labels != None:
+            fields['example_sql_query'] = MetadataField(sql_query_labels)
             if action_sequence:
                 for production_rule in action_sequence:
                     index_fields.append(IndexField(action_map[production_rule], action_field))

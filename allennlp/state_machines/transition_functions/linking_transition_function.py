@@ -96,11 +96,18 @@ class LinkingTransitionFunction(BasicTransitionFunction):
         for group_index in range(group_size):
             instance_actions = actions[group_index]
             predicted_action_embedding = predicted_action_embeddings[group_index]
-            action_embeddings, output_action_embeddings, embedded_actions = instance_actions['global']
-            # This is just a matrix product between a (num_actions, embedding_dim) matrix and an
-            # (embedding_dim, 1) matrix.
-            embedded_action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
-            action_ids = embedded_actions
+            embedded_actions: List[int] = []
+
+            output_action_embeddings = predicted_action_embeddings.new_tensor([], dtype=torch.float)
+            embedded_action_logits = predicted_action_embeddings.new_tensor([], dtype=torch.float)
+            current_log_probs = predicted_action_embeddings.new_tensor([0], dtype=torch.float)
+
+            if 'global' in instance_actions:
+                action_embeddings, output_action_embeddings, embedded_actions = instance_actions['global']
+                # This is just a matrix product between a (num_actions, embedding_dim) matrix and an
+                # (embedding_dim, 1) matrix.
+                embedded_action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
+                action_ids = embedded_actions
             if 'linked' in instance_actions:
                 linking_scores, type_embeddings, linked_actions = instance_actions['linked']
                 action_ids = embedded_actions + linked_actions
