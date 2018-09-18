@@ -62,7 +62,7 @@ def clean_and_split_sql(sql: str) -> List[str]:
     """
     sql_tokens = []
     for token in sql.strip().split():
-        token = token.replace('"', "").replace("'", "").replace("%", "")
+        token = token.replace('"', "'").replace("%", "")
         if token.endswith("(") and len(token) > 1:
             sql_tokens.append(token[:-1])
             sql_tokens.append(token[-1])

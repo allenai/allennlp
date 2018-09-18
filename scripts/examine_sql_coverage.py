@@ -21,7 +21,19 @@ def parse_dataset(filename: str, filter_by: str = None, verbose: bool = False):
 
     for i, sql_data in enumerate(process_sql_data(data)):
         sql_visitor = SqlVisitor(SQL_GRAMMAR2)
-        sql_string = " ".join(sql_data.sql)
+
+        if any([x[:7] == "DERIVED"] for x in sql_data.sql):
+            # NOTE: DATA hack alert - the geography dataset doesn't alias derived tables consistently,
+            # so we fix the data a bit here instead of completely re-working the grammar.
+            sql_to_use = []
+            for i, token in enumerate(sql_data.sql):
+                if token[:7] == "DERIVED" and sql_data.sql[i-1] == ")":
+                    sql_to_use.append("AS")
+                sql_to_use.append(token)
+
+            sql_string = " ".join(sql_to_use)
+        else:
+            sql_string = " ".join(sql_data.sql)
         num_queries += 1
         try:
             prod_rules = sql_visitor.parse(sql_string)

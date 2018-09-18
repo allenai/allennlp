@@ -18,12 +18,14 @@ from parsimonious.grammar import Grammar
 
 # TODO:
 # string set isn't an expr, it should only be in in_expr
-# not all functions can take * as an argument.    
+# not all functions can take * as an argument.
+# Check whether LIKE can take non string arguments (example in scholar dataset)
 
 SQL_GRAMMAR2 = Grammar(
         r"""
         stmt             = (query ws ";") / (query ws)
         query            = (ws select_core groupby_clause ws orderby_clause ws limit) /
+                           (ws select_core groupby_clause ws orderby_clause) /
                            (ws select_core groupby_clause ws limit) /
                            (ws select_core orderby_clause ws limit) /
                            (ws select_core groupby_clause) /
@@ -88,7 +90,7 @@ SQL_GRAMMAR2 = Grammar(
         string           = ~"\'.*?\'"i
         fname            = "COUNT" / "SUM" / "MAX" / "MIN" / "AVG" / "ALL"
         boolean          = "true" / "false"
-        binaryop         = "+" / "-" / "*" / "/" / "=" / "<>" / ">=" / "<=" / ">" / "<" / ">" / AND / OR
+        binaryop         = "+" / "-" / "*" / "/" / "=" / "<>" / ">=" / "<=" / ">" / "<" / ">" / AND / OR / LIKE
         binaryop_no_andor = "+" / "-" / "*" / "/" / "=" / "<>" / "<=" / ">" / "<" / ">"
         unaryop          = "+" / "-" / "not" / "NOT"
 
@@ -96,6 +98,7 @@ SQL_GRAMMAR2 = Grammar(
         FROM     = ws "FROM"
         WHERE    = ws "WHERE"
         AS       = ws "AS"
+        LIKE     = ws "LIKE"
         AND      = (ws "AND") / (ws "and")
         OR       = (ws "OR") / (ws "or")
         DISTINCT = ws "DISTINCT"
