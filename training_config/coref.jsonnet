@@ -1,3 +1,5 @@
+// Configuration for a coreference resolution model based on:
+//   Lee, Kenton et al. “End-to-end Neural Coreference Resolution.” EMNLP (2017).
 {
   "dataset_reader": {
     "type": "coref",
