@@ -57,7 +57,7 @@ def replace_variables(sentence: List[str],
 
 def clean_and_split_sql(sql: str) -> List[str]:
     """
-    Cleans up and unifies a SQL query. This involves removing unnecessary quotes
+    Cleans up and unifies a SQL query. This involves unifying quoted strings
     and splitting brackets which aren't formatted consistently in the data.
     """
     sql_tokens = []
