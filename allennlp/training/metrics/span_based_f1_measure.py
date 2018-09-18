@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Set, Callable
+from typing import Dict, List, Optional, Set, Callable, TypeVar
 from collections import defaultdict
 
 import torch
@@ -16,10 +16,10 @@ from allennlp.data.dataset_readers.dataset_utils.span_utils import (
 )
 
 
-tags_to_spans_function_type = Callable[
-        [List[str], Optional[List[str]]],
-        List[TypedStringSpan]
-        ]
+TAGS_TO_SPANS_FUNCTION_TYPE = TypeVar(
+        "TAGS_TO_SPANS_FUNCTION_TYPE",
+        Callable[[List[str], Optional[List[str]]], List[TypedStringSpan]]
+        )
 
 
 @Metric.register("span_f1")
@@ -42,7 +42,7 @@ class SpanBasedF1Measure(Metric):
                  tag_namespace: str = "tags",
                  ignore_classes: List[str] = None,
                  label_encoding: Optional[str] = "BIO",
-                 tags_to_spans_function: Optional[tags_to_spans_function_type] = None) -> None:
+                 tags_to_spans_function: Optional[TAGS_TO_SPANS_FUNCTION_TYPE] = None) -> None:
         """
         Parameters
         ----------
@@ -67,6 +67,9 @@ class SpanBasedF1Measure(Metric):
         label_encoding : ``str``, optional (default = "BIO")
             The encoding used to specify label span endpoints in the sequence.
             Valid options are "BIO", "IOB1", "BIOUL" or "BMES".
+        tags_to_spans_function: ``Callable``, optional (default = ``None``)
+            If ``label_encoding`` is ``None``, ``tags_to_spans_function`` will be
+            used to generate spans.
         """
         if label_encoding not in ["BIO", "IOB1", "BIOUL", "BMES"]:
             raise ConfigurationError("Unknown label encoding - expected 'BIO', 'IOB1', 'BIOUL', 'BMES'.")
