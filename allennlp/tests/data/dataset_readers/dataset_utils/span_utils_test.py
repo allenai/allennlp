@@ -151,20 +151,34 @@ class SpanUtilsTest(AllenNlpTestCase):
         spans = span_utils.bmes_tags_to_spans(tag_sequence)
         assert set(spans) == {("ARG1", (0, 0)), ("ARG2", (1, 2)), ("ARG3", (3, 3))}
 
-        # Check that it raises when labels are not correct.
-        tag_sequence = ["B-ARG1", "M-ARG2", "E-ARG1"]
-        with self.assertRaises(span_utils.InvalidTagSequence):
-            spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        # Invalid labels.
+        tag_sequence = ["B-ARG1", "M-ARG2"]
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("ARG1", (0, 0)), ("ARG2", (1, 1))}
 
-        # Check that it raises when tag transitions are not correct.
+        tag_sequence = ["B-ARG1", "E-ARG2"]
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("ARG1", (0, 0)), ("ARG2", (1, 1))}
+
+        tag_sequence = ["B-ARG1", "M-ARG1", "M-ARG2"]
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("ARG1", (0, 1)), ("ARG2", (2, 2))}
+
+        tag_sequence = ["B-ARG1", "M-ARG1", "E-ARG2"]
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("ARG1", (0, 1)), ("ARG2", (2, 2))}
+
+        # Invalid transitions.
         tag_sequence = ["B-ARG1", "B-ARG1"]
-        with self.assertRaises(span_utils.InvalidTagSequence):
-            spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("ARG1", (0, 0)), ("ARG1", (1, 1))}
+
         tag_sequence = ["B-ARG1", "S-ARG1"]
-        with self.assertRaises(span_utils.InvalidTagSequence):
-            spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("ARG1", (0, 0)), ("ARG1", (1, 1))}
 
     def test_bmes_tags_to_spans_extracts_correct_spans_without_labels(self):
+        # Good transitions.
         tag_sequence = ["B", "M", "E", "B", "E", "S"]
         spans = span_utils.bmes_tags_to_spans(tag_sequence)
         assert set(spans) == {("", (0, 2)), ("", (3, 4)), ("", (5, 5))}
@@ -173,13 +187,35 @@ class SpanUtilsTest(AllenNlpTestCase):
         spans = span_utils.bmes_tags_to_spans(tag_sequence)
         assert set(spans) == {("", (0, 0)), ("", (1, 2)), ("", (3, 3))}
 
-        # Check that it raises when tag transitions are not correct.
-        tag_sequence = ["B", "B"]
-        with self.assertRaises(span_utils.InvalidTagSequence):
-            spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        # Invalid transitions.
+        tag_sequence = ["B", "B", "E"]
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("", (0, 0)), ("", (1, 2))}
+
         tag_sequence = ["B", "S"]
-        with self.assertRaises(span_utils.InvalidTagSequence):
-            spans = span_utils.bmes_tags_to_spans(tag_sequence)
-        tag_sequence = ["B", "E", "M"]
-        with self.assertRaises(span_utils.InvalidTagSequence):
-            spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("", (0, 0)), ("", (1, 1))}
+
+        tag_sequence = ["M", "B", "E"]
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("", (0, 0)), ("", (1, 2))}
+
+        tag_sequence = ["B", "M", "S"]
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("", (0, 1)), ("", (2, 2))}
+
+        tag_sequence = ["B", "E", "M", "E"]
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("", (0, 1)), ("", (2, 3))}
+
+        tag_sequence = ["B", "E", "E"]
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("", (0, 1)), ("", (2, 2))}
+
+        tag_sequence = ["S", "M"]
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("", (0, 0)), ("", (1, 1))}
+
+        tag_sequence = ["S", "E"]
+        spans = span_utils.bmes_tags_to_spans(tag_sequence)
+        assert set(spans) == {("", (0, 0)), ("", (1, 1))}
