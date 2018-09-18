@@ -51,6 +51,9 @@ class GraphParser(Model):
         The variational dropout applied to the output of the encoder and MLP layers.
     input_dropout : ``float``, optional, (default = 0.0)
         The dropout applied to the embedded text input.
+    edge_prediction_threshold : ``int``, optional (default = 0.5)
+        The probability at which to consider a scored edge to be 'present'
+        in the decoded graph. Must be between 0 and 1.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
@@ -67,12 +70,17 @@ class GraphParser(Model):
                  pos_tag_embedding: Embedding = None,
                  dropout: float = 0.0,
                  input_dropout: float = 0.0,
+                 edge_prediction_threshold: float = 0.5,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(GraphParser, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.encoder = encoder
+        self.edge_prediction_threshold = edge_prediction_threshold
+        if not 0 < edge_prediction_threshold < 1:
+            raise ConfigurationError(f"edge_prediction_threshold must be between "
+                                     f"0 and 1 (exclusive) but found {edge_prediction_threshold}.")
 
         encoder_dim = encoder.get_output_dim()
 
@@ -122,7 +130,7 @@ class GraphParser(Model):
                 tokens: Dict[str, torch.LongTensor],
                 pos_tags: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None,
-                arc_labels: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                arc_tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -131,7 +139,7 @@ class GraphParser(Model):
             The output of ``TextField.as_array()``.
         pos_tags : ``torch.LongTensor``, optional, (default = None).
             The output of a ``SequenceLabelField`` containing POS tags.
-        arc_labels : torch.LongTensor, optional (default = None)
+        arc_tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of integer indices denoting the parent of every
             word in the dependency parse. Has shape ``(batch_size, sequence_length, sequence_length)``.
 
@@ -176,6 +184,18 @@ class GraphParser(Model):
         arc_probs, arc_tag_probs = self._greedy_decode(attended_arcs,
                                                        arc_tag_logits,
                                                        mask)
+        arc_indices = (arc_tags != -1).float()
+        # Make the arc tags not have negative values anywhere
+        # (by default, no edge is indicated with -1).
+        arc_tags = arc_tags * arc_indices
+        predicted_edges = (arc_indices > self.edge_prediction_threshold).long()
+        predicted_tags = arc_tag_probs.max(-1)[1]
+        tag_mask = float_mask.unsqueeze(1) * float_mask.unsqueeze(2)
+        self._attachment_scores(predicted_edges,
+                                predicted_tags,
+                                arc_indices,
+                                arc_tags,
+                                tag_mask)
         output_dict = {
                 "arc_probs": arc_probs,
                 "arc_tag_probs": arc_tag_probs,
@@ -183,10 +203,10 @@ class GraphParser(Model):
                 "tokens": [meta["tokens"] for meta in metadata],
                 }
 
-        if arc_labels is not None:
+        if arc_tags is not None:
             arc_nll, tag_nll = self._construct_loss(attended_arcs=attended_arcs,
                                                     arc_tag_logits=arc_tag_logits,
-                                                    arc_tags=arc_labels,
+                                                    arc_tags=arc_tags,
                                                     mask=mask)
             output_dict["loss"] = arc_nll + tag_nll
             output_dict["arc_loss"] = arc_nll
@@ -205,7 +225,7 @@ class GraphParser(Model):
         arc_tags = []
         for instance_arc_probs, instance_arc_tag_probs, length in zip(arc_probs, arc_tag_probs, lengths):
 
-            arc_matrix = instance_arc_probs > 0.5
+            arc_matrix = instance_arc_probs > self.edge_prediction_threshold
             edges = []
             edge_tags = []
             for i in range(length):
