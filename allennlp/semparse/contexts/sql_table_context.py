@@ -118,7 +118,7 @@ class SqlTableContext():
         self.tables_with_strings = tables_with_strings
         if database_directory:
             self.database_directory = database_directory
-            self.connection = sqlite3.connect(database_directory)
+            self.connection = sqlite3.connect(self.database_directory)
             self.cursor = self.connection.cursor()
 
         self.grammar_str: str = self.initialize_grammar_str()
