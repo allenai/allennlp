@@ -5,7 +5,8 @@ import torch
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules import SimilarityFunction
-from allennlp.state_machines.states import AtisGrammarBasedState, GrammarStatelet, RnnStatelet, is_nonterminal
+from allennlp.state_machines.states import GrammarStatelet
+from allennlp.models.semantic_parsing.atis.atis_semantic_parser import is_nonterminal
 from allennlp.semparse.worlds import AtisWorld
 
 class AtisDecoderStepTest(AllenNlpTestCase):

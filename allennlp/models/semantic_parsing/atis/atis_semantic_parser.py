@@ -17,20 +17,13 @@ from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.fields.array_field import ArrayField 
 from allennlp.models.model import Model
 
-# from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
-# from allennlp.models.semantic_parsing.wikitables.linking_transition_function import LinkingTransitionFunction
-# from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
-
 from allennlp.state_machines.states import GrammarBasedState
 from allennlp.state_machines.transition_functions.linking_transition_function import LinkingTransitionFunction
 
 from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
 
-
-# from allennlp.nn.decoding import BeamSearch
 from allennlp.state_machines import BeamSearch
 
-# from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
 from allennlp.state_machines.trainers import MaximumMarginalLikelihood
 
 from allennlp.semparse import ParsingError
@@ -40,8 +33,7 @@ from allennlp.common.util import pad_sequence_to_length
 from allennlp.modules import Embedding, TimeDistributed
 from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
 from allennlp.nn import util
-# from allennlp.nn.decoding import GrammarState, RnnState, ChecklistState, AtisGrammarState, is_nonterminal
-from allennlp.state_machines.states import GrammarStatelet, RnnStatelet, ChecklistStatelet, AtisGrammarBasedState, is_nonterminal
+from allennlp.state_machines.states import GrammarStatelet, RnnStatelet, ChecklistStatelet 
 from allennlp.semparse.worlds import AtisWorld
 from allennlp.training.metrics import Average
 
@@ -64,6 +56,11 @@ def action_sequence_to_sql(action_sequences: List[str]) -> str:
                             query[query_index + 1:]
                     break 
     return ' '.join([token.strip('"') for token in query])
+
+def is_nonterminal(token: str):
+    if token[0] == '"' and token[-1] == '"':
+        return False
+    return True
 
 
 @Model.register("atis_parser")
@@ -226,13 +223,13 @@ class AtisSemanticParser(Model):
                                  for i in range(batch_size)]
 
         initial_state_world = worlds if add_world_to_initial_state else None
-        initial_state = GrammarBasedDecoderState(batch_indices=list(range(batch_size)),
-                                                 action_history=[[] for _ in range(batch_size)],
-                                                 score=initial_score_list,
-                                                 rnn_state=initial_rnn_state,
-                                                 grammar_state=initial_grammar_state,
-                                                 possible_actions=actions,
-                                                 debug_info=None)
+        initial_state = GrammarBasedState(batch_indices=list(range(batch_size)),
+                                          action_history=[[] for _ in range(batch_size)],
+                                          score=initial_score_list,
+                                          rnn_state=initial_rnn_state,
+                                          grammar_state=initial_grammar_state,
+                                          possible_actions=actions,
+                                          debug_info=None)
 
         return {"initial_state": initial_state}
 
@@ -447,11 +444,12 @@ class AtisSemanticParser(Model):
                                                            entity_type_embeddings,
                                                            list(linked_action_ids))
         
-        return AtisGrammarState(['statement'],
+        return GrammarStatelet(['statement'],
                                 {},
                                 translated_valid_actions,
                                 {},
-                                is_nonterminal)
+                                is_nonterminal,
+                                reverse_productions=False)
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:

@@ -171,7 +171,7 @@ class AtisWorld():
             for table, columns in self.tables_with_strings.items():
                 for column in columns:
                     self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
-                    strings_list.extend([(format_action(f"{table}_{column}_string", str(row[0]), is_string=True), str(row[0]))
+                    strings_list.extend([(format_action(f"{table}_{column}_string", str(row[0]), is_string=not 'number' in column, is_number='number' in column), str(row[0]))
                                                 for row in self.cursor.fetchall()])
 
         # strings_list = sorted(strings_list, key=lambda string_tuple: string_tuple[0], reverse=True)
