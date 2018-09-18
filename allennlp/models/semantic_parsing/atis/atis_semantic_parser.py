@@ -16,12 +16,23 @@ from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.fields.array_field import ArrayField 
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
-from allennlp.models.semantic_parsing.wikitables.linking_transition_function import LinkingTransitionFunction
-from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
+
+# from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
+# from allennlp.models.semantic_parsing.wikitables.linking_transition_function import LinkingTransitionFunction
+# from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
+
+from allennlp.state_machines.states import GrammarBasedState
+from allennlp.state_machines.transition_functions.linking_transition_function import LinkingTransitionFunction
+
 from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
-from allennlp.nn.decoding import BeamSearch
-from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
+
+
+# from allennlp.nn.decoding import BeamSearch
+from allennlp.state_machines import BeamSearch
+
+# from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
+from allennlp.state_machines.trainers import MaximumMarginalLikelihood
+
 from allennlp.semparse import ParsingError
 
 from allennlp.common.checks import check_dimensions_match
@@ -29,7 +40,8 @@ from allennlp.common.util import pad_sequence_to_length
 from allennlp.modules import Embedding, TimeDistributed
 from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
 from allennlp.nn import util
-from allennlp.nn.decoding import GrammarState, RnnState, ChecklistState, AtisGrammarState, is_nonterminal
+# from allennlp.nn.decoding import GrammarState, RnnState, ChecklistState, AtisGrammarState, is_nonterminal
+from allennlp.state_machines.states import GrammarStatelet, RnnStatelet, ChecklistStatelet, AtisGrammarBasedState, is_nonterminal
 from allennlp.semparse.worlds import AtisWorld
 from allennlp.training.metrics import Average
 
@@ -161,7 +173,7 @@ class AtisSemanticParser(Model):
                                       actions: List[List[ProductionRuleArray]],
                                       linking_scores: torch.Tensor,
                                       add_world_to_initial_state: bool = False,
-                                      checklist_states: List[ChecklistState] = None) -> Dict:
+                                      checklist_states: List[ChecklistStatelet] = None) -> Dict:
         embedded_utterance = self._utterance_embedder(utterance)
         utterance_mask = util.get_text_field_mask(utterance).float()
 
@@ -200,7 +212,7 @@ class AtisSemanticParser(Model):
         utterance_mask_list = [utterance_mask[i] for i in range(batch_size)]
         initial_rnn_state = []
         for i in range(batch_size):
-            initial_rnn_state.append(RnnState(final_encoder_output[i],
+            initial_rnn_state.append(RnnStatelet(final_encoder_output[i],
                                               memory_cell[i],
                                               self._first_action_embedding,
                                               self._first_attended_utterance,
@@ -354,7 +366,7 @@ class AtisSemanticParser(Model):
                               world: Dict[str, List[str]],
                               possible_actions: List[ProductionRuleArray],
                               linking_scores: torch.Tensor,
-                              entity_types: torch.Tensor) -> GrammarState:
+                              entity_types: torch.Tensor) -> GrammarStatelet:
         """
         This method creates the GrammarState object that's used for decoding.  Part of creating
         that is creating the `valid_actions` dictionary, which contains embedded representations of

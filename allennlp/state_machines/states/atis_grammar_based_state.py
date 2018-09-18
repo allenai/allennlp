@@ -3,7 +3,7 @@ from typing import Callable, Dict, List, Tuple
 
 import torch
 
-from allennlp.nn.decoding.grammar_state import GrammarState
+from allennlp.state_machines.states.grammar_based_state import GrammarBasedState 
 
 def is_nonterminal(token: str):
     if token[0] == '"' and token[-1] == '"':
@@ -11,7 +11,7 @@ def is_nonterminal(token: str):
     return True
 
 
-class AtisGrammarState(GrammarState):
+class AtisGrammarBasedState(GrammarBasedState):
     def get_valid_actions(self) -> Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]:
         """
         Returns the valid actions in the current grammar state.  See the class docstring for a

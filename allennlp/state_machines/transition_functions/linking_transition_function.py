@@ -108,6 +108,7 @@ class LinkingTransitionFunction(BasicTransitionFunction):
                 # (embedding_dim, 1) matrix.
                 embedded_action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
                 action_ids = embedded_actions
+
             if 'linked' in instance_actions:
                 linking_scores, type_embeddings, linked_actions = instance_actions['linked']
                 action_ids = embedded_actions + linked_actions
