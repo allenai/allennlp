@@ -188,7 +188,7 @@ class GraphParser(Model):
         arc_indices = (arc_tags != -1).float()
         # Make the arc tags not have negative values anywhere
         # (by default, no edge is indicated with -1).
-        arc_tags = arc_tags * arc_indices
+        arc_tags_for_eval = arc_tags * arc_indices
         batch_size = arc_tags.size(0)
         predicted_edges = (arc_probs > self.edge_prediction_threshold).long()
         predicted_tags = arc_tag_probs.max(-1)[1]
@@ -196,7 +196,7 @@ class GraphParser(Model):
         self._attachment_scores(predicted_edges.view(batch_size, -1),
                                 predicted_tags.view(batch_size, -1),
                                 arc_indices.view(batch_size, -1),
-                                arc_tags.view(batch_size, -1),
+                                arc_tags_for_eval.view(batch_size, -1),
                                 tag_mask.view(batch_size, -1))
         one_minus_arc_probs = 1 - arc_probs
         self._unlabelled_f1(torch.stack([one_minus_arc_probs, arc_probs], -1), arc_indices, tag_mask)
@@ -220,7 +220,6 @@ class GraphParser(Model):
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-
         arc_tag_probs = output_dict["arc_tag_probs"].cpu().detach().numpy()
         arc_probs = output_dict["arc_probs"].cpu().detach().numpy()
         mask = output_dict["mask"]
@@ -276,6 +275,7 @@ class GraphParser(Model):
             The negative log likelihood from the arc tag loss.
         """
         float_mask = mask.float()
+        print(arc_tags)
         arc_indices = (arc_tags != -1).float()
         # Make the arc tags not have negative values anywhere
         # (by default, no edge is indicated with -1).
