@@ -344,7 +344,20 @@ class TestAtisWorld(AllenNlpTestCase):
                  'number -> ["1"]',
                  'number -> ["2200"]',
                  'number -> ["1000"]'}
-        # Also test the start and end times
+
+        assert set(world.valid_actions['time_range_start']) == \
+                {'time_range_start -> ["0"]'}
+        assert set(world.valid_actions['time_range_end']) == \
+                {'time_range_end -> ["1200"]'}
+
+        date_binary_expressions = ['biexpr -> ["date_day", ".", "year", binaryop, "1991"]',
+                                   'biexpr -> ["date_day", ".", "month_number", binaryop, "8"]',
+                                   'biexpr -> ["date_day", ".", "day_number", binaryop, "26"]',
+                                   'biexpr -> ["date_day", ".", "year", binaryop, "1991"]',
+                                   'biexpr -> ["date_day", ".", "month_number", binaryop, "5"]',
+                                   'biexpr -> ["date_day", ".", "day_number", binaryop, "9"]']
+        for date_binary_expression in date_binary_expressions:
+            assert date_binary_expression in world.valid_actions['biexpr']
 
     def test_atis_simple_action_sequence(self): # pylint: disable=no-self-use
         world = AtisWorld([("give me all flights from boston to "
