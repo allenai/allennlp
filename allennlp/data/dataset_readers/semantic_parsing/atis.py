@@ -84,9 +84,8 @@ class AtisDatasetReader(DatasetReader):
                     if not current_interaction['utterance'] or not current_interaction['sql']:
                         continue
                     utterances.append(current_interaction['utterance'])
-                    queries = [query for query in current_interaction['sql'].split('\n') if query]
-                    # query = min(queries, key=len)
-                    instance = self.text_to_instance(deepcopy(utterances), queries)
+                    sql_query_labels = [query for query in current_interaction['sql'].split('\n') if query]
+                    instance = self.text_to_instance(deepcopy(utterances), sql_query_labels)
                     if not instance:
                         continue
                     yield instance
@@ -101,8 +100,8 @@ class AtisDatasetReader(DatasetReader):
         ----------
         utterances: ``List[str]``, required.
             List of utterances in the interaction, the last element is the current utterance.
-        sql_query: ``List[str]``, optional
-            The SQL query, given as label during training or validation.
+        sql_query_labels: ``List[str]``, optional
+            The SQL queries that are given as labels during training or validation.
         """
         utterance = utterances[-1]
         action_sequence: List[str] = []
@@ -114,6 +113,8 @@ class AtisDatasetReader(DatasetReader):
                           database_directory=self._database_directory)
 
         if sql_query_labels:
+            # If there are multiple sql queries given as labels, we use the shortest
+            # one for training. 
             sql_query = min(sql_query_labels, key=len)
             try:
                 action_sequence = world.get_action_sequence(sql_query)

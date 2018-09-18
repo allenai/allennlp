@@ -11,10 +11,10 @@ class TestAtisReader(AllenNlpTestCase):
         reader = AtisDatasetReader(database_directory=str(database_directory))
 
         instances = list(reader.read(str(data_path)))
-        
+
         assert len(instances) == 13
         instance = instances[0]
-        
+
         assert set(instance.fields.keys()) == \
                 {'utterance',
                  'actions',
@@ -34,5 +34,16 @@ class TestAtisReader(AllenNlpTestCase):
         assert world.valid_actions['number'] == \
                 ['number -> ["1"]',
                  'number -> ["0"]']
-        
-        # TODO test the linking scores
+
+        assert world.linked_entities['string']['airport_airport_code_string -> ["\'DTW\'"]'][2] == \
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] # ``detroit`` -> ``DTW``
+        assert world.linked_entities['string']['flight_stop_stop_airport_string -> ["\'DTW\'"]'][2] == \
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] # ``detroit`` -> ``DTW``
+        assert world.linked_entities['string']['city_city_code_string -> ["\'DDTT\'"]'][2] == \
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] # ``detroit`` -> ``DDTT``
+        assert world.linked_entities['string']['fare_basis_economy_string -> ["\'NO\'"]'][2] == \
+                [0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0] # ``one way`` -> ``NO``
+        assert world.linked_entities['string']['city_city_name_string -> ["\'WESTCHESTER COUNTY\'"]'][2] == \
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1] # ``westchester county`` -> ``WESTCHESTER COUNTY``
+        assert world.linked_entities['string']['city_city_code_string -> ["\'HHPN\'"]'][2] == \
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1] # ``westchester county`` -> ``HHPN``
