@@ -20,17 +20,15 @@ def parse_sentence(sentence_blob: str) -> Tuple[List[Dict[str, str]], List[Tuple
 
     Each word in the sentence is returned as a dictionary with the following
     format:
-    {
-        'id': '1',
-        'form': 'Pierre',
-        'lemma': 'Pierre',
-        'pos': 'NNP',
-        'head': '2',   # Note that this is the `syntactic` head.
-        'deprel': 'nn',
-        'top': '-',
-        'pred': '+',
-        'frame': 'named:x-c'
-    }
+    'id': '1',
+    'form': 'Pierre',
+    'lemma': 'Pierre',
+    'pos': 'NNP',
+    'head': '2',   # Note that this is the `syntactic` head.
+    'deprel': 'nn',
+    'top': '-',
+    'pred': '+',
+    'frame': 'named:x-c'
 
     Along with a list of arcs and their corresponding tags. Note that
     in semantic dependency parsing words can have more than one head
