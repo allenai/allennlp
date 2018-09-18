@@ -291,7 +291,7 @@ class GraphParser(Model):
         reshaped_tags = arc_tags.view(-1)
         tag_nll = self._tag_loss(reshaped_logits, reshaped_tags.long()).view(original_shape) * tag_mask
 
-        valid_positions = mask.sum()
+        valid_positions = tag_mask.sum()
 
         arc_nll = arc_nll.sum() / valid_positions.float()
         tag_nll = tag_nll.sum() / valid_positions.float()
