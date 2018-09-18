@@ -65,7 +65,6 @@ class AtisWorld():
         self.tables_with_strings = TABLES_WITH_STRINGS 
         if database_directory:
             self.database_directory = database_directory
-            self.database_directory = '/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db'
             self.connection = sqlite3.connect(self.database_directory)
             self.cursor = self.connection.cursor()
 

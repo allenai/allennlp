@@ -58,13 +58,14 @@ def get_times_from_utterance(utterance: str,
     oclock_linking_dict = _time_regex_match(r"\d+\so'clock",
                                             utterance,
                                             char_offset_to_token_index,
-                                            lambda match: digit_to_query_time(match.rstrip("o'clock")),
+                                            lambda match: digit_to_query_time(match.rstrip(" o'clock")),
                                             indices_of_approximate_words)
+    print('oclock_linking_dict', oclock_linking_dict)
     
     hours_linking_dict = _time_regex_match(r"\d+\shours",
                                             utterance,
                                             char_offset_to_token_index,
-                                            lambda match: [int(match.rstrip("hours"))],
+                                            lambda match: [int(match.rstrip(" hours"))],
                                             indices_of_approximate_words)
 
 

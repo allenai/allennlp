@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Tuple
 import re
 import difflib
 import sqlite3
+import sqlparse
 import multiprocessing
 import time
 from copy import deepcopy
@@ -574,7 +575,7 @@ class AtisSemanticParser(Model):
                         similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
                         self._action_similarity(similarity.ratio())
                      
-                    if example_sql_query[i]:
+                    if example_sql_query and example_sql_query[i]:
                         # Since the query might hang, we run in another process and kill it if it
                         # takes too long.
                         p = multiprocessing.Process(target=self._sql_result_match,
@@ -599,9 +600,8 @@ class AtisSemanticParser(Model):
                     outputs['utterance'].append(world[i].utterances[-1])
                     outputs['tokenized_utterance'].append(world[i].tokenized_utterances[-1])
                     outputs['entities'].append(world[i].entities)
-   
                     outputs['best_action_sequence'].append(action_strings)
-                    outputs['logical_form'].append(predicted_sql_query)
+                    outputs['logical_form'].append(sqlparse.format(predicted_sql_query, reindent=True))
                     outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
             return outputs
 
