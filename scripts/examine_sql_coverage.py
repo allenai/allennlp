@@ -1,13 +1,11 @@
 import json
 import os
 import sys
-from typing import Any, Iterable, Tuple
 import argparse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import process_sql_data, SqlData
-from allennlp.semparse.contexts.grammars import SQL_GRAMMAR2
 from allennlp.semparse.contexts.sql_table_context import SqlVisitor
 from parsimonious.grammar import Grammar
 
@@ -67,7 +65,8 @@ SQL_GRAMMAR2 = Grammar(
         wsp              = ~"\s+"i
         name             = ~"[a-zA-Z]\w*"i
 
-        expr             = in_expr / like_expr / between_expr / binary_expr / unary_expr / null_check_expr / source_subq / value
+        expr             = in_expr / like_expr / between_expr / binary_expr /
+                           unary_expr / null_check_expr / source_subq / value
         like_expr        = value wsp LIKE ws string
         in_expr          = (value wsp NOT IN wsp string_set) /
                            (value wsp IN wsp string_set) /
@@ -100,8 +99,8 @@ SQL_GRAMMAR2 = Grammar(
         WHERE    = ws "WHERE"
         AS       = ws "AS"
         LIKE     = ws "LIKE"
-        AND      = (ws "AND") / (ws "and")
-        OR       = (ws "OR") / (ws "or")
+        AND      = ws "AND"
+        OR       = ws "OR"
         DISTINCT = ws "DISTINCT"
         GROUP    = ws "GROUP"
         ORDER    = ws "ORDER"
