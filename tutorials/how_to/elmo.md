@@ -54,7 +54,7 @@ For more details, see `allennlp elmo -h`.
 
 ## Using ELMo interactively
 
-You can use ELMo interactively (or programatically) with iPython.  The `allennlp.commands.elmo.ElmoEmbedder` class provides an easy way to process one or many sentences with ELMo.
+You can use ELMo interactively (or programatically) with iPython.  The `allennlp.commands.elmo.ElmoEmbedder` class provides the easiest way to process one or many sentences with ELMo because it handles batching transparently.  However, if you want to use Elmo as a PyTorch module then you need to use `allennlp.modules.elmo.Elmo`.
 
 ```
 $ ipython
@@ -75,7 +75,7 @@ $ ipython
 ## Using ELMo as a PyTorch `Module`
 
 If you need to include ELMo at multiple layers in a task model or you have other advanced use cases, you will need to create ELMo vectors programatically.
-This is easily done with the `Elmo` class [(API doc)](https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L27), which provides a mechanism to compute the weighted ELMo representations (Equation (1) in the paper).
+This is easily done with the `allennlp.modules.elmo.Elmo` class [(API doc)](https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L27), which provides a mechanism to compute the weighted ELMo representations (Equation (1) in the paper).
 
 This is a `torch.nn.Module` subclass that computes any number of ELMo
 representations and introduces trainable scalar weights for each.
