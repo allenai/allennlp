@@ -189,14 +189,15 @@ class GraphParser(Model):
         # Make the arc tags not have negative values anywhere
         # (by default, no edge is indicated with -1).
         arc_tags = arc_tags * arc_indices
+        batch_size = arc_tags.size(0)
         predicted_edges = (arc_probs > self.edge_prediction_threshold).long()
         predicted_tags = arc_tag_probs.max(-1)[1]
         tag_mask = float_mask.unsqueeze(1) * float_mask.unsqueeze(2)
-        self._attachment_scores(predicted_edges,
-                                predicted_tags,
-                                arc_indices,
-                                arc_tags,
-                                tag_mask)
+        self._attachment_scores(predicted_edges.view(batch_size, -1),
+                                predicted_tags.view(batch_size, -1),
+                                arc_indices.view(batch_size, -1),
+                                arc_tags.view(batch_size, -1),
+                                tag_mask.view(batch_size, -1))
         one_minus_arc_probs = 1 - arc_probs
         self._unlabelled_f1(torch.stack([one_minus_arc_probs, arc_probs], -1), arc_indices, tag_mask)
         output_dict = {
