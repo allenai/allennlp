@@ -86,7 +86,7 @@ class AtisDatasetReader(DatasetReader):
                     utterances.append(current_interaction['utterance'])
                     queries = [query for query in current_interaction['sql'].split('\n') if query]
                     # query = min(queries, key=len)
-                    instance = self.text_to_instance(deepcopy(utterances), queries) 
+                    instance = self.text_to_instance(deepcopy(utterances), queries)
                     if not instance:
                         continue
                     yield instance
@@ -142,7 +142,7 @@ class AtisDatasetReader(DatasetReader):
                   'actions' : action_field,
                   'world' : world_field,
                   'linking_scores' : ArrayField(world.linking_scores)}
-        
+
         if sql_query_labels != None:
             fields['example_sql_query'] = MetadataField(sql_query_labels)
             if action_sequence:

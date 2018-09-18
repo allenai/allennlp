@@ -118,8 +118,8 @@ class GrammarStatelet:
 
         This will update the non-terminal stack and the context-dependent actions.  Updating the
         non-terminal stack involves popping the non-terminal that was expanded off of the stack,
-        then pushing on any non-terminals in the production rule back on the stack.  
-        
+        then pushing on any non-terminals in the production rule back on the stack.
+
         If ``self._reverse_production`` is set to True then we push the non-terminals on in `reverse` order,
         which means that the first non-terminal in the production rule gets popped off the stack first.
 
@@ -155,7 +155,7 @@ class GrammarStatelet:
             new_lambda_stacks[(lambda_type, lambda_variable)] = []
 
         if self._reverse_productions:
-            productions = reversed(productions)
+            productions = list(reversed(productions))
 
         for production in productions:
             if self._is_nonterminal(production):

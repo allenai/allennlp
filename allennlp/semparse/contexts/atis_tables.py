@@ -1,11 +1,9 @@
 from typing import List, Dict, Callable, Set
-from datetime import datetime
-from datetime import timedelta 
+from datetime import datetime, timedelta
 import re
-from nltk import ngrams
-from pprint import pprint
-
 from collections import defaultdict
+from nltk import ngrams
+
 from allennlp.data.tokenizers import Token
 
 TWELVE_TO_TWENTY_FOUR = 1200
@@ -60,12 +58,12 @@ def get_times_from_utterance(utterance: str,
                                             char_offset_to_token_index,
                                             lambda match: digit_to_query_time(match.rstrip(" o'clock")),
                                             indices_of_approximate_words)
-    
+
     hours_linking_dict = _time_regex_match(r"\d+\shours",
-                                            utterance,
-                                            char_offset_to_token_index,
-                                            lambda match: [int(match.rstrip(" hours"))],
-                                            indices_of_approximate_words)
+                                           utterance,
+                                           char_offset_to_token_index,
+                                           lambda match: [int(match.rstrip(" hours"))],
+                                           indices_of_approximate_words)
 
 
     times_linking_dict: Dict[str, List[int]] = defaultdict(list)
@@ -92,20 +90,20 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
 
     trigrams = ngrams([token.text for token in tokenized_utterance], 3)
     for month, tens, digit in trigrams:
-        day = ' '.join([tens, digit]) 
+        day = ' '.join([tens, digit])
         if month in MONTH_NUMBERS and day in DAY_NUMBERS:
             try:
                 dates.append(datetime(year, MONTH_NUMBERS[month], DAY_NUMBERS[day]))
             except ValueError:
-                print('invalid month day') 
-    
+                print('invalid month day')
+
     bigrams = ngrams([token.text for token in tokenized_utterance], 2)
     for month, day in bigrams:
         if month in MONTH_NUMBERS and day in DAY_NUMBERS:
             try:
                 dates.append(datetime(year, MONTH_NUMBERS[month], DAY_NUMBERS[day]))
             except ValueError:
-                print('invalid month day') 
+                print('invalid month day')
 
     return dates
 
@@ -153,26 +151,26 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
                 number_linking_dict[number].append(index)
     return number_linking_dict
 
-def get_time_range_start_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
+def get_time_range_start_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     late_indices = {index for index, token in enumerate(tokenized_utterance)
-                        if token.text == 'late'}
+                    if token.text == 'late'}
 
     time_range_start_linking_dict: Dict[str, List[int]] = defaultdict(list)
     for token_index, token in enumerate(tokenized_utterance):
         for time in TIME_RANGE_START_DICT.get(token.text, []):
             if token_index - 1 not in late_indices:
                 time_range_start_linking_dict[str(time)].append(token_index)
-    
+
     bigrams = ngrams([token.text for token in tokenized_utterance], 2)
     for bigram_index, bigram in enumerate(bigrams):
         for time in TIME_RANGE_START_DICT.get(' '.join(bigram), []):
             time_range_start_linking_dict[str(time)].extend([bigram_index, bigram_index + 1])
 
-    return time_range_start_linking_dict 
+    return time_range_start_linking_dict
 
-def get_time_range_end_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
+def get_time_range_end_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     early_indices = {index for index, token in enumerate(tokenized_utterance)
-                        if token.text == 'early'}
+                     if token.text == 'early'}
 
     time_range_end_linking_dict: Dict[str, List[int]] = defaultdict(list)
     for token_index, token in enumerate(tokenized_utterance):
@@ -185,7 +183,7 @@ def get_time_range_end_from_utterance(utterance: str, tokenized_utterance: List[
         for time in TIME_RANGE_END_DICT.get(' '.join(bigram), []):
             time_range_end_linking_dict[str(time)].extend([bigram_index, bigram_index + 1])
 
-    return time_range_end_linking_dict 
+    return time_range_end_linking_dict
 
 
 def digit_to_query_time(digit: str) -> List[int]:
@@ -208,11 +206,11 @@ def get_approximate_times(times: List[int]) -> List[int]:
     """
     approximate_times = []
     for time in times:
-        hour = int(time/HOUR_TO_TWENTY_FOUR) % 24 
+        hour = int(time/HOUR_TO_TWENTY_FOUR) % 24
         minute = time % HOUR_TO_TWENTY_FOUR
         approximate_time = datetime.now()
-        approximate_time = approximate_time.replace(hour = hour, minute = minute)
-        
+        approximate_time = approximate_time.replace(hour=hour, minute=minute)
+
         start_time_range = approximate_time - timedelta(minutes=30)
         end_time_range = approximate_time + timedelta(minutes=30)
         approximate_times.extend([start_time_range.hour * HOUR_TO_TWENTY_FOUR + start_time_range.minute,
