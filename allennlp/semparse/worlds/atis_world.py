@@ -96,7 +96,7 @@ class AtisWorld():
     def get_valid_actions(self) -> Dict[str, List[str]]:
         return self.valid_actions
 
-    def get_linked_entities(self) -> Dict[str, Tuple[str, str, List[int]]]:
+    def get_linked_entities(self) -> Dict[str, Dict[str, Tuple[str, str, List[int]]]]:
         current_tokenized_utterance = [] if not self.tokenized_utterances \
                 else self.tokenized_utterances[-1]
         

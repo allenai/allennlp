@@ -96,11 +96,10 @@ class LinkingTransitionFunction(BasicTransitionFunction):
         for group_index in range(group_size):
             instance_actions = actions[group_index]
             predicted_action_embedding = predicted_action_embeddings[group_index]
-            embedded_actions = []
+            embedded_actions: List[int] = []
 
             output_action_embeddings = predicted_action_embeddings.new_tensor([], dtype=torch.float)
             embedded_action_logits = predicted_action_embeddings.new_tensor([], dtype=torch.float)
-            instance_action_ids = []
             current_log_probs = predicted_action_embeddings.new_tensor([0], dtype=torch.float)
 
             if 'global' in instance_actions:
