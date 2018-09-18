@@ -1,7 +1,6 @@
 import json
 import os
 import sys
-from typing import Any, Iterable, Tuple
 import argparse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
@@ -26,8 +25,8 @@ def parse_dataset(filename: str, filter_by: str = None, verbose: bool = False):
             # NOTE: DATA hack alert - the geography dataset doesn't alias derived tables consistently,
             # so we fix the data a bit here instead of completely re-working the grammar.
             sql_to_use = []
-            for i, token in enumerate(sql_data.sql):
-                if token[:7] == "DERIVED" and sql_data.sql[i-1] == ")":
+            for j, token in enumerate(sql_data.sql):
+                if token[:7] == "DERIVED" and sql_data.sql[j-1] == ")":
                     sql_to_use.append("AS")
                 sql_to_use.append(token)
 
