@@ -65,9 +65,9 @@ class AtisWorld():
         self.tables_with_strings = TABLES_WITH_STRINGS 
         if database_directory:
             self.database_directory = database_directory
-            self.connection = sqlite3.connect(database_directory)
+            self.database_directory = '/Users/kevinl/Documents/semant_parse/allennlp/atis/atis.db'
+            self.connection = sqlite3.connect(self.database_directory)
             self.cursor = self.connection.cursor()
-
 
         self.sql_table_context = SqlTableContext(ALL_TABLES,
                                                  TABLES_WITH_STRINGS,
@@ -79,17 +79,16 @@ class AtisWorld():
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]
-        valid_actions, linking_scores = self.init_all_valid_actions()
-        self.valid_actions: Dict[str, List[str]] = valid_actions
+        self.linked_entities = self.get_linked_entities()
 
-        linked_entities = self.get_linked_entities()
-
+        self.valid_actions: Dict[str, List[str]]  = self.update_valid_actions() 
         # This has shape (num_entities, num_utterance_tokens).
+        entities, linking_scores = self.flatten_entities()
         self.linking_scores: numpy.ndarray = linking_scores
+        self.entities: List[str] = entities
         self.grammar_str: str = self.get_grammar_str()
         self.grammar_with_context: Grammar = Grammar(self.grammar_str)
         all_possible_actions = self.all_possible_actions()
-        self.entities = self.get_entities()
 
         if database_directory:
             self.connection.close()
@@ -173,11 +172,12 @@ class AtisWorld():
             for table, columns in self.tables_with_strings.items():
                 for column in columns:
                     self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
-                    strings_list.extend([("{table}_{column}_string", str(row[0]))
+                    strings_list.extend([(format_action(f"{table}_{column}_string", str(row[0]), is_string=True), str(row[0]))
                                                 for row in self.cursor.fetchall()])
 
         # strings_list = sorted(strings_list, key=lambda string_tuple: string_tuple[0], reverse=True)
         # We construct the linking scores for strings from the ``string_linking_dict`` here.
+        print('string_linking_dict', string_linking_dict)
         for string in strings_list:
             entity_linking = [0 for token in current_tokenized_utterance]
             # string_linking_dict has the strings and linking scores from the last utterance.
@@ -185,118 +185,20 @@ class AtisWorld():
             for token_index in string_linking_dict.get(string[1], []):
                 entity_linking[token_index] = 1
             action = string[0]
-            string_linking_dict[action] = (string[0], string[1], entity_linking)
+            string_linking_scores[action] = (action.split( ' -> ')[0], string[1], entity_linking)
 
         entity_linking_scores['number'] = number_linking_scores
         entity_linking_scores['string'] = string_linking_scores
-        pprint(entity_linking_scores)
         return entity_linking_scores
-    
-    def init_all_valid_actions(self) -> Tuple[Dict[str, List[str]], numpy.ndarray]:
-        valid_actions = deepcopy(self.sql_table_context.valid_actions)
-        linking_scores = []
-
-        current_tokenized_utterance = [] if not self.tokenized_utterances \
-                else self.tokenized_utterances[-1]
-        
-        # Get time range start
+   
+    def update_valid_actions(self) -> Dict[str, List[str]]: 
+        valid_actions = self.sql_table_context.valid_actions
         valid_actions['time_range_start'] = []
-        time_range_start = {"0"}
-        time_range_start_linking_dict: Dict[str, List[int]] = {}
-
-        for utterance, tokenized_utterance in zip(self.utterances, self.tokenized_utterances):
-            time_range_start_linking_dict = get_time_range_start_from_utterance(utterance, tokenized_utterance)
-            time_range_start.update(time_range_start_linking_dict.keys())
-        time_range_start_list: List[str] = sorted(time_range_start, reverse=True)
-
-        time_range_start_linking_scores = []
-        for time in time_range_start_list:
-            entity_linking = [0 for token in current_tokenized_utterance]
-            for token_index in time_range_start_linking_dict.get(time, []):
-                entity_linking[token_index] = 1
-            time_range_start_linking_scores.append(entity_linking)
-        linking_scores.extend(time_range_start_linking_scores)
-
-        for time in list(time_range_start_list):
-            action = format_action('time_range_start', time, is_number=True)
-            valid_actions['time_range_start'].append(action)
-
-        # Get time range end
         valid_actions['time_range_end'] = []
-        time_range_end = {"1200"}
-        time_range_end_linking_dict: Dict[str, List[int]] = {}
+        for action, value in self.linked_entities['number'].items():
+            valid_actions[value[0]].append(action)
+        return valid_actions
 
-        for utterance, tokenized_utterance in zip(self.utterances, self.tokenized_utterances):
-            time_range_end_linking_dict = get_time_range_end_from_utterance(utterance, tokenized_utterance)
-            time_range_end.update(time_range_end_linking_dict.keys())
-        time_range_end_list: List[str] = sorted(time_range_end, reverse=True)
-
-        time_range_end_linking_scores = []
-        for time in time_range_end_list:
-            entity_linking = [0 for token in current_tokenized_utterance]
-            for token_index in time_range_end_linking_dict.get(time, []):
-                entity_linking[token_index] = 1
-            time_range_end_linking_scores.append(entity_linking)
-        linking_scores.extend(time_range_end_linking_scores)
-
-        for time in list(time_range_end_list):
-            action = format_action('time_range_end', time, is_number=True)
-            valid_actions['time_range_end'].append(action)
-        
-        numbers = {'0', '1'}
-        number_linking_dict: Dict[str, List[int]] = {}
-
-        for utterance, tokenized_utterance in zip(self.utterances, self.tokenized_utterances):
-            number_linking_dict = get_numbers_from_utterance(utterance, tokenized_utterance)
-            numbers.update(number_linking_dict.keys())
-        numbers_list: List[str] = sorted(numbers, reverse=True)
-
-        # We construct the linking scores for numbers from the ``number_linking_dict`` here.
-        number_linking_scores = []
-        for number in numbers_list:
-            entity_linking = [0 for token in current_tokenized_utterance]
-            # number_linking_scores has the numbers and linking scores from the last utterance.
-            # If the number is not in the last utterance, then the linking scores will be all 0.
-            for token_index in number_linking_dict.get(number, []):
-                if token_index <= len(entity_linking) - 1:
-                    entity_linking[token_index] = 1
-            number_linking_scores.append(entity_linking)
-        linking_scores.extend(number_linking_scores)
-
-        for number in list(numbers_list):
-            action = format_action('number', number, is_number=True)
-            valid_actions['number'].append(action)
-        
-        # add string linking dict
-        string_linking_dict: Dict[str, List[int]] = {}
-        for tokenized_utterance in self.tokenized_utterances:
-            string_linking_dict = get_strings_from_utterance(tokenized_utterance)
-            # strings.update(string_linking_dict.keys())
-        # strings_list: List[str] = sorted(strings, reverse=True)
-        strings_list = []
-
-        if self.tables_with_strings:
-            for table, columns in self.tables_with_strings.items():
-                for column in columns:
-                    self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
-                    strings_list.extend([(format_action(f"{table}_{column}_string", str(row[0]), is_string=True), str(row[0]))
-                                                for row in self.cursor.fetchall()])
-        strings_list = sorted(strings_list, key=lambda string_tuple: string_tuple[0], reverse=True)
-        # We construct the linking scores for strings from the ``string_linking_dict`` here.
-
-        string_linking_scores = []
-
-        for string in strings_list:
-            entity_linking = [0 for token in current_tokenized_utterance]
-            # string_linking_dict has the strings and linking scores from the last utterance.
-            # If the string is not in the last utterance, then the linking scores will be all 0.
-            for token_index in string_linking_dict.get(string[1], []):
-                entity_linking[token_index] = 1
-
-            string_linking_scores.append(entity_linking)
-        linking_scores.extend(string_linking_scores)
-
-        return valid_actions, numpy.array(linking_scores)
 
     def get_grammar_str(self) -> str:
         """
@@ -325,23 +227,19 @@ class AtisWorld():
 
         self.valid_actions['ternaryexpr'] = ['ternaryexpr -> [col_ref, "BETWEEN", time_range_start, "AND", time_range_end]',
                                              'ternaryexpr -> [col_ref, "NOT", "BETWEEN", time_range_start, "AND", time_range_end]']
-
-        numbers = [number.split(" -> ")[1].lstrip('["').rstrip('"]') for \
-                   number in sorted(self.valid_actions['number'], reverse=True)]
         
+        # We need to add the numbers, starting, ending time ranges to the grammar.
+        numbers = sorted([value[1] for key, value in self.linked_entities['number'].items() if value[0] == 'number'], reverse=True)
         self.grammar_dictionary['number'] = [f'"{number}"' for number in numbers]
 
-        time_range_start = [time.split(" -> ")[1].lstrip('["').rstrip('"]') for \
-                   time in sorted(self.valid_actions['time_range_start'], reverse=True)]
+        time_range_start = sorted([value[1] for key, value in self.linked_entities['number'].items() if value[0] == 'time_range_start'], reverse=True)
         self.grammar_dictionary['time_range_start'] = [f'"{time}"' for time in time_range_start]
 
-        time_range_end = [time.split(" -> ")[1].lstrip('["').rstrip('"]') for \
-                   time in sorted(self.valid_actions['time_range_end'], reverse=True)]
+        time_range_end = sorted([value[1] for key, value in self.linked_entities['number'].items() if value[0] == 'time_range_end'], reverse=True)
         self.grammar_dictionary['time_range_end'] = [f'"{time}"' for time in time_range_end]
-
+        
         return '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
                           for nonterminal, right_hand_side in self.grammar_dictionary.items()])
-
 
     def get_action_sequence(self, query: str) -> List[str]:
         sql_visitor = SqlVisitor(self.grammar_with_context)
@@ -361,18 +259,18 @@ class AtisWorld():
                 all_actions.add(action)
         return sorted(all_actions)
 
-    def get_entities(self) -> List[str]:
-        time_range_start = self.valid_actions['time_range_start']
-        time_range_end= self.valid_actions['time_range_end']
-        numbers = self.valid_actions['number']
-        strings = []
-        for _, action_list in self.valid_actions.items():
-            for action in action_list:
-                lhs, _ = action.split(' ->')
-                if lhs.endswith('string'):
-                    strings.append(action)
-        return sorted(time_range_start, reverse=True) + sorted(time_range_end, reverse=True)+ \
-               sorted(numbers, reverse=True) + sorted(strings, reverse=True)
+    def flatten_entities(self) -> Tuple[List[str], numpy.ndarray]:
+        entities = []
+        linking_scores = []
+        for entity in sorted(self.linked_entities['number']):
+            entities.append(entity)
+            linking_scores.append(self.linked_entities['number'][entity][2])
+
+        for entity in sorted(self.linked_entities['string']):
+            entities.append(entity)
+            linking_scores.append(self.linked_entities['string'][entity][2])
+        return entities, numpy.array(linking_scores)
+
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
