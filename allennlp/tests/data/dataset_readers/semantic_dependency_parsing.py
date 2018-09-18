@@ -11,7 +11,7 @@ class TestSemanticDependencyParsingDatasetReader:
         instances = ensure_list(instances)
 
         instance = instances[0]
-        arcs = instance.fields["arc_labels"]
+        arcs = instance.fields["arc_tags"]
         tokens = [x.text for x in instance.fields["tokens"].tokens]
         assert tokens == ['Pierre', 'Vinken', ',', '61', 'years', 'old', ',',
                           'will', 'join', 'the', 'board', 'as', 'a',
@@ -23,7 +23,7 @@ class TestSemanticDependencyParsingDatasetReader:
                                'ARG1', 'loc', 'ARG2', 'BV', 'ARG2', 'BV', 'ARG1', 'of']
 
         instance = instances[1]
-        arcs = instance.fields["arc_labels"]
+        arcs = instance.fields["arc_tags"]
         tokens = [x.text for x in instance.fields["tokens"].tokens]
         assert tokens == ['Mr.', 'Vinken', 'is', 'chairman', 'of', 'Elsevier',
                           'N.V.', ',', 'the', 'Dutch', 'publishing', 'group', '.']

@@ -14,26 +14,48 @@ logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
 FIELDS = ["id", "form", "lemma", "pos", "head", "deprel", "top", "pred", "frame"]
 
-def parse_sentence(sentence: str):
+def parse_sentence(sentence_blob: str) -> Tuple[List[Dict[str, str]], List[Tuple[int, int]], List[str]]:
+    """
+    Parses a chunk of text in the SemEval SDP format.
+
+    Each word in the sentence is returned as a dictionary with the following
+    format:
+    {
+        'id': '1',
+        'form': 'Pierre',
+        'lemma': 'Pierre',
+        'pos': 'NNP',
+        'head': '2',   # Note that this is the `syntactic` head.
+        'deprel': 'nn',
+        'top': '-',
+        'pred': '+',
+        'frame': 'named:x-c'
+    }
+
+    Along with a list of arcs and their corresponding tags. Note that
+    in semantic dependency parsing words can have more than one head
+    (it is not a tree), meaning that the list of arcs and tags are
+    not tied to the length of the sentence.
+    """
     annotated_sentence = []
     arc_indices = []
-    arc_labels = []
-    preds = []
+    arc_tags = []
+    predicates = []
 
-    lines = [line.split("\t") for line in sentence.split("\n")
+    lines = [line.split("\t") for line in sentence_blob.split("\n")
              if line and not line.strip().startswith("#")]
     for line_idx, line in enumerate(lines):
         annotated_token = {k:v for k, v in zip(FIELDS, line)}
         if annotated_token['pred'] == "+":
-            preds.append(line_idx)
+            predicates.append(line_idx)
         annotated_sentence.append(annotated_token)
 
     for line_idx, line in enumerate(lines):
-        for pred_idx, arg in enumerate(line[len(FIELDS):]):
+        for predicate_idx, arg in enumerate(line[len(FIELDS):]):
             if arg != "_":
-                arc_indices.append((line_idx, preds[pred_idx]))
-                arc_labels.append(arg)
-    return annotated_sentence, arc_indices, arc_labels
+                arc_indices.append((line_idx, predicates[predicate_idx]))
+                arc_tags.append(arg)
+    return annotated_sentence, arc_indices, arc_tags
 
 
 def lazy_parse(text: str):
@@ -67,22 +89,20 @@ class SemanticDependenciesDatasetReader(DatasetReader):
         logger.info("Reading semantic dependency parsing data from: %s", file_path)
 
         with open(file_path) as sdp_file:
-            for annotated_sentence, directed_arc_indices, arc_labels in lazy_parse(sdp_file.read()):
+            for annotated_sentence, directed_arc_indices, arc_tags in lazy_parse(sdp_file.read()):
                 # If there are no arc indices, skip this instance.
                 if not directed_arc_indices:
                     continue
                 tokens = [word["form"] for word in annotated_sentence]
                 pos_tags = [word["pos"] for word in annotated_sentence]
-
-                # TODO: make adjacency list / matrix of arcs and labels.
-                yield self.text_to_instance(tokens, pos_tags, directed_arc_indices, arc_labels)
+                yield self.text_to_instance(tokens, pos_tags, directed_arc_indices, arc_tags)
 
     @overrides
     def text_to_instance(self, # type: ignore
                          tokens: List[str],
                          pos_tags: List[str] = None,
                          arc_indices: List[Tuple[int, int]] = None,
-                         arc_labels: List[str] = None) -> Instance:
+                         arc_tags: List[str] = None) -> Instance:
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
         token_field = TextField([Token(t) for t in tokens], self._token_indexers)
@@ -90,7 +110,7 @@ class SemanticDependenciesDatasetReader(DatasetReader):
         fields["metadata"] = MetadataField({"tokens": tokens})
         if pos_tags is not None:
             fields["pos_tags"] = SequenceLabelField(pos_tags, token_field, label_namespace="pos")
-        if arc_indices is not None and arc_labels is not None:
-            fields["arc_labels"] = AdjacencyField(arc_indices, token_field, arc_labels)
+        if arc_indices is not None and arc_tags is not None:
+            fields["arc_tags"] = AdjacencyField(arc_indices, token_field, arc_tags)
 
         return Instance(fields)
