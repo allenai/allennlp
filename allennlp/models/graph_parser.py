@@ -16,7 +16,7 @@ from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator, Activation
 from allennlp.nn.util import get_text_field_mask
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
-from allennlp.training.metrics import AttachmentScores
+from allennlp.training.metrics import AttachmentScores, F1Measure
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -121,6 +121,7 @@ class GraphParser(Model):
                                "arc representation dim", "arc feedforward output dim")
 
         self._attachment_scores = AttachmentScores()
+        self._unlabelled_f1 = F1Measure(positive_label=1)
         self._arc_loss = torch.nn.BCEWithLogitsLoss(reduce=False)
         self._tag_loss = torch.nn.CrossEntropyLoss(reduce=False)
         initializer(self)
@@ -188,7 +189,7 @@ class GraphParser(Model):
         # Make the arc tags not have negative values anywhere
         # (by default, no edge is indicated with -1).
         arc_tags = arc_tags * arc_indices
-        predicted_edges = (arc_indices > self.edge_prediction_threshold).long()
+        predicted_edges = (arc_probs > self.edge_prediction_threshold).long()
         predicted_tags = arc_tag_probs.max(-1)[1]
         tag_mask = float_mask.unsqueeze(1) * float_mask.unsqueeze(2)
         self._attachment_scores(predicted_edges,
@@ -196,6 +197,8 @@ class GraphParser(Model):
                                 arc_indices,
                                 arc_tags,
                                 tag_mask)
+        one_minus_arc_probs = 1 - arc_probs
+        self._unlabelled_f1(torch.stack([one_minus_arc_probs, arc_probs], -1), arc_indices, tag_mask)
         output_dict = {
                 "arc_probs": arc_probs,
                 "arc_tag_probs": arc_tag_probs,
@@ -340,4 +343,10 @@ class GraphParser(Model):
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return self._attachment_scores.get_metric(reset)
+        scores = self._attachment_scores.get_metric(reset)
+
+        precision, recall, f1 = self._unlabelled_f1.get_metric(reset)
+        scores["precision"] = precision
+        scores["recall"] = recall
+        scores["f1"] = f1
+        return scores
