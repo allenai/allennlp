@@ -16,7 +16,7 @@ from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator, Activation
 from allennlp.nn.util import get_text_field_mask
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
-from allennlp.training.metrics import AttachmentScores, F1Measure
+from allennlp.training.metrics import F1Measure
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -120,7 +120,6 @@ class GraphParser(Model):
         check_dimensions_match(arc_representation_dim, self.head_arc_feedforward.get_output_dim(),
                                "arc representation dim", "arc feedforward output dim")
 
-        self._attachment_scores = AttachmentScores()
         self._unlabelled_f1 = F1Measure(positive_label=1)
         self._arc_loss = torch.nn.BCEWithLogitsLoss(reduce=False)
         self._tag_loss = torch.nn.CrossEntropyLoss(reduce=False)
@@ -185,19 +184,10 @@ class GraphParser(Model):
         arc_probs, arc_tag_probs = self._greedy_decode(attended_arcs,
                                                        arc_tag_logits,
                                                        mask)
-        arc_indices = (arc_tags != -1).float()
         # Make the arc tags not have negative values anywhere
         # (by default, no edge is indicated with -1).
-        arc_tags_for_eval = arc_tags * arc_indices
-        batch_size = arc_tags.size(0)
-        predicted_edges = (arc_probs > self.edge_prediction_threshold).long()
-        predicted_tags = arc_tag_probs.max(-1)[1]
+        arc_indices = (arc_tags != -1).float()
         tag_mask = float_mask.unsqueeze(1) * float_mask.unsqueeze(2)
-        self._attachment_scores(predicted_edges.view(batch_size, -1),
-                                predicted_tags.view(batch_size, -1),
-                                arc_indices.view(batch_size, -1),
-                                arc_tags_for_eval.view(batch_size, -1),
-                                tag_mask.view(batch_size, -1))
         one_minus_arc_probs = 1 - arc_probs
         self._unlabelled_f1(torch.stack([one_minus_arc_probs, arc_probs], -1), arc_indices, tag_mask)
         output_dict = {
@@ -275,7 +265,6 @@ class GraphParser(Model):
             The negative log likelihood from the arc tag loss.
         """
         float_mask = mask.float()
-        print(arc_tags)
         arc_indices = (arc_tags != -1).float()
         # Make the arc tags not have negative values anywhere
         # (by default, no edge is indicated with -1).
@@ -344,10 +333,9 @@ class GraphParser(Model):
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        scores = self._attachment_scores.get_metric(reset)
-
+        metrics = {}
         precision, recall, f1 = self._unlabelled_f1.get_metric(reset)
-        scores["precision"] = precision
-        scores["recall"] = recall
-        scores["f1"] = f1
+        metrics["precision"] = precision
+        metrics["recall"] = recall
+        metrics["f1"] = f1
         return scores
