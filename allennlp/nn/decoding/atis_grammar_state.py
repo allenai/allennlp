@@ -3,7 +3,7 @@ from typing import Callable, Dict, List, Tuple
 
 import torch
 
-from allennlp.nn.decoding import GrammarState
+from allennlp.nn.decoding.grammar_state import GrammarState
 
 def is_nonterminal(token: str):
     if token[0] == '"' and token[-1] == '"':
