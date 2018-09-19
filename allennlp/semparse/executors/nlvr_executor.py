@@ -3,9 +3,7 @@ from collections import defaultdict
 import operator
 import logging
 
-from overrides import overrides
-
-from allennlp.semparse.executors.executor import Executor, NestedList
+from allennlp.semparse import util as semparse_util
 from allennlp.semparse.worlds.world import ExecutionError
 from allennlp.semparse.worlds.nlvr_object import Object
 from allennlp.semparse.worlds.nlvr_box import Box
@@ -16,7 +14,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 AttributeType = TypeVar('AttributeType', str, int)  # pylint: disable=invalid-name
 
 
-class NlvrExecutor(Executor):
+class NlvrExecutor:
     """
     Executor for logical forms in the language we wrote for the NLVR domain.
     The top level function is an assertion function (see below). We just pass the logical form
@@ -79,10 +77,9 @@ class NlvrExecutor(Executor):
             Set of boxes representing the context of the world. We need this because some functions
             defined by the executor will have to operate on the univeral sets of boxes and objects.
         """
-        super().__init__(boxes)
-        self._boxes = boxes
+        self.boxes = boxes
         self._objects: Set[Object] = set()
-        for box in self._boxes:
+        for box in self.boxes:
             self._objects.update(box.objects)
 
         self._number_operators = {"equals": operator.eq,
@@ -106,8 +103,22 @@ class NlvrExecutor(Executor):
         self._attribute_functions = {"shape": self._shape,
                                      "color": self._color}
 
-    @overrides
-    def _handle_expression(self, expression_list: NestedList) -> bool:
+    def __eq__(self, other):
+        if not isinstance(other, NlvrExecutor):
+            return False
+        return self.boxes == other.boxes
+
+    def execute(self, logical_form: str) -> bool:
+        if not logical_form.startswith("("):
+            logical_form = f"({logical_form})"
+        logical_form = logical_form.replace(",", " ")
+        expression_as_list = semparse_util.lisp_to_nested_expression(logical_form)
+        # Expression list has an additional level of
+        # nesting at the top.
+        result = self._handle_expression(expression_as_list[0])
+        return result
+
+    def _handle_expression(self, expression_list) -> bool:
         # The whole expression has to be an assertion expression because it has to return a boolean.
         # TODO(pradeep): May want to make this more general and let the executor deal with questions.
         return self._execute_assertion(expression_list)
@@ -318,7 +329,7 @@ class NlvrExecutor(Executor):
                         return_set.add(box)
             return return_set
         elif sub_expression == 'all_boxes' or sub_expression[0] == 'all_boxes':
-            return self._boxes
+            return self.boxes
         else:
             logger.error("Invalid box filter expression: %s", sub_expression)
             raise ExecutionError("Unknown box filter expression")
@@ -599,7 +610,7 @@ class NlvrExecutor(Executor):
         Given a set of objects, separate them by the boxes they belong to and return a dict.
         """
         objects_per_box: Dict[Box, List[Object]] = defaultdict(list)
-        for box in self._boxes:
+        for box in self.boxes:
             for object_ in objects:
                 if object_ in box.objects:
                     objects_per_box[box].append(object_)

@@ -16,7 +16,6 @@ from overrides import overrides
 
 from allennlp.semparse.worlds.world import ParsingError, World
 from allennlp.semparse.type_declarations import wikitables_variable_free as types
-from allennlp.semparse.executors import WikiTablesVariableFreeExecutor
 from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -53,7 +52,9 @@ class WikiTablesVariableFreeWorld(World):
                          global_name_mapping=types.COMMON_NAME_MAPPING)
         self.table_graph = table_graph
 
-        self._executor = WikiTablesVariableFreeExecutor(self.table_graph.table_data)
+        # TODO (pradeep): Define an executor in this world when we have a new context class.
+        # Something like the following:
+        # self._executor = WikiTablesVariableFreeExecutor(self.table_graph.table_data)
 
         # For every new Sempre column name seen, we update this counter to map it to a new NLTK name.
         self._column_counter = 0
@@ -173,4 +174,4 @@ class WikiTablesVariableFreeWorld(World):
         return agenda
 
     def execute(self, logical_form: str) -> Union[List[str], int]:
-        return self._executor.execute(logical_form)
+        raise NotImplementedError
