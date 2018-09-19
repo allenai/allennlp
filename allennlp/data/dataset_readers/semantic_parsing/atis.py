@@ -30,6 +30,7 @@ class AtisDatasetReader(DatasetReader):
     """
     This ``DatasetReader`` takes json files and converts them into ``Instances`` for the
     ``AtisSemanticParser``.
+
     Each line in the file is a JSON object that represent an interaction in the ATIS dataset
     that has the following keys and values:
     ```
@@ -41,12 +42,14 @@ class AtisDatasetReader(DatasetReader):
     Sentences to Logical Form
     <https://www.semanticscholar.org/paper/Learning-Context-Dependent-Mappings-from-Sentences-Zettlemoyer-Collins/44a8fcee0741139fa15862dc4b6ce1e11444878f>'_ by Zettlemoyer and Collins (ACL/IJCNLP 2009)
     ```
+
     Each element in the ``interaction`` list has the following keys and values:
     ```
     "utterance": Natural language input
     "sql": A list of SQL queries that the utterance maps to, it could be multiple SQL queries
     or none at all.
     ```
+
     Parameters
     ----------
     token_indexers : ``Dict[str, TokenIndexer]``, optional
