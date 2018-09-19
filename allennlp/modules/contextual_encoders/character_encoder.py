@@ -93,14 +93,15 @@ class CharacterEncoder(torch.nn.Module):
         Returns
         -------
         Dict with keys:
-        ``'token_embedding'``:
+        ``token_embedding``:
             Shape ``(batch_size, sequence_length, embedding_dim)``
             tensor with context
             insensitive token representations.
-        ``'mask'``:
+        ``mask``:
             Shape ``(batch_size, sequence_length)`` long tensor with
             sequence mask.
         """
+        # pylint: disable=arguments-differ
         char_id_mask = (inputs > 0).long()  # (batch_size, sequence_length, max_characters_per_token)
         mask = (char_id_mask.sum(dim=-1) > 0).long()  # (batch_size, sequence_length)
 

@@ -76,6 +76,9 @@ pytz==2017.3
 # Reads Universal Dependencies files.
 conllu==0.11
 
+# Used in the SruContextEncoder
+sru==2.0.0
+
 #### ESSENTIAL TESTING-RELATED PACKAGES ####
 
 # We'll use pytest to run our tests; this isn't really necessary to run the code, but it is to run
