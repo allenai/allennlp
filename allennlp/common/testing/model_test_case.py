@@ -125,7 +125,6 @@ class ModelTestCase(AllenNlpTestCase):
         loaded_model_loss.backward()
 
         # Both outputs should have the same keys and the values for these keys should be close.
-
         for key in model_predictions.keys():
             self.assert_fields_equal(model_predictions[key],
                                      loaded_model_predictions[key],

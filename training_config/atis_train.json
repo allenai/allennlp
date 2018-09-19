@@ -26,13 +26,8 @@
       "bidirectional": true,
       "num_layers": 1
     },
-    "entity_encoder": {
-      "type": "boe",
-      "embedding_dim": 400,
-      "averaged": true
-    },
     "decoder_beam_search": {
-      "beam_size": 10
+    "beam_size": 10
     },
     "training_beam_size": 5,
     "max_decoding_steps": 200,

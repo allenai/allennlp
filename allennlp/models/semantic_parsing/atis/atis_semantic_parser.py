@@ -40,8 +40,6 @@ class AtisSemanticParser(Model):
         Dimension to use for action embeddings.
     encoder : ``Seq2SeqEncoder``
         The encoder to use for the input utterance.
-    entity_encoder : ``Seq2VecEncoder``
-        The encoder to used for averaging the words of an entity.
     decoder_beam_search : ``BeamSearch``
         Beam search used to retrieve best sequences after training.
     max_decoding_steps : ``int``
@@ -74,7 +72,6 @@ class AtisSemanticParser(Model):
                  utterance_embedder: TextFieldEmbedder,
                  action_embedding_dim: int,
                  encoder: Seq2SeqEncoder,
-                 entity_encoder: Seq2VecEncoder,
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  input_attention: Attention,
@@ -87,7 +84,6 @@ class AtisSemanticParser(Model):
         super(AtisSemanticParser, self).__init__(vocab)
         self._utterance_embedder = utterance_embedder
         self._encoder = encoder
-        self._entity_encoder = TimeDistributed(entity_encoder)
         self._max_decoding_steps = max_decoding_steps
         self._add_action_bias = add_action_bias
         if dropout > 0:
@@ -121,10 +117,7 @@ class AtisSemanticParser(Model):
         self._first_attended_utterance = torch.nn.Parameter(torch.FloatTensor(encoder.get_output_dim()))
         torch.nn.init.normal_(self._first_action_embedding)
         torch.nn.init.normal_(self._first_attended_utterance)
-
-        check_dimensions_match(entity_encoder.get_output_dim(), utterance_embedder.get_output_dim(),
-                               "entity word average embedding dim", "utterance embedding dim")
-
+        
         self._num_entity_types = 2  # TODO(kevin): get this in a more principled way somehow?
         self._num_start_types = 1  # TODO(kevin): get this in a more principled way somehow?
         self._embedding_dim = utterance_embedder.get_output_dim()
@@ -226,7 +219,6 @@ class AtisSemanticParser(Model):
 
         for batch_index, world in enumerate(worlds):
             types = []
-
             entities = [('number', entity)
                         if 'number' or 'time_range' in entity
                         else ('string', entity)
@@ -246,8 +238,6 @@ class AtisSemanticParser(Model):
                 # linking scores are stored.
                 flattened_entity_index = batch_index * num_entities + entity_index
                 entity_types[flattened_entity_index] = entity_type
-
-
             padded = pad_sequence_to_length(types, num_entities, lambda: 0)
             batch_types.append(padded)
 
@@ -360,7 +350,7 @@ class AtisSemanticParser(Model):
                               linking_scores: torch.Tensor,
                               entity_types: torch.Tensor) -> GrammarStatelet:
         """
-        This method creates the GrammarState object that's used for decoding.  Part of creating
+        This method creates the GrammarStatelet object that's used for decoding.  Part of creating
         that is creating the `valid_actions` dictionary, which contains embedded representations of
         all of the valid actions.  So, we create that here as well.
 
@@ -386,10 +376,8 @@ class AtisSemanticParser(Model):
             action_string = action[0]
             action_map[action_string] = action_index
 
-
         valid_actions = world.valid_actions
         entity_map = {}
-
         entities = world.entities
 
         for entity_index, entity in enumerate(entities):
@@ -445,7 +433,7 @@ class AtisSemanticParser(Model):
         """
         This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
         time, to finalize predictions.  This is (confusingly) a separate notion from the "decoder"
-        in "encoder/decoder", where that decoder logic lives in ``WikiTablesDecoderStep``.
+        in "encoder/decoder", where that decoder logic lives in ``GrammarBasedState``.
 
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
@@ -509,7 +497,7 @@ class AtisSemanticParser(Model):
             of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
             sequence_length)``.
         example_sql_queries : List[str], otpional (default=None)
-            A list of the SQL queries that are given during training or validation. 
+            A list of the SQL queries that are given during training or validation.
         """
         initial_info = self._get_initial_state_and_scores(utterance, world, actions, linking_scores)
         initial_state = initial_info["initial_state"]
@@ -563,7 +551,7 @@ class AtisSemanticParser(Model):
 
                     action_strings = [action_mapping[(i, action_index)]
                                       for action_index in best_action_indices]
-                    predicted_sql_query = action_sequence_to_sql(action_strings)
+                    predicted_sql_query = self.action_sequence_to_sql(action_strings)
 
                     if target_action_sequence is not None:
                         # Use a Tensor, not a Variable, to avoid a memory leak.
@@ -611,7 +599,6 @@ class AtisSemanticParser(Model):
         utterance_embedder = TextFieldEmbedder.from_params(vocab=vocab, params=params.pop("utterance_embedder"))
         action_embedding_dim = params.pop_int("action_embedding_dim")
         encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        entity_encoder = Seq2VecEncoder.from_params(params.pop('entity_encoder'))
         max_decoding_steps = params.pop_int("max_decoding_steps")
         decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
         input_attention = Attention.from_params(params.pop("attention"))
@@ -624,7 +611,6 @@ class AtisSemanticParser(Model):
                    utterance_embedder=utterance_embedder,
                    action_embedding_dim=action_embedding_dim,
                    encoder=encoder,
-                   entity_encoder=entity_encoder,
                    decoder_beam_search=decoder_beam_search,
                    max_decoding_steps=max_decoding_steps,
                    input_attention=input_attention,
