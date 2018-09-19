@@ -128,7 +128,6 @@ setup(name='allennlp',
           'responses>=0.7',
           'numpydoc==0.8.0',
           'conllu==0.11',
-          'sru==2.0.0',
           'parsimonious==0.8.0'
       ],
       scripts=["bin/allennlp"],
