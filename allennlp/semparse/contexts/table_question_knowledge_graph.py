@@ -62,83 +62,8 @@ NUMBER_WORDS = {
         }
 
 
-class ColumnTyper():
-    """
-        Type table columns as <string> | <number> | <date> 
-    """
-    pass
 
 
-
-class QuestionEntityExtractor():
-    """
-    A Barebones implementation similar to https://github.com/crazydonkey200/neural-symbolic-machines/blob/master/table/wtq/preprocess.py
-    for extracting entities from a question given a table. 
-    """
-    def __init__(self, 
-                 stop_words_file : str,
-                 table_entity_text: Dict[str, str],
-                 process_conjunction: bool = False) -> None:
-        self.table_entity_text = table_entity_text
-        with open(stop_words_file, 'r') as f:
-            stop_words_list = json.load(f)
-        self.stop_words = set(stop_words_list)
-        self.process_conjunction = process_conjunction
-
-    def _string_in_table(self, candidate_str) -> bool:
-        for entity, text in self.table_entity_text.items():
-            # entity normalized text is followed after fb:cell.
-            if entity.startswith('fb:cell.'):
-            	normalized_text = entity[8:]
-            	if candidate_str in normalized_text: 
-                    return True
-        return False
-
-
-    def _process_conjunction(self, entity_dat):
-        raise NotImplementedError
-
-    def _expand_entities(self, question, entity_dat ):
-        new_ents = []
-        for ent in entity_dat:
-            # to ensure the same strings are not used over and over
-            if new_ents and ent['token_end'] <= new_ents[-1]['token_end']: continue
-            curr_st = ent['token_start']
-            curr_en = ent['token_end']
-            curr_tok = ent['value']
-
-            while curr_en < len(question): 
-                next_tok = question[curr_en]
-                # use the same normalize function used by TableQuestionKnowledgeGraph for consistency
-                next_tok_normalized = TableQuestionKnowledgeGraph._normalize_string(next_tok) 
-                curr_tok_normalized = TableQuestionKnowledgeGraph._normalize_string(next_tok)
-
-                for s, s1, s2 in itertools.product( [' ', '-', '_', ''], [curr_tok, curr_tok_normalized] , [next_tok, next_tok_normalized]  ):
-                    if len(s1) == 0 or len(s2) == 0: continue
-                    candidate = s.join([s1,s2])
-                    if self._string_in_table(candidate):
-                        curr_en += 1
-                        curr_tok = candidate
-                        break
-                else: break
-
-            new_ents.append(dict(token_start=curr_st, token_end=curr_en,value=curr_tok))
-
-        return new_ents
-
-
-    def get_entities_from_question(self, question : List[str]):
-        entity_dat = []
-        for i, token in enumerate(question):
-            if token in self.stop_words: continue
-            normalized_token = TableQuestionKnowledgeGraph._normalize_string(token)
-            if len(normalized_token) == 0: continue
-            if self._string_in_table(normalized_token):
-                entity_dat.append(dict(value=normalized_token,
-                                       token_start=i,
-                                       token_end=i+1))
-
-        expanded_entities = self._expand_entities(question, entity_dat)
         
 
 
