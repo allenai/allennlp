@@ -27,30 +27,6 @@ from allennlp.training.metrics import Average
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-def action_sequence_to_sql(action_sequences: List[str]) -> str:
-    """
-    Convert an action sequence like ['statement -> [query, ";"]', ...] to a the
-    SQL string.
-    """
-    query = []
-    for action in action_sequences:
-        nonterminal, right_hand_side = action.split(' -> ')
-        right_hand_side_tokens = right_hand_side[1:-1].split(', ')
-        if nonterminal == 'statement':
-            query.extend(right_hand_side_tokens)
-        else:
-            for query_index, token in reversed(list(enumerate(query))):
-                if token == nonterminal:
-                    query = query[:query_index] + \
-                            right_hand_side_tokens + \
-                            query[query_index + 1:]
-                    break
-    return ' '.join([token.strip('"') for token in query])
-
-def is_nonterminal(token: str):
-    if token[0] == '"' and token[-1] == '"':
-        return False
-    return True
 
 @Model.register("atis_parser")
 class AtisSemanticParser(Model):
@@ -297,6 +273,31 @@ class AtisSemanticParser(Model):
             return query[1:query.rfind(')')] + ';'
         return query
 
+    @staticmethod
+    def action_sequence_to_sql(action_sequences: List[str]) -> str:
+        # Convert an action sequence like ['statement -> [query, ";"]', ...] to the
+        # SQL string.
+        query = []
+        for action in action_sequences:
+            nonterminal, right_hand_side = action.split(' -> ')
+            right_hand_side_tokens = right_hand_side[1:-1].split(', ')
+            if nonterminal == 'statement':
+                query.extend(right_hand_side_tokens)
+            else:
+                for query_index, token in reversed(list(enumerate(query))):
+                    if token == nonterminal:
+                        query = query[:query_index] + \
+                                right_hand_side_tokens + \
+                                query[query_index + 1:]
+                        break
+        return ' '.join([token.strip('"') for token in query])
+
+    @staticmethod
+    def is_nonterminal(token: str):
+        if token[0] == '"' and token[-1] == '"':
+            return False
+        return True
+
     def _sql_result_match(self, predicted_query: str, sql_query_labels: List[str]) -> int:
         postprocessed_predicted_query = self._postprocess_query_sqlite(predicted_query)
 
@@ -412,19 +413,14 @@ class AtisSemanticParser(Model):
                     linked_actions.append((production_rule_array[0], action_index))
 
             if global_actions:
-                # Then we get the ebmedded representations of the global actions.
                 global_action_tensors, global_action_ids = zip(*global_actions)
-                # global_action_tensor = torch.cat(global_action_tensors, dim=0)
                 global_action_tensor = entity_types.new_tensor(torch.cat(global_action_tensors, dim=0),
                                                                dtype=torch.long)
-                # Whats being fed to Embeddings needs to be on CUDA
-
                 global_input_embeddings = self._action_embedder(global_action_tensor)
                 global_output_embeddings = self._output_action_embedder(global_action_tensor)
                 translated_valid_actions[key]['global'] = (global_input_embeddings,
                                                            global_output_embeddings,
                                                            list(global_action_ids))
-            # Then the representations of the linked actions.
             if linked_actions:
                 linked_rules, linked_action_ids = zip(*linked_actions)
                 entities = linked_rules
@@ -441,7 +437,7 @@ class AtisSemanticParser(Model):
                                {},
                                translated_valid_actions,
                                {},
-                               is_nonterminal,
+                               self.is_nonterminal,
                                reverse_productions=False)
 
     @overrides
@@ -486,13 +482,11 @@ class AtisSemanticParser(Model):
                 actions: List[List[ProductionRuleArray]],
                 linking_scores: torch.Tensor,
                 target_action_sequence: torch.LongTensor = None,
-                example_sql_query: List[str] = None) -> Dict[str, torch.Tensor]:
+                example_sql_queries: List[str] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
-        In this method we encode the table entities, link them to words in the utterance, then
-        encode the utterance. Then we set up the initial state for the decoder, and pass that
-        state off to either a DecoderTrainer, if we're training, or a BeamSearch for inference,
-        if we're not.
+        We set up the initial state for the decoder, and pass that state off to either a DecoderTrainer,
+        if we're training, or a BeamSearch for inference, if we're not.
         Parameters
         ----------
         utterance : Dict[str, torch.LongTensor]
@@ -506,10 +500,16 @@ class AtisSemanticParser(Model):
             ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
+        linking_scores: ``torch.Tensor``
+            A matrix of the linking the utterance tokens and the entities. This is a binary matrix that
+            is deterministically generated where each entry indicates whether a token generated an entity.
+            This tensor has shape ``(num_entities, num_utterance_tokens)``.
         target_action_sequences : torch.Tensor, optional (default=None)
-           A list of possibly valid action sequences, where each action is an index into the list
-           of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
-           sequence_length)``.
+            A list of possibly valid action sequences, where each action is an index into the list
+            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
+            sequence_length)``.
+        example_sql_queries : List[str], otpional (default=None)
+            A list of the SQL queries that are given during training or validation. 
         """
         initial_info = self._get_initial_state_and_scores(utterance, world, actions, linking_scores)
         initial_state = initial_info["initial_state"]
@@ -517,7 +517,6 @@ class AtisSemanticParser(Model):
 
         if target_action_sequence is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).
-            # We only have one logical form so don't think to do this
             target_action_sequence = target_action_sequence.squeeze(-1)
             target_mask = target_action_sequence != self._action_padding_index
         else:
@@ -528,8 +527,7 @@ class AtisSemanticParser(Model):
                                                 self._decoder_step,
                                                 (target_action_sequence, target_mask))
         else:
-            # TODO(pradeep): Most of the functionality in this black can be moved to the super
-            # class.
+            # TODO(kevin) Move some of this functionality to a separate method for computing validation outputs.
             action_mapping = {}
             for batch_index, batch_actions in enumerate(actions):
                 for action_index, action in enumerate(batch_actions):
@@ -578,11 +576,11 @@ class AtisSemanticParser(Model):
                         similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
                         self._action_similarity(similarity.ratio())
 
-                    if example_sql_query and example_sql_query[i]:
+                    if example_sql_queries and example_sql_queries[i]:
                         # Since the query might hang, we run in another process and kill it if it
                         # takes too long.
                         process = multiprocessing.Process(target=self._sql_result_match,
-                                                          args=(predicted_sql_query, example_sql_query[i]))
+                                                          args=(predicted_sql_query, example_sql_queries[i]))
                         process.start()
 
                         # If the query has not finished in 10 seconds then we will proceed.
@@ -598,7 +596,7 @@ class AtisSemanticParser(Model):
                             denotation_correct = 0
 
                         self._denotation_accuracy(denotation_correct)
-                        outputs['example_sql_query'].append(example_sql_query[i])
+                        outputs['example_sql_query'].append(example_sql_queries[i])
 
                     outputs['utterance'].append(world[i].utterances[-1])
                     outputs['tokenized_utterance'].append(world[i].tokenized_utterances[-1])

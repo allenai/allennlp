@@ -70,6 +70,8 @@ class AtisDatasetReader(DatasetReader):
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
         self._database_directory = database_directory
+        # TODO(kevin): Add a keep_if_no_dpd flag so that during validation, we do not skip queries that
+        # cannot be parsed.
 
     @overrides
     def _read(self, file_path: str):
@@ -130,7 +132,7 @@ class AtisDatasetReader(DatasetReader):
             nonterminal, _ = production_rule.split(' ->')
             # The whitespaces are not semantically meaningful, so we filter them out.
             production_rule = ' '.join([token for token in production_rule.split(' ') if token != 'ws'])
-            field = ProductionRuleField(production_rule, is_global_rule(nonterminal))
+            field = ProductionRuleField(production_rule, self._is_global_rule(nonterminal))
             production_rule_fields.append(field)
 
         action_field = ListField(production_rule_fields)
@@ -144,7 +146,7 @@ class AtisDatasetReader(DatasetReader):
                   'linking_scores' : ArrayField(world.linking_scores)}
 
         if sql_query_labels != None:
-            fields['example_sql_query'] = MetadataField(sql_query_labels)
+            fields['example_sql_queries'] = MetadataField(sql_query_labels)
             if action_sequence:
                 for production_rule in action_sequence:
                     index_fields.append(IndexField(action_map[production_rule], action_field))
@@ -158,9 +160,10 @@ class AtisDatasetReader(DatasetReader):
 
         return Instance(fields)
 
-def is_global_rule(nonterminal: str) -> bool:
-    if nonterminal in ['number', 'time_range_start', 'time_range_end']:
-        return False
-    elif nonterminal.endswith('string'):
-        return False
-    return True
+    @staticmethod
+    def _is_global_rule(nonterminal: str) -> bool:
+        if nonterminal in ['number', 'time_range_start', 'time_range_end']:
+            return False
+        elif nonterminal.endswith('string'):
+            return False
+        return True

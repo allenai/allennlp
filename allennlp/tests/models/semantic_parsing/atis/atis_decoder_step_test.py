@@ -6,7 +6,7 @@ from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules import SimilarityFunction
 from allennlp.state_machines.states import GrammarStatelet
-from allennlp.models.semantic_parsing.atis.atis_semantic_parser import is_nonterminal
+from allennlp.models.semantic_parsing.atis.atis_semantic_parser import AtisSemanticParser
 from allennlp.semparse.worlds import AtisWorld
 
 class AtisDecoderStepTest(AllenNlpTestCase):
@@ -42,7 +42,7 @@ class AtisDecoderStepTest(AllenNlpTestCase):
                                         {},
                                         world.valid_actions,
                                         {},
-                                        is_nonterminal,
+                                        AtisSemanticParser.is_nonterminal,
                                         reverse_productions=False)
         for action in action_seq:
             grammar_state = grammar_state.take_action(action)
