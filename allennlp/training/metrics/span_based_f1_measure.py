@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Set, Callable, TypeVar
+from typing import Dict, List, Optional, Set, Callable
 from collections import defaultdict
 
 import torch
@@ -16,10 +16,7 @@ from allennlp.data.dataset_readers.dataset_utils.span_utils import (
 )
 
 
-TAGS_TO_SPANS_FUNCTION_TYPE = TypeVar(
-        "TAGS_TO_SPANS_FUNCTION_TYPE",
-        Callable[[List[str], Optional[List[str]]], List[TypedStringSpan]]
-        )
+TAGS_TO_SPANS_FUNCTION_TYPE = Callable[[List[str], Optional[List[str]]], List[TypedStringSpan]]
 
 
 @Metric.register("span_f1")
