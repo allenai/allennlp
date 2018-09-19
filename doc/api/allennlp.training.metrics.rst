@@ -23,7 +23,6 @@ allennlp.training.metrics
 * :ref:`SpanBasedF1Measure<span-based-f1-measure>`
 * :ref:`SquadEmAndF1<squad-em-and-f1>`
 * :ref:`UnigramRecall<unigram-recall>`
-* :ref:`WikiTablesAccuracy<wikitables-accuracy>`
 
 
 .. _metric:
@@ -124,12 +123,6 @@ allennlp.training.metrics
 
 .. _unigram-recall:
 .. automodule:: allennlp.training.metrics.unigram_recall
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. _wikitables-accuracy:
-.. automodule:: allennlp.training.metrics.wikitables_accuracy
    :members:
    :undoc-members:
    :show-inheritance:
