@@ -111,7 +111,8 @@ class AtisWorld():
             # ``number_linking_dict`` is for the last utterance here. If the number was triggered
             # before the last utterance, then it will have linking scores of 0's.
             for token_index in number_linking_dict.get(number, []):
-                entity_linking[token_index] = 1
+                if token_index < len(entity_linking):
+                    entity_linking[token_index] = 1
             action = format_action(nonterminal, number, is_number=True)
             number_linking_scores[action] = (nonterminal, number, entity_linking)
 
