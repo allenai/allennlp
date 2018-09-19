@@ -1,14 +1,13 @@
+// Configuration for the ESIM model with ELMo, modified slightly from
+// the version included in "Deep Contextualized Word Representations",
+// (https://arxiv.org/abs/1802.05365).  Compared to the version in this paper,
+// this configuration only includes one layer of ELMo representations
+// and removes GloVe embeddings.
+//
+// There is a trained model available at https://s3-us-west-2.amazonaws.com/allennlp/models/esim-elmo-2018.05.17.tar.gz
+// with test set accuracy of 88.5%, compared to the single model reported
+// result of 88.7 +/- 0.17.
 {
-  // Configuration for the ESIM model with ELMo, modified slightly from
-  // the version included in "Deep Contextualized Word Representations",
-  // (https://arxiv.org/abs/1802.05365).  Compared to the version in this paper,
-  // this configuration only includes one layer of ELMo representations
-  // and removes GloVe embeddings.
-  //
-  // There is a trained model available at https://s3-us-west-2.amazonaws.com/allennlp/models/esim-elmo-2018.05.17.tar.gz
-  // with test set accuracy of 88.5%, compared to the single model reported
-  // result of 88.7 +/- 0.17.
-
   "dataset_reader": {
     "type": "snli",
     "token_indexers": {

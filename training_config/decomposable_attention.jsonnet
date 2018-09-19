@@ -1,3 +1,5 @@
+// Configuraiton for a textual entailment model based on:
+//  Parikh, Ankur P. et al. “A Decomposable Attention Model for Natural Language Inference.” EMNLP (2016).
 {
   "dataset_reader": {
     "type": "snli",
