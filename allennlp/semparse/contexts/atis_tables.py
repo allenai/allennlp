@@ -153,7 +153,8 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
                 number_linking_dict[number].append(index)
     return number_linking_dict
 
-def get_time_range_start_from_utterance(utterance:str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
+def get_time_range_start_from_utterance(utterance: str, # pylint: disable=unused-argument
+                                        tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     late_indices = {index for index, token in enumerate(tokenized_utterance)
                     if token.text == 'late'}
 
@@ -170,7 +171,8 @@ def get_time_range_start_from_utterance(utterance:str, tokenized_utterance: List
 
     return time_range_start_linking_dict
 
-def get_time_range_end_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
+def get_time_range_end_from_utterance(utterance: str, # pylint: disable=unused-argument
+                                      tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     early_indices = {index for index, token in enumerate(tokenized_utterance)
                      if token.text == 'early'}
 

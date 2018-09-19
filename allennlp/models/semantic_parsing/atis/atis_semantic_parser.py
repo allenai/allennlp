@@ -3,19 +3,17 @@ from typing import Any, Dict, List, Tuple
 
 import difflib
 import sqlite3
-import multiprocessing
+from multiprocessing import Process
 import sqlparse
 from overrides import overrides
 import torch
 
-from allennlp.common.checks import check_dimensions_match
 from allennlp.common.util import pad_sequence_to_length
-from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
-from allennlp.modules import Attention, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, \
-        Embedding, TimeDistributed
+from allennlp.modules import Attention, Seq2SeqEncoder, TextFieldEmbedder, \
+        Embedding
 from allennlp.nn import util
 from allennlp.semparse.worlds import AtisWorld
 from allennlp.state_machines.states import GrammarBasedState
@@ -117,7 +115,7 @@ class AtisSemanticParser(Model):
         self._first_attended_utterance = torch.nn.Parameter(torch.FloatTensor(encoder.get_output_dim()))
         torch.nn.init.normal_(self._first_action_embedding)
         torch.nn.init.normal_(self._first_attended_utterance)
-        
+
         self._num_entity_types = 2  # TODO(kevin): get this in a more principled way somehow?
         self._num_start_types = 1  # TODO(kevin): get this in a more principled way somehow?
         self._embedding_dim = utterance_embedder.get_output_dim()
@@ -343,7 +341,7 @@ class AtisSemanticParser(Model):
                 }
 
     def _create_grammar_state(self,
-                              world: AtisWorld,  
+                              world: AtisWorld,
                               possible_actions: List[ProductionRuleArray],
                               linking_scores: torch.Tensor,
                               entity_types: torch.Tensor) -> GrammarStatelet:
@@ -565,13 +563,13 @@ class AtisSemanticParser(Model):
                     if example_sql_queries and example_sql_queries[i]:
                         # Since the query might hang, we run in another process and kill it if it
                         # takes too long.
-                        process = multiprocessing.Process(target=self._sql_result_match,
-                                                          args=(predicted_sql_query, example_sql_queries[i]))
+                        process = Process(target=self._sql_result_match,
+                                          args=(predicted_sql_query, example_sql_queries[i]))
                         process.start()
 
                         # If the query has not finished in 10 seconds then we will proceed.
                         process.join(10)
-                        denotation_correct = process.exitcode
+                        denotation_correct = process.exitcode # type: ignore
 
                         if process.is_alive():
                             logger.info("Evaluating query took over 10 seconds, skipping query")
