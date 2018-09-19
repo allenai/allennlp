@@ -295,8 +295,7 @@ class AtisSemanticParser(Model):
             self._cursor.execute(postprocessed_predicted_query)
             predicted_rows = self._cursor.fetchall()
         except sqlite3.Error as error:
-            logger.info("Error when executing predicted query")
-            logger.info(error)
+            logger.debug(f'Error executing predicted: {error}')
             exit(0)
 
         # If predicted table matches any of the reference tables then it is counted as correct.
@@ -307,8 +306,7 @@ class AtisSemanticParser(Model):
                 self._cursor.execute(postprocessed_sql_query_label)
                 target_rows = self._cursor.fetchall()
             except sqlite3.Error as error:
-                logger.info("Error when executing target query")
-                logger.info(error)
+                logger.debug(f'Error executing predicted: {error}')
 
             if predicted_rows == target_rows:
                 exit(1)
@@ -345,7 +343,7 @@ class AtisSemanticParser(Model):
                 }
 
     def _create_grammar_state(self,
-                              world: Dict[str, List[str]],
+                              world: AtisWorld,  
                               possible_actions: List[ProductionRuleArray],
                               linking_scores: torch.Tensor,
                               entity_types: torch.Tensor) -> GrammarStatelet:
@@ -383,7 +381,7 @@ class AtisSemanticParser(Model):
         for entity_index, entity in enumerate(entities):
             entity_map[entity] = entity_index
 
-        translated_valid_actions = {}
+        translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
         for key, action_strings in valid_actions.items():
             translated_valid_actions[key] = {}
             # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid
@@ -593,28 +591,3 @@ class AtisSemanticParser(Model):
                     outputs['logical_form'].append(sqlparse.format(predicted_sql_query, reindent=True))
                     outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
             return outputs
-
-    @classmethod
-    def from_params(cls, vocab, params: Params) -> 'AtisSemanticParser': # pylint: disable=arguments-differ
-        utterance_embedder = TextFieldEmbedder.from_params(vocab=vocab, params=params.pop("utterance_embedder"))
-        action_embedding_dim = params.pop_int("action_embedding_dim")
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        max_decoding_steps = params.pop_int("max_decoding_steps")
-        decoder_beam_search = BeamSearch.from_params(params.pop("decoder_beam_search"))
-        input_attention = Attention.from_params(params.pop("attention"))
-        training_beam_size = params.pop_int('training_beam_size', None)
-        dropout = params.pop_float('dropout', 0.0)
-        rule_namespace = params.pop('rule_namespace', 'rule_labels')
-        tables_directory = params.pop('tables_directory', None)
-        params.assert_empty(cls.__name__)
-        return cls(vocab,
-                   utterance_embedder=utterance_embedder,
-                   action_embedding_dim=action_embedding_dim,
-                   encoder=encoder,
-                   decoder_beam_search=decoder_beam_search,
-                   max_decoding_steps=max_decoding_steps,
-                   input_attention=input_attention,
-                   training_beam_size=training_beam_size,
-                   dropout=dropout,
-                   rule_namespace=rule_namespace,
-                   tables_directory=tables_directory)

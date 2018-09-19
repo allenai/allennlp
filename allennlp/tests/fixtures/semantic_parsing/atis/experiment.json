@@ -31,7 +31,7 @@
     },
     "training_beam_size": 5,
     "max_decoding_steps": 200,
-    "attention": {"type": "dot_product"},
+    "input_attention": {"type": "dot_product"},
     "dropout": 0.5,
     "tables_directory": "./allennlp/models/semantic_parsing/atis/atis.db"
   },
