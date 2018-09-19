@@ -3,11 +3,11 @@ import os
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.training.metrics import WikiTablesAccuracy
-from allennlp.training.metrics.wikitables_accuracy import SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH
+from allennlp.semparse.executors import WikiTablesSempreExecutor
+from allennlp.semparse.executors.wikitables_sempre_executor import SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH
 
 @pytest.mark.java
-class WikiTablesAccuracyTest(AllenNlpTestCase):
+class WikiTablesSempreExecutorTest(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.should_remove_sempre_abbreviations = not os.path.exists(SEMPRE_ABBREVIATIONS_PATH)
@@ -31,21 +31,14 @@ class WikiTablesAccuracyTest(AllenNlpTestCase):
         # the table.
         logical_form = ('((reverse fb:row.row.year) (fb:row.row.index (max '
                         '((reverse fb:row.row.index) (fb:row.row.league fb:cell.usl_a_league)))))')
-        wikitables_accuracy = WikiTablesAccuracy(table_directory=str(self.FIXTURES_ROOT / 'data' / 'wikitables/'))
-        wikitables_accuracy(logical_form, example_string)
-        assert wikitables_accuracy._count == 1
-        assert wikitables_accuracy._correct == 1
+        executor = WikiTablesSempreExecutor(table_directory=str(self.FIXTURES_ROOT / 'data' / 'wikitables/'))
+        assert executor.evaluate_logical_form(logical_form, example_string) is True
 
         # Testing that we handle bad logical forms correctly.
-        wikitables_accuracy(None, example_string)
-        assert wikitables_accuracy._count == 2
-        assert wikitables_accuracy._correct == 1
+        assert executor.evaluate_logical_form(None, example_string) is False
 
-        wikitables_accuracy('Error producing logical form', example_string)
-        assert wikitables_accuracy._count == 3
-        assert wikitables_accuracy._correct == 1
+        assert executor.evaluate_logical_form('Error producing logical form', example_string) is False
 
         # And an incorrect logical form.
-        wikitables_accuracy('(fb:row.row.league fb:cell.3rd_usl_3rd)', example_string)
-        assert wikitables_accuracy._count == 4
-        assert wikitables_accuracy._correct == 1
+        logical_form = '(fb:row.row.league fb:cell.3rd_usl_3rd)'
+        assert executor.evaluate_logical_form(logical_form, example_string) is False

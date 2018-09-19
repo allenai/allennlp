@@ -8,7 +8,7 @@ from numpy.testing import assert_almost_equal
 import torch
 
 from allennlp.common.testing import ModelTestCase
-from allennlp.training.metrics.wikitables_accuracy import SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH
+from allennlp.semparse.executors.wikitables_sempre_executor import SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH
 
 @pytest.mark.java
 class WikiTablesMmlSemanticParserTest(ModelTestCase):
