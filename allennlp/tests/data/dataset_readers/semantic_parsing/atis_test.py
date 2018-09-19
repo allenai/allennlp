@@ -19,7 +19,7 @@ class TestAtisReader(AllenNlpTestCase):
                 {'utterance',
                  'actions',
                  'world',
-                 'example_sql_query',
+                 'example_sql_queries',
                  'target_action_sequence',
                  'linking_scores'}
 
