@@ -2,7 +2,7 @@
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules.contextual_encoders.cnn_encoder import GatedCnnEncoder
+from allennlp.modules.seq2seq_encoders.gated_cnn_encoder import GatedCnnEncoder
 
 class TestGatedCnnEncoder(AllenNlpTestCase):
     def test_gated_cnn_encoder(self):

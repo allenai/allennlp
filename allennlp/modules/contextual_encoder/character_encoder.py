@@ -20,8 +20,9 @@ class CharacterEncoder(torch.nn.Module):
                  num_highway: int = 2,
                  projection_dim: int = 512,
                  projection_location: str = 'after_cnn',
-                 l2_coef: float = 0.0001,
-                 do_layer_norm: bool = False) -> None:
+                 do_layer_norm: bool = False,
+                 requires_grad: bool = False,
+                 add_bos_eos: bool = False) -> None:
         super().__init__()
 
         if projection_location not in _VALID_PROJECTION_LOCATIONS:
@@ -31,7 +32,6 @@ class CharacterEncoder(torch.nn.Module):
         self._max_characters_per_token = max_characters_per_token
         self._num_characters = num_characters
         self._projection_location = projection_location
-        self._l2_coef = l2_coef
 
         if activation == 'tanh':
             self._activation = torch.nn.functional.tanh

@@ -19,7 +19,7 @@ import math
 import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.contextual_encoders.contextual_encoder import ContextualEncoder
+from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
 
 _DEFAULT_LAYERS = ((1, 128), (5, 128), (1, 512))
 
@@ -118,8 +118,8 @@ class ResidualBlock(torch.nn.Module):
         return (out + x) * math.sqrt(0.5)
 
 
-@ContextualEncoder.register('gated-cnn-encoder')
-class GatedCnnEncoder(ContextualEncoder):
+@Seq2SeqEncoder.register('gated-cnn-encoder')
+class GatedCnnEncoder(Seq2SeqEncoder):
     """
     A ``ContextualEncoder`` that uses a Gated CNN.
 
@@ -183,11 +183,12 @@ class GatedCnnEncoder(ContextualEncoder):
                  layers: Sequence[Sequence[Sequence[int]]],
                  dropout: float = 0.0,
                  return_all_layers: bool = False) -> None:
-        super().__init__(num_layers=len(layers),
-                         output_dim=input_dim * 2)
+        super().__init__()
 
         self._forward_residual_blocks = torch.nn.ModuleList()
         self._backward_residual_blocks = torch.nn.ModuleList()
+        self._input_dim = input_dim
+        self._output_dim = input_dim * 2
 
         for layer in layers:
             self._forward_residual_blocks.append(
@@ -200,6 +201,7 @@ class GatedCnnEncoder(ContextualEncoder):
     def forward(self,
                 token_embeddings: torch.Tensor,
                 mask: torch.Tensor) -> None:
+        # pylint: disable=arguments-differ
         # Convolutions need transposed input
         transposed_embeddings = torch.transpose(token_embeddings, 1, 2)
 
@@ -233,3 +235,12 @@ class GatedCnnEncoder(ContextualEncoder):
         else:
             # Concatenate forward and backward, then transpose back
             return torch.cat(outputs, dim=1).transpose(1, 2)
+
+    def get_input_dim(self) -> int:
+        return self._input_dim
+
+    def get_output_dim(self) -> int:
+        return self._output_dim
+
+    def is_bidirectional(self) -> bool:
+        return True

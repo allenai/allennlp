@@ -3,14 +3,13 @@ import torch
 import numpy as np
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules.contextual_encoders.contextual_seq2seq_encoder import ContextualSeq2SeqEncoder
 from allennlp.modules.contextual_encoders.character_encoder import CharacterEncoder
-from allennlp.modules.contextual_encoders.contextual_encoder_wrapper import (
-        CharLevelContextualEncoderWrapper, TokenLevelContextualEncoderWrapper)
+from allennlp.modules.contextual_encoders.contextual_encoder import (
+        CharLevelContextualEncoder, TokenLevelContextualEncoder)
 from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
 from allennlp.modules.token_embedders import Embedding
 
-class TestContextualEncoderWrapper(AllenNlpTestCase):
+class TestContextualEncoder(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
 
@@ -30,16 +29,14 @@ class TestContextualEncoderWrapper(AllenNlpTestCase):
                              input_size=16,
                              hidden_size=10,
                              batch_first=True)
-        seq2seq = PytorchSeq2SeqWrapper(lstm)
-
-        self.contextual_encoder = ContextualSeq2SeqEncoder(num_layers=3,
-                                                           encoder=seq2seq)
+        self.seq2seq = PytorchSeq2SeqWrapper(lstm)
 
 
-    def test_char_level_contextual_encoder_wrapper(self):
-        cew = CharLevelContextualEncoderWrapper(
-                contextual_encoder=self.contextual_encoder,
+    def test_char_level_contextual_encoder(self):
+        cew = CharLevelContextualEncoder(
+                encoder=self.seq2seq,
                 character_encoder=self.character_encoder,
+                num_layers=3,
                 return_all_layers=False)
 
         character_ids = torch.from_numpy(np.random.randint(0, 262, size=(5, 6, 50)))
@@ -57,13 +54,13 @@ class TestContextualEncoderWrapper(AllenNlpTestCase):
         # output of bidirectional LSTM
         assert tuple(output.shape) == (5, 6, 20)
 
-    def test_token_level_contextual_encoder_wrapper(self):
+    def test_token_level_contextual_encoder(self):
         token_embedder = Embedding(num_embeddings=50, embedding_dim=16)
 
-        cew = TokenLevelContextualEncoderWrapper(
-                    contextual_encoder=self.contextual_encoder,
-                    token_embedder=token_embedder,
-                    return_all_layers=False)
+        cew = TokenLevelContextualEncoder(encoder=self.seq2seq,
+                                          token_embedder=token_embedder,
+                                          num_layers=3,
+                                          return_all_layers=False)
 
         token_ids = torch.from_numpy(np.random.randint(0, 50, size=(5, 6)))
         result = cew(token_ids)
@@ -78,5 +75,3 @@ class TestContextualEncoderWrapper(AllenNlpTestCase):
 
         # output of bidirectional LSTM
         assert tuple(output.shape) == (5, 6, 20)
-
-
