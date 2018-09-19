@@ -53,13 +53,13 @@ def get_times_from_utterance(utterance: str,
                                         am_map_match_to_query_value,
                                         indices_of_approximate_words)
 
-    oclock_linking_dict = _time_regex_match(r"\d+\so'clock",
+    oclock_linking_dict = _time_regex_match(r"\d+ o'clock",
                                             utterance,
                                             char_offset_to_token_index,
                                             lambda match: digit_to_query_time(match.rstrip(" o'clock")),
                                             indices_of_approximate_words)
 
-    hours_linking_dict = _time_regex_match(r"\d+\shours",
+    hours_linking_dict = _time_regex_match(r"\d+ hours",
                                            utterance,
                                            char_offset_to_token_index,
                                            lambda match: [int(match.rstrip(" hours"))],
@@ -90,6 +90,7 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
 
     trigrams = ngrams([token.text for token in tokenized_utterance], 3)
     for month, tens, digit in trigrams:
+        # This will match something like ``september twenty first``.
         day = ' '.join([tens, digit])
         if month in MONTH_NUMBERS and day in DAY_NUMBERS:
             try:
@@ -100,6 +101,7 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
     bigrams = ngrams([token.text for token in tokenized_utterance], 2)
     for month, day in bigrams:
         if month in MONTH_NUMBERS and day in DAY_NUMBERS:
+            # This will match something like ``september first``.
             try:
                 dates.append(datetime(year, MONTH_NUMBERS[month], DAY_NUMBERS[day]))
             except ValueError:
@@ -151,7 +153,7 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
                 number_linking_dict[number].append(index)
     return number_linking_dict
 
-def get_time_range_start_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
+def get_time_range_start_from_utterance(utterance:str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     late_indices = {index for index, token in enumerate(tokenized_utterance)
                     if token.text == 'late'}
 
@@ -168,7 +170,7 @@ def get_time_range_start_from_utterance(tokenized_utterance: List[Token]) -> Dic
 
     return time_range_start_linking_dict
 
-def get_time_range_end_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
+def get_time_range_end_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     early_indices = {index for index, token in enumerate(tokenized_utterance)
                      if token.text == 'early'}
 

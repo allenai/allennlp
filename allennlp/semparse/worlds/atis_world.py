@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Set, Callable
 import sqlite3
 import numpy
 from nltk import ngrams
@@ -41,7 +41,7 @@ def get_strings_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, Li
 class AtisWorld():
     """
     World representation for the Atis SQL domain. This class has a ``SqlTableContext`` which holds the base
-    grammars, it then augments this grammar with the entities that are detected from utterances.
+    grammar, it then augments this grammar by constraining each column to the values that are allowed in it.
 
     Parameters
     ----------
@@ -94,6 +94,28 @@ class AtisWorld():
     def get_valid_actions(self) -> Dict[str, List[str]]:
         return self.valid_actions
 
+    def add_to_number_linking_scores(self,
+                                     all_numbers: Set[str],
+                                     number_linking_scores: Dict[str, Tuple[str, str, List[int]]],
+                                     get_number_linking_dict: Callable[[str, List[Token]],
+                                                                       Dict[str, List[int]]],
+                                     current_tokenized_utterance: List[Token],
+                                     nonterminal: str) -> None:
+        number_linking_dict: Dict[str, List[int]] = {}
+        for utterance, tokenized_utterance in zip(self.utterances, self.tokenized_utterances):
+            number_linking_dict = get_number_linking_dict(utterance, tokenized_utterance)
+            all_numbers.update(number_linking_dict.keys())
+        all_numbers_list: List[str] = sorted(all_numbers, reverse=True)
+        for number in all_numbers_list:
+            entity_linking = [0 for token in current_tokenized_utterance]
+            # ``number_linking_dict`` is for the last utterance here. If the number was triggered
+            # before the last utterance, then it will have linking scores of 0's.
+            for token_index in number_linking_dict.get(number, []):
+                entity_linking[token_index] = 1
+            action = format_action(nonterminal, number, is_number=True)
+            number_linking_scores[action] = (nonterminal, number, entity_linking)
+
+
     def get_linked_entities(self) -> Dict[str, Dict[str, Tuple[str, str, List[int]]]]:
         current_tokenized_utterance = [] if not self.tokenized_utterances \
                 else self.tokenized_utterances[-1]
@@ -107,62 +129,28 @@ class AtisWorld():
         string_linking_scores: Dict[str, Tuple[str, str, List[int]]] = {}
 
         # Get time range start
-        time_range_start = {"0"}
-        time_range_start_linking_dict: Dict[str, List[int]] = {}
+        self.add_to_number_linking_scores({'0'},
+                                          number_linking_scores,
+                                          get_time_range_start_from_utterance,
+                                          current_tokenized_utterance,
+                                          'time_range_start')
 
-        for utterance, tokenized_utterance in zip(self.utterances, self.tokenized_utterances):
-            time_range_start_linking_dict = get_time_range_start_from_utterance(tokenized_utterance)
-            time_range_start.update(time_range_start_linking_dict.keys())
-        time_range_start_list: List[str] = sorted(time_range_start, reverse=True)
+        self.add_to_number_linking_scores({"1200"},
+                                          number_linking_scores,
+                                          get_time_range_end_from_utterance,
+                                          current_tokenized_utterance,
+                                          'time_range_end')
 
-        for time in time_range_start_list:
-            entity_linking = [0 for token in current_tokenized_utterance]
-            for token_index in time_range_start_linking_dict.get(time, []):
-                entity_linking[token_index] = 1
-            action = format_action('time_range_start', time, is_number=True)
-            number_linking_scores[action] = ('time_range_start', time, entity_linking)
-
-        # Get time range end
-        time_range_end = {"1200"}
-        time_range_end_linking_dict: Dict[str, List[int]] = {}
-
-        for utterance, tokenized_utterance in zip(self.utterances, self.tokenized_utterances):
-            time_range_end_linking_dict = get_time_range_end_from_utterance(tokenized_utterance)
-            time_range_end.update(time_range_end_linking_dict.keys())
-        time_range_end_list: List[str] = sorted(time_range_end, reverse=True)
-
-        for time in time_range_end_list:
-            entity_linking = [0 for token in current_tokenized_utterance]
-            for token_index in time_range_end_linking_dict.get(time, []):
-                entity_linking[token_index] = 1
-            action = format_action('time_range_end', time, is_number=True)
-            number_linking_scores[action] = ('time_range_end', time, entity_linking)
-
-        numbers = {'0', '1'}
-        number_linking_dict: Dict[str, List[int]] = {}
-
-        for utterance, tokenized_utterance in zip(self.utterances, self.tokenized_utterances):
-            number_linking_dict = get_numbers_from_utterance(utterance, tokenized_utterance)
-            numbers.update(number_linking_dict.keys())
-        numbers_list: List[str] = sorted(numbers, reverse=True)
-
-        # We construct the linking scores for numbers from the ``number_linking_dict`` here.
-        for number in numbers_list:
-            entity_linking = [0 for token in current_tokenized_utterance]
-            # number_linking_scores has the numbers and linking scores from the last utterance.
-            # If the number is not in the last utterance, then the linking scores will be all 0.
-            for token_index in number_linking_dict.get(number, []):
-                if token_index <= len(entity_linking) - 1:
-                    entity_linking[token_index] = 1
-            action = format_action('number', number, is_number=True)
-            number_linking_scores[action] = ('number', number, entity_linking)
+        self.add_to_number_linking_scores({'0', '1'},
+                                          number_linking_scores,
+                                          get_numbers_from_utterance,
+                                          current_tokenized_utterance,
+                                          'number')
 
         # Add string linking dict.
         string_linking_dict: Dict[str, List[int]] = {}
         for tokenized_utterance in self.tokenized_utterances:
             string_linking_dict = get_strings_from_utterance(tokenized_utterance)
-            # strings.update(string_linking_dict.keys())
-        # strings_list: List[str] = sorted(strings, reverse=True)
         strings_list = []
 
         if self.tables_with_strings:
@@ -175,9 +163,7 @@ class AtisWorld():
                                           str(row[0]))
                                          for row in self.cursor.fetchall()])
 
-        # strings_list = sorted(strings_list, key=lambda string_tuple: string_tuple[0], reverse=True)
         # We construct the linking scores for strings from the ``string_linking_dict`` here.
-        print('string_linking_dict', string_linking_dict)
         for string in strings_list:
             entity_linking = [0 for token in current_tokenized_utterance]
             # string_linking_dict has the strings and linking scores from the last utterance.
