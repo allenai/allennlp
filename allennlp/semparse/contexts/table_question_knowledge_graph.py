@@ -94,8 +94,6 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
                  question_tokens: List[Token]) -> None:
         super().__init__(entities, neighbors, entity_text)
         self.question_tokens = question_tokens
-        entity_extractor = QuestionEntityExtractor( '/u/murtyjay/allennlp_fork/stop_words.json',  entity_text)
-        print(entity_extractor.get_entities_from_question([x.text for x in question_tokens]),  question_tokens)
 
 
         self._entity_prefixes: Dict[str, List[str]] = defaultdict(list)
