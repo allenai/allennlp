@@ -68,8 +68,18 @@ class SpanBasedF1Measure(Metric):
             If ``label_encoding`` is ``None``, ``tags_to_spans_function`` will be
             used to generate spans.
         """
-        if label_encoding not in ["BIO", "IOB1", "BIOUL", "BMES"]:
-            raise ConfigurationError("Unknown label encoding - expected 'BIO', 'IOB1', 'BIOUL', 'BMES'.")
+        if label_encoding and tags_to_spans_function:
+            raise ConfigurationError(
+                    'Both label_encoding and tags_to_spans_function are provided. '
+                    'Set "label_encoding=None" explicitly to enable tags_to_spans_function.'
+                    )
+        if label_encoding:
+            if label_encoding not in ["BIO", "IOB1", "BIOUL", "BMES"]:
+                raise ConfigurationError("Unknown label encoding - expected 'BIO', 'IOB1', 'BIOUL', 'BMES'.")
+        elif tags_to_spans_function is None:
+            raise ConfigurationError(
+                    'At least one of the (label_encoding, tags_to_spans_function) should be provided.'
+                    )
 
         self._label_encoding = label_encoding
         self._tags_to_spans_function = tags_to_spans_function
@@ -156,9 +166,6 @@ class SpanBasedF1Measure(Metric):
                 tags_to_spans_function = bioul_tags_to_spans
             elif self._label_encoding == "BMES":
                 tags_to_spans_function = bmes_tags_to_spans
-            # Checking.
-            if tags_to_spans_function is None:
-                raise ConfigurationError('tags_to_spans_function is empty.')
 
             predicted_spans = tags_to_spans_function(predicted_string_labels, self._ignore_classes)
             gold_spans = tags_to_spans_function(gold_string_labels, self._ignore_classes)
