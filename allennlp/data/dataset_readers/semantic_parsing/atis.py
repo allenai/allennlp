@@ -114,7 +114,7 @@ class AtisDatasetReader(DatasetReader):
 
         if sql_query_labels:
             # If there are multiple sql queries given as labels, we use the shortest
-            # one for training. 
+            # one for training.
             sql_query = min(sql_query_labels, key=len)
             try:
                 action_sequence = world.get_action_sequence(sql_query)
@@ -127,11 +127,10 @@ class AtisDatasetReader(DatasetReader):
         production_rule_fields: List[Field] = []
 
         for production_rule in world.all_possible_actions():
-            lhs, _ = production_rule.split(' ->')
-            is_global_rule = 'number' not in lhs and 'string' not in lhs and 'time_range' not in lhs
+            nonterminal, _ = production_rule.split(' ->')
             # The whitespaces are not semantically meaningful, so we filter them out.
             production_rule = ' '.join([token for token in production_rule.split(' ') if token != 'ws'])
-            field = ProductionRuleField(production_rule, is_global_rule)
+            field = ProductionRuleField(production_rule, is_global_rule(nonterminal))
             production_rule_fields.append(field)
 
         action_field = ListField(production_rule_fields)
@@ -158,3 +157,10 @@ class AtisDatasetReader(DatasetReader):
                 return None
 
         return Instance(fields)
+
+def is_global_rule(nonterminal: str) -> bool:
+    if nonterminal in ['number', 'time_range_start', 'time_range_end']:
+        return False
+    elif nonterminal.endswith('string'):
+        return False
+    return True
