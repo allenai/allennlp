@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules.contextual_encoders.character_encoder import CharacterEncoder
+from allennlp.modules.contextual_encoder.character_encoder import CharacterEncoder
 
 class TestCharacterEncoder(AllenNlpTestCase):
     def test_character_encoder(self):

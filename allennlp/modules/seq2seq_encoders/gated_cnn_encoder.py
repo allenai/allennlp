@@ -13,13 +13,13 @@ For 16 layers of bottleneck: [[1, 256], [5, 256], [1, 512]] =
 For 16 layers of large sizes [[1, 1024], [3, 1024], [1, 512]] =
            16 * (1 * 1024 * 512 + 3 * 1024 * 1024 + 1 * 1024 * 512) = 67.1e6
 """
-from typing import Sequence
+from typing import Sequence, List
 import math
 
 import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
+from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 
 _DEFAULT_LAYERS = ((1, 128), (5, 128), (1, 512))
 
@@ -200,7 +200,7 @@ class GatedCnnEncoder(Seq2SeqEncoder):
 
     def forward(self,
                 token_embeddings: torch.Tensor,
-                mask: torch.Tensor) -> None:
+                mask: torch.Tensor):
         # pylint: disable=arguments-differ
         # Convolutions need transposed input
         transposed_embeddings = torch.transpose(token_embeddings, 1, 2)
@@ -211,10 +211,10 @@ class GatedCnnEncoder(Seq2SeqEncoder):
 
         if self._return_all_layers:
             # outputs will be [[all forward layers], [all backward layers]]
-            layer_outputs = [[], []]
+            layer_outputs: List[List[torch.Tensor]] = [[], []]
         else:
             # outputs will be [forward final layer, backward final layer]
-            outputs = []
+            outputs: List[torch.Tensor] = []
 
         for k, blocks in enumerate([self._forward_residual_blocks,
                                     self._backward_residual_blocks]):

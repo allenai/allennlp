@@ -10,14 +10,13 @@ import numpy
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
-from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
 from allennlp.common import Params
 from allennlp.common.util import lazy_groups_of
+from allennlp.modules.contextual_encoder.character_encoder import CharacterEncoder
 from allennlp.modules.elmo_lstm import ElmoLstm
-from allennlp.modules.highway import Highway
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids, get_device_of
 from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper, ELMoTokenCharactersIndexer
@@ -242,240 +241,74 @@ def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
     dataset.index_instances(vocab)
     return dataset.as_tensor_dict()['elmo']['character_ids']
 
+def _elmo_character_encoder(options_file: str, weight_file: str) -> CharacterEncoder:
+    # pylint: disable=protected-access
+    with open(cached_path(options_file), 'r') as options_fin:
+        options = json.load(options_fin)
 
-class _ElmoCharacterEncoder(torch.nn.Module):
-    """
-    Compute context insensitive token representation using pretrained biLM.
+    encoder = CharacterEncoder(
+            activation=options['char_cnn']['activation'],
+            embedding_dim=options['char_cnn']['embedding']['dim'],
+            filters=options['char_cnn']['filters'],
+            max_characters_per_token=options['char_cnn']['max_characters_per_token'],
+            num_characters=options['char_cnn']['n_characters'],
+            num_highway=options['char_cnn']['n_highway'],
+            projection_dim=options['lstm']['projection_dim'],
+            projection_location='after_highway',  # is this right?
+            do_layer_norm=False,  # is this right?
+            bos_characters=ELMoCharacterMapper.beginning_of_sentence_characters,
+            eos_characters=ELMoCharacterMapper.end_of_sentence_characters)
 
-    This embedder has input character ids of size (batch_size, sequence_length, 50)
-    and returns (batch_size, sequence_length + 2, embedding_dim), where embedding_dim
-    is specified in the options file (typically 512).
+    # Load Embedding
+    with h5py.File(cached_path(weight_file), 'r') as fin:
+        char_embed_weights = fin['char_embed'][...]
 
-    We add special entries at the beginning and end of each sequence corresponding
-    to <S> and </S>, the beginning and end of sentence tokens.
+    weights = numpy.zeros(
+            (char_embed_weights.shape[0] + 1, char_embed_weights.shape[1]),
+            dtype='float32'
+    )
+    weights[1:, :] = char_embed_weights
+    encoder._char_embedding_weights.data.copy_(torch.FloatTensor(weights))
 
-    Note: this is a lower level class useful for advanced usage.  Most users should
-    use ``ElmoTokenEmbedder`` or ``allennlp.modules.Elmo`` instead.
+    # Load CNN weights
+    for i, conv in enumerate(encoder._convolutions):
+        with h5py.File(cached_path(weight_file), 'r') as fin:
+            weight = fin['CNN']['W_cnn_{}'.format(i)][...]
+            bias = fin['CNN']['b_cnn_{}'.format(i)][...]
 
-    Parameters
-    ----------
-    options_file : ``str``
-        ELMo JSON options file
-    weight_file : ``str``
-        ELMo hdf5 weight file
-    requires_grad: ``bool``, optional
-        If True, compute gradient of ELMo parameters for fine tuning.
+        w_reshaped = numpy.transpose(weight.squeeze(axis=0), axes=(2, 1, 0))
+        if w_reshaped.shape != tuple(conv.weight.data.shape):
+            raise ValueError("Invalid weight file")
+        conv.weight.data.copy_(torch.FloatTensor(w_reshaped))
+        conv.bias.data.copy_(torch.FloatTensor(bias))
 
-    The relevant section of the options file is something like:
-    .. example-code::
+    # Load Highway layer weights
+    for k, highway_layer in enumerate(encoder._highways._layers):
+        # The AllenNLP highway is one matrix multplication with concatenation of
+        # transform and carry weights.
+        with h5py.File(cached_path(weight_file), 'r') as fin:
+            # The weights are transposed due to multiplication order assumptions in tf
+            # vs pytorch (tf.matmul(X, W) vs pytorch.matmul(W, X))
+            w_transform = numpy.transpose(fin['CNN_high_{}'.format(k)]['W_transform'][...])
+            # -1.0 since AllenNLP is g * x + (1 - g) * f(x) but tf is (1 - g) * x + g * f(x)
+            w_carry = -1.0 * numpy.transpose(fin['CNN_high_{}'.format(k)]['W_carry'][...])
+            weight = numpy.concatenate([w_transform, w_carry], axis=0)
+            print(weight.shape, highway_layer.weight.shape)
+            highway_layer.weight.data.copy_(torch.FloatTensor(weight))
 
-        .. code-block:: python
+            b_transform = fin['CNN_high_{}'.format(k)]['b_transform'][...]
+            b_carry = -1.0 * fin['CNN_high_{}'.format(k)]['b_carry'][...]
+            bias = numpy.concatenate([b_transform, b_carry], axis=0)
+            highway_layer.bias.data.copy_(torch.FloatTensor(bias))
 
-            {'char_cnn': {
-                'activation': 'relu',
-                'embedding': {'dim': 4},
-                'filters': [[1, 4], [2, 8], [3, 16], [4, 32], [5, 64]],
-                'max_characters_per_token': 50,
-                'n_characters': 262,
-                'n_highway': 2
-                }
-            }
-    """
-    def __init__(self,
-                 options_file: str,
-                 weight_file: str,
-                 requires_grad: bool = False) -> None:
-        super(_ElmoCharacterEncoder, self).__init__()
+    # Load Projection
+    with h5py.File(cached_path(weight_file), 'r') as fin:
+        weight = fin['CNN_proj']['W_proj'][...]
+        bias = fin['CNN_proj']['b_proj'][...]
+        encoder._projection.weight.data.copy_(torch.FloatTensor(numpy.transpose(weight)))
+        encoder._projection.bias.data.copy_(torch.FloatTensor(bias))
 
-        with open(cached_path(options_file), 'r') as fin:
-            self._options = json.load(fin)
-        self._weight_file = weight_file
-
-        self.output_dim = self._options['lstm']['projection_dim']
-        self.requires_grad = requires_grad
-
-        self._load_weights()
-
-        # Cache the arrays for use in forward -- +1 due to masking.
-        self._beginning_of_sentence_characters = torch.from_numpy(
-                numpy.array(ELMoCharacterMapper.beginning_of_sentence_characters) + 1
-        )
-        self._end_of_sentence_characters = torch.from_numpy(
-                numpy.array(ELMoCharacterMapper.end_of_sentence_characters) + 1
-        )
-
-    def get_output_dim(self):
-        return self.output_dim
-
-    @overrides
-    def forward(self, inputs: torch.Tensor) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
-        """
-        Compute context insensitive token embeddings for ELMo representations.
-
-        Parameters
-        ----------
-        inputs: ``torch.Tensor``
-            Shape ``(batch_size, sequence_length, 50)`` of character ids representing the
-            current batch.
-
-        Returns
-        -------
-        Dict with keys:
-        ``'token_embedding'``: ``torch.Tensor``
-            Shape ``(batch_size, sequence_length + 2, embedding_dim)`` tensor with context
-            insensitive token representations.
-        ``'mask'``:  ``torch.Tensor``
-            Shape ``(batch_size, sequence_length + 2)`` long tensor with sequence mask.
-        """
-        # Add BOS/EOS
-        mask = ((inputs > 0).long().sum(dim=-1) > 0).long()
-        character_ids_with_bos_eos, mask_with_bos_eos = add_sentence_boundary_token_ids(
-                inputs,
-                mask,
-                self._beginning_of_sentence_characters,
-                self._end_of_sentence_characters
-        )
-
-        # the character id embedding
-        max_chars_per_token = self._options['char_cnn']['max_characters_per_token']
-        # (batch_size * sequence_length, max_chars_per_token, embed_dim)
-        character_embedding = torch.nn.functional.embedding(
-                character_ids_with_bos_eos.view(-1, max_chars_per_token),
-                self._char_embedding_weights
-        )
-
-        # run convolutions
-        cnn_options = self._options['char_cnn']
-        if cnn_options['activation'] == 'tanh':
-            activation = torch.tanh
-        elif cnn_options['activation'] == 'relu':
-            activation = torch.nn.functional.relu
-        else:
-            raise ConfigurationError("Unknown activation")
-
-        # (batch_size * sequence_length, embed_dim, max_chars_per_token)
-        character_embedding = torch.transpose(character_embedding, 1, 2)
-        convs = []
-        for i in range(len(self._convolutions)):
-            conv = getattr(self, 'char_conv_{}'.format(i))
-            convolved = conv(character_embedding)
-            # (batch_size * sequence_length, n_filters for this width)
-            convolved, _ = torch.max(convolved, dim=-1)
-            convolved = activation(convolved)
-            convs.append(convolved)
-
-        # (batch_size * sequence_length, n_filters)
-        token_embedding = torch.cat(convs, dim=-1)
-
-        # apply the highway layers (batch_size * sequence_length, n_filters)
-        token_embedding = self._highways(token_embedding)
-
-        # final projection  (batch_size * sequence_length, embedding_dim)
-        token_embedding = self._projection(token_embedding)
-
-        # reshape to (batch_size, sequence_length, embedding_dim)
-        batch_size, sequence_length, _ = character_ids_with_bos_eos.size()
-
-        return {
-                'mask': mask_with_bos_eos,
-                'token_embedding': token_embedding.view(batch_size, sequence_length, -1)
-        }
-
-    def _load_weights(self):
-        self._load_char_embedding()
-        self._load_cnn_weights()
-        self._load_highway()
-        self._load_projection()
-
-    def _load_char_embedding(self):
-        with h5py.File(cached_path(self._weight_file), 'r') as fin:
-            char_embed_weights = fin['char_embed'][...]
-
-        weights = numpy.zeros(
-                (char_embed_weights.shape[0] + 1, char_embed_weights.shape[1]),
-                dtype='float32'
-        )
-        weights[1:, :] = char_embed_weights
-
-        self._char_embedding_weights = torch.nn.Parameter(
-                torch.FloatTensor(weights), requires_grad=self.requires_grad
-        )
-
-    def _load_cnn_weights(self):
-        cnn_options = self._options['char_cnn']
-        filters = cnn_options['filters']
-        char_embed_dim = cnn_options['embedding']['dim']
-
-        convolutions = []
-        for i, (width, num) in enumerate(filters):
-            conv = torch.nn.Conv1d(
-                    in_channels=char_embed_dim,
-                    out_channels=num,
-                    kernel_size=width,
-                    bias=True
-            )
-            # load the weights
-            with h5py.File(cached_path(self._weight_file), 'r') as fin:
-                weight = fin['CNN']['W_cnn_{}'.format(i)][...]
-                bias = fin['CNN']['b_cnn_{}'.format(i)][...]
-
-            w_reshaped = numpy.transpose(weight.squeeze(axis=0), axes=(2, 1, 0))
-            if w_reshaped.shape != tuple(conv.weight.data.shape):
-                raise ValueError("Invalid weight file")
-            conv.weight.data.copy_(torch.FloatTensor(w_reshaped))
-            conv.bias.data.copy_(torch.FloatTensor(bias))
-
-            conv.weight.requires_grad = self.requires_grad
-            conv.bias.requires_grad = self.requires_grad
-
-            convolutions.append(conv)
-            self.add_module('char_conv_{}'.format(i), conv)
-
-        self._convolutions = convolutions
-
-    def _load_highway(self):
-        # pylint: disable=protected-access
-        # the highway layers have same dimensionality as the number of cnn filters
-        cnn_options = self._options['char_cnn']
-        filters = cnn_options['filters']
-        n_filters = sum(f[1] for f in filters)
-        n_highway = cnn_options['n_highway']
-
-        # create the layers, and load the weights
-        self._highways = Highway(n_filters, n_highway, activation=torch.nn.functional.relu)
-        for k in range(n_highway):
-            # The AllenNLP highway is one matrix multplication with concatenation of
-            # transform and carry weights.
-            with h5py.File(cached_path(self._weight_file), 'r') as fin:
-                # The weights are transposed due to multiplication order assumptions in tf
-                # vs pytorch (tf.matmul(X, W) vs pytorch.matmul(W, X))
-                w_transform = numpy.transpose(fin['CNN_high_{}'.format(k)]['W_transform'][...])
-                # -1.0 since AllenNLP is g * x + (1 - g) * f(x) but tf is (1 - g) * x + g * f(x)
-                w_carry = -1.0 * numpy.transpose(fin['CNN_high_{}'.format(k)]['W_carry'][...])
-                weight = numpy.concatenate([w_transform, w_carry], axis=0)
-                self._highways._layers[k].weight.data.copy_(torch.FloatTensor(weight))
-                self._highways._layers[k].weight.requires_grad = self.requires_grad
-
-                b_transform = fin['CNN_high_{}'.format(k)]['b_transform'][...]
-                b_carry = -1.0 * fin['CNN_high_{}'.format(k)]['b_carry'][...]
-                bias = numpy.concatenate([b_transform, b_carry], axis=0)
-                self._highways._layers[k].bias.data.copy_(torch.FloatTensor(bias))
-                self._highways._layers[k].bias.requires_grad = self.requires_grad
-
-    def _load_projection(self):
-        cnn_options = self._options['char_cnn']
-        filters = cnn_options['filters']
-        n_filters = sum(f[1] for f in filters)
-
-        self._projection = torch.nn.Linear(n_filters, self.output_dim, bias=True)
-        with h5py.File(cached_path(self._weight_file), 'r') as fin:
-            weight = fin['CNN_proj']['W_proj'][...]
-            bias = fin['CNN_proj']['b_proj'][...]
-            self._projection.weight.data.copy_(torch.FloatTensor(numpy.transpose(weight)))
-            self._projection.bias.data.copy_(torch.FloatTensor(bias))
-
-            self._projection.weight.requires_grad = self.requires_grad
-            self._projection.bias.requires_grad = self.requires_grad
+    return encoder
 
 
 class _ElmoBiLm(torch.nn.Module):
@@ -508,7 +341,10 @@ class _ElmoBiLm(torch.nn.Module):
                  vocab_to_cache: List[str] = None) -> None:
         super(_ElmoBiLm, self).__init__()
 
-        self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=requires_grad)
+        self._token_embedder = _elmo_character_encoder(options_file, weight_file)
+
+        for param in self._token_embedder.parameters():
+            param.requires_grad = requires_grad
 
         self._requires_grad = requires_grad
         if requires_grad and vocab_to_cache:

@@ -16,7 +16,7 @@ from allennlp.data.token_indexers.single_id_token_indexer import SingleIdTokenIn
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.dataset import Batch
 from allennlp.data.iterators import BasicIterator
-from allennlp.modules.elmo import _ElmoBiLm, Elmo, _ElmoCharacterEncoder
+from allennlp.modules.elmo import _ElmoBiLm, Elmo, _elmo_character_encoder
 from allennlp.modules.token_embedders import ElmoTokenEmbedder
 from allennlp.data.fields import TextField
 from allennlp.nn.util import remove_sentence_boundaries
@@ -331,7 +331,7 @@ class TestElmoTokenRepresentation(ElmoTestCase):
             )
         batch = torch.from_numpy(numpy.array(sentences))
 
-        elmo_token_embedder = _ElmoCharacterEncoder(self.options_file, self.weight_file)
+        elmo_token_embedder = _elmo_character_encoder(self.options_file, self.weight_file)
         elmo_token_embedder_output = elmo_token_embedder(batch)
 
         # Reshape back to a list of words and compare with ground truth.  Need to also
@@ -352,7 +352,7 @@ class TestElmoTokenRepresentation(ElmoTestCase):
         # The additional <S> and </S> embeddings added by the embedder should be as expected.
         indexer = ELMoTokenCharactersIndexer()
 
-        elmo_token_embedder = _ElmoCharacterEncoder(self.options_file, self.weight_file)
+        elmo_token_embedder = _elmo_character_encoder(self.options_file, self.weight_file)
 
         for correct_index, token in [[0, '<S>'], [2, '</S>']]:
             indices = indexer.tokens_to_indices([Token(token)], Vocabulary(), "correct")

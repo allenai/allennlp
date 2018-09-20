@@ -1,4 +1,4 @@
-from typing import Sequence, Dict
+from typing import Sequence, Dict, List
 
 import torch
 import numpy as np
@@ -6,6 +6,7 @@ import numpy as np
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.highway import Highway
 from allennlp.modules.masked_layer_norm import MaskedLayerNorm
+from allennlp.nn.util import add_sentence_boundary_token_ids
 
 _DEFAULT_FILTERS = ((1, 4), (2, 8), (3, 16), (4, 32), (5, 64))
 _VALID_PROJECTION_LOCATIONS = {'after_cnn', 'after_highway'}
@@ -21,8 +22,8 @@ class CharacterEncoder(torch.nn.Module):
                  projection_dim: int = 512,
                  projection_location: str = 'after_cnn',
                  do_layer_norm: bool = False,
-                 requires_grad: bool = False,
-                 add_bos_eos: bool = False) -> None:
+                 bos_characters: List[int] = None,
+                 eos_characters: List[int] = None) -> None:
         super().__init__()
 
         if projection_location not in _VALID_PROJECTION_LOCATIONS:
@@ -33,6 +34,16 @@ class CharacterEncoder(torch.nn.Module):
         self._num_characters = num_characters
         self._projection_location = projection_location
 
+        if bos_characters and eos_characters:
+            # Add 1 for masking.
+            self._bos_characters = torch.from_numpy(np.array(bos_characters) + 1)
+            self._eos_characters = torch.from_numpy(np.array(eos_characters) + 1)
+        elif bos_characters or eos_characters:
+            raise ConfigurationError("must specify both bos_characters and eos_characters or neither")
+        else:
+            self._bos_characters = None
+            self._eos_characters = None
+
         if activation == 'tanh':
             self._activation = torch.nn.functional.tanh
         elif activation == 'relu':
@@ -41,18 +52,21 @@ class CharacterEncoder(torch.nn.Module):
             raise ConfigurationError(f"unknown activation {activation}")
 
         # char embedding
-        self._char_embedding = torch.nn.Embedding(num_characters, embedding_dim)
-        torch.nn.init.uniform_(self._char_embedding.weight.data, a=-1, b=1)
+        weights = np.random.uniform(-1, 1, (num_characters, embedding_dim)).astype('float32')
+        self._char_embedding_weights = torch.nn.Parameter(torch.FloatTensor(weights))
 
         # Create the convolutions
-        self._convolutions = torch.nn.ModuleList()
-        for width, num in filters:
+        # (It would be better to just use a `torch.nn.ModuleList` here, but then the
+        #  parameter names won't agree with the existing serialized ELMo models.)
+        self._convolutions: List[torch.nn.Module] = []
+        for i, (width, num) in enumerate(filters):
             conv = torch.nn.Conv1d(in_channels=embedding_dim,
                                    out_channels=num,
                                    kernel_size=width,
                                    bias=True)
             conv.weight.data.uniform_(-0.05, 0.05)
             conv.bias.data.fill_(0.0)
+            self.add_module(f"char_conv_{i}", conv)  # needs to match the old ELMo name
             self._convolutions.append(conv)
 
         # Create the highway layers
@@ -63,12 +77,12 @@ class CharacterEncoder(torch.nn.Module):
             # highway_dim is the number of cnn filters
             highway_dim = num_filters
         self._highways = Highway(highway_dim, num_highway, activation=torch.nn.functional.relu)
-        for highway in self._highways._layers:   # pylint: disable=protected-access
+        for highway_layer in self._highways._layers:   # pylint: disable=protected-access
             # highway is a linear layer for each highway layer
             # with fused W and b weights
-            highway.weight.data.normal_(mean=0.0, std=np.sqrt(1.0 / highway_dim))
-            highway.bias[:highway_dim].data.fill_(0.0)
-            highway.bias[highway_dim:].data.fill_(2.0)
+            highway_layer.weight.data.normal_(mean=0.0, std=np.sqrt(1.0 / highway_dim))
+            highway_layer.bias[:highway_dim].data.fill_(0.0)
+            highway_layer.bias[highway_dim:].data.fill_(2.0)
 
         # Projection layer: always num_filters -> projection_dim
         self._projection = torch.nn.Linear(num_filters, projection_dim, bias=True)
@@ -105,9 +119,16 @@ class CharacterEncoder(torch.nn.Module):
         char_id_mask = (inputs > 0).long()  # (batch_size, sequence_length, max_characters_per_token)
         mask = (char_id_mask.sum(dim=-1) > 0).long()  # (batch_size, sequence_length)
 
+        # Add BOS / EOS
+        if self._bos_characters is not None:
+            inputs, mask = add_sentence_boundary_token_ids(inputs,
+                                                           mask,
+                                                           self._bos_characters, self._eos_characters)
+
         # character_id embedding
         # (batch_size * sequence_length, max_chars_per_token, embed_dim)
-        character_embedding = self._char_embedding(inputs.view(-1, self._max_characters_per_token))
+        character_embedding = torch.nn.functional.embedding(inputs.view(-1, self._max_characters_per_token),
+                                                            self._char_embedding_weights)
 
         # (batch_size * sequence_length, embed_dim, max_chars_per_token)
         character_embedding = character_embedding.transpose(1, 2)
@@ -146,3 +167,6 @@ class CharacterEncoder(torch.nn.Module):
                 'mask': mask,
                 'token_embedding': token_embedding_reshaped
         }
+
+    def get_output_dim(self) -> int:
+        return self.output_dim

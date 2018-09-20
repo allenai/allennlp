@@ -3,8 +3,8 @@ import torch
 import numpy as np
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules.contextual_encoders.character_encoder import CharacterEncoder
-from allennlp.modules.contextual_encoders.contextual_encoder import (
+from allennlp.modules.contextual_encoder.character_encoder import CharacterEncoder
+from allennlp.modules.contextual_encoder.contextual_encoder import (
         CharLevelContextualEncoder, TokenLevelContextualEncoder)
 from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
 from allennlp.modules.token_embedders import Embedding
