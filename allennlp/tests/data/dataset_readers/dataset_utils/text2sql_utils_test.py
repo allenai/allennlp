@@ -23,8 +23,8 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
         assert sql_data.text_with_variables == ['how', 'many', 'name0', 'are', 'there', 'in', 'city_name0', '?']
         assert sql_data.sql == ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', 'AS', 'LOCATIONalias0', ',',
                                 'RESTAURANT', 'AS', 'RESTAURANTalias0', 'WHERE', 'LOCATIONalias0.CITY_NAME', '=',
-                                'city_name0', 'AND', 'RESTAURANTalias0.ID', '=', 'LOCATIONalias0.RESTAURANT_ID',
-                                'AND', 'RESTAURANTalias0.NAME', '=', 'name0', ';']
+                                '\'city_name0\'', 'AND', 'RESTAURANTalias0.ID', '=', 'LOCATIONalias0.RESTAURANT_ID',
+                                'AND', 'RESTAURANTalias0.NAME', '=', '\'name0\'', ';']
         assert sql_data.text_variables == {'city_name0': 'san francisco', 'name0': 'buttercup kitchen'}
         assert sql_data.sql_variables == {'city_name0': 'san francisco', 'name0': 'buttercup kitchen'}
 
@@ -44,8 +44,8 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
         for i, sql_data in enumerate(dataset):
             assert sql_data.sql == ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'GEOGRAPHIC', 'AS', 'GEOGRAPHICalias0',
                                     ',', 'RESTAURANT', 'AS', 'RESTAURANTalias0', 'WHERE', 'GEOGRAPHICalias0.REGION',
-                                    '=', 'region0', 'AND', 'RESTAURANTalias0.CITY_NAME', '=', 'GEOGRAPHICalias0.CITY_NAME',
-                                    'AND', 'RESTAURANTalias0.FOOD_TYPE', '=', 'food_type0', ';']
+                                    '=', '\'region0\'', 'AND', 'RESTAURANTalias0.CITY_NAME', '=', 'GEOGRAPHICalias0.CITY_NAME',
+                                    'AND', 'RESTAURANTalias0.FOOD_TYPE', '=', '\'food_type0\'', ';']
             assert sql_data.text_variables == {'region0': 'bay area', 'food_type0': 'chinese'}
             assert sql_data.sql_variables == {'region0': 'bay area', 'food_type0': 'chinese'}
             assert sql_data.text == correct_text[i][0]
@@ -71,5 +71,5 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
         cleaned = text2sql_utils.clean_and_split_sql(sql)
         assert cleaned == ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', 'AS', 'LOCATIONalias0', ',',
                            'RESTAURANT', 'AS', 'RESTAURANTalias0', 'WHERE', 'LOCATIONalias0.CITY_NAME', '=',
-                           'city_name0', 'AND', 'RESTAURANTalias0.ID', '=', 'LOCATIONalias0.RESTAURANT_ID',
-                           'AND', 'RESTAURANTalias0.NAME', '=', 'name0', ';']
+                           '\'city_name0\'', 'AND', 'RESTAURANTalias0.ID', '=', 'LOCATIONalias0.RESTAURANT_ID',
+                           'AND', 'RESTAURANTalias0.NAME', '=', '\'name0\'', ';']
