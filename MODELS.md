@@ -14,11 +14,11 @@ Based on [BiDAF (Seo et al, 2017)](https://www.semanticscholar.org/paper/Bidirec
 ```
 $ docker run allennlp/allennlp:v0.6.1 evaluate https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz https://s3-us-west-2.amazonaws.com/allennlp/datasets/squad/squad-dev-v1.1.json
 Metrics:
-start_acc: 0.6421002838221381
-end_acc: 0.671050141911069
-span_acc: 0.5526963103122043
-em: 0.6837275307473983
-f1: 0.7785736528673436
+start_acc: 0.642
+end_acc: 0.671
+span_acc: 0.552
+em: 0.683
+f1: 0.778
 ```
 
 ## Textual Entailment
