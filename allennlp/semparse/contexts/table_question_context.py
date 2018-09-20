@@ -29,7 +29,7 @@ STOP_WORDS = ["", "",  "all", "being", "-", "over", "through", "yourselves", "it
 
                                  
 
-class ContextGenerator:
+class TableQuestionContext:
     """
     A Barebones implementation similar to https://github.com/crazydonkey200/neural-symbolic-machines/blob/master/table/wtq/preprocess.py
     for extracting entities from a question given a table. 
@@ -42,46 +42,48 @@ class ContextGenerator:
         self.cell_values = cell_values
         self.column_types = { column_index_to_name[column_index] : max(column_type_statistics[column_index]) for column_index in column_index_to_name }
             
-       
-
     @classmethod
-    def parse_file(cls, filename: str, question: List[Token], max_tokens_for_num_cell : int) -> 'TableQuestionKnowledgeGraph':
+    def read_from_file(cls, filename: str, max_tokens_for_num_cell : int) -> 'TableQuestionKnowledgeGraph':
         with open(filename, 'r') as file_pointer:
-        	reader = csv.reader(file_pointer,  delimiter='\t', quoting=csv.QUOTE_NONE)
-        	# obtain column information
-        	lines = [line for line in reader]
-        	column_index_to_name = {}
+            reader = csv.reader(file_pointer,  delimiter='\t', quoting=csv.QUOTE_NONE)
+            # obtain column information
+            lines = [line for line in reader]
+            column_index_to_name = {}
 
-        	header = lines[0] # the first line is the header
-        	index = 1
-        	while lines[index][0] == '-1':
-        		# column names start with fb:row.row. 
-        		curr_line = lines[index]
-        		column_name_sempre = curr_line[2]
-        		column_index = curr_line[1]
-        		column_name = column_name_sempre.replace('fb:row.row.', '')
-        		column_index_to_name[column_index] = column_name
-            	index += 1
-
-        
-        	column_node_type_info = [{'string' : 0, 'number' : 0, 'date' : 0} 
-                                 for col in column_index_to_name]
-        	cell_values = set()
-        	while index < len(lines):
-        		curr_line = lines[index]
-            	column_index = curr_line[1]
-            	node_info = dict(zip(header, curr_line))
-                cell_values.add(cls._normalize_string(node_info['content']))  
-            	if node_info['date']:
-            		column_node_type_info[column_index]['date'] += 1 
-            	# If cell contains too many tokens, then likely not number
-            	elif node_info['number'] and num_tokens < max_tokens_for_num_cell:
-            		column_node_type_info[column_index]['number'] += 1 
-            	else:
-            		column_node_type_info[column_index]['string'] += 1
+            header = lines[0] # the first line is the header
+            index = 1
+            while lines[index][0] == '-1':
+                # column names start with fb:row.row.
+                curr_line = lines[index]
+                column_name_sempre = curr_line[2]
+                column_index = int(curr_line[1])
+                column_name = column_name_sempre.replace('fb:row.row.', '')
+                column_index_to_name[column_index] = column_name
+                index += 1
 
 
-        	return cls(cell_values, column_node_type_info, column_index_to_name)
+            column_node_type_info = [{'string' : 0, 'number' : 0, 'date' : 0}
+                                     for col in column_index_to_name]
+            cell_values = set()
+            while index < len(lines):
+                curr_line = lines[index]
+                column_index = int(curr_line[1])
+                node_info = dict(zip(header, curr_line))
+                cell_values.add(cls._normalize_string(node_info['content']))
+                num_tokens = len(node_info['tokens'].split('|'))
+                if node_info['date']:
+                    column_node_type_info[column_index]['date'] += 1
+                # If cell contains too many tokens, then likely not number
+                elif node_info['number'] and num_tokens < max_tokens_for_num_cell:
+                    column_node_type_info[column_index]['number'] += 1
+                else:
+                    column_node_type_info[column_index]['string'] += 1
+                index += 1
+
+
+            return cls(cell_values, column_node_type_info, column_index_to_name)       
+
+
 
 
     def get_entities_from_question(self, question : List[str]):
@@ -131,3 +133,43 @@ class ContextGenerator:
             new_ents.append({'token_start' : curr_st, 'token_end' : curr_en, 'value' : curr_tok})
 
         return new_ents
+
+    @staticmethod
+    def _normalize_string(string: str) -> str:
+        """
+        These are the transformation rules used to normalize cell in column names in Sempre.  See
+        ``edu.stanford.nlp.sempre.tables.StringNormalizationUtils.characterNormalize`` and
+        ``edu.stanford.nlp.sempre.tables.TableTypeSystem.canonicalizeName``.  We reproduce those
+        rules here to normalize and canonicalize cells and columns in the same way so that we can
+        match them against constants in logical forms appropriately.
+        """
+        # Normalization rules from Sempre
+        # \u201A -> ,
+        string = re.sub("‚", ",", string)
+        string = re.sub("„", ",,", string)
+        string = re.sub("[·・]", ".", string)
+        string = re.sub("…", "...", string)
+        string = re.sub("ˆ", "^", string)
+        string = re.sub("˜", "~", string)
+        string = re.sub("‹", "<", string)
+        string = re.sub("›", ">", string)
+        string = re.sub("[‘’´`]", "'", string)
+        string = re.sub("[“”«»]", "\"", string)
+        string = re.sub("[•†‡²³]", "", string)
+        string = re.sub("[‐‑–—−]", "-", string)
+        # Oddly, some unicode characters get converted to _ instead of being stripped.  Not really
+        # sure how sempre decides what to do with these...  TODO(mattg): can we just get rid of the
+        # need for this function somehow?  It's causing a whole lot of headaches.
+        string = re.sub("[ðø′″€⁄ªΣ]", "_", string)
+        # This is such a mess.  There isn't just a block of unicode that we can strip out, because
+        # sometimes sempre just strips diacritics...  We'll try stripping out a few separate
+        # blocks, skipping the ones that sempre skips...
+        string = re.sub("[\\u0180-\\u0210]", "", string).strip()
+        string = re.sub("[\\u0220-\\uFFFF]", "", string).strip()
+        string = string.replace("\\n", "_")
+        string = re.sub("\\s+", " ", string)
+        # Canonicalization rules from Sempre
+        string = re.sub("[^\\w]", "_", string)
+        string = re.sub("_+", "_", string)
+        string = re.sub("_$", "", string)
+        return unidecode(string.lower())
