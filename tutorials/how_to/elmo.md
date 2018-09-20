@@ -52,31 +52,9 @@ JSON-serialized string with a mapping from sentences to line indices to the
 
 For more details, see `allennlp elmo -h`. 
 
-## Using ELMo interactively
+## Using ELMo as a PyTorch `Module` to train a new model
 
-You can use ELMo interactively (or programatically) with iPython.  The `allennlp.commands.elmo.ElmoEmbedder` class provides the easiest way to process one or many sentences with ELMo, but it is meant for use as a standalone command and not within a larger model.  For example, if you would like to learn a weighted average of the ELMo vectors then you need to use `allennlp.modules.elmo.Elmo` instead.
-
-The `ElmoEmbedder` command returns three vectors, each corresponding to a layer in the ELMo LSTM output.  The first layer captures mostly syntactic information and the last layer captures more of the semantics.
-
-```
-$ ipython
-> from allennlp.commands.elmo import ElmoEmbedder
-> elmo = ElmoEmbedder()
-> tokens = ["I", "ate", "an", "apple", "for", "breakfast"]
-> vectors = elmo.embed_sentence(tokens)
-
-> assert(len(vectors) == 3) # one for each layer in the ELMo output
-> assert(len(vectors[0]) == len(tokens)) # the vector elements correspond with the input tokens
-
-> import scipy
-> vectors2 = elmo.embed_sentence(["I", "ate", "a", "carrot", "for", "breakfast"])
-> scipy.spatial.distance.cosine(vectors[2][3], vectors2[2][3]) # cosine distance between "ate" and "carrot" in the last layer
-0.18020617961883545
-```
-
-## Using ELMo as a PyTorch `Module`
-
-If you need to include ELMo at multiple layers in a task model or you have other advanced use cases, you will need to create ELMo vectors programatically using the `allennlp.modules.elmo.Elmo` class [(API doc)](https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L27).  This class provides a mechanism to compute the weighted ELMo representations (Equation (1) in the paper) as a PyTorch tensor.  The weighted average can be learned as part of a larger model and typically works best for using ELMo to improving performance on a particular task.
+To train a model using ELMo, use the allennlp.modules.elmo.Elmo class ([API doc](https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L27)). This class provides a mechanism to compute the weighted ELMo representations (Equation (1) in the paper) as a PyTorch tensor.  The weighted average can be learned as part of a larger model and typically works best for using ELMo to improving performance on a particular task.
 
 This is a `torch.nn.Module` subclass that computes any number of ELMo
 representations and introduces trainable scalar weights for each.
@@ -108,6 +86,27 @@ embeddings = elmo(character_ids)
 If you are not training a pytorch model, and just want numpy arrays as output
 then use `allennlp.commands.elmo.ElmoEmbedder`.
 
+## Using ELMo interactively
+
+You can use ELMo interactively (or programatically) with iPython.  The `allennlp.commands.elmo.ElmoEmbedder` class provides the easiest way to process one or many sentences with ELMo, but it returns numpy arrays so it is meant for use as a standalone command and not within a larger model.  For example, if you would like to learn a weighted average of the ELMo vectors then you need to use `allennlp.modules.elmo.Elmo` instead.
+
+The ElmoEmbedder class returns three vectors for each word, each vector corresponding to a layer in the ELMo LSTM output. The first layer corresponds to the context insensitive token representation, followed by the two LSTM layers. See the ELMo paper or follow up work at EMNLP 2018 for a description of what types of information is captured in each layer.
+
+```
+$ ipython
+> from allennlp.commands.elmo import ElmoEmbedder
+> elmo = ElmoEmbedder()
+> tokens = ["I", "ate", "an", "apple", "for", "breakfast"]
+> vectors = elmo.embed_sentence(tokens)
+
+> assert(len(vectors) == 3) # one for each layer in the ELMo output
+> assert(len(vectors[0]) == len(tokens)) # the vector elements correspond with the input tokens
+
+> import scipy
+> vectors2 = elmo.embed_sentence(["I", "ate", "a", "carrot", "for", "breakfast"])
+> scipy.spatial.distance.cosine(vectors[2][3], vectors2[2][3]) # cosine distance between "ate" and "carrot" in the last layer
+0.18020617961883545
+```
 
 ## Using ELMo with existing `allennlp` models
 
