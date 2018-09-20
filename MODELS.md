@@ -7,7 +7,9 @@ work better for a particular application.
 
 ## Machine Comprehension
 
-### [bidaf-model-2017.09.15-charpad.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz) (based on [BiDAF (Seo et al, 2017)](https://www.semanticscholar.org/paper/Bidirectional-Attention-Flow-for-Machine-Comprehen-Seo-Kembhavi/007ab5528b3bd310a80d553cccad4b78dc496b02))
+### [bidaf-model-2017.09.15-charpad.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz)
+
+Based on [BiDAF (Seo et al, 2017)](https://www.semanticscholar.org/paper/Bidirectional-Attention-Flow-for-Machine-Comprehen-Seo-Kembhavi/007ab5528b3bd310a80d553cccad4b78dc496b02)
 
 ```
 $ docker run allennlp/allennlp:v0.6.1 evaluate https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz https://s3-us-west-2.amazonaws.com/allennlp/datasets/squad/squad-dev-v1.1.json
@@ -21,7 +23,9 @@ f1: 0.7785736528673436
 
 ## Textual Entailment
 
-### [decomposable-attention-elmo-2018.02.19.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-elmo-2018.02.19.tar.gz) (based on [Parikh et al, 2017](https://www.semanticscholar.org/paper/A-Decomposable-Attention-Model-for-Natural-Languag-Parikh-T%C3%A4ckstr%C3%B6m/07a9478e87a8304fc3267fa16e83e9f3bbd98b27))
+### [decomposable-attention-elmo-2018.02.19.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-elmo-2018.02.19.tar.gz)
+
+Based on [Parikh et al, 2017](https://www.semanticscholar.org/paper/A-Decomposable-Attention-Model-for-Natural-Languag-Parikh-T%C3%A4ckstr%C3%B6m/07a9478e87a8304fc3267fa16e83e9f3bbd98b27)
 
 ```
 $ docker run allennlp/allennlp:v0.6.1 evaluate https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-elmo-2018.02.19.tar.gz https://s3-us-west-2.amazonaws.com/allennlp/datasets/snli/snli_1.0_test.jsonl
@@ -30,22 +34,29 @@ $ docker run allennlp/allennlp:v0.6.1 evaluate https://s3-us-west-2.amazonaws.co
 ## Semantic Role Labeling
 
 ### [srl-model-2018.05.25.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2018.05.25.tar.gz)
+
 Based on [He et al, 2017](https://www.semanticscholar.org/paper/Deep-Semantic-Role-Labeling-What-Works-and-What-s-He-Lee/a3ccff7ad63c2805078b34b8514fa9eab80d38e9)
 
 
 ## Coreference Resolution
 
-### [coref-model-2018.02.05.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2018.02.05.tar.gz) (based on [End-to-End Coreference Resolution (Lee et al, 2017)](https://www.semanticscholar.org/paper/End-to-end-Neural-Coreference-Resolution-Lee-He/3f2114893dc44eacac951f148fbff142ca200e83))
+### [coref-model-2018.02.05.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2018.02.05.tar.gz)
+
+Based on [End-to-End Coreference Resolution (Lee et al, 2017)](https://www.semanticscholar.org/paper/End-to-end-Neural-Coreference-Resolution-Lee-He/3f2114893dc44eacac951f148fbff142ca200e83)
 
 
 ## Named Entity Recognition
 
-### [ner-model-2018.04.26.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.26.tar.gz) (based on [Deep contextualized word representations](https://arxiv.org/abs/1802.05365))
+### [ner-model-2018.04.26.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.26.tar.gz) 
+
+Based on [Deep contextualized word representations](https://arxiv.org/abs/1802.05365)
 
 
 ## Constituency Parsing
 
-### [elmo-constituency-parser-2018.03.14.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/elmo-constituency-parser-2018.03.14.tar.gz) (based on [Minimal Span Based Constituency Parser (Stern et al, 2017)](https://www.semanticscholar.org/paper/A-Minimal-Span-Based-Neural-Constituency-Parser-Stern-Andreas/593e4e749bd2dbcaf8dc25298d830b41d435e435) but with ELMo embeddings)
+### [elmo-constituency-parser-2018.03.14.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/elmo-constituency-parser-2018.03.14.tar.gz)
+
+Based on [Minimal Span Based Constituency Parser (Stern et al, 2017)](https://www.semanticscholar.org/paper/A-Minimal-Span-Based-Neural-Constituency-Parser-Stern-Andreas/593e4e749bd2dbcaf8dc25298d830b41d435e435) but with ELMo embeddings
 
 
 ## Dependency Parsing
