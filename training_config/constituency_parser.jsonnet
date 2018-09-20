@@ -1,3 +1,5 @@
+// Configuration for a constituency parser based on:
+//   Stern, Mitchell et al. “A Minimal Span-Based Neural Constituency Parser.” ACL (2017).
 {
     "dataset_reader":{
         "type":"ptb_trees",
