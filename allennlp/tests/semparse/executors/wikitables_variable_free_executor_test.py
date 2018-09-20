@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,invalid-name,too-many-public-methods
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.semparse.worlds.world import ExecutionError
 from allennlp.semparse.executors import WikiTablesVariableFreeExecutor
 from allennlp.semparse.executors.wikitables_variable_free_executor import Date
 
@@ -29,6 +30,16 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
                                  "fb:row.row.open_cup": "fb:cell.4th_round",
                                  "fb:row.row.avg_attendance": "fb:cell.6028"}]
         self.executor_with_date = WikiTablesVariableFreeExecutor(table_data_with_date)
+
+    def test_execute_fails_with_unknown_function(self):
+        logical_form = "(unknown_function all_rows fb:row.row.league)"
+        with self.assertRaises(ExecutionError):
+            self.executor.execute(logical_form)
+
+    def test_execute_fails_with_unknown_constant(self):
+        logical_form = "12fdw"
+        with self.assertRaises(ExecutionError):
+            self.executor.execute(logical_form)
 
     def test_execute_works_with_select(self):
         logical_form = "(select all_rows fb:row.row.league)"
@@ -78,9 +89,10 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
         assert count_result == 2
 
     def test_execute_works_with_filter_date_greater_equals(self):
-        # Selecting cell values from all rows that have date greater than or equal to 2005 February.
+        # Selecting cell values from all rows that have date greater than or equal to 2005 February
+        # 1st.
         logical_form = """(select (filter_date_greater_equals all_rows fb:row.row.date
-                                   (date 2005 2 -1)) fb:row.row.league)"""
+                                   (date 2005 2 1)) fb:row.row.league)"""
         cell_value_list = self.executor_with_date.execute(logical_form)
         assert cell_value_list == ['fb:cell.usl_first_division']
 
@@ -279,12 +291,28 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
         avg_value = self.executor.execute(logical_form)
         assert avg_value == 1141
 
+    def test_execute_fails_with_diff_on_non_numerical_columns(self):
+        logical_form = """(diff (filter_in all_rows fb:row.row.league usl_a_league)
+                                (filter_in all_rows fb:row.row.league usl_first_division)
+                                fb:row.row.league)"""
+        with self.assertRaises(ExecutionError):
+            self.executor.execute(logical_form)
+
+    def test_execute_fails_with_non_int_dates(self):
+        logical_form = """(date 2015 1.5 1)"""
+        with self.assertRaises(ExecutionError):
+            self.executor.execute(logical_form)
+
     def test_date_comparison_works(self):
         assert Date(2013, 12, 31) > Date(2013, 12, 30)
         assert Date(2013, 12, 31) == Date(2013, 12, -1)
         assert Date(2013, -1, -1) >= Date(2013, 12, 31)
         assert Date(2013, 12, 31) != 2013
         # pylint: disable=singleton-comparison
+        assert (Date(2013, 12, -1) > Date(2013, 12, 31)) == False
+        assert (Date(2013, 12, 31) > 2013) == False
+        assert (Date(2013, 12, 31) >= 2013) == False
+        assert Date(2013, 12, 31) != 2013
         assert (Date(2018, 1, 1) >= Date(-1, 2, 1)) == False
         assert (Date(2018, 1, 1) < Date(-1, 2, 1)) == False
         # When year is unknown in both cases, we can compare months and days.
