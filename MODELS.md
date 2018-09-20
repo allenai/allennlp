@@ -66,6 +66,8 @@ Based on [Deep contextualized word representations](https://arxiv.org/abs/1802.0
 f1: 0.925
 ```
 
+### [fine-grained-ner-model-elmo-2018.08.31.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/fine-grained-ner-model-elmo-2018.08.31.tar.gz)
+
 
 ## Constituency Parsing
 
