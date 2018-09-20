@@ -10,9 +10,8 @@ from parsimonious.grammar import Grammar
 
 WIKI_GRAMMAR = Grammar(
         r"""
-        statement           = (expr ws statement ws) / (expr)
-        expr                = "(" ws expr_contents ws ")"
-        expr_contents       = hop_expr /
+        statement           = "(" ws expr ws ")"
+        expr                = hop_expr /
                               row_list_return_expr /
                               position_expr /
                               count_expr /
@@ -85,7 +84,9 @@ def main() -> None:
     examples = ["(filter_equal [hawaii tacoma] 4 r.score-num)",
                 "(mode all_rows r.goals_scored-num)",
                 "(count (filter_greater all_rows 46 r.teams-num))",
-                "(hop (filter_equal [hawaii tacoma] 4 r.score-num) r.name-str)"]
+                "(max (filter_greater all_rows 46 r.teams-num) r.scores-num)",
+                "(hop (filter_equal [hawaii tacoma] 4 r.score-num) r.name-str)",
+                "(hop (filter_less [(previous [hawaii]) tacoma] 4 r.score-num) r.name-str)"]
     for i, example in enumerate(examples):
         print(f"Example {i}")
         parse_example(example)
