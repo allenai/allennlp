@@ -157,12 +157,34 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
         cell_list = self.executor.execute(logical_form)
         assert cell_list == ["fb:cell.4th_western"]
 
+    def test_execute_logs_warning_with_first_on_empty_list(self):
+        # Selecting "regular season" from the first row where year is greater than 2010.
+        with self.assertLogs("allennlp.semparse.executors.wikitables_variable_free_executor") as log:
+            logical_form = """(select (first (filter_number_greater all_rows fb:row.row.year 2010))
+                                      fb:row.row.regular_season)"""
+            self.executor.execute(logical_form)
+        self.assertEqual(log.output,
+                         ["WARNING:allennlp.semparse.executors.wikitables_variable_free_executor:"
+                          "Trying to get first row from an empty list: "
+                          "['filter_number_greater', 'all_rows', 'fb:row.row.year', '2010']"])
+
     def test_execute_works_with_last(self):
         # Selecting "regular season" from the last row where year is not equal to 2010.
         logical_form = """(select (last (filter_number_not_equals all_rows fb:row.row.year 2010))
                                   fb:row.row.regular_season)"""
         cell_list = self.executor.execute(logical_form)
         assert cell_list == ["fb:cell.5th"]
+
+    def test_execute_logs_warning_with_last_on_empty_list(self):
+        # Selecting "regular season" from the last row where year is greater than 2010.
+        with self.assertLogs("allennlp.semparse.executors.wikitables_variable_free_executor") as log:
+            logical_form = """(select (last (filter_number_greater all_rows fb:row.row.year 2010))
+                                      fb:row.row.regular_season)"""
+            self.executor.execute(logical_form)
+        self.assertEqual(log.output,
+                         ["WARNING:allennlp.semparse.executors.wikitables_variable_free_executor:"
+                          "Trying to get last row from an empty list: "
+                          "['filter_number_greater', 'all_rows', 'fb:row.row.year', '2010']"])
 
     def test_execute_works_with_previous(self):
         # Selecting "regular season" from the row before last where year is not equal to 2010.
@@ -172,6 +194,17 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
         cell_list = self.executor.execute(logical_form)
         assert cell_list == ["fb:cell.4th_western"]
 
+    def test_execute_logs_warning_with_previous_on_empty_list(self):
+        # Selecting "regular season" from the row before the one where year is greater than 2010.
+        with self.assertLogs("allennlp.semparse.executors.wikitables_variable_free_executor") as log:
+            logical_form = """(select (previous (filter_number_greater all_rows fb:row.row.year 2010))
+                                      fb:row.row.regular_season)"""
+            self.executor.execute(logical_form)
+        self.assertEqual(log.output,
+                         ["WARNING:allennlp.semparse.executors.wikitables_variable_free_executor:"
+                          "Trying to get the previous row from an empty list: "
+                          "['filter_number_greater', 'all_rows', 'fb:row.row.year', '2010']"])
+
     def test_execute_works_with_next(self):
         # Selecting "regular season" from the row after first where year is not equal to 2010.
         logical_form = """(select (next (first (filter_number_not_equals
@@ -180,15 +213,31 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
         cell_list = self.executor.execute(logical_form)
         assert cell_list == ["fb:cell.5th"]
 
+    def test_execute_logs_warning_with_next_on_empty_list(self):
+        # Selecting "regular season" from the row after the one where year is greater than 2010.
+        with self.assertLogs("allennlp.semparse.executors.wikitables_variable_free_executor") as log:
+            logical_form = """(select (next (filter_number_greater all_rows fb:row.row.year 2010))
+                                      fb:row.row.regular_season)"""
+            self.executor.execute(logical_form)
+        self.assertEqual(log.output,
+                         ["WARNING:allennlp.semparse.executors.wikitables_variable_free_executor:"
+                          "Trying to get the next row from an empty list: "
+                          "['filter_number_greater', 'all_rows', 'fb:row.row.year', '2010']"])
+
     def test_execute_works_with_mode(self):
         # Most frequent division value.
         logical_form = """(mode all_rows fb:row.row.division)"""
         cell_list = self.executor.execute(logical_form)
         assert cell_list == ["fb:cell.2"]
-        # If we used selec instead, we should get a list of two values.
+        # If we used select instead, we should get a list of two values.
         logical_form = """(select all_rows fb:row.row.division)"""
         cell_list = self.executor.execute(logical_form)
         assert cell_list == ["fb:cell.2", "fb:cell.2"]
+        # If we queried for the most frequent year instead, it should return two values since both
+        # have the max frequency of 1.
+        logical_form = """(mode all_rows fb:row.row.year)"""
+        cell_list = self.executor.execute(logical_form)
+        assert cell_list == ["fb:cell.2001", "fb:cell.2005"]
 
     def test_execute_works_with_same_as(self):
         # Select the "league" from all the rows that have the same value under "playoffs" as the
