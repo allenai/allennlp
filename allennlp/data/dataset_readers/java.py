@@ -53,43 +53,6 @@ class JavaDatasetReader(DatasetReader):
         self._tokenizer = tokenizer or WordTokenizer()
         self._linking_feature_extractors = linking_feature_extractors
 
-    # class ASTNode:
-    #     def __init__(self, children, rule, desc):
-    #         self.children = children
-    #         self.rule = rule
-    #         self.desc = desc
-    #     def __str__(self):
-    #         return self.rule
-    # def is_nonterminal(self, nt):
-    #     return nt[0].isupper()
-    # def _is_terminal_rule(self, rule):
-    #     lhs, rhs = rule.split('-->')
-    #     return (
-    #            "IdentifierNT" in lhs) \
-    #            or re.match(r"^Nt_.*_literal-->.*", rule) \
-    #            or rule == "<unk>"
-    # def gen_ast(self, rules, i):
-    #     curr = self.ASTNode([], rules[i], "")
-    #     lhs, rhs = rules[i].split('-->')
-    #     rhs_tokens = rhs.split('___')
-    #     if self._is_terminal_rule(rules[i]):
-    #         curr.desc += rhs
-    #     else:
-    #         for nt in rhs_tokens:
-    #             if self.is_nonterminal(nt):
-    #                 child, i = self.gen_ast(rules, i+1)
-    #                 curr.children.append(child)
-    #                 curr.desc += child.desc
-    #             else:
-    #                 curr.desc += nt
-    #     return curr, i
-    # def printMethodCaller(self, curr):
-    #     lhs, rhs = curr.rule.split('-->')
-    #     if rhs == 'Expression___.___Nt_33':
-    #         print(curr.children[0].desc, curr.children[1].desc)
-    #     for c in curr.children:
-    #         self.printMethodCaller(c)
-
     @overrides
     def _read(self, file_path: str):
         # if `file_path` is a URL, redirect to the cache
@@ -98,13 +61,7 @@ class JavaDatasetReader(DatasetReader):
         logger.info("Reading file at %s", file_path)
         with open(file_path) as dataset_file:
             dataset = json.load(dataset_file)
-            # p2methods = json.load(dataset_file)
 
-        # for _, methods in p2methods.items():
-        #     dataset += methods
-        #     if self._num_dataset_instances != -1:
-        #         if len(dataset) > self._num_dataset_instances:
-        #             break
         if self._num_dataset_instances != -1:
             dataset = dataset[:self._num_dataset_instances]
 
@@ -112,21 +69,7 @@ class JavaDatasetReader(DatasetReader):
             [d['rules'] for d in dataset]
         )
 
-        print('---------------------')
-        print(dataset[0].keys())
-
-        og_prototype_rules = [d['prototype_rules'] for d in dataset]
-        prototype_rules = self.split_identifier_rule_into_multiple(
-            [d['prototype_rules'] for d in dataset]
-        )
         global_production_rule_fields, global_rule2index = self.get_global_rule_fields(modified_rules)
-
-        for rules in prototype_rules:
-            for i,rule in enumerate(rules):
-                # lhs, rhs = rule.split('-->')
-                # No class field/func identifier rules since these cannot be embedded
-                if rule not in global_rule2index:
-                    rules[i] = PLAIN_IDENTIFIER_RULE
 
         logger.info("Reading the dataset")
         for i, record in enumerate(dataset):
@@ -149,53 +92,6 @@ class JavaDatasetReader(DatasetReader):
                                              code=record['code'],
                                              path=record['path'])
             yield instance
-
-    def get_types_used_frequently_even_if_not_in_class(self, rules, dataset):
-        type_in_class_count = 0
-        num_types = 0
-        type2count = Counter()
-        for i, d in enumerate(dataset):
-            enviro_types = d['varTypes'] + d['methodReturns']
-            for rule in rules[i]:
-                lhs, rhs = rule.split('-->')
-                if lhs == 'IdentifierNTClassOrInterfaceType':
-                    inclass = False
-                    for t in enviro_types:
-                        if rhs in t:
-                            type_in_class_count += 1
-                            inclass = True
-                            break
-                    if not inclass:
-                        type2count[rhs] += 1
-                        # print('-'*20)
-                        # print(enviro_types)
-                        # print(rhs)
-                    num_types += 1
-
-        # print('Num type in class', type_in_class_count)
-        # print('Num type total', num_types)
-        # print(type2count.most_common(50))
-        # print(sum([count for t, count in type2count.most_common(50)]))
-        return [t for t, _ in type2count.most_common(50)]
-
-    def experiment_nt33(self, rules, dataset):
-        type_in_class_count = 0
-        num_types = 0
-        type2count = Counter()
-        for i, d in enumerate(dataset):
-            enviro_types = d['varTypes'] + d['methodReturns']
-            for rule in rules[i]:
-                lhs, rhs = rule.split('-->')
-                if lhs == 'IdentifierNTNt_33':
-                    print('-----------'*5)
-                    for rule in rules[i]:
-                        print(rule)
-                    print(' '.join(d['code']))
-                    print(lhs, rhs)
-
-
-        exit()
-
 
     def split_identifier_rule_into_multiple(self, rules_lst):
         """ The identifier rule is split based on parent state prefix to cut down the
@@ -224,6 +120,7 @@ class JavaDatasetReader(DatasetReader):
                     new_rules[-1].append(rule)
 
         return new_rules
+
 
     def get_global_rule_fields(self, rules):
         # Prepare global production rules to be used in JavaGrammarState.

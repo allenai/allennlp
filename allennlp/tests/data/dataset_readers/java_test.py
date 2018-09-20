@@ -12,7 +12,6 @@ class JavaDatasetReaderTest(AllenNlpTestCase):
     def test_reader_reads(self):
         reader = JavaDatasetReader.from_params(Params({
             "utterance_indexers": {"namespace": "utterance"},
-            # "type_indekxers": {"tokens": {"namespace": "type"}},
             "min_identifier_count": 3,
             "num_dataset_instances": -1,
             "linking_feature_extractors": [
