@@ -12,13 +12,16 @@ work better for a particular application.
 Based on [BiDAF (Seo et al, 2017)](https://www.semanticscholar.org/paper/Bidirectional-Attention-Flow-for-Machine-Comprehen-Seo-Kembhavi/007ab5528b3bd310a80d553cccad4b78dc496b02)
 
 ```
-$ docker run allennlp/allennlp:v0.6.1 evaluate https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz https://s3-us-west-2.amazonaws.com/allennlp/datasets/squad/squad-dev-v1.1.json
+$ docker run allennlp/allennlp:v0.6.1 \
+    evaluate \
+    https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz \
+    https://s3-us-west-2.amazonaws.com/allennlp/datasets/squad/squad-dev-v1.1.json
 Metrics:
 start_acc: 0.642
-end_acc: 0.671
-span_acc: 0.552
-em: 0.683
-f1: 0.778
+  end_acc: 0.671
+ span_acc: 0.552
+       em: 0.683
+       f1: 0.778
 ```
 
 ## Textual Entailment
@@ -37,6 +40,10 @@ $ docker run allennlp/allennlp:v0.6.1 evaluate https://s3-us-west-2.amazonaws.co
 
 Based on [He et al, 2017](https://www.semanticscholar.org/paper/Deep-Semantic-Role-Labeling-What-Works-and-What-s-He-Lee/a3ccff7ad63c2805078b34b8514fa9eab80d38e9)
 
+```
+f1: 0.849
+```
+
 
 ## Coreference Resolution
 
@@ -44,12 +51,19 @@ Based on [He et al, 2017](https://www.semanticscholar.org/paper/Deep-Semantic-Ro
 
 Based on [End-to-End Coreference Resolution (Lee et al, 2017)](https://www.semanticscholar.org/paper/End-to-end-Neural-Coreference-Resolution-Lee-He/3f2114893dc44eacac951f148fbff142ca200e83)
 
+```
+f1: 0.630
+```
 
 ## Named Entity Recognition
 
 ### [ner-model-2018.04.26.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.26.tar.gz) 
 
 Based on [Deep contextualized word representations](https://arxiv.org/abs/1802.05365)
+
+```
+f1: 0.925
+```
 
 
 ## Constituency Parsing
@@ -69,13 +83,15 @@ Based on [Dozat and Manning, 2017](https://arxiv.org/pdf/1611.01734.pdf)
 
 * [biaffine-dependency-parser-ud-2018.08.23.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/biaffine-dependency-parser-ud-2018.08.23.tar.gz) uses [Universal Dependency](http://universaldependencies.org/) style depedencies.
 
+```
+f1: 0.941
+```
 
 ## Semantic Parsing
 
 ### Wikitables
 
 #### [biaffine-dependency-parser-ptb-2018.08.23.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/biaffine-dependency-parser-ptb-2018.08.23.tar.gz)
-
 
 ## Event2Mind
 
