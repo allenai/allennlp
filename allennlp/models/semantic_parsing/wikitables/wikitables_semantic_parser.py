@@ -12,11 +12,12 @@ from allennlp.modules import Embedding, Seq2SeqEncoder, Seq2VecEncoder, TextFiel
 from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
 from allennlp.nn import util
 from allennlp.semparse import ParsingError
+from allennlp.semparse.executors import WikiTablesSempreExecutor
 from allennlp.semparse.type_declarations import type_declaration
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import WikiTablesWorld
 from allennlp.state_machines.states import GrammarBasedState, GrammarStatelet, RnnStatelet
-from allennlp.training.metrics import Average, WikiTablesAccuracy
+from allennlp.training.metrics import Average
 
 
 class WikiTablesSemanticParser(Model):
@@ -82,7 +83,7 @@ class WikiTablesSemanticParser(Model):
                  num_linking_features: int = 10,
                  rule_namespace: str = 'rule_labels',
                  tables_directory: str = '/wikitables/') -> None:
-        super(WikiTablesSemanticParser, self).__init__(vocab)
+        super().__init__(vocab)
         self._question_embedder = question_embedder
         self._encoder = encoder
         self._entity_encoder = TimeDistributed(entity_encoder)
@@ -94,7 +95,8 @@ class WikiTablesSemanticParser(Model):
         else:
             self._dropout = lambda x: x
         self._rule_namespace = rule_namespace
-        self._denotation_accuracy = WikiTablesAccuracy(tables_directory)
+        self._executor = WikiTablesSempreExecutor(tables_directory)
+        self._denotation_accuracy = Average()
         self._action_sequence_accuracy = Average()
         self._has_logical_form = Average()
 
@@ -644,7 +646,9 @@ class WikiTablesSemanticParser(Model):
                     self._has_logical_form(0.0)
                     logical_form = 'Error producing logical form'
                 if example_lisp_string:
-                    self._denotation_accuracy(logical_form, example_lisp_string[i])
+                    denotation_correct = self._executor.evaluate_logical_form(logical_form,
+                                                                              example_lisp_string[i])
+                    self._denotation_accuracy(1.0 if denotation_correct else 0.0)
                 outputs['best_action_sequence'].append(action_strings)
                 outputs['logical_form'].append(logical_form)
                 outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
@@ -652,8 +656,7 @@ class WikiTablesSemanticParser(Model):
             else:
                 outputs['logical_form'].append('')
                 self._has_logical_form(0.0)
-                if example_lisp_string:
-                    self._denotation_accuracy(None, example_lisp_string[i])
+                self._denotation_accuracy(0.0)
         if metadata is not None:
             outputs["question_tokens"] = [x["question_tokens"] for x in metadata]
             outputs["original_table"] = [x["original_table"] for x in metadata]

@@ -1032,6 +1032,8 @@ class Trainer:
         model_save_interval = params.pop_float("model_save_interval", None)
         summary_interval = params.pop_int("summary_interval", 100)
         histogram_interval = params.pop_int("histogram_interval", None)
+        should_log_parameter_statistics = params.pop_bool("should_log_parameter_statistics", True)
+        should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
 
         params.assert_empty(cls.__name__)
         return Trainer(model, optimizer, iterator,
@@ -1050,4 +1052,6 @@ class Trainer:
                        keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
                        model_save_interval=model_save_interval,
                        summary_interval=summary_interval,
-                       histogram_interval=histogram_interval)
+                       histogram_interval=histogram_interval,
+                       should_log_parameter_statistics=should_log_parameter_statistics,
+                       should_log_learning_rate=should_log_learning_rate)

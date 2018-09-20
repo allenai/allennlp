@@ -7,6 +7,7 @@ allennlp.training.metrics
    :show-inheritance:
 
 * :ref:`Metric<metric>`
+* :ref:`AttachmentScores<attachment-scores>`
 * :ref:`Average<average>`
 * :ref:`BooleanAccuracy<boolean-accuracy>`
 * :ref:`CategoricalAccuracy<categorical-accuracy>`
@@ -18,14 +19,20 @@ allennlp.training.metrics
 * :ref:`MeanAbsoluteError<mean-absolute-error>`
 * :ref:`MentionRecall<mention-recall>`
 * :ref:`PearsonCorrelation<pearson-correlation>`
+* :ref:`SequenceAccuracy<sequence-accuracy>`
 * :ref:`SpanBasedF1Measure<span-based-f1-measure>`
 * :ref:`SquadEmAndF1<squad-em-and-f1>`
-* :ref:`WikiTablesAccuracy<wikitables-accuracy>`
-* :ref:`AttachmentScores<attachment-scores>`
+* :ref:`UnigramRecall<unigram-recall>`
 
 
 .. _metric:
 .. automodule:: allennlp.training.metrics.metric
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _attachment-scores:
+.. automodule:: allennlp.training.metrics.attachment_scores
    :members:
    :undoc-members:
    :show-inheritance:
@@ -96,6 +103,12 @@ allennlp.training.metrics
    :undoc-members:
    :show-inheritance:
 
+.. _sequence-accuracy:
+.. automodule:: allennlp.training.metrics.sequence_accuracy
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. _span-based-f1-measure:
 .. automodule:: allennlp.training.metrics.span_based_f1_measure
    :members:
@@ -108,14 +121,8 @@ allennlp.training.metrics
    :undoc-members:
    :show-inheritance:
 
-.. _wikitables-accuracy:
-.. automodule:: allennlp.training.metrics.wikitables_accuracy
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. _attachment-scores:
-.. automodule:: allennlp.training.metrics.attachment_scores
+.. _unigram-recall:
+.. automodule:: allennlp.training.metrics.unigram_recall
    :members:
    :undoc-members:
    :show-inheritance:
