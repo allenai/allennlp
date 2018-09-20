@@ -32,7 +32,7 @@ STOP_WORDS = ["", "",  "all", "being", "-", "over", "through", "yourselves", "it
 class TableQuestionContext:
     """
     A Barebones implementation similar to https://github.com/crazydonkey200/neural-symbolic-machines/blob/master/table/wtq/preprocess.py
-    for extracting entities from a question given a table. 
+    for extracting entities from a question given a table and type its columns with <string> | <date> | <number> 
     """
 
     def __init__(self, 
@@ -40,7 +40,7 @@ class TableQuestionContext:
                  column_type_statistics : List[Dict[str,int]],
                  column_index_to_name : Dict[int,str]) -> None:
         self.cell_values = cell_values
-        self.column_types = { column_index_to_name[column_index] : max(column_type_statistics[column_index]) for column_index in column_index_to_name }
+        self.column_types = { column_index_to_name[column_index] : max(column_type_statistics[column_index], key=column_type_statistics[column_index].get) for column_index in column_index_to_name }
             
     @classmethod
     def read_from_file(cls, filename: str, max_tokens_for_num_cell : int) -> 'TableQuestionKnowledgeGraph':
@@ -76,7 +76,7 @@ class TableQuestionContext:
                 # If cell contains too many tokens, then likely not number
                 elif node_info['number'] and num_tokens < max_tokens_for_num_cell:
                     column_node_type_info[column_index]['number'] += 1
-                else:
+                elif node_info['content'] != '—':
                     column_node_type_info[column_index]['string'] += 1
                 index += 1
 
