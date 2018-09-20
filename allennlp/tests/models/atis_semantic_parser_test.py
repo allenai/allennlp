@@ -9,3 +9,26 @@ class AtisSemanticParserTest(ModelTestCase):
 
     def test_atis_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
+
+    def test_action_sequence_to_sql(self):
+        action_sequence = ['statement -> [query, ";"]',
+                           'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                           'where_clause, ")"]',
+                           'where_clause -> ["WHERE", "(", conditions, ")"]',
+                           'conditions -> [condition]',
+                           'condition -> [biexpr]',
+                           'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
+                           'city_city_name_string -> ["\'BOSTON\'"]',
+                           'binaryop -> ["="]',
+                           'table_refs -> [table_name]',
+                           'table_name -> ["city"]',
+                           'select_results -> [col_refs]',
+                           'col_refs -> [col_ref, ",", col_refs]',
+                           'col_refs -> [col_ref]',
+                           'col_ref -> ["city", ".", "city_name"]',
+                           'col_ref -> ["city", ".", "city_code"]',
+                           'distinct -> ["DISTINCT"]']
+
+        sql_query = self.model.action_sequence_to_sql(action_sequence)
+        assert sql_query == "( SELECT DISTINCT city . city_code , city . city_name " \
+                            "FROM city WHERE ( city . city_name = 'BOSTON' ) ) ;"

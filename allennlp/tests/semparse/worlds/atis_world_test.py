@@ -730,3 +730,14 @@ class TestAtisWorld(AllenNlpTestCase):
                               database_directory=str(self.database_directory))
             action_sequence = world.get_action_sequence(line['interaction'][utterance_idx]['sql'])
             assert action_sequence is not None
+
+    def test_time_extraction(self): # pylint: disable=no-self-use
+        approximate_times = get_approximate_times([1900])
+        assert approximate_times == [1830, 1930]
+
+        approximate_times = get_approximate_times([515])
+        assert approximate_times == [445, 545]
+
+        pm_times = [pm_map_match_to_query_value(string)
+                    for string in ['12pm', '1pm', '830pm', '1230pm', '115pm']]
+        assert pm_times == [[1200], [1300], [2030], [1230], [1315]]
