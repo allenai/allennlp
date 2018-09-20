@@ -471,6 +471,7 @@ class AtisSemanticParser(Model):
         """
         We set up the initial state for the decoder, and pass that state off to either a DecoderTrainer,
         if we're training, or a BeamSearch for inference, if we're not.
+
         Parameters
         ----------
         utterance : Dict[str, torch.LongTensor]
