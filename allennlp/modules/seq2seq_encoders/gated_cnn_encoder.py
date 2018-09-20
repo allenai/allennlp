@@ -1,18 +1,3 @@
-"""
-Language Modeling with Gated Convolutional Networks,  Yann N. Dauphin et al, ICML 2017
-https://arxiv.org/abs/1612.08083
-
-Convolutional Sequence to Sequence Learning, Jonas Gehring et al, ICML 2017
-https://arxiv.org/abs/1705.03122
-
-number of flops per convolution = width * in_channels * out_channels
-
-For 16 layers x (3, 512) = 16 * 3 * 512 * 512 = 12.5e6
-For 16 layers of bottleneck: [[1, 256], [5, 256], [1, 512]] =
-           16 * (1 * 256 * 512 + 5 * 256 * 256 + 1 * 256 * 512) = 9.4e6
-For 16 layers of large sizes [[1, 1024], [3, 1024], [1, 512]] =
-           16 * (1 * 1024 * 512 + 3 * 1024 * 1024 + 1 * 1024 * 512) = 67.1e6
-"""
 from typing import Sequence, List
 import math
 
@@ -123,49 +108,46 @@ class GatedCnnEncoder(Seq2SeqEncoder):
     """
     A ``ContextualEncoder`` that uses a Gated CNN.
 
+    Language Modeling with Gated Convolutional Networks,  Yann N. Dauphin et al, ICML 2017
+    https://arxiv.org/abs/1612.08083
+
+    Convolutional Sequence to Sequence Learning, Jonas Gehring et al, ICML 2017
+    https://arxiv.org/abs/1705.03122
+
+    number of flops per convolution = width * in_channels * out_channels
+
+    For 16 layers x (3, 512) = 16 * 3 * 512 * 512 = 12.5e6
+    For 16 layers of bottleneck: [[1, 256], [5, 256], [1, 512]] =
+    16 * (1 * 256 * 512 + 5 * 256 * 256 + 1 * 256 * 512) = 9.4e6
+    For 16 layers of large sizes [[1, 1024], [3, 1024], [1, 512]] =
+    16 * (1 * 1024 * 512 + 3 * 1024 * 1024 + 1 * 1024 * 512) = 67.1e6
+
     Some possibilities:
 
-    * Each element of the list is wrapped in a residual block:
-        input_dim = 512
-        layers = [ [[4, 512]],
-                   [[4, 512], [4, 512]],
-                   [[4, 512], [4, 512]],
-                   [[4, 512], [4, 512]] ]
-        dropout = 0.05
+    Each element of the list is wrapped in a residual block:
+    input_dim = 512
+    layers = [ [[4, 512]], [[4, 512], [4, 512]], [[4, 512], [4, 512]], [[4, 512], [4, 512]]
+    dropout = 0.05
 
-    * An architecture that uses a larger projection layer inside each block
-        input_dim = 512
-        layers = [ [[4, 512]],
-                   [[1, 2048], [5, 2048], [1, 512]], ...
-                ]
+    An architecture that uses a larger projection layer inside each block
+    input_dim = 512
+    layers = [ [[4, 512]], [[1, 2048], [5, 2048], [1, 512]], ... ]
 
-    * A "bottleneck architecture"
-        input_dim = 512
-        layers = [ [[4, 512]],
-                   [[1, 128], [5, 128], [1, 512]], ...
-                 ]
+    A "bottleneck architecture"
+    input_dim = 512
+    layers = [ [[4, 512]], [[1, 128], [5, 128], [1, 512]], ... ]
 
-    * An architecture with dilated convolutions
-      https://fomoro.com/tools/receptive-fields/#2,1,1,VALID;2,1,2,VALID;2,1,4,VALID;2,1,8,VALID;2,1,1,VALID;2,1,2,VALID;2,1,4,VALID;2,1,8,VALID;2,1,1,VALID;2,1,2,VALID;2,1,4,VALID;2,1,8,VALID;2,1,1,VALID;2,1,2,VALID;2,1,4,VALID;2,1,4,VALID
+    An architecture with dilated convolutions
+    https://fomoro.com/tools/receptive-fields/#2,1,1,VALID;2,1,2,VALID;2,1,4,VALID;2,1,8,VALID;2,1,1,VALID;2,1,2,VALID;2,1,4,VALID;2,1,8,VALID;2,1,1,VALID;2,1,2,VALID;2,1,4,VALID;2,1,8,VALID;2,1,1,VALID;2,1,2,VALID;2,1,4,VALID;2,1,4,VALID
 
-        input_dim = 512
-        layers = [  [[2, 512, 1]],
-                    [[2, 512, 2]],
-                    [[2, 512, 4]],
-                    [[2, 512, 8]],   # receptive field == 16
-                    [[2, 512, 1]],
-                    [[2, 512, 2]],
-                    [[2, 512, 4]],
-                    [[2, 512, 8]],   # receptive field == 31
-                    [[2, 512, 1]],
-                    [[2, 512, 2]],
-                    [[2, 512, 4]],
-                    [[2, 512, 8]],   # receptive field == 46
-                    [[2, 512, 1]],
-                    [[2, 512, 2]],
-                    [[2, 512, 4]],
-                    [[2, 512, 8]],   # receptive field == 57
-                ]
+    input_dim = 512
+    layers = [
+    [[2, 512, 1]], [[2, 512, 2]], [[2, 512, 4]], [[2, 512, 8]],   # receptive field == 16
+    [[2, 512, 1]], [[2, 512, 2]], [[2, 512, 4]], [[2, 512, 8]],   # receptive field == 31
+    [[2, 512, 1]], [[2, 512, 2]], [[2, 512, 4]], [[2, 512, 8]],   # receptive field == 46
+    [[2, 512, 1]], [[2, 512, 2]], [[2, 512, 4]], [[2, 512, 8]],   # receptive field == 57
+    ]
+
 
     Parameters
     ----------
