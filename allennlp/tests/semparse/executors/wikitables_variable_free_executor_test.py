@@ -73,6 +73,11 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
                                    (min all_rows fb:row.row.avg_attendance)) fb:row.row.league)"""
         cell_value_list = self.executor.execute(logical_form)
         assert cell_value_list == ['fb:cell.usl_a_league']
+        # Replacing the filter value with an invalid value.
+        logical_form = """(select (filter_number_greater all_rows fb:row.row.avg_attendance
+                                   all_rows) fb:row.row.league)"""
+        with self.assertRaises(ExecutionError):
+            self.executor.execute(logical_form)
 
     def test_execute_works_with_filter_date_greater(self):
         # Selecting cell values from all rows that have date greater than 2002.
@@ -80,6 +85,11 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
                                    (date 2002 -1 -1)) fb:row.row.league)"""
         cell_value_list = self.executor_with_date.execute(logical_form)
         assert cell_value_list == ['fb:cell.usl_first_division']
+        # Replacing the filter value with an invalid value.
+        logical_form = """(select (filter_date_greater all_rows fb:row.row.date
+                                   2005) fb:row.row.league)"""
+        with self.assertRaises(ExecutionError):
+            self.executor_with_date.execute(logical_form)
 
     def test_execute_works_with_filter_number_greater_equals(self):
         # Counting rows that have attendance greater than or equal to the min value of attendance.
@@ -87,6 +97,10 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
                                   (min all_rows fb:row.row.avg_attendance)))"""
         count_result = self.executor.execute(logical_form)
         assert count_result == 2
+        # Replacing the filter value with an invalid value.
+        logical_form = """(count (filter_number_greater all_rows fb:row.row.avg_attendance all_rows))"""
+        with self.assertRaises(ExecutionError):
+            self.executor.execute(logical_form)
 
     def test_execute_works_with_filter_date_greater_equals(self):
         # Selecting cell values from all rows that have date greater than or equal to 2005 February
@@ -95,6 +109,11 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
                                    (date 2005 2 1)) fb:row.row.league)"""
         cell_value_list = self.executor_with_date.execute(logical_form)
         assert cell_value_list == ['fb:cell.usl_first_division']
+        # Replacing the filter value with an invalid value.
+        logical_form = """(select (filter_date_greater_equals all_rows fb:row.row.date
+                                   2005) fb:row.row.league)"""
+        with self.assertRaises(ExecutionError):
+            self.executor_with_date.execute(logical_form)
 
     def test_execute_works_with_filter_number_lesser(self):
         # Selecting cell values from all rows that have date lesser than 2005.
@@ -102,19 +121,34 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
                                     (max all_rows fb:row.row.year)) fb:row.row.league)"""
         cell_value_list = self.executor.execute(logical_form)
         assert cell_value_list == ['fb:cell.usl_a_league']
+        # Replacing the filter value with an invalid value.
+        logical_form = """(select (filter_number_lesser all_rows fb:row.row.year
+                                   (date 2005 -1 -1)) fb:row.row.league)"""
+        with self.assertRaises(ExecutionError):
+            self.executor.execute(logical_form)
 
     def test_execute_works_with_filter_date_lesser(self):
-        # Selecting cell values from all rows that have date less that 2000 December
+        # Selecting cell values from all rows that have date less that 2005 January
         logical_form = """(select (filter_date_lesser all_rows fb:row.row.date
-                                   (date 2000 12 -1)) fb:row.row.league)"""
+                                   (date 2005 1 -1)) fb:row.row.league)"""
         cell_value_list = self.executor_with_date.execute(logical_form)
-        assert cell_value_list == []
+        assert cell_value_list == ["fb:cell.usl_a_league"]
+        # Replacing the filter value with an invalid value.
+        logical_form = """(select (filter_date_lesser all_rows fb:row.row.date
+                                   2005) fb:row.row.league)"""
+        with self.assertRaises(ExecutionError):
+            self.executor_with_date.execute(logical_form)
 
     def test_execute_works_with_filter_number_lesser_equals(self):
         # Counting rows that have year lesser than or equal to 2005.
         logical_form = """(count (filter_number_lesser_equals all_rows fb:row.row.year 2005))"""
         count_result = self.executor.execute(logical_form)
         assert count_result == 2
+        # Replacing the filter value with an invalid value.
+        logical_form = """(select (filter_number_lesser_equals all_rows fb:row.row.year
+                                   (date 2005 -1 -1)) fb:row.row.league)"""
+        with self.assertRaises(ExecutionError):
+            self.executor.execute(logical_form)
 
     def test_execute_works_with_filter_date_lesser_equals(self):
         # Selecting cell values from all rows that have date less that or equal to 2001 February 23
@@ -122,12 +156,21 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
                                    (date 2001 2 23)) fb:row.row.league)"""
         cell_value_list = self.executor_with_date.execute(logical_form)
         assert cell_value_list == ['fb:cell.usl_a_league']
+        # Replacing the filter value with an invalid value.
+        logical_form = """(select (filter_date_lesser_equals all_rows fb:row.row.date
+                                   2005) fb:row.row.league)"""
+        with self.assertRaises(ExecutionError):
+            self.executor_with_date.execute(logical_form)
 
     def test_execute_works_with_filter_number_equals(self):
         # Counting rows that have year equal to 2010.
         logical_form = """(count (filter_number_equals all_rows fb:row.row.year 2010))"""
         count_result = self.executor.execute(logical_form)
         assert count_result == 0
+        # Replacing the filter value with an invalid value.
+        logical_form = """(count (filter_number_equals all_rows fb:row.row.year (date 2010 -1 -1))"""
+        with self.assertRaises(ExecutionError):
+            self.executor.execute(logical_form)
 
     def test_execute_works_with_filter_date_equals(self):
         # Selecting cell values from all rows that have date not equal to 2001
@@ -135,12 +178,21 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
                                    (date 2001 -1 -1)) fb:row.row.league)"""
         cell_value_list = self.executor_with_date.execute(logical_form)
         assert cell_value_list == ['fb:cell.usl_a_league']
+        # Replacing the filter value with an invalid value.
+        logical_form = """(select (filter_date_equals all_rows fb:row.row.date
+                                   2005) fb:row.row.league)"""
+        with self.assertRaises(ExecutionError):
+            self.executor_with_date.execute(logical_form)
 
     def test_execute_works_with_filter_number_not_equals(self):
         # Counting rows that have year not equal to 2010.
         logical_form = """(count (filter_number_not_equals all_rows fb:row.row.year 2010))"""
         count_result = self.executor.execute(logical_form)
         assert count_result == 2
+        # Replacing the filter value with an invalid value.
+        logical_form = """(count (filter_number_not_equals all_rows fb:row.row.year (date 2010 -1 -1))"""
+        with self.assertRaises(ExecutionError):
+            self.executor.execute(logical_form)
 
     def test_execute_works_with_filter_date_not_equals(self):
         # Selecting cell values from all rows that have date not equal to 2001
@@ -148,6 +200,11 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
                                    (date 2001 -1 -1)) fb:row.row.league)"""
         cell_value_list = self.executor_with_date.execute(logical_form)
         assert cell_value_list == ['fb:cell.usl_first_division']
+        # Replacing the filter value with an invalid value.
+        logical_form = """(select (filter_date_not_equals all_rows fb:row.row.date
+                                   2005) fb:row.row.league)"""
+        with self.assertRaises(ExecutionError):
+            self.executor_with_date.execute(logical_form)
 
     def test_execute_works_with_filter_in(self):
         # Selecting "regular season" from rows that have "did not qualify" in "open cup" column.
