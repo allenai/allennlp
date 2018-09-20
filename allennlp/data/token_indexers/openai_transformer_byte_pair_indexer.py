@@ -16,6 +16,7 @@ def text_standardize(text):
     """
     Apply text standardization following original implementation.
     """
+    # pylint: disable=anomalous-backslash-in-string
     text = text.replace('—', '-')
     text = text.replace('–', '-')
     text = text.replace('―', '-')

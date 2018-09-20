@@ -132,7 +132,6 @@ def create_small_test_fixture(output_dir: str = '/tmp') -> None:
     """
     import json
     import pathlib
-    from allennlp.modules.openai_transformer import OpenaiTransformer
 
     model_dir = pathlib.Path(output_dir) / 'model'
     model_dir.mkdir(exist_ok=True)  # pylint: disable=no-member
