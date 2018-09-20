@@ -474,8 +474,8 @@ class AtisSemanticParser(Model):
         Parameters
         ----------
         utterance : Dict[str, torch.LongTensor]
-           The output of ``TextField.as_array()`` applied on the utterance ``TextField``. This will
-           be passed through a ``TextFieldEmbedder`` and then through an encoder.
+            The output of ``TextField.as_array()`` applied on the utterance ``TextField``. This will
+            be passed through a ``TextFieldEmbedder`` and then through an encoder.
         world : ``List[AtisWorld]``
             We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
             how ``MetadataField`` works, this gets passed to us as a ``List[AtisWorld]``,
