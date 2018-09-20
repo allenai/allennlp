@@ -16,6 +16,7 @@ $ docker run allennlp/allennlp:v0.6.1 \
     evaluate \
     https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz \
     https://s3-us-west-2.amazonaws.com/allennlp/datasets/squad/squad-dev-v1.1.json
+    
 Metrics:
 start_acc: 0.642
   end_acc: 0.671
