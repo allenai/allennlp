@@ -5,10 +5,7 @@ import pathlib
 import shutil
 import subprocess
 
-from overrides import overrides
-
 from allennlp.common.file_utils import cached_path
-from allennlp.training.metrics.metric import Metric
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -20,42 +17,33 @@ SEMPRE_ABBREVIATIONS_PATH = os.path.join(SEMPRE_DIR, "abbreviations.tsv")
 SEMPRE_GRAMMAR_PATH = os.path.join(SEMPRE_DIR, "grow.grammar")
 
 
-class WikiTablesAccuracy(Metric):
+class WikiTablesSempreExecutor:
+    """
+    This class evaluates lambda-DCS logical forms by calling out to SEMPRE, where the particular
+    lambda-DCS language we use was defined.  It's a huge pain to have to rely on a call to a java
+    subprocess, but it's way easier than trying to write our own executor for the language.
+
+    Because of how the SEMPRE executor works, we need to have access to the original table on disk,
+    and we need to pass in the full lisp "example" string that's given in the dataset.  SEMPRE
+    parses the example string (which includes a path to the table), reads the table, executes the
+    logical form in the context of the table, and compares the answer produced to the answer
+    specified in the example string.
+
+    We don't even get back the denotation of the logical form here, because then we'd have to do a
+    comparison with the correct answer, and that's a bit messy - better to just let SEMPRE do it.
+    This is why we only provide a :func:`evaluate_logical_form` method that returns a ``bool``
+    instead of an ``execute`` method returning an answer.  You might think that if we got the
+    answer back, we could at least use this for a demo.  The sad thing is that even that doesn't
+    work, because this executor relies on having the table for the example already accessible on
+    disk, which we don't have in the case of a demo - we have to do extra stuff there to get it to
+    work, including writing the table to disk so that SEMPRE can access it!  It's all a bit of a
+    mess.
+    """
     def __init__(self, table_directory: str) -> None:
         self._table_directory = table_directory
         self._executor_process: subprocess.Popen = None
         self._should_remove_sempre_dir = not os.path.exists(SEMPRE_DIR)
         self._create_sempre_executor()
-        self._count = 0
-        self._correct = 0
-
-    @overrides
-    def __call__(self, logical_form: str, example_lisp_string: str):  # type: ignore
-        """
-        Parameters
-        ----------
-        example_lisp_string : ``str``
-            The value to average.
-        """
-        denotation_correct = self.evaluate_logical_form(logical_form, example_lisp_string)
-        if denotation_correct:
-            self._correct += 1
-        self._count += 1
-
-    @overrides
-    def get_metric(self, reset: bool = False) -> float:
-        accuracy = self._correct / self._count if self._count > 0 else 0
-        if reset:
-            self.reset()
-        return accuracy
-
-    @overrides
-    def reset(self):
-        self._count = 0
-        self._correct = 0
-
-    def __str__(self):
-        return f"WikiTablesAccuracy(correct={self._correct}, count={self._count})"
 
     def evaluate_logical_form(self, logical_form: str, example_lisp_string: str) -> bool:
         if not logical_form or logical_form.startswith('Error'):

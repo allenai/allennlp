@@ -1,3 +1,5 @@
+// Configuration for a named entity recognization model based on:
+//   Peters, Matthew E. et al. “Deep contextualized word representations.” NAACL-HLT (2018).
 {
   "dataset_reader": {
     "type": "conll2003",

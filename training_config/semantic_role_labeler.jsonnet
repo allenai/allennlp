@@ -1,3 +1,5 @@
+// Configuration for a semantic role labeler model based on:
+//   He, Luheng et al. “Deep Semantic Role Labeling: What Works and What's Next.” ACL (2017).
 {
   "dataset_reader":{"type":"srl"},
   "train_data_path": std.extVar("SRL_TRAIN_DATA_PATH"),

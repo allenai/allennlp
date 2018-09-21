@@ -1,0 +1,71 @@
+{
+  "dataset_reader": {
+    "type": "event2mind",
+    "source_tokenizer": {
+      "type": "word",
+      "word_splitter": {
+        "type": "spacy"
+      }
+    },
+    "target_tokenizer": {
+      "type": "word"
+    },
+    "source_token_indexers": {
+      "tokens": {
+        "type": "single_id",
+        "namespace": "source_tokens"
+      }
+    },
+    "target_token_indexers": {
+      "tokens": {
+        "namespace": "target_tokens"
+      }
+    }
+  },
+  "vocabulary": {
+    "min_count": {"tokens": 2}
+  },
+  "train_data_path": "https://raw.githubusercontent.com/uwnlp/event2mind/master/docs/data/train.csv",
+  "validation_data_path": "https://raw.githubusercontent.com/uwnlp/event2mind/master/docs/data/dev.csv",
+  "model": {
+    "type": "event2mind",
+    "source_embedder": {
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "vocab_namespace": "source_tokens",
+          # TODO(brendanr): Upload the w2v embeddings and use those if permissible.
+          "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
+          "embedding_dim": 300,
+          "trainable": false
+        }
+      }
+    },
+    "embedding_dropout": 0.2,
+    "encoder": {
+      "type": "gru",
+      "input_size": 300,
+      # When we concatenate the forward and backward states together this gives
+      # our desired encoded vector of size 100.
+      "hidden_size": 50,
+      "num_layers": 1,
+      "bidirectional": true
+    },
+    "max_decoding_steps": 10,
+    "target_namespace": "target_tokens"
+  },
+  "iterator": {
+    "type": "bucket",
+    "padding_noise": 0.0,
+    "batch_size" : 64,
+    "sorting_keys": [["source", "num_tokens"]]
+  },
+  "trainer": {
+    "num_epochs": 40,
+    "patience": 10,
+    "cuda_device": 0,
+    "optimizer": {
+      "type": "adam"
+    }
+  }
+}
