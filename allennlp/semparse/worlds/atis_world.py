@@ -14,8 +14,8 @@ from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
 def get_strings_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     """
-    Based on the current utterance, return a dictionary where the keys are the strings in the utterance
-    that map to lists of the token indices that they are linked to.
+    Based on the current utterance, return a dictionary where the keys are the strings in
+    the database that map to lists of the token indices that they are linked to.
     """
     string_linking_scores: Dict[str, List[int]] = defaultdict(list)
 
@@ -62,21 +62,22 @@ class AtisWorld():
 
         self.all_tables = ALL_TABLES
         self.tables_with_strings = TABLES_WITH_STRINGS
-        if database_directory:
-            self.database_directory = database_directory
-            self.connection = sqlite3.connect(self.database_directory)
-            self.cursor = self.connection.cursor()
 
         self.sql_table_context = SqlTableContext(ALL_TABLES,
                                                  TABLES_WITH_STRINGS,
                                                  database_directory) if database_directory else None
+        if database_directory:
+            self.database_directory = database_directory
+            self.connection = sqlite3.connect(self.database_directory)
+            self.cursor = self.connection.cursor()
 
         self.grammar_dictionary = self.sql_table_context.grammar_dictionary
 
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]
-        self.linked_entities = self.get_linked_entities()
+        self.linked_entities = self._get_linked_entities()
+        self.dates = self._get_dates()
 
         self.valid_actions: Dict[str, List[str]] = self._update_valid_actions()
         entities, linking_scores = self._flatten_entities()
@@ -100,6 +101,14 @@ class AtisWorld():
                                                                        Dict[str, List[int]]],
                                      current_tokenized_utterance: List[Token],
                                      nonterminal: str) -> None:
+        """
+        This is a helper method for adding different types of numbers (eg. starting time ranges) as entities.
+        We first go through all utterances in the interaction and find the numbers of a certain type and add
+        them to the set ``all_numbers``, which is initialized with default values. We want to add all numbers 
+        that occur in the interaction, and not just the current turn because the query could contain numbers
+        that were triggered before the current turn. For each entity, we then check if it is triggered by tokens
+        in the current utterance and construct the linking score.
+        """
         number_linking_dict: Dict[str, List[int]] = {}
         for utterance, tokenized_utterance in zip(self.utterances, self.tokenized_utterances):
             number_linking_dict = get_number_linking_dict(utterance, tokenized_utterance)
@@ -116,7 +125,12 @@ class AtisWorld():
             number_linking_scores[action] = (nonterminal, number, entity_linking)
 
 
-    def get_linked_entities(self) -> Dict[str, Dict[str, Tuple[str, str, List[int]]]]:
+    def _get_linked_entities(self) -> Dict[str, Dict[str, Tuple[str, str, List[int]]]]:
+        """
+        This method gets entities from the current utterance finds which tokens they are linked to.
+        The entities are divided into two main groups, ``numbers`` and ``strings``. We rely on these
+        entities later for updating the valid actions and the grammar.
+        """
         current_tokenized_utterance = [] if not self.tokenized_utterances \
                 else self.tokenized_utterances[-1]
 
@@ -183,41 +197,48 @@ class AtisWorld():
         valid_actions['time_range_end'] = []
         for action, value in self.linked_entities['number'].items():
             valid_actions[value[0]].append(action)
+
+        for date in self.dates:
+            for biexpr_rule in [f'biexpr -> ["date_day", ".", "year", binaryop, "{date.year}"]',
+                                f'biexpr -> ["date_day", ".", "month_number", binaryop, "{date.month}"]',
+                                f'biexpr -> ["date_day", ".", "day_number", binaryop, "{date.day}"]']:
+                if biexpr_rule not in valid_actions:
+                    valid_actions['biexpr'].append(biexpr_rule)
+
+        valid_actions['ternaryexpr'] = \
+                ['ternaryexpr -> [col_ref, "BETWEEN", time_range_start, "AND", time_range_end]',
+                 'ternaryexpr -> [col_ref, "NOT", "BETWEEN", time_range_start, "AND", time_range_end]']
+
         return valid_actions
 
+    def _get_dates(self):
+        dates = []
+        for tokenized_utterance in self.tokenized_utterances:
+            dates.extend(get_date_from_utterance(tokenized_utterance))
+        return dates
 
     def get_grammar_str(self) -> str:
         """
         Generate a string that can be used to instantiate a ``Grammar`` object. The string is a sequence of
-        rules that define the grammar.
+        rules that define the grammar. We modify the ``grammar_dictionary`` with additional constraints we want
+        for the ATIS dataset. We then add numbers to the grammar dictionary. The strings in the database are already
+        added in by the ``SqlTableContext``. Finally, we construct a string from the ``grammar_dictionary``.
         """
-        dates = []
-        for tokenized_utterance in self.tokenized_utterances:
-            dates.extend(get_date_from_utterance(tokenized_utterance))
-        if dates:
-            year_binary_expression = f'("date_day" ws "." ws "year" ws binaryop ws "{dates[0].year}")'
+        if self.dates:
+            year_binary_expression = f'("date_day" ws "." ws "year" ws binaryop ws "{self.dates[0].year}")'
             self.grammar_dictionary['biexpr'].append(year_binary_expression)
 
-            for date in dates:
+            for date in self.dates:
                 month_day_binary_expressions = \
                         [f'("date_day" ws "." ws "month_number" ws binaryop ws "{date.month}")',
                          f'("date_day" ws "." ws "day_number" ws binaryop ws "{date.day}")']
                 self.grammar_dictionary['biexpr'].extend(month_day_binary_expressions)
 
-                for biexpr_rule in [f'biexpr -> ["date_day", ".", "year", binaryop, "{date.year}"]',
-                                    f'biexpr -> ["date_day", ".", "month_number", binaryop, "{date.month}"]',
-                                    f'biexpr -> ["date_day", ".", "day_number", binaryop, "{date.day}"]']:
-                    if biexpr_rule not in self.valid_actions:
-                        self.valid_actions['biexpr'].append(biexpr_rule)
-        # add ternary expression
+
         self.grammar_dictionary['ternaryexpr'] = \
                 ['(col_ref ws "not" ws "BETWEEN" ws time_range_start ws "AND" ws time_range_end ws)',
                  '(col_ref ws "NOT" ws "BETWEEN" ws time_range_start  ws "AND" ws time_range_end ws)',
                  '(col_ref ws "BETWEEN" ws time_range_start ws "AND" ws time_range_end ws)']
-
-        self.valid_actions['ternaryexpr'] = \
-                ['ternaryexpr -> [col_ref, "BETWEEN", time_range_start, "AND", time_range_end]',
-                 'ternaryexpr -> [col_ref, "NOT", "BETWEEN", time_range_start, "AND", time_range_end]']
 
         # We need to add the numbers, starting, ending time ranges to the grammar.
         numbers = sorted([value[1] for key, value in self.linked_entities['number'].items()
@@ -254,6 +275,12 @@ class AtisWorld():
         return sorted(all_actions)
 
     def _flatten_entities(self) -> Tuple[List[str], numpy.ndarray]:
+        """
+        When we first get the entities and the linking scores in ``_get_linked_entities``
+        we represent as dictionaries for easier updates to the grammar and valid actions.
+        In this method, we flatten them for the model so that the entities are represented as
+        a list, and the linking scores are a 2D numpy array of shape (num_entities, num_utterance_tokens).
+        """
         entities = []
         linking_scores = []
         for entity in sorted(self.linked_entities['number']):

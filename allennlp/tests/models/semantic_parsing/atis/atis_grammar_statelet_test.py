@@ -9,12 +9,12 @@ from allennlp.state_machines.states import GrammarStatelet
 from allennlp.models.semantic_parsing.atis.atis_semantic_parser import AtisSemanticParser
 from allennlp.semparse.worlds import AtisWorld
 
-class AtisDecoderStepTest(AllenNlpTestCase):
+class AtisGrammarStateletTest(AllenNlpTestCase):
     def setUp(self):
         self.database_directory = self.FIXTURES_ROOT / "data" / "atis" / "atis.db"
         super().setUp()
 
-    def test_atis_grammar_state(self):
+    def test_atis_grammar_statelet(self):
         valid_actions = None
         world = AtisWorld([("give me all flights from boston to "
                             "philadelphia next week arriving after lunch")],
