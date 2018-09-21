@@ -16,9 +16,9 @@ from parsimonious.grammar import Grammar
 
 from allennlp.data.tokenizers import WordTokenizer
 
-# This is the base definition of the SQL grammar written in a simplified sort of
-# EBNF notation. The notation here is of the form:
-#    nonterminal = right hand side
+# This is the base definition of the SQL grammar in a simplified sort of
+# EBNF notation, and represented as a dictionary. The keys are the nonterminals and the values
+# are the possible expansions of the nonterminal where each element in the list is one possible expansion.
 # Rules that differ only in capitalization of keywords are mapped to the same action by
 # the ``SqlVisitor``.  The nonterminal of the first rule is the starting symbol.
 # In addition to the grammar here, we add ``col_ref``, ``table_name`` based on the tables
@@ -29,48 +29,48 @@ from allennlp.data.tokenizers import WordTokenizer
 # in the query.
 # For example, to include city names as strings:
 #
-#       biexpr = ( "city" ws "." ws "city_name"  binop ws city_city_name_strings ) / ...
-#       city_city_name_strings = "NASHVILLE" / "BOSTON" /  ...
+#       grammar_dictionary['biexpr'] = \
+#               ['( "city" ws "." ws "city_name"  binop ws city_city_name_strings )',  ...
+#       grammar_dictionary['city_city_name_strings'] = ['"NASHVILLE"', '"BOSTON"',  ...
 
-GRAMMAR_DICTIONARY = {
-        'statement'         :['query ws ";" ws'],
-        'query'             :['(ws "(" ws "SELECT" ws distinct ws select_results ws '
+GRAMMAR_DICTIONARY = {}
+GRAMMAR_DICTIONARY['statement'] = ['query ws ";" ws']
+GRAMMAR_DICTIONARY['query'] = ['(ws "(" ws "SELECT" ws distinct ws select_results ws '
                               '"FROM" ws table_refs ws where_clause ws ")" ws)',
                               '(ws "SELECT" ws distinct ws select_results ws '
-                              '"FROM" ws table_refs ws where_clause ws)'],
-        'select_results'    :['col_refs', 'agg'],
-        'agg'               :['agg_func ws "(" ws col_ref ws ")"'],
-        'agg_func'          :['"MIN"', '"min"', '"MAX"', '"max"', '"COUNT"', '"count"'],
-        'col_refs'          :['(col_ref ws "," ws col_refs)', '(col_ref)'],
-        'table_refs'        :['(table_name ws "," ws table_refs)', '(table_name)'],
-        'where_clause'      :['("WHERE" ws "(" ws conditions ws ")" ws)', '("WHERE" ws conditions ws)'],
-        'conditions'        :['(condition ws conj ws conditions)',
-                              '(condition ws conj ws "(" ws conditions ws ")")',
-                              '("(" ws conditions ws ")" ws conj ws conditions)',
-                              '("(" ws conditions ws ")")',
-                              '("not" ws conditions ws )',
-                              '("NOT" ws conditions ws )',
-                              'condition'],
-
-        'condition'         :['in_clause', 'ternaryexpr', 'biexpr'],
-        'in_clause'         :['(ws col_ref ws "IN" ws query ws)'],
-        'biexpr'            :['( col_ref ws binaryop ws value)', '(value ws binaryop ws value)'],
-        'binaryop'          :['"+"', '"-"', '"*"', '"/"', '"="',
-                              '">="', '"<="', '">"', '"<"', '"is"', '"IS"'],
-        'ternaryexpr'       :['(col_ref ws "not" ws "BETWEEN" ws value ws "AND" ws value ws)',
-                              '(col_ref ws "NOT" ws "BETWEEN" ws value ws "AND" ws value ws)',
-                              '(col_ref ws "BETWEEN" ws value ws "AND" ws value ws)'],
-        'value'             :['("not" ws pos_value)', '("NOT" ws pos_value)', '(pos_value)'],
-        'pos_value'         :['("ALL" ws query)', '("ANY" ws query)', 'number',
-                              'boolean', 'col_ref', 'agg_results', '"NULL"'],
-        'agg_results'       :['(ws "("  ws "SELECT" ws distinct ws agg ws '
-                              '"FROM" ws table_name ws where_clause ws ")" ws)',
-                              '(ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ws)'],
-        'boolean'           :['"true"', '"false"'],
-        'ws'                :[r'~"\s*"i'],
-        'conj'              :['"AND"', '"OR"'],
-        'distinct'          :['("DISTINCT")', '("")'],
-        'number'            :['""']}
+                              '"FROM" ws table_refs ws where_clause ws)']
+GRAMMAR_DICTIONARY['select_results'] = ['col_refs', 'agg']
+GRAMMAR_DICTIONARY['agg'] = ['agg_func ws "(" ws col_ref ws ")"']
+GRAMMAR_DICTIONARY['agg_func'] = ['"MIN"', '"min"', '"MAX"', '"max"', '"COUNT"', '"count"']
+GRAMMAR_DICTIONARY['col_refs'] = ['(col_ref ws "," ws col_refs)', '(col_ref)']
+GRAMMAR_DICTIONARY['table_refs'] = ['(table_name ws "," ws table_refs)', '(table_name)']
+GRAMMAR_DICTIONARY['where_clause'] = ['("WHERE" ws "(" ws conditions ws ")" ws)', '("WHERE" ws conditions ws)']
+GRAMMAR_DICTIONARY['conditions'] = ['(condition ws conj ws conditions)',
+                                          '(condition ws conj ws "(" ws conditions ws ")")',
+                                          '("(" ws conditions ws ")" ws conj ws conditions)',
+                                          '("(" ws conditions ws ")")',
+                                          '("not" ws conditions ws )',
+                                          '("NOT" ws conditions ws )',
+                                          'condition']
+GRAMMAR_DICTIONARY['condition'] = ['in_clause', 'ternaryexpr', 'biexpr']
+GRAMMAR_DICTIONARY['in_clause'] = ['(ws col_ref ws "IN" ws query ws)']
+GRAMMAR_DICTIONARY['biexpr'] = ['( col_ref ws binaryop ws value)', '(value ws binaryop ws value)']
+GRAMMAR_DICTIONARY['binaryop'] = ['"+"', '"-"', '"*"', '"/"', '"="',
+                      '">="', '"<="', '">"', '"<"', '"is"', '"IS"']
+GRAMMAR_DICTIONARY['ternaryexpr'] = ['(col_ref ws "not" ws "BETWEEN" ws value ws "AND" ws value ws)',
+                                     '(col_ref ws "NOT" ws "BETWEEN" ws value ws "AND" ws value ws)',
+                                     '(col_ref ws "BETWEEN" ws value ws "AND" ws value ws)']
+GRAMMAR_DICTIONARY['value'] = ['("not" ws pos_value)', '("NOT" ws pos_value)', '(pos_value)']
+GRAMMAR_DICTIONARY['pos_value'] = ['("ALL" ws query)', '("ANY" ws query)', 'number',
+                                   'boolean', 'col_ref', 'agg_results', '"NULL"']
+GRAMMAR_DICTIONARY['agg_results'] = ['(ws "("  ws "SELECT" ws distinct ws agg ws '
+                                     '"FROM" ws table_name ws where_clause ws ")" ws)',
+                                     '(ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ws)']
+GRAMMAR_DICTIONARY['boolean'] = ['"true"', '"false"']
+GRAMMAR_DICTIONARY['ws'] = [r'~"\s*"i']
+GRAMMAR_DICTIONARY['conj'] = ['"AND"', '"OR"']
+GRAMMAR_DICTIONARY['distinct'] = ['("DISTINCT")', '("")']
+GRAMMAR_DICTIONARY['number'] = ['""']
 
 KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"', '"IN"', '"LIKE"',
             '"IS"', '"BETWEEN"', '"AND"', '"ALL"', '"ANY"', '"NULL"', '"OR"', '"DISTINCT"']
