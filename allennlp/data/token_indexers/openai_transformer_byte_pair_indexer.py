@@ -47,7 +47,8 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
                  byte_pairs: List[Tuple[str, str]] = None,
                  n_ctx: int = 512,
                  model_path: str = None,
-                 namespace: str = 'openai_transformer') -> None:
+                 namespace: str = 'openai_transformer',
+                 tokens_to_add: List[str] = None) -> None:
         self._namespace = namespace
         self._added_to_vocabulary = False
 
@@ -81,6 +82,13 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
                 else:
                     raise ConfigurationError(f"expected .bpe file in archive {model_path}")
 
+        if tokens_to_add is not None:
+            for token in tokens_to_add:
+                encoder[token + '</w>'] = len(encoder)
+            self.tokens_to_add = set(tokens_to_add)
+        else:
+            self.tokens_to_add = None
+
         self.encoder = encoder
         self.decoder = {word_id: word for word, word_id in self.encoder.items()}
 
@@ -103,6 +111,12 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
 
         if text in self.cache:
             return self.cache[text]
+
+        if self.tokens_to_add and text in self.tokens_to_add:
+            # this is a special token, and it's guaranteed to be a word
+            word = [text + '</w>']
+            self.cache[text] = word
+            return word
 
         # Split into letters, but add a `</w>` to the last
         word = [c for c in text[:-1]]

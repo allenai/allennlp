@@ -232,9 +232,10 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
     Parameters
     ----------
     vocab_size: ``int`` (optional, default: 40990)
-        The size of the vocabulary, including the positional encodings.
+        The size of the vocabulary, including the default positional embeddings,
+        but without n_special.
     n_ctx: ``int`` (optional, default: 512)
-        The number of positional encodings.
+        The number of positional encodings to use for evaluation.
     embedding_dim: ``int`` (optional, default: 768)
         The dimension of the output embeddings.
     num_heads: ``int`` (optional, default: 12)
@@ -266,7 +267,8 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
                  residual_dropout_probability: float = 0.1,
                  activation_function: str = 'gelu',
                  model_path: str = None,
-                 requires_grad: bool = False) -> None:
+                 requires_grad: bool = False,
+                 n_special: int = -1) -> None:
         super().__init__()
 
         config = TransformerConfig(
@@ -277,6 +279,9 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
                 residual_dropout_probability,
                 activation_function,
         )
+
+        # add space for the special tokens
+        vocab_size += max(n_special, 0)
 
         self.vocab_size = vocab_size
         self.n_ctx = n_ctx
@@ -298,7 +303,7 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
             parameter.requires_grad = requires_grad
 
         if model_path:
-            self.load_weights(model_path)
+            self.load_weights(model_path, n_special=n_special)
 
     def forward(self, x: torch.Tensor) -> List[torch.Tensor]:
         #x = x.view(-1, x.size(2), x.size(3))
@@ -404,6 +409,7 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
 
         # and then assign it
         self.embed.weight.data = torch.from_numpy(init_params[0])
+        self.decoder.weight = self.embed.weight
 
         # for each (name, array) pair to transfer over
         for name, ip in zip(names[1:n_transfer], init_params[1:n_transfer]):
