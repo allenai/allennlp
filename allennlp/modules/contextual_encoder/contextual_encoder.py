@@ -72,12 +72,24 @@ class ContextualEncoder(torch.nn.Module, Registrable):
 
     def forward(self, ids: torch.Tensor, callback: Callable = None) -> Dict[str, torch.Tensor]:
         """
-        If return_all_layers is True, returns {
-            'output': (batch_size, num_layers, timesteps, dim),
-            'token_embedding': (batch_size, timesteps, embedding_dim)
-            'mask': (batch_size, timesteps)
-        }
-        If return_all_layers is False, output is (batch_size, timesteps, dim)
+        Computes context-sensitive encodings.
+
+        Parameters
+        ----------
+        inputs:
+            Shape ``(batch_size, sequence_length, max_characters_per_token)`` of character ids
+            representing the current batch.
+
+        Returns
+        -------
+        Dict with keys:
+        ``token_embedding``:
+            Shape ``(batch_size, sequence_length, embedding_dim)`` tensor
+        ``mask``:
+            Shape ``(batch_size, sequence_length)`` long tensor with sequence mask.
+        ``output``:
+            If return_all_layers, a ``(batch_size, num_layers, sequence_length, dim)`` tensor.
+            Otherwise, a ``(batch_size, sequence_length, dim)`` tensor.
         """
         # pylint: disable=arguments-differ
         raise NotImplementedError
