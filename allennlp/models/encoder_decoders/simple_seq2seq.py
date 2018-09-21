@@ -15,7 +15,7 @@ from allennlp.modules.attention import LegacyAttention
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
-from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits, weighted_sum
+from allennlp.nn.util import get_final_encoder_states, get_text_field_mask, sequence_cross_entropy_with_logits, weighted_sum
 
 
 @Model.register("simple_seq2seq")
@@ -125,7 +125,12 @@ class SimpleSeq2Seq(Model):
         batch_size, _, _ = embedded_input.size()
         source_mask = get_text_field_mask(source_tokens)
         encoder_outputs = self._encoder(embedded_input, source_mask)
-        final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
+        # (batch_size, encoder_output_dim)
+        final_encoder_output = get_final_encoder_states(
+                encoder_outputs,
+                source_mask,
+                self._encoder.is_bidirectional()
+        )
         if target_tokens:
             targets = target_tokens["tokens"]
             target_sequence_length = targets.size()[1]
@@ -141,7 +146,16 @@ class SimpleSeq2Seq(Model):
         step_probabilities = []
         step_predictions = []
         for timestep in range(num_decoding_steps):
-            if self.training and torch.rand(1).item() >= self._scheduled_sampling_ratio:
+            use_gold_targets = False
+            # Use gold tokens at test time when provided and at a rate of 1 -
+            # _scheduled_sampling_ratio during training.
+            if self.training:
+                if torch.rand(1).item() >= self._scheduled_sampling_ratio:
+                    use_gold_targets = True
+            elif target_tokens:
+                use_gold_targets = True
+
+            if use_gold_targets:
                 input_choices = targets[:, timestep]
             else:
                 if timestep == 0:
