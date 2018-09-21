@@ -1,8 +1,19 @@
 # pylint: disable=no-self-use,invalid-name
 import pytest
+import spacy
+import torch
+import numpy
+import h5py
 
-from allennlp.common.testing import ModelTestCase
+from allennlp.common.testing import ModelTestCase, AllenNlpTestCase
 from allennlp.data.dataset import Batch
+from allennlp.data import Token
+from allennlp.data.token_indexers import OpenaiTransformerBytePairIndexer
+from allennlp.data.token_indexers.openai_transformer_byte_pair_indexer import text_standardize
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.modules.openai_transformer import OpenaiTransformer
+from allennlp.nn.util import get_range_vector
+
 
 # Skip this one, it's an expensive test.
 @pytest.mark.skip()
@@ -54,6 +65,62 @@ class TestOpenaiTransformerEmbedderSmall(ModelTestCase):
                 assert tag in {'O', 'I-ORG', 'I-PER', 'I-LOC'}
 
 
+# Skip this one, it's an expensive test.
+@pytest.mark.skip()
+class TestOpenAiTransformerEmbedderCorrectWithFixture(AllenNlpTestCase):
+    """
+    Test that the implementation produces same embeddings as tensorflow model
+    """
+    def test_openai_transformer_matches_tensorflow(self):
+        model_path = "https://s3-us-west-2.amazonaws.com/allennlp/models/openai-transformer-lm-2018.07.23.tar.gz"
+        indexer = OpenaiTransformerBytePairIndexer(model_path=model_path)
+        transformer = OpenaiTransformer(model_path=model_path)
+
+        # get the test sentences
+        with open(self.FIXTURES_ROOT / 'openai_transformer' / 'text.txt', 'r') as fin:
+            sentences = fin.read().strip().split('\n')
+
+        # tokenize and check that indices are correct
+        nlp = spacy.load('en_core_web_sm')
+
+        # make a batch of two sentences
+        batch_indices = []
+        batch_lengths = []
+        for k, sentence in enumerate(sentences):
+            tokens = [token.text for token in nlp(text_standardize(sentence)) if not token.is_space]
+            indices = indexer.tokens_to_indices(
+                    [Token(token) for token in tokens], Vocabulary(), 'openai_indexer'
+            )
+            batch_indices.append(indices['openai_indexer'])
+            batch_lengths.append(len([i for i in indices['openai_indexer'] if i != 0]))
+        batch_indices = torch.from_numpy(numpy.array(batch_indices))
+        batch_size, num_timesteps = batch_indices.size()
+        vocab_size = transformer.vocab_size - transformer.n_ctx
+        positional_encodings = get_range_vector(num_timesteps, device=-1) + vocab_size
+
+        # Combine the inputs with positional encodings
+        batch_tensor = torch.stack([
+                batch_indices,   # (batch_size, num_timesteps)
+                positional_encodings.expand(batch_size, num_timesteps)
+        ], dim=-1)
+
+        # run the LM
+        transformer.eval()
+        activations = transformer(batch_tensor)
+
+        # load the expected activations
+        expected_activations = []
+        with h5py.File(self.FIXTURES_ROOT / 'openai_transformer' / 'expected_embeddings.hdf5', 'r') as fin:
+            expected_activations.append(fin['0'][...])
+            expected_activations.append(fin['1'][...])
+
+        # just check the top layer
+        for k in range(2):
+            actual = activations[-1][k, :batch_lengths[k], :].numpy()
+            expected = expected_activations[k]
+            numpy.testing.assert_almost_equal(expected, actual, decimal=5)
+
+
 def create_small_test_fixture(output_dir: str = '/tmp') -> None:
     """
     This is how I created the transformer_model.tar.gz.
@@ -65,7 +132,6 @@ def create_small_test_fixture(output_dir: str = '/tmp') -> None:
     """
     import json
     import pathlib
-    from allennlp.modules.openai_transformer import OpenaiTransformer
 
     model_dir = pathlib.Path(output_dir) / 'model'
     model_dir.mkdir(exist_ok=True)  # pylint: disable=no-member
