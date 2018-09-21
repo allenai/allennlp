@@ -92,7 +92,7 @@ class QuarelSemanticParser(Model):
                  dropout: float = 0.0,
                  num_linking_features: int = 0,
                  num_entity_bits: int = 0,
-                 entity_bits_output: bool = False,
+                 entity_bits_output: bool = True,
                  use_entities: bool = False,
                  denotation_only: bool = False,
                  entity_similarity_mode: str = "dot_product",
@@ -401,7 +401,7 @@ class QuarelSemanticParser(Model):
             self._denotation_accuracy_cat(denotation_logits, denotation_target.squeeze(-1))
             return {"loss": loss}
 
-        memory_cell = encoder_outputs.new_zeros(batch_size, self._encoder.get_output_dim())
+        memory_cell = encoder_outputs.new_zeros(batch_size, self._encoder_output_dim)
 
         _, num_entities, num_question_tokens = linking_scores.size()
 
