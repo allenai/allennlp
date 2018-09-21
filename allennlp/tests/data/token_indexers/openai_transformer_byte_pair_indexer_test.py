@@ -1,12 +1,14 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
 import json
 import tarfile
+import spacy
 
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token
 from allennlp.data.token_indexers import OpenaiTransformerBytePairIndexer
+from allennlp.data.token_indexers.openai_transformer_byte_pair_indexer import text_standardize
 from allennlp.data.vocabulary import Vocabulary
 
 
@@ -99,3 +101,24 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
 
         with pytest.raises(RuntimeError):
             self.indexer.tokens_to_indices(tokens, self.vocab, 'should-fail')
+
+    @pytest.mark.skip()
+    def test_for_correctness_with_fixture(self):
+        bpe_path = "https://s3-us-west-2.amazonaws.com/allennlp/models/openai-transformer-lm-2018.07.23.tar.gz"
+        indexer = OpenaiTransformerBytePairIndexer(model_path=bpe_path)
+
+        with open(self.FIXTURES_ROOT / 'openai_transformer' / 'text.txt', 'r') as fin:
+            sentences = fin.read().strip().split('\n')
+        with open(self.FIXTURES_ROOT / 'openai_transformer' / 'indexed_text.json', 'r') as fin:
+            expected_indices = json.load(fin)
+
+        # tokenize and check that indices are correct
+        nlp = spacy.load('en_core_web_sm')
+
+        for k, sentence in enumerate(sentences):
+            tokens = [token.text for token in nlp(text_standardize(sentence)) if not token.is_space]
+            indices = indexer.tokens_to_indices(
+                    [Token(token) for token in tokens], Vocabulary(), 'openai_indexer'
+            )
+            non_padded_indices = [i for i in indices['openai_indexer'] if i != 0]
+            assert non_padded_indices == expected_indices[k]
