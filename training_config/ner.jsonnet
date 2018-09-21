@@ -15,6 +15,7 @@
   },
   "train_data_path": std.extVar("NER_TRAIN_DATA_PATH"),
   "validation_data_path": std.extVar("NER_TEST_A_PATH"),
+  "test_data_path": std.extVar("NER_TEST_B_PATH"),
   "model": {
     "type": "crf_tagger",
     "label_encoding": "BIOUL",
