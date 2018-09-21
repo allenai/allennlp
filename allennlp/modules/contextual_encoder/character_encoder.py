@@ -19,9 +19,32 @@ class CharacterEncoder(torch.nn.Module):
     Parameters
     ----------
     embedding_dim: int
-
-
-
+        The dimension of the initial character embedding.
+    filters: ``Sequence[Sequence[int]]``
+        A sequence of pairs (filter_width, num_filters).
+    num_highway: int
+        The number of highway layers.
+    projection_dim: int
+        The output dimension of the projection layer.
+    activation: str, optional (default = 'relu')
+        The activation function for the convolutional layers.
+    max_characters_per_token: int, optional (default = 50)
+        The maximum length of any token.
+    num_characters: int, optional (default = 262)
+        The number of characters in the vocabulary.
+    projection_location: str, optional (default = 'after_highway')
+        Where to apply the projection layer. Valid values are
+        'after_highway', 'after_cnn', and None.
+    do_layer_norm: bool, optional (default = False)
+        If True, we apply ``MaskedLayerNorm`` to the final encoded result.
+    bos_characters: ``List[int]``, optional (default = None)
+        Characters for the beginning-of-sentence token (if any).
+        If provided, they will be prepended to each sentence.
+        If provided, ``eos_characters`` must be provided as well.
+    eos_characters: ``List[int]``, optional (default = None)
+        Characters for the end-of-sentence token (if any).
+        If provided, they will be appended to each sentence.
+        If provided, ``bos_characters`` must be provided as well.
     """
     def __init__(self,
                  embedding_dim: int,
@@ -115,16 +138,17 @@ class CharacterEncoder(torch.nn.Module):
         inputs:
             Shape ``(batch_size, sequence_length, max_characters_per_token)`` of character ids
             representing the current batch.
+
         Returns
         -------
         Dict with keys:
         ``token_embedding``:
-            Shape ``(batch_size, sequence_length, embedding_dim)``
-            tensor with context
-            insensitive token representations.
+            Shape ``(batch_size, sequence_length, embedding_dim)`` tensor
+            with context-insensitive token representations. If bos_characters and eos_characters
+            are being added, the second dimension will be ``sequence_length + 2``.
         ``mask``:
-            Shape ``(batch_size, sequence_length)`` long tensor with
-            sequence mask.
+            Shape ``(batch_size, sequence_length)`` long tensor with sequence mask. If bos_characters and
+            eos_characters are being added, the second dimension will be ``sequence_length + 2``.
         """
         # pylint: disable=arguments-differ
         char_id_mask = (inputs > 0).long()  # (batch_size, sequence_length, max_characters_per_token)

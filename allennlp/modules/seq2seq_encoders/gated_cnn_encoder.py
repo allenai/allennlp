@@ -98,7 +98,11 @@ class ResidualBlock(torch.nn.Module):
 @Seq2SeqEncoder.register('gated-cnn-encoder')
 class GatedCnnEncoder(Seq2SeqEncoder):
     """
+    **This is work-in-progress and has not been fully tested yet. Use at your own risk!**
+
     A ``ContextualEncoder`` that uses a Gated CNN.
+
+    see
 
     Language Modeling with Gated Convolutional Networks,  Yann N. Dauphin et al, ICML 2017
     https://arxiv.org/abs/1612.08083
