@@ -36,7 +36,7 @@ class TestContextualEncoder(AllenNlpTestCase):
         cew = CharLevelContextualEncoder(
                 encoder=self.seq2seq,
                 character_encoder=self.character_encoder,
-                num_layers=3,
+                num_layers=4,
                 return_all_layers=False)
 
         character_ids = torch.from_numpy(np.random.randint(0, 262, size=(5, 6, 50)))

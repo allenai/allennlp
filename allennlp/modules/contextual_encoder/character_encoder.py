@@ -8,19 +8,30 @@ from allennlp.modules.highway import Highway
 from allennlp.modules.masked_layer_norm import MaskedLayerNorm
 from allennlp.nn.util import add_sentence_boundary_token_ids
 
-_DEFAULT_FILTERS = ((1, 4), (2, 8), (3, 16), (4, 32), (5, 64))
-_VALID_PROJECTION_LOCATIONS = {'after_cnn', 'after_highway'}
+_VALID_PROJECTION_LOCATIONS = {'after_cnn', 'after_highway', None}
 
 class CharacterEncoder(torch.nn.Module):
+    """
+    The character CNN + highway encoder from Kim et al "Character aware neural language models"
+    https://arxiv.org/abs/1508.06615
+    with an optional projection.
+
+    Parameters
+    ----------
+    embedding_dim: int
+
+
+
+    """
     def __init__(self,
+                 embedding_dim: int,
+                 filters: Sequence[Sequence[int]],
+                 num_highway: int,
+                 projection_dim: int,
                  activation: str = 'relu',
-                 embedding_dim: int = 4,
-                 filters: Sequence[Sequence[int]] = _DEFAULT_FILTERS,
                  max_characters_per_token: int = 50,
                  num_characters: int = 262,
-                 num_highway: int = 2,
-                 projection_dim: int = 512,
-                 projection_location: str = 'after_cnn',
+                 projection_location: str = 'after_highway',
                  do_layer_norm: bool = False,
                  bos_characters: List[int] = None,
                  eos_characters: List[int] = None) -> None:
@@ -134,8 +145,9 @@ class CharacterEncoder(torch.nn.Module):
         character_embedding = character_embedding.transpose(1, 2)
 
         convolutions = []
-        for convolution in self._convolutions:
-            convolved = convolution(character_embedding)
+        for i in range(len(self._convolutions)):
+            char_conv_i = getattr(self, f"char_conv_{i}")
+            convolved = char_conv_i(character_embedding)
 
             # (batch_size * sequence_length, n_filters for this width)
             convolved, _ = torch.max(convolved, dim=-1)

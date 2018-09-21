@@ -37,11 +37,6 @@ class ResidualBlock(torch.nn.Module):
             else:
                 raise ValueError("each layer must have length 2 or 3")
 
-            # He init (2015)
-            # init = normal(0, std=sqrt(2 / n), n = last_dim * kernel width
-            #std = np.sqrt(2.0 / (layer[0] * last_dim))
-            #std = np.sqrt(2.0 / (layer[0] * (last_dim + layer[1]) / 2.0))
-
             # from Convolutional Sequence to Sequence Learning
             if k == 0:
                 conv_dropout = dropout
@@ -94,9 +89,6 @@ class ResidualBlock(torch.nn.Module):
                     # remove from the beginning of the sequence
                     conv_out = conv_out.narrow(2, dims_to_remove, timesteps)
 
-            # Now split the convolutions into two pieces and apply the gates
-            #out1, out2 = conv_out.chunk(2, dim=1)
-            #out = torch.nn.functional.sigmoid(out1) * out2
             out = torch.nn.functional.glu(conv_out, dim=1)
 
         # see Convolutional Sequence to Sequence Learning
@@ -114,14 +106,6 @@ class GatedCnnEncoder(Seq2SeqEncoder):
     Convolutional Sequence to Sequence Learning, Jonas Gehring et al, ICML 2017
     https://arxiv.org/abs/1705.03122
 
-    number of flops per convolution = width * in_channels * out_channels
-
-    For 16 layers x (3, 512) = 16 * 3 * 512 * 512 = 12.5e6
-    For 16 layers of bottleneck: [[1, 256], [5, 256], [1, 512]] =
-    16 * (1 * 256 * 512 + 5 * 256 * 256 + 1 * 256 * 512) = 9.4e6
-    For 16 layers of large sizes [[1, 1024], [3, 1024], [1, 512]] =
-    16 * (1 * 1024 * 512 + 3 * 1024 * 1024 + 1 * 1024 * 512) = 67.1e6
-
     Some possibilities:
 
     Each element of the list is wrapped in a residual block:
@@ -129,17 +113,11 @@ class GatedCnnEncoder(Seq2SeqEncoder):
     layers = [ [[4, 512]], [[4, 512], [4, 512]], [[4, 512], [4, 512]], [[4, 512], [4, 512]]
     dropout = 0.05
 
-    An architecture that uses a larger projection layer inside each block
-    input_dim = 512
-    layers = [ [[4, 512]], [[1, 2048], [5, 2048], [1, 512]], ... ]
-
     A "bottleneck architecture"
     input_dim = 512
     layers = [ [[4, 512]], [[1, 128], [5, 128], [1, 512]], ... ]
 
     An architecture with dilated convolutions
-    https://fomoro.com/tools/receptive-fields/#2,1,1,VALID;2,1,2,VALID;2,1,4,VALID;2,1,8,VALID;2,1,1,VALID;2,1,2,VALID;2,1,4,VALID;2,1,8,VALID;2,1,1,VALID;2,1,2,VALID;2,1,4,VALID;2,1,8,VALID;2,1,1,VALID;2,1,2,VALID;2,1,4,VALID;2,1,4,VALID
-
     input_dim = 512
     layers = [
     [[2, 512, 1]], [[2, 512, 2]], [[2, 512, 4]], [[2, 512, 8]],   # receptive field == 16

@@ -20,6 +20,11 @@ class ContextualEncoder(torch.nn.Module, Registrable):
     ----------
     encoder : ``Seq2SeqEncoder``
         The ``Seq2SeqEncoder`` to wrap.
+    num_layers : int
+        The total number of contextual layers + 1 (for the token layer)
+    dropout : float, optional (default: None)
+        If specified, this dropout is applied to the token embeddings
+        before passing them to the wrapped encoder.
     return_all_layers : bool, optional (default: False)
         Should this module return all layers or only the last layer?
     """
@@ -67,8 +72,12 @@ class ContextualEncoder(torch.nn.Module, Registrable):
 
     def forward(self, ids: torch.Tensor, callback: Callable = None) -> Dict[str, torch.Tensor]:
         """
-        If return_all_layers is True, returns {'output': (batch_size, num_layers, timesteps, dim)}
-        Otherwise, returns {'output'}: (batch_size, timesteps, dim)
+        If return_all_layers is True, returns {
+            'output': (batch_size, num_layers, timesteps, dim),
+            'token_embedding': (batch_size, timesteps, embedding_dim)
+            'mask': (batch_size, timesteps)
+        }
+        If return_all_layers is False, output is (batch_size, timesteps, dim)
         """
         # pylint: disable=arguments-differ
         raise NotImplementedError
@@ -85,6 +94,11 @@ class CharLevelContextualEncoder(ContextualEncoder):
         The ``Seq2SeqEncoder`` to wrap.
     character_encoder : ``CharacterEncoder``
         The ``CharacterEncoder`` to apply to the inputs.
+    num_layers : int
+        The total number of contextual layers + 1 (for the token layer)
+    dropout : float, optional (default: None)
+        If specified, this dropout is applied to the token embeddings
+        before passing them to the wrapped encoder.
     return_all_layers : bool, optional (default: False)
         Should this module return all layers or only the last layer?
     """
@@ -113,6 +127,11 @@ class TokenLevelContextualEncoder(ContextualEncoder):
         The ``Seq2SeqEncoder`` to wrap.
     token_embedder : ``TokenEmbedder``
         Used to embed the input tokens.
+    num_layers : int
+        The total number of contextual layers + 1 (for the token layer)
+    dropout : float, optional (default: None)
+        If specified, this dropout is applied to the token embeddings
+        before passing them to the wrapped encoder.
     embedding_layer_norm : ``MaskedLayerNorm``, optional (default: None)
         If supplied, this layer norm is applied to the token embeddings
         before passing them to the contextual encoder.
