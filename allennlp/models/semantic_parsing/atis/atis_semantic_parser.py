@@ -128,11 +128,11 @@ class AtisSemanticParser(Model):
                                                        add_action_bias=self._add_action_bias,
                                                        dropout=dropout)
 
-    def _get_initial_state_and_scores(self,
-                                      utterance: Dict[str, torch.LongTensor],
-                                      worlds: List[AtisWorld],
-                                      actions: List[List[ProductionRuleArray]],
-                                      linking_scores: torch.Tensor) -> Dict:
+    def _get_initial_state(self,
+                           utterance: Dict[str, torch.LongTensor],
+                           worlds: List[AtisWorld],
+                           actions: List[List[ProductionRuleArray]],
+                           linking_scores: torch.Tensor) -> GrammarBasedState:
         embedded_utterance = self._utterance_embedder(utterance)
         utterance_mask = util.get_text_field_mask(utterance).float()
 
@@ -185,8 +185,7 @@ class AtisSemanticParser(Model):
                                           grammar_state=initial_grammar_state,
                                           possible_actions=actions,
                                           debug_info=None)
-
-        return {"initial_state": initial_state}
+        return initial_state
 
     @staticmethod
     def _get_type_vector(worlds: List[AtisWorld],
@@ -493,9 +492,12 @@ class AtisSemanticParser(Model):
         sql_queries : List[str], otpional (default=None)
             A list of the SQL queries that are given during training or validation.
         """
-        initial_info = self._get_initial_state_and_scores(utterance, world, actions, linking_scores)
-        initial_state = initial_info["initial_state"]
+        initial_state = self._get_initial_state(utterance, world, actions, linking_scores)
         batch_size = list(utterance.values())[0].size(0)
+        print('linkingscores')
+        print(linking_scores.shape())
+        print('target action seq')
+        print(target_action_sequences.shape())
 
         if target_action_sequence is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).
