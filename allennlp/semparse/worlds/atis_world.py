@@ -1,4 +1,3 @@
-from copy import deepcopy
 from typing import List, Dict, Tuple, Set, Callable
 import sqlite3
 import numpy
@@ -50,25 +49,25 @@ class AtisWorld():
         current utterance that we are interested in.
     tokenizer: ``Tokenizer``, optional (default=``WordTokenizer()``)
         We use this tokenizer to tokenize the utterances.
-    database_directory: ``str``, optional
-        We pass the location of the database directory to ``SqlTableContext`` to get the allowed strings in
+    database_file: ``str``, optional
+        We pass the location of the database to ``SqlTableContext`` to get the allowed strings in
         the grammar.
     """
 
     def __init__(self,
                  utterances: List[str],
                  tokenizer: Tokenizer = None,
-                 database_directory: str = None) -> None:
+                 database_file: str = None) -> None:
 
         self.all_tables = ALL_TABLES
         self.tables_with_strings = TABLES_WITH_STRINGS
 
         self.sql_table_context = SqlTableContext(ALL_TABLES,
                                                  TABLES_WITH_STRINGS,
-                                                 database_directory) if database_directory else None
-        if database_directory:
-            self.database_directory = database_directory
-            self.connection = sqlite3.connect(self.database_directory)
+                                                 database_file) if database_file else None
+        if database_file:
+            self.database_file = database_file
+            self.connection = sqlite3.connect(self.database_file)
             self.cursor = self.connection.cursor()
 
         self.grammar_dictionary = self.sql_table_context.grammar_dictionary
@@ -87,7 +86,7 @@ class AtisWorld():
         self.grammar_str: str = self.get_grammar_str()
         self.grammar_with_context: Grammar = Grammar(self.grammar_str)
 
-        if database_directory:
+        if database_file:
             self.connection.close()
 
 
@@ -104,7 +103,7 @@ class AtisWorld():
         """
         This is a helper method for adding different types of numbers (eg. starting time ranges) as entities.
         We first go through all utterances in the interaction and find the numbers of a certain type and add
-        them to the set ``all_numbers``, which is initialized with default values. We want to add all numbers 
+        them to the set ``all_numbers``, which is initialized with default values. We want to add all numbers
         that occur in the interaction, and not just the current turn because the query could contain numbers
         that were triggered before the current turn. For each entity, we then check if it is triggered by tokens
         in the current utterance and construct the linking score.
@@ -219,10 +218,11 @@ class AtisWorld():
 
     def get_grammar_str(self) -> str:
         """
-        Generate a string that can be used to instantiate a ``Grammar`` object. The string is a sequence of
-        rules that define the grammar. We modify the ``grammar_dictionary`` with additional constraints we want
-        for the ATIS dataset. We then add numbers to the grammar dictionary. The strings in the database are already
-        added in by the ``SqlTableContext``. Finally, we construct a string from the ``grammar_dictionary``.
+        Generate a string that can be used to instantiate a ``Grammar`` object. The string is a sequence
+        of rules that define the grammar. We modify the ``grammar_dictionary`` with additional constraints
+        we want for the ATIS dataset. We then add numbers to the grammar dictionary. The strings in the
+        database are already added in by the ``SqlTableContext``. Finally, we construct a string from the
+        ``grammar_dictionary``.
         """
         if self.dates:
             year_binary_expression = f'("date_day" ws "." ws "year" ws binaryop ws "{self.dates[0].year}")'

@@ -60,11 +60,10 @@ class AtisSemanticParser(Model):
     rule_namespace : ``str``, optional (default=rule_labels)
         The vocabulary namespace to use for production rules.  The default corresponds to the
         default used in the dataset reader, so you likely don't need to modify this.
-    tables_directory : ``str``, optional (default=/atis/atis.db)
+    database_file: ``str``, optional (default=/atis/atis.db)
         The path of the SQLite database when evaluating logical forms. SQLite is disk based, so we need
         the file location to connect to it.
     """
-    # pylint: disable=abstract-method
     def __init__(self,
                  vocab: Vocabulary,
                  utterance_embedder: TextFieldEmbedder,
@@ -77,9 +76,9 @@ class AtisSemanticParser(Model):
                  training_beam_size: int = None,
                  dropout: float = 0.0,
                  rule_namespace: str = 'rule_labels',
-                 tables_directory='/atis/atis.db') -> None:
+                 database_file='/atis/atis.db') -> None:
         # Atis semantic parser init
-        super(AtisSemanticParser, self).__init__(vocab)
+        super().__init__(vocab)
         self._utterance_embedder = utterance_embedder
         self._encoder = encoder
         self._max_decoding_steps = max_decoding_steps
@@ -95,8 +94,8 @@ class AtisSemanticParser(Model):
         self._denotation_accuracy = Average()
 
         # Initialize a cursor to our sqlite database, so we can execute logical forms for denotation accuracy.
-        self._tables_directory = tables_directory
-        self._connection = sqlite3.connect(self._tables_directory)
+        self._database_file = database_file 
+        self._connection = sqlite3.connect(self._database_file)
         self._cursor = self._connection.cursor()
 
         self._action_padding_index = -1  # the padding value used by IndexField
@@ -117,7 +116,6 @@ class AtisSemanticParser(Model):
         torch.nn.init.normal_(self._first_attended_utterance)
 
         self._num_entity_types = 2  # TODO(kevin): get this in a more principled way somehow?
-        self._num_start_types = 1  # TODO(kevin): get this in a more principled way somehow?
         self._embedding_dim = utterance_embedder.get_output_dim()
         self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
 
@@ -126,7 +124,6 @@ class AtisSemanticParser(Model):
         self._decoder_step = LinkingTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
                                                        action_embedding_dim=action_embedding_dim,
                                                        input_attention=input_attention,
-                                                       num_start_types=self._num_start_types,
                                                        predict_start_type_separately=False,
                                                        add_action_bias=self._add_action_bias,
                                                        dropout=dropout)
@@ -584,7 +581,8 @@ class AtisSemanticParser(Model):
                         outputs['sql_queries'].append(sql_queries[i])
 
                     outputs['utterance'].append(world[i].utterances[-1])
-                    outputs['tokenized_utterance'].append([token.text for token in world[i].tokenized_utterances[-1]])
+                    outputs['tokenized_utterance'].append([token.text
+                                                           for token in world[i].tokenized_utterances[-1]])
                     outputs['entities'].append(world[i].entities)
                     outputs['best_action_sequence'].append(action_strings)
                     outputs['logical_form'].append(sqlparse.format(predicted_sql_query, reindent=True))

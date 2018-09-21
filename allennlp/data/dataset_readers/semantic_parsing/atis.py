@@ -60,7 +60,7 @@ class AtisDatasetReader(DatasetReader):
     tokenizer : ``Tokenizer``, optional
         Tokenizer to use for the utterances. Will default to ``WordTokenizer()`` with Spacy's tagger
         enabled.
-    database_directory : ``str``, optional
+    database_file: ``str``, optional
         The directory to find the sqlite database file. We query the sqlite database to find the strings
         that are allowed.
     """
@@ -68,11 +68,11 @@ class AtisDatasetReader(DatasetReader):
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False,
                  tokenizer: Tokenizer = None,
-                 database_directory: str = None) -> None:
+                 database_file: str = None) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
-        self._database_directory = database_directory
+        self._database_file = database_file
         # TODO(kevin): Add a keep_unparseable_utterances flag so that during validation, we do not skip queries that
         # cannot be parsed.
 
@@ -115,7 +115,7 @@ class AtisDatasetReader(DatasetReader):
             return None
 
         world = AtisWorld(utterances=utterances,
-                          database_directory=self._database_directory)
+                          database_file=self._database_file)
 
         if sql_query_labels:
             # If there are multiple sql queries given as labels, we use the shortest

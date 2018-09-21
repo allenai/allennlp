@@ -14,8 +14,6 @@ from parsimonious.expressions import Sequence, OneOf, Literal
 from parsimonious.nodes import Node, NodeVisitor
 from parsimonious.grammar import Grammar
 
-from allennlp.data.tokenizers import WordTokenizer
-
 # This is the base definition of the SQL grammar in a simplified sort of
 # EBNF notation, and represented as a dictionary. The keys are the nonterminals and the values
 # are the possible expansions of the nonterminal where each element in the list is one possible expansion.
@@ -36,9 +34,9 @@ from allennlp.data.tokenizers import WordTokenizer
 GRAMMAR_DICTIONARY = {}
 GRAMMAR_DICTIONARY['statement'] = ['query ws ";" ws']
 GRAMMAR_DICTIONARY['query'] = ['(ws "(" ws "SELECT" ws distinct ws select_results ws '
-                              '"FROM" ws table_refs ws where_clause ws ")" ws)',
-                              '(ws "SELECT" ws distinct ws select_results ws '
-                              '"FROM" ws table_refs ws where_clause ws)']
+                               '"FROM" ws table_refs ws where_clause ws ")" ws)',
+                               '(ws "SELECT" ws distinct ws select_results ws '
+                               '"FROM" ws table_refs ws where_clause ws)']
 GRAMMAR_DICTIONARY['select_results'] = ['col_refs', 'agg']
 GRAMMAR_DICTIONARY['agg'] = ['agg_func ws "(" ws col_ref ws ")"']
 GRAMMAR_DICTIONARY['agg_func'] = ['"MIN"', '"min"', '"MAX"', '"max"', '"COUNT"', '"count"']
@@ -46,17 +44,17 @@ GRAMMAR_DICTIONARY['col_refs'] = ['(col_ref ws "," ws col_refs)', '(col_ref)']
 GRAMMAR_DICTIONARY['table_refs'] = ['(table_name ws "," ws table_refs)', '(table_name)']
 GRAMMAR_DICTIONARY['where_clause'] = ['("WHERE" ws "(" ws conditions ws ")" ws)', '("WHERE" ws conditions ws)']
 GRAMMAR_DICTIONARY['conditions'] = ['(condition ws conj ws conditions)',
-                                          '(condition ws conj ws "(" ws conditions ws ")")',
-                                          '("(" ws conditions ws ")" ws conj ws conditions)',
-                                          '("(" ws conditions ws ")")',
-                                          '("not" ws conditions ws )',
-                                          '("NOT" ws conditions ws )',
-                                          'condition']
+                                    '(condition ws conj ws "(" ws conditions ws ")")',
+                                    '("(" ws conditions ws ")" ws conj ws conditions)',
+                                    '("(" ws conditions ws ")")',
+                                    '("not" ws conditions ws )',
+                                    '("NOT" ws conditions ws )',
+                                    'condition']
 GRAMMAR_DICTIONARY['condition'] = ['in_clause', 'ternaryexpr', 'biexpr']
 GRAMMAR_DICTIONARY['in_clause'] = ['(ws col_ref ws "IN" ws query ws)']
 GRAMMAR_DICTIONARY['biexpr'] = ['( col_ref ws binaryop ws value)', '(value ws binaryop ws value)']
 GRAMMAR_DICTIONARY['binaryop'] = ['"+"', '"-"', '"*"', '"/"', '"="',
-                      '">="', '"<="', '">"', '"<"', '"is"', '"IS"']
+                                  '">="', '"<="', '">"', '"<"', '"is"', '"IS"']
 GRAMMAR_DICTIONARY['ternaryexpr'] = ['(col_ref ws "not" ws "BETWEEN" ws value ws "AND" ws value ws)',
                                      '(col_ref ws "NOT" ws "BETWEEN" ws value ws "AND" ws value ws)',
                                      '(col_ref ws "BETWEEN" ws value ws "AND" ws value ws)']
