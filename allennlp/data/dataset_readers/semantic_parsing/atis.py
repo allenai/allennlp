@@ -73,7 +73,7 @@ class AtisDatasetReader(DatasetReader):
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
         self._database_directory = database_directory
-        # TODO(kevin): Add a keep_if_no_dpd flag so that during validation, we do not skip queries that
+        # TODO(kevin): Add a keep_unparseable_utterances flag so that during validation, we do not skip queries that
         # cannot be parsed.
 
     @overrides
@@ -149,7 +149,7 @@ class AtisDatasetReader(DatasetReader):
                   'linking_scores' : ArrayField(world.linking_scores)}
 
         if sql_query_labels != None:
-            fields['example_sql_queries'] = MetadataField(sql_query_labels)
+            fields['sql_queries'] = MetadataField(sql_query_labels)
             if action_sequence:
                 for production_rule in action_sequence:
                     index_fields.append(IndexField(action_map[production_rule], action_field))

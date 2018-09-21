@@ -69,19 +69,18 @@ class AtisWorld():
 
         self.sql_table_context = SqlTableContext(ALL_TABLES,
                                                  TABLES_WITH_STRINGS,
-                                                 database_directory,
-                                                 utterances=utterances) if database_directory else None
+                                                 database_directory) if database_directory else None
 
-        self.grammar_dictionary = deepcopy(self.sql_table_context.grammar_dictionary)
+        self.grammar_dictionary = self.sql_table_context.grammar_dictionary
 
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]
         self.linked_entities = self.get_linked_entities()
 
-        self.valid_actions: Dict[str, List[str]] = self.update_valid_actions()
+        self.valid_actions: Dict[str, List[str]] = self._update_valid_actions()
+        entities, linking_scores = self._flatten_entities()
         # This has shape (num_entities, num_utterance_tokens).
-        entities, linking_scores = self.flatten_entities()
         self.linking_scores: numpy.ndarray = linking_scores
         self.entities: List[str] = entities
         self.grammar_str: str = self.get_grammar_str()
@@ -178,7 +177,7 @@ class AtisWorld():
         entity_linking_scores['string'] = string_linking_scores
         return entity_linking_scores
 
-    def update_valid_actions(self) -> Dict[str, List[str]]:
+    def _update_valid_actions(self) -> Dict[str, List[str]]:
         valid_actions = self.sql_table_context.valid_actions
         valid_actions['time_range_start'] = []
         valid_actions['time_range_end'] = []
@@ -254,7 +253,7 @@ class AtisWorld():
                 all_actions.add(action)
         return sorted(all_actions)
 
-    def flatten_entities(self) -> Tuple[List[str], numpy.ndarray]:
+    def _flatten_entities(self) -> Tuple[List[str], numpy.ndarray]:
         entities = []
         linking_scores = []
         for entity in sorted(self.linked_entities['number']):

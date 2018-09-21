@@ -34,9 +34,9 @@ from allennlp.data.tokenizers import WordTokenizer
 
 GRAMMAR_DICTIONARY = {
         'statement'         :['query ws ";" ws'],
-        'query'             :['(ws "(" ws "SELECT" ws distinct ws select_results ws ' \
+        'query'             :['(ws "(" ws "SELECT" ws distinct ws select_results ws '
                               '"FROM" ws table_refs ws where_clause ws ")" ws)',
-                              '(ws "SELECT" ws distinct ws select_results ws ' \
+                              '(ws "SELECT" ws distinct ws select_results ws '
                               '"FROM" ws table_refs ws where_clause ws)'],
         'select_results'    :['col_refs', 'agg'],
         'agg'               :['agg_func ws "(" ws col_ref ws ")"'],
@@ -63,7 +63,7 @@ GRAMMAR_DICTIONARY = {
         'value'             :['("not" ws pos_value)', '("NOT" ws pos_value)', '(pos_value)'],
         'pos_value'         :['("ALL" ws query)', '("ANY" ws query)', 'number',
                               'boolean', 'col_ref', 'agg_results', '"NULL"'],
-        'agg_results'       :['(ws "("  ws "SELECT" ws distinct ws agg ws ' \
+        'agg_results'       :['(ws "("  ws "SELECT" ws distinct ws agg ws '
                               '"FROM" ws table_name ws where_clause ws ")" ws)',
                               '(ws "SELECT" ws distinct ws agg ws "FROM" ws table_name ws where_clause ws)'],
         'boolean'           :['"true"', '"false"'],
@@ -75,7 +75,10 @@ GRAMMAR_DICTIONARY = {
 KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"', '"IN"', '"LIKE"',
             '"IS"', '"BETWEEN"', '"AND"', '"ALL"', '"ANY"', '"NULL"', '"OR"', '"DISTINCT"']
 
-def format_action(nonterminal: str, right_hand_side: str, is_string=False, is_number=False) -> str:
+def format_action(nonterminal: str,
+                  right_hand_side: str,
+                  is_string: bool = False,
+                  is_number: bool = False) -> str:
     if right_hand_side.upper() in KEYWORDS:
         right_hand_side = right_hand_side.upper()
 
@@ -111,11 +114,8 @@ class SqlTableContext():
     def __init__(self,
                  all_tables: Dict[str, List[str]] = None,
                  tables_with_strings: Dict[str, List[str]] = None,
-                 database_directory: str = None,
-                 utterances: List[str] = None) -> None:
+                 database_directory: str = None) -> None:
         self.grammar_dictionary = deepcopy(GRAMMAR_DICTIONARY)
-        self.utterances = utterances
-        self.tokenizer = WordTokenizer()
         self.all_tables = all_tables
         self.tables_with_strings = tables_with_strings
         if database_directory:

@@ -466,7 +466,7 @@ class AtisSemanticParser(Model):
                 actions: List[List[ProductionRuleArray]],
                 linking_scores: torch.Tensor,
                 target_action_sequence: torch.LongTensor = None,
-                example_sql_queries: List[str] = None) -> Dict[str, torch.Tensor]:
+                sql_queries: List[str] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         We set up the initial state for the decoder, and pass that state off to either a DecoderTrainer,
@@ -493,7 +493,7 @@ class AtisSemanticParser(Model):
             A list of possibly valid action sequences, where each action is an index into the list
             of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
             sequence_length)``.
-        example_sql_queries : List[str], otpional (default=None)
+        sql_queries : List[str], otpional (default=None)
             A list of the SQL queries that are given during training or validation.
         """
         initial_info = self._get_initial_state_and_scores(utterance, world, actions, linking_scores)
@@ -530,12 +530,12 @@ class AtisSemanticParser(Model):
             best_final_states = self._beam_search.search(num_steps,
                                                          initial_state,
                                                          self._decoder_step,
-                                                         keep_final_unfinished_states=False)
+                                                         keep_final_unfinished_states=True)
             outputs['best_action_sequence'] = []
             outputs['debug_info'] = []
             outputs['entities'] = []
             outputs['logical_form'] = []
-            outputs['example_sql_query'] = []
+            outputs['sql_queries'] = []
             outputs['utterance'] = []
             outputs['tokenized_utterance'] = []
 
@@ -561,11 +561,11 @@ class AtisSemanticParser(Model):
                         similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
                         self._action_similarity(similarity.ratio())
 
-                    if example_sql_queries and example_sql_queries[i]:
+                    if sql_queries and sql_queries[i]:
                         # Since the query might hang, we run in another process and kill it if it
                         # takes too long.
                         process = Process(target=self._sql_result_match,
-                                          args=(predicted_sql_query, example_sql_queries[i]))
+                                          args=(predicted_sql_query, sql_queries[i]))
                         process.start()
 
                         # If the query has not finished in 10 seconds then we will proceed.
@@ -581,10 +581,10 @@ class AtisSemanticParser(Model):
                             denotation_correct = 0
 
                         self._denotation_accuracy(denotation_correct)
-                        outputs['example_sql_query'].append(example_sql_queries[i])
+                        outputs['sql_queries'].append(sql_queries[i])
 
                     outputs['utterance'].append(world[i].utterances[-1])
-                    outputs['tokenized_utterance'].append(world[i].tokenized_utterances[-1])
+                    outputs['tokenized_utterance'].append([token.text for token in world[i].tokenized_utterances[-1]])
                     outputs['entities'].append(world[i].entities)
                     outputs['best_action_sequence'].append(action_strings)
                     outputs['logical_form'].append(sqlparse.format(predicted_sql_query, reindent=True))
