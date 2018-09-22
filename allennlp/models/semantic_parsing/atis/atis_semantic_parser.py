@@ -49,11 +49,6 @@ class AtisSemanticParser(Model):
     add_action_bias : ``bool``, optional (default=True)
         If ``True``, we will learn a bias weight for each action that gets used when predicting
         that action, in addition to its embedding.
-    training_beam_size : ``int``, optional (default=None)
-        If given, we will use a constrained beam search of this size during training, so that we
-        use only the top ``training_beam_size`` action sequences according to the model in the MML
-        computation.  If this is ``None``, we will use all of the provided action sequences in the
-        MML computation.
     dropout : ``float``, optional (default=0)
         If greater than 0, we will apply dropout with this probability after all encoders (pytorch
         LSTMs do not apply dropout to their last layer).
@@ -127,6 +122,144 @@ class AtisSemanticParser(Model):
                                                        predict_start_type_separately=False,
                                                        add_action_bias=self._add_action_bias,
                                                        dropout=dropout)
+
+    @overrides
+    def forward(self,  # type: ignore
+                utterance: Dict[str, torch.LongTensor],
+                world: List[AtisWorld],
+                actions: List[List[ProductionRuleArray]],
+                linking_scores: torch.Tensor,
+                target_action_sequence: torch.LongTensor = None,
+                sql_queries: List[str] = None) -> Dict[str, torch.Tensor]:
+        # pylint: disable=arguments-differ
+        """
+        We set up the initial state for the decoder, and pass that state off to either a DecoderTrainer,
+        if we're training, or a BeamSearch for inference, if we're not.
+
+        Parameters
+        ----------
+        utterance : Dict[str, torch.LongTensor]
+            The output of ``TextField.as_array()`` applied on the utterance ``TextField``. This will
+            be passed through a ``TextFieldEmbedder`` and then through an encoder.
+        world : ``List[AtisWorld]``
+            We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
+            how ``MetadataField`` works, this gets passed to us as a ``List[AtisWorld]``,
+        actions : ``List[List[ProductionRuleArray]]``
+            A list of all possible actions for each ``World`` in the batch, indexed into a
+            ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
+            and use the embeddings to determine which action to take at each timestep in the
+            decoder.
+        linking_scores: ``torch.Tensor``
+            A matrix of the linking the utterance tokens and the entities. This is a binary matrix that
+            is deterministically generated where each entry indicates whether a token generated an entity.
+            This tensor has shape ``(batch_size, num_entities, num_utterance_tokens)``.
+        target_action_sequence : torch.Tensor, optional (default=None)
+            A list of possibly valid action sequences, where each action is an index into the list
+            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
+            sequence_length)``.
+        sql_queries : List[str], otpional (default=None)
+            A list of the SQL queries that are given during training or validation.
+        """
+        initial_state = self._get_initial_state(utterance, world, actions, linking_scores)
+        batch_size = linking_scores.shape[0] 
+
+        if target_action_sequence is not None:
+            # Remove the trailing dimension (from ListField[ListField[IndexField]]).
+            target_action_sequence = target_action_sequence.squeeze(-1)
+            target_mask = target_action_sequence != self._action_padding_index
+        else:
+            target_mask = None
+
+        if self.training:
+            return self._decoder_trainer.decode(initial_state,
+                                                self._decoder_step,
+                                                (target_action_sequence, target_mask))
+        else:
+            # TODO(kevin) Move some of this functionality to a separate method for computing validation outputs.
+            action_mapping = {}
+            for batch_index, batch_actions in enumerate(actions):
+                for action_index, action in enumerate(batch_actions):
+                    action_mapping[(batch_index, action_index)] = action[0]
+            outputs: Dict[str, Any] = {'action_mapping': action_mapping}
+            outputs['linking_scores'] = linking_scores
+            if target_action_sequence is not None:
+                outputs['loss'] = self._decoder_trainer.decode(initial_state,
+                                                               self._decoder_step,
+                                                               (target_action_sequence, target_mask))['loss']
+            num_steps = self._max_decoding_steps
+            # This tells the state to start keeping track of debug info, which we'll pass along in
+            # our output dictionary.
+            initial_state.debug_info = [[] for _ in range(batch_size)]
+            best_final_states = self._beam_search.search(num_steps,
+                                                         initial_state,
+                                                         self._decoder_step,
+                                                         keep_final_unfinished_states=False)
+            outputs['best_action_sequence'] = []
+            outputs['debug_info'] = []
+            outputs['entities'] = []
+            outputs['predicted_sql_query'] = []
+            outputs['sql_queries'] = []
+            outputs['utterance'] = []
+            outputs['tokenized_utterance'] = []
+
+            for i in range(batch_size):
+                # Decoding may not have terminated with any completed valid SQL queries, if `num_steps`
+                # isn't long enough (or if the model is not trained enough and gets into an
+                # infinite action loop).
+                if i not in best_final_states:
+                    self._action_sequence_accuracy.get_metric(0),
+                    self._denotation_accuracy.get_metric(0)
+                    self._valid_sql_query.get_metric(0)
+                    self._action_similarity.get_metric(0)
+                    continue
+
+                    best_action_indices = best_final_states[i][0].action_history[0]
+
+                    action_strings = [action_mapping[(i, action_index)]
+                                      for action_index in best_action_indices]
+                    predicted_sql_query = self.action_sequence_to_sql(action_strings)
+
+                if target_action_sequence is not None:
+                    # Use a Tensor, not a Variable, to avoid a memory leak.
+                    targets = target_action_sequence[i].data
+                    sequence_in_targets = 0
+                    sequence_in_targets = self._action_history_match(best_action_indices, targets)
+                    self._action_sequence_accuracy(sequence_in_targets)
+
+                    targets_list = [target.item() for target in targets[0]]
+                    similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
+                    self._action_similarity(similarity.ratio())
+
+                if sql_queries and sql_queries[i]:
+                    # Since the query might hang, we run in another process and kill it if it
+                    # takes too long.
+                    process = Process(target=self._sql_result_match,
+                                      args=(predicted_sql_query, sql_queries[i]))
+                    process.start()
+
+                    # If the query has not finished in 10 seconds then we will proceed.
+                    process.join(10)
+                    denotation_correct = process.exitcode # type: ignore
+
+                    if process.is_alive():
+                        logger.info("Evaluating query took over 10 seconds, skipping query")
+                        process.terminate()
+                        process.join()
+
+                    if denotation_correct is None:
+                        denotation_correct = 0
+
+                    self._denotation_accuracy(denotation_correct)
+                    outputs['sql_queries'].append(sql_queries[i])
+
+                    outputs['utterance'].append(world[i].utterances[-1])
+                    outputs['tokenized_utterance'].append([token.text
+                                                           for token in world[i].tokenized_utterances[-1]])
+                    outputs['entities'].append(world[i].entities)
+                    outputs['best_action_sequence'].append(action_strings)
+                    outputs['predicted_sql_query'].append(sqlparse.format(predicted_sql_query, reindent=True))
+                    outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
+            return outputs
 
     def _get_initial_state(self,
                            utterance: Dict[str, torch.LongTensor],
@@ -460,140 +593,4 @@ class AtisSemanticParser(Model):
         output_dict["predicted_actions"] = batch_action_info
         return output_dict
 
-    @overrides
-    def forward(self,  # type: ignore
-                utterance: Dict[str, torch.LongTensor],
-                world: List[AtisWorld],
-                actions: List[List[ProductionRuleArray]],
-                linking_scores: torch.Tensor,
-                target_action_sequence: torch.LongTensor = None,
-                sql_queries: List[str] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
-        """
-        We set up the initial state for the decoder, and pass that state off to either a DecoderTrainer,
-        if we're training, or a BeamSearch for inference, if we're not.
-
-        Parameters
-        ----------
-        utterance : Dict[str, torch.LongTensor]
-            The output of ``TextField.as_array()`` applied on the utterance ``TextField``. This will
-            be passed through a ``TextFieldEmbedder`` and then through an encoder.
-        world : ``List[AtisWorld]``
-            We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
-            how ``MetadataField`` works, this gets passed to us as a ``List[AtisWorld]``,
-        actions : ``List[List[ProductionRuleArray]]``
-            A list of all possible actions for each ``World`` in the batch, indexed into a
-            ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
-            and use the embeddings to determine which action to take at each timestep in the
-            decoder.
-        linking_scores: ``torch.Tensor``
-            A matrix of the linking the utterance tokens and the entities. This is a binary matrix that
-            is deterministically generated where each entry indicates whether a token generated an entity.
-            This tensor has shape ``(batch_size, num_entities, num_utterance_tokens)``.
-        target_action_sequence : torch.Tensor, optional (default=None)
-            A list of possibly valid action sequences, where each action is an index into the list
-            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
-            sequence_length)``.
-        sql_queries : List[str], otpional (default=None)
-            A list of the SQL queries that are given during training or validation.
-        """
-        initial_state = self._get_initial_state(utterance, world, actions, linking_scores)
-        batch_size = linking_scores.shape[0] 
-
-        if target_action_sequence is not None:
-            # Remove the trailing dimension (from ListField[ListField[IndexField]]).
-            target_action_sequence = target_action_sequence.squeeze(-1)
-            target_mask = target_action_sequence != self._action_padding_index
-        else:
-            target_mask = None
-
-        if self.training:
-            return self._decoder_trainer.decode(initial_state,
-                                                self._decoder_step,
-                                                (target_action_sequence, target_mask))
-        else:
-            # TODO(kevin) Move some of this functionality to a separate method for computing validation outputs.
-            action_mapping = {}
-            for batch_index, batch_actions in enumerate(actions):
-                for action_index, action in enumerate(batch_actions):
-                    action_mapping[(batch_index, action_index)] = action[0]
-            outputs: Dict[str, Any] = {'action_mapping': action_mapping}
-            outputs['linking_scores'] = linking_scores
-            if target_action_sequence is not None:
-                outputs['loss'] = self._decoder_trainer.decode(initial_state,
-                                                               self._decoder_step,
-                                                               (target_action_sequence, target_mask))['loss']
-            num_steps = self._max_decoding_steps
-            # This tells the state to start keeping track of debug info, which we'll pass along in
-            # our output dictionary.
-            initial_state.debug_info = [[] for _ in range(batch_size)]
-            best_final_states = self._beam_search.search(num_steps,
-                                                         initial_state,
-                                                         self._decoder_step,
-                                                         keep_final_unfinished_states=False)
-            outputs['best_action_sequence'] = []
-            outputs['debug_info'] = []
-            outputs['entities'] = []
-            outputs['predicted_sql_query'] = []
-            outputs['sql_queries'] = []
-            outputs['utterance'] = []
-            outputs['tokenized_utterance'] = []
-
-            for i in range(batch_size):
-                # Decoding may not have terminated with any completed valid SQL queries, if `num_steps`
-                # isn't long enough (or if the model is not trained enough and gets into an
-                # infinite action loop).
-                if i not in best_final_states:
-                    self._action_sequence_accuracy.get_metric(0),
-                    self._denotation_accuracy.get_metric(0)
-                    self._valid_sql_query.get_metric(0)
-                    self._action_similarity.get_metric(0)
-                    continue
-
-                    best_action_indices = best_final_states[i][0].action_history[0]
-
-                    action_strings = [action_mapping[(i, action_index)]
-                                      for action_index in best_action_indices]
-                    predicted_sql_query = self.action_sequence_to_sql(action_strings)
-
-                if target_action_sequence is not None:
-                    # Use a Tensor, not a Variable, to avoid a memory leak.
-                    targets = target_action_sequence[i].data
-                    sequence_in_targets = 0
-                    sequence_in_targets = self._action_history_match(best_action_indices, targets)
-                    self._action_sequence_accuracy(sequence_in_targets)
-
-                    targets_list = [target.item() for target in targets[0]]
-                    similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
-                    self._action_similarity(similarity.ratio())
-
-                if sql_queries and sql_queries[i]:
-                    # Since the query might hang, we run in another process and kill it if it
-                    # takes too long.
-                    process = Process(target=self._sql_result_match,
-                                      args=(predicted_sql_query, sql_queries[i]))
-                    process.start()
-
-                    # If the query has not finished in 10 seconds then we will proceed.
-                    process.join(10)
-                    denotation_correct = process.exitcode # type: ignore
-
-                    if process.is_alive():
-                        logger.info("Evaluating query took over 10 seconds, skipping query")
-                        process.terminate()
-                        process.join()
-
-                    if denotation_correct is None:
-                        denotation_correct = 0
-
-                    self._denotation_accuracy(denotation_correct)
-                    outputs['sql_queries'].append(sql_queries[i])
-
-                    outputs['utterance'].append(world[i].utterances[-1])
-                    outputs['tokenized_utterance'].append([token.text
-                                                           for token in world[i].tokenized_utterances[-1]])
-                    outputs['entities'].append(world[i].entities)
-                    outputs['best_action_sequence'].append(action_strings)
-                    outputs['predicted_sql_query'].append(sqlparse.format(predicted_sql_query, reindent=True))
-                    outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
-            return outputs
+    

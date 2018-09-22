@@ -25,7 +25,6 @@
     "decoder_beam_search": {
     "beam_size": 10
     },
-    "training_beam_size": 5,
     "max_decoding_steps": 200,
     "input_attention": {"type": "dot_product"},
     "dropout": 0.5,
