@@ -61,7 +61,7 @@ class AtisSemanticParser(Model):
         The vocabulary namespace to use for production rules.  The default corresponds to the
         default used in the dataset reader, so you likely don't need to modify this.
     database_file: ``str``, optional (default=/atis/atis.db)
-        The path of the SQLite database when evaluating logical forms. SQLite is disk based, so we need
+        The path of the SQLite database when evaluating SQL queries. SQLite is disk based, so we need
         the file location to connect to it.
     """
     def __init__(self,
@@ -89,11 +89,11 @@ class AtisSemanticParser(Model):
             self._dropout = lambda x: x
         self._rule_namespace = rule_namespace
         self._action_sequence_accuracy = Average()
-        self._has_logical_form = Average()
+        self._valid_sql_query= Average()
         self._action_similarity = Average()
         self._denotation_accuracy = Average()
 
-        # Initialize a cursor to our sqlite database, so we can execute logical forms for denotation accuracy.
+        # Initialize a cursor to our sqlite database, so we can execute SQL queries for denotation accuracy.
         self._database_file = database_file 
         self._connection = sqlite3.connect(self._database_file)
         self._cursor = self._connection.cursor()
@@ -283,6 +283,11 @@ class AtisSemanticParser(Model):
         return True
 
     def _sql_result_match(self, predicted_query: str, sql_query_labels: List[str]) -> int:
+        """
+        We evaluate here whether the predicted query and the query label evaluate to the
+        exact same table. This method is only called by the subprocess, so we just exit with
+        1 if it is correct and 0 otherwise.
+        """
         postprocessed_predicted_query = self._postprocess_query_sqlite(predicted_query)
 
         try:
@@ -311,28 +316,28 @@ class AtisSemanticParser(Model):
         """
         We track four metrics here:
 
-            1. dpd_acc, which is the percentage of the time that our best output action sequence is
-            in the set of action sequences provided by DPD.
+            1. exact_match, which is the percentage of the time that our best output action sequence
+            matches the SQL query exactly.
 
             2. denotation_acc, which is the percentage of examples where we get the correct
             denotation.  This is the typical "accuracy" metric, and it is what you should usually
             report in an experimental result.  You need to be careful, though, that you're
-            computing this on the full data, and not just the subset that has DPD output (make sure
-            you pass "keep_if_no_dpd=True" to the dataset reader, which we do for validation data,
+            computing this on the full data, and not just the subset that can be parsed. (make sure
+            you pass "keep_if_unparseable=True" to the dataset reader, which we do for validation data,
             but not training data).
 
-            3. lf_percent, which is the percentage of time that decoding actually produces a
-            finished logical form.  We might not produce a valid logical form if the decoder gets
-            into a repetitive loop, or we're trying to produce a super long logical form and run
+            3. valid_sql_query, which is the percentage of time that decoding actually produces a
+            valid SQL query.  We might not produce a valid valid SQL query if the decoder gets
+            into a repetitive loop, or we're trying to produce a super long SQL query and run
             out of time steps, or something.
 
             4. action_similarity, which is how similar the action sequence predicted is to the actual
-               action sequence. This is basically a soft measure of dpd_acc.
+               action sequence. This is basically a soft measure of exact_match.
         """
         return {
-                'dpd_acc': self._action_sequence_accuracy.get_metric(reset),
+                'exact_match': self._action_sequence_accuracy.get_metric(reset),
                 'denotation_acc': self._denotation_accuracy.get_metric(reset),
-                'lf_percent': self._has_logical_form.get_metric(reset),
+                'valid_sql_query': self._valid_sql_query.get_metric(reset),
                 'action_similarity': self._action_similarity.get_metric(reset)
                 }
 
@@ -425,10 +430,10 @@ class AtisSemanticParser(Model):
         """
         This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
         time, to finalize predictions.  This is (confusingly) a separate notion from the "decoder"
-        in "encoder/decoder", where that decoder logic lives in ``GrammarBasedState``.
+        in "encoder/decoder", where that decoder logic lives in ``TransitionFunction``.
 
         This method trims the output predictions to the first end symbol, replaces indices with
-        corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
+        corresponding tokens, and adds a field called ``predicted_actions`` to the ``output_dict``.
         """
         action_mapping = output_dict['action_mapping']
         best_actions = output_dict["best_action_sequence"]
@@ -484,8 +489,8 @@ class AtisSemanticParser(Model):
         linking_scores: ``torch.Tensor``
             A matrix of the linking the utterance tokens and the entities. This is a binary matrix that
             is deterministically generated where each entry indicates whether a token generated an entity.
-            This tensor has shape ``(num_entities, num_utterance_tokens)``.
-        target_action_sequences : torch.Tensor, optional (default=None)
+            This tensor has shape ``(batch_size, num_entities, num_utterance_tokens)``.
+        target_action_sequence : torch.Tensor, optional (default=None)
             A list of possibly valid action sequences, where each action is an index into the list
             of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
             sequence_length)``.
@@ -493,11 +498,7 @@ class AtisSemanticParser(Model):
             A list of the SQL queries that are given during training or validation.
         """
         initial_state = self._get_initial_state(utterance, world, actions, linking_scores)
-        batch_size = list(utterance.values())[0].size(0)
-        print('linkingscores')
-        print(linking_scores.shape())
-        print('target action seq')
-        print(target_action_sequences.shape())
+        batch_size = linking_scores.shape[0] 
 
         if target_action_sequence is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).
@@ -533,60 +534,66 @@ class AtisSemanticParser(Model):
             outputs['best_action_sequence'] = []
             outputs['debug_info'] = []
             outputs['entities'] = []
-            outputs['logical_form'] = []
+            outputs['predicted_sql_query'] = []
             outputs['sql_queries'] = []
             outputs['utterance'] = []
             outputs['tokenized_utterance'] = []
 
             for i in range(batch_size):
-                # Decoding may not have terminated with any completed logical forms, if `num_steps`
+                # Decoding may not have terminated with any completed valid SQL queries, if `num_steps`
                 # isn't long enough (or if the model is not trained enough and gets into an
                 # infinite action loop).
-                if i in best_final_states:
+                if i not in best_final_states:
+                    self._action_sequence_accuracy.get_metric(0),
+                    self._denotation_accuracy.get_metric(0)
+                    self._valid_sql_query.get_metric(0)
+                    self._action_similarity.get_metric(0)
+                    continue
+
                     best_action_indices = best_final_states[i][0].action_history[0]
 
                     action_strings = [action_mapping[(i, action_index)]
                                       for action_index in best_action_indices]
                     predicted_sql_query = self.action_sequence_to_sql(action_strings)
 
-                    if target_action_sequence is not None:
-                        # Use a Tensor, not a Variable, to avoid a memory leak.
-                        targets = target_action_sequence[i].data
-                        sequence_in_targets = 0
-                        sequence_in_targets = self._action_history_match(best_action_indices, targets)
-                        self._action_sequence_accuracy(sequence_in_targets)
+                if target_action_sequence is not None:
+                    # Use a Tensor, not a Variable, to avoid a memory leak.
+                    targets = target_action_sequence[i].data
+                    sequence_in_targets = 0
+                    sequence_in_targets = self._action_history_match(best_action_indices, targets)
+                    self._action_sequence_accuracy(sequence_in_targets)
 
-                        targets_list = [target.item() for target in targets[0]]
-                        similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
-                        self._action_similarity(similarity.ratio())
+                    targets_list = [target.item() for target in targets[0]]
+                    similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
+                    self._action_similarity(similarity.ratio())
 
-                    if sql_queries and sql_queries[i]:
-                        # Since the query might hang, we run in another process and kill it if it
-                        # takes too long.
-                        process = Process(target=self._sql_result_match,
-                                          args=(predicted_sql_query, sql_queries[i]))
-                        process.start()
+                if sql_queries and sql_queries[i]:
+                    # Since the query might hang, we run in another process and kill it if it
+                    # takes too long.
+                    process = Process(target=self._sql_result_match,
+                                      args=(predicted_sql_query, sql_queries[i]))
+                    process.start()
 
-                        # If the query has not finished in 10 seconds then we will proceed.
-                        process.join(10)
-                        denotation_correct = process.exitcode # type: ignore
+                    # If the query has not finished in 10 seconds then we will proceed.
+                    process.join(10)
+                    denotation_correct = process.exitcode # type: ignore
 
-                        if process.is_alive():
-                            logger.info("Evaluating query took over 10 seconds, skipping query")
-                            process.terminate()
-                            process.join()
+                    if process.is_alive():
+                        logger.info("Evaluating query took over 10 seconds, skipping query")
+                        process.terminate()
+                        process.join()
 
-                        if denotation_correct is None:
-                            denotation_correct = 0
+                    if denotation_correct is None:
+                        denotation_correct = 0
 
-                        self._denotation_accuracy(denotation_correct)
-                        outputs['sql_queries'].append(sql_queries[i])
+                    self._denotation_accuracy(denotation_correct)
+                    outputs['sql_queries'].append(sql_queries[i])
 
                     outputs['utterance'].append(world[i].utterances[-1])
                     outputs['tokenized_utterance'].append([token.text
                                                            for token in world[i].tokenized_utterances[-1]])
                     outputs['entities'].append(world[i].entities)
                     outputs['best_action_sequence'].append(action_strings)
-                    outputs['logical_form'].append(sqlparse.format(predicted_sql_query, reindent=True))
+                    outputs['predicted_sql_query'].append(sqlparse.format(predicted_sql_query, reindent=True))
                     outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
             return outputs
