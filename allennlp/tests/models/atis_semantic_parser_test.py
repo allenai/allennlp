@@ -1,5 +1,6 @@
 # pylint: disable=invalid-name,no-self-use,protected-access
 from allennlp.common.testing import ModelTestCase
+from allennlp.semparse.contexts.sql_table_context import action_sequence_to_sql
 
 class AtisSemanticParserTest(ModelTestCase):
     def setUp(self):
@@ -29,6 +30,6 @@ class AtisSemanticParserTest(ModelTestCase):
                            'col_ref -> ["city", ".", "city_code"]',
                            'distinct -> ["DISTINCT"]']
 
-        sql_query = self.model.action_sequence_to_sql(action_sequence)
+        sql_query = action_sequence_to_sql(action_sequence)
         assert sql_query == "( SELECT DISTINCT city . city_code , city . city_name " \
                             "FROM city WHERE ( city . city_name = 'BOSTON' ) ) ;"
