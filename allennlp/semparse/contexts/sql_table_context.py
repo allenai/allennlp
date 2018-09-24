@@ -14,6 +14,8 @@ from parsimonious.expressions import Sequence, OneOf, Literal
 from parsimonious.nodes import Node, NodeVisitor
 from parsimonious.grammar import Grammar
 
+from allennlp.common.file_utils import cached_path
+
 # This is the base definition of the SQL grammar in a simplified sort of
 # EBNF notation, and represented as a dictionary. The keys are the nonterminals and the values
 # are the possible expansions of the nonterminal where each element in the list is one possible expansion.
@@ -117,7 +119,7 @@ class SqlTableContext():
         self.all_tables = all_tables
         self.tables_with_strings = tables_with_strings
         if database_directory:
-            self.database_directory = database_directory
+            self.database_directory = cached_path(database_directory)
             self.connection = sqlite3.connect(self.database_directory)
             self.cursor = self.connection.cursor()
 

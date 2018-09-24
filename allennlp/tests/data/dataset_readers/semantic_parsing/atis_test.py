@@ -1,4 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
+from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers import AtisDatasetReader
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -7,8 +8,8 @@ from allennlp.semparse.worlds import AtisWorld
 class TestAtisReader(AllenNlpTestCase):
     def test_atis_read_from_file(self):
         data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "atis" / "sample.json"
-        database_directory = AllenNlpTestCase.FIXTURES_ROOT / "data" / "atis" / "atis.db"
-        reader = AtisDatasetReader(database_directory=str(database_directory))
+        database_file = cached_path("https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db")
+        reader = AtisDatasetReader(database_file=database_file)
 
         instances = list(reader.read(str(data_path)))
 

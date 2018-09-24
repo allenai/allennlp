@@ -8,6 +8,7 @@ import sqlparse
 from overrides import overrides
 import torch
 
+from allennlp.common.file_utils import cached_path
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
@@ -89,7 +90,7 @@ class AtisSemanticParser(Model):
         self._denotation_accuracy = Average()
 
         # Initialize a cursor to our sqlite database, so we can execute SQL queries for denotation accuracy.
-        self._database_file = database_file
+        self._database_file = cached_path(database_file)
         self._connection = sqlite3.connect(self._database_file)
         self._cursor = self._connection.cursor()
 

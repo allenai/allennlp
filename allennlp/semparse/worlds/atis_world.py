@@ -5,6 +5,7 @@ from nltk import ngrams
 
 from parsimonious.grammar import Grammar
 
+from allennlp.common.file_utils import cached_path
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
 from allennlp.semparse.contexts.sql_table_context import \
         SqlTableContext, SqlVisitor, format_action
@@ -66,7 +67,7 @@ class AtisWorld():
                                                  TABLES_WITH_STRINGS,
                                                  database_file) if database_file else None
         if database_file:
-            self.database_file = database_file
+            self.database_file = cached_path(database_file)
             self.connection = sqlite3.connect(self.database_file)
             self.cursor = self.connection.cursor()
 
