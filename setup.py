@@ -128,7 +128,8 @@ setup(name='allennlp',
           'responses>=0.7',
           'numpydoc==0.8.0',
           'conllu==0.11',
-          'parsimonious==0.8.0'
+          'parsimonious==0.8.0',
+          'sqlparse==0.2.4'
       ],
       scripts=["bin/allennlp"],
       setup_requires=setup_requirements,
