@@ -463,7 +463,7 @@ class AtisSemanticParser(Model):
             but not training data).
 
             3. valid_sql_query, which is the percentage of time that decoding actually produces a
-            valid SQL query.  We might not produce a valid valid SQL query if the decoder gets
+            valid SQL query.  We might not produce a valid SQL query if the decoder gets
             into a repetitive loop, or we're trying to produce a super long SQL query and run
             out of time steps, or something.
 
