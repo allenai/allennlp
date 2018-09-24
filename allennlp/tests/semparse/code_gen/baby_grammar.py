@@ -1,5 +1,6 @@
 
 from typing import Tuple, NamedTuple
+from allennlp.common.registrable import Registrable
 
 """
 A baby grammar to experiment with generating a parser specification
@@ -13,7 +14,7 @@ no more functionality than the base class. TODO(Mark): is this required?
 """
 
 class Box:
-    def __init__(self, height: int, width: int):
+    def __init__(self, height: int, width: int) -> None:
         self._height: int = height
         self._width: int = width
 
@@ -22,7 +23,6 @@ class Box:
 
     def height(self) -> int:
         return self._height
-
 
 
 def expand(x: Box, value: int) -> Box:
@@ -40,6 +40,7 @@ def add(x: int, y: int) -> int:
 def subtract(x: int, y: int) -> int:
     return x - y
 
+top_level_grammar = {expand, area, perimeter, subtract}
 
 examples = {
     "Please can you expand this box of size (2,3) by 5?": expand(Box(2,3), 5),
