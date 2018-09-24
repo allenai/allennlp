@@ -127,6 +127,7 @@ class QuarelSemanticParser(Model):
         if self._add_action_bias:
             self._action_biases = Embedding(num_embeddings=num_actions, embedding_dim=1)
 
+        self._embedding_dim = question_embedder.get_output_dim()
         self._neighbor_params = None
         self._use_entities = use_entities
         if self._use_entities and self._entity_encoder is not None:
@@ -138,7 +139,6 @@ class QuarelSemanticParser(Model):
         # entity_type stuff is irrelevant
         self._num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
         self._num_start_types = 1 # Hardcoded until we feed lf syntax into the model
-        self._embedding_dim = question_embedder.get_output_dim()
         self._entity_type_encoder_embedding = Embedding(self._num_entity_types, self._embedding_dim)
         self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
 
