@@ -423,6 +423,7 @@ class AtisSemanticParser(Model):
         exact same table. This method is only called by the subprocess, so we just exit with
         1 if it is correct and 0 otherwise.
         """
+        # TODO(kevin): move the SQL execution to an executor.
         postprocessed_predicted_query = self._postprocess_query_sqlite(predicted_query)
 
         try:
