@@ -19,10 +19,6 @@ tests = [ {"strings": ["film"], "numbers": [["1", "first"], ["1943", "1943"]], "
         {"strings": ["cherry"], "question": "who is ranked previous to don cherry?"} ]
 
 class TestTableQuestionContext(AllenNlpTestCase):
-    def test_extract_entities_from_question(self):
-        question = "did the bell system strike last longer in 1971 or 1983?"   
-        # Read sampled tests and see if our model can also recover these  
- 
     def test_read_from_file(self):
         tokenizer =  WordTokenizer(SpacyWordSplitter(pos_tags=True))
         for table in glob.glob('test_tables/*'):
