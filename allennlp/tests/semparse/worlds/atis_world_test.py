@@ -10,11 +10,11 @@ class TestAtisWorld(AllenNlpTestCase):
         super().setUp()
         test_filename = self.FIXTURES_ROOT / "data" / "atis" / "sample.json"
         self.data = open(test_filename).readlines()
-        self.database_directory = self.FIXTURES_ROOT / "data" / "atis" / "atis.db"
+        self.database_file = self.FIXTURES_ROOT / "data" / "atis" / "atis.db"
 
     def test_atis_global_actions(self): # pylint: disable=no-self-use
         world = AtisWorld(utterances=[],
-                          database_directory=str(self.database_directory))
+                          database_file=str(self.database_file))
         valid_actions = world.valid_actions
         assert set(valid_actions.keys()) == {'agg',
                                              'agg_func',
@@ -315,7 +315,7 @@ class TestAtisWorld(AllenNlpTestCase):
     def test_atis_local_actions(self): # pylint: disable=no-self-use
         # Check if the triggers activate correcty
         world = AtisWorld(["show me the flights from denver at 12 o'clock"],
-                          database_directory=str(self.database_directory))
+                          database_file=str(self.database_file))
 
         assert set(world.valid_actions['number']) == \
             {'number -> ["0"]',
@@ -325,7 +325,7 @@ class TestAtisWorld(AllenNlpTestCase):
 
         world = AtisWorld(["show me the flights from denver at 12 o'clock",
                            "show me the delta or united flights in afternoon"],
-                          database_directory=str(self.database_directory))
+                          database_file=str(self.database_file))
 
         assert set(world.valid_actions['number']) == \
                 {'number -> ["0"]',
@@ -337,7 +337,7 @@ class TestAtisWorld(AllenNlpTestCase):
                           may ninth from pittsburgh to atlanta leaving \
                           pittsburgh before 10 o'clock in morning 1991 \
                           august twenty sixth"],
-                          database_directory=str(self.database_directory))
+                          database_file=str(self.database_file))
 
         assert set(world.valid_actions['number']) == \
                 {'number -> ["0"]',
@@ -362,7 +362,7 @@ class TestAtisWorld(AllenNlpTestCase):
     def test_atis_simple_action_sequence(self): # pylint: disable=no-self-use
         world = AtisWorld([("give me all flights from boston to "
                             "philadelphia next week arriving after lunch")],
-                          database_directory=str(self.database_directory))
+                          database_file=str(self.database_file))
         action_sequence = world.get_action_sequence(("(SELECT DISTINCT city . city_code , city . city_name "
                                                      "FROM city WHERE ( city.city_name = 'BOSTON' ) );"))
         assert action_sequence == ['statement -> [query, ";"]',
@@ -461,7 +461,7 @@ class TestAtisWorld(AllenNlpTestCase):
                 'distinct -> [""]']
         world = AtisWorld([("give me all flights from boston to "
                             "philadelphia next week arriving after lunch")],
-                          database_directory=str(self.database_directory))
+                          database_file=str(self.database_file))
 
         action_sequence = world.get_action_sequence(("( SELECT DISTINCT flight.flight_id "
                                                      "FROM flight WHERE "
@@ -517,7 +517,7 @@ class TestAtisWorld(AllenNlpTestCase):
     def test_atis_long_action_sequence(self): # pylint: disable=no-self-use
         world = AtisWorld([("what is the earliest flight in morning "
                             "1993 june fourth from boston to pittsburgh")],
-                          database_directory=str(self.database_directory))
+                          database_file=str(self.database_file))
         action_sequence = world.get_action_sequence("( SELECT DISTINCT flight.flight_id "
                                                     "FROM flight "
                                                     "WHERE ( flight.departure_time = ( "
@@ -727,7 +727,7 @@ class TestAtisWorld(AllenNlpTestCase):
         for utterance_idx in range(len(line['interaction'])):
             world = AtisWorld([interaction['utterance'] for
                                interaction in line['interaction'][:utterance_idx+1]],
-                              database_directory=str(self.database_directory))
+                              database_file=str(self.database_file))
             action_sequence = world.get_action_sequence(line['interaction'][utterance_idx]['sql'])
             assert action_sequence is not None
 

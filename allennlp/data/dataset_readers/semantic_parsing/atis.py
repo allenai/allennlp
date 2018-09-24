@@ -154,9 +154,8 @@ class AtisDatasetReader(DatasetReader):
                 for production_rule in action_sequence:
                     index_fields.append(IndexField(action_map[production_rule], action_field))
 
-                action_sequence_field: List[Field] = []
-                action_sequence_field.append(ListField(index_fields))
-                fields['target_action_sequence'] = ListField(action_sequence_field)
+                action_sequence_field = ListField(index_fields)
+                fields['target_action_sequence'] = action_sequence_field
             else:
                 # If we are given a SQL query, but we are unable to parse it, then we will skip it.
                 return None

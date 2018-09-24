@@ -83,13 +83,13 @@ class AtisSemanticParser(Model):
         else:
             self._dropout = lambda x: x
         self._rule_namespace = rule_namespace
-        self._action_sequence_accuracy = Average()
-        self._valid_sql_query= Average()
+        self._exact_match = Average()
+        self._valid_sql_query = Average()
         self._action_similarity = Average()
         self._denotation_accuracy = Average()
 
         # Initialize a cursor to our sqlite database, so we can execute SQL queries for denotation accuracy.
-        self._database_file = database_file 
+        self._database_file = database_file
         self._connection = sqlite3.connect(self._database_file)
         self._cursor = self._connection.cursor()
 
@@ -154,15 +154,14 @@ class AtisSemanticParser(Model):
             is deterministically generated where each entry indicates whether a token generated an entity.
             This tensor has shape ``(batch_size, num_entities, num_utterance_tokens)``.
         target_action_sequence : torch.Tensor, optional (default=None)
-            A list of possibly valid action sequences, where each action is an index into the list
-            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
-            sequence_length)``.
-        sql_queries : List[str], otpional (default=None)
+            The action sequence for the correct action sequence, where each action is an index into the list
+            of possible actions.  This tensor has shape ``(batch_size, sequence_length, 1)``. We remove the
+            trailing dimension.
+        sql_queries : List[str], optional (default=None)
             A list of the SQL queries that are given during training or validation.
         """
         initial_state = self._get_initial_state(utterance, world, actions, linking_scores)
-        batch_size = linking_scores.shape[0] 
-
+        batch_size = linking_scores.shape[0]
         if target_action_sequence is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).
             target_action_sequence = target_action_sequence.squeeze(-1)
@@ -171,9 +170,11 @@ class AtisSemanticParser(Model):
             target_mask = None
 
         if self.training:
+            # target_action_sequence is of shape (batch_size, 1, sequence_length) here after we unsqueeze it for
+            # the MML trainer.
             return self._decoder_trainer.decode(initial_state,
                                                 self._decoder_step,
-                                                (target_action_sequence, target_mask))
+                                                (target_action_sequence.unsqueeze(1), target_mask.unsqueeze(1)))
         else:
             # TODO(kevin) Move some of this functionality to a separate method for computing validation outputs.
             action_mapping = {}
@@ -185,7 +186,8 @@ class AtisSemanticParser(Model):
             if target_action_sequence is not None:
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
                                                                self._decoder_step,
-                                                               (target_action_sequence, target_mask))['loss']
+                                                               (target_action_sequence.unsqueeze(1),
+                                                                target_mask.unsqueeze(1)))['loss']
             num_steps = self._max_decoding_steps
             # This tells the state to start keeping track of debug info, which we'll pass along in
             # our output dictionary.
@@ -207,27 +209,26 @@ class AtisSemanticParser(Model):
                 # isn't long enough (or if the model is not trained enough and gets into an
                 # infinite action loop).
                 if i not in best_final_states:
-                    self._action_sequence_accuracy.get_metric(0),
-                    self._denotation_accuracy.get_metric(0)
-                    self._valid_sql_query.get_metric(0)
-                    self._action_similarity.get_metric(0)
+                    self._exact_match(0)
+                    self._denotation_accuracy(0)
+                    self._valid_sql_query(0)
+                    self._action_similarity(0)
                     continue
 
-                    best_action_indices = best_final_states[i][0].action_history[0]
+                best_action_indices = best_final_states[i][0].action_history[0]
 
-                    action_strings = [action_mapping[(i, action_index)]
-                                      for action_index in best_action_indices]
-                    predicted_sql_query = self.action_sequence_to_sql(action_strings)
+                action_strings = [action_mapping[(i, action_index)]
+                                  for action_index in best_action_indices]
+                predicted_sql_query = self.action_sequence_to_sql(action_strings)
 
                 if target_action_sequence is not None:
                     # Use a Tensor, not a Variable, to avoid a memory leak.
                     targets = target_action_sequence[i].data
                     sequence_in_targets = 0
                     sequence_in_targets = self._action_history_match(best_action_indices, targets)
-                    self._action_sequence_accuracy(sequence_in_targets)
+                    self._exact_match(sequence_in_targets)
 
-                    targets_list = [target.item() for target in targets[0]]
-                    similarity = difflib.SequenceMatcher(None, best_action_indices, targets_list)
+                    similarity = difflib.SequenceMatcher(None, best_action_indices, targets)
                     self._action_similarity(similarity.ratio())
 
                 if sql_queries and sql_queries[i]:
@@ -374,12 +375,12 @@ class AtisSemanticParser(Model):
     def _action_history_match(predicted: List[int], targets: torch.LongTensor) -> int:
         # TODO(mattg): this could probably be moved into a FullSequenceMatch metric, or something.
         # Check if target is big enough to cover prediction (including start/end symbols)
-        if len(predicted) > targets.size(1):
+        if len(predicted) > targets.size(0):
             return 0
         predicted_tensor = targets.new_tensor(predicted)
-        targets_trimmed = targets[:, :len(predicted)]
+        targets_trimmed = targets[:len(predicted)]
         # Return 1 if the predicted sequence is anywhere in the list of targets.
-        return torch.max(torch.min(targets_trimmed.eq(predicted_tensor), dim=1)[0]).item()
+        return predicted_tensor.equal(targets_trimmed)
 
     @staticmethod
     def _postprocess_query_sqlite(query: str):
@@ -468,7 +469,7 @@ class AtisSemanticParser(Model):
                action sequence. This is basically a soft measure of exact_match.
         """
         return {
-                'exact_match': self._action_sequence_accuracy.get_metric(reset),
+                'exact_match': self._exact_match.get_metric(reset),
                 'denotation_acc': self._denotation_accuracy.get_metric(reset),
                 'valid_sql_query': self._valid_sql_query.get_metric(reset),
                 'action_similarity': self._action_similarity.get_metric(reset)
@@ -592,5 +593,3 @@ class AtisSemanticParser(Model):
             batch_action_info.append(instance_action_info)
         output_dict["predicted_actions"] = batch_action_info
         return output_dict
-
-    
