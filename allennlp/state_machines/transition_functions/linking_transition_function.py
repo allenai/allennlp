@@ -121,7 +121,10 @@ class LinkingTransitionFunction(BasicTransitionFunction):
                 # The `output_action_embeddings` tensor gets used later as the input to the next
                 # decoder step.  For linked actions, we don't have any action embedding, so we use
                 # the entity type instead.
-                output_action_embeddings = type_embeddings
+                if output_action_embeddings is not None:
+                    output_action_embeddings = torch.cat([output_action_embeddings, type_embeddings], dim=0)
+                else:
+                    output_action_embeddings = type_embeddings
 
                 if self._mixture_feedforward is not None:
                     # The linked and global logits are combined with a mixture weight to prevent the
@@ -130,15 +133,16 @@ class LinkingTransitionFunction(BasicTransitionFunction):
                     mixture_weight = self._mixture_feedforward(hidden_state[group_index])
                     mix1 = torch.log(mixture_weight)
                     mix2 = torch.log(1 - mixture_weight)
-                    
+
                     entity_action_probs = torch.nn.functional.log_softmax(linked_action_logits, dim=-1) + mix1
-                    if embedded_action_logits:
-                        embedded_action_probs = torch.nn.functional.log_softmax(embedded_action_logits, dim=-1) + mix2
+                    if embedded_action_logits is not None:
+                        embedded_action_probs = torch.nn.functional.log_softmax(embedded_action_logits,
+                                                                                dim=-1) + mix2
                         current_log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=-1)
                     else:
                         current_log_probs = entity_action_probs
                 else:
-                    if embedded_action_logits:
+                    if embedded_action_logits is not None:
                         action_logits = torch.cat([embedded_action_logits, linked_action_logits], dim=-1)
                     else:
                         action_logits = linked_action_logits

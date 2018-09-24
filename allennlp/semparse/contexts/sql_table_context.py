@@ -94,6 +94,24 @@ def format_action(nonterminal: str,
         child_strings = [tok.upper() if tok.upper() in KEYWORDS else tok for tok in child_strings]
         return f"{nonterminal} -> [{', '.join(child_strings)}]"
 
+def action_sequence_to_sql(action_sequences: List[str]) -> str:
+    # Convert an action sequence like ['statement -> [query, ";"]', ...] to the
+    # SQL string.
+    query = []
+    for action in action_sequences:
+        nonterminal, right_hand_side = action.split(' -> ')
+        right_hand_side_tokens = right_hand_side[1:-1].split(', ')
+        if nonterminal == 'statement':
+            query.extend(right_hand_side_tokens)
+        else:
+            for query_index, token in reversed(list(enumerate(query))):
+                if token == nonterminal:
+                    query = query[:query_index] + \
+                            right_hand_side_tokens + \
+                            query[query_index + 1:]
+                    break
+    return ' '.join([token.strip('"') for token in query])
+
 class SqlTableContext():
     """
     A ``SqlTableContext`` represents the SQL context with grammar of SQL and the valid actions
@@ -107,26 +125,26 @@ class SqlTableContext():
     tables_with_strings: ``Dict[str, List[str]]``
         A dictionary representing the SQL tables that we want to generate strings for. The keys are the
         names of the tables that map to lists of the table's column names.
-    database_directory : ``str``, optional
+    database_file : ``str``, optional
         The directory to find the sqlite database file. We query the sqlite database to find the strings
         that are allowed.
     """
     def __init__(self,
                  all_tables: Dict[str, List[str]] = None,
                  tables_with_strings: Dict[str, List[str]] = None,
-                 database_directory: str = None) -> None:
+                 database_file: str = None) -> None:
         self.grammar_dictionary = deepcopy(GRAMMAR_DICTIONARY)
         self.all_tables = all_tables
         self.tables_with_strings = tables_with_strings
-        if database_directory:
-            self.database_directory = cached_path(database_directory)
-            self.connection = sqlite3.connect(self.database_directory)
+        if database_file:
+            self.database_file = cached_path(database_file)
+            self.connection = sqlite3.connect(self.database_file)
             self.cursor = self.connection.cursor()
 
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)
         self.valid_actions: Dict[str, List[str]] = self.initialize_valid_actions()
-        if database_directory:
+        if database_file:
             self.connection.close()
 
     def initialize_valid_actions(self) -> Dict[str, List[str]]:

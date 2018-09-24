@@ -17,6 +17,7 @@ from allennlp.modules import Attention, Seq2SeqEncoder, TextFieldEmbedder, \
         Embedding
 from allennlp.nn import util
 from allennlp.semparse.worlds import AtisWorld
+from allennlp.semparse.contexts.sql_table_context import action_sequence_to_sql
 from allennlp.state_machines.states import GrammarBasedState
 from allennlp.state_machines.transition_functions.linking_transition_function import LinkingTransitionFunction
 from allennlp.state_machines import BeamSearch
@@ -112,17 +113,16 @@ class AtisSemanticParser(Model):
         torch.nn.init.normal_(self._first_attended_utterance)
 
         self._num_entity_types = 2  # TODO(kevin): get this in a more principled way somehow?
-        self._embedding_dim = utterance_embedder.get_output_dim()
         self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
 
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
-        self._decoder_step = LinkingTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
-                                                       action_embedding_dim=action_embedding_dim,
-                                                       input_attention=input_attention,
-                                                       predict_start_type_separately=False,
-                                                       add_action_bias=self._add_action_bias,
-                                                       dropout=dropout)
+        self._transition_function = LinkingTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
+                                                              action_embedding_dim=action_embedding_dim,
+                                                              input_attention=input_attention,
+                                                              predict_start_type_separately=False,
+                                                              add_action_bias=self._add_action_bias,
+                                                              dropout=dropout)
 
     @overrides
     def forward(self,  # type: ignore
@@ -174,7 +174,7 @@ class AtisSemanticParser(Model):
             # target_action_sequence is of shape (batch_size, 1, sequence_length) here after we unsqueeze it for
             # the MML trainer.
             return self._decoder_trainer.decode(initial_state,
-                                                self._decoder_step,
+                                                self._transition_function,
                                                 (target_action_sequence.unsqueeze(1), target_mask.unsqueeze(1)))
         else:
             # TODO(kevin) Move some of this functionality to a separate method for computing validation outputs.
@@ -186,7 +186,7 @@ class AtisSemanticParser(Model):
             outputs['linking_scores'] = linking_scores
             if target_action_sequence is not None:
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
-                                                               self._decoder_step,
+                                                               self._transition_function,
                                                                (target_action_sequence.unsqueeze(1),
                                                                 target_mask.unsqueeze(1)))['loss']
             num_steps = self._max_decoding_steps
@@ -195,7 +195,7 @@ class AtisSemanticParser(Model):
             initial_state.debug_info = [[] for _ in range(batch_size)]
             best_final_states = self._beam_search.search(num_steps,
                                                          initial_state,
-                                                         self._decoder_step,
+                                                         self._transition_function,
                                                          keep_final_unfinished_states=False)
             outputs['best_action_sequence'] = []
             outputs['debug_info'] = []
@@ -220,7 +220,7 @@ class AtisSemanticParser(Model):
 
                 action_strings = [action_mapping[(i, action_index)]
                                   for action_index in best_action_indices]
-                predicted_sql_query = self.action_sequence_to_sql(action_strings)
+                predicted_sql_query = action_sequence_to_sql(action_strings)
 
                 if target_action_sequence is not None:
                     # Use a Tensor, not a Variable, to avoid a memory leak.
@@ -387,29 +387,12 @@ class AtisSemanticParser(Model):
     def _postprocess_query_sqlite(query: str):
         # The dialect of SQL that SQLite takes is not exactly the same as the labeled data.
         # We strip off the parentheses that surround the entire query here.
+        # TODO(kevin): also move this to the SQL executor.
         query = query.strip()
         if query.startswith('('):
             return query[1:query.rfind(')')] + ';'
         return query
 
-    @staticmethod
-    def action_sequence_to_sql(action_sequences: List[str]) -> str:
-        # Convert an action sequence like ['statement -> [query, ";"]', ...] to the
-        # SQL string.
-        query = []
-        for action in action_sequences:
-            nonterminal, right_hand_side = action.split(' -> ')
-            right_hand_side_tokens = right_hand_side[1:-1].split(', ')
-            if nonterminal == 'statement':
-                query.extend(right_hand_side_tokens)
-            else:
-                for query_index, token in reversed(list(enumerate(query))):
-                    if token == nonterminal:
-                        query = query[:query_index] + \
-                                right_hand_side_tokens + \
-                                query[query_index + 1:]
-                        break
-        return ' '.join([token.strip('"') for token in query])
 
     @staticmethod
     def is_nonterminal(token: str):
@@ -468,7 +451,7 @@ class AtisSemanticParser(Model):
             out of time steps, or something.
 
             4. action_similarity, which is how similar the action sequence predicted is to the actual
-               action sequence. This is basically a soft measure of exact_match.
+            action sequence. This is basically a soft measure of exact_match.
         """
         return {
                 'exact_match': self._exact_match.get_metric(reset),

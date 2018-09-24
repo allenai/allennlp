@@ -71,7 +71,6 @@ class AtisWorld():
             self.connection = sqlite3.connect(self.database_file)
             self.cursor = self.connection.cursor()
 
-        self.grammar_dictionary = self.sql_table_context.grammar_dictionary
 
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
@@ -84,8 +83,9 @@ class AtisWorld():
         # This has shape (num_entities, num_utterance_tokens).
         self.linking_scores: numpy.ndarray = linking_scores
         self.entities: List[str] = entities
-        self.grammar_str: str = self.get_grammar_str()
-        self.grammar_with_context: Grammar = Grammar(self.grammar_str)
+        self.grammar_dictionary = self.update_grammar_dictionary()
+        self.grammar_string: str = self.get_grammar_string()
+        self.grammar_with_context: Grammar = Grammar(self.grammar_string)
 
         if database_file:
             self.connection.close()
@@ -217,14 +217,13 @@ class AtisWorld():
             dates.extend(get_date_from_utterance(tokenized_utterance))
         return dates
 
-    def get_grammar_str(self) -> str:
+    def update_grammar_dictionary(self) -> Dict[str, List[str]]:
         """
-        Generate a string that can be used to instantiate a ``Grammar`` object. The string is a sequence
-        of rules that define the grammar. We modify the ``grammar_dictionary`` with additional constraints
+        We modify the ``grammar_dictionary`` with additional constraints
         we want for the ATIS dataset. We then add numbers to the grammar dictionary. The strings in the
-        database are already added in by the ``SqlTableContext``. Finally, we construct a string from the
-        ``grammar_dictionary``.
+        database are already added in by the ``SqlTableContext``.
         """
+        self.grammar_dictionary = self.sql_table_context.grammar_dictionary
         if self.dates:
             year_binary_expression = f'("date_day" ws "." ws "year" ws binaryop ws "{self.dates[0].year}")'
             self.grammar_dictionary['biexpr'].append(year_binary_expression)
@@ -253,7 +252,13 @@ class AtisWorld():
         time_range_end = sorted([value[1] for key, value in self.linked_entities['number'].items()
                                  if value[0] == 'time_range_end'], reverse=True)
         self.grammar_dictionary['time_range_end'] = [f'"{time}"' for time in time_range_end]
+        return self.grammar_dictionary
 
+    def get_grammar_string(self) -> str:
+        """
+        Generate a string that can be used to instantiate a ``Grammar`` object. The string is a sequence
+        of rules that define the grammar.
+        """
         return '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
                           for nonterminal, right_hand_side in self.grammar_dictionary.items()])
 
@@ -299,5 +304,5 @@ class AtisWorld():
             return all([self.valid_actions == other.valid_actions,
                         numpy.array_equal(self.linking_scores, other.linking_scores),
                         self.utterances == other.utterances,
-                        self.grammar_str == other.grammar_str])
+                        self.grammar_string == other.grammar_string])
         return False
