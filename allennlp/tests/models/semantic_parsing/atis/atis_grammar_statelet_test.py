@@ -11,14 +11,14 @@ from allennlp.semparse.worlds import AtisWorld
 
 class AtisGrammarStateletTest(AllenNlpTestCase):
     def setUp(self):
-        self.database_directory = self.FIXTURES_ROOT / "data" / "atis" / "atis.db"
+        self.database_file = "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
         super().setUp()
 
     def test_atis_grammar_statelet(self):
         valid_actions = None
         world = AtisWorld([("give me all flights from boston to "
                             "philadelphia next week arriving after lunch")],
-                           database_directory=str(self.database_directory))
+                           database_file=self.database_file)
 
         action_seq = ['statement -> [query, ";"]',
                       'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
