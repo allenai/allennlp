@@ -39,6 +39,7 @@ class WikiTablesMmlSemanticParserTest(ModelTestCase):
         if self.should_remove_root_sempre_grammar and os.path.exists(self.module_root_grammar_path):
             os.remove(self.module_root_grammar_path)
 
+    @flaky
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 

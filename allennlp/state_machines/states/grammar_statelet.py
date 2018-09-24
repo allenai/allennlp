@@ -61,18 +61,23 @@ class GrammarStatelet:
         a non-terminal that needs to be added to the non-terminal stack.  You can use
         ``type_declaraction.is_nonterminal`` here, or write your own function if that one doesn't
         work for your domain.
+    reverse_productions: ``bool``
+        A flag that reverse the production rules when True. If the production rules are reversed, then
+        the first non-terminal in the production will be popped off the stack.
     """
     def __init__(self,
                  nonterminal_stack: List[str],
                  lambda_stacks: Dict[Tuple[str, str], List[str]],
                  valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]],
                  context_actions: Dict[str, Tuple[torch.Tensor, torch.Tensor, int]],
-                 is_nonterminal: Callable[[str], bool]) -> None:
+                 is_nonterminal: Callable[[str], bool],
+                 reverse_productions: bool = True) -> None:
         self._nonterminal_stack = nonterminal_stack
         self._lambda_stacks = lambda_stacks
         self._valid_actions = valid_actions
         self._context_actions = context_actions
         self._is_nonterminal = is_nonterminal
+        self._reverse_productions = reverse_productions
 
     def is_finished(self) -> bool:
         """
@@ -113,9 +118,10 @@ class GrammarStatelet:
 
         This will update the non-terminal stack and the context-dependent actions.  Updating the
         non-terminal stack involves popping the non-terminal that was expanded off of the stack,
-        then pushing on any non-terminals in the production rule back on the stack.  We push the
-        non-terminals on in `reverse` order, so that the first non-terminal in the production rule
-        gets popped off the stack first.
+        then pushing on any non-terminals in the production rule back on the stack.
+
+        If ``self._reverse_production`` is set to True then we push the non-terminals on in `reverse` order,
+        which means that the first non-terminal in the production rule gets popped off the stack first.
 
         For example, if our current ``nonterminal_stack`` is ``["r", "<e,r>", "d"]``, and
         ``action`` is ``d -> [<e,d>, e]``, the resulting stack will be ``["r", "<e,r>", "e",
@@ -148,7 +154,10 @@ class GrammarStatelet:
             lambda_type = left_side[1]
             new_lambda_stacks[(lambda_type, lambda_variable)] = []
 
-        for production in reversed(productions):
+        if self._reverse_productions:
+            productions = list(reversed(productions))
+
+        for production in productions:
             if self._is_nonterminal(production):
                 new_stack.append(production)
                 for lambda_stack in new_lambda_stacks.values():
@@ -162,7 +171,8 @@ class GrammarStatelet:
                                lambda_stacks=new_lambda_stacks,
                                valid_actions=self._valid_actions,
                                context_actions=self._context_actions,
-                               is_nonterminal=self._is_nonterminal)
+                               is_nonterminal=self._is_nonterminal,
+                               reverse_productions=self._reverse_productions)
 
     @staticmethod
     def _get_productions_from_string(production_string: str) -> List[str]:
