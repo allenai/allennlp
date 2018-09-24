@@ -101,9 +101,9 @@ class LinkingTransitionFunction(BasicTransitionFunction):
             predicted_action_embedding = predicted_action_embeddings[group_index]
             embedded_actions: List[int] = []
 
-            output_action_embeddings = predicted_action_embeddings.new_tensor([], dtype=torch.float)
-            embedded_action_logits = predicted_action_embeddings.new_tensor([], dtype=torch.float)
-            current_log_probs = predicted_action_embeddings.new_tensor([0], dtype=torch.float)
+            output_action_embeddings = None
+            embedded_action_logits = None
+            current_log_probs = None
 
             if 'global' in instance_actions:
                 action_embeddings, output_action_embeddings, embedded_actions = instance_actions['global']
@@ -121,7 +121,7 @@ class LinkingTransitionFunction(BasicTransitionFunction):
                 # The `output_action_embeddings` tensor gets used later as the input to the next
                 # decoder step.  For linked actions, we don't have any action embedding, so we use
                 # the entity type instead.
-                output_action_embeddings = torch.cat([output_action_embeddings, type_embeddings], dim=0)
+                output_action_embeddings = type_embeddings
 
                 if self._mixture_feedforward is not None:
                     # The linked and global logits are combined with a mixture weight to prevent the
@@ -130,12 +130,18 @@ class LinkingTransitionFunction(BasicTransitionFunction):
                     mixture_weight = self._mixture_feedforward(hidden_state[group_index])
                     mix1 = torch.log(mixture_weight)
                     mix2 = torch.log(1 - mixture_weight)
-
+                    
                     entity_action_probs = torch.nn.functional.log_softmax(linked_action_logits, dim=-1) + mix1
-                    embedded_action_probs = torch.nn.functional.log_softmax(embedded_action_logits, dim=-1) + mix2
-                    current_log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=-1)
+                    if embedded_action_logits:
+                        embedded_action_probs = torch.nn.functional.log_softmax(embedded_action_logits, dim=-1) + mix2
+                        current_log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=-1)
+                    else:
+                        current_log_probs = entity_action_probs
                 else:
-                    action_logits = torch.cat([embedded_action_logits, linked_action_logits], dim=-1)
+                    if embedded_action_logits:
+                        action_logits = torch.cat([embedded_action_logits, linked_action_logits], dim=-1)
+                    else:
+                        action_logits = linked_action_logits
                     current_log_probs = torch.nn.functional.log_softmax(action_logits, dim=-1)
             else:
                 action_logits = embedded_action_logits
