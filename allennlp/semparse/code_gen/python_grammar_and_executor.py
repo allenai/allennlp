@@ -116,6 +116,7 @@ class Inspector:
                                  functions: List[GrammarFunction],
                                  classes: List[GrammarClass]) -> Grammar:
         
+
         all_base_types = set()
         for x in functions + classes:
             all_base_types.update(x.get_all_types())
