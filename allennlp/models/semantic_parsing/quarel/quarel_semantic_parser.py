@@ -127,10 +127,12 @@ class QuarelSemanticParser(Model):
         if self._add_action_bias:
             self._action_biases = Embedding(num_embeddings=num_actions, embedding_dim=1)
 
+        self._neighbor_params = None
         self._use_entities = use_entities
         if self._use_entities and self._entity_encoder is not None:
             check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
                                    "entity word average embedding dim", "question embedding dim")
+            self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
 
         # Note: there's only one non-trivial entity type in QuaRel for now, so most of the
         # entity_type stuff is irrelevant
@@ -139,8 +141,6 @@ class QuarelSemanticParser(Model):
         self._embedding_dim = question_embedder.get_output_dim()
         self._entity_type_encoder_embedding = Embedding(self._num_entity_types, self._embedding_dim)
         self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
-
-        self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
 
         self._entity_similarity_layer = None
         self._entity_similarity_mode = entity_similarity_mode
@@ -194,7 +194,7 @@ class QuarelSemanticParser(Model):
                                                        action_embedding_dim=action_embedding_dim,
                                                        input_attention=attention,
                                                        num_start_types=self._num_start_types,
-                                                       predict_start_type_separately=True,
+                                                       predict_start_type_separately=False,
                                                        add_action_bias=self._add_action_bias,
                                                        mixture_feedforward=mixture_feedforward,
                                                        dropout=dropout)
