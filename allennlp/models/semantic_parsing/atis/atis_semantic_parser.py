@@ -239,12 +239,12 @@ class AtisSemanticParser(Model):
                                       args=(predicted_sql_query, sql_queries[i]))
                     process.start()
 
-                    # If the query has not finished in 10 seconds then we will proceed.
-                    process.join(10)
+                    # If the query has not finished in 3 seconds then we will proceed.
+                    process.join(3)
                     denotation_correct = process.exitcode # type: ignore
 
                     if process.is_alive():
-                        logger.info("Evaluating query took over 10 seconds, skipping query")
+                        logger.info("Evaluating query took over 3 seconds, skipping query")
                         process.terminate()
                         process.join()
 
