@@ -89,45 +89,49 @@ class TableQuestionContext:
                                            key=column_type_statistics[column_index].get) for column_index in column_index_to_name}
 
     @classmethod
+    def read_from_lines(cls, lines: List[str], max_tokens_for_num_cell : int) -> 'TableQuestionContext':
+        column_index_to_name = {}
+
+        header = lines[0] # the first line is the header
+        index = 1
+        while lines[index][0] == '-1':
+            # column names start with fb:row.row.
+            curr_line = lines[index]
+            column_name_sempre = curr_line[2]
+            column_index = int(curr_line[1])
+            column_name = column_name_sempre.replace('fb:row.row.', '')
+            column_index_to_name[column_index] = column_name
+            index += 1
+
+
+        column_node_type_info = [{'string' : 0, 'number' : 0, 'date' : 0}
+                                 for col in column_index_to_name]
+        cell_values = set()
+        while index < len(lines):
+            curr_line = lines[index]
+            column_index = int(curr_line[1])
+            node_info = dict(zip(header, curr_line))
+            cell_values.add(cls._normalize_string(node_info['content']))
+            num_tokens = len(node_info['tokens'].split('|'))
+            if node_info['date']:
+                column_node_type_info[column_index]['date'] += 1
+            # If cell contains too many tokens, then likely not number
+            elif node_info['number'] and num_tokens < max_tokens_for_num_cell:
+                column_node_type_info[column_index]['number'] += 1
+            elif node_info['content'] != '—':
+                column_node_type_info[column_index]['string'] += 1
+            index += 1
+
+
+        return cls(cell_values, column_node_type_info, column_index_to_name)
+
+    @classmethod
     def read_from_file(cls, filename: str, max_tokens_for_num_cell: int) -> 'TableQuestionContext':
         with open(filename, 'r') as file_pointer:
             reader = csv.reader(file_pointer, delimiter='\t', quoting=csv.QUOTE_NONE)
             # obtain column information
             lines = [line for line in reader]
-            column_index_to_name = {}
-
-            header = lines[0] # the first line is the header
-            index = 1
-            while lines[index][0] == '-1':
-                # column names start with fb:row.row.
-                curr_line = lines[index]
-                column_name_sempre = curr_line[2]
-                column_index = int(curr_line[1])
-                column_name = column_name_sempre.replace('fb:row.row.', '')
-                column_index_to_name[column_index] = column_name
-                index += 1
-
-
-            column_node_type_info = [{'string' : 0, 'number' : 0, 'date' : 0}
-                                     for col in column_index_to_name]
-            cell_values = set()
-            while index < len(lines):
-                curr_line = lines[index]
-                column_index = int(curr_line[1])
-                node_info = dict(zip(header, curr_line))
-                cell_values.add(cls._normalize_string(node_info['content']))
-                num_tokens = len(node_info['tokens'].split('|'))
-                if node_info['date']:
-                    column_node_type_info[column_index]['date'] += 1
-                # If cell contains too many tokens, then likely not number
-                elif node_info['number'] and num_tokens < max_tokens_for_num_cell:
-                    column_node_type_info[column_index]['number'] += 1
-                elif node_info['content'] != '—':
-                    column_node_type_info[column_index]['string'] += 1
-                index += 1
-
-
-            return cls(cell_values, column_node_type_info, column_index_to_name)
+            return cls.read_from_lines(lines, max_tokens_for_num_cell)
 
 
 
@@ -155,8 +159,10 @@ class TableQuestionContext:
             for ent in entity_data:
                 if ent['value'] not in number_token_text:
                     expanded_string_entities.append(ent)
+            expanded_entities = [ ent['value'] for ent in self._expand_entities(question, expanded_string_entities) ]
+        else:
+            expanded_entities = [ ent['value'] for ent in self._expand_entities(question, entity_data) ]
             
-        expanded_entities = [ ent['value'] for ent in self._expand_entities(question, entity_data) ]
         return expanded_entities, extracted_numbers  #TODO(shikhar) Handle conjunctions
 
 
