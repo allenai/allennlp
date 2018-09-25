@@ -15,7 +15,7 @@ from allennlp.modules.attention import LegacyAttention
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
-from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits, weighted_sum
+from allennlp.nn import util
 
 
 @Model.register("simple_seq2seq")
@@ -123,9 +123,14 @@ class SimpleSeq2Seq(Model):
         # (batch_size, input_sequence_length, encoder_output_dim)
         embedded_input = self._source_embedder(source_tokens)
         batch_size, _, _ = embedded_input.size()
-        source_mask = get_text_field_mask(source_tokens)
+        source_mask = util.get_text_field_mask(source_tokens)
         encoder_outputs = self._encoder(embedded_input, source_mask)
-        final_encoder_output = encoder_outputs[:, -1]  # (batch_size, encoder_output_dim)
+        # (batch_size, encoder_output_dim)
+        final_encoder_output = util.get_final_encoder_states(
+                encoder_outputs,
+                source_mask,
+                self._encoder.is_bidirectional()
+        )
         if target_tokens:
             targets = target_tokens["tokens"]
             target_sequence_length = targets.size()[1]
@@ -141,7 +146,16 @@ class SimpleSeq2Seq(Model):
         step_probabilities = []
         step_predictions = []
         for timestep in range(num_decoding_steps):
-            if self.training and torch.rand(1).item() >= self._scheduled_sampling_ratio:
+            use_gold_targets = False
+            # Use gold tokens at test time when provided and at a rate of 1 -
+            # _scheduled_sampling_ratio during training.
+            if self.training:
+                if torch.rand(1).item() >= self._scheduled_sampling_ratio:
+                    use_gold_targets = True
+            elif target_tokens:
+                use_gold_targets = True
+
+            if use_gold_targets:
                 input_choices = targets[:, timestep]
             else:
                 if timestep == 0:
@@ -173,7 +187,7 @@ class SimpleSeq2Seq(Model):
                        "class_probabilities": class_probabilities,
                        "predictions": all_predictions}
         if target_tokens:
-            target_mask = get_text_field_mask(target_tokens)
+            target_mask = util.get_text_field_mask(target_tokens)
             loss = self._get_loss(logits, targets, target_mask)
             output_dict["loss"] = loss
             # TODO: Define metrics
@@ -217,7 +231,7 @@ class SimpleSeq2Seq(Model):
             # (batch_size, input_sequence_length)
             input_weights = self._decoder_attention(decoder_hidden_state, encoder_outputs, encoder_outputs_mask)
             # (batch_size, encoder_output_dim)
-            attended_input = weighted_sum(encoder_outputs, input_weights)
+            attended_input = util.weighted_sum(encoder_outputs, input_weights)
             # (batch_size, encoder_output_dim + target_embedding_dim)
             return torch.cat((attended_input, embedded_input), -1)
         else:
@@ -252,7 +266,7 @@ class SimpleSeq2Seq(Model):
         """
         relevant_targets = targets[:, 1:].contiguous()  # (batch_size, num_decoding_steps)
         relevant_mask = target_mask[:, 1:].contiguous()  # (batch_size, num_decoding_steps)
-        loss = sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask)
+        loss = util.sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask)
         return loss
 
     @overrides

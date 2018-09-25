@@ -53,6 +53,20 @@ class TestEmbedding(AllenNlpTestCase):
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 1, 4, 20)
 
+    def test_min_pretrained_embeddings(self):
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace('the')
+        vocab.add_token_to_namespace('a')
+        params = Params({
+                'pretrained_file': str(self.FIXTURES_ROOT / 'embeddings/glove.6B.100d.sample.txt.gz'),
+                'embedding_dim': 100,
+                'min_pretrained_embeddings': 50
+                })
+        # This will now update vocab
+        _ = Embedding.from_params(vocab, params)
+        assert vocab.get_vocab_size() >= 50
+        assert vocab.get_token_index("his") > 1  # not @@UNKNOWN@@
+
     def test_embedding_layer_actually_initializes_word_vectors_correctly(self):
         vocab = Vocabulary()
         vocab.add_token_to_namespace("word")
