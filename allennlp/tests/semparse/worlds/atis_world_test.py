@@ -8,7 +8,6 @@ from allennlp.common.file_utils import cached_path
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.atis_world import AtisWorld
-from parsimonious.exceptions import ParseError
 
 class TestAtisWorld(AllenNlpTestCase):
     def setUp(self):

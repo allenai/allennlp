@@ -249,7 +249,7 @@ class AtisWorld():
                                           current_tokenized_utterance,
                                           'time_range_start')
 
-        self.add_to_number_linking_scores({"1200"},
+        self.add_to_number_linking_scores({'1200'},
                                           number_linking_scores,
                                           get_time_range_end_from_utterance,
                                           current_tokenized_utterance,
@@ -266,7 +266,7 @@ class AtisWorld():
                                           get_costs_from_utterance,
                                           current_tokenized_utterance,
                                           'fare_round_trip_cost')
-        
+
 
         # Add string linking dict.
         string_linking_dict: Dict[str, List[int]] = {}
