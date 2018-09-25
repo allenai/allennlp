@@ -38,6 +38,7 @@
     "num_epochs": 20,
     "patience": 10,
     "cuda_device": 0,
+    "validation_metric": "+denotation_acc",
     "optimizer": {
       "type": "adam",
       "lr": 0.001

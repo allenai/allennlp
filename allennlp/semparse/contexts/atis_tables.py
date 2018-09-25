@@ -189,6 +189,17 @@ def get_time_range_end_from_utterance(utterance: str, # pylint: disable=unused-a
 
     return time_range_end_linking_dict
 
+def get_costs_from_utterance(utterance: str, # pylint: disable=unused-argument
+                             tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
+    dollars_indices = {index for index, token in enumerate(tokenized_utterance)
+                       if token.text == 'dollars'}
+
+    costs_linking_dict: Dict[str, List[int]] = defaultdict(list)
+    for token_index, token in enumerate(tokenized_utterance):
+        if token_index + 1 in dollars_indices and token.text.isdigit():
+            costs_linking_dict[token.text].append(token_index)
+    return costs_linking_dict
+
 
 def digit_to_query_time(digit: str) -> List[int]:
     """
@@ -477,17 +488,17 @@ ALL_TABLES = {'aircraft': ['aircraft_code', 'aircraft_description', 'capacity',
 
 TABLES_WITH_STRINGS = {'airline' : ['airline_code', 'airline_name'],
                        'city' : ['city_name', 'state_code', 'city_code'],
-                       'fare' : ['round_trip_required', 'fare_basis_code'],
+                       'fare' : ['round_trip_required', 'fare_basis_code', 'restriction_code'],
                        'flight' : ['airline_code', 'flight_days', 'flight_number'],
                        'flight_stop' : ['stop_airport'],
                        'airport' : ['airport_code'],
-                       'state' : ['state_name'],
+                       'state' : ['state_name', 'state_code'],
                        'fare_basis' : ['fare_basis_code', 'class_type', 'economy'],
                        'class_of_service' : ['booking_class'],
                        'aircraft' : ['basic_type', 'manufacturer'],
                        'restriction' : ['restriction_code'],
                        'ground_service' : ['transport_type'],
-                       'days' : ['day_name'],
+                       'days' : ['day_name', 'days_code'],
                        'food_service': ['meal_description']}
 
 DAY_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']

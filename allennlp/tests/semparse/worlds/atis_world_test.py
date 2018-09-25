@@ -8,11 +8,12 @@ from allennlp.common.file_utils import cached_path
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.atis_world import AtisWorld
+from parsimonious.exceptions import ParseError
 
 class TestAtisWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        test_filename = self.FIXTURES_ROOT / "data" / "atis" / "sample.json"
+        test_filename = self.FIXTURES_ROOT / "data" / "atis" / "dev.json"
         self.data = open(test_filename).readlines()
         self.database_file = cached_path("https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db")
 
