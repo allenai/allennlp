@@ -4,12 +4,9 @@ from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 
 class TestAtisParserPredictor(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
-
     def test_atis_parser_uses_named_inputs(self):
         inputs = {
-            "utterance": "show me the flights to seattle",
+                "utterance": "show me the flights to seattle",
         }
 
         archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'atis' / 'serialization' / 'model.tar.gz'
@@ -29,7 +26,7 @@ class TestAtisParserPredictor(AllenNlpTestCase):
 
     def test_atis_parser_predicted_sql_present(self):
         inputs = {
-            "utterance": "show me flights to seattle"
+                "utterance": "show me flights to seattle"
         }
 
         archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'atis' / 'serialization' / 'model.tar.gz'
