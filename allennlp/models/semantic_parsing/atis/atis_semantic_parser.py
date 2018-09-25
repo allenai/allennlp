@@ -205,7 +205,6 @@ class AtisSemanticParser(Model):
             outputs['utterance'] = []
             outputs['tokenized_utterance'] = []
 
-
             for i in range(batch_size):
                 # Decoding may not have terminated with any completed valid SQL queries, if `num_steps`
                 # isn't long enough (or if the model is not trained enough and gets into an
