@@ -8,7 +8,7 @@ semantic role labeling, classification, and syntactic parsing.
 This document describes how to add ELMo representations to your model using pytorch and `allennlp`.
 We also have a [tensorflow implementation](https://github.com/allenai/bilm-tf).
 
-For more detail about ELMo, please see the publication ["Deep contextualized word representations", NAACL 2018](http://www.aclweb.org/anthology/N18-1202).
+For more detail about ELMo, please see the publication ["Deep contextualized word representations", NAACL 2018](http://www.aclweb.org/anthology/N18-1202) or the [ELMo section of the AllenNLP website](https://allennlp.org/elmo).
 
 Citations:
 
@@ -31,7 +31,6 @@ Citations:
   booktitle={ACL workshop for NLP Open Source Software}
 }
 ```
-
 
 ## Writing contextual representations to disk
 
@@ -63,10 +62,9 @@ libraries, such as h5py:
 > assert(len(embedding[0]) == 16) # one entry for each word in the source sentence
 ```
 
-## Using ELMo programmatically
+## Using ELMo as a PyTorch `Module` to train a new model
 
-If you need to include ELMo at multiple layers in a task model or you have other advanced use cases, you will need to create ELMo vectors programatically.
-This is easily done with the `Elmo` class [(API doc)](https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L27), which provides a mechanism to compute the weighted ELMo representations (Equation (1) in the paper).
+To train a model using ELMo, use the allennlp.modules.elmo.Elmo class ([API doc](https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L27)). This class provides a mechanism to compute the weighted ELMo representations (Equation (1) in the paper) as a PyTorch tensor.  The weighted average can be learned as part of a larger model and typically works best for using ELMo to improving performance on a particular task.
 
 This is a `torch.nn.Module` subclass that computes any number of ELMo
 representations and introduces trainable scalar weights for each.
@@ -98,6 +96,27 @@ embeddings = elmo(character_ids)
 If you are not training a pytorch model, and just want numpy arrays as output
 then use `allennlp.commands.elmo.ElmoEmbedder`.
 
+## Using ELMo interactively
+
+You can use ELMo interactively (or programatically) with iPython.  The `allennlp.commands.elmo.ElmoEmbedder` class provides the easiest way to process one or many sentences with ELMo, but it returns numpy arrays so it is meant for use as a standalone command and not within a larger model.  For example, if you would like to learn a weighted average of the ELMo vectors then you need to use `allennlp.modules.elmo.Elmo` instead.
+
+The ElmoEmbedder class returns three vectors for each word, each vector corresponding to a layer in the ELMo LSTM output. The first layer corresponds to the context insensitive token representation, followed by the two LSTM layers. See the ELMo paper or follow up work at EMNLP 2018 for a description of what types of information is captured in each layer.
+
+```
+$ ipython
+> from allennlp.commands.elmo import ElmoEmbedder
+> elmo = ElmoEmbedder()
+> tokens = ["I", "ate", "an", "apple", "for", "breakfast"]
+> vectors = elmo.embed_sentence(tokens)
+
+> assert(len(vectors) == 3) # one for each layer in the ELMo output
+> assert(len(vectors[0]) == len(tokens)) # the vector elements correspond with the input tokens
+
+> import scipy
+> vectors2 = elmo.embed_sentence(["I", "ate", "a", "carrot", "for", "breakfast"])
+> scipy.spatial.distance.cosine(vectors[2][3], vectors2[2][3]) # cosine distance between "ate" and "carrot" in the last layer
+0.18020617961883545
+```
 
 ## Using ELMo with existing `allennlp` models
 
