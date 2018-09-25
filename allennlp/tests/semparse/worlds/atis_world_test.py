@@ -13,7 +13,7 @@ from parsimonious.exceptions import ParseError
 class TestAtisWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        test_filename = self.FIXTURES_ROOT / "data" / "atis" / "dev.json"
+        test_filename = self.FIXTURES_ROOT / "data" / "atis" / "sample.json"
         self.data = open(test_filename).readlines()
         self.database_file = cached_path("https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db")
 
