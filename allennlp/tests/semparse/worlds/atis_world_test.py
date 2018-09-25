@@ -31,8 +31,8 @@ class TestAtisWorld(AllenNlpTestCase):
                                              'biexpr',
                                              'binaryop',
                                              'boolean',
-                                             'city_city_name_string',
                                              'city_city_code_string',
+                                             'city_city_name_string',
                                              'city_state_code_string',
                                              'class_of_service_booking_class_string',
                                              'col_ref',
@@ -41,11 +41,14 @@ class TestAtisWorld(AllenNlpTestCase):
                                              'conditions',
                                              'conj',
                                              'days_day_name_string',
+                                             'days_days_code_string',
                                              'distinct',
                                              'fare_basis_class_type_string',
                                              'fare_basis_economy_string',
                                              'fare_basis_fare_basis_code_string',
                                              'fare_fare_basis_code_string',
+                                             'fare_restriction_code_string',
+                                             'fare_round_trip_cost',
                                              'fare_round_trip_required_string',
                                              'flight_airline_code_string',
                                              'flight_flight_days_string',
@@ -59,6 +62,7 @@ class TestAtisWorld(AllenNlpTestCase):
                                              'query',
                                              'restriction_restriction_code_string',
                                              'select_results',
+                                             'state_state_code_string',
                                              'state_state_name_string',
                                              'statement',
                                              'table_name',
@@ -120,8 +124,12 @@ class TestAtisWorld(AllenNlpTestCase):
                  'biexpr -> ["class_of_service", ".", "booking_class", binaryop, '
                  'class_of_service_booking_class_string]',
                  'biexpr -> ["days", ".", "day_name", binaryop, days_day_name_string]',
+                 'biexpr -> ["days", ".", "days_code", binaryop, days_days_code_string]',
                  'biexpr -> ["fare", ".", "fare_basis_code", binaryop, '
                  'fare_fare_basis_code_string]',
+                 'biexpr -> ["fare", ".", "restriction_code", binaryop, '
+                 'fare_restriction_code_string]',
+                 'biexpr -> ["fare", ".", "round_trip_cost", binaryop, fare_round_trip_cost]',
                  'biexpr -> ["fare", ".", "round_trip_required", binaryop, '
                  'fare_round_trip_required_string]',
                  'biexpr -> ["fare_basis", ".", "class_type", binaryop, '
@@ -144,6 +152,7 @@ class TestAtisWorld(AllenNlpTestCase):
                  'ground_service_transport_type_string]',
                  'biexpr -> ["restriction", ".", "restriction_code", binaryop, '
                  'restriction_restriction_code_string]',
+                 'biexpr -> ["state", ".", "state_code", binaryop, state_state_code_string]',
                  'biexpr -> ["state", ".", "state_name", binaryop, state_state_name_string]',
                  'biexpr -> [col_ref, binaryop, value]',
                  'biexpr -> [value, binaryop, value]'}

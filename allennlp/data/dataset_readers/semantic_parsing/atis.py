@@ -66,10 +66,12 @@ class AtisDatasetReader(DatasetReader):
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
+                 keep_if_unparseable: bool = False,
                  lazy: bool = False,
                  tokenizer: Tokenizer = None,
                  database_file: str = None) -> None:
         super().__init__(lazy)
+        self._keep_if_unparseable = keep_if_unparseable
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter())
         self._database_file = database_file
@@ -155,8 +157,9 @@ class AtisDatasetReader(DatasetReader):
 
                 action_sequence_field = ListField(index_fields)
                 fields['target_action_sequence'] = action_sequence_field
-            else:
-                # If we are given a SQL query, but we are unable to parse it, then we will skip it.
+            elif not self._keep_if_unparseable:
+                # If we are given a SQL query, but we are unable to parse it, and we do not specify explicitly
+                # to keep it, then we will skip the it.
                 return None
 
         return Instance(fields)
