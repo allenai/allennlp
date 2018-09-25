@@ -8,6 +8,12 @@ from allennlp.common.file_utils import cached_path
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class SqlExecutor:
+    """
+    This class evaluates SQL queries by connecting to a SQLite database. Because SQLite is disk-based
+    we just need to provide one file with the location. We execute the predicted SQL query and the labeled
+    queries against the database and check if they execute to the same table.
+    """
+
     def __init__(self, database_file: str) -> None:
         # Initialize a cursor to our sqlite database, so we can execute SQL queries for denotation accuracy.
         self._database_file = cached_path(database_file)
@@ -16,7 +22,7 @@ class SqlExecutor:
 
     def evaluate_sql_query(self,
                            predicted_sql_query: str,
-                           sql_query_labels: List[str]) -> bool:
+                           sql_query_labels: List[str]) -> int:
         # Since the query might hang, we run in another process and kill it if it
         # takes too long.
         process = Process(target=self._evaluate_sql_query_subprocess,
