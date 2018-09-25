@@ -261,12 +261,17 @@ class AtisWorld():
                                           current_tokenized_utterance,
                                           'number')
 
-        self.add_to_number_linking_scores({'0'},
+        self.add_to_number_linking_scores({''},
                                           number_linking_scores,
                                           get_costs_from_utterance,
                                           current_tokenized_utterance,
                                           'fare_round_trip_cost')
 
+        self.add_to_number_linking_scores({''},
+                                          number_linking_scores,
+                                          get_costs_from_utterance,
+                                          current_tokenized_utterance,
+                                          'fare_one_direction_cost')
 
         # Add string linking dict.
         string_linking_dict: Dict[str, List[int]] = {}

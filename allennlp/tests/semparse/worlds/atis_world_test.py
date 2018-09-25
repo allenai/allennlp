@@ -48,6 +48,7 @@ class TestAtisWorld(AllenNlpTestCase):
                                              'fare_fare_basis_code_string',
                                              'fare_restriction_code_string',
                                              'fare_round_trip_cost',
+                                             'fare_one_direction_cost',
                                              'fare_round_trip_required_string',
                                              'flight_airline_code_string',
                                              'flight_flight_days_string',
