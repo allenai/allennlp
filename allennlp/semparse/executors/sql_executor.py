@@ -43,7 +43,7 @@ class SqlExecutor:
         exact same table. This method is only called by the subprocess, so we just exit with
         1 if it is correct and 0 otherwise.
         """
-        postprocessed_predicted_query = self._postprocess_query_sqlite(predicted_query)
+        postprocessed_predicted_query = self.postprocess_query_sqlite(predicted_query)
 
         try:
             self._cursor.execute(postprocessed_predicted_query)
@@ -55,19 +55,18 @@ class SqlExecutor:
         # If predicted table matches any of the reference tables then it is counted as correct.
         target_rows = None
         for sql_query_label in sql_query_labels:
-            postprocessed_sql_query_label = self._postprocess_query_sqlite(sql_query_label)
+            postprocessed_sql_query_label = self.postprocess_query_sqlite(sql_query_label)
             try:
                 self._cursor.execute(postprocessed_sql_query_label)
                 target_rows = self._cursor.fetchall()
             except sqlite3.Error as error:
                 logger.debug(f'Error executing predicted: {error}')
-
             if predicted_rows == target_rows:
                 exit(1)
         exit(0)
-    
+
     @staticmethod
-    def _postprocess_query_sqlite(query: str):
+    def postprocess_query_sqlite(query: str):
         # The dialect of SQL that SQLite takes is not exactly the same as the labeled data.
         # We strip off the parentheses that surround the entire query here.
         query = query.strip()
