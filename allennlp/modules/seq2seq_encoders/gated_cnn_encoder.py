@@ -6,13 +6,11 @@ import torch
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 
-_DEFAULT_LAYERS = ((1, 128), (5, 128), (1, 512))
-
 class ResidualBlock(torch.nn.Module):
     def __init__(self,
-                 input_dim: int = 512,
-                 layers: Sequence[Sequence[int]] = _DEFAULT_LAYERS,
-                 direction: str = 'forward',
+                 input_dim: int,
+                 layers: Sequence[Sequence[int]],
+                 direction: str,
                  do_weight_norm: bool = True,
                  dropout: float = 0.0) -> None:
         super().__init__()
