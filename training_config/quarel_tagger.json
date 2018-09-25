@@ -29,6 +29,7 @@
         "type": "embedding",
         "pretrained_file": "/Users/tafjord/data/glove/glove.6B.100d.txt.gz",
         "embedding_dim": 100,
+        "min_pretrained_embeddings": 30000,
         "trainable": false
       }
     },

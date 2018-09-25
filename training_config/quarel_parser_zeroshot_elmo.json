@@ -5,7 +5,7 @@
     "sample": -1,
     "replace_world_entities": true,
     "align_world_extractions": true,
-    "world_extraction_model": "/inputs/allennlp-models/quarel-tagger-try5-model.tar.gz",
+    "world_extraction_model": "/inputs/allennlp-models/quarel-tagger-try6-model.tar.gz",
     "lf_syntax": "quarel_v1_attr_entities",
     "lexical_cues": ["synonyms", "values"],
     "question_token_indexers": {
@@ -24,7 +24,7 @@
     "sample": -1,
     "replace_world_entities": true,
     "align_world_extractions": false,
-    "world_extraction_model": "/inputs/allennlp-models/quarel-tagger-try5-model.tar.gz",
+    "world_extraction_model": "/inputs/allennlp-models/quarel-tagger-try6-model.tar.gz",
     "lf_syntax": "quarel_v1_attr_entities",
     "lexical_cues": ["synonyms", "values"],
     "question_token_indexers": {
@@ -50,6 +50,7 @@
       "tokens": {
         "type": "embedding",
         "pretrained_file": "/inputs/glove/glove.6B.100d.txt.gz",
+        "min_pretrained_embeddings": 200000,
         "embedding_dim": 100,
         "trainable": false
       },
