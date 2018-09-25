@@ -6,11 +6,13 @@ import numpy as np
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.highway import Highway
 from allennlp.modules.masked_layer_norm import MaskedLayerNorm
+from allennlp.modules.token_embedders import TokenEmbedder
 from allennlp.nn.util import add_sentence_boundary_token_ids
 
 _VALID_PROJECTION_LOCATIONS = {'after_cnn', 'after_highway', None}
 
-class CharacterEncoder(torch.nn.Module):
+@TokenEmbedder.register('cnn-highway')
+class CnnHighwayEncoder(TokenEmbedder):
     """
     The character CNN + highway encoder from Kim et al "Character aware neural language models"
     https://arxiv.org/abs/1508.06615
@@ -45,6 +47,14 @@ class CharacterEncoder(torch.nn.Module):
         Characters for the end-of-sentence token (if any).
         If provided, they will be appended to each sentence.
         If provided, ``bos_characters`` must be provided as well.
+    return_mask: ``bool``, optional (default = False)
+        If True, the forward method will return a dict containing
+        both the embedding and the mask. (This is unusual ``TokenEmbedder``
+        behavior, but the current ``Elmo`` model uses the ``CnnHighwayEncoder``
+        internally and requires this dict to be returned.) Otherwise, it will just
+        return the embedding tensor. (The ``TokenEmbedder`` contract
+        is agnostic on this issue, but the ``BasicTextFieldEmbedder``
+        requires its token embedders to return bare tensors.)
     """
     def __init__(self,
                  embedding_dim: int,
@@ -57,7 +67,8 @@ class CharacterEncoder(torch.nn.Module):
                  projection_location: str = 'after_highway',
                  do_layer_norm: bool = False,
                  bos_characters: List[int] = None,
-                 eos_characters: List[int] = None) -> None:
+                 eos_characters: List[int] = None,
+                 return_mask: bool = False) -> None:
         super().__init__()
 
         if projection_location not in _VALID_PROJECTION_LOCATIONS:
@@ -67,6 +78,7 @@ class CharacterEncoder(torch.nn.Module):
         self._max_characters_per_token = max_characters_per_token
         self._num_characters = num_characters
         self._projection_location = projection_location
+        self._return_mask = return_mask
 
         if bos_characters and eos_characters:
             # Add 1 for masking.
@@ -90,8 +102,6 @@ class CharacterEncoder(torch.nn.Module):
         self._char_embedding_weights = torch.nn.Parameter(torch.FloatTensor(weights))
 
         # Create the convolutions
-        # (It would be better to just use a `torch.nn.ModuleList` here, but then the
-        #  parameter names won't agree with the existing serialized ELMo models.)
         self._convolutions: List[torch.nn.Module] = []
         for i, (width, num) in enumerate(filters):
             conv = torch.nn.Conv1d(in_channels=embedding_dim,
@@ -141,14 +151,10 @@ class CharacterEncoder(torch.nn.Module):
 
         Returns
         -------
-        Dict with keys:
         ``token_embedding``:
             Shape ``(batch_size, sequence_length, embedding_dim)`` tensor
             with context-insensitive token representations. If bos_characters and eos_characters
             are being added, the second dimension will be ``sequence_length + 2``.
-        ``mask``:
-            Shape ``(batch_size, sequence_length)`` long tensor with sequence mask. If bos_characters and
-            eos_characters are being added, the second dimension will be ``sequence_length + 2``.
         """
         # pylint: disable=arguments-differ
         char_id_mask = (inputs > 0).long()  # (batch_size, sequence_length, max_characters_per_token)
@@ -199,10 +205,10 @@ class CharacterEncoder(torch.nn.Module):
         if self._layer_norm:
             token_embedding_reshaped = self._layer_norm(token_embedding_reshaped, mask)
 
-        return {
-                'mask': mask,
-                'token_embedding': token_embedding_reshaped
-        }
+        if self._return_mask:
+            return {"mask": mask, "token_embedding": token_embedding_reshaped}
+        else:
+            return token_embedding_reshaped
 
     def get_output_dim(self) -> int:
         return self.output_dim

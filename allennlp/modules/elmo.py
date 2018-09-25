@@ -15,7 +15,7 @@ from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
 from allennlp.common import Params
 from allennlp.common.util import lazy_groups_of
-from allennlp.modules.contextual_encoder.character_encoder import CharacterEncoder
+from allennlp.modules.token_embedders.cnn_highway_encoder import CnnHighwayEncoder
 from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids, get_device_of
@@ -241,10 +241,10 @@ def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
     dataset.index_instances(vocab)
     return dataset.as_tensor_dict()['elmo']['character_ids']
 
-class _ElmoCharacterEncoder(CharacterEncoder):
+class _ElmoCharacterEncoder(CnnHighwayEncoder):
     """
     This was originally its own class. Then we included most of its functionality
-    as the broader ``CharacterEncoder``. To maintain backward compatibility
+    as the broader ``CnnHighwayEncoder``. To maintain backward compatibility
     we keep ``_ElmoCharacterEncoder`` as a subclass of that one.
     """
     def __init__(self, options_file: str, weight_file: str, requires_grad: bool) -> None:
@@ -263,7 +263,8 @@ class _ElmoCharacterEncoder(CharacterEncoder):
                 projection_location='after_highway',
                 do_layer_norm=False,
                 bos_characters=ELMoCharacterMapper.beginning_of_sentence_characters,
-                eos_characters=ELMoCharacterMapper.end_of_sentence_characters
+                eos_characters=ELMoCharacterMapper.end_of_sentence_characters,
+                return_mask=True
         )
 
         # Load Embedding

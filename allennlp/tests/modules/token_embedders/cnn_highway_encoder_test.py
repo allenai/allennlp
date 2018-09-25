@@ -3,11 +3,11 @@ import numpy as np
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules.contextual_encoder.character_encoder import CharacterEncoder
+from allennlp.modules.token_embedders.cnn_highway_encoder import CnnHighwayEncoder
 
-class TestCharacterEncoder(AllenNlpTestCase):
-    def test_character_encoder(self):
-        encoder = CharacterEncoder(
+class TestCnnHighwayEncoder(AllenNlpTestCase):
+    def test_cnn_highway_encoder(self):
+        encoder = CnnHighwayEncoder(
                 activation='relu',
                 embedding_dim=4,
                 filters=[[1, 4], [2, 8], [3, 16], [4, 32], [5, 64]],
@@ -21,4 +21,4 @@ class TestCharacterEncoder(AllenNlpTestCase):
         character_ids = torch.from_numpy(np.random.randint(0, 262, size=(5, 6, 50)))
         token_embedding = encoder(character_ids)
 
-        assert list(token_embedding['token_embedding'].size()) == [5, 6, 16]
+        assert list(token_embedding.size()) == [5, 6, 16]
