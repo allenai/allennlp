@@ -205,6 +205,7 @@ class AtisSemanticParser(Model):
             outputs['utterance'] = []
             outputs['tokenized_utterance'] = []
 
+
             for i in range(batch_size):
                 # Decoding may not have terminated with any completed valid SQL queries, if `num_steps`
                 # isn't long enough (or if the model is not trained enough and gets into an
@@ -214,6 +215,7 @@ class AtisSemanticParser(Model):
                     self._denotation_accuracy(0)
                     self._valid_sql_query(0)
                     self._action_similarity(0)
+                    outputs['predicted_sql_query'].append('')
                     continue
 
                 best_action_indices = best_final_states[i][0].action_history[0]
@@ -254,13 +256,13 @@ class AtisSemanticParser(Model):
                     self._denotation_accuracy(denotation_correct)
                     outputs['sql_queries'].append(sql_queries[i])
 
-                    outputs['utterance'].append(world[i].utterances[-1])
-                    outputs['tokenized_utterance'].append([token.text
-                                                           for token in world[i].tokenized_utterances[-1]])
-                    outputs['entities'].append(world[i].entities)
-                    outputs['best_action_sequence'].append(action_strings)
-                    outputs['predicted_sql_query'].append(sqlparse.format(predicted_sql_query, reindent=True))
-                    outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
+                outputs['utterance'].append(world[i].utterances[-1])
+                outputs['tokenized_utterance'].append([token.text
+                                                       for token in world[i].tokenized_utterances[-1]])
+                outputs['entities'].append(world[i].entities)
+                outputs['best_action_sequence'].append(action_strings)
+                outputs['predicted_sql_query'].append(sqlparse.format(predicted_sql_query, reindent=True))
+                outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
             return outputs
 
     def _get_initial_state(self,
