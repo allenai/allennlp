@@ -10,15 +10,15 @@
     "utterance_embedder": {
       "tokens": {
         "type": "embedding",
-        "embedding_dim": 400,
+        "embedding_dim": 4,
         "trainable": true
       }
     },
-    "action_embedding_dim": 200,
+    "action_embedding_dim": 2,
     "encoder": {
       "type": "lstm",
-      "input_size": 400,
-      "hidden_size": 800,
+      "input_size": 4,
+      "hidden_size": 8,
       "bidirectional": true,
       "num_layers": 1
     },
