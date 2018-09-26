@@ -64,7 +64,7 @@ def clean_and_split_sql(sql: str) -> List[str]:
     Cleans up and unifies a SQL query. This involves unifying quoted strings
     and splitting brackets which aren't formatted consistently in the data.
     """
-    sql_tokens = []
+    sql_tokens: List[str] = []
     for token in sql.strip().split():
         token = token.replace('"', "'").replace("%", "")
         if token.endswith("(") and len(token) > 1:
@@ -86,7 +86,7 @@ def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
 
         previous_token = token
 
-    dealiased_tokens = []
+    dealiased_tokens: List[str] = []
     for token in sql_tokens:
         new_token = unneeded_aliases.get(token, None)
 
@@ -117,7 +117,7 @@ def read_dataset_schema(schema_path: str) -> Dict[str, Tuple[str, str]]:
     -------
     A dictionary mapping table names to typed columns.
     """
-    schema = defaultdict(list)
+    schema: Dict[str, Tuple[str, str]] = defaultdict(list)
     for i, line in enumerate(open(schema_path, "r")):
         if i == 0:
             header = [x.strip() for x in line.split(",")]

@@ -9,7 +9,7 @@ class TestTemplateText2SqlDatasetReader(AllenNlpTestCase):
     def test_reader(self):
         reader = TemplateText2SqlDatasetReader()
 
-        instances = reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "text2sql" / "*"))
+        instances = reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "text2sql" / "*.json"))
         instances = ensure_list(instances)
 
         fields = instances[0].fields
