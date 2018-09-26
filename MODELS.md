@@ -102,6 +102,8 @@ f1: 0.941
 
 #### [wikitables-model-2018.09.14.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/wikitables-model-2018.09.14.tar.gz)
 
+**Caveat:** that this is trained on only part of the data and not officially evaluated.
+
 ## Event2Mind
 
 Based on [Event2Mind: Commonsense Inference on Events, Intents, and Reactions](https://homes.cs.washington.edu/~msap/debug/event2mind/docs/data/rashkin2018event2mind.pdf)
@@ -112,11 +114,15 @@ More information at: https://homes.cs.washington.edu/~msap/debug/event2mind/docs
 
 ## BiMPM
 
+Based on [Bilateral Multi-Perspective Matching for Natural Language Sentences](https://arxiv.org/abs/1702.03814)
+
 * [bimpm-quora-2018.08.17.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/datasets/quora-question-paraphrase/test.tsv)
 
+```
+```
 
 ## ESIM
 
-Based on ???
+Based on [Enhanced LSTM for Natural Language Inference](https://arxiv.org/pdf/1609.06038.pdf) and uses ELMo
 
 * [esim-elmo-2018.05.17.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/esim-elmo-2018.05.17.tar.gz)
