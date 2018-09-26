@@ -55,6 +55,9 @@ def replace_variables(sentence: List[str],
                 tags.append(token)
     return tokens, tags
 
+def split_table_and_column_names(table: str) -> Tuple[str]:
+    return (x for x in table.partition(".") if x != '')
+
 def clean_and_split_sql(sql: str) -> List[str]:
     """
     Cleans up and unifies a SQL query. This involves unifying quoted strings
@@ -64,16 +67,36 @@ def clean_and_split_sql(sql: str) -> List[str]:
     for token in sql.strip().split():
         token = token.replace('"', "'").replace("%", "")
         if token.endswith("(") and len(token) > 1:
-            sql_tokens.append(token[:-1])
-            sql_tokens.append(token[-1])
+            sql_tokens.extend(split_table_and_column_names(token[:-1]))
+            sql_tokens.extend(split_table_and_column_names(token[-1]))
         else:
-            sql_tokens.append(token)
+            sql_tokens.extend(split_table_and_column_names(token))
     return sql_tokens
+
+def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
+
+    unneeded_aliases = {}
+    previous_token = sql_tokens[0]
+    for j, (token, next_token) in enumerate(zip(sql_tokens[1:-1], sql_tokens[2:])):
+        if token == "AS" and previous_token is not None:
+            table_name = next_token[:-6]
+            if table_name == previous_token:
+                unneeded_aliases[next_token] = previous_token
+
+        previous_token = token
+
+    dealiased_tokens = []
+    for token in sql_tokens:
+        new_token = sql_tokens.get(token, None) or token
+        dealiased_tokens.append(new_token)
+
+    return dealiased_tokens
 
 
 def process_sql_data(data: List[JsonDict],
                      use_all_sql: bool = False,
-                     use_all_queries: bool = False) -> Iterable[SqlData]:
+                     use_all_queries: bool = False,
+                     remove_unneeded_aliases = False) -> Iterable[SqlData]:
     """
     A utility function for reading in text2sql data. The blob is
     the result of loading the json from a file produced by the script
@@ -90,6 +113,14 @@ def process_sql_data(data: List[JsonDict],
         duplicated queries will occur in the dataset as separate instances,
         as for a given SQL query, not only are there multiple queries with
         the same template, but there are also duplicate queries.
+    remove_unneeded_aliases : ``bool``, (default = False)
+        The text2sql data by default creates alias names for `all` tables,
+        regardless of whether the table is derived or if it is identical to
+        the original (e.g SELECT TABLEalias0.COLUMN FROM TABLE AS TABLEalias0).
+        This is not necessary and makes the action sequence and grammar manipulation
+        much harder in a grammar based decoder. Note that this does not
+        remove aliases which are legitimately required, such as when a new
+        table is formed by performing operations on the original table.
     """
     for example in data:
         seen_sentences: Set[str] = set()
@@ -108,6 +139,9 @@ def process_sql_data(data: List[JsonDict],
                         seen_sentences.add(key)
 
                 sql_tokens = clean_and_split_sql(sql)
+                if remove_unneeded_aliases:
+                    sql_tokens = clean_unneeded_aliases(sql_tokens)
+
                 sql_variables = {}
                 for variable in example['variables']:
                     sql_variables[variable['name']] = variable['example']
