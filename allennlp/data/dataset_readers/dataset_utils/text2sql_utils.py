@@ -4,6 +4,7 @@ Utility functions for reading the standardised text2sql datasets presented in
 `"Improving Text to SQL Evaluation Methodology" <https://arxiv.org/abs/1806.09029>`_
 """
 from typing import List, Dict, NamedTuple, Iterable, Tuple, Set
+from collections import defaultdict
 
 from allennlp.common import JsonDict
 
@@ -55,7 +56,7 @@ def replace_variables(sentence: List[str],
                 tags.append(token)
     return tokens, tags
 
-def split_table_and_column_names(table: str) -> Tuple[str]:
+def split_table_and_column_names(table: str) -> Iterable[str]:
     return (x for x in table.partition(".") if x != '')
 
 def clean_and_split_sql(sql: str) -> List[str]:
@@ -98,6 +99,38 @@ def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
         dealiased_tokens.append(new_token)
 
     return dealiased_tokens
+
+def read_dataset_schema(schema_path: str) -> Dict[str, Tuple[str, str]]:
+    """
+    Reads a schema from the text2sql data, returning a dictionary
+    mapping table names to their columns and respective types.
+    This handles columns in an arbitrary order and also allows
+    either ``{Table, Field}`` or ``{Table, Field} Name`` as headers,
+    because both appear in the data.
+
+    Parameters
+    ----------
+    schema_path : ``str``, required.
+        The path to the csv schema.
+
+    Returns
+    -------
+    A dictionary mapping table names to typed columns.
+    """
+    schema = defaultdict(list)
+    for i, line in enumerate(open(schema_path, "r")):
+        if i == 0:
+            header = [x.strip() for x in line.split(",")]
+        elif line[0] == "-":
+            continue
+        else:
+            data = {key: value for key, value in zip(header, [x.strip() for x in line.split(",")])}
+
+            table = data.get("Table Name", None) or data.get("Table")
+            column = data.get("Field Name", None) or data.get("Field")
+            schema[table].append((column, data["Type"]))
+
+    return {**schema}
 
 
 def process_sql_data(data: List[JsonDict],

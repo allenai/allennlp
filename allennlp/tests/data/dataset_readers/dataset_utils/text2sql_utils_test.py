@@ -8,7 +8,7 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
 
     def setUp(self):
         super().setUp()
-        self.data = AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants_tiny.json'
+        self.data = self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants_tiny.json'
 
     def test_process_sql_data_blob(self):
 
@@ -85,3 +85,25 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
         assert cleaned == ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',', 'RESTAURANT', 'WHERE',
                            'LOCATION', '.', 'CITY_NAME', '=', "'city_name0'", 'AND', 'RESTAURANT', '.', 'ID',
                            '=', 'LOCATION', '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
+
+    def test_read_database_schema(self):
+        schema = text2sql_utils.read_dataset_schema(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
+        assert schema == {
+                'RESTAURANT': [
+                        ('RESTAURANT_ID', 'int(11)'),
+                        ('NAME', 'varchar(255)'),
+                        ('FOOD_TYPE', 'varchar(255)'),
+                        ('CITY_NAME', 'varchar(255)'),
+                        ('RATING', '"decimal(1')
+                ],
+                'LOCATION': [
+                        ('RESTAURANT_ID', 'int(11)'),
+                        ('HOUSE_NUMBER', 'int(11)'),
+                        ('STREET_NAME', 'varchar(255)'),
+                        ('CITY_NAME', 'varchar(255)')
+                ],
+                'GEOGRAPHIC': [
+                        ('CITY_NAME', 'varchar(255)'),
+                        ('COUNTY', 'varchar(255)'),
+                        ('REGION', 'varchar(255)')]
+                }
