@@ -73,3 +73,15 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
                            'RESTAURANT', 'AS', 'RESTAURANTalias0', 'WHERE', 'LOCATIONalias0', '.', 'CITY_NAME', '=',
                            '\'city_name0\'', 'AND', 'RESTAURANTalias0', '.', 'ID', '=', 'LOCATIONalias0', '.', 'RESTAURANT_ID',
                            'AND', 'RESTAURANTalias0', '.', 'NAME', '=', '\'name0\'', ';']
+
+
+    def test_clean_unneeded_aliases(self):
+        sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', 'AS', 'LOCATIONalias0', ',',
+               'RESTAURANT', 'AS', 'RESTAURANTalias0', 'WHERE', 'LOCATIONalias0', '.', 'CITY_NAME', '=',
+               '\'city_name0\'', 'AND', 'RESTAURANTalias0', '.', 'ID', '=', 'LOCATIONalias0', '.', 'RESTAURANT_ID',
+               'AND', 'RESTAURANTalias0', '.', 'NAME', '=', '\'name0\'', ';']
+
+        cleaned = text2sql_utils.clean_unneeded_aliases(sql)
+        assert cleaned == ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',', 'RESTAURANT', 'WHERE',
+                           'LOCATION', '.', 'CITY_NAME', '=', "'city_name0'", 'AND', 'RESTAURANT', '.', 'ID',
+                           '=', 'LOCATION', '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=',"'name0'", ';']

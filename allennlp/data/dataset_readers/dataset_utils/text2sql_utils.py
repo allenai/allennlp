@@ -87,7 +87,14 @@ def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
 
     dealiased_tokens = []
     for token in sql_tokens:
-        new_token = sql_tokens.get(token, None) or token
+        new_token = unneeded_aliases.get(token, None)
+
+        if new_token is not None and dealiased_tokens[-1] == "AS":
+            dealiased_tokens.pop()
+            continue
+        elif new_token is None:
+            new_token = token
+
         dealiased_tokens.append(new_token)
 
     return dealiased_tokens
