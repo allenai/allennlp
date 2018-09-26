@@ -261,13 +261,13 @@ class AtisWorld():
                                           current_tokenized_utterance,
                                           'number')
 
-        self.add_to_number_linking_scores({''},
+        self.add_to_number_linking_scores({'0'},
                                           number_linking_scores,
                                           get_costs_from_utterance,
                                           current_tokenized_utterance,
                                           'fare_round_trip_cost')
 
-        self.add_to_number_linking_scores({''},
+        self.add_to_number_linking_scores({'0'},
                                           number_linking_scores,
                                           get_costs_from_utterance,
                                           current_tokenized_utterance,
