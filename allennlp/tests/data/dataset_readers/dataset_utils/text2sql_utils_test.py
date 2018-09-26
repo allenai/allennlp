@@ -84,4 +84,4 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
         cleaned = text2sql_utils.clean_unneeded_aliases(sql)
         assert cleaned == ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',', 'RESTAURANT', 'WHERE',
                            'LOCATION', '.', 'CITY_NAME', '=', "'city_name0'", 'AND', 'RESTAURANT', '.', 'ID',
-                           '=', 'LOCATION', '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=',"'name0'", ';']
+                           '=', 'LOCATION', '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']

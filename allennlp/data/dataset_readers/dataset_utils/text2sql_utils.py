@@ -77,7 +77,7 @@ def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
 
     unneeded_aliases = {}
     previous_token = sql_tokens[0]
-    for j, (token, next_token) in enumerate(zip(sql_tokens[1:-1], sql_tokens[2:])):
+    for (token, next_token) in zip(sql_tokens[1:-1], sql_tokens[2:]):
         if token == "AS" and previous_token is not None:
             table_name = next_token[:-6]
             if table_name == previous_token:
@@ -103,7 +103,7 @@ def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
 def process_sql_data(data: List[JsonDict],
                      use_all_sql: bool = False,
                      use_all_queries: bool = False,
-                     remove_unneeded_aliases = False) -> Iterable[SqlData]:
+                     remove_unneeded_aliases: bool = False) -> Iterable[SqlData]:
     """
     A utility function for reading in text2sql data. The blob is
     the result of loading the json from a file produced by the script
