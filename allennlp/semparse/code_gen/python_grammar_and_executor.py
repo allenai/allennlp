@@ -22,13 +22,6 @@ from parsimonious import Grammar
 
 from allennlp.common.registrable import Registrable
 
-class Executor:
-
-    def __init__(self, grammar: Grammar):
-
-        self.grammar = grammar
-
-
 TypeSignature = Tuple[Tuple[type], type]
 
 class GrammarFunction:

@@ -24,6 +24,8 @@ class Box:
     def height(self) -> int:
         return self._height
 
+def height(x: Box) -> int:
+    return x._height
 
 def expand(x: Box, value: int) -> Box:
     return Box(x.height() + value, x.width() + value)
