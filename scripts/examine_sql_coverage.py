@@ -8,7 +8,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.par
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import process_sql_data, SqlData
 from allennlp.semparse.contexts.sql_table_context import SqlVisitor
 from parsimonious.grammar import Grammar
-from parsimonious.expressions import Expression
 # still TODO: 
 # JOIN, seems hard.
 # Added query to pos_value - check this, very unclear if it is the correct way to handle this.
@@ -58,7 +57,7 @@ SQL_GRAMMAR2 = Grammar(
         ordering         = ASC / DESC
         limit            = LIMIT ws number
 
-        col_ref          = (table_name "." column_name) / column_name
+        col_ref          = (table_name ws "." ws column_name) / column_name
         table_name       = name
         column_name      = name
         ws               = ~"\s*"i
@@ -186,7 +185,7 @@ def parse_dataset(filename: str, filter_by: str = None, verbose: bool = False):
         if (i + 1) % 500 == 0:
             print(f"\tProcessed {i + 1} queries.")
 
-    return num_parsed, num_queries, filtered_errors, non_basic_as_aliases, as_count ,queries_with_weird_as
+    return num_parsed, num_queries, filtered_errors, non_basic_as_aliases, as_count, queries_with_weird_as
 
 def main(data_directory: int, dataset: str = None, filter_by: str = None, verbose: bool = False) -> None:
     """
