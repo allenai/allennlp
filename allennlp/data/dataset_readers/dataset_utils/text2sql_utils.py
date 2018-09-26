@@ -100,7 +100,7 @@ def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
 
     return dealiased_tokens
 
-def read_dataset_schema(schema_path: str) -> Dict[str, Tuple[str, str]]:
+def read_dataset_schema(schema_path: str) -> Dict[str, List[Tuple[str, str]]]:
     """
     Reads a schema from the text2sql data, returning a dictionary
     mapping table names to their columns and respective types.
@@ -117,7 +117,7 @@ def read_dataset_schema(schema_path: str) -> Dict[str, Tuple[str, str]]:
     -------
     A dictionary mapping table names to typed columns.
     """
-    schema: Dict[str, Tuple[str, str]] = defaultdict(list)
+    schema: Dict[str, List[Tuple[str, str]]] = defaultdict(list)
     for i, line in enumerate(open(schema_path, "r")):
         if i == 0:
             header = [x.strip() for x in line.split(",")]
