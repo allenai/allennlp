@@ -205,8 +205,8 @@ class QuarelSemanticParser(Model):
                 table: Dict[str, torch.LongTensor],
                 world: List[QuarelWorld],
                 actions: List[List[ProductionRuleArray]],
-                entity_bits: List[torch.Tensor] = None,
-                denotation_target: List[torch.Tensor] = None,
+                entity_bits: torch.Tensor = None,
+                denotation_target: torch.Tensor = None,
                 target_action_sequences: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
