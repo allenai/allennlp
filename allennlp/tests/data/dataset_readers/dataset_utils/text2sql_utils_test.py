@@ -89,6 +89,10 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
         # Check we don't mangle decimal numbers:
         assert text2sql_utils.clean_unneeded_aliases(["2.5"]) == ["2.5"]
 
+        # Check we don't remove non-trivial aliases:
+        sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'MAX', '(', 'LOCATION', '.', 'ID', ')', 'AS', 'LOCATIONalias0', ";"]
+        assert text2sql_utils.clean_unneeded_aliases(sql) == sql
+
     def test_read_database_schema(self):
         schema = text2sql_utils.read_dataset_schema(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
         assert schema == {

@@ -57,8 +57,8 @@ def replace_variables(sentence: List[str],
     return tokens, tags
 
 def split_table_and_column_names(table: str) -> Iterable[str]:
-
     partitioned = [x for x in table.partition(".") if x != '']
+    # Avoid splitting decimal strings.
     if partitioned[0].isnumeric() and partitioned[-1].isnumeric():
         return [table]
     return partitioned
@@ -84,8 +84,11 @@ def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
     previous_token = sql_tokens[0]
     for (token, next_token) in zip(sql_tokens[1:-1], sql_tokens[2:]):
         if token == "AS" and previous_token is not None:
+            # Check to see if the table name without the alias
+            # is the same.
             table_name = next_token[:-6]
             if table_name == previous_token:
+                # If so, store the mapping as a replacement.
                 unneeded_aliases[next_token] = previous_token
 
         previous_token = token
