@@ -41,12 +41,20 @@ class ConstrainedBeamSearch:
         A ``(batch_size, num_sequences, sequence_length)`` tensor indicating whether each entry in
         the ``allowed_sequences`` tensor is padding.  The allowed sequences could be padded both on
         the ``num_sequences`` dimension and the ``sequence_length`` dimension.
+    per_node_beam_size : ``int``, optional (default = beam_size)
+        The maximum number of candidates to consider per node, at each step in the search.
+        If not given, this just defaults to `beam_size`. Setting this parameter
+        to a number smaller than `beam_size` may give better results, as it can introduce
+        more diversity into the search. See Freitag and Al-Onaizan 2017,
+        "Beam Search Strategies for Neural Machine Translation".
     """
     def __init__(self,
                  beam_size: Optional[int],
                  allowed_sequences: torch.Tensor,
-                 allowed_sequence_mask: torch.Tensor) -> None:
+                 allowed_sequence_mask: torch.Tensor,
+                 per_node_beam_size: int = None) -> None:
         self._beam_size = beam_size
+        self._per_node_beam_size = per_node_beam_size or beam_size
         self._allowed_transitions = util.construct_prefix_tree(allowed_sequences, allowed_sequence_mask)
 
     def search(self,
@@ -79,7 +87,7 @@ class ConstrainedBeamSearch:
                                                    grouped_state.action_history):
                 allowed_actions.append(self._allowed_transitions[batch_index][tuple(action_history)])
             for next_state in transition_function.take_step(grouped_state,
-                                                            max_actions=self._beam_size,
+                                                            max_actions=self._per_node_beam_size,
                                                             allowed_actions=allowed_actions):
                 # NOTE: we're doing state.batch_indices[0] here (and similar things below),
                 # hard-coding a group size of 1.  But, our use of `next_state.is_finished()`
