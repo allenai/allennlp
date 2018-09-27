@@ -1,26 +1,26 @@
 import re
 import csv
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Union
 
 from unidecode import unidecode
 from allennlp.data.tokenizers import Token
 
 # == stop words that will be omitted by ContextGenerator
-STOP_WORDS = ["", "", "all", "being", "-", "over", "through", "yourselves", "its", "before",\
-             "hadn", "with", "had", ",", "should", "to", "only", "under", "ours", "has", "ought", "do",\
-             "them", "his", "than", "very", "cannot", "they", "not", "during", "yourself", "him", "nor",\
-             "did", "didn", "'ve", "this", "she", "each", "where", "because", "doing", "some", "we", "are",\
-             "further", "ourselves", "out", "what", "for", "weren", "does", "above", "between", "mustn", "?",\
-             "be", "hasn", "who", "were", "here", "shouldn", "let", "hers", "by", "both", "about", "couldn",\
-             "of", "could", "against", "isn", "or", "own", "into", "while", "whom", "down", "wasn", "your",\
-             "from", "her", "their", "aren", "there", "been", ".", "few", "too", "wouldn", "themselves",\
-             ":", "was", "until", "more", "himself", "on", "but", "don", "herself", "haven", "those", "he",\
-             "me", "myself", "these", "up", ";", "below", "'re", "can", "theirs", "my", "and", "would", "then",\
-             "is", "am", "it", "doesn", "an", "as", "itself", "at", "have", "in", "any", "if", "!", "again", "'ll",\
-             "no", "that", "when", "same", "how", "other", "which", "you", "many", "shan", "'t", "'s", "our",
-  "after","most", "'d", "such", "'m", "why", "a", "off", "i", "yours", "so", "the", "having", "once"]
+STOP_WORDS = {"", "", "all", "being", "-", "over", "through", "yourselves", "its", "before",
+              "hadn", "with", "had", ",", "should", "to", "only", "under", "ours", "has", "ought", "do",
+              "them", "his", "than", "very", "cannot", "they", "not", "during", "yourself", "him",
+              "nor", "did", "didn", "'ve", "this", "she", "each", "where", "because", "doing", "some", "we", "are",
+              "further", "ourselves", "out", "what", "for", "weren", "does", "above", "between", "mustn", "?",
+              "be", "hasn", "who", "were", "here", "shouldn", "let", "hers", "by", "both", "about", "couldn",
+              "of", "could", "against", "isn", "or", "own", "into", "while", "whom", "down", "wasn", "your",
+              "from", "her", "their", "aren", "there", "been", ".", "few", "too", "wouldn", "themselves",
+              ":", "was", "until", "more", "himself", "on", "but", "don", "herself", "haven", "those", "he",
+              "me", "myself", "these", "up", ";", "below", "'re", "can", "theirs", "my", "and", "would", "then",
+              "is", "am", "it", "doesn", "an", "as", "itself", "at", "have", "in", "any", "if", "!",
+              "again", "'ll", "no", "that", "when", "same", "how", "other", "which", "you", "many", "shan",
+              "'t", "'s", "our", "after", "most", "'d", "such", "'m", "why", "a", "off", "i", "yours", "so",
+              "the", "having", "once"}
 
-DEFAULT_NUMBERS = ['-1', '0', '1']
 NUMBER_CHARACTERS = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '-'}
 MONTH_NUMBERS = {
         'january': 1,
@@ -76,20 +76,28 @@ NUMBER_WORDS = {
 
 class TableQuestionContext:
     """
-    A Barebones implementation similar to https://github.com/crazydonkey200/neural-symbolic-machines/blob/master/table/wtq/preprocess.py
+    A barebones implementation similar to
+    https://github.com/crazydonkey200/neural-symbolic-machines/blob/master/table/wtq/preprocess.py
     for extracting entities from a question given a table and type its columns with <string> | <date> | <number>
     """
-
+    # TODO(shikhar/pradeep): Fix variable names
     def __init__(self,
                  cell_values: Set[str],
                  column_type_statistics: List[Dict[str, int]],
-                 column_index_to_name:  Dict[int, str]) -> None:
+                 column_index_to_name: Dict[int, str],
+                 question_tokens: List[Token]) -> None:
         self.cell_values = cell_values
-        self.column_types = {column_index_to_name[column_index] : max(column_type_statistics[column_index], 
-                                           key=column_type_statistics[column_index].get) for column_index in column_index_to_name}
+        self.column_types = {column_index_to_name[column_index]: max(column_type_statistics[column_index],
+                                                                     key=column_type_statistics[column_index].get)
+                             for column_index in column_index_to_name}
+        self.question_tokens = question_tokens
+
+    MAX_TOKENS_FOR_NUM_CELL = 1
 
     @classmethod
-    def read_from_lines(cls, lines: List[str], max_tokens_for_num_cell : int) -> 'TableQuestionContext':
+    def read_from_lines(cls,
+                        lines: List[List[str]],
+                        question_tokens: List[Token]) -> 'TableQuestionContext':
         column_index_to_name = {}
 
         header = lines[0] # the first line is the header
@@ -102,8 +110,6 @@ class TableQuestionContext:
             column_name = column_name_sempre.replace('fb:row.row.', '')
             column_index_to_name[column_index] = column_name
             index += 1
-
-
         column_node_type_info = [{'string' : 0, 'number' : 0, 'date' : 0}
                                  for col in column_index_to_name]
         cell_values = set()
@@ -116,29 +122,24 @@ class TableQuestionContext:
             if node_info['date']:
                 column_node_type_info[column_index]['date'] += 1
             # If cell contains too many tokens, then likely not number
-            elif node_info['number'] and num_tokens < max_tokens_for_num_cell:
+            elif node_info['number'] and num_tokens <= cls.MAX_TOKENS_FOR_NUM_CELL:
                 column_node_type_info[column_index]['number'] += 1
             elif node_info['content'] != '—':
                 column_node_type_info[column_index]['string'] += 1
             index += 1
-
-
-        return cls(cell_values, column_node_type_info, column_index_to_name)
+        return cls(cell_values, column_node_type_info, column_index_to_name, question_tokens)
 
     @classmethod
-    def read_from_file(cls, filename: str, max_tokens_for_num_cell: int) -> 'TableQuestionContext':
+    def read_from_file(cls, filename: str, question_tokens: List[Token]) -> 'TableQuestionContext':
         with open(filename, 'r') as file_pointer:
             reader = csv.reader(file_pointer, delimiter='\t', quoting=csv.QUOTE_NONE)
             # obtain column information
             lines = [line for line in reader]
-            return cls.read_from_lines(lines, max_tokens_for_num_cell)
+            return cls.read_from_lines(lines, question_tokens)
 
-
-
-
-    def get_entities_from_question(self, question: List[Token]):
+    def get_entities_from_question(self):
         entity_data = []
-        for i, token in enumerate(question):
+        for i, token in enumerate(self.question_tokens):
             token_text = token.text
             if token_text in STOP_WORDS:
                 continue
@@ -149,20 +150,20 @@ class TableQuestionContext:
                 curr_data = {'value' : normalized_token_text, 'token_start' : i, 'token_end' : i+1}
                 entity_data.append(curr_data)
 
-        extracted_numbers = self._get_numbers_from_tokens(question)
-        
+        extracted_numbers = self._get_numbers_from_tokens(self.question_tokens)
         # filter out number entities to avoid repitition
-        if len(extracted_numbers) > 0:
-            _ , number_token_text  = list(zip(*extracted_numbers))
+        if extracted_numbers:
+            _, number_token_text = list(zip(*extracted_numbers))
             number_token_text = list(number_token_text)
-            expanded_string_entities = [] 
+            expanded_string_entities = []
             for ent in entity_data:
                 if ent['value'] not in number_token_text:
                     expanded_string_entities.append(ent)
-            expanded_entities = [ ent['value'] for ent in self._expand_entities(question, expanded_string_entities) ]
+            expanded_entities = [ent['value'] for ent in
+                                 self._expand_entities(self.question_tokens, expanded_string_entities)]
         else:
-            expanded_entities = [ ent['value'] for ent in self._expand_entities(question, entity_data) ]
-            
+            expanded_entities = [ent['value'] for ent in
+                                 self._expand_entities(self.question_tokens, entity_data)]
         return expanded_entities, extracted_numbers  #TODO(shikhar) Handle conjunctions
 
 
@@ -235,7 +236,6 @@ class TableQuestionContext:
                 return True
         return False
 
-
     def _process_conjunction(self, entity_data):
         raise NotImplementedError
 
@@ -263,7 +263,6 @@ class TableQuestionContext:
                     break
 
             new_ents.append({'token_start' : current_start, 'token_end' : current_end, 'value' : current_token})
-
         return new_ents
 
     @staticmethod
