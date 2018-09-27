@@ -29,8 +29,8 @@ class QuarelWorld(World):
         self._syntax = syntax
         self.types = QuarelTypeDeclaration(syntax)
         super(QuarelWorld, self).__init__(
-                global_type_signatures=self.types.COMMON_TYPE_SIGNATURE,
-                global_name_mapping=self.types.COMMON_NAME_MAPPING)
+                global_type_signatures=self.types.common_type_signature,
+                global_name_mapping=self.types.common_name_mapping)
         self.table_graph = table_graph
 
         # Keep map and counter for each entity type encountered (first letter in entity string)
@@ -70,26 +70,26 @@ class QuarelWorld(World):
     @overrides
     def _map_name(self, name: str, keep_mapping: bool = False) -> str:
         translated_name = name
-        if name in self.types.COMMON_NAME_MAPPING:
-            translated_name = self.types.COMMON_NAME_MAPPING[name]
+        if name in self.types.common_name_mapping:
+            translated_name = self.types.common_name_mapping[name]
         elif name in self.local_name_mapping:
             translated_name = self.local_name_mapping[name]
         elif name.startswith("a:"):
             translated_name = "A"+str(10+self._entity_index(name))
-            self._add_name_mapping(name, translated_name, self.types.ATTR_FUNCTION_TYPE)
+            self._add_name_mapping(name, translated_name, self.types.attr_function_type)
 
         return translated_name
 
     def _get_curried_functions(self) -> Dict[Type, int]:
-        return self.types.CURRIED_FUNCTIONS
+        return self.types.curried_functions
 
     @overrides
     def get_basic_types(self) -> Set[Type]:
-        return self.types.BASIC_TYPES
+        return self.types.basic_types
 
     @overrides
     def get_valid_starting_types(self) -> Set[Type]:
-        return self.types.STARTING_TYPES
+        return self.types.starting_types
 
     # Simple table for how attributes relates to each other
     # First entry is by convention (above in __init__) the friction subset
