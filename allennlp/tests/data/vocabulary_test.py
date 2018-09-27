@@ -691,7 +691,7 @@ class TestVocabulary(AllenNlpTestCase):
     def test_min_pretrained_embeddings(self):
         params = Params({
                 "pretrained_files": {
-                    "tokens": str(self.FIXTURES_ROOT / "embeddings/glove.6B.100d.sample.txt.gz")
+                        "tokens": str(self.FIXTURES_ROOT / "embeddings/glove.6B.100d.sample.txt.gz")
                 },
                 "min_pretrained_embeddings": {"tokens": 50},
         })
@@ -699,4 +699,3 @@ class TestVocabulary(AllenNlpTestCase):
         vocab = Vocabulary.from_params(params=params, instances=self.dataset)
         assert vocab.get_vocab_size() >= 50
         assert vocab.get_token_index("his") > 1  # not @@UNKNOWN@@
-
