@@ -1,0 +1,375 @@
+2018-09-27 11:26:34,947 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.data.dataset_readers.dataset_reader.DatasetReader'> from params {'align_world_extractions': True, 'lazy': False, 'lf_syntax': 'quarel_friction', 'question_token_indexers': {'tokens': {'lowercase_tokens': True, 'type': 'single_id'}}, 'replace_world_entities': True, 'sample': -1, 'type': 'quarel', 'world_extraction_model': '/inputs/allennlp-models/quarel-f-tagger-try3-model.tar.gz'} and extras {}
+2018-09-27 11:26:34,947 - INFO - allennlp.common.params - dataset_reader.type = quarel
+2018-09-27 11:26:34,947 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.data.dataset_readers.semantic_parsing.quarel.QuarelDatasetReader'> from params {'align_world_extractions': True, 'lazy': False, 'lf_syntax': 'quarel_friction', 'question_token_indexers': {'tokens': {'lowercase_tokens': True, 'type': 'single_id'}}, 'replace_world_entities': True, 'sample': -1, 'world_extraction_model': '/inputs/allennlp-models/quarel-f-tagger-try3-model.tar.gz'} and extras {}
+2018-09-27 11:26:34,948 - INFO - allennlp.common.params - dataset_reader.lazy = False
+2018-09-27 11:26:34,948 - INFO - allennlp.common.params - dataset_reader.sample = -1
+2018-09-27 11:26:34,948 - INFO - allennlp.common.params - dataset_reader.lf_syntax = quarel_friction
+2018-09-27 11:26:34,948 - INFO - allennlp.common.params - dataset_reader.replace_world_entities = True
+2018-09-27 11:26:34,948 - INFO - allennlp.common.params - dataset_reader.align_world_extractions = True
+2018-09-27 11:26:34,948 - INFO - allennlp.common.params - dataset_reader.gold_world_extractions = False
+2018-09-27 11:26:34,948 - INFO - allennlp.common.params - dataset_reader.tagger_only = False
+2018-09-27 11:26:34,948 - INFO - allennlp.common.params - dataset_reader.denotation_only = False
+2018-09-27 11:26:34,948 - INFO - allennlp.common.params - dataset_reader.world_extraction_model = /inputs/allennlp-models/quarel-f-tagger-try3-model.tar.gz
+2018-09-27 11:26:34,948 - INFO - allennlp.common.params - dataset_reader.skip_attributes_regex = None
+2018-09-27 11:26:34,948 - INFO - allennlp.common.params - dataset_reader.entity_bits_mode = None
+2018-09-27 11:26:34,948 - INFO - allennlp.common.params - dataset_reader.entity_types = None
+2018-09-27 11:26:34,948 - INFO - allennlp.common.params - dataset_reader.lexical_cues = None
+2018-09-27 11:26:34,948 - INFO - allennlp.common.from_params - instantiating class allennlp.data.token_indexers.token_indexer.TokenIndexer from params {'lowercase_tokens': True, 'type': 'single_id'} and extras {}
+2018-09-27 11:26:34,949 - INFO - allennlp.common.params - dataset_reader.question_token_indexers.tokens.type = single_id
+2018-09-27 11:26:34,949 - INFO - allennlp.common.from_params - instantiating class allennlp.data.token_indexers.single_id_token_indexer.SingleIdTokenIndexer from params {'lowercase_tokens': True} and extras {}
+2018-09-27 11:26:34,949 - INFO - allennlp.common.params - dataset_reader.question_token_indexers.tokens.namespace = tokens
+2018-09-27 11:26:34,949 - INFO - allennlp.common.params - dataset_reader.question_token_indexers.tokens.lowercase_tokens = True
+2018-09-27 11:26:35,273 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - all_entities = None
+2018-09-27 11:26:35,274 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - Loading world tagger model...
+2018-09-27 11:26:35,277 - INFO - allennlp.models.archival - loading archive file /inputs/allennlp-models/quarel-f-tagger-try3-model.tar.gz
+2018-09-27 11:26:35,279 - INFO - allennlp.models.archival - extracting archive file /inputs/allennlp-models/quarel-f-tagger-try3-model.tar.gz to temp dir /var/folders/m2/r8qr5r2d7j7bm9l4c7x_b3ww0000gp/T/tmpim2tegiu
+2018-09-27 11:26:35,329 - INFO - allennlp.common.registrable - instantiating registered subclass crf_tagger of <class 'allennlp.models.model.Model'>
+2018-09-27 11:26:35,329 - INFO - allennlp.data.vocabulary - Loading token dictionary from /var/folders/m2/r8qr5r2d7j7bm9l4c7x_b3ww0000gp/T/tmpim2tegiu/vocabulary.
+2018-09-27 11:26:35,332 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.models.model.Model'> from params {'constraint_type': 'BIO', 'dropout': 0.2, 'encoder': {'bidirectional': True, 'hidden_size': 50, 'input_size': 100, 'num_layers': 1, 'type': 'lstm'}, 'include_start_end_transitions': False, 'text_field_embedder': {'tokens': {'embedding_dim': 100, 'trainable': False, 'type': 'embedding'}}, 'type': 'crf_tagger'} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x122e98128>}
+2018-09-27 11:26:35,332 - INFO - allennlp.common.params - model.type = crf_tagger
+2018-09-27 11:26:35,332 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.models.crf_tagger.CrfTagger'> from params {'constraint_type': 'BIO', 'dropout': 0.2, 'encoder': {'bidirectional': True, 'hidden_size': 50, 'input_size': 100, 'num_layers': 1, 'type': 'lstm'}, 'include_start_end_transitions': False, 'text_field_embedder': {'tokens': {'embedding_dim': 100, 'trainable': False, 'type': 'embedding'}}} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x122e98128>}
+2018-09-27 11:26:35,332 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.modules.text_field_embedders.text_field_embedder.TextFieldEmbedder'> from params {'tokens': {'embedding_dim': 100, 'trainable': False, 'type': 'embedding'}} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x122e98128>}
+2018-09-27 11:26:35,333 - INFO - allennlp.common.params - model.text_field_embedder.type = basic
+2018-09-27 11:26:35,333 - INFO - allennlp.common.params - model.text_field_embedder.embedder_to_indexer_map = None
+2018-09-27 11:26:35,333 - INFO - allennlp.common.params - model.text_field_embedder.allow_unmatched_keys = False
+2018-09-27 11:26:35,333 - INFO - allennlp.common.params - model.text_field_embedder.token_embedders = None
+2018-09-27 11:26:35,333 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.modules.token_embedders.token_embedder.TokenEmbedder'> from params {'embedding_dim': 100, 'trainable': False, 'type': 'embedding'} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x122e98128>}
+2018-09-27 11:26:35,333 - INFO - allennlp.common.params - model.text_field_embedder.tokens.type = embedding
+2018-09-27 11:26:35,333 - INFO - allennlp.common.params - model.text_field_embedder.tokens.num_embeddings = None
+2018-09-27 11:26:35,333 - INFO - allennlp.common.params - model.text_field_embedder.tokens.vocab_namespace = tokens
+2018-09-27 11:26:35,333 - INFO - allennlp.common.params - model.text_field_embedder.tokens.embedding_dim = 100
+2018-09-27 11:26:35,333 - INFO - allennlp.common.params - model.text_field_embedder.tokens.pretrained_file = None
+2018-09-27 11:26:35,333 - INFO - allennlp.common.params - model.text_field_embedder.tokens.projection_dim = None
+2018-09-27 11:26:35,333 - INFO - allennlp.common.params - model.text_field_embedder.tokens.trainable = False
+2018-09-27 11:26:35,333 - INFO - allennlp.common.params - model.text_field_embedder.tokens.padding_index = None
+2018-09-27 11:26:35,334 - INFO - allennlp.common.params - model.text_field_embedder.tokens.max_norm = None
+2018-09-27 11:26:35,334 - INFO - allennlp.common.params - model.text_field_embedder.tokens.norm_type = 2.0
+2018-09-27 11:26:35,334 - INFO - allennlp.common.params - model.text_field_embedder.tokens.scale_grad_by_freq = False
+2018-09-27 11:26:35,334 - INFO - allennlp.common.params - model.text_field_embedder.tokens.sparse = False
+2018-09-27 11:26:35,336 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.modules.seq2seq_encoders.seq2seq_encoder.Seq2SeqEncoder'> from params {'bidirectional': True, 'hidden_size': 50, 'input_size': 100, 'num_layers': 1, 'type': 'lstm'} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x122e98128>}
+2018-09-27 11:26:35,336 - INFO - allennlp.common.params - model.encoder.type = lstm
+2018-09-27 11:26:35,336 - INFO - allennlp.common.params - model.encoder.batch_first = True
+2018-09-27 11:26:35,336 - INFO - allennlp.common.params - Converting Params object to dict; logging of default values will not occur when dictionary parameters are used subsequently.
+2018-09-27 11:26:35,336 - INFO - allennlp.common.params - CURRENTLY DEFINED PARAMETERS: 
+2018-09-27 11:26:35,336 - INFO - allennlp.common.params - model.encoder.bidirectional = True
+2018-09-27 11:26:35,336 - INFO - allennlp.common.params - model.encoder.hidden_size = 50
+2018-09-27 11:26:35,336 - INFO - allennlp.common.params - model.encoder.input_size = 100
+2018-09-27 11:26:35,336 - INFO - allennlp.common.params - model.encoder.num_layers = 1
+2018-09-27 11:26:35,336 - INFO - allennlp.common.params - model.encoder.batch_first = True
+2018-09-27 11:26:35,338 - INFO - allennlp.common.params - model.label_namespace = labels
+2018-09-27 11:26:35,338 - INFO - allennlp.common.params - model.label_encoding = None
+2018-09-27 11:26:35,338 - INFO - allennlp.common.params - model.constraint_type = BIO
+2018-09-27 11:26:35,338 - INFO - allennlp.common.params - model.include_start_end_transitions = False
+2018-09-27 11:26:35,338 - INFO - allennlp.common.params - model.constrain_crf_decoding = None
+2018-09-27 11:26:35,338 - INFO - allennlp.common.params - model.calculate_span_f1 = None
+2018-09-27 11:26:35,338 - INFO - allennlp.common.params - model.dropout = 0.2
+2018-09-27 11:26:35,338 - INFO - allennlp.common.params - model.verbose_metrics = False
+2018-09-27 11:26:35,339 - INFO - allennlp.nn.initializers - Initializing parameters
+2018-09-27 11:26:35,339 - INFO - allennlp.nn.initializers - Done initializing parameters; the following parameters are using their default initialization from their code
+2018-09-27 11:26:35,339 - INFO - allennlp.nn.initializers -    crf._constraint_mask
+2018-09-27 11:26:35,339 - INFO - allennlp.nn.initializers -    crf.transitions
+2018-09-27 11:26:35,339 - INFO - allennlp.nn.initializers -    encoder._module.bias_hh_l0
+2018-09-27 11:26:35,339 - INFO - allennlp.nn.initializers -    encoder._module.bias_hh_l0_reverse
+2018-09-27 11:26:35,340 - INFO - allennlp.nn.initializers -    encoder._module.bias_ih_l0
+2018-09-27 11:26:35,340 - INFO - allennlp.nn.initializers -    encoder._module.bias_ih_l0_reverse
+2018-09-27 11:26:35,340 - INFO - allennlp.nn.initializers -    encoder._module.weight_hh_l0
+2018-09-27 11:26:35,340 - INFO - allennlp.nn.initializers -    encoder._module.weight_hh_l0_reverse
+2018-09-27 11:26:35,340 - INFO - allennlp.nn.initializers -    encoder._module.weight_ih_l0
+2018-09-27 11:26:35,340 - INFO - allennlp.nn.initializers -    encoder._module.weight_ih_l0_reverse
+2018-09-27 11:26:35,340 - INFO - allennlp.nn.initializers -    tag_projection_layer._module.bias
+2018-09-27 11:26:35,340 - INFO - allennlp.nn.initializers -    tag_projection_layer._module.weight
+2018-09-27 11:26:35,340 - INFO - allennlp.nn.initializers -    text_field_embedder.token_embedder_tokens.weight
+2018-09-27 11:26:35,343 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.data.dataset_readers.dataset_reader.DatasetReader'> from params {'entity_types': ['world'], 'gold_world_extractions': True, 'lazy': False, 'lf_syntax': 'quarel_friction', 'question_token_indexers': {'tokens': {'lowercase_tokens': True, 'type': 'single_id'}}, 'sample': -1, 'tagger_only': True, 'type': 'quarel'} and extras {}
+2018-09-27 11:26:35,343 - INFO - allennlp.common.params - dataset_reader.type = quarel
+2018-09-27 11:26:35,343 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.data.dataset_readers.semantic_parsing.quarel.QuarelDatasetReader'> from params {'entity_types': ['world'], 'gold_world_extractions': True, 'lazy': False, 'lf_syntax': 'quarel_friction', 'question_token_indexers': {'tokens': {'lowercase_tokens': True, 'type': 'single_id'}}, 'sample': -1, 'tagger_only': True} and extras {}
+2018-09-27 11:26:35,343 - INFO - allennlp.common.params - dataset_reader.lazy = False
+2018-09-27 11:26:35,343 - INFO - allennlp.common.params - dataset_reader.sample = -1
+2018-09-27 11:26:35,344 - INFO - allennlp.common.params - dataset_reader.lf_syntax = quarel_friction
+2018-09-27 11:26:35,344 - INFO - allennlp.common.params - dataset_reader.replace_world_entities = False
+2018-09-27 11:26:35,344 - INFO - allennlp.common.params - dataset_reader.align_world_extractions = False
+2018-09-27 11:26:35,344 - INFO - allennlp.common.params - dataset_reader.gold_world_extractions = True
+2018-09-27 11:26:35,344 - INFO - allennlp.common.params - dataset_reader.tagger_only = True
+2018-09-27 11:26:35,344 - INFO - allennlp.common.params - dataset_reader.denotation_only = False
+2018-09-27 11:26:35,344 - INFO - allennlp.common.params - dataset_reader.world_extraction_model = None
+2018-09-27 11:26:35,344 - INFO - allennlp.common.params - dataset_reader.skip_attributes_regex = None
+2018-09-27 11:26:35,344 - INFO - allennlp.common.params - dataset_reader.entity_bits_mode = None
+2018-09-27 11:26:35,344 - INFO - allennlp.common.params - dataset_reader.entity_types = ['world']
+2018-09-27 11:26:35,344 - INFO - allennlp.common.params - dataset_reader.lexical_cues = None
+2018-09-27 11:26:35,344 - INFO - allennlp.common.from_params - instantiating class allennlp.data.token_indexers.token_indexer.TokenIndexer from params {'lowercase_tokens': True, 'type': 'single_id'} and extras {}
+2018-09-27 11:26:35,344 - INFO - allennlp.common.params - dataset_reader.question_token_indexers.tokens.type = single_id
+2018-09-27 11:26:35,345 - INFO - allennlp.common.from_params - instantiating class allennlp.data.token_indexers.single_id_token_indexer.SingleIdTokenIndexer from params {'lowercase_tokens': True} and extras {}
+2018-09-27 11:26:35,345 - INFO - allennlp.common.params - dataset_reader.question_token_indexers.tokens.namespace = tokens
+2018-09-27 11:26:35,345 - INFO - allennlp.common.params - dataset_reader.question_token_indexers.tokens.lowercase_tokens = True
+2018-09-27 11:26:35,345 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - all_entities = ['world1', 'world2']
+2018-09-27 11:26:35,345 - INFO - allennlp.common.registrable - instantiating registered subclass sentence-tagger of <class 'allennlp.predictors.predictor.Predictor'>
+2018-09-27 11:26:35,683 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - Done loading world tagger model!
+2018-09-27 11:26:35,684 - INFO - allennlp.commands.train - Using a separate dataset reader to load validation and test data.
+2018-09-27 11:26:35,684 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.data.dataset_readers.dataset_reader.DatasetReader'> from params {'align_world_extractions': False, 'lazy': False, 'lf_syntax': 'quarel_friction', 'question_token_indexers': {'tokens': {'lowercase_tokens': True, 'type': 'single_id'}}, 'replace_world_entities': True, 'sample': -1, 'type': 'quarel', 'world_extraction_model': '/inputs/allennlp-models/quarel-f-tagger-try3-model.tar.gz'} and extras {}
+2018-09-27 11:26:35,684 - INFO - allennlp.common.params - validation_dataset_reader.type = quarel
+2018-09-27 11:26:35,684 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.data.dataset_readers.semantic_parsing.quarel.QuarelDatasetReader'> from params {'align_world_extractions': False, 'lazy': False, 'lf_syntax': 'quarel_friction', 'question_token_indexers': {'tokens': {'lowercase_tokens': True, 'type': 'single_id'}}, 'replace_world_entities': True, 'sample': -1, 'world_extraction_model': '/inputs/allennlp-models/quarel-f-tagger-try3-model.tar.gz'} and extras {}
+2018-09-27 11:26:35,684 - INFO - allennlp.common.params - validation_dataset_reader.lazy = False
+2018-09-27 11:26:35,684 - INFO - allennlp.common.params - validation_dataset_reader.sample = -1
+2018-09-27 11:26:35,684 - INFO - allennlp.common.params - validation_dataset_reader.lf_syntax = quarel_friction
+2018-09-27 11:26:35,684 - INFO - allennlp.common.params - validation_dataset_reader.replace_world_entities = True
+2018-09-27 11:26:35,685 - INFO - allennlp.common.params - validation_dataset_reader.align_world_extractions = False
+2018-09-27 11:26:35,685 - INFO - allennlp.common.params - validation_dataset_reader.gold_world_extractions = False
+2018-09-27 11:26:35,685 - INFO - allennlp.common.params - validation_dataset_reader.tagger_only = False
+2018-09-27 11:26:35,685 - INFO - allennlp.common.params - validation_dataset_reader.denotation_only = False
+2018-09-27 11:26:35,685 - INFO - allennlp.common.params - validation_dataset_reader.world_extraction_model = /inputs/allennlp-models/quarel-f-tagger-try3-model.tar.gz
+2018-09-27 11:26:35,685 - INFO - allennlp.common.params - validation_dataset_reader.skip_attributes_regex = None
+2018-09-27 11:26:35,685 - INFO - allennlp.common.params - validation_dataset_reader.entity_bits_mode = None
+2018-09-27 11:26:35,686 - INFO - allennlp.common.params - validation_dataset_reader.entity_types = None
+2018-09-27 11:26:35,686 - INFO - allennlp.common.params - validation_dataset_reader.lexical_cues = None
+2018-09-27 11:26:35,686 - INFO - allennlp.common.from_params - instantiating class allennlp.data.token_indexers.token_indexer.TokenIndexer from params {'lowercase_tokens': True, 'type': 'single_id'} and extras {}
+2018-09-27 11:26:35,686 - INFO - allennlp.common.params - validation_dataset_reader.question_token_indexers.tokens.type = single_id
+2018-09-27 11:26:35,686 - INFO - allennlp.common.from_params - instantiating class allennlp.data.token_indexers.single_id_token_indexer.SingleIdTokenIndexer from params {'lowercase_tokens': True} and extras {}
+2018-09-27 11:26:35,686 - INFO - allennlp.common.params - validation_dataset_reader.question_token_indexers.tokens.namespace = tokens
+2018-09-27 11:26:35,686 - INFO - allennlp.common.params - validation_dataset_reader.question_token_indexers.tokens.lowercase_tokens = True
+2018-09-27 11:26:35,686 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - all_entities = None
+2018-09-27 11:26:35,686 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - Loading world tagger model...
+2018-09-27 11:26:35,687 - INFO - allennlp.models.archival - loading archive file /inputs/allennlp-models/quarel-f-tagger-try3-model.tar.gz
+2018-09-27 11:26:35,687 - INFO - allennlp.models.archival - extracting archive file /inputs/allennlp-models/quarel-f-tagger-try3-model.tar.gz to temp dir /var/folders/m2/r8qr5r2d7j7bm9l4c7x_b3ww0000gp/T/tmpo9jeysmq
+2018-09-27 11:26:35,734 - INFO - allennlp.common.registrable - instantiating registered subclass crf_tagger of <class 'allennlp.models.model.Model'>
+2018-09-27 11:26:35,734 - INFO - allennlp.data.vocabulary - Loading token dictionary from /var/folders/m2/r8qr5r2d7j7bm9l4c7x_b3ww0000gp/T/tmpo9jeysmq/vocabulary.
+2018-09-27 11:26:35,736 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.models.model.Model'> from params {'constraint_type': 'BIO', 'dropout': 0.2, 'encoder': {'bidirectional': True, 'hidden_size': 50, 'input_size': 100, 'num_layers': 1, 'type': 'lstm'}, 'include_start_end_transitions': False, 'text_field_embedder': {'tokens': {'embedding_dim': 100, 'trainable': False, 'type': 'embedding'}}, 'type': 'crf_tagger'} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x124ec0198>}
+2018-09-27 11:26:35,736 - INFO - allennlp.common.params - model.type = crf_tagger
+2018-09-27 11:26:35,736 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.models.crf_tagger.CrfTagger'> from params {'constraint_type': 'BIO', 'dropout': 0.2, 'encoder': {'bidirectional': True, 'hidden_size': 50, 'input_size': 100, 'num_layers': 1, 'type': 'lstm'}, 'include_start_end_transitions': False, 'text_field_embedder': {'tokens': {'embedding_dim': 100, 'trainable': False, 'type': 'embedding'}}} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x124ec0198>}
+2018-09-27 11:26:35,737 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.modules.text_field_embedders.text_field_embedder.TextFieldEmbedder'> from params {'tokens': {'embedding_dim': 100, 'trainable': False, 'type': 'embedding'}} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x124ec0198>}
+2018-09-27 11:26:35,737 - INFO - allennlp.common.params - model.text_field_embedder.type = basic
+2018-09-27 11:26:35,737 - INFO - allennlp.common.params - model.text_field_embedder.embedder_to_indexer_map = None
+2018-09-27 11:26:35,737 - INFO - allennlp.common.params - model.text_field_embedder.allow_unmatched_keys = False
+2018-09-27 11:26:35,737 - INFO - allennlp.common.params - model.text_field_embedder.token_embedders = None
+2018-09-27 11:26:35,737 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.modules.token_embedders.token_embedder.TokenEmbedder'> from params {'embedding_dim': 100, 'trainable': False, 'type': 'embedding'} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x124ec0198>}
+2018-09-27 11:26:35,737 - INFO - allennlp.common.params - model.text_field_embedder.tokens.type = embedding
+2018-09-27 11:26:35,737 - INFO - allennlp.common.params - model.text_field_embedder.tokens.num_embeddings = None
+2018-09-27 11:26:35,737 - INFO - allennlp.common.params - model.text_field_embedder.tokens.vocab_namespace = tokens
+2018-09-27 11:26:35,737 - INFO - allennlp.common.params - model.text_field_embedder.tokens.embedding_dim = 100
+2018-09-27 11:26:35,737 - INFO - allennlp.common.params - model.text_field_embedder.tokens.pretrained_file = None
+2018-09-27 11:26:35,738 - INFO - allennlp.common.params - model.text_field_embedder.tokens.projection_dim = None
+2018-09-27 11:26:35,738 - INFO - allennlp.common.params - model.text_field_embedder.tokens.trainable = False
+2018-09-27 11:26:35,738 - INFO - allennlp.common.params - model.text_field_embedder.tokens.padding_index = None
+2018-09-27 11:26:35,738 - INFO - allennlp.common.params - model.text_field_embedder.tokens.max_norm = None
+2018-09-27 11:26:35,738 - INFO - allennlp.common.params - model.text_field_embedder.tokens.norm_type = 2.0
+2018-09-27 11:26:35,738 - INFO - allennlp.common.params - model.text_field_embedder.tokens.scale_grad_by_freq = False
+2018-09-27 11:26:35,738 - INFO - allennlp.common.params - model.text_field_embedder.tokens.sparse = False
+2018-09-27 11:26:35,740 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.modules.seq2seq_encoders.seq2seq_encoder.Seq2SeqEncoder'> from params {'bidirectional': True, 'hidden_size': 50, 'input_size': 100, 'num_layers': 1, 'type': 'lstm'} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x124ec0198>}
+2018-09-27 11:26:35,740 - INFO - allennlp.common.params - model.encoder.type = lstm
+2018-09-27 11:26:35,740 - INFO - allennlp.common.params - model.encoder.batch_first = True
+2018-09-27 11:26:35,740 - INFO - allennlp.common.params - Converting Params object to dict; logging of default values will not occur when dictionary parameters are used subsequently.
+2018-09-27 11:26:35,740 - INFO - allennlp.common.params - CURRENTLY DEFINED PARAMETERS: 
+2018-09-27 11:26:35,740 - INFO - allennlp.common.params - model.encoder.bidirectional = True
+2018-09-27 11:26:35,741 - INFO - allennlp.common.params - model.encoder.hidden_size = 50
+2018-09-27 11:26:35,741 - INFO - allennlp.common.params - model.encoder.input_size = 100
+2018-09-27 11:26:35,741 - INFO - allennlp.common.params - model.encoder.num_layers = 1
+2018-09-27 11:26:35,741 - INFO - allennlp.common.params - model.encoder.batch_first = True
+2018-09-27 11:26:35,742 - INFO - allennlp.common.params - model.label_namespace = labels
+2018-09-27 11:26:35,742 - INFO - allennlp.common.params - model.label_encoding = None
+2018-09-27 11:26:35,742 - INFO - allennlp.common.params - model.constraint_type = BIO
+2018-09-27 11:26:35,742 - INFO - allennlp.common.params - model.include_start_end_transitions = False
+2018-09-27 11:26:35,742 - INFO - allennlp.common.params - model.constrain_crf_decoding = None
+2018-09-27 11:26:35,742 - INFO - allennlp.common.params - model.calculate_span_f1 = None
+2018-09-27 11:26:35,742 - INFO - allennlp.common.params - model.dropout = 0.2
+2018-09-27 11:26:35,742 - INFO - allennlp.common.params - model.verbose_metrics = False
+2018-09-27 11:26:35,743 - INFO - allennlp.nn.initializers - Initializing parameters
+2018-09-27 11:26:35,743 - INFO - allennlp.nn.initializers - Done initializing parameters; the following parameters are using their default initialization from their code
+2018-09-27 11:26:35,743 - INFO - allennlp.nn.initializers -    crf._constraint_mask
+2018-09-27 11:26:35,743 - INFO - allennlp.nn.initializers -    crf.transitions
+2018-09-27 11:26:35,743 - INFO - allennlp.nn.initializers -    encoder._module.bias_hh_l0
+2018-09-27 11:26:35,743 - INFO - allennlp.nn.initializers -    encoder._module.bias_hh_l0_reverse
+2018-09-27 11:26:35,743 - INFO - allennlp.nn.initializers -    encoder._module.bias_ih_l0
+2018-09-27 11:26:35,743 - INFO - allennlp.nn.initializers -    encoder._module.bias_ih_l0_reverse
+2018-09-27 11:26:35,743 - INFO - allennlp.nn.initializers -    encoder._module.weight_hh_l0
+2018-09-27 11:26:35,743 - INFO - allennlp.nn.initializers -    encoder._module.weight_hh_l0_reverse
+2018-09-27 11:26:35,743 - INFO - allennlp.nn.initializers -    encoder._module.weight_ih_l0
+2018-09-27 11:26:35,744 - INFO - allennlp.nn.initializers -    encoder._module.weight_ih_l0_reverse
+2018-09-27 11:26:35,744 - INFO - allennlp.nn.initializers -    tag_projection_layer._module.bias
+2018-09-27 11:26:35,744 - INFO - allennlp.nn.initializers -    tag_projection_layer._module.weight
+2018-09-27 11:26:35,744 - INFO - allennlp.nn.initializers -    text_field_embedder.token_embedder_tokens.weight
+2018-09-27 11:26:35,746 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.data.dataset_readers.dataset_reader.DatasetReader'> from params {'entity_types': ['world'], 'gold_world_extractions': True, 'lazy': False, 'lf_syntax': 'quarel_friction', 'question_token_indexers': {'tokens': {'lowercase_tokens': True, 'type': 'single_id'}}, 'sample': -1, 'tagger_only': True, 'type': 'quarel'} and extras {}
+2018-09-27 11:26:35,746 - INFO - allennlp.common.params - dataset_reader.type = quarel
+2018-09-27 11:26:35,746 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.data.dataset_readers.semantic_parsing.quarel.QuarelDatasetReader'> from params {'entity_types': ['world'], 'gold_world_extractions': True, 'lazy': False, 'lf_syntax': 'quarel_friction', 'question_token_indexers': {'tokens': {'lowercase_tokens': True, 'type': 'single_id'}}, 'sample': -1, 'tagger_only': True} and extras {}
+2018-09-27 11:26:35,746 - INFO - allennlp.common.params - dataset_reader.lazy = False
+2018-09-27 11:26:35,746 - INFO - allennlp.common.params - dataset_reader.sample = -1
+2018-09-27 11:26:35,747 - INFO - allennlp.common.params - dataset_reader.lf_syntax = quarel_friction
+2018-09-27 11:26:35,747 - INFO - allennlp.common.params - dataset_reader.replace_world_entities = False
+2018-09-27 11:26:35,747 - INFO - allennlp.common.params - dataset_reader.align_world_extractions = False
+2018-09-27 11:26:35,747 - INFO - allennlp.common.params - dataset_reader.gold_world_extractions = True
+2018-09-27 11:26:35,747 - INFO - allennlp.common.params - dataset_reader.tagger_only = True
+2018-09-27 11:26:35,747 - INFO - allennlp.common.params - dataset_reader.denotation_only = False
+2018-09-27 11:26:35,747 - INFO - allennlp.common.params - dataset_reader.world_extraction_model = None
+2018-09-27 11:26:35,747 - INFO - allennlp.common.params - dataset_reader.skip_attributes_regex = None
+2018-09-27 11:26:35,747 - INFO - allennlp.common.params - dataset_reader.entity_bits_mode = None
+2018-09-27 11:26:35,747 - INFO - allennlp.common.params - dataset_reader.entity_types = ['world']
+2018-09-27 11:26:35,747 - INFO - allennlp.common.params - dataset_reader.lexical_cues = None
+2018-09-27 11:26:35,747 - INFO - allennlp.common.from_params - instantiating class allennlp.data.token_indexers.token_indexer.TokenIndexer from params {'lowercase_tokens': True, 'type': 'single_id'} and extras {}
+2018-09-27 11:26:35,747 - INFO - allennlp.common.params - dataset_reader.question_token_indexers.tokens.type = single_id
+2018-09-27 11:26:35,747 - INFO - allennlp.common.from_params - instantiating class allennlp.data.token_indexers.single_id_token_indexer.SingleIdTokenIndexer from params {'lowercase_tokens': True} and extras {}
+2018-09-27 11:26:35,747 - INFO - allennlp.common.params - dataset_reader.question_token_indexers.tokens.namespace = tokens
+2018-09-27 11:26:35,748 - INFO - allennlp.common.params - dataset_reader.question_token_indexers.tokens.lowercase_tokens = True
+2018-09-27 11:26:35,748 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - all_entities = ['world1', 'world2']
+2018-09-27 11:26:35,748 - INFO - allennlp.common.registrable - instantiating registered subclass sentence-tagger of <class 'allennlp.predictors.predictor.Predictor'>
+2018-09-27 11:26:35,748 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - Done loading world tagger model!
+2018-09-27 11:26:35,748 - INFO - allennlp.common.params - train_data_path = /inputs/friction-q-v3xl/friction-q-v3xl-train.jsonl
+2018-09-27 11:26:35,748 - INFO - allennlp.commands.train - Reading training data from /inputs/friction-q-v3xl/friction-q-v3xl-train.jsonl
+2018-09-27 11:26:35,750 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - Reading instances from lines in file: /inputs/friction-q-v3xl/friction-q-v3xl-train.jsonl
+2018-09-27 11:26:35,760 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - question_data_list = [{'id': 'FrictionQ_V3_0872', 'question': 'The lawnmower went faster over the worldone, versus the worldtwo because the worldone has answeroptionA more resistance answeroptionB less resistance', 'answer_index': 1, 'logical_forms': ['(infer (speed higher world1) (friction higher world1) (friction lower world1))'], 'world_literals': {'world1': 'moss', 'world2': 'tall grass'}, 'world_extractions': {'world1': ['moss'], 'world2': ['tall grass']}}]
+2018-09-27 11:26:35,760 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - logical_forms = ['(infer (speed higher world1) (friction higher world1) (friction lower world1))']
+2018-09-27 11:26:35,773 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - question_data_list = [{'id': 'FrictionQ_V3_1558', 'question': 'The nunchucks experience more resistance on a worldone then on a worldtwo. This means that they will slide slower on the answeroptionA worldone answeroptionB worldtwo', 'answer_index': 0, 'logical_forms': ['(infer (friction higher world1) (speed lower world1) (speed lower world2))'], 'world_literals': {'world1': 'yoga mat', 'world2': 'wooden floor'}, 'world_extractions': {'world1': ['yoga mat'], 'world2': ['wooden floor']}}]
+2018-09-27 11:26:35,773 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - logical_forms = ['(infer (friction higher world1) (speed lower world1) (speed lower world2))']
+2018-09-27 11:26:35,789 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - question_data_list = [{'id': 'FrictionQ_V3_0700', 'question': 'Jake is riding his bike on the worldone. He sees that there is construction up ahead and he veers off into the worldtwo. Jake moves slower when he is in the worldtwo. He was able to go further on the answeroptionA worldone answeroptionB worldtwo.', 'answer_index': 0, 'logical_forms': ['(infer (speed lower world2) (distance higher world1) (distance higher world2))'], 'world_literals': {'world1': 'mud', 'world2': 'sidewalk'}, 'world_extractions': {'world1': ['sidewalk'], 'world2': ['mud']}}]
+2018-09-27 11:26:35,789 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - logical_forms = ['(infer (speed lower world2) (distance higher world1) (distance higher world2))']
+2018-09-27 11:26:35,801 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - question_data_list = [{'id': 'FrictionQ_V3_0455', 'question': "The propeller on Kate's boat moved slower in the worldone compared to the worldtwo. This means the propeller heated up less in the answeroptionA worldone answeroptionB worldtwo", 'answer_index': 1, 'logical_forms': ['(infer (speed lower world1) (heat lower world1) (heat lower world2))'], 'world_literals': {'world1': 'ocean', 'world2': 'river'}, 'world_extractions': {'world1': ['ocean'], 'world2': ['river']}}]
+2018-09-27 11:26:35,801 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - logical_forms = ['(infer (speed lower world1) (heat lower world1) (heat lower world2))']
+2018-09-27 11:26:50,476 - INFO - allennlp.common.params - validation_data_path = /inputs/friction-q-v3xl/friction-q-v3xl-dev.jsonl
+2018-09-27 11:26:50,476 - INFO - allennlp.commands.train - Reading validation data from /inputs/friction-q-v3xl/friction-q-v3xl-dev.jsonl
+2018-09-27 11:26:50,477 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - Reading instances from lines in file: /inputs/friction-q-v3xl/friction-q-v3xl-dev.jsonl
+2018-09-27 11:26:50,488 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - question_data_list = [{'id': 'FrictionQ_V3_0842', 'question': 'Sam is skating outside. He glides across the worldone with no problem, but falls when he skates on worldtwo. Which ground has less friction? answeroptionA worldone answeroptionB worldtwo', 'answer_index': 0, 'logical_forms': ['(infer (and (smoothness high world1) (smoothness low world2)) (friction lower world1) (friction lower world2))', '(infer (and (smoothness high world2) (smoothness low world1)) (friction lower world2) (friction lower world1))'], 'value_literals': {'high': 'glides', 'low': 'falls'}, 'world_literals': {'world1': 'dirt', 'world2': 'gravel'}, 'world_extractions': {'world1': ['dirt'], 'world2': ['gravel']}}]
+2018-09-27 11:26:50,488 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - logical_forms = ['(infer (and (smoothness high world1) (smoothness low world2)) (friction lower world1) (friction lower world2))', '(infer (and (smoothness high world2) (smoothness low world1)) (friction lower world2) (friction lower world1))']
+2018-09-27 11:26:50,500 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - question_data_list = [{'id': 'FrictionQ_V3_1021', 'question': "Peter's surfboard drifted more slowly over worldtwo than over worldone. He also noticed that the surfboard stayed cooler when in answeroptionA worldtwo answeroptionB worldone", 'answer_index': 1, 'logical_forms': ['(infer (speed lower world1) (heat lower world1) (heat lower world2))', '(infer (speed lower world2) (heat lower world2) (heat lower world1))'], 'world_literals': {'world1': 'waves', 'world2': 'calm water'}, 'world_extractions': {'world1': ['calm water'], 'world2': ['wave']}}]
+2018-09-27 11:26:50,501 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - logical_forms = ['(infer (speed lower world1) (heat lower world1) (heat lower world2))', '(infer (speed lower world2) (heat lower world2) (heat lower world1))']
+2018-09-27 11:26:50,520 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - question_data_list = [{'id': 'FrictionQ_V3_0534', 'question': 'Jerry rolls a worldone down the worldone and it rolls fast and far. Then Jerry rolls the same worldone on the worldtwo and the rock barely moves. The blankblank had more resistance. answeroptionA worldtwo answeroptionB worldone', 'answer_index': 0, 'logical_forms': ['(infer (and (speed high world1) (speed low world2)) (friction higher world2) (friction higher world1))', '(infer (and (speed high world2) (speed low world1)) (friction higher world1) (friction higher world2))'], 'value_literals': {'high': 'fast and far', 'low': 'barely moves'}, 'world_literals': {'world1': 'sidewalk', 'world2': 'lawn'}, 'world_extractions': {'world1': ['sidewalk', 'green rock'], 'world2': ['lawn']}}]
+2018-09-27 11:26:50,521 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - logical_forms = ['(infer (and (speed high world1) (speed low world2)) (friction higher world2) (friction higher world1))', '(infer (and (speed high world2) (speed low world1)) (friction higher world1) (friction higher world2))']
+2018-09-27 11:26:50,548 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - question_data_list = [{'id': 'FrictionQ_V3_1055', 'question': 'Larry is shopping. As he pushes his shopping cart outside the store, he realizes there is more friction in the worldone than there was in the store on the worldtwo. Larry pushes the shopping cart at a lower rate of speed over the answeroptionA worldtwo answeroptionB worldone.', 'answer_index': 1, 'logical_forms': ['(infer (friction higher world1) (speed lower world2) (speed lower world1))', '(infer (friction higher world2) (speed lower world1) (speed lower world2))'], 'world_literals': {'world1': 'old parking lot', 'world2': 'tile floor'}, 'world_extractions': {'world1': ['old parking lot', 'parking lot'], 'world2': ['tile floor']}}]
+2018-09-27 11:26:50,548 - INFO - allennlp.data.dataset_readers.semantic_parsing.quarel - logical_forms = ['(infer (friction higher world1) (speed lower world2) (speed lower world1))', '(infer (friction higher world2) (speed lower world1) (speed lower world2))']
+2018-09-27 11:26:52,889 - INFO - allennlp.common.params - test_data_path = None
+2018-09-27 11:26:52,890 - INFO - allennlp.commands.train - From dataset instances, train, validation will be considered for vocabulary creation.
+2018-09-27 11:26:52,890 - INFO - allennlp.common.params - vocabulary.type = None
+2018-09-27 11:26:52,890 - INFO - allennlp.common.params - vocabulary.extend = False
+2018-09-27 11:26:52,890 - INFO - allennlp.common.params - vocabulary.directory_path = None
+2018-09-27 11:26:52,890 - INFO - allennlp.common.params - vocabulary.min_count = None
+2018-09-27 11:26:52,890 - INFO - allennlp.common.params - vocabulary.max_vocab_size = None
+2018-09-27 11:26:52,891 - INFO - allennlp.common.params - vocabulary.non_padded_namespaces = ['actions']
+2018-09-27 11:26:52,891 - INFO - allennlp.common.params - vocabulary.min_pretrained_embeddings = None
+2018-09-27 11:26:52,891 - INFO - allennlp.common.params - vocabulary.only_include_pretrained_words = False
+2018-09-27 11:26:52,891 - INFO - allennlp.common.params - vocabulary.tokens_to_add = None
+2018-09-27 11:26:52,891 - INFO - allennlp.data.vocabulary - Fitting token dictionary from dataset.
+2018-09-27 11:26:52,989 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.models.model.Model'> from params {'action_embedding_dim': 50, 'attention': {'type': 'dot_product'}, 'decoder_beam_search': {'beam_size': 5}, 'dropout': 0.2, 'encoder': {'bidirectional': False, 'hidden_size': 50, 'input_size': 100, 'num_layers': 1, 'type': 'lstm'}, 'max_decoding_steps': 30, 'question_embedder': {'tokens': {'embedding_dim': 100, 'pretrained_file': '/inputs/glove/glove.6B.100d.txt.gz', 'trainable': False, 'type': 'embedding'}}, 'type': 'quarel_parser'} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x124ec8080>}
+2018-09-27 11:26:52,989 - INFO - allennlp.common.params - model.type = quarel_parser
+2018-09-27 11:26:52,989 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.models.semantic_parsing.quarel.quarel_semantic_parser.QuarelSemanticParser'> from params {'action_embedding_dim': 50, 'attention': {'type': 'dot_product'}, 'decoder_beam_search': {'beam_size': 5}, 'dropout': 0.2, 'encoder': {'bidirectional': False, 'hidden_size': 50, 'input_size': 100, 'num_layers': 1, 'type': 'lstm'}, 'max_decoding_steps': 30, 'question_embedder': {'tokens': {'embedding_dim': 100, 'pretrained_file': '/inputs/glove/glove.6B.100d.txt.gz', 'trainable': False, 'type': 'embedding'}}} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x124ec8080>}
+2018-09-27 11:26:52,990 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.modules.text_field_embedders.text_field_embedder.TextFieldEmbedder'> from params {'tokens': {'embedding_dim': 100, 'pretrained_file': '/inputs/glove/glove.6B.100d.txt.gz', 'trainable': False, 'type': 'embedding'}} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x124ec8080>}
+2018-09-27 11:26:52,990 - INFO - allennlp.common.params - model.question_embedder.type = basic
+2018-09-27 11:26:52,990 - INFO - allennlp.common.params - model.question_embedder.embedder_to_indexer_map = None
+2018-09-27 11:26:52,990 - INFO - allennlp.common.params - model.question_embedder.allow_unmatched_keys = False
+2018-09-27 11:26:52,990 - INFO - allennlp.common.params - model.question_embedder.token_embedders = None
+2018-09-27 11:26:52,990 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.modules.token_embedders.token_embedder.TokenEmbedder'> from params {'embedding_dim': 100, 'pretrained_file': '/inputs/glove/glove.6B.100d.txt.gz', 'trainable': False, 'type': 'embedding'} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x124ec8080>}
+2018-09-27 11:26:52,990 - INFO - allennlp.common.params - model.question_embedder.tokens.type = embedding
+2018-09-27 11:26:52,990 - INFO - allennlp.common.params - model.question_embedder.tokens.num_embeddings = None
+2018-09-27 11:26:52,990 - INFO - allennlp.common.params - model.question_embedder.tokens.vocab_namespace = tokens
+2018-09-27 11:26:52,991 - INFO - allennlp.common.params - model.question_embedder.tokens.embedding_dim = 100
+2018-09-27 11:26:52,991 - INFO - allennlp.common.params - model.question_embedder.tokens.pretrained_file = /inputs/glove/glove.6B.100d.txt.gz
+2018-09-27 11:26:52,991 - INFO - allennlp.common.params - model.question_embedder.tokens.projection_dim = None
+2018-09-27 11:26:52,991 - INFO - allennlp.common.params - model.question_embedder.tokens.trainable = False
+2018-09-27 11:26:52,991 - INFO - allennlp.common.params - model.question_embedder.tokens.padding_index = None
+2018-09-27 11:26:52,991 - INFO - allennlp.common.params - model.question_embedder.tokens.max_norm = None
+2018-09-27 11:26:52,991 - INFO - allennlp.common.params - model.question_embedder.tokens.norm_type = 2.0
+2018-09-27 11:26:52,991 - INFO - allennlp.common.params - model.question_embedder.tokens.scale_grad_by_freq = False
+2018-09-27 11:26:52,991 - INFO - allennlp.common.params - model.question_embedder.tokens.sparse = False
+2018-09-27 11:26:52,991 - INFO - allennlp.modules.token_embedders.embedding - Reading pretrained embeddings from file
+2018-09-27 11:26:58,222 - INFO - allennlp.modules.token_embedders.embedding - Initializing pre-trained embedding layer
+2018-09-27 11:26:58,241 - INFO - allennlp.modules.token_embedders.embedding - Pretrained embeddings were found for 2305 out of 2331 tokens
+2018-09-27 11:26:58,242 - INFO - allennlp.common.params - model.action_embedding_dim = 50
+2018-09-27 11:26:58,242 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.modules.seq2seq_encoders.seq2seq_encoder.Seq2SeqEncoder'> from params {'bidirectional': False, 'hidden_size': 50, 'input_size': 100, 'num_layers': 1, 'type': 'lstm'} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x124ec8080>}
+2018-09-27 11:26:58,242 - INFO - allennlp.common.params - model.encoder.type = lstm
+2018-09-27 11:26:58,242 - INFO - allennlp.common.params - model.encoder.batch_first = True
+2018-09-27 11:26:58,242 - INFO - allennlp.common.params - Converting Params object to dict; logging of default values will not occur when dictionary parameters are used subsequently.
+2018-09-27 11:26:58,242 - INFO - allennlp.common.params - CURRENTLY DEFINED PARAMETERS: 
+2018-09-27 11:26:58,242 - INFO - allennlp.common.params - model.encoder.bidirectional = False
+2018-09-27 11:26:58,242 - INFO - allennlp.common.params - model.encoder.hidden_size = 50
+2018-09-27 11:26:58,242 - INFO - allennlp.common.params - model.encoder.input_size = 100
+2018-09-27 11:26:58,243 - INFO - allennlp.common.params - model.encoder.num_layers = 1
+2018-09-27 11:26:58,243 - INFO - allennlp.common.params - model.encoder.batch_first = True
+2018-09-27 11:26:58,243 - INFO - allennlp.common.from_params - instantiating class allennlp.state_machines.beam_search.BeamSearch from params {'beam_size': 5} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x124ec8080>}
+2018-09-27 11:26:58,243 - INFO - allennlp.common.params - model.decoder_beam_search.beam_size = 5
+2018-09-27 11:26:58,243 - INFO - allennlp.common.params - model.max_decoding_steps = 30
+2018-09-27 11:26:58,243 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.modules.attention.attention.Attention'> from params {'type': 'dot_product'} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x124ec8080>}
+2018-09-27 11:26:58,244 - INFO - allennlp.common.params - model.attention.type = dot_product
+2018-09-27 11:26:58,244 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.modules.attention.dot_product_attention.DotProductAttention'> from params {} and extras {'vocab': <allennlp.data.vocabulary.Vocabulary object at 0x124ec8080>}
+2018-09-27 11:26:58,244 - INFO - allennlp.common.params - model.attention.normalize = True
+2018-09-27 11:26:58,244 - INFO - allennlp.common.params - model.add_action_bias = True
+2018-09-27 11:26:58,244 - INFO - allennlp.common.params - model.use_neighbor_similarity_for_linking = False
+2018-09-27 11:26:58,244 - INFO - allennlp.common.params - model.dropout = 0.2
+2018-09-27 11:26:58,244 - INFO - allennlp.common.params - model.num_linking_features = 0
+2018-09-27 11:26:58,244 - INFO - allennlp.common.params - model.num_entity_bits = 0
+2018-09-27 11:26:58,244 - INFO - allennlp.common.params - model.entity_bits_output = True
+2018-09-27 11:26:58,244 - INFO - allennlp.common.params - model.use_entities = False
+2018-09-27 11:26:58,244 - INFO - allennlp.common.params - model.denotation_only = False
+2018-09-27 11:26:58,244 - INFO - allennlp.common.params - model.entity_similarity_mode = dot_product
+2018-09-27 11:26:58,244 - INFO - allennlp.common.params - model.rule_namespace = rule_labels
+2018-09-27 11:26:58,251 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.data.iterators.data_iterator.DataIterator'> from params {'batch_size': 1, 'type': 'basic'} and extras {}
+2018-09-27 11:26:58,251 - INFO - allennlp.common.params - iterator.type = basic
+2018-09-27 11:26:58,252 - INFO - allennlp.common.from_params - instantiating class <class 'allennlp.data.iterators.basic_iterator.BasicIterator'> from params {'batch_size': 1} and extras {}
+2018-09-27 11:26:58,252 - INFO - allennlp.common.params - iterator.batch_size = 1
+2018-09-27 11:26:58,252 - INFO - allennlp.common.params - iterator.instances_per_epoch = None
+2018-09-27 11:26:58,252 - INFO - allennlp.common.params - iterator.max_instances_in_memory = None
+2018-09-27 11:26:58,252 - INFO - allennlp.common.params - iterator.cache_instances = False
+2018-09-27 11:26:58,252 - INFO - allennlp.common.params - iterator.track_epoch = False
+2018-09-27 11:26:58,252 - INFO - allennlp.common.params - iterator.maximum_samples_per_batch = None
+2018-09-27 11:26:58,252 - INFO - allennlp.common.params - validation_iterator = None
+2018-09-27 11:26:58,252 - INFO - allennlp.common.params - trainer.no_grad = ()
+2018-09-27 11:26:58,252 - INFO - allennlp.commands.train - Following parameters are Frozen  (without gradient):
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _question_embedder.token_embedder_tokens.weight
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - Following parameters are Tunable (with gradient):
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _first_action_embedding
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _first_attended_question
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _encoder._module.weight_ih_l0
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _encoder._module.weight_hh_l0
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _encoder._module.bias_ih_l0
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _encoder._module.bias_hh_l0
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _action_embedder.weight
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _action_biases.weight
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _entity_type_encoder_embedding.weight
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _entity_type_decoder_embedding.weight
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _decoder_step._input_projection_layer.weight
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _decoder_step._input_projection_layer.bias
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _decoder_step._output_projection_layer.weight
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _decoder_step._output_projection_layer.bias
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _decoder_step._decoder_cell.weight_ih
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _decoder_step._decoder_cell.weight_hh
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _decoder_step._decoder_cell.bias_ih
+2018-09-27 11:26:58,253 - INFO - allennlp.commands.train - _decoder_step._decoder_cell.bias_hh
+2018-09-27 11:26:58,253 - INFO - allennlp.common.params - trainer.patience = 40
+2018-09-27 11:26:58,253 - INFO - allennlp.common.params - trainer.validation_metric = +parse_acc
+2018-09-27 11:26:58,254 - INFO - allennlp.common.params - trainer.shuffle = True
+2018-09-27 11:26:58,254 - INFO - allennlp.common.params - trainer.num_epochs = 100
+2018-09-27 11:26:58,254 - INFO - allennlp.common.params - trainer.cuda_device = -1
+2018-09-27 11:26:58,254 - INFO - allennlp.common.params - trainer.grad_norm = None
+2018-09-27 11:26:58,254 - INFO - allennlp.common.params - trainer.grad_clipping = None
+2018-09-27 11:26:58,254 - INFO - allennlp.common.params - trainer.optimizer.type = adam
+2018-09-27 11:26:58,254 - INFO - allennlp.common.params - trainer.optimizer.parameter_groups = None
+2018-09-27 11:26:58,254 - INFO - allennlp.training.optimizers - Number of trainable parameters: 62569
+2018-09-27 11:26:58,255 - INFO - allennlp.common.registrable - instantiating registered subclass adam of <class 'allennlp.training.optimizers.Optimizer'>
+2018-09-27 11:26:58,255 - INFO - allennlp.common.params - Converting Params object to dict; logging of default values will not occur when dictionary parameters are used subsequently.
+2018-09-27 11:26:58,255 - INFO - allennlp.common.params - CURRENTLY DEFINED PARAMETERS: 
+2018-09-27 11:26:58,255 - INFO - allennlp.common.params - trainer.learning_rate_scheduler.type = reduce_on_plateau
+2018-09-27 11:26:58,255 - INFO - allennlp.common.registrable - instantiating registered subclass reduce_on_plateau of <class 'allennlp.training.learning_rate_schedulers.LearningRateScheduler'>
+2018-09-27 11:26:58,255 - INFO - allennlp.common.params - Converting Params object to dict; logging of default values will not occur when dictionary parameters are used subsequently.
+2018-09-27 11:26:58,255 - INFO - allennlp.common.params - CURRENTLY DEFINED PARAMETERS: 
+2018-09-27 11:26:58,255 - INFO - allennlp.common.params - trainer.learning_rate_scheduler.factor = 0.5
+2018-09-27 11:26:58,255 - INFO - allennlp.common.params - trainer.learning_rate_scheduler.mode = max
+2018-09-27 11:26:58,255 - INFO - allennlp.common.params - trainer.learning_rate_scheduler.patience = 10
+2018-09-27 11:26:58,255 - INFO - allennlp.common.params - trainer.num_serialized_models_to_keep = 2
+2018-09-27 11:26:58,255 - INFO - allennlp.common.params - trainer.keep_serialized_model_every_num_seconds = None
+2018-09-27 11:26:58,256 - INFO - allennlp.common.params - trainer.model_save_interval = None
+2018-09-27 11:26:58,256 - INFO - allennlp.common.params - trainer.summary_interval = 100
+2018-09-27 11:26:58,256 - INFO - allennlp.common.params - trainer.histogram_interval = None
+2018-09-27 11:26:58,256 - INFO - allennlp.common.params - trainer.should_log_parameter_statistics = True
+2018-09-27 11:26:58,256 - INFO - allennlp.common.params - trainer.should_log_learning_rate = False
+2018-09-27 11:26:58,257 - INFO - allennlp.common.params - evaluate_on_test = False
+2018-09-27 11:26:58,257 - INFO - allennlp.training.trainer - Beginning training.
+2018-09-27 11:26:58,258 - INFO - allennlp.training.trainer - Epoch 0/99
+2018-09-27 11:26:58,258 - INFO - allennlp.training.trainer - Peak CPU memory usage MB: 338.776064
+2018-09-27 11:26:58,273 - INFO - allennlp.training.trainer - Training
+2018-09-27 11:27:27,638 - INFO - allennlp.training.trainer - Validating
+2018-09-27 11:27:31,309 - INFO - allennlp.training.trainer -                    Training |  Validation
+2018-09-27 11:27:31,310 - INFO - allennlp.training.trainer - denotation_acc |     0.000  |     0.489
+2018-09-27 11:27:31,310 - INFO - allennlp.training.trainer - loss           |    10.587  |     7.872
+2018-09-27 11:27:31,310 - INFO - allennlp.training.trainer - lf_percent     |     0.000  |     1.000
+2018-09-27 11:27:31,310 - INFO - allennlp.training.trainer - parse_acc      |     0.000  |     0.007
+2018-09-27 11:27:31,315 - INFO - allennlp.training.trainer - Best validation performance so far. Copying weights to 'tmpout7/best.th'.
+2018-09-27 11:27:31,316 - INFO - allennlp.training.trainer - Epoch duration: 00:00:33
+2018-09-27 11:27:31,316 - INFO - allennlp.training.trainer - Estimated training time remaining: 0:54:32
+2018-09-27 11:27:31,316 - INFO - allennlp.training.trainer - Epoch 1/99
+2018-09-27 11:27:31,316 - INFO - allennlp.training.trainer - Peak CPU memory usage MB: 354.811904
+2018-09-27 11:27:31,326 - INFO - allennlp.training.trainer - Training
+2018-09-27 11:27:41,172 - INFO - root - Training interrupted by the user. Attempting to create a model archive using the current best epoch weights.
+2018-09-27 11:27:41,172 - INFO - allennlp.models.archival - archiving weights and vocabulary to tmpout7/model.tar.gz

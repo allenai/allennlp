@@ -228,7 +228,7 @@ class QuarelDatasetReader(DatasetReader):
                     logical_forms = question_data['logical_forms']
                     # Skip examples with certain attributes
                     if (self._skip_attributes_regex is not None and
-                            self._skip_attributes_regex.search(logical_forms[0])):
+                                self._skip_attributes_regex.search(logical_forms[0])):
                         continue
 
                     if debug_counter > 0:
@@ -428,7 +428,7 @@ class QuarelDatasetReader(DatasetReader):
         res = []
         # Hackily access last two feature extractors for table field (span overlaps which don't
         # depend on the actual table information)
-        features = table_field._feature_extractors[8:]
+        features = table_field._feature_extractors[8:]  # pylint: disable=protected-access
         for i, token in enumerate(tokenized_question):
             tag_best = 0
             score_max = 0.0

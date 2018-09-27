@@ -148,7 +148,7 @@ class QuarelSemanticParser(Model):
             self._entity_similarity_layer = \
                 TimeDistributed(torch.nn.Linear(self._embedding_dim, 1, bias=False))
             # Center initial values around unweighted dot product
-            self._entity_similarity_layer._module.weight.data += 1
+            self._entity_similarity_layer._module.weight.data += 1  # pylint: disable=protected-access
         elif self._entity_similarity_mode == "dot_product":
             pass
         else:

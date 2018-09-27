@@ -153,7 +153,7 @@ def get_explanation(logical_form: str,
     })
     answers = parse[0][2:]
     output.append({
-           "header": "The answer options are stating",
+            "header": "The answer options are stating",
             "content": ["A: " + " and ".join(nl_arg(answers[0], nl_world)),
                         "B: " + " and ".join(nl_arg(answers[1], nl_world))]
     })
@@ -164,7 +164,7 @@ def get_explanation(logical_form: str,
     s_dir = world.qr_size[setup_core[1]]
     s_world = nl_world[setup_core[2]]
     a_attr = answers[answer_index][0]
-    qr_dir = world._get_qr_coeff(strip_entity_type(s_attr), strip_entity_type(a_attr))
+    qr_dir = world._get_qr_coeff(strip_entity_type(s_attr), strip_entity_type(a_attr))  # pylint: disable=protected-access
     a_dir = s_dir * qr_dir
     a_world = nl_world[answers[answer_index][2]]
 
@@ -335,11 +335,13 @@ class WorldTaggerExtractor:
     def get_world_entities(self,
                            question: str,
                            tokenized_question: List[Token] = None) -> Dict[str, List[str]]:
+
+        # TODO: Fix protected access
         tokenized_question = tokenized_question or \
-                             self._tagger._dataset_reader._tokenizer.tokenize(question.lower())
-        instance = self._tagger._dataset_reader.text_to_instance(question,
+                             self._tagger._dataset_reader._tokenizer.tokenize(question.lower())  # pylint: disable=protected-access
+        instance = self._tagger._dataset_reader.text_to_instance(question,  # pylint: disable=protected-access
                                                                  tokenized_question=tokenized_question)
-        output = self._tagger._model.forward_on_instance(instance)
+        output = self._tagger._model.forward_on_instance(instance)  # pylint: disable=protected-access
         tokens_text = [t.text for t in tokenized_question]
         res = group_worlds(output['tags'], tokens_text)
         return res

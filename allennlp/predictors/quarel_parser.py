@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import cast, Tuple
 
 from overrides import overrides
 
@@ -17,17 +17,19 @@ class QuarelParserPredictor(Predictor):
     """
     def _my_json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
         """
-        Expects JSON that looks like ``{"question": "...", "table": "..."}``.
         """
-        reader: QuarelDatasetReader = self._dataset_reader
 
-        question_data = reader._preprocess(json_dict)[0]
+        # Make a cast here to satisfy mypy
+        dataset_reader = cast(QuarelDatasetReader, self._dataset_reader)
+
+        # TODO: Fix protected access usage
+        question_data = dataset_reader._preprocess(json_dict)[0]  # pylint: disable=protected-access
 
         qr_spec_override = None
         dynamic_entities = None
         if 'entitycues' in json_dict:
             entity_cues = from_entity_cues_string(json_dict['entitycues'])
-            dynamic_entities = reader._dynamic_entities.copy()
+            dynamic_entities = dataset_reader._dynamic_entities.copy()  # pylint: disable=protected-access
             for entity, cues in entity_cues.items():
                 key = "a:" + entity
                 entity_strings = [words_from_entity_string(entity).lower()]
@@ -38,7 +40,7 @@ class QuarelParserPredictor(Predictor):
             qr_spec_override = from_qr_spec_string(json_dict['qrspec'])
             old_entities = dynamic_entities
             if old_entities is None:
-                old_entities = reader._dynamic_entities.copy()
+                old_entities = dataset_reader._dynamic_entities.copy()  # pylint: disable=protected-access
             dynamic_entities = {}
             for qset in qr_spec_override:
                 for entity in qset:
@@ -47,13 +49,13 @@ class QuarelParserPredictor(Predictor):
                     dynamic_entities[key] = value
 
         question = question_data['question']
-        tokenized_question = reader._tokenizer.tokenize(question.lower())
+        tokenized_question = dataset_reader._tokenizer.tokenize(question.lower())  # pylint: disable=protected-access
         world_extractions = question_data.get('world_extractions')
 
-        instance = self._dataset_reader.text_to_instance(question,
-                                                         world_extractions=world_extractions,
-                                                         qr_spec_override=qr_spec_override,
-                                                         dynamic_entities_override=dynamic_entities)
+        instance = dataset_reader.text_to_instance(question,
+                                                   world_extractions=world_extractions,
+                                                   qr_spec_override=qr_spec_override,
+                                                   dynamic_entities_override=dynamic_entities)
 
         world_extractions_out = {"world1": "N/A", "world2": "N/A"}
         if world_extractions is not None:
@@ -63,6 +65,11 @@ class QuarelParserPredictor(Predictor):
                       'question_tokens': tokenized_question,
                       "world_extractions": world_extractions_out}
         return instance, extra_info
+
+    @overrides
+    def _json_to_instance(self, json_dict: JsonDict) -> Instance:
+        instance, _ = self._my_json_to_instance(json_dict)
+        return instance
 
     @overrides
     def predict_json(self, inputs: JsonDict) -> JsonDict:
