@@ -47,7 +47,7 @@ class BasicTransitionFunctionTest(AllenNlpTestCase):
                                    [1, 2, 3])
                 }
         }
-        grammar_state = [GrammarStatelet([nonterminal], {}, valid_actions, {}, is_nonterminal)
+        grammar_state = [GrammarStatelet([nonterminal], valid_actions, is_nonterminal)
                          for _, nonterminal in zip(batch_indices, ['e', 'd', 'e'])]
         self.encoder_outputs = torch.FloatTensor([[[1, 2], [3, 4], [5, 6]], [[10, 11], [12, 13], [14, 15]]])
         self.encoder_output_mask = torch.FloatTensor([[1, 1, 1], [1, 1, 0]])
