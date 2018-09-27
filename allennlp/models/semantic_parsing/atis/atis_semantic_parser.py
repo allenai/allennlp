@@ -15,7 +15,7 @@ from allennlp.modules import Attention, Seq2SeqEncoder, TextFieldEmbedder, \
         Embedding
 from allennlp.nn import util
 from allennlp.semparse.worlds import AtisWorld
-from allennlp.semparse.contexts.sql_table_context import action_sequence_to_sql
+from allennlp.semparse.contexts.sql_context_utils import action_sequence_to_sql
 from allennlp.state_machines.states import GrammarBasedState
 from allennlp.state_machines.transition_functions.linking_transition_function import LinkingTransitionFunction
 from allennlp.state_machines import BeamSearch

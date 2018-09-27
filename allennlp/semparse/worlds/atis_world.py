@@ -7,8 +7,8 @@ from parsimonious.grammar import Grammar
 
 from allennlp.common.file_utils import cached_path
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
-from allennlp.semparse.contexts.sql_table_context import \
-        SqlTableContext, SqlVisitor, format_action
+from allennlp.semparse.contexts.atis_sql_table_context import AtisSqlTableContext, KEYWORDS
+from allennlp.semparse.contexts.sql_context_utils import SqlVisitor, format_action
 
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
@@ -63,9 +63,9 @@ class AtisWorld():
         self.all_tables = ALL_TABLES
         self.tables_with_strings = TABLES_WITH_STRINGS
 
-        self.sql_table_context = SqlTableContext(ALL_TABLES,
-                                                 TABLES_WITH_STRINGS,
-                                                 database_file) if database_file else None
+        self.sql_table_context = AtisSqlTableContext(ALL_TABLES,
+                                                     TABLES_WITH_STRINGS,
+                                                     database_file) if database_file else None
         if database_file:
             self.database_file = cached_path(database_file)
             self.connection = sqlite3.connect(self.database_file)
@@ -121,7 +121,7 @@ class AtisWorld():
             for token_index in number_linking_dict.get(number, []):
                 if token_index < len(entity_linking):
                     entity_linking[token_index] = 1
-            action = format_action(nonterminal, number, is_number=True)
+            action = format_action(nonterminal, number, is_number=True, keywords_to_uppercase=KEYWORDS)
             number_linking_scores[action] = (nonterminal, number, entity_linking)
 
 
@@ -173,7 +173,8 @@ class AtisWorld():
                     self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
                     strings_list.extend([(format_action(f"{table}_{column}_string", str(row[0]),
                                                         is_string=not 'number' in column,
-                                                        is_number='number' in column),
+                                                        is_number='number' in column,
+                                                        keywords_to_uppercase=KEYWORDS),
                                           str(row[0]))
                                          for row in self.cursor.fetchall()])
 
@@ -263,7 +264,7 @@ class AtisWorld():
                           for nonterminal, right_hand_side in self.grammar_dictionary.items()])
 
     def get_action_sequence(self, query: str) -> List[str]:
-        sql_visitor = SqlVisitor(self.grammar_with_context)
+        sql_visitor = SqlVisitor(self.grammar_with_context, keywords_to_uppercase=KEYWORDS)
         if query:
             action_sequence = sql_visitor.parse(query)
             return action_sequence
