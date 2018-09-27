@@ -2,17 +2,15 @@
 An ``AtisSqlTableContext`` represents the SQL context in which an utterance appears
 for the Atis dataset, with the grammar and the valid actions.
 """
-from collections import defaultdict
-from typing import List, Dict, Set
+from typing import List, Dict
 import sqlite3
 from copy import deepcopy
 
 
-from parsimonious.expressions import Sequence, OneOf, Literal
 from parsimonious.grammar import Grammar
 
 from allennlp.common.file_utils import cached_path
-from allennlp.semparse.contexts.sql_context_utils import format_action
+from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions
 
 # This is the base definition of the SQL grammar in a simplified sort of
 # EBNF notation, and represented as a dictionary. The keys are the nonterminals and the values
@@ -73,7 +71,7 @@ GRAMMAR_DICTIONARY['number'] = ['""']
 KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"', '"IN"', '"LIKE"',
             '"IS"', '"BETWEEN"', '"AND"', '"ALL"', '"ANY"', '"NULL"', '"OR"', '"DISTINCT"']
 
-class AtisSqlTableContext():
+class AtisSqlTableContext:
     """
     An ``AtisSqlTableContext`` represents the SQL context with a grammar of SQL and the valid actions
     based on the schema of the tables that it represents.
@@ -104,43 +102,9 @@ class AtisSqlTableContext():
 
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)
-        self.valid_actions: Dict[str, List[str]] = self.initialize_valid_actions()
+        self.valid_actions: Dict[str, List[str]] = initialize_valid_actions(self.grammar, KEYWORDS)
         if database_file:
             self.connection.close()
-
-    def initialize_valid_actions(self) -> Dict[str, List[str]]:
-        """
-        We initialize the valid actions with the global actions. These include the
-        valid actions that result from the grammar and also those that result from
-        the tables provided. The keys represent the nonterminals in the grammar
-        and the values are lists of the valid actions of that nonterminal.
-        """
-        valid_actions: Dict[str, Set[str]] = defaultdict(set)
-
-        for key in self.grammar:
-            rhs = self.grammar[key]
-
-            # Sequence represents a series of expressions that match pieces of the text in order.
-            # Eg. A -> B C
-            if isinstance(rhs, Sequence):
-                valid_actions[key].add(format_action(key, " ".join(rhs._unicode_members()), # pylint: disable=protected-access
-                                                     keywords_to_uppercase=KEYWORDS))
-
-            # OneOf represents a series of expressions, one of which matches the text.
-            # Eg. A -> B / C
-            elif isinstance(rhs, OneOf):
-                for option in rhs._unicode_members(): # pylint: disable=protected-access
-                    valid_actions[key].add(format_action(key, option, keywords_to_uppercase=KEYWORDS))
-
-            # A string literal, eg. "A"
-            elif isinstance(rhs, Literal):
-                if rhs.literal != "":
-                    valid_actions[key].add(format_action(key, repr(rhs.literal), keywords_to_uppercase=KEYWORDS))
-                else:
-                    valid_actions[key] = set()
-
-        valid_action_strings = {key: sorted(value) for key, value in valid_actions.items()}
-        return valid_action_strings
 
     def initialize_grammar_str(self):
         if self.all_tables:
