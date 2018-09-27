@@ -31,9 +31,8 @@ make these links):
 
 - Transition functions and training algorithms
 - Keeping track of the decoder's state
-- Defining a transition system to specify what actions there are and when they can be taken
+- Defining a transition system (or a logical form language) to specify what actions there are and when they can be taken, and an execution engine for that language
 - Adding context to your model (like a table or a database)
-- Defining an execution engine
 - Putting the context, the transition system, and the execution engine together into a `World`
 
 ## Training a transition function
@@ -169,16 +168,51 @@ non-terminal is at the top of the non-terminal stack, what actions are available
 class GrammarStatelet:
     def __init__(self,
                  nonterminal_stack: List[str],
-                 valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]],
+                 valid_actions: Dict[str, ActionRepresentation],
                  is_nonterminal: Callable[[str], bool]) -> None:
         ...
 
     def is_finished(self) -> bool:
         ...
 
-    def get_valid_actions(self) -> Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]:
+    def get_valid_actions(self) -> ActionRepresentation:
         ...
 
     def take_action(self, production_rule: str) -> 'GrammarStatelet':
         ...
 ```
+
+To group these things together, we have a `GrammarBasedState` class, that you can actually use with
+a `TransitionFunction`:
+
+```python
+class GrammarBasedState():
+    def __init__(self,
+                 batch_indices: List[int],
+                 action_history: List[List[int]],
+                 score: List[torch.Tensor],
+                 rnn_state: List[RnnStatelet],
+                 grammar_state: List[GrammarStatelet],
+                 possible_actions: List[List[ProductionRuleArray]],
+                 extras: List[Any] = None,
+                 debug_info: List = None) -> None:
+```
+
+As you can see, this keeps track of the basic things that any `State` needs (lists of batch
+indices, action histories, and scores), along with the `RnnStatelets` and `GrammarStatelets`
+discussed above, and a few other fields that are helpful during decoding.
+
+## Defining a language and an execution engine
+
+The previous two sections of this tutorial dealt with a general architecture for training state
+machines, which can be used for any transition system, not just a semantic parser.  For the rest of
+this tutorial, we'll focus on using those state machines to do semantic parsing, by defining a
+language to parse into, an execution engine for that language, and actually 
+
+
+
+## Adding context to a model
+
+## Combining the context, language and execution together into a World
+
+## Putting it all together: a quick summary
