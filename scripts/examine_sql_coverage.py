@@ -6,7 +6,7 @@ import argparse
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import process_sql_data, SqlData
-from allennlp.semparse.contexts.sql_table_context import SqlVisitor
+from allennlp.semparse.contexts.sql_context_utils import SqlVisitor
 from parsimonious.grammar import Grammar
 # still TODO: 
 # JOIN, seems hard.
