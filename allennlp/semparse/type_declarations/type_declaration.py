@@ -127,6 +127,23 @@ class NamedBasicType(BasicType):
         return self._string_rep
 
 
+class MultiMatchNamedBasicType(NamedBasicType):
+    """
+    A ``NamedBasicType`` that matches with any type within a list of ``BasicTypes`` that it takes
+    as an additional argument during instantiation. We just override the ``matches`` method in
+    ``BasicType`` to match against any of the types given by the list.
+    """
+    def __init__(self,
+                 string_rep,
+                 types_to_match: List[BasicType]):
+        super().__init__(string_rep)
+        self._types_to_match = set(types_to_match)
+
+    @overrides
+    def matches(self, other):
+        return super().matches(other) or other in self._types_to_match
+
+
 class PlaceholderType(ComplexType):
     """
     ``PlaceholderType`` is a ``ComplexType`` that involves placeholders, and thus its type
