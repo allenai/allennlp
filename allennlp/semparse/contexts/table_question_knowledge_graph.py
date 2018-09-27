@@ -1,4 +1,4 @@
-import re, itertools,nltk, json
+import re
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, List, Tuple, Union, Set
 
@@ -60,11 +60,6 @@ NUMBER_WORDS = {
         'tenth': 10,
         **MONTH_NUMBERS,
         }
-
-
-
-
-        
 
 
 class TableQuestionKnowledgeGraph(KnowledgeGraph):
