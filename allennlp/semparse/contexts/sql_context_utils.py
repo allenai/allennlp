@@ -95,9 +95,10 @@ class SqlVisitor(NodeVisitor):
                         child_strings.append(child.expr.name)
                     else:
                         child_right_side_string = child.expr._as_rhs().lstrip("(").rstrip(")") # pylint: disable=protected-access
-                        child_right_side_list = [tok for tok in \
+                        child_right_side_list = [tok for tok in
                                                  re.split(" ws |ws | ws", child_right_side_string) if tok]
-                        child_right_side_list = [tok.upper() if tok.upper() in self.keywords_to_uppercase else tok \
+                        child_right_side_list = [tok.upper() if tok.upper() in
+                                                 self.keywords_to_uppercase else tok
                                                  for tok in child_right_side_list]
                         child_strings.extend(child_right_side_list)
                 right_hand_side = "[" + ", ".join(child_strings) + "]"
