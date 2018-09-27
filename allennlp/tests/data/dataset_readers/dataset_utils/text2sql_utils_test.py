@@ -86,6 +86,9 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
                            'LOCATION', '.', 'CITY_NAME', '=', "'city_name0'", 'AND', 'RESTAURANT', '.', 'ID',
                            '=', 'LOCATION', '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
 
+        # Check we don't mangle decimal numbers:
+        assert text2sql_utils.clean_unneeded_aliases(["2.5"]) == ["2.5"]    
+
     def test_read_database_schema(self):
         schema = text2sql_utils.read_dataset_schema(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
         assert schema == {

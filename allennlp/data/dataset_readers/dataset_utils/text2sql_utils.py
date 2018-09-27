@@ -57,7 +57,11 @@ def replace_variables(sentence: List[str],
     return tokens, tags
 
 def split_table_and_column_names(table: str) -> Iterable[str]:
-    return (x for x in table.partition(".") if x != '')
+
+    partitioned = [x for x in table.partition(".") if x != '']
+    if partitioned[0].isnumeric() and partitioned[-1].isnumeric():
+        return [table]
+    return partitioned
 
 def clean_and_split_sql(sql: str) -> List[str]:
     """
