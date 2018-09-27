@@ -140,9 +140,10 @@ class SqlTableContext():
             self.database_file = cached_path(database_file)
             self.connection = sqlite3.connect(self.database_file)
             self.cursor = self.connection.cursor()
-
-        self.grammar_str: str = self.initialize_grammar_str()
-        self.grammar: Grammar = Grammar(self.grammar_str)
+        
+        self.update_grammar_dict_and_strings()
+        self.grammar_string: str = self.get_grammar_string()
+        self.grammar: Grammar = Grammar(self.grammar_string)
         self.valid_actions: Dict[str, List[str]] = self.initialize_valid_actions()
         if database_file:
             self.connection.close()
@@ -180,7 +181,9 @@ class SqlTableContext():
         valid_action_strings = {key: sorted(value) for key, value in valid_actions.items()}
         return valid_action_strings
 
-    def initialize_grammar_str(self):
+    def update_grammar_dict_and_strings(self):
+        self.strings_list = []
+
         if self.all_tables:
             self.grammar_dictionary['table_name'] = \
                     sorted([f'"{table}"'
@@ -198,20 +201,29 @@ class SqlTableContext():
                                 for column in columns])
                 for column in columns:
                     self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
+                    results = self.cursor.fetchall()
+
+                    self.strings_list.extend([(format_action(f"{table}_{column}_string", str(row[0]),
+                                                        is_string=not 'number' in column,
+                                                        is_number='number' in column),
+                                          str(row[0]))
+                                         for row in results])
+
                     if column.endswith('number'):
                         self.grammar_dictionary[f'{table}_{column}_string'] = \
-                                sorted([f'"{str(row[0])}"' for row in self.cursor.fetchall()], reverse=True)
+                                sorted([f'"{str(row[0])}"' for row in results], reverse=True)
                     else:
                         self.grammar_dictionary[f'{table}_{column}_string'] = \
-                                sorted([f'"\'{str(row[0])}\'"' for row in self.cursor.fetchall()], reverse=True)
+                                sorted([f'"\'{str(row[0])}\'"' for row in results], reverse=True)
 
         self.grammar_dictionary['biexpr'] = sorted(biexprs, reverse=True) + \
                 ['( col_ref ws binaryop ws value)', '(value ws binaryop ws value)']
+
+
+    def get_grammar_string(self):
         return '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
                           for nonterminal, right_hand_side in self.grammar_dictionary.items()])
-
-
-
+    
 class SqlVisitor(NodeVisitor):
     """
     ``SqlVisitor`` performs a depth-first traversal of the the AST. It takes the parse tree

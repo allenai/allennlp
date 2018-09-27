@@ -114,8 +114,7 @@ class AtisDatasetReader(DatasetReader):
         if not utterance:
             return None
 
-        world = AtisWorld(utterances=utterances,
-                          database_file=self._database_file)
+        world = AtisWorld(utterances=utterances)
 
         if sql_query_labels:
             # If there are multiple sql queries given as labels, we use the shortest

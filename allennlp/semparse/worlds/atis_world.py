@@ -2,6 +2,7 @@ from typing import List, Dict, Tuple, Set, Callable
 import sqlite3
 import numpy
 from nltk import ngrams
+from copy import deepcopy
 
 from parsimonious.grammar import Grammar
 
@@ -55,22 +56,14 @@ class AtisWorld():
         the grammar.
     """
 
+    database_file = "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
+    sql_table_context = SqlTableContext(ALL_TABLES,
+                                        TABLES_WITH_STRINGS,
+                                        database_file)
+
     def __init__(self,
                  utterances: List[str],
-                 tokenizer: Tokenizer = None,
-                 database_file: str = None) -> None:
-
-        self.all_tables = ALL_TABLES
-        self.tables_with_strings = TABLES_WITH_STRINGS
-
-        self.sql_table_context = SqlTableContext(ALL_TABLES,
-                                                 TABLES_WITH_STRINGS,
-                                                 database_file) if database_file else None
-        if database_file:
-            self.database_file = cached_path(database_file)
-            self.connection = sqlite3.connect(self.database_file)
-            self.cursor = self.connection.cursor()
-
+                 tokenizer: Tokenizer = None) -> None:
 
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
@@ -86,10 +79,6 @@ class AtisWorld():
         self.grammar_dictionary = self.update_grammar_dictionary()
         self.grammar_string: str = self.get_grammar_string()
         self.grammar_with_context: Grammar = Grammar(self.grammar_string)
-
-        if database_file:
-            self.connection.close()
-
 
     def get_valid_actions(self) -> Dict[str, List[str]]:
         return self.valid_actions
@@ -165,17 +154,8 @@ class AtisWorld():
         string_linking_dict: Dict[str, List[int]] = {}
         for tokenized_utterance in self.tokenized_utterances:
             string_linking_dict = get_strings_from_utterance(tokenized_utterance)
-        strings_list = []
 
-        if self.tables_with_strings:
-            for table, columns in self.tables_with_strings.items():
-                for column in columns:
-                    self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
-                    strings_list.extend([(format_action(f"{table}_{column}_string", str(row[0]),
-                                                        is_string=not 'number' in column,
-                                                        is_number='number' in column),
-                                          str(row[0]))
-                                         for row in self.cursor.fetchall()])
+        strings_list = AtisWorld.sql_table_context.strings_list
 
         # We construct the linking scores for strings from the ``string_linking_dict`` here.
         for string in strings_list:
@@ -192,7 +172,7 @@ class AtisWorld():
         return entity_linking_scores
 
     def _update_valid_actions(self) -> Dict[str, List[str]]:
-        valid_actions = self.sql_table_context.valid_actions
+        valid_actions = deepcopy(self.sql_table_context.valid_actions)
         valid_actions['time_range_start'] = []
         valid_actions['time_range_end'] = []
         for action, value in self.linked_entities['number'].items():
@@ -223,7 +203,7 @@ class AtisWorld():
         we want for the ATIS dataset. We then add numbers to the grammar dictionary. The strings in the
         database are already added in by the ``SqlTableContext``.
         """
-        self.grammar_dictionary = self.sql_table_context.grammar_dictionary
+        self.grammar_dictionary = deepcopy(self.sql_table_context.grammar_dictionary)
         if self.dates:
             year_binary_expression = f'("date_day" ws "." ws "year" ws binaryop ws "{self.dates[0].year}")'
             self.grammar_dictionary['biexpr'].append(year_binary_expression)
