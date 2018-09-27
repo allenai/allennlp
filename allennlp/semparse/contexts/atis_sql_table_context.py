@@ -1,20 +1,18 @@
 """
-A ``SqlTableContext`` represents the SQL context in which an utterance appears, with the grammar and
-the valid actions.
+An ``AtisSqlTableContext`` represents the SQL context in which an utterance appears
+for the Atis dataset, with the grammar and the valid actions.
 """
-import re
 from collections import defaultdict
 from typing import List, Dict, Set
 import sqlite3
 from copy import deepcopy
 
-from overrides import overrides
 
 from parsimonious.expressions import Sequence, OneOf, Literal
-from parsimonious.nodes import Node, NodeVisitor
 from parsimonious.grammar import Grammar
 
 from allennlp.common.file_utils import cached_path
+from allennlp.semparse.contexts.sql_context_utils import format_action
 
 # This is the base definition of the SQL grammar in a simplified sort of
 # EBNF notation, and represented as a dictionary. The keys are the nonterminals and the values
@@ -75,46 +73,9 @@ GRAMMAR_DICTIONARY['number'] = ['""']
 KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"', '"IN"', '"LIKE"',
             '"IS"', '"BETWEEN"', '"AND"', '"ALL"', '"ANY"', '"NULL"', '"OR"', '"DISTINCT"']
 
-def format_action(nonterminal: str,
-                  right_hand_side: str,
-                  is_string: bool = False,
-                  is_number: bool = False) -> str:
-    if right_hand_side.upper() in KEYWORDS:
-        right_hand_side = right_hand_side.upper()
-
-    if is_string:
-        return f'{nonterminal} -> ["\'{right_hand_side}\'"]'
-
-    elif is_number:
-        return f'{nonterminal} -> ["{right_hand_side}"]'
-
-    else:
-        right_hand_side = right_hand_side.lstrip("(").rstrip(")")
-        child_strings = [token for token in re.split(" ws |ws | ws", right_hand_side) if token]
-        child_strings = [tok.upper() if tok.upper() in KEYWORDS else tok for tok in child_strings]
-        return f"{nonterminal} -> [{', '.join(child_strings)}]"
-
-def action_sequence_to_sql(action_sequences: List[str]) -> str:
-    # Convert an action sequence like ['statement -> [query, ";"]', ...] to the
-    # SQL string.
-    query = []
-    for action in action_sequences:
-        nonterminal, right_hand_side = action.split(' -> ')
-        right_hand_side_tokens = right_hand_side[1:-1].split(', ')
-        if nonterminal == 'statement':
-            query.extend(right_hand_side_tokens)
-        else:
-            for query_index, token in reversed(list(enumerate(query))):
-                if token == nonterminal:
-                    query = query[:query_index] + \
-                            right_hand_side_tokens + \
-                            query[query_index + 1:]
-                    break
-    return ' '.join([token.strip('"') for token in query])
-
-class SqlTableContext():
+class AtisSqlTableContext():
     """
-    A ``SqlTableContext`` represents the SQL context with grammar of SQL and the valid actions
+    An ``AtisSqlTableContext`` represents the SQL context with a grammar of SQL and the valid actions
     based on the schema of the tables that it represents.
 
     Parameters
@@ -162,18 +123,19 @@ class SqlTableContext():
             # Sequence represents a series of expressions that match pieces of the text in order.
             # Eg. A -> B C
             if isinstance(rhs, Sequence):
-                valid_actions[key].add(format_action(key, " ".join(rhs._unicode_members()))) # pylint: disable=protected-access
+                valid_actions[key].add(format_action(key, " ".join(rhs._unicode_members()), # pylint: disable=protected-access
+                                                     keywords_to_uppercase=KEYWORDS))
 
             # OneOf represents a series of expressions, one of which matches the text.
             # Eg. A -> B / C
             elif isinstance(rhs, OneOf):
                 for option in rhs._unicode_members(): # pylint: disable=protected-access
-                    valid_actions[key].add(format_action(key, option))
+                    valid_actions[key].add(format_action(key, option, keywords_to_uppercase=KEYWORDS))
 
             # A string literal, eg. "A"
             elif isinstance(rhs, Literal):
                 if rhs.literal != "":
-                    valid_actions[key].add(format_action(key, repr(rhs.literal)))
+                    valid_actions[key].add(format_action(key, repr(rhs.literal), keywords_to_uppercase=KEYWORDS))
                 else:
                     valid_actions[key] = set()
 
@@ -209,60 +171,3 @@ class SqlTableContext():
                 ['( col_ref ws binaryop ws value)', '(value ws binaryop ws value)']
         return '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
                           for nonterminal, right_hand_side in self.grammar_dictionary.items()])
-
-
-
-class SqlVisitor(NodeVisitor):
-    """
-    ``SqlVisitor`` performs a depth-first traversal of the the AST. It takes the parse tree
-    and gives us an action sequence that resulted in that parse. Since the visitor has mutable
-    state, we define a new ``SqlVisitor`` for each query. To get the action sequence, we create
-    a ``SqlVisitor`` and call parse on it, which returns a list of actions. Ex.
-
-        sql_visitor = SqlVisitor(grammar_string)
-        action_sequence = sql_visitor.parse(query)
-
-    Parameters
-    ----------
-    grammar : ``Grammar``
-        A Grammar object that we use to parse the text.
-    """
-    def __init__(self, grammar: Grammar) -> None:
-        self.action_sequence: List[str] = []
-        self.grammar: Grammar = grammar
-
-    @overrides
-    def generic_visit(self, node: Node, visited_children: List[None]) -> List[str]:
-        self.add_action(node)
-        if node.expr.name == 'statement':
-            return self.action_sequence
-        return []
-
-    def add_action(self, node: Node) -> None:
-        """
-        For each node, we accumulate the rules that generated its children in a list.
-        """
-        if node.expr.name and node.expr.name != 'ws':
-            nonterminal = f'{node.expr.name} -> '
-
-            if isinstance(node.expr, Literal):
-                right_hand_side = f'["{node.text}"]'
-
-            else:
-                child_strings = []
-                for child in node.__iter__():
-                    if child.expr.name == 'ws':
-                        continue
-                    if child.expr.name != '':
-                        child_strings.append(child.expr.name)
-                    else:
-                        child_right_side_string = child.expr._as_rhs().lstrip("(").rstrip(")") # pylint: disable=protected-access
-                        child_right_side_list = [tok for tok in \
-                                                 re.split(" ws |ws | ws", child_right_side_string) if tok]
-                        child_right_side_list = [tok.upper() if tok.upper() in KEYWORDS else tok \
-                                                 for tok in child_right_side_list]
-                        child_strings.extend(child_right_side_list)
-                right_hand_side = "[" + ", ".join(child_strings) + "]"
-
-            rule = nonterminal + right_hand_side
-            self.action_sequence = [rule] + self.action_sequence
