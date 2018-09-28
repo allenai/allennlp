@@ -19,13 +19,18 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
     ----------
     transformer: ``OpenaiTransformer``, required.
         The ``OpenaiTransformer`` module used for the embeddings.
+    top_layer_only: ``bool``, optional (default = ``False``)
+        If ``True``, then only return the top layer instead of apply the scalar mix.
     """
     def __init__(self,
-                 transformer: OpenaiTransformer) -> None:
+                 transformer: OpenaiTransformer,
+                 top_layer_only: bool = False) -> None:
         super().__init__()
 
         self._transformer = transformer
-        self._scalar_mix = ScalarMix(transformer.num_output_layers, do_layer_norm=False)
+        self._top_layer_only = top_layer_only
+        if not top_layer_only:
+            self._scalar_mix = ScalarMix(transformer.num_output_layers, do_layer_norm=False)
 
     def get_output_dim(self):
         """
@@ -72,7 +77,10 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
         layer_activations = self._transformer(batch_tensor)
 
         # Output of scalar_mix is (batch_size, num_timesteps, embedding_dim)
-        mix = self._scalar_mix(layer_activations, byte_pairs_mask)
+        if self._top_layer_only:
+            mix = layer_activations[-1]
+        else:
+            mix = self._scalar_mix(layer_activations, byte_pairs_mask)
 
         # These embeddings are one per byte-pair, but we want one per original _word_.
         # So we choose the embedding corresponding to the last byte pair for each word,

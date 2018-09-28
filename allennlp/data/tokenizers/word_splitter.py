@@ -164,7 +164,6 @@ class OpenAISplitter(WordSplitter):
 
     @staticmethod
     def _standardize(text):
-        import ftfy
         return text_standardize(ftfy.fix_text(text))
 
     @overrides
