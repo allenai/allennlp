@@ -4,13 +4,12 @@ import math
 from overrides import overrides
 import torch
 
-from allennlp.common.checks import check_dimensions_match
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder, FeedForward, Embedding
-from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BagOfEmbeddingsEncoder
+from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
 from allennlp.semparse.type_declarations import type_declaration
@@ -39,8 +38,6 @@ class QuarelSemanticParser(Model):
         Dimension to use for action embeddings.
     encoder : ``Seq2SeqEncoder``
         The encoder to use for the input question.
-    entity_encoder : ``Seq2VecEncoder``, optional (default=None)
-        The encoder to used for averaging the words of an entity.
     decoder_beam_search : ``BeamSearch``
         When we're not training, this is how we will do decoding.
     max_decoding_steps : ``int``
@@ -49,10 +46,6 @@ class QuarelSemanticParser(Model):
     attention : ``Attention``
         We compute an attention over the input question at each step of the decoder, using the
         decoder hidden state as the query.  Passed to the transition function.
-    use_neighbor_similarity_for_linking : ``bool``, optional (default=False)
-        If ``True``, we will compute a max similarity between a question token and the `neighbors`
-        of an entity as a component of the linking scores.  This is meant to capture the same kind
-        of information as the ``related_column`` feature.
     dropout : ``float``, optional (default=0)
         If greater than 0, we will apply dropout with this probability after all encoders (pytorch
         LSTMs do not apply dropout to their last layer).
@@ -87,26 +80,21 @@ class QuarelSemanticParser(Model):
                  attention: Attention,
                  mixture_feedforward: FeedForward = None,
                  add_action_bias: bool = True,
-                 entity_encoder: Seq2VecEncoder = None,
-                 use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
                  num_linking_features: int = 0,
                  num_entity_bits: int = 0,
                  entity_bits_output: bool = True,
                  use_entities: bool = False,
                  denotation_only: bool = False,
+                 # Deprecated parameter to load older models
+                 entity_encoder: Seq2VecEncoder = None,  # pylint: disable=unused-argument
                  entity_similarity_mode: str = "dot_product",
                  rule_namespace: str = 'rule_labels') -> None:
         super(QuarelSemanticParser, self).__init__(vocab)
         self._question_embedder = question_embedder
         self._encoder = encoder
-        if entity_encoder is not None:
-            self._entity_encoder = TimeDistributed(entity_encoder)
-        else:
-            self._entity_encoder = None
         self._beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
-        self._use_neighbor_similarity_for_linking = use_neighbor_similarity_for_linking
         if dropout > 0:
             self._dropout = torch.nn.Dropout(p=dropout)
         else:
@@ -128,12 +116,7 @@ class QuarelSemanticParser(Model):
             self._action_biases = Embedding(num_embeddings=num_actions, embedding_dim=1)
 
         self._embedding_dim = question_embedder.get_output_dim()
-        self._neighbor_params = None
         self._use_entities = use_entities
-        if self._use_entities and self._entity_encoder is not None:
-            check_dimensions_match(entity_encoder.get_output_dim(), question_embedder.get_output_dim(),
-                                   "entity word average embedding dim", "question embedding dim")
-            self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
 
         # Note: there's only one non-trivial entity type in QuaRel for now, so most of the
         # entity_type stuff is irrelevant
@@ -158,13 +141,6 @@ class QuarelSemanticParser(Model):
             self._linking_params = torch.nn.Linear(num_linking_features, 1)
         else:
             self._linking_params = None
-
-        if self._use_neighbor_similarity_for_linking:
-            self._question_entity_params = torch.nn.Linear(1, 1)
-            self._question_neighbor_params = torch.nn.Linear(1, 1)
-        else:
-            self._question_entity_params = None
-            self._question_neighbor_params = None
 
         self._decoder_trainer = MaximumMarginalLikelihood()
 
@@ -252,7 +228,6 @@ class QuarelSemanticParser(Model):
 
         # (batch_size, num_entities, num_entity_tokens, embedding_dim)
         embedded_table = self._question_embedder(table_text, num_wrapping_dims=1)
-        table_mask = util.get_text_field_mask(table_text, num_wrapping_dims=1).float()
 
         batch_size, num_entities, num_entity_tokens, _ = embedded_table.size()
 
@@ -263,32 +238,6 @@ class QuarelSemanticParser(Model):
         entity_types, entity_type_dict = self._get_type_vector(world, num_entities, embedded_table)
 
         if self._use_entities:
-            if self._entity_encoder is not None:
-                # (batch_size, num_entities, embedding_dim)
-                encoded_table = self._entity_encoder(embedded_table, table_mask)
-                # (batch_size, num_entities, num_neighbors)
-                neighbor_indices = self._get_neighbor_indices(world, num_entities, encoded_table)
-
-                # Neighbor_indices is padded with -1 since 0 is a potential neighbor index.
-                # Thus, the absolute value needs to be taken in the index_select, and 1 needs to
-                # be added for the mask since that method expects 0 for padding.
-                # (batch_size, num_entities, num_neighbors, embedding_dim)
-                embedded_neighbors = util.batched_index_select(encoded_table, torch.abs(neighbor_indices))
-
-                neighbor_mask = util.get_text_field_mask({'ignored': neighbor_indices + 1},
-                                                         num_wrapping_dims=1).float()
-
-                # Encoder initialized to easily obtain a masked average.
-                neighbor_encoder = TimeDistributed(BagOfEmbeddingsEncoder(self._embedding_dim, averaged=True))
-                # (batch_size, num_entities, embedding_dim)
-                embedded_neighbors = neighbor_encoder(embedded_neighbors, neighbor_mask)
-
-                entity_type_embeddings = self._entity_type_encoder_embedding(entity_types)
-                projected_neighbor_embeddings = self._neighbor_params(embedded_neighbors.float())
-                # (batch_size, num_entities, embedding_dim)
-                entity_embeddings = torch.nn.functional.tanh(entity_type_embeddings +
-                                                             projected_neighbor_embeddings)
-
 
             if self._entity_similarity_mode == "dot_product":
                 # Compute entity and question word cosine similarity. Need to add a small value to
@@ -332,33 +281,6 @@ class QuarelSemanticParser(Model):
             # (batch_size, num_entities, num_question_tokens, num_features)
             linking_features = table['linking']
 
-            if self._use_neighbor_similarity_for_linking:
-                # The linking score is computed as a linear projection of two terms. The first is the
-                # maximum similarity score over the entity's words and the question token. The second
-                # is the maximum similarity over the words in the entity's neighbors and the question
-                # token.
-                #
-                # The second term, projected_question_neighbor_similarity, is useful when a column
-                # needs to be selected. For example, the question token might have no similarity with
-                # the column name, but is similar with the cells in the column.
-                #
-                # Note that projected_question_neighbor_similarity is intended to capture the same
-                # information as the related_column feature.
-                #
-                # Also note that this block needs to be _before_ the `linking_params` block, because
-                # we're overwriting `linking_scores`, not adding to it.
-
-                # (batch_size, num_entities, num_neighbors, num_question_tokens)
-                question_neighbor_similarity = util.batched_index_select(question_entity_similarity_max_score,
-                                                                         torch.abs(neighbor_indices))
-                # (batch_size, num_entities, num_question_tokens)
-                question_neighbor_similarity_max_score, _ = torch.max(question_neighbor_similarity, 2)
-                projected_question_entity_similarity = self._question_entity_params(
-                        question_entity_similarity_max_score.unsqueeze(-1)).squeeze(-1)
-                projected_question_neighbor_similarity = self._question_neighbor_params(
-                        question_neighbor_similarity_max_score.unsqueeze(-1)).squeeze(-1)
-                linking_scores = projected_question_entity_similarity + projected_question_neighbor_similarity
-
             if self._linking_params is not None:
                 feature_scores = self._linking_params(linking_features).squeeze(3)
                 linking_scores = linking_scores + feature_scores
@@ -366,14 +288,7 @@ class QuarelSemanticParser(Model):
             # (batch_size, num_question_tokens, num_entities)
             linking_probabilities = self._get_linking_probabilities(world, linking_scores.transpose(1, 2),
                                                                     question_mask, entity_type_dict)
-
-            if self._entity_encoder is not None:
-                # (batch_size, num_question_tokens, embedding_dim)
-                link_embedding = util.weighted_sum(entity_embeddings, linking_probabilities)
-
-                encoder_input = torch.cat([link_embedding, embedded_question], 2)
-            else:
-                encoder_input = embedded_question
+            encoder_input = embedded_question
         else:
             if entity_bits is not None and not self._entity_bits_output:
                 encoder_input = torch.cat([embedded_question, entity_bits], 2)
@@ -532,52 +447,6 @@ class QuarelSemanticParser(Model):
                     outputs['score'].append(0)
                     self._has_logical_form(0.0)
             return outputs
-
-    @staticmethod
-    def _get_neighbor_indices(worlds: List[QuarelWorld],
-                              num_entities: int,
-                              tensor: torch.Tensor) -> torch.LongTensor:
-        """
-        This method returns the indices of each entity's neighbors. A tensor
-        is accepted as a parameter for copying purposes.
-
-        Parameters
-        ----------
-        worlds : ``List[QuarelWorld]``
-        num_entities : ``int``
-        tensor : ``torch.Tensor``
-            Used for copying the constructed list onto the right device.
-
-        Returns
-        -------
-        A ``torch.LongTensor`` with shape ``(batch_size, num_entities, num_neighbors)``. It is padded
-        with -1 instead of 0, since 0 is a valid neighbor index.
-        """
-
-        # Need a non-zero minimum number here to avoid exception
-        num_neighbors = 1
-        for world in worlds:
-            for entity in world.table_graph.entities:
-                if len(world.table_graph.neighbors[entity]) > num_neighbors:
-                    num_neighbors = len(world.table_graph.neighbors[entity])
-
-        batch_neighbors = []
-        for world in worlds:
-            # Each batch instance has its own world, which has a corresponding table.
-            entities = world.table_graph.entities
-            entity2index = {entity: i for i, entity in enumerate(entities)}
-            entity2neighbors = world.table_graph.neighbors
-            neighbor_indexes = []
-            for entity in entities:
-                entity_neighbors = [entity2index[n] for n in entity2neighbors[entity]]
-                # Pad with -1 instead of 0, since 0 represents a neighbor index.
-                padded = pad_sequence_to_length(entity_neighbors, num_neighbors, lambda: -1)
-                neighbor_indexes.append(padded)
-            neighbor_indexes = pad_sequence_to_length(neighbor_indexes,
-                                                      num_entities,
-                                                      lambda: [-1] * num_neighbors)
-            batch_neighbors.append(neighbor_indexes)
-        return tensor.new_tensor(batch_neighbors, dtype=torch.long)
 
     @staticmethod
     def _get_type_vector(worlds: List[QuarelWorld],
