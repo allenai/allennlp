@@ -30,6 +30,14 @@ class QuarelSemanticParserTest(ModelTestCase):
         param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'experiment_parser_entity_bits.json'
         self.ensure_model_can_train_save_and_load(param_file, gradients_to_ignore=self.ignore)
 
+    def test_friction_model_can_train_save_and_load(self):
+        param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'experiment_parser_friction.json'
+        self.ensure_model_can_train_save_and_load(param_file, gradients_to_ignore=self.ignore)
+
+    def test_friction_zeroshot_model_can_train_save_and_load(self):
+        param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'experiment_parser_friction_zeroshot.json'  # pylint: disable=line-too-long
+        self.ensure_model_can_train_save_and_load(param_file, gradients_to_ignore=self.ignore)
+
     def test_tagger_model_can_train_save_and_load(self):
         param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'experiment_tagger.json'
         self.ensure_model_can_train_save_and_load(param_file, gradients_to_ignore=self.ignore)
