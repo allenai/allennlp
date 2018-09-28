@@ -109,6 +109,13 @@ class AtisSqlTableContext(SqlTableContext):
             self.connection.close()
 
     @overrides
+    def get_grammar_dictionary(self) -> Dict[str, List[str]]:
+        return self.grammar_dictionary
+
+    @overrides
+    def get_valid_actions(self) -> Dict[str, List[str]]:
+        return self.valid_actions
+
     def initialize_grammar_str(self) -> str:
         if self.all_tables:
             self.grammar_dictionary['table_name'] = \

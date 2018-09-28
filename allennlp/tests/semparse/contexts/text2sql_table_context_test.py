@@ -10,8 +10,8 @@ class TestText2sqlTableContext(AllenNlpTestCase):
 
     def test_context_modifies_unconstrained_grammar_correctly(self):
         context = UnconstrainedText2SqlTableContext(self.schema)
-        print(context.grammar_dictionary)
-        assert context.grammar_dictionary["table_name"] == ['"RESTAURANT"', '"LOCATION"', '"GEOGRAPHIC"']
-        assert context.grammar_dictionary["column_name"] == ['"STREET_NAME"', '"RESTAURANT_ID"', '"REGION"',
-                                                             '"RATING"', '"NAME"', '"HOUSE_NUMBER"',
-                                                             '"FOOD_TYPE"', '"COUNTY"', '"CITY_NAME"']
+        grammar_dictionary = context.get_grammar_dictionary()
+        assert grammar_dictionary["table_name"] == ['"RESTAURANT"', '"LOCATION"', '"GEOGRAPHIC"']
+        assert grammar_dictionary["column_name"] == ['"STREET_NAME"', '"RESTAURANT_ID"', '"REGION"',
+                                                     '"RATING"', '"NAME"', '"HOUSE_NUMBER"',
+                                                     '"FOOD_TYPE"', '"COUNTY"', '"CITY_NAME"']

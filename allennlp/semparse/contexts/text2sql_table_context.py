@@ -119,6 +119,13 @@ class UnconstrainedText2SqlTableContext(SqlTableContext):
         self.valid_actions: Dict[str, List[str]] = initialize_valid_actions(self.grammar)
 
     @overrides
+    def get_grammar_dictionary(self) -> Dict[str, List[str]]:
+        return self.grammar_dictionary
+
+    @overrides
+    def get_valid_actions(self) -> Dict[str, List[str]]:
+        return self.valid_actions
+
     def initialize_grammar_str(self):
         # Add all the table and column names to the grammar.
         if self.all_tables:

@@ -12,10 +12,15 @@ from allennlp.common.registrable import Registrable
 
 class SqlTableContext(Registrable):
 
-    def initialize_grammar_str(self) -> str:
-
+    """
+    An abstract, registrable class representing some kind
+    of SQL tables and grammar.
+    """
+    def get_grammar_dictionary(self) -> Dict[str, List[str]]:
         raise NotImplementedError
 
+    def get_valid_actions(self) -> Dict[str, List[str]]:
+        raise NotImplementedError
 
 def format_grammar_string(grammar_dictionary: Dict[str, List[str]]) -> str:
     """
