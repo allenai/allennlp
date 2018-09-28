@@ -98,7 +98,6 @@ class AtisSqlTableContext:
             self.database_file = cached_path(database_file)
             self.connection = sqlite3.connect(self.database_file)
             self.cursor = self.connection.cursor()
-        
         self.update_grammar_dict_and_strings()
         self.grammar_string: str = self.get_grammar_string()
         self.grammar: Grammar = Grammar(self.grammar_string)
@@ -129,11 +128,12 @@ class AtisSqlTableContext:
                     self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
                     results = self.cursor.fetchall()
 
-                    self.strings_list.extend([(format_action(f"{table}_{column}_string", str(row[0]),
-                                                        is_string=not 'number' in column,
-                                                        is_number='number' in column),
-                                          str(row[0]))
-                                         for row in results])
+                    self.strings_list.extend([(format_action(f"{table}_{column}_string",
+                                                             str(row[0]),
+                                                             is_string=not 'number' in column,
+                                                             is_number='number' in column),
+                                               str(row[0]))
+                                              for row in results])
 
                     if column.endswith('number'):
                         self.grammar_dictionary[f'{table}_{column}_string'] = \

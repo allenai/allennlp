@@ -1,12 +1,10 @@
 from typing import List, Dict, Tuple, Set, Callable
-import sqlite3
+from copy import deepcopy
 import numpy
 from nltk import ngrams
-from copy import deepcopy
 
 from parsimonious.grammar import Grammar
 
-from allennlp.common.file_utils import cached_path
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
 from allennlp.semparse.contexts.atis_sql_table_context import AtisSqlTableContext, KEYWORDS
 from allennlp.semparse.contexts.sql_context_utils import SqlVisitor, format_action
@@ -58,8 +56,8 @@ class AtisWorld():
 
     database_file = "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
     sql_table_context = AtisSqlTableContext(ALL_TABLES,
-                                        TABLES_WITH_STRINGS,
-                                        database_file)
+                                            TABLES_WITH_STRINGS,
+                                            database_file)
 
     def __init__(self,
                  utterances: List[str],
