@@ -18,6 +18,7 @@ from allennlp.models.semantic_parsing.nlvr.nlvr_coverage_semantic_parser import 
 from allennlp.models.semantic_parsing.nlvr.nlvr_direct_semantic_parser import NlvrDirectSemanticParser
 from allennlp.models.semantic_parsing.wikitables.wikitables_mml_semantic_parser import WikiTablesMmlSemanticParser
 from allennlp.models.semantic_parsing.wikitables.wikitables_erm_semantic_parser import WikiTablesErmSemanticParser
+from allennlp.models.semantic_parsing.atis.atis_semantic_parser import AtisSemanticParser
 from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.models.esim import ESIM

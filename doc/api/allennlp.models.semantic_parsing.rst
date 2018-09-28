@@ -10,3 +10,4 @@ allennlp.models.semantic_parsing
 
   allennlp.models.semantic_parsing.nlvr
   allennlp.models.semantic_parsing.wikitables
+  allennlp.models.semantic_parsing.atis

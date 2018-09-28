@@ -8,7 +8,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.par
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import process_sql_data, SqlData
 from allennlp.semparse.contexts.sql_table_context import SqlVisitor
 from parsimonious.grammar import Grammar
-
 # still TODO: 
 # JOIN, seems hard.
 # Added query to pos_value - check this, very unclear if it is the correct way to handle this.
@@ -58,7 +57,7 @@ SQL_GRAMMAR2 = Grammar(
         ordering         = ASC / DESC
         limit            = LIMIT ws number
 
-        col_ref          = (table_name "." column_name) / column_name
+        col_ref          = (table_name ws "." ws column_name) / column_name
         table_name       = name
         column_name      = name
         ws               = ~"\s*"i
@@ -127,6 +126,10 @@ def parse_dataset(filename: str, filter_by: str = None, verbose: bool = False):
     num_parsed = 0
     filtered_errors = 0
 
+    non_basic_as_aliases = 0
+    as_count = 0
+    queries_with_weird_as = 0
+
     for i, sql_data in enumerate(process_sql_data(data)):
         sql_visitor = SqlVisitor(SQL_GRAMMAR2)
 
@@ -138,6 +141,23 @@ def parse_dataset(filename: str, filter_by: str = None, verbose: bool = False):
                 if token[:7] == "DERIVED" and sql_data.sql[j-1] == ")":
                     sql_to_use.append("AS")
                 sql_to_use.append(token)
+
+            previous_token = None
+            query_has_weird_as = False
+            for j, token in enumerate(sql_to_use[:-1]):
+
+                if token == "AS" and previous_token is not None:
+
+                    table_name = sql_to_use[j + 1][:-6]
+                    if table_name != previous_token:
+                        non_basic_as_aliases += 1
+                        query_has_weird_as = True
+                    as_count += 1
+                previous_token = token
+
+            if query_has_weird_as:
+                queries_with_weird_as += 1
+
 
             sql_string = " ".join(sql_to_use)
         else:
@@ -165,7 +185,7 @@ def parse_dataset(filename: str, filter_by: str = None, verbose: bool = False):
         if (i + 1) % 500 == 0:
             print(f"\tProcessed {i + 1} queries.")
 
-    return num_parsed, num_queries, filtered_errors
+    return num_parsed, num_queries, filtered_errors, non_basic_as_aliases, as_count, queries_with_weird_as
 
 def main(data_directory: int, dataset: str = None, filter_by: str = None, verbose: bool = False) -> None:
     """
@@ -189,16 +209,24 @@ def main(data_directory: int, dataset: str = None, filter_by: str = None, verbos
 
         print(f"Parsing dataset at {directory}")
         parsed = 0
+        total_non_aliases = 0
+        total_as_count = 0
+        total_queries_with_weird_as = 0
         total = 0
         for json_file in data_files:
             print(f"\tParsing split at {json_file}")
             file_path = os.path.join(directory, json_file)
-            num_parsed, num_queries, filtered_errors = parse_dataset(file_path, filter_by, verbose)
+            num_parsed, num_queries, filtered_errors, non_basic_as_aliases, as_count, queries_with_weird_as = parse_dataset(file_path, filter_by, verbose)
 
             parsed += num_parsed
             total += num_queries
+            total_non_aliases += non_basic_as_aliases
+            total_as_count += as_count
+            total_queries_with_weird_as += queries_with_weird_as
 
         print(f"\tParsed {parsed} out of {total} queries, coverage {parsed/total}")
+        print(f"\tFound {total_non_aliases} out of {total_as_count} non simple AS aliases. percentage: {total_non_aliases/total_as_count}")
+        print(f"\tFound {total_queries_with_weird_as} out of {total} queries with > 1 weird AS. percentage: {total_queries_with_weird_as/total}")
         if filter_by is not None:
             print(f"\tOf {total - parsed} errors, {filtered_errors/ (total - parsed + 1e-13)} contain {filter_by}")
 

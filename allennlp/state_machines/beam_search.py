@@ -21,9 +21,21 @@ class BeamSearch(FromParams, Generic[StateType]):
     states in sorted order, so we do not do an additional sort inside of ``BeamSearch.search()``.
     If you're implementing your own ``TransitionFunction``, you must ensure that you've sorted the
     states that you return.
+
+    Parameters
+    ----------
+    beam_size : ``int``
+        The beam size to use.
+    per_node_beam_size : ``int``, optional (default = beam_size)
+        The maximum number of candidates to consider per node, at each step in the search.
+        If not given, this just defaults to `beam_size`. Setting this parameter
+        to a number smaller than `beam_size` may give better results, as it can introduce
+        more diversity into the search. See Freitag and Al-Onaizan 2017,
+        "Beam Search Strategies for Neural Machine Translation".
     """
-    def __init__(self, beam_size: int) -> None:
+    def __init__(self, beam_size: int, per_node_beam_size: int = None) -> None:
         self._beam_size = beam_size
+        self._per_node_beam_size = per_node_beam_size or beam_size
 
     def search(self,
                num_steps: int,
@@ -58,7 +70,7 @@ class BeamSearch(FromParams, Generic[StateType]):
         while states and step_num <= num_steps:
             next_states: Dict[int, List[StateType]] = defaultdict(list)
             grouped_state = states[0].combine_states(states)
-            for next_state in transition_function.take_step(grouped_state, max_actions=self._beam_size):
+            for next_state in transition_function.take_step(grouped_state, max_actions=self._per_node_beam_size):
                 # NOTE: we're doing state.batch_indices[0] here (and similar things below),
                 # hard-coding a group size of 1.  But, our use of `next_state.is_finished()`
                 # already checks for that, as it crashes if the group size is not 1.
