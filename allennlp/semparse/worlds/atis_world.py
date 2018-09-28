@@ -49,9 +49,6 @@ class AtisWorld():
         current utterance that we are interested in.
     tokenizer: ``Tokenizer``, optional (default=``WordTokenizer()``)
         We use this tokenizer to tokenize the utterances.
-    database_file: ``str``, optional
-        We pass the location of the database to ``SqlTableContext`` to get the allowed strings in
-        the grammar.
     """
 
     database_file = "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
