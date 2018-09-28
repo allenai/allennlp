@@ -10,7 +10,7 @@ from copy import deepcopy
 from parsimonious.grammar import Grammar
 
 from allennlp.common.file_utils import cached_path
-from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions
+from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions, format_grammar_string
 
 # This is the base definition of the SQL grammar in a simplified sort of
 # EBNF notation, and represented as a dictionary. The keys are the nonterminals and the values
@@ -133,5 +133,4 @@ class AtisSqlTableContext:
 
         self.grammar_dictionary['biexpr'] = sorted(biexprs, reverse=True) + \
                 ['( col_ref ws binaryop ws value)', '(value ws binaryop ws value)']
-        return '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
-                          for nonterminal, right_hand_side in self.grammar_dictionary.items()])
+        return format_grammar_string(self.grammar_dictionary)

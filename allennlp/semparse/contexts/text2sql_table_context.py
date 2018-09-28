@@ -10,7 +10,7 @@ from copy import deepcopy
 from parsimonious.grammar import Grammar
 
 from allennlp.common.file_utils import cached_path
-from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions
+from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions, format_grammar_string
 
 GRAMMAR_DICTIONARY = {}
 GRAMMAR_DICTIONARY["statement"] = ['(query ws ";")', '(query ws)']
@@ -26,7 +26,7 @@ GRAMMAR_DICTIONARY["select_core"] = ['(select_with_distinct select_results from_
                                      '(select_with_distinct select_results from_clause)',
                                      '(select_with_distinct select_results where_clause)',
                                      '(select_with_distinct select_results)']
-GRAMMAR_DICTIONARY["select_with_distinct"] = ['(SELECT DISTINCT)', 'SELECT']
+GRAMMAR_DICTIONARY["select_with_distinct"] = ['(ws "SELECT" ws "DISTINCT")', 'ws "SELECT"']
 GRAMMAR_DICTIONARY["select_results"] = ['(ws select_result ws "," ws select_results)', '(ws select_result)']
 GRAMMAR_DICTIONARY["select_result"] = ['sel_res_all_star', 'sel_res_tab_star', 'sel_res_val', 'sel_res_col']
 GRAMMAR_DICTIONARY["sel_res_tab_star"] = ['name ".*"']
@@ -49,7 +49,7 @@ GRAMMAR_DICTIONARY["having_clause"] = ['HAVING ws expr']
 
 GRAMMAR_DICTIONARY["orderby_clause"] = ['ORDER BY order_clause']
 GRAMMAR_DICTIONARY["order_clause"] = ['(ordering_term ws "," order_clause)', 'ordering_term']
-GRAMMAR_DICTIONARY["ordering_term"] = ['(ws expr ordering)', 'ws expr']
+GRAMMAR_DICTIONARY["ordering_term"] = ['(ws expr ordering)', '(ws expr)']
 GRAMMAR_DICTIONARY["ordering"] = ['ASC', 'DESC']
 GRAMMAR_DICTIONARY["limit"] = ['LIMIT ws number']
 
@@ -70,13 +70,15 @@ GRAMMAR_DICTIONARY["in_expr"] = ['(value wsp NOT IN wsp string_set)',
 
 GRAMMAR_DICTIONARY["between_expr"] = ['value BETWEEN wsp value AND wsp value']
 GRAMMAR_DICTIONARY["binary_expr"] = ['value ws binaryop wsp expr']
-GRAMMAR_DICTIONARY["unary_expr"] = ['unary_op expr']
+GRAMMAR_DICTIONARY["unary_expr"] = ['unaryop expr']
 GRAMMAR_DICTIONARY["null_check_expr"] = ['(col_ref IS NOT NULL)', '(col_ref IS NULL)']
+
 GRAMMAR_DICTIONARY["value"] = ['parenval', 'datetime', 'number', 'boolean', 'function', 'col_ref', 'string']
 GRAMMAR_DICTIONARY["datetime"] = ['"YEAR(CURDATE())"']
 GRAMMAR_DICTIONARY["parenval"] = ['"(" ws expr ws ")"']
-GRAMMAR_DICTIONARY["function"] = ['fname ws "(" ws DISTINCT ws arg_list_or_star ws ")")',
+GRAMMAR_DICTIONARY["function"] = ['(fname ws "(" ws DISTINCT ws arg_list_or_star ws ")")',
                                   '(fname ws "(" ws arg_list_or_star ws ")")']
+
 GRAMMAR_DICTIONARY["arg_list_or_star"] = ['arg_list', '"*"']
 GRAMMAR_DICTIONARY["arg_list"] = ['(expr ws "," ws arg_list)', 'expr']
 GRAMMAR_DICTIONARY["number"] = ['~"\d*\.?\d+"i']
@@ -95,7 +97,7 @@ KEYWORDS = ["SELECT", "FROM", "WHERE", "AS", "LIKE", "AND", "OR", "DISTINCT", "G
             "ORDER", "BY", "ASC", "DESC", "BETWEEN", "IN", "IS", "NOT", "NULL", "HAVING", "LIMIT", "LIKE"]
 
 for keyword in KEYWORDS:
-    GRAMMAR_DICTIONARY[keyword] = f'"{keyword}"'
+    GRAMMAR_DICTIONARY[keyword] = [f'ws "{keyword}"']
 
 class Text2SqlTableContext:
     """
@@ -162,5 +164,5 @@ class Text2SqlTableContext:
 
         self.grammar_dictionary['biexpr'] = sorted(biexprs, reverse=True) + \
                 ['( col_ref ws binaryop ws value)', '(value ws binaryop ws value)']
-        return '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
-                          for nonterminal, right_hand_side in self.grammar_dictionary.items()])
+
+        return format_grammar_string(self.grammar_dictionary)
