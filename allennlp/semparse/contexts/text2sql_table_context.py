@@ -112,7 +112,8 @@ class UnconstrainedText2SqlTableContext(SqlTableContext):
     def __init__(self,
                  schema_path: str = None) -> None:
         self.grammar_dictionary = deepcopy(GRAMMAR_DICTIONARY)
-        self.all_tables = {k: v[0] for k, v in read_dataset_schema(schema_path).items()}
+        schema = read_dataset_schema(schema_path)
+        self.all_tables = {k: [x[0] for x in v] for k, v in schema}
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)
         self.valid_actions: Dict[str, List[str]] = initialize_valid_actions(self.grammar)
@@ -125,9 +126,10 @@ class UnconstrainedText2SqlTableContext(SqlTableContext):
                                   list(self.all_tables.keys())], reverse=True)
             self.grammar_dictionary['table_name'] = table_names
 
-            all_columns = []
+            all_columns = set()
             for columns in self.all_tables.values():
-                all_columns.extend(columns)
-            self.grammar_dictionary['column_name'] = all_columns
+                all_columns.update(columns)
+            sorted_columns = sorted([f'"{column}"' for column in all_columns], reverse=True)
+            self.grammar_dictionary['column_name'] = sorted_columns
 
         return format_grammar_string(self.grammar_dictionary)
