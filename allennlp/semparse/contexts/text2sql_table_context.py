@@ -1,3 +1,4 @@
+# pylint: disable=anomalous-backslash-in-string
 """
 A ``Text2SqlTableContext`` represents the SQL context in which an utterance appears
 for the any of the text2sql datasets, with the grammar and the valid actions.
@@ -98,7 +99,7 @@ class UnconstrainedText2SqlTableContext(SqlTableContext):
     """
     This context is minimally constrained in terms of table productions,
     meaning that we don't even constrain columns to be associated with the correct
-    table. We just augment the grammar to know what columns and tables there are,
+    table. We just augment the grammar to know what columns and tables are,
     with no constraints.
 
     Parameters
