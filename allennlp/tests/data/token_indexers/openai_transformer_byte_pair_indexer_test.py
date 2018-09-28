@@ -45,7 +45,10 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
         self.byte_pairs = byte_pairs
 
     def _create_indexer_vocab(self, tokens_to_add=None):
-        self.indexer = OpenaiTransformerBytePairIndexer(self.encoding, self.byte_pairs, tokens_to_add=tokens_to_add)
+        # pylint: disable=attribute-defined-outside-init
+        self.indexer = OpenaiTransformerBytePairIndexer(
+                self.encoding, self.byte_pairs, tokens_to_add=tokens_to_add
+        )
         self.vocab = Vocabulary(non_padded_namespaces=['openai_transformer'])
 
     def test_bpe(self):
