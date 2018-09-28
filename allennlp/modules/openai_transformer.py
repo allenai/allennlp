@@ -255,6 +255,9 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
         the weights will be loaded from that file.
     requires_grad: ``bool`` (optional, default: ``False``)
         If true, the transformer will be fine-tuneable.
+    n_special: ``int`` (optional, default: ``-1``)
+        The number of special tokens added to the byte pair vocabulary
+        (via ``OpenaiTransformerBytePairIndexer``).
     """
     def __init__(self,
                  vocab_size: int = 40990,
