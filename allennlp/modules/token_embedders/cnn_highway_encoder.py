@@ -7,7 +7,6 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.modules.highway import Highway
 from allennlp.modules.masked_layer_norm import MaskedLayerNorm
 from allennlp.modules.token_embedders import TokenEmbedder
-from allennlp.nn.util import add_sentence_boundary_token_ids
 
 _VALID_PROJECTION_LOCATIONS = {'after_cnn', 'after_highway', None}
 
@@ -39,22 +38,6 @@ class CnnHighwayEncoder(TokenEmbedder):
         'after_highway', 'after_cnn', and None.
     do_layer_norm: bool, optional (default = False)
         If True, we apply ``MaskedLayerNorm`` to the final encoded result.
-    bos_characters: ``List[int]``, optional (default = None)
-        Characters for the beginning-of-sentence token (if any).
-        If provided, they will be prepended to each sentence.
-        If provided, ``eos_characters`` must be provided as well.
-    eos_characters: ``List[int]``, optional (default = None)
-        Characters for the end-of-sentence token (if any).
-        If provided, they will be appended to each sentence.
-        If provided, ``bos_characters`` must be provided as well.
-    return_mask: ``bool``, optional (default = False)
-        If True, the forward method will return a dict containing
-        both the embedding and the mask. (This is unusual ``TokenEmbedder``
-        behavior, but the current ``Elmo`` model uses the ``CnnHighwayEncoder``
-        internally and requires this dict to be returned.) Otherwise, it will just
-        return the embedding tensor. (The ``TokenEmbedder`` contract
-        is agnostic on this issue, but the ``BasicTextFieldEmbedder``
-        requires its token embedders to return bare tensors.)
     """
     def __init__(self,
                  embedding_dim: int,
@@ -62,33 +45,17 @@ class CnnHighwayEncoder(TokenEmbedder):
                  num_highway: int,
                  projection_dim: int,
                  activation: str = 'relu',
-                 max_characters_per_token: int = 50,
                  num_characters: int = 262,
                  projection_location: str = 'after_highway',
-                 do_layer_norm: bool = False,
-                 bos_characters: List[int] = None,
-                 eos_characters: List[int] = None,
-                 return_mask: bool = False) -> None:
+                 do_layer_norm: bool = False) -> None:
         super().__init__()
 
         if projection_location not in _VALID_PROJECTION_LOCATIONS:
             raise ConfigurationError(f"unknown projection location: {projection_location}")
 
         self.output_dim = projection_dim
-        self._max_characters_per_token = max_characters_per_token
         self._num_characters = num_characters
         self._projection_location = projection_location
-        self._return_mask = return_mask
-
-        if bos_characters and eos_characters:
-            # Add 1 for masking.
-            self._bos_characters = torch.from_numpy(np.array(bos_characters) + 1)
-            self._eos_characters = torch.from_numpy(np.array(eos_characters) + 1)
-        elif bos_characters or eos_characters:
-            raise ConfigurationError("must specify both bos_characters and eos_characters or neither")
-        else:
-            self._bos_characters = None
-            self._eos_characters = None
 
         if activation == 'tanh':
             self._activation = torch.nn.functional.tanh
@@ -157,18 +124,14 @@ class CnnHighwayEncoder(TokenEmbedder):
             are being added, the second dimension will be ``sequence_length + 2``.
         """
         # pylint: disable=arguments-differ
+        max_characters_per_token = inputs.size(2)
+
         char_id_mask = (inputs > 0).long()  # (batch_size, sequence_length, max_characters_per_token)
         mask = (char_id_mask.sum(dim=-1) > 0).long()  # (batch_size, sequence_length)
 
-        # Add BOS / EOS
-        if self._bos_characters is not None:
-            inputs, mask = add_sentence_boundary_token_ids(inputs,
-                                                           mask,
-                                                           self._bos_characters, self._eos_characters)
-
         # character_id embedding
         # (batch_size * sequence_length, max_chars_per_token, embed_dim)
-        character_embedding = torch.nn.functional.embedding(inputs.view(-1, self._max_characters_per_token),
+        character_embedding = torch.nn.functional.embedding(inputs.view(-1, max_characters_per_token),
                                                             self._char_embedding_weights)
 
         # (batch_size * sequence_length, embed_dim, max_chars_per_token)
@@ -205,10 +168,7 @@ class CnnHighwayEncoder(TokenEmbedder):
         if self._layer_norm:
             token_embedding_reshaped = self._layer_norm(token_embedding_reshaped, mask)
 
-        if self._return_mask:
-            return {"mask": mask, "token_embedding": token_embedding_reshaped}
-        else:
-            return token_embedding_reshaped
+        return token_embedding_reshaped
 
     def get_output_dim(self) -> int:
         return self.output_dim

@@ -30,9 +30,21 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
     # pylint: disable=no-self-use
     def __init__(self,
                  namespace: str = 'token_characters',
-                 character_tokenizer: CharacterTokenizer = CharacterTokenizer()) -> None:
+                 character_tokenizer: CharacterTokenizer = CharacterTokenizer(),
+                 bos_token: str = None,
+                 eos_token: str = None) -> None:
         self._namespace = namespace
         self._character_tokenizer = character_tokenizer
+
+        if bos_token and eos_token:
+            self._bos_token = bos_token
+            self._eos_token = eos_token
+        elif bos_token or eos_token:
+            raise ConfigurationError("you must specify both bos_token and eos_token "
+                                     "or neither of them")
+        else:
+            self._bos_token = None
+            self._eos_token = None
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -44,11 +56,18 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
             if getattr(character, 'text_id', None) is None:
                 counter[self._namespace][character.text] += 1
 
+    def _add_bos_eos(self, tokens: List[Token]) -> List[Token]:
+        if self._bos_token:
+            return [Token(self._bos_token)] + tokens + [Token(self._eos_token)]
+        else:
+            return tokens
+
     @overrides
     def tokens_to_indices(self,
                           tokens: List[Token],
                           vocabulary: Vocabulary,
                           index_name: str) -> Dict[str, List[List[int]]]:
+        tokens = self._add_bos_eos(tokens)
         indices: List[List[int]] = []
         for token in tokens:
             token_indices: List[int] = []

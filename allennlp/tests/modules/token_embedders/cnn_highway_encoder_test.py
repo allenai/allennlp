@@ -11,7 +11,6 @@ class TestCnnHighwayEncoder(AllenNlpTestCase):
                 activation='relu',
                 embedding_dim=4,
                 filters=[[1, 4], [2, 8], [3, 16], [4, 32], [5, 64]],
-                max_characters_per_token=50,
                 num_characters=262,
                 num_highway=2,
                 projection_dim=16,

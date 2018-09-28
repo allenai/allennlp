@@ -98,7 +98,7 @@ class GatedCnnEncoder(Seq2SeqEncoder):
     """
     **This is work-in-progress and has not been fully tested yet. Use at your own risk!**
 
-    A ``ContextualEncoder`` that uses a Gated CNN.
+    A ``Seq2SeqEncoder`` that uses a Gated CNN.
 
     see
 

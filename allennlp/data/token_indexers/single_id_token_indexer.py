@@ -2,6 +2,7 @@ from typing import Dict, List
 
 from overrides import overrides
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
@@ -22,9 +23,22 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
         vocabulary.
     """
     # pylint: disable=no-self-use
-    def __init__(self, namespace: str = 'tokens', lowercase_tokens: bool = False) -> None:
+    def __init__(self,
+                 namespace: str = 'tokens',
+                 lowercase_tokens: bool = False,
+                 bos_token: str = None,
+                 eos_token: str = None) -> None:
         self.namespace = namespace
         self.lowercase_tokens = lowercase_tokens
+
+        if bos_token and eos_token:
+            self._bos_token = bos_token
+            self._eos_token = eos_token
+        elif bos_token or eos_token:
+            raise ConfigurationError("must specify both bos_token and eos_token or neither")
+        else:
+            self._bos_token = None
+            self._eos_token = None
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -36,12 +50,19 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
                 text = text.lower()
             counter[self.namespace][text] += 1
 
+    def _add_bos_eos(self, tokens: List[Token]) -> List[Token]:
+        if self._bos_token:
+            return [Token(self._bos_token)] + tokens + [Token(self._eos_token)]
+        else:
+            return tokens
+
     @overrides
     def tokens_to_indices(self,
                           tokens: List[Token],
                           vocabulary: Vocabulary,
                           index_name: str) -> Dict[str, List[int]]:
         indices: List[int] = []
+        tokens = self._add_bos_eos(tokens)
 
         for token in tokens:
             if getattr(token, 'text_id', None) is not None:
