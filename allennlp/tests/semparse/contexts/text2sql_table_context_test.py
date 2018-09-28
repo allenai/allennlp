@@ -1,5 +1,5 @@
 # pylint: disable=invalid-name
-from allennlp.semparse.contexts.text2sql_table_context import UnconstrainedText2SqlTableContext
+from allennlp.semparse.contexts.text2sql_table_context import WeaklyConstrainedText2SqlTableContext
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -9,7 +9,7 @@ class TestText2sqlTableContext(AllenNlpTestCase):
         self.schema = str(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
 
     def test_context_modifies_unconstrained_grammar_correctly(self):
-        context = UnconstrainedText2SqlTableContext(self.schema)
+        context = WeaklyConstrainedText2SqlTableContext(self.schema)
         grammar_dictionary = context.get_grammar_dictionary()
         assert grammar_dictionary["table_name"] == ['"RESTAURANT"', '"LOCATION"', '"GEOGRAPHIC"']
         assert grammar_dictionary["column_name"] == ['"STREET_NAME"', '"RESTAURANT_ID"', '"REGION"',

@@ -94,8 +94,8 @@ GRAMMAR_DICTIONARY["binaryop"] = ['"+"', '"-"', '"*"', '"/"', '"="', '"<>"',
                                   '">="', '"<="', '">"', '"<"', '"AND"', '"OR"', '"LIKE"']
 GRAMMAR_DICTIONARY["unaryop"] = ['"+"', '"-"', '"not"', '"NOT"']
 
-@SqlTableContext.register("unconstrained_text2sql")
-class UnconstrainedText2SqlTableContext(SqlTableContext):
+@SqlTableContext.register("weakly_constrained_text2sql")
+class WeaklyConstrainedText2SqlTableContext(SqlTableContext):
     """
     This context is minimally constrained in terms of table productions,
     meaning that we don't even constrain columns to be associated with the correct
