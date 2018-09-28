@@ -402,8 +402,8 @@ class SimpleSeq2Seq(TransitionFunction[SimpleState], Model):
                       for x in state.action_history[i]]
             print(torch.exp(state.score[i]).item(), tokens)
 
-    def _gather_final_states(self,  # pylint: disable=no-self-use
-                             states: Mapping[int, Sequence[SimpleState]]) -> Dict[str, torch.Tensor]:
+    @staticmethod
+    def _gather_final_states(states: Mapping[int, Sequence[SimpleState]]) -> Dict[str, torch.Tensor]:
         # pylint: disable=not-callable
         """
         Take the best state from within each batch and batch together the results.
@@ -482,7 +482,7 @@ class SimpleSeq2Seq(TransitionFunction[SimpleState], Model):
     def _prepare_attended_input(self,
                                 decoder_hidden_state: torch.LongTensor = None,
                                 encoder_outputs: torch.LongTensor = None,
-                                encoder_outputs_mask: torch.LongTensor = None) -> torch.LongTensor:
+                                encoder_outputs_mask: torch.LongTensor = None) -> torch.Tensor:
         """
         Apply attention over encoder outputs and decoder state.
 
@@ -497,7 +497,7 @@ class SimpleSeq2Seq(TransitionFunction[SimpleState], Model):
 
         Returns
         -------
-        ``torch.LongTensor``, (batch_size, encoder_output_dim)
+        ``torch.Tensor``, (batch_size, encoder_output_dim)
         """
         # Ensure mask is also a FloatTensor. Or else the multiplication within
         # attention will complain.
