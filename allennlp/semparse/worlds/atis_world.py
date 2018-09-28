@@ -8,8 +8,8 @@ from parsimonious.grammar import Grammar
 
 from allennlp.common.file_utils import cached_path
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
-from allennlp.semparse.contexts.sql_table_context import \
-        SqlTableContext, SqlVisitor, format_action
+from allennlp.semparse.contexts.atis_sql_table_context import AtisSqlTableContext, KEYWORDS
+from allennlp.semparse.contexts.sql_context_utils import SqlVisitor, format_action
 
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
@@ -57,7 +57,7 @@ class AtisWorld():
     """
 
     database_file = "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
-    sql_table_context = SqlTableContext(ALL_TABLES,
+    sql_table_context = AtisSqlTableContext(ALL_TABLES,
                                         TABLES_WITH_STRINGS,
                                         database_file)
 
@@ -110,7 +110,7 @@ class AtisWorld():
             for token_index in number_linking_dict.get(number, []):
                 if token_index < len(entity_linking):
                     entity_linking[token_index] = 1
-            action = format_action(nonterminal, number, is_number=True)
+            action = format_action(nonterminal, number, is_number=True, keywords_to_uppercase=KEYWORDS)
             number_linking_scores[action] = (nonterminal, number, entity_linking)
 
 
@@ -154,9 +154,7 @@ class AtisWorld():
         string_linking_dict: Dict[str, List[int]] = {}
         for tokenized_utterance in self.tokenized_utterances:
             string_linking_dict = get_strings_from_utterance(tokenized_utterance)
-
         strings_list = AtisWorld.sql_table_context.strings_list
-
         # We construct the linking scores for strings from the ``string_linking_dict`` here.
         for string in strings_list:
             entity_linking = [0 for token in current_tokenized_utterance]
@@ -243,7 +241,7 @@ class AtisWorld():
                           for nonterminal, right_hand_side in self.grammar_dictionary.items()])
 
     def get_action_sequence(self, query: str) -> List[str]:
-        sql_visitor = SqlVisitor(self.grammar_with_context)
+        sql_visitor = SqlVisitor(self.grammar_with_context, keywords_to_uppercase=KEYWORDS)
         if query:
             action_sequence = sql_visitor.parse(query)
             return action_sequence

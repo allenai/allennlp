@@ -20,6 +20,7 @@ allennlp.predictors
 * :ref:`NlvrParserPredictor<nlvr-parser>`
 * :ref:`OpenIePredictor<open-information-extraction>`
 * :ref:`Event2MindPredictor<event2mind>`
+* :ref:`AtisParserPredictor<atis-parser>`
 
 
 .. _predictor:
@@ -102,6 +103,12 @@ allennlp.predictors
 
 .. _event2mind:
 .. automodule:: allennlp.predictors.event2mind
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _atis-parser:
+.. automodule:: allennlp.predictors.atis_parser
    :members:
    :undoc-members:
    :show-inheritance:

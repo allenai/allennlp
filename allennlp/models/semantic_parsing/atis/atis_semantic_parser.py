@@ -15,7 +15,7 @@ from allennlp.modules import Attention, Seq2SeqEncoder, TextFieldEmbedder, \
         Embedding
 from allennlp.nn import util
 from allennlp.semparse.worlds import AtisWorld
-from allennlp.semparse.contexts.sql_table_context import action_sequence_to_sql
+from allennlp.semparse.contexts.sql_context_utils import action_sequence_to_sql
 from allennlp.state_machines.states import GrammarBasedState
 from allennlp.state_machines.transition_functions.linking_transition_function import LinkingTransitionFunction
 from allennlp.state_machines import BeamSearch
@@ -208,6 +208,7 @@ class AtisSemanticParser(Model):
                     self._denotation_accuracy(0)
                     self._valid_sql_query(0)
                     self._action_similarity(0)
+                    outputs['predicted_sql_query'].append('')
                     continue
 
                 best_action_indices = best_final_states[i][0].action_history[0]
