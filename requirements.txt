@@ -133,4 +133,4 @@ pypandoc
 twine==1.11.0
 
 # For text normalization
-ftfy
+#ftfy
