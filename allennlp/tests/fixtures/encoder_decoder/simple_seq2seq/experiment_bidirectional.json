@@ -68,13 +68,14 @@
       "type": "lstm",
       "input_size": 47,
       "hidden_size": 10,
-      "num_layers": 1
+      "num_layers": 1,
+      "bidirectional": true
     },
     "max_decoding_steps": 20,
     "attention": {
       "type": "bilinear",
-      "vector_dim": 10,
-      "matrix_dim": 10
+      "vector_dim": 20,
+      "matrix_dim": 20
     },
     "beam_search": {
       "beam_size": 5

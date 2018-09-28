@@ -16,14 +16,8 @@ class SimpleSeq2SeqTest(ModelTestCase):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_bidirectional_model_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(
-                self.param_file,
-                overrides="{model: {encoder: {bidirectional: true}}}"
-                )
-
-    def test_model_with_attention_can_train_save_and_load(self):
         param_file = self.FIXTURES_ROOT / "encoder_decoder" / \
-                     "simple_seq2seq" / "experiment_with_attention.json"
+                     "simple_seq2seq" / "experiment_bidirectional.json"
         self.ensure_model_can_train_save_and_load(param_file)
 
     def test_loss_is_computed_correctly(self):

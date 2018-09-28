@@ -19,7 +19,7 @@ from allennlp.state_machines.states import SimpleState
 
 
 @Model.register("simple_seq2seq")
-class IntentParser(TransitionFunction[SimpleState], Model):
+class SimpleSeq2Seq(TransitionFunction[SimpleState], Model):
     """
     This ``SimpleSeq2Seq`` class is a :class:`Model` which takes a sequence, encodes it, and then
     uses the encoded representations to decode another sequence.  You can use this as the basis for
@@ -68,7 +68,7 @@ class IntentParser(TransitionFunction[SimpleState], Model):
                  target_namespace: str = "target_tokens",
                  target_embedding_dim: int = 30,
                  scheduled_sampling_ratio: float = 0.) -> None:
-        super(IntentParser, self).__init__(vocab)
+        super(SimpleSeq2Seq, self).__init__(vocab)
         self._max_decoding_steps = max_decoding_steps
         self._source_namespace = source_namespace
         self._target_namespace = target_namespace
