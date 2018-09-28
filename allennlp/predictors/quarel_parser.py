@@ -23,7 +23,7 @@ class QuarelParserPredictor(Predictor):
         dataset_reader = cast(QuarelDatasetReader, self._dataset_reader)
 
         # TODO: Fix protected access usage
-        question_data = dataset_reader._preprocess(json_dict)[0]  # pylint: disable=protected-access
+        question_data = dataset_reader.preprocess(json_dict, predict=True)[0]
 
         qr_spec_override = None
         dynamic_entities = None

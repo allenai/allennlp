@@ -162,7 +162,7 @@ class QuarelDatasetReader(DatasetReader):
         self._attr_regex = re.compile(r"""\((\w+) (high|low|higher|lower)""")
 
     # Depending on dataset parameters, preprocess the data
-    def _preprocess(self, question_data: JsonDict) -> List[JsonDict]:
+    def preprocess(self, question_data: JsonDict, predict: bool = False) -> List[JsonDict]:
         # Use 'world_literals' to override 'world_extractions'
         if self._gold_world_extractions and 'world_literals' in question_data:
             question_data['world_extractions'] = question_data['world_literals']
@@ -193,12 +193,12 @@ class QuarelDatasetReader(DatasetReader):
             question_data['logical_forms'] = logical_forms
 
         output = [question_data]
-        need_extractions = self._replace_world_entities
+        need_extractions = self._replace_world_entities and not predict
         if not 'world_extractions' in question_data and need_extractions:
             output = []
         # Can potentially return different variants of question here, currently
         # output is either 0 or 1 entries
-        if self._replace_world_entities:
+        if self._replace_world_entities and 'world_extractions' in question_data:
             output = [self._replace_stemmed_entities(data) for data in output]
         return output
 
@@ -217,7 +217,7 @@ class QuarelDatasetReader(DatasetReader):
                 if not line:
                     continue
                 question_data_orig = json.loads(line)
-                question_data_list = self._preprocess(question_data_orig)
+                question_data_list = self.preprocess(question_data_orig)
 
                 debug_counter -= 1
                 if debug_counter > 0:
@@ -229,6 +229,10 @@ class QuarelDatasetReader(DatasetReader):
                     # Skip examples with certain attributes
                     if (self._skip_attributes_regex is not None and
                                 self._skip_attributes_regex.search(logical_forms[0])):
+                        continue
+                    # Somewhat hacky filtering to "friction" subset of questions based on id
+                    if (question_id is not None and "_friction" in self._lf_syntax and
+                                "_Fr_"  not in question_id):
                         continue
 
                     if debug_counter > 0:
