@@ -26,32 +26,32 @@ GRAMMAR_DICTIONARY["select_core"] = ['(select_with_distinct select_results from_
                                      '(select_with_distinct select_results from_clause)',
                                      '(select_with_distinct select_results where_clause)',
                                      '(select_with_distinct select_results)']
-GRAMMAR_DICTIONARY["select_with_distinct"] = ['(ws "SELECT" ws "DISTINCT")', 'ws "SELECT"']
+GRAMMAR_DICTIONARY["select_with_distinct"] = ['(ws "SELECT" ws "DISTINCT")', '(ws "SELECT")']
 GRAMMAR_DICTIONARY["select_results"] = ['(ws select_result ws "," ws select_results)', '(ws select_result)']
 GRAMMAR_DICTIONARY["select_result"] = ['sel_res_all_star', 'sel_res_tab_star', 'sel_res_val', 'sel_res_col']
 GRAMMAR_DICTIONARY["sel_res_tab_star"] = ['name ".*"']
 GRAMMAR_DICTIONARY["sel_res_all_star"] = ['"*"']
-GRAMMAR_DICTIONARY['sel_res_val'] = ['(expr AS wsp name)', 'expr']
-GRAMMAR_DICTIONARY['sel_res_col'] = ['col_ref AS wsp name']
+GRAMMAR_DICTIONARY['sel_res_val'] = ['(expr ws "AS" wsp name)', 'expr']
+GRAMMAR_DICTIONARY['sel_res_col'] = ['col_ref ws "AS" wsp name']
 
-GRAMMAR_DICTIONARY["from_clause"] = ['FROM source']
+GRAMMAR_DICTIONARY["from_clause"] = ['ws "FROM" source']
 GRAMMAR_DICTIONARY["source"] = ['(ws single_source ws "," ws source)', '(ws single_source)']
 GRAMMAR_DICTIONARY["single_source"] = ['source_table', 'source_subq']
-GRAMMAR_DICTIONARY["source_table"] = ['table_name AS wsp name']
-GRAMMAR_DICTIONARY["source_subq"] = ['("(" ws query ws ")" AS ws name)', '("(" ws query ws ")")']
+GRAMMAR_DICTIONARY["source_table"] = ['table_name ws "AS" wsp name']
+GRAMMAR_DICTIONARY["source_subq"] = ['("(" ws query ws ")" ws "AS" ws name)', '("(" ws query ws ")")']
 
-GRAMMAR_DICTIONARY["where_clause"] = ['(WHERE wsp expr where_conj)', '(WHERE wsp expr)']
-GRAMMAR_DICTIONARY["where_conj"] = ['(AND wsp expr where_conj)', '(AND wsp expr)']
+GRAMMAR_DICTIONARY["where_clause"] = ['(ws "WHERE" wsp expr where_conj)', '(ws "WHERE" wsp expr)']
+GRAMMAR_DICTIONARY["where_conj"] = ['(ws "AND" wsp expr where_conj)', '(ws "AND" wsp expr)']
 
-GRAMMAR_DICTIONARY["groupby_clause"] = ['(GROUP BY group_clause having_clause)', '(GROUP BY group_clause)']
+GRAMMAR_DICTIONARY["groupby_clause"] = ['(ws "GROUP" ws "BY" group_clause having_clause)', '(ws "GROUP" ws "BY" group_clause)']
 GRAMMAR_DICTIONARY["group_clause"] = ['(ws expr ws "," group_clause)', '(ws expr)']
-GRAMMAR_DICTIONARY["having_clause"] = ['HAVING ws expr']
+GRAMMAR_DICTIONARY["having_clause"] = ['ws "HAVING" ws expr']
 
-GRAMMAR_DICTIONARY["orderby_clause"] = ['ORDER BY order_clause']
+GRAMMAR_DICTIONARY["orderby_clause"] = ['ws "ORDER" ws "BY" order_clause']
 GRAMMAR_DICTIONARY["order_clause"] = ['(ordering_term ws "," order_clause)', 'ordering_term']
 GRAMMAR_DICTIONARY["ordering_term"] = ['(ws expr ordering)', '(ws expr)']
-GRAMMAR_DICTIONARY["ordering"] = ['ASC', 'DESC']
-GRAMMAR_DICTIONARY["limit"] = ['LIMIT ws number']
+GRAMMAR_DICTIONARY["ordering"] = ['(ws "ASC")', '(ws "DESC")']
+GRAMMAR_DICTIONARY["limit"] = ['ws "LIMIT" ws number']
 
 GRAMMAR_DICTIONARY["col_ref"] = ['(table_name ws "." ws column_name)', 'column_name']
 GRAMMAR_DICTIONARY["table_name"] = ['name']
@@ -62,21 +62,21 @@ GRAMMAR_DICTIONARY['name'] = ['~"[a-zA-Z]\w*"i']
 
 GRAMMAR_DICTIONARY["expr"] = ['in_expr', 'like_expr', 'between_expr', 'binary_expr',
                               'unary_expr', 'null_check_expr', 'source_subq', 'value']
-GRAMMAR_DICTIONARY["like_expr"] = ['value wsp LIKE ws string']
-GRAMMAR_DICTIONARY["in_expr"] = ['(value wsp NOT IN wsp string_set)',
-                                 '(value wsp IN wsp string_set)',
-                                 '(value wsp NOT IN wsp expr)',
-                                 '(value wsp IN wsp expr)']
+GRAMMAR_DICTIONARY["like_expr"] = ['value wsp ws "LIKE" ws string']
+GRAMMAR_DICTIONARY["in_expr"] = ['(value wsp ws "NOT" ws "IN" wsp string_set)',
+                                 '(value wsp ws "IN" wsp string_set)',
+                                 '(value wsp ws "NOT" ws "IN" wsp expr)',
+                                 '(value wsp ws "IN" wsp expr)']
 
-GRAMMAR_DICTIONARY["between_expr"] = ['value BETWEEN wsp value AND wsp value']
+GRAMMAR_DICTIONARY["between_expr"] = ['value ws "BETWEEN" wsp value ws "AND" wsp value']
 GRAMMAR_DICTIONARY["binary_expr"] = ['value ws binaryop wsp expr']
 GRAMMAR_DICTIONARY["unary_expr"] = ['unaryop expr']
-GRAMMAR_DICTIONARY["null_check_expr"] = ['(col_ref IS NOT NULL)', '(col_ref IS NULL)']
+GRAMMAR_DICTIONARY["null_check_expr"] = ['(col_ref ws "IS" ws "NOT" ws "NULL")', '(col_ref ws "IS" ws "NULL")']
 
 GRAMMAR_DICTIONARY["value"] = ['parenval', 'datetime', 'number', 'boolean', 'function', 'col_ref', 'string']
 GRAMMAR_DICTIONARY["datetime"] = ['"YEAR(CURDATE())"']
 GRAMMAR_DICTIONARY["parenval"] = ['"(" ws expr ws ")"']
-GRAMMAR_DICTIONARY["function"] = ['(fname ws "(" ws DISTINCT ws arg_list_or_star ws ")")',
+GRAMMAR_DICTIONARY["function"] = ['(fname ws "(" ws "DISTINCT" ws arg_list_or_star ws ")")',
                                   '(fname ws "(" ws arg_list_or_star ws ")")']
 
 GRAMMAR_DICTIONARY["arg_list_or_star"] = ['arg_list', '"*"']
@@ -90,14 +90,8 @@ GRAMMAR_DICTIONARY["boolean"] = ['"true"', '"false"']
 
 # TODO(MARK): This is not tight enough. AND/OR are strictly boolean value operators.
 GRAMMAR_DICTIONARY["binaryop"] = ['"+"', '"-"', '"*"', '"/"', '"="', '"<>"',
-                                  '">="', '"<="', '">"', '"<"', 'AND', 'OR', 'LIKE']
+                                  '">="', '"<="', '">"', '"<"', '"AND"', '"OR"', '"LIKE"']
 GRAMMAR_DICTIONARY["unaryop"] = ['"+"', '"-"', '"not"', '"NOT"']
-
-KEYWORDS = ["SELECT", "FROM", "WHERE", "AS", "LIKE", "AND", "OR", "DISTINCT", "GROUP",
-            "ORDER", "BY", "ASC", "DESC", "BETWEEN", "IN", "IS", "NOT", "NULL", "HAVING", "LIMIT", "LIKE"]
-
-for keyword in KEYWORDS:
-    GRAMMAR_DICTIONARY[keyword] = [f'ws "{keyword}"']
 
 class Text2SqlTableContext:
     """
