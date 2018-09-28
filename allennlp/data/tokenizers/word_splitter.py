@@ -3,7 +3,7 @@ from typing import List
 
 from overrides import overrides
 import spacy
-#import ftfy
+import ftfy
 
 from allennlp.common import Registrable
 from allennlp.common.util import get_spacy_model
