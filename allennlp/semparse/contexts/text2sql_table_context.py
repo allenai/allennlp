@@ -43,9 +43,8 @@ GRAMMAR_DICTIONARY["source_subq"] = ['("(" ws query ws ")" ws "AS" ws name)', '(
 GRAMMAR_DICTIONARY["where_clause"] = ['(ws "WHERE" wsp expr where_conj)', '(ws "WHERE" wsp expr)']
 GRAMMAR_DICTIONARY["where_conj"] = ['(ws "AND" wsp expr where_conj)', '(ws "AND" wsp expr)']
 
-GRAMMAR_DICTIONARY["groupby_clause"] = ['(ws "GROUP" ws "BY" group_clause having_clause)', '(ws "GROUP" ws "BY" group_clause)']
+GRAMMAR_DICTIONARY["groupby_clause"] = ['(ws "GROUP" ws "BY" group_clause ws "HAVING" ws expr)', '(ws "GROUP" ws "BY" group_clause)']
 GRAMMAR_DICTIONARY["group_clause"] = ['(ws expr ws "," group_clause)', '(ws expr)']
-GRAMMAR_DICTIONARY["having_clause"] = ['ws "HAVING" ws expr']
 
 GRAMMAR_DICTIONARY["orderby_clause"] = ['ws "ORDER" ws "BY" order_clause']
 GRAMMAR_DICTIONARY["order_clause"] = ['(ordering_term ws "," order_clause)', 'ordering_term']
@@ -62,19 +61,18 @@ GRAMMAR_DICTIONARY['name'] = ['~"[a-zA-Z]\w*"i']
 
 GRAMMAR_DICTIONARY["expr"] = ['in_expr', 'like_expr', 'between_expr', 'binary_expr',
                               'unary_expr', 'null_check_expr', 'source_subq', 'value']
-GRAMMAR_DICTIONARY["like_expr"] = ['value wsp ws "LIKE" ws string']
-GRAMMAR_DICTIONARY["in_expr"] = ['(value wsp ws "NOT" ws "IN" wsp string_set)',
-                                 '(value wsp ws "IN" wsp string_set)',
-                                 '(value wsp ws "NOT" ws "IN" wsp expr)',
-                                 '(value wsp ws "IN" wsp expr)']
+GRAMMAR_DICTIONARY["like_expr"] = ['value wsp "LIKE" wsp string']
+GRAMMAR_DICTIONARY["in_expr"] = ['(value wsp "NOT" wsp "IN" wsp string_set)',
+                                 '(value wsp "IN" wsp string_set)',
+                                 '(value wsp "NOT" wsp "IN" wsp expr)',
+                                 '(value wsp "IN" wsp expr)']
 
 GRAMMAR_DICTIONARY["between_expr"] = ['value ws "BETWEEN" wsp value ws "AND" wsp value']
 GRAMMAR_DICTIONARY["binary_expr"] = ['value ws binaryop wsp expr']
 GRAMMAR_DICTIONARY["unary_expr"] = ['unaryop expr']
 GRAMMAR_DICTIONARY["null_check_expr"] = ['(col_ref ws "IS" ws "NOT" ws "NULL")', '(col_ref ws "IS" ws "NULL")']
 
-GRAMMAR_DICTIONARY["value"] = ['parenval', 'datetime', 'number', 'boolean', 'function', 'col_ref', 'string']
-GRAMMAR_DICTIONARY["datetime"] = ['"YEAR(CURDATE())"']
+GRAMMAR_DICTIONARY["value"] = ['parenval', '"YEAR(CURDATE())"', 'number', 'boolean', 'function', 'col_ref', 'string']
 GRAMMAR_DICTIONARY["parenval"] = ['"(" ws expr ws ")"']
 GRAMMAR_DICTIONARY["function"] = ['(fname ws "(" ws "DISTINCT" ws arg_list_or_star ws ")")',
                                   '(fname ws "(" ws arg_list_or_star ws ")")']
