@@ -57,6 +57,9 @@ unidecode
 # Used by semantic parsing code to parse SQL
 parsimonious==0.8.0
 
+# Used by semantic parsing code to format and postprocess SQL
+sqlparse==0.2.4
+
 #### ESSENTIAL LIBRARIES USED IN SCRIPTS ####
 # Used for downloading datasets over HTTP
 requests>=2.18

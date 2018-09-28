@@ -4,6 +4,7 @@ Utility functions for reading the standardised text2sql datasets presented in
 `"Improving Text to SQL Evaluation Methodology" <https://arxiv.org/abs/1806.09029>`_
 """
 from typing import List, Dict, NamedTuple, Iterable, Tuple, Set
+from collections import defaultdict
 
 from allennlp.common import JsonDict
 
@@ -55,25 +56,94 @@ def replace_variables(sentence: List[str],
                 tags.append(token)
     return tokens, tags
 
+def split_table_and_column_names(table: str) -> Iterable[str]:
+    partitioned = [x for x in table.partition(".") if x != '']
+    # Avoid splitting decimal strings.
+    if partitioned[0].isnumeric() and partitioned[-1].isnumeric():
+        return [table]
+    return partitioned
+
 def clean_and_split_sql(sql: str) -> List[str]:
     """
     Cleans up and unifies a SQL query. This involves unifying quoted strings
     and splitting brackets which aren't formatted consistently in the data.
     """
-    sql_tokens = []
+    sql_tokens: List[str] = []
     for token in sql.strip().split():
         token = token.replace('"', "'").replace("%", "")
         if token.endswith("(") and len(token) > 1:
-            sql_tokens.append(token[:-1])
-            sql_tokens.append(token[-1])
+            sql_tokens.extend(split_table_and_column_names(token[:-1]))
+            sql_tokens.extend(split_table_and_column_names(token[-1]))
         else:
-            sql_tokens.append(token)
+            sql_tokens.extend(split_table_and_column_names(token))
     return sql_tokens
+
+def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
+
+    unneeded_aliases = {}
+    previous_token = sql_tokens[0]
+    for (token, next_token) in zip(sql_tokens[1:-1], sql_tokens[2:]):
+        if token == "AS" and previous_token is not None:
+            # Check to see if the table name without the alias
+            # is the same.
+            table_name = next_token[:-6]
+            if table_name == previous_token:
+                # If so, store the mapping as a replacement.
+                unneeded_aliases[next_token] = previous_token
+
+        previous_token = token
+
+    dealiased_tokens: List[str] = []
+    for token in sql_tokens:
+        new_token = unneeded_aliases.get(token, None)
+
+        if new_token is not None and dealiased_tokens[-1] == "AS":
+            dealiased_tokens.pop()
+            continue
+        elif new_token is None:
+            new_token = token
+
+        dealiased_tokens.append(new_token)
+
+    return dealiased_tokens
+
+def read_dataset_schema(schema_path: str) -> Dict[str, List[Tuple[str, str]]]:
+    """
+    Reads a schema from the text2sql data, returning a dictionary
+    mapping table names to their columns and respective types.
+    This handles columns in an arbitrary order and also allows
+    either ``{Table, Field}`` or ``{Table, Field} Name`` as headers,
+    because both appear in the data.
+
+    Parameters
+    ----------
+    schema_path : ``str``, required.
+        The path to the csv schema.
+
+    Returns
+    -------
+    A dictionary mapping table names to typed columns.
+    """
+    schema: Dict[str, List[Tuple[str, str]]] = defaultdict(list)
+    for i, line in enumerate(open(schema_path, "r")):
+        if i == 0:
+            header = [x.strip() for x in line.split(",")]
+        elif line[0] == "-":
+            continue
+        else:
+            data = {key: value for key, value in zip(header, [x.strip() for x in line.split(",")])}
+
+            table = data.get("Table Name", None) or data.get("Table")
+            column = data.get("Field Name", None) or data.get("Field")
+            schema[table].append((column, data["Type"]))
+
+    return {**schema}
 
 
 def process_sql_data(data: List[JsonDict],
                      use_all_sql: bool = False,
-                     use_all_queries: bool = False) -> Iterable[SqlData]:
+                     use_all_queries: bool = False,
+                     remove_unneeded_aliases: bool = False) -> Iterable[SqlData]:
     """
     A utility function for reading in text2sql data. The blob is
     the result of loading the json from a file produced by the script
@@ -90,6 +160,14 @@ def process_sql_data(data: List[JsonDict],
         duplicated queries will occur in the dataset as separate instances,
         as for a given SQL query, not only are there multiple queries with
         the same template, but there are also duplicate queries.
+    remove_unneeded_aliases : ``bool``, (default = False)
+        The text2sql data by default creates alias names for `all` tables,
+        regardless of whether the table is derived or if it is identical to
+        the original (e.g SELECT TABLEalias0.COLUMN FROM TABLE AS TABLEalias0).
+        This is not necessary and makes the action sequence and grammar manipulation
+        much harder in a grammar based decoder. Note that this does not
+        remove aliases which are legitimately required, such as when a new
+        table is formed by performing operations on the original table.
     """
     for example in data:
         seen_sentences: Set[str] = set()
@@ -108,6 +186,9 @@ def process_sql_data(data: List[JsonDict],
                         seen_sentences.add(key)
 
                 sql_tokens = clean_and_split_sql(sql)
+                if remove_unneeded_aliases:
+                    sql_tokens = clean_unneeded_aliases(sql_tokens)
+
                 sql_variables = {}
                 for variable in example['variables']:
                     sql_variables[variable['name']] = variable['example']
