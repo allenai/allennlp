@@ -130,6 +130,8 @@ class TestAtisWorld(AllenNlpTestCase):
                  'biexpr -> ["fare", ".", "restriction_code", binaryop, '
                  'fare_restriction_code_string]',
                  'biexpr -> ["fare", ".", "round_trip_cost", binaryop, fare_round_trip_cost]',
+                 'biexpr -> ["fare", ".", "one_direction_cost", binaryop, '
+                 'fare_one_direction_cost]',
                  'biexpr -> ["fare", ".", "round_trip_required", binaryop, '
                  'fare_round_trip_required_string]',
                  'biexpr -> ["fare_basis", ".", "class_type", binaryop, '
