@@ -118,14 +118,16 @@ class IntentParser(TransitionFunction[SimpleState], Model):
 
         Parameters
         ----------
-        source_tokens : Dict[str, torch.LongTensor]
+        source_tokens : ``Dict[str, torch.LongTensor]``
            The output of `TextField.as_array()` applied on the source `TextField`. This will be
            passed through a `TextFieldEmbedder` and then through an encoder.
-
-        target_tokens : Dict[str, torch.LongTensor], optional (default = None)
+        target_tokens : ``Dict[str, torch.LongTensor]``, optional (default = None)
            Output of `Textfield.as_array()` applied on target `TextField`. We assume that the
            target tokens are also represented as a `TextField`.
 
+        Returns
+        -------
+        ``Dict[str, torch.Tensor]``
         """
         embedded_input = self._source_embedder(source_tokens)
         # shape: (batch_size, max_input_sequence_length, encoder_input_dim)
@@ -174,16 +176,15 @@ class IntentParser(TransitionFunction[SimpleState], Model):
 
         Parameters
         ----------
-        targets : torch.Tensor, (batch_size, max_target_sequence_length)
-        source_mask : torch.Tensor, (batch_size, max_input_sequence_length)
-        decoder_hidden : torch.Tensor, (batch_size, decoder_output_dim)
-        decoder_context : torch.Tensor, (batch_size, decoder_output_dim)
-        encoder_outputs : torch.Tensor, (batch_size, max_input_sequence_length, encoder_output_dim)
+        targets : ``torch.Tensor``, (batch_size, max_target_sequence_length)
+        source_mask : ``torch.Tensor``, (batch_size, max_input_sequence_length)
+        decoder_hidden : ``torch.Tensor``, (batch_size, decoder_output_dim)
+        decoder_context : ``torch.Tensor``, (batch_size, decoder_output_dim)
+        encoder_outputs : ``torch.Tensor``, (batch_size, max_input_sequence_length, encoder_output_dim)
 
         Returns
         -------
-        Dict[str, torch.Tensor]
-
+        ``Dict[str, torch.Tensor]``
         """
         targets = target_tokens["tokens"]
         # shape: (batch_size, max_target_sequence_length)
@@ -283,15 +284,14 @@ class IntentParser(TransitionFunction[SimpleState], Model):
 
         Parameters
         ----------
-        source_mask : torch.Tensor, (batch_size, max_input_sequence_length)
-        decoder_hidden : torch.Tensor, (batch_size, decoder_output_dim)
-        decoder_context : torch.Tensor, (batch_size, decoder_output_dim)
-        encoder_outputs : torch.Tensor, (batch_size, max_input_sequence_length, encoder_output_dim)
+        source_mask : ``torch.Tensor``, (batch_size, max_input_sequence_length)
+        decoder_hidden : ``torch.Tensor``, (batch_size, decoder_output_dim)
+        decoder_context : ``torch.Tensor``, (batch_size, decoder_output_dim)
+        encoder_outputs : ``torch.Tensor``, (batch_size, max_input_sequence_length, encoder_output_dim)
 
         Returns
         -------
-        Dict[str, torch.Tensor]
-
+        ``Dict[str, torch.Tensor]``
         """
         initial_state = self._create_initial_state(
                 source_mask, decoder_hidden, decoder_context, encoder_outputs)
@@ -313,7 +313,6 @@ class IntentParser(TransitionFunction[SimpleState], Model):
         construct new states for the next step.  Each new state corresponds to one valid action
         that can be taken from the current state, and they are ordered by their probability of
         being selected.
-
         """
         group_size = len(state.batch_indices)
 
@@ -433,15 +432,14 @@ class IntentParser(TransitionFunction[SimpleState], Model):
 
         Parameters
         ----------
-        source_mask : torch.Tensor, (batch_size, max_input_sequence_length)
-        decoder_hidden : torch.Tensor, (batch_size, decoder_output_dim)
-        decoder_context : torch.Tensor, (batch_size, decoder_output_dim)
-        encoder_outputs : torch.Tensor, (batch_size, max_input_sequence_length, encoder_output_dim)
+        source_mask : ``torch.Tensor``, (batch_size, max_input_sequence_length)
+        decoder_hidden : ``torch.Tensor``, (batch_size, decoder_output_dim)
+        decoder_context : ``torch.Tensor``, (batch_size, decoder_output_dim)
+        encoder_outputs : ``torch.Tensor``, (batch_size, max_input_sequence_length, encoder_output_dim)
 
         Returns
         -------
-        SimpleState
-
+        ``SimpleState``
         """
         batch_size = source_mask.size()[0]
 
@@ -490,19 +488,16 @@ class IntentParser(TransitionFunction[SimpleState], Model):
 
         Parameters
         ----------
-        decoder_hidden_state : torch.LongTensor, (batch_size, decoder_output_dim)
+        decoder_hidden_state : ``torch.LongTensor``, (batch_size, decoder_output_dim)
             Output of from the decoder at the last time step. Needed only if using attention.
-
-        encoder_outputs : torch.LongTensor, (batch_size, max_input_sequence_length, encoder_output_dim)
+        encoder_outputs : ``torch.LongTensor``, (batch_size, max_input_sequence_length, encoder_output_dim)
             Encoder outputs from all time steps. Needed only if using attention.
-
-        encoder_outputs_mask : torch.LongTensor, (batch_size, max_input_sequence_length, encoder_output_dim)
+        encoder_outputs_mask : ``torch.LongTensor``, (batch_size, max_input_sequence_length, encoder_output_dim)
             Masks on encoder outputs. Needed only if using attention.
 
         Returns
         -------
-        torch.LongTensor, (batch_size, encoder_output_dim)
-
+        ``torch.LongTensor``, (batch_size, encoder_output_dim)
         """
         # Ensure mask is also a FloatTensor. Or else the multiplication within
         # attention will complain.
@@ -546,7 +541,6 @@ class IntentParser(TransitionFunction[SimpleState], Model):
            with masks             1   1   1   1   0   0
            against                l1  l2  l3  l4  l5  l6
            (where the input was)  <S> w1  w2  w3  <E> <P>
-
         """
         relevant_targets = targets[:, 1:].contiguous()
         # shape: (batch_size, num_decoding_steps)
@@ -567,7 +561,6 @@ class IntentParser(TransitionFunction[SimpleState], Model):
 
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
-
         """
         predicted_indices = output_dict["predictions"]
         if not isinstance(predicted_indices, numpy.ndarray):
