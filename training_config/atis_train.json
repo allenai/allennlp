@@ -26,7 +26,7 @@
     "beam_size": 10
     },
     "max_decoding_steps": 200,
-    "attention": {"type": "dot_product"},
+    "input_attention": {"type": "dot_product"},
     "dropout": 0.5,
     "database_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
   },
