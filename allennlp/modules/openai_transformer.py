@@ -288,6 +288,7 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
 
         self.vocab_size = vocab_size
         self.n_ctx = n_ctx
+        self.n_special = n_special
 
         self.num_output_layers = 1 + num_layers
 
@@ -306,7 +307,7 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
             parameter.requires_grad = requires_grad
 
         if model_path:
-            self.load_weights(model_path, n_special=n_special)
+            self.load_weights(model_path, n_special=n_special, n_ctx=n_ctx)
 
     def forward(self, x: torch.Tensor) -> List[torch.Tensor]:
         #x = x.view(-1, x.size(2), x.size(3))
