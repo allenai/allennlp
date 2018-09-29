@@ -69,7 +69,6 @@ class WikiTablesParserPredictor(Predictor):
                                                                 outputs['original_table'])
         return sanitize(outputs)
 
-
     def predict_batch_instance(self, instances: List[Instance]) -> List[JsonDict]:
         outputs = self._model.forward_on_instances(instances)
         for output in outputs:
