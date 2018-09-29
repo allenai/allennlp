@@ -307,7 +307,7 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
             parameter.requires_grad = requires_grad
 
         if model_path:
-            self.load_weights(model_path, n_special=n_special, n_ctx=n_ctx)
+            self.load_weights(model_path, n_special=n_special)
 
     def forward(self, x: torch.Tensor) -> List[torch.Tensor]:
         #x = x.view(-1, x.size(2), x.size(3))
