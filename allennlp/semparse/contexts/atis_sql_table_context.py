@@ -10,8 +10,8 @@ from overrides import overrides
 from parsimonious.grammar import Grammar
 
 from allennlp.common.file_utils import cached_path
-from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions, format_grammar_string
-from allennlp.semparse.contexts.sql_context_utils import SqlTableContext
+from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions, format_grammar_string, \
+        format_action, SqlTableContext
 
 # This is the base definition of the SQL grammar in a simplified sort of
 # EBNF notation, and represented as a dictionary. The keys are the nonterminals and the values
