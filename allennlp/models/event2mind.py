@@ -14,8 +14,10 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Seq2VecEncoder, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
+from allennlp.nn.beam_search import BeamSearch
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.training.metrics import UnigramRecall
+
 
 @Model.register("event2mind")
 class Event2Mind(Model):
@@ -41,7 +43,9 @@ class Event2Mind(Model):
         The encoder of the "encoder/decoder" model.
     max_decoding_steps : int, required
         Length of decoded sequences.
-    target_names: ``List[str]``, optional
+    beam_size : int, optional (default = 10)
+        The width of the beam search.
+    target_names: ``List[str]``, optional, (default = ['xintent', 'xreact', 'oreact'])
         Names of the target fields matching those in the ``Instance`` objects.
     target_namespace : str, optional (default = 'tokens')
         If the target side vocabulary is different from the source side's, you need to specify the
@@ -51,17 +55,20 @@ class Event2Mind(Model):
         You can specify an embedding dimensionality for the target side. If not, we'll use the same
         value as the source embedder's.
     """
-    # pylint: disable=dangerous-default-value
     def __init__(self,
                  vocab: Vocabulary,
                  source_embedder: TextFieldEmbedder,
                  embedding_dropout: float,
                  encoder: Seq2VecEncoder,
                  max_decoding_steps: int,
-                 target_names: List[str] = ["xintent", "xreact", "oreact"],
+                 beam_size: int = 10,
+                 target_names: List[str] = None,
                  target_namespace: str = "tokens",
                  target_embedding_dim: int = None) -> None:
+        target_names = target_names or ["xintent", "xreact", "oreact"]
+
         super(Event2Mind, self).__init__(vocab)
+
         # Note: The original tweaks the embeddings for "personx" to be the mean
         # across the embeddings for "he", "she", "him" and "her". Similarly for
         # "personx's" and so forth. We could consider that here as a well.
@@ -95,6 +102,12 @@ class Event2Mind(Model):
                     target_embedding_dim,
                     self._decoder_output_dim
             )
+
+        self._beam_search = BeamSearch(
+                self._end_index,
+                beam_size=beam_size,
+                max_steps=max_decoding_steps
+        )
 
     def _update_recall(self,
                        all_top_k_predictions: torch.Tensor,
@@ -175,20 +188,16 @@ class Event2Mind(Model):
 
         # Perform beam search to obtain the predictions.
         if not self.training:
+            batch_size = final_encoder_output.size()[0]
             for name, state in self._states.items():
+                start_predictions = final_encoder_output.new_full(
+                        (batch_size,), fill_value=self._start_index, dtype=torch.long)
+                start_state = {"decoder_hidden": final_encoder_output}
+
                 # (batch_size, 10, num_decoding_steps)
-                (all_top_k_predictions, log_probabilities) = self.beam_search(
-                        final_encoder_output=final_encoder_output,
-                        width=10,
-                        # We always use the max here instead of passing in the
-                        # length of the longest target to avoid biasing the
-                        # search. Whether this problem would manifest otherwise
-                        # would depend on the metric being used.
-                        num_decoding_steps=self._max_decoding_steps,
-                        target_embedder=state.embedder,
-                        decoder_cell=state.decoder_cell,
-                        output_projection_layer=state.output_projection_layer
-                )
+                all_top_k_predictions, log_probabilities = self._beam_search.search(
+                        start_predictions, start_state, state.take_step)
+
                 if target_tokens:
                     self._update_recall(all_top_k_predictions, target_tokens[name], state.recall)
                 output_dict[f"{name}_top_k_predictions"] = all_top_k_predictions
@@ -509,6 +518,7 @@ class Event2Mind(Model):
                 all_metrics[name] = state.recall.get_metric(reset=reset)
         return all_metrics
 
+
 class StateDecoder:
     """
     Simple struct-like class for internal use.
@@ -526,3 +536,14 @@ class StateDecoder:
         self.output_projection_layer = Linear(output_dim, num_classes)
         event2mind.add_module(f"{name}_output_project_layer", self.output_projection_layer)
         self.recall = UnigramRecall()
+
+    def take_step(self,
+                  last_predictions: torch.Tensor,
+                  state: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+        decoder_hidden = state["decoder_hidden"]
+        decoder_input = self.embedder(last_predictions)
+        decoder_hidden = self.decoder_cell(decoder_input, decoder_hidden)
+        state["decoder_hidden"] = decoder_hidden
+        output_projections = self.output_projection_layer(decoder_hidden)
+        class_log_probabilities = F.log_softmax(output_projections, dim=-1)
+        return class_log_probabilities, state
