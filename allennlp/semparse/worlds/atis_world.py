@@ -165,7 +165,7 @@ class AtisWorld():
         return entity_linking_scores
 
     def _update_valid_actions(self) -> Dict[str, List[str]]:
-        valid_actions = deepcopy(self.sql_table_context.valid_actions)
+        valid_actions = deepcopy(self.sql_table_context.get_valid_actions())
         valid_actions['time_range_start'] = []
         valid_actions['time_range_end'] = []
         for action, value in self.linked_entities['number'].items():
@@ -196,7 +196,7 @@ class AtisWorld():
         we want for the ATIS dataset. We then add numbers to the grammar dictionary. The strings in the
         database are already added in by the ``SqlTableContext``.
         """
-        self.grammar_dictionary = deepcopy(self.sql_table_context.grammar_dictionary)
+        self.grammar_dictionary = deepcopy(self.sql_table_context.get_grammar_dictionary())
         if self.dates:
             year_binary_expression = f'("date_day" ws "." ws "year" ws binaryop ws "{self.dates[0].year}")'
             self.grammar_dictionary['biexpr'].append(year_binary_expression)

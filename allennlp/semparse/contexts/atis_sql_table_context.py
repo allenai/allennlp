@@ -6,10 +6,12 @@ from typing import List, Dict
 import sqlite3
 from copy import deepcopy
 
+from overrides import overrides
 from parsimonious.grammar import Grammar
 
 from allennlp.common.file_utils import cached_path
-from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions, format_action
+from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions, format_grammar_string
+from allennlp.semparse.contexts.sql_context_utils import SqlTableContext
 
 # This is the base definition of the SQL grammar in a simplified sort of
 # EBNF notation, and represented as a dictionary. The keys are the nonterminals and the values
@@ -70,7 +72,8 @@ GRAMMAR_DICTIONARY['number'] = ['""']
 KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"', '"IN"', '"LIKE"',
             '"IS"', '"BETWEEN"', '"AND"', '"ALL"', '"ANY"', '"NULL"', '"OR"', '"DISTINCT"']
 
-class AtisSqlTableContext:
+@SqlTableContext.register("atis")
+class AtisSqlTableContext(SqlTableContext):
     """
     An ``AtisSqlTableContext`` represents the SQL context with a grammar of SQL and the valid actions
     based on the schema of the tables that it represents.
@@ -105,6 +108,13 @@ class AtisSqlTableContext:
         if database_file:
             self.connection.close()
 
+    @overrides
+    def get_grammar_dictionary(self) -> Dict[str, List[str]]:
+        return self.grammar_dictionary
+
+    @overrides
+    def get_valid_actions(self) -> Dict[str, List[str]]:
+        return self.valid_actions
 
     def update_grammar_dict_and_strings(self):
         self.strings_list = []
@@ -145,7 +155,5 @@ class AtisSqlTableContext:
         self.grammar_dictionary['biexpr'] = sorted(biexprs, reverse=True) + \
                 ['( col_ref ws binaryop ws value)', '(value ws binaryop ws value)']
 
-
     def get_grammar_string(self):
-        return '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
-                          for nonterminal, right_hand_side in self.grammar_dictionary.items()])
+        return format_grammar_string(self.grammar_dictionary)
