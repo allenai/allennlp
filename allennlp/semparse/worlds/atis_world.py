@@ -278,6 +278,7 @@ class AtisWorld():
         for tokenized_utterance in self.tokenized_utterances:
             string_linking_dict = get_strings_from_utterance(tokenized_utterance)
         strings_list = AtisWorld.sql_table_context.strings_list
+        strings_list.append(('flight_airline_code_string -> ["\'EA\'"]', 'EA'))
         # We construct the linking scores for strings from the ``string_linking_dict`` here.
         for string in strings_list:
             entity_linking = [0 for token in current_tokenized_utterance]

@@ -151,10 +151,9 @@ class AtisDatasetReader(DatasetReader):
 
         if sql_query_labels != None:
             fields['sql_queries'] = MetadataField(sql_query_labels)
-            if action_sequence:
+            if action_sequence and not self._keep_if_unparseable:
                 for production_rule in action_sequence:
                     index_fields.append(IndexField(action_map[production_rule], action_field))
-
                 action_sequence_field = ListField(index_fields)
                 fields['target_action_sequence'] = action_sequence_field
             elif not self._keep_if_unparseable:
