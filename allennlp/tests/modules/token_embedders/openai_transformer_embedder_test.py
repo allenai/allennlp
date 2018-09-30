@@ -82,7 +82,7 @@ class TestOpenaiTransformerEmbedderSmall(ModelTestCase):
                 "top_layer_only": True
         })
         embedder = OpenaiTransformerEmbedder.from_params(params)
-        training_tensors = self._get_training_tensors() 
+        training_tensors = self._get_training_tensors()
         output = embedder(training_tensors['tokens']['openai_transformer'],
                           training_tensors['tokens']['openai_transformer-offsets'])
         assert list(output.shape) == [2, 7, 10]
