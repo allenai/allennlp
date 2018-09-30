@@ -76,7 +76,7 @@ class TestOpenaiTransformerEmbedderSmall(ModelTestCase):
                         "embedding_dim": 10,
                         "num_heads": 2,
                         "num_layers": 2,
-                        "vocab_size": 100,
+                        "vocab_size": 50,
                         "n_ctx": 50
                 },
                 "top_layer_only": True
@@ -94,7 +94,7 @@ class TestOpenaiTransformerEmbedderSmall(ModelTestCase):
                         "embedding_dim": 10,
                         "num_heads": 2,
                         "num_layers": 2,
-                        "vocab_size": 100,
+                        "vocab_size": 50,
                         "n_ctx": 50
                 },
         })

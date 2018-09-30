@@ -58,6 +58,10 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
         # pylint: disable=arguments-differ
         batch_size, num_timesteps = inputs.size()
 
+        # the transformer embedding consists of the byte pair embeddings,
+        # the special embeddings and the position embeddings.
+        # the position embeddings are always at least self._transformer.n_ctx,
+        # but may be longer.
         # the transformer "vocab" consists of the actual vocab and the
         # positional encodings. Here we want the count of just the former.
         vocab_size = self._transformer.vocab_size - self._transformer.n_ctx

@@ -231,9 +231,9 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
 
     Parameters
     ----------
-    vocab_size: ``int`` (optional, default: 40990)
-        The size of the vocabulary, including the default positional embeddings,
-        but without n_special.
+    vocab_size: ``int`` (optional, default: 40478)
+        The size of the vocabulary (number of byte pair embeddings)
+        excluding the n_special embeddings (if any), and the positional embeddings.
     n_ctx: ``int`` (optional, default: 512)
         The number of positional encodings to use for evaluation.
     embedding_dim: ``int`` (optional, default: 768)
@@ -260,7 +260,7 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
         (via ``OpenaiTransformerBytePairIndexer``).
     """
     def __init__(self,
-                 vocab_size: int = 40990,
+                 vocab_size: int = 40478,
                  n_ctx: int = 512,
                  embedding_dim: int = 768,
                  num_heads: int = 12,
@@ -283,21 +283,20 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
                 activation_function,
         )
 
-        # add space for the special tokens
-        vocab_size += max(n_special, 0)
-
-        self.vocab_size = vocab_size
+        # the embedding size is vocab_size + n_special embeddings + n_ctx
+        embedding_size = vocab_size + max(n_special, 0) + n_ctx
+        self.vocab_size = embedding_size
         self.n_ctx = n_ctx
         self.n_special = n_special
 
         self.num_output_layers = 1 + num_layers
 
-        self.embed = torch.nn.Embedding(vocab_size, embedding_dim)
+        self.embed = torch.nn.Embedding(embedding_size, embedding_dim)
         self.drop = torch.nn.Dropout(embedding_dropout_probability)
 
         block = Block(n_ctx, config, scale=True)
         self.h = torch.nn.ModuleList([copy.deepcopy(block) for _ in range(num_layers)])
-        self.decoder = torch.nn.Linear(embedding_dim, vocab_size, bias=False)
+        self.decoder = torch.nn.Linear(embedding_dim, embedding_size, bias=False)
         self.decoder.weight = self.embed.weight  # Tied weights
         # To reproduce the noise_shape parameter of TF implementation
 
@@ -307,7 +306,7 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
             parameter.requires_grad = requires_grad
 
         if model_path:
-            self.load_weights(model_path, n_special=n_special)
+            self.load_weights(model_path, n_special=n_special, n_ctx=n_ctx)
 
     def forward(self, x: torch.Tensor) -> List[torch.Tensor]:
         #x = x.view(-1, x.size(2), x.size(3))
