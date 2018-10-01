@@ -17,7 +17,7 @@ class BeamSearch:
         The index of the "stop" or "end" token in the target vocabulary.
     max_steps : ``int``, optional (default = 50)
         The maximum number of decoding steps to take, i.e. the maximum length
-        of predicted sequences.
+        of the predicted sequences.
     beam_size : ``int``, optional (default = 10)
         The width of the beam used.
     """
@@ -36,7 +36,7 @@ class BeamSearch:
                step: StepFunctionType,
                first_step: StepFunctionType = None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Use beam search decoding to find the highest probability sequences.
+        Use beam search decoding to find the highest probability target sequences.
 
         Parameters
         ----------
@@ -45,20 +45,25 @@ class BeamSearch:
             Usually the initial predictions are just the index of the "start" token
             in the target vocabulary.
         start_state : ``StateType``
-            The initial state passed to the `first_step` function.
+            The initial state passed to the `first_step` function. Each value of the state dict
+            should be a tensor of shape `(batch_size, *)`, where `*` means any other
+            number of dimensions.
         step : ``StepFunctionType``
             A function that is responsible for computing the next most likely tokens,
             given the current state and the predictions from the last time step.
             The function should accept two arguments. The first being a tensor
             of shape `(group_size,)`, representing the index of the predicted
             tokens from the last time step, and the second being the current state.
+            The `group_size` will be `batch_size * beam_size`, except in the initial
+            step, for which it will just be `batch_size`.
             The function is expected to return a tuple, where the first element
             is a tensor of shape `(group_size, target_vocab_size)` containing
             the log probabilities of the tokens for the next step, and the second
-            element is the updated state.
+            element is the updated state. The tensor in the state should have shape
+            `(group_size, *)`, where `*` means any other number of dimensions.
         first_step : ``StepFunctionType``, optional
             If the first step of decoding should be handled differently, then you can
-            pass a step function to be used only during the first step. If not set,
+            set this function which will only be used during the first step. If not set,
             ``step`` will be used for the first step as well. This function should have the
             same signature as ``step``.
 
@@ -197,7 +202,7 @@ class BeamSearch:
             for key, state_tensor in state.items():
                 _, *last_dims = state_tensor.size()
                 expanded_backpointer = backpointer.\
-                        unsqueeze(2).\
+                        view(batch_size, self.beam_size, *([1] * len(last_dims))).\
                         expand(batch_size, self.beam_size, *last_dims)
                 # shape: (batch_size, beam_size, *)
 

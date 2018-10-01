@@ -417,16 +417,21 @@ class SimpleSeq2Seq(Model):
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
         """
         predicted_indices = output_dict["predictions"]
+        print("indices", predicted_indices.size())
         if not isinstance(predicted_indices, numpy.ndarray):
             predicted_indices = predicted_indices.detach().cpu().numpy()
         all_predicted_tokens = []
-        for indices in predicted_indices:
-            indices = list(indices)
-            # Collect indices till the first end_symbol
-            if self._end_index in indices:
-                indices = indices[:indices.index(self._end_index)]
-            predicted_tokens = [self.vocab.get_token_from_index(x, namespace=self._target_namespace)
-                                for x in indices]
-            all_predicted_tokens.append(predicted_tokens)
+        for top_k in predicted_indices:
+            top_k_tokens = []
+            for indices in top_k:
+                indices = list(indices)
+                # Collect indices till the first end_symbol
+                if self._end_index in indices:
+                    indices = indices[:indices.index(self._end_index)]
+                predicted_tokens = [self.vocab.get_token_from_index(x, namespace=self._target_namespace)
+                                    for x in indices]
+                top_k_tokens.append(predicted_tokens)
+            all_predicted_tokens.append(top_k_tokens)
         output_dict["predicted_tokens"] = all_predicted_tokens
+        print("LEN", len(all_predicted_tokens))
         return output_dict

@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,protected-access
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
@@ -19,4 +19,7 @@ class TestSimpleSeq2SeqPredictor(AllenNlpTestCase):
         predicted_tokens = result.get("predicted_tokens")
         assert predicted_tokens is not None
         assert isinstance(predicted_tokens, list)
-        assert all(isinstance(x, str) for x in predicted_tokens)
+        assert len(predicted_tokens) == predictor._model._beam_search.beam_size
+        for pred_tokens in predicted_tokens:
+            assert isinstance(pred_tokens, list)
+            assert all(isinstance(x, str) for x in pred_tokens)
