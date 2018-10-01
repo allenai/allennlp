@@ -102,11 +102,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         fields["tokens"] = tokens
 
         if sql is not None:
-            try:
-                action_sequence, all_actions = self._world.get_action_sequence_and_all_actions(sql.sql)
-            except ParseError:
-                logger.debug(f'Parsing error')
-                return None
+            action_sequence, all_actions = self._world.get_action_sequence_and_all_actions(sql.sql)
 
         index_fields: List[Field] = []
         production_rule_fields: List[Field] = []

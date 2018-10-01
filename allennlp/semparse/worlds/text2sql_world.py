@@ -20,12 +20,13 @@ class Text2SqlWorld:
 
     def __init__(self, sql_table_context: SqlTableContext) -> None:
         # NOTE: This base dictionary should not be modified.
+        self.sql_table_context = sql_table_context
         self.base_grammar_dictionary = sql_table_context.get_grammar_dictionary()
 
-    def get_action_sequence_and_all_actions(self, query: str) -> Tuple[List[str], List[str]]:
+    def get_action_sequence_and_all_actions(self, query: List[str]) -> Tuple[List[str], List[str]]:
         # TODO(Mark): Add in modifications here
         grammar_with_context = deepcopy(self.base_grammar_dictionary)
-        grammar = Grammar(format_grammar_string(grammar_with_context))
+        grammar = Grammar(self.sql_table_context.initialize_grammar_str())
 
         valid_actions = initialize_valid_actions(grammar)
         all_actions = set()
@@ -34,7 +35,8 @@ class Text2SqlWorld:
         all_actions = sorted(all_actions)
 
         sql_visitor = SqlVisitor(grammar)
-        action_sequence = sql_visitor.parse(query) if query else []
+        print(query)
+        action_sequence = sql_visitor.parse(" ".join(query)) if query else []
         return action_sequence, all_actions
 
     @staticmethod
