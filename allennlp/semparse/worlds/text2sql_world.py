@@ -26,7 +26,7 @@ class Text2SqlWorld:
     def get_action_sequence_and_all_actions(self, query: List[str]) -> Tuple[List[str], List[str]]:
         # TODO(Mark): Add in modifications here
         grammar_with_context = deepcopy(self.base_grammar_dictionary)
-        grammar = Grammar(self.sql_table_context.initialize_grammar_str())
+        grammar = Grammar(format_grammar_string(grammar_with_context))
 
         valid_actions = initialize_valid_actions(grammar)
         all_actions = set()

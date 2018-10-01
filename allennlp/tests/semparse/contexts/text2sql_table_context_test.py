@@ -1,5 +1,9 @@
 # pylint: disable=invalid-name
+
+from parsimonious import Grammar
+
 from allennlp.semparse.contexts.text2sql_table_context import WeaklyConstrainedText2SqlTableContext
+from allennlp.semparse.contexts.sql_context_utils import format_grammar_string, SqlVisitor
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -17,10 +21,11 @@ class TestText2sqlTableContext(AllenNlpTestCase):
                                                      '"FOOD_TYPE"', '"COUNTY"', '"CITY_NAME"']
 
     def test_grammar_from_context_can_parse_statements(self):
-
         context = WeaklyConstrainedText2SqlTableContext(self.schema)
         sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',',
                'RESTAURANT', 'WHERE', 'LOCATION', '.', 'CITY_NAME', '=',
-               "'city_name0'", 'AND', 'RESTAURANT', '.', 'ID', '=', 'LOCATION',
+               "'city_name0'", 'AND', 'RESTAURANT', '.', 'NAME', '=', 'LOCATION',
                '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
-        context.grammar.parse(" ".join(sql))
+
+        sql_visitor = SqlVisitor(context.grammar)
+        sql_visitor.parse(" ".join(sql))
