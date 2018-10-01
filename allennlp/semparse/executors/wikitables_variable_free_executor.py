@@ -59,6 +59,9 @@ class Date:
             return False
         return self > other or self == other
 
+    def __str__(self):
+        return f"{self.year}-{self.month}-{self.day}"
+
 
 class WikiTablesVariableFreeExecutor:
     # pylint: disable=too-many-public-methods
