@@ -104,17 +104,6 @@ class QuarelSemanticParser(Model):
         self._action_sequence_accuracy = Average()
         self._has_logical_form = Average()
 
-        self._action_padding_index = -1  # the padding value used by IndexField
-        num_actions = vocab.get_vocab_size(self._rule_namespace)
-        self._num_actions = num_actions
-        self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
-        # We are tying the action embeddings used for input and output
-        # self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
-        self._output_action_embedder = self._action_embedder  # tied weights
-        self._add_action_bias = add_action_bias
-        if self._add_action_bias:
-            self._action_biases = Embedding(num_embeddings=num_actions, embedding_dim=1)
-
         self._embedding_dim = question_embedder.get_output_dim()
         self._use_entities = use_entities
 
@@ -152,19 +141,32 @@ class QuarelSemanticParser(Model):
 
         self._debug_count = 10
 
+        self._num_denotation_cats = 2  # Hardcoded for simplicity
+        self._denotation_only = denotation_only
+        if self._denotation_only:
+            self._denotation_accuracy_cat = CategoricalAccuracy()
+            self._denotation_classifier = torch.nn.Linear(self._encoder_output_dim,
+                                                      self._num_denotation_cats)
+            # Rest of init not needed for denotation only where no decoding to actions needed
+            return
+
+        self._action_padding_index = -1  # the padding value used by IndexField
+        num_actions = vocab.get_vocab_size(self._rule_namespace)
+        self._num_actions = num_actions
+        self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
+        # We are tying the action embeddings used for input and output
+        # self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
+        self._output_action_embedder = self._action_embedder  # tied weights
+        self._add_action_bias = add_action_bias
+        if self._add_action_bias:
+            self._action_biases = Embedding(num_embeddings=num_actions, embedding_dim=1)
+
         # This is what we pass as input in the first step of decoding, when we don't have a
         # previous action, or a previous question attention.
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
         self._first_attended_question = torch.nn.Parameter(torch.FloatTensor(self._encoder_output_dim))
         torch.nn.init.normal_(self._first_action_embedding)
         torch.nn.init.normal_(self._first_attended_question)
-
-        self._num_denotation_cats = 2  # Hardcoded for simplicity
-        self._denotation_only = denotation_only
-        if self._denotation_only:
-            self._denotation_accuracy_cat = CategoricalAccuracy()
-            self._denotation_classifier = torch.nn.Linear(self._encoder_output_dim,
-                                                          self._num_denotation_cats)
 
         self._decoder_step = LinkingTransitionFunction(encoder_output_dim=self._encoder_output_dim,
                                                        action_embedding_dim=action_embedding_dim,
@@ -313,7 +315,7 @@ class QuarelSemanticParser(Model):
         if self._denotation_only:
             denotation_logits = self._denotation_classifier(final_encoder_output)
             loss = torch.nn.functional.cross_entropy(denotation_logits, denotation_target.view(-1))
-            self._denotation_accuracy_cat(denotation_logits, denotation_target.squeeze(-1))
+            self._denotation_accuracy_cat(denotation_logits, denotation_target)
             return {"loss": loss}
 
         memory_cell = encoder_outputs.new_zeros(batch_size, self._encoder_output_dim)
