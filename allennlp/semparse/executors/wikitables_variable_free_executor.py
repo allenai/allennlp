@@ -31,7 +31,7 @@ class Date:
         # pylint: disable=too-many-return-statements
         # The logic below is tricky, and is based on some assumptions we make about date comparison.
         # Year, month or day being -1 means that we do not know its value. In those cases, the
-        # we conside the comparison to be undefined, and return False if all the fields that are
+        # we consider the comparison to be undefined, and return False if all the fields that are
         # more significant than the field being compared are equal. However, when year is -1 for both
         # dates being compared, it is safe to assume that the year is not specified because it is
         # the same. So we make an exception just in that case. That is, we deem the comparison
