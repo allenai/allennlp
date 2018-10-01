@@ -24,6 +24,10 @@ class QuarelSemanticParserTest(ModelTestCase):
         param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'experiment_parser_zeroshot.json'
         self.ensure_model_can_train_save_and_load(param_file, gradients_to_ignore=self.ignore)
 
+    def test_wdp_zeroshot_model_can_train_save_and_load(self):
+        param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'experiment_parser_wdp_zeroshot.json'
+        self.ensure_model_can_train_save_and_load(param_file, gradients_to_ignore=self.ignore)
+
     def test_with_tagger_model_can_train_save_and_load(self):
         param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'experiment_parser_w_tagger.json'
         self.ensure_model_can_train_save_and_load(param_file, gradients_to_ignore=self.ignore)
@@ -51,9 +55,9 @@ class QuarelSemanticParserTest(ModelTestCase):
     # Misc util function tests
     def test_group_worlds(self):
         tags = ['B-world', 'B-world', 'I-world', 'O', 'B-world', 'I-world', 'B-world']
-        tokens = ['floor', 'blue', 'rug', 'in', 'wood', 'floor', 'rug']
+        tokens = ['woodfloor', 'blue', 'rug', 'in', 'wood', 'floor', 'rug']
         worlds = group_worlds(tags, tokens)
-        assert worlds['world1'] == ['wood floor', 'floor']
+        assert worlds['world1'] == ['wood floor', 'woodfloor']
         assert worlds['world2'] == ['blue rug', 'rug']
 
     def test_(self):
