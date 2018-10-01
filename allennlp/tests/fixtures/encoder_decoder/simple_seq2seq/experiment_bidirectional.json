@@ -76,9 +76,6 @@
       "type": "bilinear",
       "vector_dim": 20,
       "matrix_dim": 20
-    },
-    "beam_search": {
-      "beam_size": 5
     }
   },
   "iterator": {

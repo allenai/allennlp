@@ -15,5 +15,4 @@ from allennlp.state_machines.states.coverage_state import CoverageState
 from allennlp.state_machines.states.grammar_based_state import GrammarBasedState
 from allennlp.state_machines.states.grammar_statelet import GrammarStatelet
 from allennlp.state_machines.states.rnn_statelet import RnnStatelet
-from allennlp.state_machines.states.simple_state import SimpleState
 from allennlp.state_machines.states.state import State

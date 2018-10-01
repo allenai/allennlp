@@ -20,7 +20,8 @@ class BeamSearch:
     def search(self,
                start_predictions: torch.Tensor,
                start_state: StateType,
-               step: StepFunctionType) -> Tuple[torch.Tensor, torch.Tensor]:
+               step: StepFunctionType,
+               first_step: StepFunctionType = None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Use beam search decoding to find the highest probability sequences.
 
@@ -32,6 +33,8 @@ class BeamSearch:
             has shape ``(batch_size, beam_size)``.
         """
         batch_size = start_predictions.size()[0]
+
+        first_step = first_step or step
 
         # List of (batch_size, beam_size) tensors. One for each time step. Does not
         # include the start symbols, which are implicit.
@@ -48,7 +51,7 @@ class BeamSearch:
         # within the main loop we are going from the `beam_size` elements of the
         # beam to `beam_size`^2 candidates from which we will select the top
         # `beam_size` elements for the next iteration.
-        start_class_log_probabilities, state = step(start_predictions, start_state)
+        start_class_log_probabilities, state = first_step(start_predictions, start_state)
         # shape: (batch_size, num_classes)
 
         start_top_log_probabilities, start_predicted_classes = \
