@@ -22,7 +22,8 @@ class BidirectionalLanguageModel(Model):
                  contextualizer: Seq2SeqEncoder,
                  softmax: Softmax,
                  dropout: float = None,
-                 loss_scale_fac: Union[float, str] = 1.0) -> None:
+                 loss_scale_fac: Union[float, str] = 1.0,
+                 remove_bos_eos: bool = True) -> None:
         super().__init__(vocab)
         self._text_field_embedder = text_field_embedder
         self._contextualizer = contextualizer
@@ -36,6 +37,7 @@ class BidirectionalLanguageModel(Model):
         else:
             self._dropout = None
         self._loss_scale_fac = loss_scale_fac
+        self._remove_bos_eos = remove_bos_eos
 
     def _compute_loss(self,
                       lm_embeddings: torch.Tensor,
@@ -123,7 +125,7 @@ class BidirectionalLanguageModel(Model):
         if num_targets > 0:
             average_loss = 0.5 * (forward_loss + backward_loss) / num_targets.float()
         else:
-            average_loss = torch.tensor(0.0).to(forward_targets.device)
+            average_loss = torch.tensor(0.0).to(forward_targets.device)  # pylint: disable=not-callable
         # this is stored to compute perplexity if needed
         self._last_average_loss[0] = average_loss.detach().item()
 
@@ -148,4 +150,9 @@ class BidirectionalLanguageModel(Model):
             }
 
         # TODO: add non-loss functions to the output
+        if self._remove_bos_eos:
+            return_dict['lm_embeddings'] = contextual_embeddings[:, 1:-1]
+        else:
+            return_dict['lm_embeddings'] = contextual_embeddings
+
         return return_dict

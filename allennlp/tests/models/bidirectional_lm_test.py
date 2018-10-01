@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -14,6 +15,8 @@ from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
 from allennlp.modules.token_embedders.cnn_highway_encoder import CnnHighwayEncoder
 from allennlp.nn.util import get_text_field_mask
 
+BOS_TOKEN = "<s>"
+EOS_TOKEN = "</s>"
 
 class TestBidirectionalLM(AllenNlpTestCase):
     def setUp(self):
@@ -21,14 +24,21 @@ class TestBidirectionalLM(AllenNlpTestCase):
 
         sentences = ["This is the first sentence.", "This is yet another sentence."]
         token_indexers = {
-                "tokens": SingleIdTokenIndexer(),
-                "token_characters": TokenCharactersIndexer()
+                "tokens": SingleIdTokenIndexer(bos_token=BOS_TOKEN, eos_token=EOS_TOKEN),
+                "token_characters": TokenCharactersIndexer(bos_token=BOS_TOKEN, eos_token=EOS_TOKEN)
         }
         tokenizer = WordTokenizer()
 
         self.instances = [Instance({"tokens": TextField(tokenizer.tokenize(sentence), token_indexers)})
                           for sentence in sentences]
-        self.vocab = Vocabulary.from_instances(self.instances)
+
+
+        tokens_to_add = {
+                "tokens": [BOS_TOKEN, EOS_TOKEN],
+                "token_characters": [c for c in BOS_TOKEN + EOS_TOKEN]
+        }
+
+        self.vocab = Vocabulary.from_instances(self.instances, tokens_to_add=tokens_to_add)
 
 
 
@@ -60,17 +70,28 @@ class TestBidirectionalLM(AllenNlpTestCase):
                                            contextualizer=contextualizer,
                                            softmax=softmax)
 
+        # Try the pieces individually
         for batch in iterator(self.instances, num_epochs=1):
             token_dict = batch['tokens']
             mask = get_text_field_mask(token_dict)
             output = text_field_embedder(token_dict)
 
-            assert tuple(output.shape) == (2, 6, 16)
+            # Sequence length is 8 because of BOS / EOS.
+            assert tuple(output.shape) == (2, 8, 16)
 
             contextualized = contextualizer(output, mask)
-            assert tuple(contextualized.shape) == (2, 6, 14)
+            assert tuple(contextualized.shape) == (2, 8, 14)
 
+        # Try the whole thing
         for batch in iterator(self.instances, num_epochs=1):
             result = model(**batch)
 
-            assert set(result) == {"loss", "forward_loss", "backward_loss"}
+            assert set(result) == {"loss", "forward_loss", "backward_loss", "lm_embeddings"}
+            embeddings = result["lm_embeddings"]
+            assert tuple(embeddings.shape) == (2, 6, 14)
+
+            loss = result["loss"].item()
+            forward_loss = result["forward_loss"].item()
+            backward_loss = result["backward_loss"].item()
+
+            np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2)
