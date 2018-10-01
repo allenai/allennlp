@@ -38,6 +38,8 @@ class ActionSpaceWalker:
 
         self._completed_paths = []
         actions = self._world.get_valid_actions()
+        # Keeps track of `MultiMatchNamedBasicTypes` to substitute them with appropriate types.
+        multi_match_substitutions = self._world.get_multi_match_mapping()
         # Overview: We keep track of the buffer of non-terminals to expand, and the action history
         # for each incomplete path. At every iteration in the while loop below, we iterate over all
         # incomplete paths, expand one non-terminal from the buffer in a depth-first fashion, get
@@ -53,8 +55,15 @@ class ActionSpaceWalker:
             for nonterminal_buffer, history in incomplete_paths:
                 # Taking the last non-terminal added to the buffer. We're going depth-first.
                 nonterminal = nonterminal_buffer.pop()
+                next_actions = []
+                if nonterminal in multi_match_substitutions:
+                    for current_nonterminal in [nonterminal] + multi_match_substitutions[nonterminal]:
+                        if current_nonterminal in actions:
+                            next_actions.extend(actions[current_nonterminal])
+                else:
+                    next_actions.extend(actions[nonterminal])
                 # Iterating over all possible next actions.
-                for action in actions[nonterminal]:
+                for action in next_actions:
                     new_history = history + [action]
                     new_nonterminal_buffer = nonterminal_buffer[:]
                     # Since we expand the last action added to the buffer, the left child should be
