@@ -1,12 +1,14 @@
 {
   "dataset_reader": {
     "type": "atis",
-    "database_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
+    "database_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db",
+    "num_turns_to_concatenate": 3
   },
   "validation_dataset_reader": {
     "type": "atis",
     "database_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db",
-    "keep_if_unparseable": true
+    "keep_if_unparseable": true,
+    "num_turns_to_concatenate": 3
   },
   "train_data_path": "allennlp/tests/fixtures/data/atis/sample.json",
   "validation_data_path": "allennlp/tests/fixtures/data/atis/sample.json",

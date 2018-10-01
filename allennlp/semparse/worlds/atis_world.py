@@ -62,7 +62,7 @@ class AtisWorld():
             AtisWorld.sql_table_context = AtisSqlTableContext(ALL_TABLES,
                                                               TABLES_WITH_STRINGS,
                                                               AtisWorld.database_file)
-        self.utterances: List[str] = utterances
+        self.utterances: List[str] = deepcopy(utterances)
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]
         self.linked_entities = self._get_linked_entities()

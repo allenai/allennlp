@@ -19,6 +19,8 @@ from allennlp.semparse.worlds.atis_world import AtisWorld
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+END_OF_UTTERANCE_TOKEN = "@@EOU@@"
+
 def _lazy_parse(text: str):
     for interaction in text.split("\n"):
         if interaction:
@@ -69,14 +71,14 @@ class AtisDatasetReader(DatasetReader):
                  keep_if_unparseable: bool = False,
                  lazy: bool = False,
                  tokenizer: Tokenizer = None,
-                 database_file: str = None) -> None:
+                 database_file: str = None,
+                 num_turns_to_concatenate = None) -> None:
         super().__init__(lazy)
         self._keep_if_unparseable = keep_if_unparseable
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter())
         self._database_file = database_file
-        # TODO(kevin): Add a keep_unparseable_utterances flag so that during validation, we do not skip queries that
-        # cannot be parsed.
+        self._num_turns_to_concatenate = num_turns_to_concatenate
 
     @overrides
     def _read(self, file_path: str):
@@ -110,6 +112,9 @@ class AtisDatasetReader(DatasetReader):
         sql_query_labels: ``List[str]``, optional
             The SQL queries that are given as labels during training or validation.
         """
+        if self._num_turns_to_concatenate:
+            utterances[-1] = f' {END_OF_UTTERANCE_TOKEN} '.join(utterances[-self._num_turns_to_concatenate:])
+        
         utterance = utterances[-1]
         action_sequence: List[str] = []
 

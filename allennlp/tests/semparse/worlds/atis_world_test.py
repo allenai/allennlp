@@ -771,3 +771,8 @@ class TestAtisWorld(AllenNlpTestCase):
                                                          world.grammar['ws'],
                                                          world.grammar['time_range_end'],
                                                          world.grammar['ws'])
+    def test_atis_debug(self): # pylint: disable=no-self-use
+        # Check if the triggers activate correcty
+        world = AtisWorld(["show me the flights on eastern air"]) 
+
+        print(world.entities) 
