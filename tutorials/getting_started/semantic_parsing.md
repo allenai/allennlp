@@ -207,12 +207,77 @@ discussed above, and a few other fields that are helpful during decoding.
 The previous two sections of this tutorial dealt with a general architecture for training state
 machines, which can be used for any transition system, not just a semantic parser.  For the rest of
 this tutorial, we'll focus on using those state machines to do semantic parsing, by defining a
-language to parse into, an execution engine for that language, and actually 
+language to parse into, an execution engine for that language, and actually executing logical forms
+or programs in a specific context.
 
+And, I'll warn you ahead of time, the way we currently define languages is a bit convoluted and
+difficult to work with.  Sorry.  We're working on a better way to do this, but this is what we have
+for now.
 
+There are currently two ways that you can define a language to parse into with our framework: you
+can use an `nltk`-based logic system, seen in `semparse.transition_functions`, or you can use
+`parsimonious` to write a context-free grammar.  With the `nltk`-based system, you define the
+functions that are available in your (lisp-like) language, with their type signatures, and our code
+builds a grammar for you that can parse statements in that language.  With the `parsimonious`
+system, you have to come up with the grammar yourself, but you have more flexibility in the
+language that is parsed (we use this for SQL, which is not lisp-like).
+
+The key functionality of both of these systems is to (1) go from a logical form or program to a
+sequence of actions that the parser can output, (2) define the allowed actions at each timestep
+(which is determined by the current grammar state), and (3) go from a sequence of actions back to a
+logical form.  If you have your own method of getting this functionality that doesn't need either
+of our two options, then you can bypass these pieces of the framework entirely - just pass the
+action sequences and the set of valid actions into your model however you want.
+
+Instead of describing in detail how these two systems work, we'll just point you to some examples
+and their documentation (ADD LINK).  If you are trying to implement your own language using these
+and have trouble, open an issue on github and we'll see what we can do.
+
+For executing logical forms, we have put our execution engines in `semparse.executors`; you can see
+what is available there.  There isn't any consistent theme for defining the execution engine - some
+of the executors call subprocesses to execute the logical form (for SQL and for using SEMPRE to
+evaluate lambda-DCS), and some of them have executors that are just python code.
+
+We have some ideas around how to combine the language definition and the executor into one simple
+piece of python code, but we're still working on that.  Hopefully this piece will be easier in the
+not-too-distant future.
 
 ## Adding context to a model
 
+Many semantic parsing tasks have some additional piece of context as input, like a knowledge graph,
+a table, or a SQL database.  We have code for representing some of these additional contexts in
+`semparse.contexts`.  For example, the `TableQuestionKnowledgeGraph` takes a table and a question
+from the WikiTableQuestions dataset and extracts a set of "entities" and relationships between
+them.  The `SqlTableContext` takes a SQL database and reads its tables and columns to constrain the
+SQL grammar that gets generated, so you can only produce queries that reference columns that are
+actually in the table.
+
 ## Combining the context, language and execution together into a World
+
+We put all of these pieces together for any particular `Instance` in a `World` class.  This class
+knows what language is being used, what `Instance`-specific context there is, and how to execute
+logical forms, so it is the main way that a `Model` can interact with the language.
+
+The `World` has, potentially, six functions:
+
+1. Has a list of all possible actions for a given `Instance`, so we can convert them to integers.
+2. Defines which actions are valid in any given state.
+3. Maps logical forms to action sequences.
+4. Converts action sequences back to logical forms.
+5. Executes logical forms in some (potentially `Instance`-specific) context.
+6. Passes along `Instance`-specific context to the `Model`.
+
+Most of this work is actually done by the inputs to the `World` (the context, the grammar, and the
+executor), but sometimes there are interactions between the three that require an object to mediate
+those interactions.  For example, the execution engine for NLVR requires a particular structured
+object to execute logical forms on, and the table in a WikiTableQuestions instance can add things
+to the grammar.
+
+As with defining the language, if you have your own way of performing those six functions, you can
+bypass our `World` code and still use whatever other components you find helpful.  If you are using
+our `nltk`-based logic system to define your language, however, the base `World` class has some
+important functionality for getting the type system to work correctly (e.g., the logic that
+converts logical forms to action sequences and back actually lives partially in `World`).  This
+could probably use a bit of refactoring.
 
 ## Putting it all together: a quick summary
