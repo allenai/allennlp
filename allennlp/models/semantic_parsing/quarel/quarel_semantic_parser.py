@@ -146,7 +146,7 @@ class QuarelSemanticParser(Model):
         if self._denotation_only:
             self._denotation_accuracy_cat = CategoricalAccuracy()
             self._denotation_classifier = torch.nn.Linear(self._encoder_output_dim,
-                                                      self._num_denotation_cats)
+                                                          self._num_denotation_cats)
             # Rest of init not needed for denotation only where no decoding to actions needed
             return
 

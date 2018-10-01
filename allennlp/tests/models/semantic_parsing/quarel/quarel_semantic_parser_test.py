@@ -1,5 +1,7 @@
 # pylint: disable=invalid-name,no-self-use,protected-access
 from allennlp.common.testing import ModelTestCase
+from allennlp.semparse.helpers.quarel_utils import group_worlds, to_qr_spec_string
+
 
 class QuarelSemanticParserTest(ModelTestCase):
 
@@ -38,6 +40,26 @@ class QuarelSemanticParserTest(ModelTestCase):
         param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'experiment_parser_friction_zeroshot.json'  # pylint: disable=line-too-long
         self.ensure_model_can_train_save_and_load(param_file, gradients_to_ignore=self.ignore)
 
+    def test_denotation_only_model_can_train_save_and_load(self):
+        param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'experiment_denotation_only.json'
+        self.ensure_model_can_train_save_and_load(param_file, gradients_to_ignore=self.ignore)
+
     def test_tagger_model_can_train_save_and_load(self):
         param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'experiment_tagger.json'
         self.ensure_model_can_train_save_and_load(param_file, gradients_to_ignore=self.ignore)
+
+    # Misc util function tests
+    def test_group_worlds(self):
+        tags = ['B-world', 'B-world', 'I-world', 'O', 'B-world', 'I-world', 'B-world']
+        tokens = ['floor', 'blue', 'rug', 'in', 'wood', 'floor', 'rug']
+        worlds = group_worlds(tags, tokens)
+        assert worlds['world1'] == ['wood floor', 'floor']
+        assert worlds['world2'] == ['blue rug', 'rug']
+
+    def test_(self):
+        qr_spec = [
+                {"friction": 1, "speed": -1, "smoothness": -1, "distance": -1, "heat": 1},
+                {"speed": 1, "time": -1}
+        ]
+        qr_spec_string = to_qr_spec_string(qr_spec)
+        assert qr_spec_string == '[friction, -speed, -smoothness, -distance, +heat]\n[speed, -time]'

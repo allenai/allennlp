@@ -5,8 +5,8 @@
     "replace_world_entities": true,
     "gold_world_extractions": true,
     "align_world_extractions": true,
-    "lf_syntax": "quarel_v1_attr_entities",
-    "lexical_cues": ["synonyms", "values"],
+    "denotation_only": true,
+    "lf_syntax": "quarel_v1",
     "question_token_indexers": {
       "tokens": {
         "type": "single_id",
@@ -21,8 +21,7 @@
   "validation_data_path": "allennlp/tests/fixtures/data/quarel.jsonl",
   "model": {
     "type": "quarel_parser",
-    "use_entities": true,
-    "num_linking_features": 0,
+    "denotation_only": true,
     "question_embedder": {
       "tokens": {
         "type": "embedding",
@@ -52,7 +51,7 @@
   "trainer": {
     "num_epochs": 2,
     "patience": 10,
-    "validation_metric": "+parse_acc",
+    "validation_metric": "+denotation_acc",
     "cuda_device": -1,
     "optimizer": {
       "type": "adam"

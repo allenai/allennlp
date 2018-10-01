@@ -21,3 +21,9 @@ class TestQuarelParserPredictor(AllenNlpTestCase):
         result = predictor.predict_json(inputs)
         answer_index = result.get('answer_index')
         assert answer_index is not None
+
+        # Check input modality where entity cues are not given
+        del inputs['entitycues']
+        result = predictor.predict_json(inputs)
+        answer_index = result.get('answer_index')
+        assert answer_index is not None

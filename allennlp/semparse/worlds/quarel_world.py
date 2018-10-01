@@ -22,10 +22,9 @@ class QuarelWorld(World):
     """
     def __init__(self,
                  table_graph: KnowledgeGraph,
-                 syntax: str = "with_type_2",
+                 syntax: str,
                  qr_coeff_sets: List[Dict[str, int]] = None) -> None:
-        if syntax is None:
-            syntax = "with_type_2"
+
         self._syntax = syntax
         self.types = QuarelTypeDeclaration(syntax)
         super(QuarelWorld, self).__init__(

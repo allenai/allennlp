@@ -21,7 +21,6 @@ from allennlp.data.fields import ArrayField, Field, TextField, KnowledgeGraphFie
 from allennlp.data.fields import IndexField, ListField, MetadataField, ProductionRuleField
 from allennlp.data.fields import SequenceLabelField
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.dataset_readers.seq2seq import START_SYMBOL, END_SYMBOL
 from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
 from allennlp.semparse.helpers.quarel_utils import WorldTaggerExtractor, words_from_entity_string
 from allennlp.semparse.helpers.quarel_utils import LEXICAL_CUES, align_entities
@@ -231,8 +230,7 @@ class QuarelDatasetReader(DatasetReader):
                                 self._skip_attributes_regex.search(logical_forms[0])):
                         continue
                     # Somewhat hacky filtering to "friction" subset of questions based on id
-                    if (question_id is not None and "_friction" in self._lf_syntax and
-                                "_Fr_"  not in question_id):
+                    if not self._compatible_question(question_data):
                         continue
 
                     if debug_counter > 0:
@@ -384,6 +382,14 @@ class QuarelDatasetReader(DatasetReader):
             res.append(bio_tag)
         return res
 
+    def _compatible_question(self, question_data: JsonDict) -> bool:
+        question_id = question_data.get('id')
+        if not question_id:
+            return True
+        if not '_friction' in self._lf_syntax:
+            return True
+        return '_Fr_' in question_id or 'Friction' in question_id
+
     @staticmethod
     def _fix_question(question: str) -> str:
         """
@@ -458,12 +464,6 @@ class QuarelDatasetReader(DatasetReader):
             if '_literals' in key and key.replace('_literals', '') in self._entity_types:
                 res.update(value)
         return res
-
-    @staticmethod
-    def _make_action_sequence_field(action_sequence: List[str]) -> ListField:
-        action_sequence.insert(0, START_SYMBOL)
-        action_sequence.append(END_SYMBOL)
-        return ListField([LabelField(action, label_namespace='actions') for action in action_sequence])
 
     def _stem_phrase(self, phrase: str) -> str:
         return re.sub(r"\w+", lambda x: self._stemmer.stem(x.group(0)), phrase)
