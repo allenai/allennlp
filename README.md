@@ -46,7 +46,7 @@ Installing the library and dependencies is simple using `pip`.
 That's it! You're now ready to build and train AllenNLP models.
 AllenNLP installs a script when you install the python package, meaning you can run allennlp commands just by typing `allennlp` into a terminal.
 
-You can now test your installation with `./scripts/verify.py`.
+You can now test your installation with `allennlp test-install`.
 
 _`pip` currently installs Pytorch for CUDA 8 only (or no GPU). If you require a newer version,
 please visit http://pytorch.org/ and install the relevant pytorch binary._
@@ -62,10 +62,10 @@ Once you have [installed Docker](https://docs.docker.com/engine/installation/)
 just run the following command to get an environment that will run on either the cpu or gpu.
 
    ```bash
-   docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.6.1` 
+   docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.6.1`
    ```
 
-You can now test your installation with `./scripts/verify.py`.
+You can now test your installation with `test-install`.
 
 ### Installing from source
 
@@ -93,7 +93,7 @@ environment.  This will make `allennlp` available on your
 system but it will use the sources from the local clone you
 made of the source repository.
 
-You can test your installation with `./scripts/verify.py`.
+You can test your installation with `bin/allennlp test-install`.
 
 ## Running AllenNLP
 
@@ -212,7 +212,7 @@ allennlp/allennlp            latest              b66aee6cb593        5 minutes a
 
 You can run the image with `docker run --rm -it allennlp/allennlp:latest`.  The `--rm` flag cleans up the image on exit and the `-it` flags make the session interactive so you can use the bash shell the Docker image starts.
 
-You can test your installation by running  `./scripts/verify.py`.
+You can test your installation by running  `allennlp test-install`.
 
 ## Citing
 
