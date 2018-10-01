@@ -2,6 +2,7 @@
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
+from allennlp.data.tokenizers import WordTokenizer
 
 MAX_TOKENS_FOR_NUMBER = 6
 
