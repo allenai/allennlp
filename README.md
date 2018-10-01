@@ -65,7 +65,7 @@ just run the following command to get an environment that will run on either the
    docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.6.1
    ```
 
-You can now test your installation with `test-install`.
+You can test the Docker environment with `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.6.1 test-install`.
 
 ### Installing from source
 
