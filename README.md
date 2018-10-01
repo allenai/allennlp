@@ -48,7 +48,7 @@ AllenNLP installs a script when you install the python package, meaning you can 
 
 You can now test your installation with `allennlp test-install`.
 
-_`pip` currently installs Pytorch for CUDA 8 only (or no GPU). If you require a newer version,
+_`pip` currently installs Pytorch for CUDA 9 only (or no GPU). If you require an older version,
 please visit http://pytorch.org/ and install the relevant pytorch binary._
 
 ### Installing using Docker
@@ -62,7 +62,7 @@ Once you have [installed Docker](https://docs.docker.com/engine/installation/)
 just run the following command to get an environment that will run on either the cpu or gpu.
 
    ```bash
-   docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.6.1`
+   docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.6.1
    ```
 
 You can now test your installation with `test-install`.

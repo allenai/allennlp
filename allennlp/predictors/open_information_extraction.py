@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 
 from overrides import overrides
 
@@ -60,6 +60,116 @@ def make_oie_string(tokens: List[Token], tags: List[str]) -> str:
 
     return " ".join(frame)
 
+def get_predicate_indices(tags: List[str]) -> List[int]:
+    """
+    Return the word indices of a predicate in BIO tags.
+    """
+    return [ind for ind, tag in enumerate(tags) if 'V' in tag]
+
+def get_predicate_text(sent_tokens: List[Token], tags: List[str]) -> str:
+    """
+    Get the predicate in this prediction.
+    """
+    return " ".join([sent_tokens[pred_id].text
+                     for pred_id in get_predicate_indices(tags)])
+
+def predicates_overlap(tags1: List[str], tags2: List[str]) -> bool:
+    """
+    Tests whether the predicate in BIO tags1 overlap
+    with those of tags2.
+    """
+    # Get predicate word indices from both predictions
+    pred_ind1 = get_predicate_indices(tags1)
+    pred_ind2 = get_predicate_indices(tags2)
+
+    # Return if pred_ind1 pred_ind2 overlap
+    return any(set.intersection(set(pred_ind1), set(pred_ind2)))
+
+def get_coherent_next_tag(prev_label: str, cur_label: str) -> str:
+    """
+    Generate a coherent tag, given previous tag and current label.
+    """
+    if cur_label == "O":
+        # Don't need to add prefix to an "O" label
+        return "O"
+
+    if prev_label == cur_label:
+        return f"I-{cur_label}"
+    else:
+        return f"B-{cur_label}"
+
+def merge_overlapping_predictions(tags1: List[str], tags2: List[str]) -> List[str]:
+    """
+    Merge two predictions into one. Assumes the predicate in tags1 overlap with
+    the predicate of tags2.
+    """
+    ret_sequence = []
+    prev_label = "O"
+
+    # Build a coherent sequence out of two
+    # spans which predicates' overlap
+
+    for tag1, tag2 in zip(tags1, tags2):
+        label1 = tag1.split("-")[-1]
+        label2 = tag2.split("-")[-1]
+        if (label1 == "V") or (label2 == "V"):
+            # Construct maximal predicate length -
+            # add predicate tag if any of the sequence predict it
+            cur_label = "V"
+
+        # Else - prefer an argument over 'O' label
+        elif label1 != "O":
+            cur_label = label1
+        else:
+            cur_label = label2
+
+        # Append cur tag to the returned sequence
+        cur_tag = get_coherent_next_tag(prev_label, cur_label)
+        prev_label = cur_label
+        ret_sequence.append(cur_tag)
+    return ret_sequence
+
+def consolidate_predictions(outputs: List[List[str]], sent_tokens: List[Token]) -> Dict[str, List[str]]:
+    """
+    Identify that certain predicates are part of a multiword predicate
+    (e.g., "decided to run") in which case, we don't need to return
+    the embedded predicate ("run").
+    """
+    pred_dict: Dict[str, List[str]] = {}
+    merged_outputs = [join_mwp(output) for output in outputs]
+    predicate_texts = [get_predicate_text(sent_tokens, tags)
+                       for tags in merged_outputs]
+
+    for pred1_text, tags1 in zip(predicate_texts, merged_outputs):
+        # A flag indicating whether to add tags1 to predictions
+        add_to_prediction = True
+
+        #  Check if this predicate overlaps another predicate
+        for pred2_text, tags2 in pred_dict.items():
+            if predicates_overlap(tags1, tags2):
+                # tags1 overlaps tags2
+                pred_dict[pred2_text] = merge_overlapping_predictions(tags1, tags2)
+                add_to_prediction = False
+
+        # This predicate doesn't overlap - add as a new predicate
+        if add_to_prediction:
+            pred_dict[pred1_text] = tags1
+
+    return pred_dict
+
+
+def sanitize_label(label: str) -> str:
+    """
+    Sanitize a BIO label - this deals with OIE
+    labels sometimes having some noise, as parentheses.
+    """
+    if "-" in label:
+        prefix, suffix = label.split("-")
+        suffix = suffix.split("(")[-1]
+        return f"{prefix}-{suffix}"
+    else:
+        return label
+
 @Predictor.register('open-information-extraction')
 class OpenIePredictor(Predictor):
     """
@@ -116,13 +226,16 @@ class OpenIePredictor(Predictor):
                      for pred_id in pred_ids]
 
         # Run model
-        outputs = [self._model.forward_on_instance(instance)["tags"]
+        outputs = [[sanitize_label(label) for label in self._model.forward_on_instance(instance)["tags"]]
                    for instance in instances]
+
+        # Consolidate predictions
+        pred_dict = consolidate_predictions(outputs, sent_tokens)
 
         # Build and return output dictionary
         results = {"verbs": [], "words": sent_tokens}
 
-        for tags, pred_id in zip(outputs, pred_ids):
+        for tags in pred_dict.values():
             # Join multi-word predicates
             tags = join_mwp(tags)
 
@@ -131,7 +244,7 @@ class OpenIePredictor(Predictor):
 
             # Add a predicate prediction to the return dictionary.
             results["verbs"].append({
-                    "verb": sent_tokens[pred_id].text,
+                    "verb": get_predicate_text(sent_tokens, tags),
                     "description": description,
                     "tags": tags,
             })

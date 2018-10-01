@@ -1,3 +1,5 @@
+// Configuration for a named entity recognization model based on:
+//   Peters, Matthew E. et al. “Deep contextualized word representations.” NAACL-HLT (2018).
 {
   "dataset_reader": {
     "type": "conll2003",
@@ -15,6 +17,7 @@
   },
   "train_data_path": std.extVar("NER_TRAIN_DATA_PATH"),
   "validation_data_path": std.extVar("NER_TEST_A_PATH"),
+  "test_data_path": std.extVar("NER_TEST_B_PATH"),
   "model": {
     "type": "crf_tagger",
     "label_encoding": "BIOUL",
