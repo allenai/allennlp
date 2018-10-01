@@ -94,6 +94,9 @@ system but it will use the sources from the local clone you
 made of the source repository.
 
 You can test your installation with `bin/allennlp test-install`.
+The full development environment also requires the JVM and `perl`,
+which must be installed separately.  `./scripts/verify.py` will run
+the full suite of tests used by our continuous build environment.
 
 ## Running AllenNLP
 
