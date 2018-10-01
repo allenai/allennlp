@@ -6,12 +6,14 @@ import numpy
 import h5py
 
 from allennlp.common.testing import ModelTestCase, AllenNlpTestCase
+from allennlp.common.params import Params
 from allennlp.data.dataset import Batch
 from allennlp.data import Token
 from allennlp.data.token_indexers import OpenaiTransformerBytePairIndexer
 from allennlp.data.token_indexers.openai_transformer_byte_pair_indexer import text_standardize
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.openai_transformer import OpenaiTransformer
+from allennlp.modules.token_embedders import OpenaiTransformerEmbedder
 from allennlp.nn.util import get_range_vector
 
 
@@ -50,10 +52,13 @@ class TestOpenaiTransformerEmbedderSmall(ModelTestCase):
     def test_tagger_with_openai_token_embedder_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
-    def test_tagger_with_openai_token_embedder_forward_pass_runs_correctly(self):
+    def _get_training_tensors(self):
         dataset = Batch(self.instances)
         dataset.index_instances(self.vocab)
-        training_tensors = dataset.as_tensor_dict()
+        return dataset.as_tensor_dict()
+
+    def test_tagger_with_openai_token_embedder_forward_pass_runs_correctly(self):
+        training_tensors = self._get_training_tensors()
         output_dict = self.model(**training_tensors)
         tags = output_dict['tags']
         assert len(tags) == 2
@@ -63,6 +68,40 @@ class TestOpenaiTransformerEmbedderSmall(ModelTestCase):
             for tag_id in example_tags:
                 tag = self.model.vocab.get_token_from_index(tag_id, namespace="labels")
                 assert tag in {'O', 'I-ORG', 'I-PER', 'I-LOC'}
+
+    def test_openai_can_run_with_top_layer(self):
+        params = Params({
+                "transformer": {
+                        "model_path": "allennlp/tests/fixtures/openai_transformer/transformer_small.tar.gz",
+                        "embedding_dim": 10,
+                        "num_heads": 2,
+                        "num_layers": 2,
+                        "vocab_size": 50,
+                        "n_ctx": 50
+                },
+                "top_layer_only": True
+        })
+        embedder = OpenaiTransformerEmbedder.from_params(params)
+        training_tensors = self._get_training_tensors()
+        output = embedder(training_tensors['tokens']['openai_transformer'],
+                          training_tensors['tokens']['openai_transformer-offsets'])
+        assert list(output.shape) == [2, 7, 10]
+
+    def test_openai_can_run_with_no_offsets(self):
+        params = Params({
+                "transformer": {
+                        "model_path": "allennlp/tests/fixtures/openai_transformer/transformer_small.tar.gz",
+                        "embedding_dim": 10,
+                        "num_heads": 2,
+                        "num_layers": 2,
+                        "vocab_size": 50,
+                        "n_ctx": 50
+                },
+        })
+        embedder = OpenaiTransformerEmbedder.from_params(params)
+        training_tensors = self._get_training_tensors()
+        output = embedder(training_tensors['tokens']['openai_transformer'])
+        assert list(output.shape) == [2, 2, 10]
 
 
 # Skip this one, it's an expensive test.
