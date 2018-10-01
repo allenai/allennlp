@@ -15,3 +15,12 @@ class TestText2sqlTableContext(AllenNlpTestCase):
         assert grammar_dictionary["column_name"] == ['"STREET_NAME"', '"RESTAURANT_ID"', '"REGION"',
                                                      '"RATING"', '"NAME"', '"HOUSE_NUMBER"',
                                                      '"FOOD_TYPE"', '"COUNTY"', '"CITY_NAME"']
+
+    def test_grammar_from_context_can_parse_statements(self):
+
+        context = WeaklyConstrainedText2SqlTableContext(self.schema)
+        sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',',
+               'RESTAURANT', 'WHERE', 'LOCATION', '.', 'CITY_NAME', '=',
+               "'city_name0'", 'AND', 'RESTAURANT', '.', 'ID', '=', 'LOCATION',
+               '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
+        context.grammar.parse(" ".join(sql))
