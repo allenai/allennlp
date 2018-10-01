@@ -115,7 +115,7 @@ class SimpleSeq2Seq(Model):
         self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
 
     @overrides
-    def forward(self,
+    def forward(self,  # type: ignore
                 source_tokens: Dict[str, torch.LongTensor],
                 target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ

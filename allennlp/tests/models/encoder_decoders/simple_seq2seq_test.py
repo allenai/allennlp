@@ -38,6 +38,7 @@ class SimpleSeq2SeqTest(ModelTestCase):
 
     def test_decode_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
+        del training_tensors["target_tokens"]
         output_dict = self.model(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
         # ``decode`` should have added a ``predicted_tokens`` field to ``output_dict``. Checking if it's there.
