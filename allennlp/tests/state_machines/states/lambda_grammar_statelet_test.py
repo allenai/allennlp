@@ -31,7 +31,11 @@ class TestLambdaGrammarStatelet(AllenNlpTestCase):
         assert state.get_valid_actions() == s_actions
         state = LambdaGrammarStatelet(['t'], {}, {'s': s_actions, 't': t_actions}, {}, is_nonterminal)
         assert state.get_valid_actions() == t_actions
-        state = LambdaGrammarStatelet(['e'], {}, {'s': s_actions, 't': t_actions, 'e': e_actions}, {}, is_nonterminal)
+        state = LambdaGrammarStatelet(['e'],
+                                      {},
+                                      {'s': s_actions, 't': t_actions, 'e': e_actions},
+                                      {},
+                                      is_nonterminal)
         assert state.get_valid_actions() == e_actions
 
     def test_get_valid_actions_adds_lambda_productions(self):

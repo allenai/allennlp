@@ -1,10 +1,9 @@
-from typing import Callable, Dict, Generic, List, Tuple, TypeVar
-
-import torch
+from typing import Callable, Dict, Generic, List, TypeVar
 
 from allennlp.nn import util
 
-ActionRepresentation = TypeVar('ActionRepresentation')
+ActionRepresentation = TypeVar('ActionRepresentation')  # pylint: ignore=invalid-name
+
 
 class GrammarStatelet(Generic[ActionRepresentation]):
     """

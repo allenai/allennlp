@@ -177,7 +177,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
         batch_size = len(rnn_state)
         initial_score = rnn_state[0].hidden_state.new_zeros(batch_size)
         initial_score_list = [initial_score[i] for i in range(batch_size)]
-        initial_state = GrammarBasedState(batch_indices=list(range(batch_size)),
+        initial_state = GrammarBasedState(batch_indices=list(range(batch_size)),  # type: ignore
                                           action_history=[[] for _ in range(batch_size)],
                                           score=initial_score_list,
                                           rnn_state=rnn_state,

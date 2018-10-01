@@ -6,10 +6,11 @@ from allennlp.nn import util
 
 
 # We're not actually inhereting from `GrammarStatelet` here because there's very little logic that
-# would actually be shared, and it would make this class too convoluted to use it.
+# would actually be shared.  Doing that doesn't solve our type problems, anyway, because List isn't
+# covariant...
 class LambdaGrammarStatelet:
     """
-    A ``LambdaGrammarStatelet`` is a ``GrammarStatelet` that adds lambda productions.  These
+    A ``LambdaGrammarStatelet`` is a ``GrammarStatelet`` that adds lambda productions.  These
     productions change the valid actions depending on the current state (you can produce lambda
     variables inside the scope of a lambda expression), so we need some extra bookkeeping to keep
     track of them.
