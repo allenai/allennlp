@@ -2,7 +2,7 @@ from typing import Callable, Dict, Generic, List, TypeVar
 
 from allennlp.nn import util
 
-ActionRepresentation = TypeVar('ActionRepresentation')  # pylint: ignore=invalid-name
+ActionRepresentation = TypeVar('ActionRepresentation')  # pylint: disable=invalid-name
 
 
 class GrammarStatelet(Generic[ActionRepresentation]):
