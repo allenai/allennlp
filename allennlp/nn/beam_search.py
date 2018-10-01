@@ -130,6 +130,11 @@ class BeamSearch:
             last_predictions = predictions[-1].reshape(batch_size * self.beam_size)
             # shape: (batch_size * beam_size,)
 
+            # If every predicted token from the last step is `self._end_index`,
+            # then we can stop early.
+            if (last_predictions == self._end_index).all():
+                break
+
             # Take a step. This get the predicted log probs of the next classes
             # and updates the state.
             class_log_probabilities, state = step(last_predictions, state)
@@ -213,13 +218,13 @@ class BeamSearch:
                 # shape: (batch_size * beam_size, *)
 
         # Reconstruct the sequences.
-        reconstructed_predictions = [predictions[self.max_steps - 1].unsqueeze(2)]
+        reconstructed_predictions = [predictions[-1].unsqueeze(2)]
         # shape: [(batch_size, beam_size, 1)]
 
-        cur_backpointers = backpointers[self.max_steps - 2]
+        cur_backpointers = backpointers[-1]
         # shape: (batch_size, beam_size)
 
-        for timestep in range(self.max_steps - 2, 0, -1):
+        for timestep in range(len(predictions) - 2, 0, -1):
             cur_preds = predictions[timestep].gather(1, cur_backpointers).unsqueeze(2)
             # shape: (batch_size, beam_size, 1)
 

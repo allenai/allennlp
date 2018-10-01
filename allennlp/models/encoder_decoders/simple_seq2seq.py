@@ -417,7 +417,6 @@ class SimpleSeq2Seq(Model):
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
         """
         predicted_indices = output_dict["predictions"]
-        print("indices", predicted_indices.size())
         if not isinstance(predicted_indices, numpy.ndarray):
             predicted_indices = predicted_indices.detach().cpu().numpy()
         all_predicted_tokens = []
@@ -433,5 +432,4 @@ class SimpleSeq2Seq(Model):
                 top_k_tokens.append(predicted_tokens)
             all_predicted_tokens.append(top_k_tokens)
         output_dict["predicted_tokens"] = all_predicted_tokens
-        print("LEN", len(all_predicted_tokens))
         return output_dict
