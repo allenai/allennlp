@@ -81,15 +81,21 @@ class TableQuestionContext:
     for extracting entities from a question given a table and type its columns with <string> | <date> | <number>
     """
     def __init__(self,
-                 cell_values: Set[str],
-                 column_type_statistics: List[Dict[str, int]],
-                 column_index_to_name: Dict[int, str],
+                 table_data: List[Dict[str, str]],
+                 column_types: Dict[str, str],
                  question_tokens: List[Token]) -> None:
-        self.cell_values = cell_values
-        self.column_types = {column_index_to_name[column_index]: max(column_type_statistics[column_index],
-                                                                     key=column_type_statistics[column_index].get)
-                             for column_index in column_index_to_name}
+        self.table_data = table_data
+        self.column_types = column_types
         self.question_tokens = question_tokens
+        self.table_data: List[Dict[str, str]] = []
+        self._cell_values: Set[str] = set()
+        for table_row in table_data:
+            self.table_data.append({})
+            for column_name, cell_value in table_row.items():
+                column_type = column_types[column_name]
+                typed_column_name = f"{column_type}_column:{column_name}"
+                self.table_data[-1][typed_column_name] = cell_value
+                self._cell_values.add(cell_value)
 
     MAX_TOKENS_FOR_NUM_CELL = 1
 
@@ -101,6 +107,7 @@ class TableQuestionContext:
 
         header = lines[0] # the first line is the header
         index = 1
+        table_data: List[Dict[str, str]] = []
         while lines[index][0] == '-1':
             # column names start with fb:row.row.
             current_line = lines[index]
@@ -112,11 +119,19 @@ class TableQuestionContext:
         column_node_type_info = [{'string' : 0, 'number' : 0, 'date' : 0}
                                  for col in column_index_to_name]
         cell_values = set()
-        while index < len(lines):
-            curr_line = lines[index]
-            column_index = int(curr_line[1])
-            node_info = dict(zip(header, curr_line))
-            cell_values.add(cls._normalize_string(node_info['content']))
+        last_row_index = -1
+        for current_line in lines[1:]:
+            row_index = int(current_line[0])
+            if row_index == -1:
+                continue  # header row
+            column_index = int(current_line[1])
+            if row_index != last_row_index:
+                table_data.append({})
+            node_info = dict(zip(header, current_line))
+            cell_value = cls._normalize_string(node_info['content'])
+            column_name = column_index_to_name[column_index]
+            table_data[-1][column_name] = cell_value
+            cell_values.add(cell_value)
             num_tokens = len(node_info['tokens'].split('|'))
             if node_info['date']:
                 column_node_type_info[column_index]['date'] += 1
@@ -125,8 +140,11 @@ class TableQuestionContext:
                 column_node_type_info[column_index]['number'] += 1
             elif node_info['content'] != '—':
                 column_node_type_info[column_index]['string'] += 1
-            index += 1
-        return cls(cell_values, column_node_type_info, column_index_to_name, question_tokens)
+            last_row_index = row_index
+        column_types = {column_index_to_name[column_index]: max(column_node_type_info[column_index],
+                                                                key=column_node_type_info[column_index].get)
+                        for column_index in column_index_to_name}
+        return cls(table_data, column_types, question_tokens)
 
     @classmethod
     def read_from_file(cls, filename: str, question_tokens: List[Token]) -> 'TableQuestionContext':
@@ -146,8 +164,8 @@ class TableQuestionContext:
             if not normalized_token_text:
                 continue
             if self._string_in_table(normalized_token_text):
-                curr_data = {'value' : normalized_token_text, 'token_start' : i, 'token_end' : i+1}
-                entity_data.append(curr_data)
+                entity_data.append({'value' : normalized_token_text,
+                                    'token_start' : i, 'token_end' : i+1})
 
         extracted_numbers = self._get_numbers_from_tokens(self.question_tokens)
         # filter out number entities to avoid repitition
@@ -155,13 +173,13 @@ class TableQuestionContext:
             _, number_token_indices = list(zip(*extracted_numbers))
             number_token_text = [self.question_tokens[i].text for i in number_token_indices]
             expanded_string_entities = []
-            for ent in entity_data:
-                if ent['value'] not in number_token_text:
-                    expanded_string_entities.append(ent)
-            expanded_entities = [ent['value'] for ent in
+            for entity in entity_data:
+                if entity['value'] not in number_token_text:
+                    expanded_string_entities.append(entity)
+            expanded_entities = [entity['value'] for entity in
                                  self._expand_entities(self.question_tokens, expanded_string_entities)]
         else:
-            expanded_entities = [ent['value'] for ent in
+            expanded_entities = [entity['value'] for entity in
                                  self._expand_entities(self.question_tokens, entity_data)]
         return expanded_entities, extracted_numbers  #TODO(shikhar) Handle conjunctions
 
@@ -230,7 +248,7 @@ class TableQuestionContext:
         return numbers
 
     def _string_in_table(self, candidate: str) -> bool:
-        for cell_value in self.cell_values:
+        for cell_value in self._cell_values:
             if candidate in cell_value:
                 return True
         return False

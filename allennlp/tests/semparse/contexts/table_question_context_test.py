@@ -4,12 +4,18 @@ from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
-MAX_TOKENS_FOR_NUMBER = 6
 
 class TestTableQuestionContext(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.tokenizer = WordTokenizer(SpacyWordSplitter(pos_tags=True))
+
+    def test_table_data(self):
+        question = "what was the attendance when usl a league played?"
+        question_tokens = self.tokenizer.tokenize(question)
+        test_file = f'{self.FIXTURES_ROOT}/data/wikitables/sample_table.tagged'
+        table_question_context = TableQuestionContext.read_from_file(test_file, question_tokens)
+        print(table_question_context.table_data)
 
     def test_number_extraction(self):
         question = """how many players on the 191617 illinois fighting illini men's basketball team

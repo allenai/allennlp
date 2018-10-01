@@ -17,6 +17,7 @@ from overrides import overrides
 from allennlp.semparse.worlds.world import ParsingError, World
 from allennlp.semparse.type_declarations import wikitables_variable_free as types
 from allennlp.semparse.contexts import TableQuestionContext
+from allennlp.semparse.executors import WikiTablesVariableFreeExecutor
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -54,9 +55,7 @@ class WikiTablesVariableFreeWorld(World):
         # TODO (pradeep): Do we need constant type prefixes?
         self.table_context = table_context
 
-        # TODO (pradeep): Define an executor in this world when we have a new context class.
-        # Something like the following:
-        # self._executor = WikiTablesVariableFreeExecutor(self.table_graph.table_data)
+        self._executor = WikiTablesVariableFreeExecutor(self.table_context.table_data)
 
         # For every new column name seen, we update this counter to map it to a new NLTK name.
         self._column_counter = 0
@@ -136,12 +135,7 @@ class WikiTablesVariableFreeWorld(World):
                 translated_name = types.COMMON_NAME_MAPPING[name]
             else:
                 translated_name = self.local_name_mapping[name]
-        try:
-            return translated_name
-        except UnboundLocalError:
-            print("CALLED MAP NAME WITH", name)
-            print("LOCAL MAPPING WAS", self.local_name_mapping)
-            raise UnboundLocalError
+        return translated_name
 
     def get_agenda(self):
         agenda_items = []
@@ -194,4 +188,4 @@ class WikiTablesVariableFreeWorld(World):
         return agenda
 
     def execute(self, logical_form: str) -> Union[List[str], int]:
-        raise NotImplementedError
+        return self._executor.execute(logical_form)
