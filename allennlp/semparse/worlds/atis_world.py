@@ -52,14 +52,15 @@ class AtisWorld():
     """
 
     database_file = "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
-    sql_table_context = AtisSqlTableContext(ALL_TABLES,
-                                            TABLES_WITH_STRINGS,
-                                            database_file)
+    sql_table_context = None
 
     def __init__(self,
                  utterances: List[str],
                  tokenizer: Tokenizer = None) -> None:
-
+        if AtisWorld.sql_table_context is None:
+            AtisWorld.sql_table_context = AtisSqlTableContext(ALL_TABLES,
+                                                              TABLES_WITH_STRINGS,
+                                                              AtisWorld.database_file)
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]
