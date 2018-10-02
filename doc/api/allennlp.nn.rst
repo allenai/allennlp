@@ -11,6 +11,7 @@ for working with PyTorch neural networks.
    allennlp.nn.initializers
    allennlp.nn.regularizers
    allennlp.nn.util
+   allennlp.nn.beam_search
 
 
 .. automodule:: allennlp.nn

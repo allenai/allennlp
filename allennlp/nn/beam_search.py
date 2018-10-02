@@ -41,26 +41,26 @@ class BeamSearch:
         Parameters
         ----------
         start_predictions : ``torch.Tensor``
-            A tensor containing the initial predictions with shape `(batch_size,)`.
+            A tensor containing the initial predictions with shape ``(batch_size,)``.
             Usually the initial predictions are just the index of the "start" token
             in the target vocabulary.
         start_state : ``StateType``
-            The initial state passed to the `first_step` function. Each value of the state dict
-            should be a tensor of shape `(batch_size, *)`, where `*` means any other
+            The initial state passed to the ``first_step`` function. Each value of the state dict
+            should be a tensor of shape ``(batch_size, *)``, where '*' means any other
             number of dimensions.
         step : ``StepFunctionType``
             A function that is responsible for computing the next most likely tokens,
             given the current state and the predictions from the last time step.
             The function should accept two arguments. The first being a tensor
-            of shape `(group_size,)`, representing the index of the predicted
+            of shape ``(group_size,)``, representing the index of the predicted
             tokens from the last time step, and the second being the current state.
-            The `group_size` will be `batch_size * beam_size`, except in the initial
-            step, for which it will just be `batch_size`.
+            The ``group_size`` will be ``batch_size * beam_size``, except in the initial
+            step, for which it will just be ``batch_size``.
             The function is expected to return a tuple, where the first element
-            is a tensor of shape `(group_size, target_vocab_size)` containing
+            is a tensor of shape ``(group_size, target_vocab_size)`` containing
             the log probabilities of the tokens for the next step, and the second
             element is the updated state. The tensor in the state should have shape
-            `(group_size, *)`, where `*` means any other number of dimensions.
+            ``(group_size, *)``, where '*' means any other number of dimensions.
         first_step : ``StepFunctionType``, optional
             If the first step of decoding should be handled differently, then you can
             set this function which will only be used during the first step. If not set,
