@@ -52,4 +52,3 @@ def check_for_java():
         return
     except FileNotFoundError:
         raise RuntimeError('Java is not installed.')
-        
