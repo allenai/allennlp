@@ -148,7 +148,7 @@ class AtisWorld():
                 day_binary_expression = self._get_sequence_with_spacing(new_grammar,
                                                                         [Literal('date_day'),
                                                                          Literal('.'),
-                                                                         Literal('month_number'),
+                                                                         Literal('day_number'),
                                                                          new_grammar['binaryop'],
                                                                          Literal(f'{date.day}')])
                 new_binary_expressions.extend([month_binary_expression,
