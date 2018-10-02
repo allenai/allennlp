@@ -122,8 +122,6 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         action_map = {action.rule: i # type: ignore
                       for i, action in enumerate(valid_actions_field.field_list)}
 
-        for k, v in action_map.items():
-            print(k, v)
         for production_rule in action_sequence:
             index_fields.append(IndexField(action_map[production_rule], valid_actions_field))
 

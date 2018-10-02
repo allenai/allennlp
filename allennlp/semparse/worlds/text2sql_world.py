@@ -31,12 +31,11 @@ class Text2SqlWorld:
         all_actions = set()
         for action_list in valid_actions.values():
             all_actions.update(action_list)
-        all_actions = sorted(all_actions)
+        sorted_actions = sorted(all_actions)
 
         sql_visitor = SqlVisitor(grammar)
         action_sequence = sql_visitor.parse(" ".join(query)) if query else []
-        print(action_sequence)
-        return action_sequence, all_actions
+        return action_sequence, sorted_actions
 
     @staticmethod
     def is_global_rule(nonterminal: str) -> bool:
