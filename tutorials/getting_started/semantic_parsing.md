@@ -31,7 +31,8 @@ make these links):
 
 - Transition functions and training algorithms
 - Keeping track of the decoder's state
-- Defining a transition system (or a logical form language) to specify what actions there are and when they can be taken, and an execution engine for that language
+- Defining a transition system (or a logical form language) to specify what actions there are and
+  when they can be taken, and an execution engine for that language
 - Adding context to your model (like a table or a database)
 - Putting the context, the transition system, and the execution engine together into a `World`
 
@@ -281,3 +282,34 @@ converts logical forms to action sequences and back actually lives partially in 
 could probably use a bit of refactoring.
 
 ## Putting it all together: a quick summary
+
+There are a bunch of moving pieces to get a semantic parser working.  To summarize, we have:
+
+1. A general state machine architecture for training transition functions (in
+   `allennlp.state_machines`).  Your model creates an initial `State` and a `TransitionFunction`,
+and passes these off to a `DecoderTrainer` that implements some learning algorithm.
+2. A bunch of examples of using this architecture for training semantic parsers (in
+   `allennlp.semparse`).  The language you're parsing into determines the state space and the
+transition system (which you can specify using our `nltk`-based logic system, or using
+`parsimonious` or something similar).  The `Model` encodes some input utterance (and possibly some
+additional context), instantiates a `World` that can execute logical forms in some (possibly
+`Instance`-specific) context, initializes the grammar and RNN states, and passes all of this off to
+the state machine architecture.
+
+These are the datasets that are currently supported:
+
+- WikiTableQuestions, a dataset of questions over tables extracted from Wikipedia (paper, website).
+  We support the lambda-DCS language by interfacing with SEMPRE, and very soon we will also support
+the variable-free language in Chen Liang's MAPO paper.
+- Cornell Natural Language Visual Reasoning (NLVR), a dataset of true/false statements about images
+  (paper, website).  We designed a simple language that operates on the structured representations
+in the dataset (not the images), and this is what we use.
+- ATIS, a dataset of interactions with a flight service, mapping language to SQL queries (paper,
+  website).  We support hierarchical, grammar-based decoding of SQL on this dataset, using a
+hand-built `parsimonious` grammar for the SQL queries.
+- All of the text-to-SQL datasets from the "Improving Text-to-SQL Evaluation Methodology" paper
+  (paper, website).  You can use this data either with template prediction and slot filling, or
+with grammar-based decoding, using a general SQL grammar that we wrote with `parsimonious`.
+- QuaRel, a dataset of science questions that require qualitative reasoning (paper, website).
+
+There are models implemented for most of these datasets, many of which you can see in our demo.
