@@ -107,7 +107,8 @@ class WikiTablesParserPredictor(Predictor):
         # TODO(matt): The jar that we have isn't optimal for this use case - we're using a
         # script designed for computing accuracy, and just pulling out a piece of it. Writing
         # a new entry point to the jar that's tailored for this use would be cleaner.
-        check_for_java()
+        if not check_for_java():
+            raise RuntimeError('Java is not installed properly.')
         command = ' '.join(['java',
                             '-jar',
                             cached_path(DEFAULT_EXECUTOR_JAR),

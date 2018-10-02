@@ -44,11 +44,9 @@ def check_for_gpu(device_id: int):
                                  " if you want to run on CPU use the override"
                                  " 'trainer.cuda_device=-1' in the json config file.")
 
-def check_for_java():
+def check_for_java() -> bool:
     try:
         java_version = subprocess.check_output(['java', '-version'], stderr=subprocess.STDOUT)
-        if 'version' not in java_version.decode():
-            raise RuntimeError('Java is not installed properly.')
-        return
+        return 'version' in java_version.decode()
     except FileNotFoundError:
-        raise RuntimeError('Java is not installed.')
+        return False
