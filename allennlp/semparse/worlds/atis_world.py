@@ -72,11 +72,11 @@ class AtisWorld():
         # This has shape (num_entities, num_utterance_tokens).
         self.linking_scores: numpy.ndarray = linking_scores
         self.entities: List[str] = entities
-        self.grammar: Grammar = self.update_grammar()
+        self.grammar: Grammar = self._update_grammar()
         self.valid_actions = initialize_valid_actions(self.grammar,
                                                       KEYWORDS)
 
-    def update_grammar(self):
+    def _update_grammar(self):
         """
         We create a new ``Grammar`` object from the one in ``AtisSqlTableContext``, that also
         has the new entities that are extracted from the utterance. Stitching together the expressions
