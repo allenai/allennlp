@@ -113,6 +113,7 @@ class WeaklyConstrainedText2SqlTableContext(SqlTableContext):
                  schema_path: str = None) -> None:
         self.grammar_dictionary = deepcopy(GRAMMAR_DICTIONARY)
         schema = read_dataset_schema(schema_path)
+        self.schema = schema
         self.all_tables = {k: [x.name for x in v] for k, v in schema.items()}
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)

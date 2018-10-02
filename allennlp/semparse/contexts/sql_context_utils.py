@@ -86,7 +86,7 @@ def format_action(nonterminal: str,
 
     else:
         right_hand_side = right_hand_side.lstrip("(").rstrip(")")
-        child_strings = [token for token in re.split(" ws |ws | ws", right_hand_side) if token]
+        child_strings = [token for token in re.split(" wsp |wsp | wsp| ws |ws | ws|", right_hand_side) if token]
         child_strings = [tok.upper() if tok.upper() in keywords_to_uppercase else tok for tok in child_strings]
         return f"{nonterminal} -> [{', '.join(child_strings)}]"
 
@@ -140,7 +140,7 @@ class SqlVisitor(NodeVisitor):
         """
         For each node, we accumulate the rules that generated its children in a list.
         """
-        if node.expr.name and node.expr.name != 'ws':
+        if node.expr.name and node.expr.name not in ['ws', 'wsp']:
             nonterminal = f'{node.expr.name} -> '
 
             if isinstance(node.expr, Literal):
@@ -149,14 +149,15 @@ class SqlVisitor(NodeVisitor):
             else:
                 child_strings = []
                 for child in node.__iter__():
-                    if child.expr.name == 'ws':
+                    if child.expr.name in ['ws', 'wsp']:
                         continue
                     if child.expr.name != '':
                         child_strings.append(child.expr.name)
                     else:
                         child_right_side_string = child.expr._as_rhs().lstrip("(").rstrip(")") # pylint: disable=protected-access
                         child_right_side_list = [tok for tok in
-                                                 re.split(" ws |ws | ws", child_right_side_string) if tok]
+                                                 re.split(" wsp |wsp | wsp| ws |ws | ws|",
+                                                          child_right_side_string) if tok]
                         child_right_side_list = [tok.upper() if tok.upper() in
                                                  self.keywords_to_uppercase else tok
                                                  for tok in child_right_side_list]

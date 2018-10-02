@@ -17,7 +17,6 @@ class Text2SqlWorld:
         This defines what sort of table-based constraints we apply
         to the world.
     """
-
     def __init__(self, sql_table_context: SqlTableContext) -> None:
         # NOTE: This base dictionary should not be modified.
         self.sql_table_context = sql_table_context
@@ -35,8 +34,8 @@ class Text2SqlWorld:
         all_actions = sorted(all_actions)
 
         sql_visitor = SqlVisitor(grammar)
-        print(query)
         action_sequence = sql_visitor.parse(" ".join(query)) if query else []
+        print(action_sequence)
         return action_sequence, all_actions
 
     @staticmethod

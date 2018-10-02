@@ -87,7 +87,9 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
 
             for sql_data in text2sql_utils.process_sql_data(data,
                                                             use_all_sql=self._use_all_sql,
-                                                            remove_unneeded_aliases=self._remove_unneeded_aliases):
+                                                            remove_unneeded_aliases=self._remove_unneeded_aliases,
+                                                            # TODO(Mark): Horrible hack, remove
+                                                            schema=self._sql_table_context.schema):
                 instance = self.text_to_instance(sql_data.text, sql_data)
                 if instance is not None:
                     yield instance
@@ -120,6 +122,8 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         action_map = {action.rule: i # type: ignore
                       for i, action in enumerate(valid_actions_field.field_list)}
 
+        for k, v in action_map.items():
+            print(k, v)
         for production_rule in action_sequence:
             index_fields.append(IndexField(action_map[production_rule], valid_actions_field))
 
