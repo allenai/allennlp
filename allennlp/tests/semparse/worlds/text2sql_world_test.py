@@ -13,6 +13,7 @@ class TestText2SqlWorld(AllenNlpTestCase):
         self.world = Text2SqlWorld(context)
 
     def test_get_action_sequence_and_global_actions(self):
+        # TODO(Mark): Fill in this test.
         action_sequence, all_actions = self.world.get_action_sequence_and_all_actions(None)
 
         assert action_sequence == []

@@ -33,7 +33,7 @@ GRAMMAR_DICTIONARY["sel_res_all_star"] = ['"*"']
 GRAMMAR_DICTIONARY['sel_res_val'] = ['(expr ws "AS" wsp name)', 'expr']
 GRAMMAR_DICTIONARY['sel_res_col'] = ['col_ref ws "AS" wsp name']
 
-GRAMMAR_DICTIONARY["from_clause"] = ['ws "FROM" source']
+GRAMMAR_DICTIONARY["from_clause"] = ['ws "FROM" ws source']
 GRAMMAR_DICTIONARY["source"] = ['(ws single_source ws "," ws source)', '(ws single_source)']
 GRAMMAR_DICTIONARY["single_source"] = ['source_table', 'source_subq']
 GRAMMAR_DICTIONARY["source_table"] = ['table_name', '(table_name ws "AS" wsp name)']

@@ -125,6 +125,14 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
                       for i, action in enumerate(valid_actions_field.field_list)}
 
         for production_rule in action_sequence:
+            # Temporarily skipping this production to
+            # make a PR smaller. The next PR will constrain
+            # the strings produced to be from the table,
+            # but at the moment they are blank so they
+            # aren't present in the global actions.
+            # TODO(Mark): fix the above.
+            if production_rule.startswith("string"):
+                continue
             index_fields.append(IndexField(action_map[production_rule], valid_actions_field))
 
         action_sequence_field = ListField(index_fields)
