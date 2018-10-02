@@ -2,6 +2,8 @@ from typing import List, Callable, Tuple, Dict
 
 import torch
 
+from allennlp.common.checks import ConfigurationError
+
 
 StateType = Dict[str, torch.Tensor]  # pylint: disable=invalid-name
 StepFunctionType = Callable[[torch.Tensor, StateType], Tuple[torch.Tensor, StateType]]  # pylint: disable=invalid-name
@@ -20,15 +22,23 @@ class BeamSearch:
         of the predicted sequences.
     beam_size : ``int``, optional (default = 10)
         The width of the beam used.
+    per_node_beam_size : ``int``, optional (default = beam_size)
+        The maximum number of candidates to consider per node, at each step in the search.
+        If not given, this just defaults to ``beam_size``. Setting this parameter
+        to a number smaller than ``beam_size`` may give better results, as it can introduce
+        more diversity into the search. See `Beam Search Strategies for Neural Machine Translation.
+        Freitag and Al-Onaizan, 2017 <http://arxiv.org/abs/1702.01806>`_.
     """
 
     def __init__(self,
                  end_index: int,
                  max_steps: int = 50,
-                 beam_size: int = 10) -> None:
+                 beam_size: int = 10,
+                 per_node_beam_size: int = None) -> None:
         self._end_index = end_index
-        self.beam_size = beam_size
         self.max_steps = max_steps
+        self.beam_size = beam_size
+        self.per_node_beam_size = per_node_beam_size or beam_size
 
     def search(self,
                start_predictions: torch.Tensor,
@@ -36,7 +46,8 @@ class BeamSearch:
                step: StepFunctionType,
                first_step: StepFunctionType = None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Use beam search decoding to find the highest probability target sequences.
+        Given a starting state and a step function, apply beam search to find the
+        most likely target sequences.
 
         Parameters
         ----------
@@ -46,7 +57,7 @@ class BeamSearch:
             in the target vocabulary.
         start_state : ``StateType``
             The initial state passed to the ``first_step`` function. Each value of the state dict
-            should be a tensor of shape ``(batch_size, *)``, where '*' means any other
+            should be a tensor of shape ``(batch_size, *)``, where ``*`` means any other
             number of dimensions.
         step : ``StepFunctionType``
             A function that is responsible for computing the next most likely tokens,
@@ -60,7 +71,7 @@ class BeamSearch:
             is a tensor of shape ``(group_size, target_vocab_size)`` containing
             the log probabilities of the tokens for the next step, and the second
             element is the updated state. The tensor in the state should have shape
-            ``(group_size, *)``, where '*' means any other number of dimensions.
+            ``(group_size, *)``, where ``*`` means any other number of dimensions.
         first_step : ``StepFunctionType``, optional
             If the first step of decoding should be handled differently, then you can
             set this function which will only be used during the first step. If not set,
@@ -69,8 +80,8 @@ class BeamSearch:
 
         Returns
         -------
-        ``Tuple[torch.Tensor, torch.Tensor]``
-            ``(predictions, log_probabilities)``, where ``predictions``
+        Tuple[torch.Tensor, torch.Tensor]
+            Tuple of ``(predictions, log_probabilities)``, where ``predictions``
             has shape ``(batch_size, beam_size, max_steps)`` and ``log_probabilities``
             has shape ``(batch_size, beam_size)``.
         """
@@ -96,11 +107,17 @@ class BeamSearch:
         start_class_log_probabilities, state = first_step(start_predictions, start_state)
         # shape: (batch_size, num_classes)
 
+        num_classes = start_class_log_probabilities.size()[1]
+
+        # Make sure `per_node_beam_size` is not larger than `num_classes`.
+        if self.per_node_beam_size > num_classes:
+            raise ConfigurationError(f"Target vocab size ({num_classes:d}) too small "
+                                     f"relative to per_node_beam_size ({self.per_node_beam_size:d}).\n"
+                                     f"Please decrease beam_size or per_node_beam_size.")
+
         start_top_log_probabilities, start_predicted_classes = \
                 start_class_log_probabilities.topk(self.beam_size)
         # shape: (batch_size, beam_size), (batch_size, beam_size)
-
-        num_classes = start_class_log_probabilities.size()[1]
 
         # The log probabilities for the last time step.
         last_log_probabilities = start_top_log_probabilities
@@ -157,28 +174,29 @@ class BeamSearch:
             )
             # shape: (batch_size * beam_size, num_classes)
 
-            top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(self.beam_size)
-            # shape: (batch_size * beam_size, beam_size), (batch_size * beam_size, beam_size)
+            top_log_probabilities, predicted_classes = \
+                cleaned_log_probabilities.topk(self.per_node_beam_size)
+            # shape (both): (batch_size * beam_size, per_node_beam_size)
 
-            # Here we expand the last log probabilities to (batch_size * beam_size, beam_size)
+            # Here we expand the last log probabilities to (batch_size * beam_size, per_node_beam_size)
             # so that we can add them to the current log probs for this timestep.
             # This lets us maintain the log probability of each element on the beam.
             expanded_last_log_probabilities = last_log_probabilities.\
                     unsqueeze(2).\
-                    expand(batch_size, self.beam_size, self.beam_size).\
-                    reshape(batch_size * self.beam_size, self.beam_size)
-            # shape: (batch_size * beam_size, beam_size)
+                    expand(batch_size, self.beam_size, self.per_node_beam_size).\
+                    reshape(batch_size * self.beam_size, self.per_node_beam_size)
+            # shape: (batch_size * beam_size, per_node_beam_size)
 
             summed_top_log_probabilities = top_log_probabilities + expanded_last_log_probabilities
-            # shape: (batch_size * beam_size, beam_size)
+            # shape: (batch_size * beam_size, per_node_beam_size)
 
             reshaped_summed = summed_top_log_probabilities.\
-                    reshape(batch_size, self.beam_size * self.beam_size)
-            # shape: (batch_size, beam_size * beam_size)
+                    reshape(batch_size, self.beam_size * self.per_node_beam_size)
+            # shape: (batch_size, beam_size * per_node_beam_size)
 
             reshaped_predicted_classes = predicted_classes.\
-                    reshape(batch_size, self.beam_size * self.beam_size)
-            # shape: (batch_size, beam_size * beam_size)
+                    reshape(batch_size, self.beam_size * self.per_node_beam_size)
+            # shape: (batch_size, beam_size * per_node_beam_size)
 
             # Keep only the top `beam_size` beam indices.
             restricted_beam_log_probs, restricted_beam_indices = reshaped_summed.topk(self.beam_size)
@@ -193,11 +211,11 @@ class BeamSearch:
             last_log_probabilities = restricted_beam_log_probs
             # shape: (batch_size, beam_size)
 
-            # The beam indices come from a `beam_size * beam_size` dimension where the
+            # The beam indices come from a `beam_size * per_node_beam_size` dimension where the
             # indices with a common ancestor are grouped together. Hence
-            # dividing by beam_size gives the ancestor. (Note that this is integer
+            # dividing by per_node_beam_size gives the ancestor. (Note that this is integer
             # division as the tensor is a LongTensor.)
-            backpointer = restricted_beam_indices / self.beam_size
+            backpointer = restricted_beam_indices / self.per_node_beam_size
             # shape: (batch_size, beam_size)
 
             backpointers.append(backpointer)
