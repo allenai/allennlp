@@ -26,6 +26,11 @@ allennlp.semparse.contexts
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.semparse.contexts.text2sql_table_context
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.semparse.contexts.sql_context_utils
    :members:
    :undoc-members:

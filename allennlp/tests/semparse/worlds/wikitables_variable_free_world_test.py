@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,too-many-public-methods
 from typing import List
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -19,6 +19,9 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         self.table_file = self.FIXTURES_ROOT / 'data' / 'wikitables' / 'sample_table.tsv'
         self.table_kg = TableQuestionKnowledgeGraph.read_from_file(self.table_file, question_tokens)
         self.world = WikiTablesVariableFreeWorld(self.table_kg)
+        table_file_with_date = self.FIXTURES_ROOT / 'data' / 'wikitables' / 'sample_table_with_date.tsv'
+        table_kg_with_date = TableQuestionKnowledgeGraph.read_from_file(table_file_with_date, question_tokens)
+        self.world_with_date = WikiTablesVariableFreeWorld(table_kg_with_date)
 
     def test_get_valid_actions_returns_correct_set(self):
         # This test is long, but worth it.  These are all of the valid actions in the grammar, and
@@ -27,12 +30,12 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         valid_actions = self.world.get_valid_actions()
         assert set(valid_actions.keys()) == {
                 "<r,<l,s>>",
-                "<r,<n,<l,r>>>",
+                "<r,<l,<n,r>>>",
                 "<r,<l,r>>",
                 "<r,<r,<l,n>>>",
-                "<r,<s,<l,r>>>",
+                "<r,<l,<s,r>>>",
                 "<n,<n,<n,d>>>",
-                "<r,<d,<l,r>>>",
+                "<r,<l,<d,r>>>",
                 "<r,<l,n>>",
                 "<r,r>",
                 "<r,n>",
@@ -47,7 +50,7 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         check_productions_match(valid_actions['<r,<l,s>>'],
                                 ['mode', 'select'])
 
-        check_productions_match(valid_actions['<r,<n,<l,r>>>'],
+        check_productions_match(valid_actions['<r,<l,<n,r>>>'],
                                 ['filter_number_equals', 'filter_number_greater',
                                  'filter_number_greater_equals', 'filter_number_lesser',
                                  'filter_number_lesser_equals', 'filter_number_not_equals'])
@@ -58,13 +61,13 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         check_productions_match(valid_actions['<r,<r,<l,n>>>'],
                                 ['diff'])
 
-        check_productions_match(valid_actions['<r,<s,<l,r>>>'],
+        check_productions_match(valid_actions['<r,<l,<s,r>>>'],
                                 ['filter_in', 'filter_not_in'])
 
         check_productions_match(valid_actions['<n,<n,<n,d>>>'],
                                 ['date'])
 
-        check_productions_match(valid_actions['<r,<d,<l,r>>>'],
+        check_productions_match(valid_actions['<r,<l,<d,r>>>'],
                                 ['filter_date_equals', 'filter_date_greater',
                                  'filter_date_greater_equals', 'filter_date_lesser',
                                  'filter_date_lesser_equals', 'filter_date_not_equals'])
@@ -124,45 +127,45 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
 
         check_productions_match(valid_actions['r'],
                                 ['all_rows',
-                                 '[<r,<d,<l,r>>>, r, d, l]',
+                                 '[<r,<l,<d,r>>>, r, l, d]',
                                  '[<r,<l,r>>, r, l]',
-                                 '[<r,<n,<l,r>>>, r, n, l]',
-                                 '[<r,<s,<l,r>>>, r, s, l]',
+                                 '[<r,<l,<n,r>>>, r, l, n]',
+                                 '[<r,<l,<s,r>>>, r, l, s]',
                                  '[<r,r>, r]'])
 
     def test_world_processes_logical_forms_correctly(self):
-        logical_form = "(select (filter_in all_rows fb:cell.usl_a_league fb:row.row.league) fb:row.row.year)"
+        logical_form = "(select (filter_in all_rows fb:row.row.league fb:cell.usl_a_league) fb:row.row.year)"
         expression = self.world.parse_logical_form(logical_form)
         # Cells (and parts) get mapped to strings.
-        assert str(expression) == "S0(F30(R,string:usl_a_league,C2),C6)"
+        assert str(expression) == "S0(F30(R,C2,string:usl_a_league),C6)"
 
     def test_world_gets_correct_actions(self):
-        logical_form = "(select (filter_in all_rows fb:cell.usl_a_league fb:row.row.league) fb:row.row.year)"
+        logical_form = "(select (filter_in all_rows fb:row.row.league fb:cell.usl_a_league) fb:row.row.year)"
         expression = self.world.parse_logical_form(logical_form)
         expected_sequence = ['@start@ -> s', 's -> [<r,<l,s>>, r, l]', '<r,<l,s>> -> select',
-                             'r -> [<r,<s,<l,r>>>, r, s, l]', '<r,<s,<l,r>>> -> filter_in',
-                             'r -> all_rows', 's -> fb:cell.usl_a_league', 'l -> fb:row.row.league',
+                             'r -> [<r,<l,<s,r>>>, r, l, s]', '<r,<l,<s,r>>> -> filter_in',
+                             'r -> all_rows', 'l -> fb:row.row.league', 's -> fb:cell.usl_a_league',
                              'l -> fb:row.row.year']
         assert self.world.get_action_sequence(expression) == expected_sequence
 
     def test_world_gets_logical_form_from_actions(self):
-        logical_form = "(select (filter_in all_rows fb:cell.usl_a_league fb:row.row.league) fb:row.row.year)"
+        logical_form = "(select (filter_in all_rows fb:row.row.league fb:cell.usl_a_league) fb:row.row.year)"
         expression = self.world.parse_logical_form(logical_form)
         action_sequence = self.world.get_action_sequence(expression)
         reconstructed_logical_form = self.world.get_logical_form(action_sequence)
         assert logical_form == reconstructed_logical_form
 
     def test_world_processes_logical_forms_with_number_correctly(self):
-        logical_form = "(select (filter_number_greater all_rows 2013 fb:row.row.year) fb:row.row.year)"
+        logical_form = "(select (filter_number_greater all_rows fb:row.row.year 2013) fb:row.row.year)"
         expression = self.world.parse_logical_form(logical_form)
         # Cells (and parts) get mapped to strings.
-        assert str(expression) == "S0(F10(R,num:2013,C6),C6)"
+        assert str(expression) == "S0(F10(R,C6,num:2013),C6)"
 
     def test_world_processes_logical_forms_with_date_correctly(self):
-        logical_form = "(select (filter_date_greater all_rows (date 2013 -1 -1) fb:row.row.year) fb:row.row.year)"
+        logical_form = "(select (filter_date_greater all_rows fb:row.row.year (date 2013 -1 -1)) fb:row.row.year)"
         expression = self.world.parse_logical_form(logical_form)
         # Cells (and parts) get mapped to strings.
-        assert str(expression) == "S0(F20(R,T0(num:2013,num:~1,num:~1),C6),C6)"
+        assert str(expression) == "S0(F20(R,C6,T0(num:2013,num:~1,num:~1)),C6)"
 
     def _get_world_with_question_tokens(self, tokens: List[Token]) -> WikiTablesVariableFreeWorld:
         table_kg = TableQuestionKnowledgeGraph.read_from_file(self.table_file, tokens)
