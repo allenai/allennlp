@@ -54,7 +54,7 @@ GRAMMAR_DICTIONARY["ordering_term"] = ['(ws expr ordering)', '(ws expr)']
 GRAMMAR_DICTIONARY["ordering"] = ['(ws "ASC")', '(ws "DESC")']
 GRAMMAR_DICTIONARY["limit"] = ['ws "LIMIT" ws number']
 
-GRAMMAR_DICTIONARY["col_ref"] = ['(table_name ws "." ws column_name)', 'column_name']
+GRAMMAR_DICTIONARY["col_ref"] = ['(table_name ws "." ws column_name)', 'table_name']
 GRAMMAR_DICTIONARY["table_name"] = ['name']
 GRAMMAR_DICTIONARY["column_name"] = ['name']
 GRAMMAR_DICTIONARY["ws"] = ['~"\s*"i']
@@ -113,7 +113,7 @@ class WeaklyConstrainedText2SqlTableContext(SqlTableContext):
                  schema_path: str = None) -> None:
         self.grammar_dictionary = deepcopy(GRAMMAR_DICTIONARY)
         schema = read_dataset_schema(schema_path)
-        self.all_tables = {k: [x[0] for x in v] for k, v in schema.items()}
+        self.all_tables = {k: [x.name for x in v] for k, v in schema.items()}
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)
         self.valid_actions: Dict[str, List[str]] = initialize_valid_actions(self.grammar)
