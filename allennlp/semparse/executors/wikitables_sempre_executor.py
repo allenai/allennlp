@@ -6,6 +6,7 @@ import shutil
 import subprocess
 
 from allennlp.common.file_utils import cached_path
+from allennlp.common.checks import check_for_java
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -81,6 +82,8 @@ class WikiTablesSempreExecutor:
             subprocess.run(f'wget {GROW_FILE}', shell=True)
             subprocess.run(f'mv wikitables-grow.grammar {grammar_path}', shell=True)
 
+        if not check_for_java():
+            raise RuntimeError('Java is not installed properly.')
         args = ['java', '-jar', cached_path(SEMPRE_EXECUTOR_JAR), 'serve', self._table_directory]
         self._executor_process = subprocess.Popen(args,
                                                   stdin=subprocess.PIPE,
