@@ -21,7 +21,8 @@ DEFAULT_PREDICTORS = {
         'dialog_qa': 'dialog_qa',
         'event2mind': 'event2mind',
         'simple_tagger': 'sentence-tagger',
-        'srl': 'semantic-role-labeling'
+        'srl': 'semantic-role-labeling',
+        'quarel_parser': 'quarel-parser'
 }
 
 class Predictor(Registrable):
