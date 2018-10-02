@@ -75,14 +75,14 @@ class WikiTablesSempreExecutor:
         abbreviations_path = os.path.join(SEMPRE_DIR, 'abbreviations.tsv')
         if not os.path.exists(abbreviations_path):
             result = requests.get(ABBREVIATIONS_FILE)
-            with open(abbreviations_path, 'wb') as temp_file:
-                temp_file.write(result.content)
+            with open(abbreviations_path, 'wb') as downloaded_file:
+                downloaded_file.write(result.content)
 
         grammar_path = os.path.join(SEMPRE_DIR, 'grow.grammar')
         if not os.path.exists(grammar_path):
             result = requests.get(GROW_FILE)
-            with open(grammar_path, 'wb') as temp_file:
-                temp_file.write(result.content)
+            with open(grammar_path, 'wb') as downloaded_file:
+                downloaded_file.write(result.content)
 
         args = ['java', '-jar', cached_path(SEMPRE_EXECUTOR_JAR), 'serve', self._table_directory]
         self._executor_process = subprocess.Popen(args,
