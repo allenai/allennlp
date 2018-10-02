@@ -5,6 +5,7 @@ from allennlp.data.tokenizers.token import Token
 from allennlp.data.tokenizers.word_splitter import LettersDigitsWordSplitter
 from allennlp.data.tokenizers.word_splitter import SimpleWordSplitter
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
+from allennlp.data.tokenizers.word_splitter import OpenAISplitter
 
 
 class TestSimpleWordSplitter(AllenNlpTestCase):
@@ -149,3 +150,14 @@ class TestSpacyWordSplitter(AllenNlpTestCase):
             assert len(batch_sentence) == len(separate_sentence)
             for batch_word, separate_word in zip(batch_sentence, separate_sentence):
                 assert batch_word.text == separate_word.text
+
+class TestOpenAiWordSplitter(AllenNlpTestCase):
+    def setUp(self):
+        super(TestOpenAiWordSplitter, self).setUp()
+        self.word_splitter = OpenAISplitter()
+
+    def test_tokenize_handles_complex_punctuation(self):
+        sentence = "This sentence ?a!?!"
+        expected_tokens = ['This', 'sentence', '?', 'a', '!', '?', '!']
+        tokens = [t.text for t in self.word_splitter.split_words(sentence)]
+        assert tokens == expected_tokens
