@@ -14,7 +14,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.dataset_readers.dataset_utils import text2sql_utils
-from allennlp.semparse.contexts.sql_context_utils import SqlTableContext
+from allennlp.semparse.contexts.text2sql_table_context import Text2SqlTableContext
 from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -29,9 +29,8 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
 
     Parameters
     ----------
-    sql_table_context: ``SqlTableContext``, required.
-        The context determines the type of constraints which are
-        applied to the grammar for a particular instance.
+    schema_path : ``str``, required.
+        The path to the database schema.
     use_all_sql : ``bool``, optional (default = False)
         Whether to use all of the sql queries which have identical semantics,
         or whether to just use the first one.
@@ -48,7 +47,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         in the training set.
     """
     def __init__(self,
-                 sql_table_context: SqlTableContext,
+                 schema_path: str,
                  use_all_sql: bool = False,
                  remove_unneeded_aliases: bool = True,
                  token_indexers: Dict[str, TokenIndexer] = None,
@@ -60,8 +59,8 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         self._remove_unneeded_aliases = remove_unneeded_aliases
         self._cross_validation_split_to_exclude = str(cross_validation_split_to_exclude)
 
-        self._sql_table_context = sql_table_context
-        self._world = Text2SqlWorld(sql_table_context)
+        self._sql_table_context = Text2SqlTableContext(schema_path)
+        self._world = Text2SqlWorld(self._sql_table_context)
 
     @overrides
     def _read(self, file_path: str):
@@ -104,7 +103,10 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         fields["tokens"] = tokens
 
         if sql is not None:
-            action_sequence, all_actions = self._world.get_action_sequence_and_all_actions(sql.sql)
+            try:
+                action_sequence, all_actions = self._world.get_action_sequence_and_all_actions(sql.sql)
+            except ParseError:
+                return None
 
         index_fields: List[Field] = []
         production_rule_fields: List[Field] = []

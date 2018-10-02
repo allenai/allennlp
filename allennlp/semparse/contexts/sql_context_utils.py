@@ -8,20 +8,6 @@ from parsimonious.expressions import Literal, OneOf, Sequence
 from parsimonious.nodes import Node, NodeVisitor
 from parsimonious.grammar import Grammar
 
-from allennlp.common.registrable import Registrable
-
-class SqlTableContext(Registrable):
-
-    """
-    An abstract, registrable class representing some kind
-    of SQL tables and grammar.
-    """
-    def get_grammar_dictionary(self) -> Dict[str, List[str]]:
-        raise NotImplementedError
-
-    def get_valid_actions(self) -> Dict[str, List[str]]:
-        raise NotImplementedError
-
 def format_grammar_string(grammar_dictionary: Dict[str, List[str]]) -> str:
     """
     Formats a dictionary of production rules into the string format expected

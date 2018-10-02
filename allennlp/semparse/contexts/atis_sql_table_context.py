@@ -6,12 +6,11 @@ from typing import List, Dict, Tuple
 import sqlite3
 from copy import deepcopy
 
-from overrides import overrides
 from parsimonious.grammar import Grammar
 
 from allennlp.common.file_utils import cached_path
 from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions, format_grammar_string, \
-        format_action, SqlTableContext
+        format_action
 
 # This is the base definition of the SQL grammar in a simplified sort of
 # EBNF notation, and represented as a dictionary. The keys are the nonterminals and the values
@@ -72,8 +71,7 @@ GRAMMAR_DICTIONARY['number'] = ['""']
 KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"', '"IN"', '"LIKE"',
             '"IS"', '"BETWEEN"', '"AND"', '"ALL"', '"ANY"', '"NULL"', '"OR"', '"DISTINCT"']
 
-@SqlTableContext.register("atis")
-class AtisSqlTableContext(SqlTableContext):
+class AtisSqlTableContext:
     """
     An ``AtisSqlTableContext`` represents the SQL context with a grammar of SQL and the valid actions
     based on the schema of the tables that it represents.
@@ -111,11 +109,9 @@ class AtisSqlTableContext(SqlTableContext):
         if database_file:
             self.connection.close()
 
-    @overrides
     def get_grammar_dictionary(self) -> Dict[str, List[str]]:
         return self.grammar_dictionary
 
-    @overrides
     def get_valid_actions(self) -> Dict[str, List[str]]:
         return self.valid_actions
 

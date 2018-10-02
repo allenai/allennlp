@@ -2,14 +2,14 @@
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld
-from allennlp.semparse.contexts.text2sql_table_context import WeaklyConstrainedText2SqlTableContext
+from allennlp.semparse.contexts.text2sql_table_context import Text2SqlTableContext
 
 
 class TestText2SqlWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.schema = str(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
-        context = WeaklyConstrainedText2SqlTableContext(self.schema)
+        context = Text2SqlTableContext(self.schema)
         self.world = Text2SqlWorld(context)
 
     def test_get_action_sequence_and_global_actions(self):

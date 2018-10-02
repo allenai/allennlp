@@ -3,8 +3,9 @@ from copy import deepcopy
 
 from parsimonious import Grammar
 
-from allennlp.semparse.contexts.sql_context_utils import SqlTableContext, SqlVisitor
+from allennlp.semparse.contexts.sql_context_utils import SqlVisitor
 from allennlp.semparse.contexts.sql_context_utils import format_grammar_string, initialize_valid_actions
+from allennlp.semparse.contexts.text2sql_table_context import Text2SqlTableContext
 
 
 class Text2SqlWorld:
@@ -13,11 +14,11 @@ class Text2SqlWorld:
 
     Parameters
     ----------
-    sql_table_context : ``SqlTableContext``
+    sql_table_context : ``Text2SqlTableContext``
         This defines what sort of table-based constraints we apply
         to the world.
     """
-    def __init__(self, sql_table_context: SqlTableContext) -> None:
+    def __init__(self, sql_table_context: Text2SqlTableContext) -> None:
         # NOTE: This base dictionary should not be modified.
         self.sql_table_context = sql_table_context
         self.base_grammar_dictionary = sql_table_context.get_grammar_dictionary()
@@ -38,5 +39,5 @@ class Text2SqlWorld:
         return action_sequence, sorted_actions
 
     @staticmethod
-    def is_global_rule(nonterminal: str) -> bool:
+    def is_global_rule(nonterminal: str) -> bool: # pylint: disable=unused-argument
         return True

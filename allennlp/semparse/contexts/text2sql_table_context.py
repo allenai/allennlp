@@ -6,11 +6,9 @@ for the any of the text2sql datasets, with the grammar and the valid actions.
 from typing import List, Dict
 from copy import deepcopy
 
-from overrides import overrides
 from parsimonious.grammar import Grammar
 
 from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions, format_grammar_string
-from allennlp.semparse.contexts.sql_context_utils import SqlTableContext
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
 
 GRAMMAR_DICTIONARY = {}
@@ -94,8 +92,7 @@ GRAMMAR_DICTIONARY["binaryop"] = ['"+"', '"-"', '"*"', '"/"', '"="', '"<>"',
                                   '">="', '"<="', '">"', '"<"', '"AND"', '"OR"', '"LIKE"']
 GRAMMAR_DICTIONARY["unaryop"] = ['"+"', '"-"', '"not"', '"NOT"']
 
-@SqlTableContext.register("weakly_constrained_text2sql")
-class WeaklyConstrainedText2SqlTableContext(SqlTableContext):
+class Text2SqlTableContext:
     """
     This context is minimally constrained in terms of table productions,
     meaning that we don't even constrain columns to be associated with the correct
@@ -119,11 +116,9 @@ class WeaklyConstrainedText2SqlTableContext(SqlTableContext):
         self.grammar: Grammar = Grammar(self.grammar_str)
         self.valid_actions: Dict[str, List[str]] = initialize_valid_actions(self.grammar)
 
-    @overrides
     def get_grammar_dictionary(self) -> Dict[str, List[str]]:
         return self.grammar_dictionary
 
-    @overrides
     def get_valid_actions(self) -> Dict[str, List[str]]:
         return self.valid_actions
 
