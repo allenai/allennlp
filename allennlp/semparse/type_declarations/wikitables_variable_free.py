@@ -18,7 +18,7 @@ from allennlp.semparse.type_declarations.type_declaration import (NamedBasicType
 ROW_TYPE = NamedBasicType("ROW")
 # The following three type signatures are assigned such that they're easy to understand from the
 # first letters, while being different from the cell types.
-DATE_COLUMN_TYPE = NamedBasicType("YCOLUMN")  # Y for year
+DATE_COLUMN_TYPE = NamedBasicType("MCOLUMN")  # M for month
 NUMBER_COLUMN_TYPE = NamedBasicType("FCOLUMN")  # F for float
 STRING_COLUMN_TYPE = NamedBasicType("TCOLUMN")  # T for token
 GENERIC_COLUMN_TYPE = MultiMatchNamedBasicType("GCOLUMN", [STRING_COLUMN_TYPE, DATE_COLUMN_TYPE,

@@ -108,19 +108,22 @@ class WikiTablesVariableFreeExecutor:
             function_name = expression[0]
         else:
             # This is a constant (like "all_rows" or "2005")
-            return self._handle_constant(str(expression))
+            return self._handle_constant(expression)
         try:
             function = getattr(self, function_name)
             return function(*expression[1:])
         except AttributeError:
             raise ExecutionError(f"Function not found: {function_name}")
 
-    def _handle_constant(self, constant: str) -> Union[List[Dict[str, str]], float]:
+    def _handle_constant(self, constant: str) -> Union[List[Dict[str, str]], str, float]:
         if constant == "all_rows":
             return self._table_data
         try:
             return float(constant)
         except ValueError:
+            # The constant is not a number. Returning as-is if it is a string.
+            if isinstance(constant, str):
+                return constant
             raise ExecutionError(f"Cannot handle constant: {constant}")
 
     @staticmethod
@@ -228,7 +231,7 @@ class WikiTablesVariableFreeExecutor:
         if not value_row_pairs:
             return []
         # Returns a list containing the row with the max cell value.
-        return [sorted(value_row_pairs, reverse=True)[0][1]]
+        return [sorted(value_row_pairs, key=lambda x: x[0], reverse=True)[0][1]]
 
     def argmin(self, row_expression_list: NestedList, column_name: str) -> List[Dict[str, str]]:
         """
@@ -249,7 +252,7 @@ class WikiTablesVariableFreeExecutor:
         if not value_row_pairs:
             return []
         # Returns a list containing the row with the max cell value.
-        return [sorted(value_row_pairs)[0][1]]
+        return [sorted(value_row_pairs, key=lambda x: x[0])[0][1]]
 
     def filter_number_greater(self,
                               row_expression_list: NestedList,
@@ -510,7 +513,7 @@ class WikiTablesVariableFreeExecutor:
     def filter_in(self,
                   row_expression_list: NestedList,
                   column_name: str,
-                  filter_value: str) -> List[Dict[str, str]]:
+                  value_expression: NestedList) -> List[Dict[str, str]]:
         """
         Takes a list of rows, a column, and a string value and returns all the rows where the value
         in that column contains the given string.
@@ -518,8 +521,9 @@ class WikiTablesVariableFreeExecutor:
         row_list = self._handle_expression(row_expression_list)
         if not row_list:
             return []
-        # Assuming filter value is a simple string with underscores for spaces. The cell values also
-        # have underscores for spaces, so we do not need to replace them here.
+        filter_value = self._handle_expression(value_expression)
+        # Assuming filter value has underscores for spaces. The cell values also have underscores
+        # for spaces, so we do not need to replace them here.
         result_list = []
         for row in row_list:
             if filter_value in row[column_name].replace("fb:cell.", ""):
@@ -529,7 +533,7 @@ class WikiTablesVariableFreeExecutor:
     def filter_not_in(self,
                       row_expression_list: NestedList,
                       column_name: str,
-                      filter_value: str) -> List[Dict[str, str]]:
+                      value_expression: NestedList) -> List[Dict[str, str]]:
         """
         Takes a list of rows, a column, and a string value and returns all the rows where the value
         in that column does not contain the given string.
@@ -537,8 +541,9 @@ class WikiTablesVariableFreeExecutor:
         row_list = self._handle_expression(row_expression_list)
         if not row_list:
             return []
-        # Assuming filter value is a simple string with underscores for spaces. The cell values also
-        # have underscores for spaces, so we do not need to replace them here.
+        filter_value = self._handle_expression(value_expression)
+        # Assuming filter value has underscores for spaces. The cell values also have underscores
+        # for spaces, so we do not need to replace them here.
         result_list = []
         for row in row_list:
             if filter_value not in row[column_name].replace("fb:cell.", ""):
