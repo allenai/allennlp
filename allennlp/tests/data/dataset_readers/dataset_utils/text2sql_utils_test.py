@@ -95,22 +95,34 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
 
     def test_read_database_schema(self):
         schema = text2sql_utils.read_dataset_schema(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
+        # Make it easier to compare:
+        schema = {k: [(x.name, x.column_type, x.is_primary_key) for x in v]
+                  for k, v in schema.items()}
         assert schema == {
                 'RESTAURANT': [
-                        ('RESTAURANT_ID', 'int(11)'),
-                        ('NAME', 'varchar(255)'),
-                        ('FOOD_TYPE', 'varchar(255)'),
-                        ('CITY_NAME', 'varchar(255)'),
-                        ('RATING', '"decimal(1')
+                        ('RESTAURANT_ID', 'int(11)', True),
+                        ('NAME', 'varchar(255)', False),
+                        ('FOOD_TYPE', 'varchar(255)', False),
+                        ('CITY_NAME', 'varchar(255)', False),
+                        ('RATING', '"decimal(1', False)
                 ],
                 'LOCATION': [
-                        ('RESTAURANT_ID', 'int(11)'),
-                        ('HOUSE_NUMBER', 'int(11)'),
-                        ('STREET_NAME', 'varchar(255)'),
-                        ('CITY_NAME', 'varchar(255)')
+                        ('RESTAURANT_ID', 'int(11)', True),
+                        ('HOUSE_NUMBER', 'int(11)', False),
+                        ('STREET_NAME', 'varchar(255)', False),
+                        ('CITY_NAME', 'varchar(255)', False)
                 ],
                 'GEOGRAPHIC': [
-                        ('CITY_NAME', 'varchar(255)'),
-                        ('COUNTY', 'varchar(255)'),
-                        ('REGION', 'varchar(255)')]
+                        ('CITY_NAME', 'varchar(255)', True),
+                        ('COUNTY', 'varchar(255)', False),
+                        ('REGION', 'varchar(255)', False)]
                 }
+
+    def test_resolve_primary_keys_in_schema(self):
+        schema = text2sql_utils.read_dataset_schema(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
+        sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'MAX', '(', 'LOCATION', '.', 'ID', ')', 'AS', 'LOCATIONalias0', ";"]
+
+
+        resolved = text2sql_utils.resolve_primary_keys_in_schema(sql, schema)
+        print(resolved)
+        assert resolved == ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'MAX', '(', 'LOCATION', '.', 'RESTAURANT_ID', ')', 'AS', 'LOCATIONalias0', ";"]
