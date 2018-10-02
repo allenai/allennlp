@@ -4,6 +4,7 @@ import numpy
 from nltk import ngrams
 
 from parsimonious.grammar import Grammar
+from parsimonious.expressions import Expression, OneOf, Sequence, Literal
 
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
 from allennlp.semparse.contexts.atis_sql_table_context import AtisSqlTableContext, KEYWORDS
@@ -71,9 +72,100 @@ class AtisWorld():
         # This has shape (num_entities, num_utterance_tokens).
         self.linking_scores: numpy.ndarray = linking_scores
         self.entities: List[str] = entities
-        self.grammar_dictionary = self.update_grammar_dictionary()
-        self.grammar_string: str = self.get_grammar_string()
-        self.grammar_with_context: Grammar = Grammar(self.grammar_string)
+        self.grammar = self.update_grammar()
+
+    def update_grammar(self):
+        """
+        We create a new ``Grammar`` object from the one in ``AtisSqlTableContext``, that also
+        has the new entities that are extracted from the utterance. Stitching together the expressions
+        to form the grammar is a little tedious here, but it is worth it because we don't have to create
+        a new grammar from scratch. Creating a new grammar is expensive because we have many production
+        rules that have all database values in the column on the right hand side.
+        """
+
+        # This will give us a shallow copy, but that's OK because everything
+        # inside is immutable so we get a new copy of it.
+        new_grammar = AtisWorld.sql_table_context.grammar._copy()
+
+        if self.dates:
+            new_binary_expressions = []
+            year_binary_expression = self._get_sequence_with_spacing(new_grammar,
+                                                                     [Literal('date_day'),
+                                                                      Literal('.'),
+                                                                      Literal('year'),
+                                                                      new_grammar['binaryop'],
+                                                                      Literal(f'{self.dates[0].year}')])
+            new_binary_expressions.append(year_binary_expression)
+
+            for date in self.dates:
+                month_binary_expression = self._get_sequence_with_spacing(new_grammar,
+                                                                          [Literal('date_day'),
+                                                                           Literal('.'),
+                                                                           Literal('month_number'),
+                                                                           new_grammar['binaryop'],
+                                                                           Literal(f'{date.month}')])
+
+                day_binary_expression = self._get_sequence_with_spacing(new_grammar,
+                                                                        [Literal('date_day'),
+                                                                         Literal('.'),
+                                                                         Literal('month_number'),
+                                                                         new_grammar['binaryop'],
+                                                                         Literal(f'{date.day}')])
+                new_binary_expressions.extend([month_binary_expression,
+                                               day_binary_expression])
+
+            new_grammar['biexpr'].members = new_grammar['biexpr'].members + tuple(new_binary_expressions)
+
+        numbers = sorted([value[1] for key, value in self.linked_entities['number'].items()
+                          if value[0] == 'number'], reverse=True)
+        number_literals = [Literal(number) for number in numbers]
+        new_grammar['number'] = OneOf(*number_literals, name='number')
+        new_grammar['pos_value'].members = [member if member.name != 'number' else new_grammar['number']
+                                            for member in new_grammar['pos_value'].members]
+
+
+        time_range_start = sorted([value[1] for key, value in self.linked_entities['number'].items()
+                                   if value[0] == 'time_range_start'], reverse=True)
+        time_range_start_literals = [Literal(time) for time in time_range_start]
+        new_grammar['time_range_start'] = OneOf(*time_range_start_literals, name='time_range_start')
+
+        time_range_end = sorted([value[1] for key, value in self.linked_entities['number'].items()
+                                   if value[0] == 'time_range_end'], reverse=True)
+        time_range_end_literals = [Literal(time) for time in time_range_end]
+        new_grammar['time_range_end'] = OneOf(*time_range_end_literals, name='time_range_end')
+
+        ternary_expressions = [self._get_sequence_with_spacing(new_grammar,
+                                                               [new_grammar['col_ref'],
+                                                                Literal('BETWEEN'),
+                                                                new_grammar['time_range_start'],
+                                                                Literal(f'AND'),
+                                                                new_grammar['time_range_end']]),
+                               self._get_sequence_with_spacing(new_grammar,
+                                                              [new_grammar['col_ref'],
+                                                               Literal('NOT'),
+                                                               Literal('BETWEEN'),
+                                                               new_grammar['time_range_start'],
+                                                               Literal(f'AND'),
+                                                               new_grammar['time_range_end']]),
+                               self._get_sequence_with_spacing(new_grammar,
+                                                              [new_grammar['col_ref'],
+                                                               Literal('not'),
+                                                               Literal('BETWEEN'),
+                                                               new_grammar['time_range_start'],
+                                                               Literal(f'AND'),
+                                                               new_grammar['time_range_end']])]
+                              
+        new_grammar['ternaryexpr'] = OneOf(*ternary_expressions, name='ternaryexpr')
+        new_grammar['condition'].members = [member if member.name != 'ternaryexpr' else new_grammar['ternaryexpr']
+                                            for member in new_grammar['condition'].members]
+        return new_grammar
+
+    def _get_sequence_with_spacing(self,
+                                   new_grammar,
+                                   expressions: List[Expression],
+                                   name: str = '') -> Sequence:
+        expressions = [subexpression for expression in expressions for subexpression in (expression, new_grammar['ws'])]
+        return Sequence(*expressions, name=name)
 
     def get_valid_actions(self) -> Dict[str, List[str]]:
         return self.valid_actions
@@ -190,53 +282,8 @@ class AtisWorld():
             dates.extend(get_date_from_utterance(tokenized_utterance))
         return dates
 
-    def update_grammar_dictionary(self) -> Dict[str, List[str]]:
-        """
-        We modify the ``grammar_dictionary`` with additional constraints
-        we want for the ATIS dataset. We then add numbers to the grammar dictionary. The strings in the
-        database are already added in by the ``SqlTableContext``.
-        """
-        self.grammar_dictionary = deepcopy(self.sql_table_context.get_grammar_dictionary())
-        if self.dates:
-            year_binary_expression = f'("date_day" ws "." ws "year" ws binaryop ws "{self.dates[0].year}")'
-            self.grammar_dictionary['biexpr'].append(year_binary_expression)
-
-            for date in self.dates:
-                month_day_binary_expressions = \
-                        [f'("date_day" ws "." ws "month_number" ws binaryop ws "{date.month}")',
-                         f'("date_day" ws "." ws "day_number" ws binaryop ws "{date.day}")']
-                self.grammar_dictionary['biexpr'].extend(month_day_binary_expressions)
-
-
-        self.grammar_dictionary['ternaryexpr'] = \
-                ['(col_ref ws "not" ws "BETWEEN" ws time_range_start ws "AND" ws time_range_end ws)',
-                 '(col_ref ws "NOT" ws "BETWEEN" ws time_range_start  ws "AND" ws time_range_end ws)',
-                 '(col_ref ws "BETWEEN" ws time_range_start ws "AND" ws time_range_end ws)']
-
-        # We need to add the numbers, starting, ending time ranges to the grammar.
-        numbers = sorted([value[1] for key, value in self.linked_entities['number'].items()
-                          if value[0] == 'number'], reverse=True)
-        self.grammar_dictionary['number'] = [f'"{number}"' for number in numbers]
-
-        time_range_start = sorted([value[1] for key, value in self.linked_entities['number'].items()
-                                   if value[0] == 'time_range_start'], reverse=True)
-        self.grammar_dictionary['time_range_start'] = [f'"{time}"' for time in time_range_start]
-
-        time_range_end = sorted([value[1] for key, value in self.linked_entities['number'].items()
-                                 if value[0] == 'time_range_end'], reverse=True)
-        self.grammar_dictionary['time_range_end'] = [f'"{time}"' for time in time_range_end]
-        return self.grammar_dictionary
-
-    def get_grammar_string(self) -> str:
-        """
-        Generate a string that can be used to instantiate a ``Grammar`` object. The string is a sequence
-        of rules that define the grammar.
-        """
-        return '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
-                          for nonterminal, right_hand_side in self.grammar_dictionary.items()])
-
     def get_action_sequence(self, query: str) -> List[str]:
-        sql_visitor = SqlVisitor(self.grammar_with_context, keywords_to_uppercase=KEYWORDS)
+        sql_visitor = SqlVisitor(self.grammar, keywords_to_uppercase=KEYWORDS)
         if query:
             action_sequence = sql_visitor.parse(query)
             return action_sequence
