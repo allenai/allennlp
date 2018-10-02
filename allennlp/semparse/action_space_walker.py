@@ -60,6 +60,14 @@ class ActionSpaceWalker:
                     for current_nonterminal in [nonterminal] + multi_match_substitutions[nonterminal]:
                         if current_nonterminal in actions:
                             next_actions.extend(actions[current_nonterminal])
+                elif nonterminal not in actions:
+                    # This happens when the nonterminal corresponds to a type that does not exist in
+                    # the context. For example, in the variable free variant of the WikiTables
+                    # world, there are nonterminals for specific column types (like date). Say we
+                    # produced a path containing "filter_date_greater" already, and we do not have
+                    # an columns of type "date", then this condition would be triggered. We should
+                    # just discard those paths.
+                    continue
                 else:
                     next_actions.extend(actions[nonterminal])
                 # Iterating over all possible next actions.

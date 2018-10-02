@@ -3,6 +3,7 @@ from overrides import overrides
 from nltk.sem.logic import TRUTH_TYPE
 
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.semparse.type_declarations.type_declaration import NamedBasicType
 from allennlp.semparse.worlds.world import World
 from allennlp.semparse import ActionSpaceWalker
 
@@ -12,6 +13,10 @@ class FakeWorldWithAssertions(World):
     @overrides
     def get_valid_starting_types(self):
         return set([TRUTH_TYPE])
+
+    @overrides
+    def get_basic_types(self):
+        return set([NamedBasicType("OBJECT")])
 
     @overrides
     def get_valid_actions(self):
