@@ -6,11 +6,9 @@ for the any of the text2sql datasets, with the grammar and the valid actions.
 from typing import List, Dict
 from copy import deepcopy
 
-from overrides import overrides
 from parsimonious.grammar import Grammar
 
 from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions, format_grammar_string
-from allennlp.semparse.contexts.sql_context_utils import SqlTableContext
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
 
 GRAMMAR_DICTIONARY = {}
@@ -35,10 +33,10 @@ GRAMMAR_DICTIONARY["sel_res_all_star"] = ['"*"']
 GRAMMAR_DICTIONARY['sel_res_val'] = ['(expr ws "AS" wsp name)', 'expr']
 GRAMMAR_DICTIONARY['sel_res_col'] = ['col_ref ws "AS" wsp name']
 
-GRAMMAR_DICTIONARY["from_clause"] = ['ws "FROM" source']
+GRAMMAR_DICTIONARY["from_clause"] = ['ws "FROM" ws source']
 GRAMMAR_DICTIONARY["source"] = ['(ws single_source ws "," ws source)', '(ws single_source)']
 GRAMMAR_DICTIONARY["single_source"] = ['source_table', 'source_subq']
-GRAMMAR_DICTIONARY["source_table"] = ['table_name ws "AS" wsp name']
+GRAMMAR_DICTIONARY["source_table"] = ['table_name', '(table_name ws "AS" wsp name)']
 GRAMMAR_DICTIONARY["source_subq"] = ['("(" ws query ws ")" ws "AS" ws name)', '("(" ws query ws ")")']
 
 GRAMMAR_DICTIONARY["where_clause"] = ['(ws "WHERE" wsp expr where_conj)', '(ws "WHERE" wsp expr)']
@@ -54,7 +52,7 @@ GRAMMAR_DICTIONARY["ordering_term"] = ['(ws expr ordering)', '(ws expr)']
 GRAMMAR_DICTIONARY["ordering"] = ['(ws "ASC")', '(ws "DESC")']
 GRAMMAR_DICTIONARY["limit"] = ['ws "LIMIT" ws number']
 
-GRAMMAR_DICTIONARY["col_ref"] = ['(table_name ws "." ws column_name)', 'column_name']
+GRAMMAR_DICTIONARY["col_ref"] = ['(table_name ws "." ws column_name)', 'table_name']
 GRAMMAR_DICTIONARY["table_name"] = ['name']
 GRAMMAR_DICTIONARY["column_name"] = ['name']
 GRAMMAR_DICTIONARY["ws"] = ['~"\s*"i']
@@ -94,8 +92,7 @@ GRAMMAR_DICTIONARY["binaryop"] = ['"+"', '"-"', '"*"', '"/"', '"="', '"<>"',
                                   '">="', '"<="', '">"', '"<"', '"AND"', '"OR"', '"LIKE"']
 GRAMMAR_DICTIONARY["unaryop"] = ['"+"', '"-"', '"not"', '"NOT"']
 
-@SqlTableContext.register("weakly_constrained_text2sql")
-class WeaklyConstrainedText2SqlTableContext(SqlTableContext):
+class Text2SqlTableContext:
     """
     This context is minimally constrained in terms of table productions,
     meaning that we don't even constrain columns to be associated with the correct
@@ -113,16 +110,15 @@ class WeaklyConstrainedText2SqlTableContext(SqlTableContext):
                  schema_path: str = None) -> None:
         self.grammar_dictionary = deepcopy(GRAMMAR_DICTIONARY)
         schema = read_dataset_schema(schema_path)
-        self.all_tables = {k: [x[0] for x in v] for k, v in schema.items()}
+        self.schema = schema
+        self.all_tables = {k: [x.name for x in v] for k, v in schema.items()}
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)
         self.valid_actions: Dict[str, List[str]] = initialize_valid_actions(self.grammar)
 
-    @overrides
     def get_grammar_dictionary(self) -> Dict[str, List[str]]:
         return self.grammar_dictionary
 
-    @overrides
     def get_valid_actions(self) -> Dict[str, List[str]]:
         return self.valid_actions
 
