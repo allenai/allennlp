@@ -32,9 +32,9 @@ class TestAtisReader(AllenNlpTestCase):
         assert isinstance(instance.fields['world'].as_tensor({}), AtisWorld)
 
         world = instance.fields['world'].metadata
-        assert world.valid_actions['number'] == \
-                ['number -> ["1"]',
-                 'number -> ["0"]']
+        assert set(world.valid_actions['number']) == \
+                {'number -> ["1"]',
+                 'number -> ["0"]'}
 
         assert world.linked_entities['string']['airport_airport_code_string -> ["\'DTW\'"]'][2] == \
                 [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] # ``detroit`` -> ``DTW``

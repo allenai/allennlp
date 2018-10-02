@@ -1,5 +1,5 @@
 from typing import List, Dict, Tuple, Set, Callable
-from copy import deepcopy
+from copy import copy
 import numpy
 from nltk import ngrams
 
@@ -8,7 +8,7 @@ from parsimonious.expressions import Expression, OneOf, Sequence, Literal
 
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
 from allennlp.semparse.contexts.atis_sql_table_context import AtisSqlTableContext, KEYWORDS
-from allennlp.semparse.contexts.sql_context_utils import SqlVisitor, format_action, intialize_valid_actions
+from allennlp.semparse.contexts.sql_context_utils import SqlVisitor, format_action, initialize_valid_actions
 
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
@@ -68,13 +68,13 @@ class AtisWorld():
         self.linked_entities = self._get_linked_entities()
         self.dates = self._get_dates()
 
-        # self.valid_actions: Dict[str, List[str]] = self._update_valid_actions()
-        self.valid_actions = sql_context_utils.
         entities, linking_scores = self._flatten_entities()
         # This has shape (num_entities, num_utterance_tokens).
         self.linking_scores: numpy.ndarray = linking_scores
         self.entities: List[str] = entities
         self.grammar: Grammar = self.update_grammar()
+        self.valid_actions = initialize_valid_actions(self.grammar,
+                                                      KEYWORDS)
 
     def update_grammar(self):
         """
@@ -84,12 +84,12 @@ class AtisWorld():
         a new grammar from scratch. Creating a new grammar is expensive because we have many production
         rules that have all database values in the column on the right hand side. We update the expressions
         bottom up, since the higher level expressions may refer to the lower level ones. For example, the
-        ternary expression will refer to the start and end times. 
+        ternary expression will refer to the start and end times.
         """
 
         # This will give us a shallow copy, but that's OK because everything
         # inside is immutable so we get a new copy of it.
-        new_grammar = AtisWorld.sql_table_context.grammar._copy()
+        new_grammar = copy(AtisWorld.sql_table_context.grammar)
 
         numbers = self._get_numeric_database_values('number')
         number_literals = [Literal(number) for number in numbers]
@@ -162,7 +162,7 @@ class AtisWorld():
         return sorted([value[1] for key, value in self.linked_entities['number'].items()
                        if value[0] == nonterminal], reverse=True)
 
-    def _update_expression_reference(self,
+    def _update_expression_reference(self, # pylint disable=no-self-use
                                      grammar: Grammar,
                                      parent_expression_nonterminal: str,
                                      child_expression_nonterminal: str) -> None:
@@ -171,11 +171,11 @@ class AtisWorld():
         it, and we need to update those to point to the new expression.
         """
         grammar[parent_expression_nonterminal].members = \
-                [member if member.name != child_expression_nonterminal 
+                [member if member.name != child_expression_nonterminal
                  else grammar[child_expression_nonterminal]
                  for member in grammar[parent_expression_nonterminal].members]
 
-    def _get_sequence_with_spacing(self,
+    def _get_sequence_with_spacing(self, # pylint disable=no-self-use
                                    new_grammar,
                                    expressions: List[Expression],
                                    name: str = '') -> Sequence:
@@ -276,26 +276,6 @@ class AtisWorld():
         entity_linking_scores['number'] = number_linking_scores
         entity_linking_scores['string'] = string_linking_scores
         return entity_linking_scores
-
-    def _update_valid_actions(self) -> Dict[str, List[str]]:
-        valid_actions = deepcopy(self.sql_table_context.get_valid_actions())
-        valid_actions['time_range_start'] = []
-        valid_actions['time_range_end'] = []
-        for action, value in self.linked_entities['number'].items():
-            valid_actions[value[0]].append(action)
-
-        for date in self.dates:
-            for biexpr_rule in [f'biexpr -> ["date_day", ".", "year", binaryop, "{date.year}"]',
-                                f'biexpr -> ["date_day", ".", "month_number", binaryop, "{date.month}"]',
-                                f'biexpr -> ["date_day", ".", "day_number", binaryop, "{date.day}"]']:
-                if biexpr_rule not in valid_actions:
-                    valid_actions['biexpr'].append(biexpr_rule)
-
-        valid_actions['ternaryexpr'] = \
-                ['ternaryexpr -> [col_ref, "BETWEEN", time_range_start, "AND", time_range_end]',
-                 'ternaryexpr -> [col_ref, "NOT", "BETWEEN", time_range_start, "AND", time_range_end]']
-
-        return valid_actions
 
     def _get_dates(self):
         dates = []
