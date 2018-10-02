@@ -60,6 +60,32 @@ def format_action(nonterminal: str,
                   is_string: bool = False,
                   is_number: bool = False,
                   keywords_to_uppercase: List[str] = None) -> str:
+    """
+    This function formats an action as it appears in models. It
+    splits productions based on the special `ws` and `wsp` rules,
+    which are used in grammars to denote whitespace, and then
+    rejoins these tokens a formatted, comma separated list.
+    Importantly, note that it `does not` split on spaces in
+    the grammar string, because these might not correspond
+    to spaces in the language the grammar recognises.
+
+    Parameters
+    ----------
+    nonterminal : ``str``, required.
+        The nonterminal in the action.
+    right_hand_side : ``str``, required.
+        The right hand side of the action
+        (i.e the thing which is produced).
+    is_string : ``bool``, optional (default = False).
+        Whether the production produces a string.
+        If it does, it is formatted as ``nonterminal -> ['string']``
+    is_number : ``bool``, optional, (default = False).
+        Whether the production produces a string.
+        If it does, it is formatted as ``nonterminal -> ['number']``
+    keywords_to_uppecase: ``List[str]``, optional, (default = None)
+        Keywords in the grammar to uppercase. In the case of sql,
+        this might be SELECT, MAX etc.
+    """
     keywords_to_uppercase = keywords_to_uppercase or []
     if right_hand_side.upper() in keywords_to_uppercase:
         right_hand_side = right_hand_side.upper()
@@ -105,10 +131,17 @@ class SqlVisitor(NodeVisitor):
         sql_visitor = SqlVisitor(grammar_string)
         action_sequence = sql_visitor.parse(query)
 
+    Importantly, this ``SqlVisitor`` skips over ``ws`` and ``wsp`` nodes,
+    because they do not hold any meaning, and make an action sequence
+    much longer than it needs to be.
+
     Parameters
     ----------
     grammar : ``Grammar``
         A Grammar object that we use to parse the text.
+    keywords_to_uppecase: ``List[str]``, optional, (default = None)
+        Keywords in the grammar to uppercase. In the case of sql,
+        this might be SELECT, MAX etc.
     """
     def __init__(self, grammar: Grammar, keywords_to_uppercase: List[str] = None) -> None:
         self.action_sequence: List[str] = []
