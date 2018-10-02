@@ -1,5 +1,8 @@
 # pylint: disable=too-many-lines
+from datetime import datetime
 import json
+
+from parsimonious.expressions import Literal, Sequence
 
 from allennlp.common.file_utils import cached_path
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
@@ -734,3 +737,25 @@ class TestAtisWorld(AllenNlpTestCase):
         pm_times = [pm_map_match_to_query_value(string)
                     for string in ['12pm', '1pm', '830pm', '1230pm', '115pm']]
         assert pm_times == [[1200], [1300], [2030], [1230], [1315]]
+
+    def test_atis_helper_methods(self): # pylint: disable=no-self-use
+        world = AtisWorld([("what is the earliest flight in morning "
+                            "1993 june fourth from boston to pittsburgh")])
+        assert world.dates == [datetime(1993, 6, 4, 0, 0)]
+        assert world._get_numeric_database_values('time_range_end') == ['1200'] # pylint: disable=protected-access
+        assert world._get_sequence_with_spacing(world.grammar, # pylint: disable=protected-access
+                                                [world.grammar['col_ref'],
+                                                 Literal('BETWEEN'),
+                                                 world.grammar['time_range_start'],
+                                                 Literal(f'AND'),
+                                                 world.grammar['time_range_end']]) == \
+                                                Sequence(world.grammar['col_ref'],
+                                                         world.grammar['ws'],
+                                                         Literal('BETWEEN'),
+                                                         world.grammar['ws'],
+                                                         world.grammar['time_range_start'],
+                                                         world.grammar['ws'],
+                                                         Literal(f'AND'),
+                                                         world.grammar['ws'],
+                                                         world.grammar['time_range_end'],
+                                                         world.grammar['ws'])
