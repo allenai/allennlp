@@ -38,8 +38,12 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
     indexing is not based on a `Vocabulary` but on a fixed
     set of mappings that are loaded by the constructor.
 
-    Note: the original implementation applied ``text_standardize`` before
-    tokenizing.
+    Note: recommend using ``OpenAISplitter`` tokenizer with this indexer,
+    as it applies the same text normalization as the original implementation.
+
+    Note 2: when ``tokens_to_add`` is not None, be sure to set
+    ``n_special=len(tokens_to_add)`` in ``OpenaiTransformer``, otherwise
+    behavior is undefined.
     """
     # pylint: disable=no-self-use
     def __init__(self,
@@ -47,7 +51,8 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
                  byte_pairs: List[Tuple[str, str]] = None,
                  n_ctx: int = 512,
                  model_path: str = None,
-                 namespace: str = 'openai_transformer') -> None:
+                 namespace: str = 'openai_transformer',
+                 tokens_to_add: List[str] = None) -> None:
         self._namespace = namespace
         self._added_to_vocabulary = False
 
@@ -81,6 +86,13 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
                 else:
                     raise ConfigurationError(f"expected .bpe file in archive {model_path}")
 
+        if tokens_to_add is not None:
+            for token in tokens_to_add:
+                encoder[token + '</w>'] = len(encoder)
+            self.tokens_to_add = set(tokens_to_add)
+        else:
+            self.tokens_to_add = None
+
         self.encoder = encoder
         self.decoder = {word_id: word for word, word_id in self.encoder.items()}
 
@@ -103,6 +115,12 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
 
         if text in self.cache:
             return self.cache[text]
+
+        if self.tokens_to_add and text in self.tokens_to_add:
+            # this is a special token, and it's guaranteed to be a word
+            word = [text + '</w>']
+            self.cache[text] = word
+            return word
 
         # Split into letters, but add a `</w>` to the last
         word = [c for c in text[:-1]]
