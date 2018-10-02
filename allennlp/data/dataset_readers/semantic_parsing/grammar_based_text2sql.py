@@ -113,8 +113,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
 
         for production_rule in all_actions:
             nonterminal, _ = production_rule.split(' ->')
-            # The whitespaces are not semantically meaningful, so we filter them out.
-            production_rule = ' '.join([token for token in production_rule.split(' ') if token != 'ws'])
+            production_rule = ' '.join(production_rule.split(' '))
             field = ProductionRuleField(production_rule, self._world.is_global_rule(nonterminal))
             production_rule_fields.append(field)
 
