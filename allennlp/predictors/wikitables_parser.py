@@ -39,15 +39,15 @@ class WikiTablesParserPredictor(Predictor):
         os.makedirs(SEMPRE_DIR, exist_ok=True)
         abbreviations_path = os.path.join(SEMPRE_DIR, 'abbreviations.tsv')
         if not os.path.exists(abbreviations_path):
-            r = requests.get(ABBREVIATIONS_FILE)  
-            with open(abbreviations_path, 'wb') as f:
-                f.write(r.content)
+            result = requests.get(ABBREVIATIONS_FILE)
+            with open(abbreviations_path, 'wb') as temp_file:
+                temp_file.write(result.content)
 
         grammar_path = os.path.join(SEMPRE_DIR, 'grow.grammar')
         if not os.path.exists(grammar_path):
-            r = requests.get(GROW_FILE)  
-            with open(grammar_path, 'wb') as f:
-                f.write(r.content)
+            result = requests.get(GROW_FILE)
+            with open(grammar_path, 'wb') as temp_file:
+                temp_file.write(result.content)
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
