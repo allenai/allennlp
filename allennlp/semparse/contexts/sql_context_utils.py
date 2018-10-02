@@ -8,20 +8,6 @@ from parsimonious.expressions import Literal, OneOf, Sequence
 from parsimonious.nodes import Node, NodeVisitor
 from parsimonious.grammar import Grammar
 
-from allennlp.common.registrable import Registrable
-
-class SqlTableContext(Registrable):
-
-    """
-    An abstract, registrable class representing some kind
-    of SQL tables and grammar.
-    """
-    def get_grammar_dictionary(self) -> Dict[str, List[str]]:
-        raise NotImplementedError
-
-    def get_valid_actions(self) -> Dict[str, List[str]]:
-        raise NotImplementedError
-
 def format_grammar_string(grammar_dictionary: Dict[str, List[str]]) -> str:
     """
     Formats a dictionary of production rules into the string format expected
@@ -74,6 +60,32 @@ def format_action(nonterminal: str,
                   is_string: bool = False,
                   is_number: bool = False,
                   keywords_to_uppercase: List[str] = None) -> str:
+    """
+    This function formats an action as it appears in models. It
+    splits productions based on the special `ws` and `wsp` rules,
+    which are used in grammars to denote whitespace, and then
+    rejoins these tokens a formatted, comma separated list.
+    Importantly, note that it `does not` split on spaces in
+    the grammar string, because these might not correspond
+    to spaces in the language the grammar recognises.
+
+    Parameters
+    ----------
+    nonterminal : ``str``, required.
+        The nonterminal in the action.
+    right_hand_side : ``str``, required.
+        The right hand side of the action
+        (i.e the thing which is produced).
+    is_string : ``bool``, optional (default = False).
+        Whether the production produces a string.
+        If it does, it is formatted as ``nonterminal -> ['string']``
+    is_number : ``bool``, optional, (default = False).
+        Whether the production produces a string.
+        If it does, it is formatted as ``nonterminal -> ['number']``
+    keywords_to_uppecase: ``List[str]``, optional, (default = None)
+        Keywords in the grammar to uppercase. In the case of sql,
+        this might be SELECT, MAX etc.
+    """
     keywords_to_uppercase = keywords_to_uppercase or []
     if right_hand_side.upper() in keywords_to_uppercase:
         right_hand_side = right_hand_side.upper()
@@ -86,7 +98,7 @@ def format_action(nonterminal: str,
 
     else:
         right_hand_side = right_hand_side.lstrip("(").rstrip(")")
-        child_strings = [token for token in re.split(" ws |ws | ws", right_hand_side) if token]
+        child_strings = [token for token in re.split(" wsp |wsp | wsp| ws |ws | ws|", right_hand_side) if token]
         child_strings = [tok.upper() if tok.upper() in keywords_to_uppercase else tok for tok in child_strings]
         return f"{nonterminal} -> [{', '.join(child_strings)}]"
 
@@ -119,10 +131,17 @@ class SqlVisitor(NodeVisitor):
         sql_visitor = SqlVisitor(grammar_string)
         action_sequence = sql_visitor.parse(query)
 
+    Importantly, this ``SqlVisitor`` skips over ``ws`` and ``wsp`` nodes,
+    because they do not hold any meaning, and make an action sequence
+    much longer than it needs to be.
+
     Parameters
     ----------
     grammar : ``Grammar``
         A Grammar object that we use to parse the text.
+    keywords_to_uppecase: ``List[str]``, optional, (default = None)
+        Keywords in the grammar to uppercase. In the case of sql,
+        this might be SELECT, MAX etc.
     """
     def __init__(self, grammar: Grammar, keywords_to_uppercase: List[str] = None) -> None:
         self.action_sequence: List[str] = []
@@ -140,7 +159,7 @@ class SqlVisitor(NodeVisitor):
         """
         For each node, we accumulate the rules that generated its children in a list.
         """
-        if node.expr.name and node.expr.name != 'ws':
+        if node.expr.name and node.expr.name not in ['ws', 'wsp']:
             nonterminal = f'{node.expr.name} -> '
 
             if isinstance(node.expr, Literal):
@@ -149,14 +168,15 @@ class SqlVisitor(NodeVisitor):
             else:
                 child_strings = []
                 for child in node.__iter__():
-                    if child.expr.name == 'ws':
+                    if child.expr.name in ['ws', 'wsp']:
                         continue
                     if child.expr.name != '':
                         child_strings.append(child.expr.name)
                     else:
                         child_right_side_string = child.expr._as_rhs().lstrip("(").rstrip(")") # pylint: disable=protected-access
                         child_right_side_list = [tok for tok in
-                                                 re.split(" ws |ws | ws", child_right_side_string) if tok]
+                                                 re.split(" wsp |wsp | wsp| ws |ws | ws|",
+                                                          child_right_side_string) if tok]
                         child_right_side_list = [tok.upper() if tok.upper() in
                                                  self.keywords_to_uppercase else tok
                                                  for tok in child_right_side_list]

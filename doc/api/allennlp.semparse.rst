@@ -17,4 +17,5 @@ allennlp.semparse
    allennlp.semparse.executors
    allennlp.semparse.type_declarations
    allennlp.semparse.worlds
+   allennlp.semparse.executors
    allennlp.semparse.util
