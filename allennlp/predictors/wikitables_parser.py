@@ -12,6 +12,7 @@ from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
+from allennlp.common.checks import check_for_java
 
 # TODO(mattg): We should merge how this works with how the `WikiTablesAccuracy` metric works, maybe
 # just removing the need for adding this stuff at all, because the parser already runs the java
@@ -109,6 +110,8 @@ class WikiTablesParserPredictor(Predictor):
         # TODO(matt): The jar that we have isn't optimal for this use case - we're using a
         # script designed for computing accuracy, and just pulling out a piece of it. Writing
         # a new entry point to the jar that's tailored for this use would be cleaner.
+        if not check_for_java():
+            raise RuntimeError('Java is not installed properly.')
         command = ' '.join(['java',
                             '-jar',
                             cached_path(DEFAULT_EXECUTOR_JAR),
