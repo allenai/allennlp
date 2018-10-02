@@ -38,6 +38,10 @@ class SqlData(NamedTuple):
     text_variables: Dict[str, str]
     sql_variables: Dict[str, str]
 
+class TableColumn(NamedTuple):
+    name: str
+    column_type: str
+    is_primary_key: bool
 
 def replace_variables(sentence: List[str],
                       sentence_variables: Dict[str, str]) -> Tuple[List[str], List[str]]:
@@ -78,6 +82,25 @@ def clean_and_split_sql(sql: str) -> List[str]:
             sql_tokens.extend(split_table_and_column_names(token))
     return sql_tokens
 
+def resolve_primary_keys_in_schema(sql_tokens: List[str],
+                                   schema: Dict[str, List[TableColumn]]) -> List[str]:
+    """
+    Some examples in the text2sql datasets use ID as a column reference to the
+    column of a table which has a primary key. This causes problems if you are trying
+    to constrain a grammar to only produce the column names directly, because you don't
+    know what ID refers to. So instead of dealing with that, we just replace it.
+    """
+    primary_keys_for_tables = {name: max(columns, key=lambda x: x.is_primary_key).name
+                               for name, columns in schema.items()}
+    resolved_tokens = []
+    for i, token in enumerate(sql_tokens):
+        if i > 2:
+            table_name = sql_tokens[i - 2]
+            if token == "ID" and table_name in primary_keys_for_tables.keys():
+                token = primary_keys_for_tables[table_name]
+        resolved_tokens.append(token)
+    return resolved_tokens
+
 def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
 
     unneeded_aliases = {}
@@ -107,7 +130,7 @@ def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
 
     return dealiased_tokens
 
-def read_dataset_schema(schema_path: str) -> Dict[str, List[Tuple[str, str]]]:
+def read_dataset_schema(schema_path: str) -> Dict[str, List[TableColumn]]:
     """
     Reads a schema from the text2sql data, returning a dictionary
     mapping table names to their columns and respective types.
@@ -124,7 +147,7 @@ def read_dataset_schema(schema_path: str) -> Dict[str, List[Tuple[str, str]]]:
     -------
     A dictionary mapping table names to typed columns.
     """
-    schema: Dict[str, List[Tuple[str, str]]] = defaultdict(list)
+    schema: Dict[str, List[TableColumn]] = defaultdict(list)
     for i, line in enumerate(open(schema_path, "r")):
         if i == 0:
             header = [x.strip() for x in line.split(",")]
@@ -135,7 +158,8 @@ def read_dataset_schema(schema_path: str) -> Dict[str, List[Tuple[str, str]]]:
 
             table = data.get("Table Name", None) or data.get("Table")
             column = data.get("Field Name", None) or data.get("Field")
-            schema[table].append((column, data["Type"]))
+            is_primary_key = data.get("Primary Key") == "y"
+            schema[table].append(TableColumn(column, data["Type"], is_primary_key))
 
     return {**schema}
 
@@ -143,7 +167,8 @@ def read_dataset_schema(schema_path: str) -> Dict[str, List[Tuple[str, str]]]:
 def process_sql_data(data: List[JsonDict],
                      use_all_sql: bool = False,
                      use_all_queries: bool = False,
-                     remove_unneeded_aliases: bool = False) -> Iterable[SqlData]:
+                     remove_unneeded_aliases: bool = False,
+                     schema: Dict[str, List[TableColumn]] = None) -> Iterable[SqlData]:
     """
     A utility function for reading in text2sql data. The blob is
     the result of loading the json from a file produced by the script
@@ -168,6 +193,10 @@ def process_sql_data(data: List[JsonDict],
         much harder in a grammar based decoder. Note that this does not
         remove aliases which are legitimately required, such as when a new
         table is formed by performing operations on the original table.
+    schema : ``Dict[str, List[TableColumn]]``, optional, (default = None)
+        A schema to resolve primary keys against. Converts 'ID' column names
+        to their actual name with respect to the Primary Key for the table
+        in the schema.
     """
     for example in data:
         seen_sentences: Set[str] = set()
@@ -188,6 +217,8 @@ def process_sql_data(data: List[JsonDict],
                 sql_tokens = clean_and_split_sql(sql)
                 if remove_unneeded_aliases:
                     sql_tokens = clean_unneeded_aliases(sql_tokens)
+                if schema is not None:
+                    sql_tokens = resolve_primary_keys_in_schema(sql_tokens, schema)
 
                 sql_variables = {}
                 for variable in example['variables']:
