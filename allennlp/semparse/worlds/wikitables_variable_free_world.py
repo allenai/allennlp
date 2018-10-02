@@ -73,12 +73,13 @@ class WikiTablesVariableFreeWorld(World):
         # specified.
         self._map_name(f"num:-1", keep_mapping=True)
 
+        # Keeps track of column name productions so that we can add them to the agenda.
+        self._column_productions_for_agenda: Dict[str, str] = {}
+
         # Adding column names to the local name mapping.
         for column_name, column_type in table_context.column_types.items():
             self._map_name(f"{column_type}_column:{column_name}", keep_mapping=True)
 
-
-        # TODO (pradeep): Update agenda definition and rethink this field.
         self.global_terminal_productions: Dict[str, str] = {}
         for predicate, mapped_name in self.global_name_mapping.items():
             if mapped_name in self.global_type_signatures:
@@ -110,11 +111,13 @@ class WikiTablesVariableFreeWorld(World):
                 translated_name = "C%d" % self._column_counter
                 self._column_counter += 1
                 if name.startswith("number_column:"):
-                    self._add_name_mapping(name, translated_name, types.NUMBER_COLUMN_TYPE)
+                    column_type = types.NUMBER_COLUMN_TYPE
                 elif name.startswith("string_column:"):
-                    self._add_name_mapping(name, translated_name, types.STRING_COLUMN_TYPE)
+                    column_type = types.STRING_COLUMN_TYPE
                 else:
-                    self._add_name_mapping(name, translated_name, types.DATE_COLUMN_TYPE)
+                    column_type = types.DATE_COLUMN_TYPE
+                self._add_name_mapping(name, translated_name, column_type)
+                self._column_productions_for_agenda[name] = f"{column_type} -> {name}"
             elif name.startswith("string:"):
                 # We do not need to translate these names.
                 original_name = name.replace("string:", "")
@@ -182,9 +185,11 @@ class WikiTablesVariableFreeWorld(World):
             agenda.append(f"{types.STRING_TYPE} -> {entity}")
         for number in self._question_numbers:
             agenda.append(f"{types.NUMBER_TYPE} -> {number}")
-        # TODO(pradeep): Also add mapping to column names. May be enumerate over column productions
-        # and check if terminals are in the question.
 
+        question_with_underscores = "_".join(question_tokens)
+        for column_name, signature in self._column_productions_for_agenda.items():
+            if column_name in question_with_underscores:
+                agenda.append(signature)
         return agenda
 
     def execute(self, logical_form: str) -> Union[List[str], int]:

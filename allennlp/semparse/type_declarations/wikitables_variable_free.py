@@ -17,7 +17,7 @@ from allennlp.semparse.type_declarations.type_declaration import (Type, NamedBas
 ROW_TYPE = NamedBasicType("ROW")
 # The following three type signatures are assigned such that they're easy to understand from the
 # first letters, while being different from the cell types.
-DATE_COLUMN_TYPE = NamedBasicType("YCOLUMN")  # Y for year
+DATE_COLUMN_TYPE = NamedBasicType("MCOLUMN")  # M for month
 NUMBER_COLUMN_TYPE = NamedBasicType("FCOLUMN")  # F for float
 STRING_COLUMN_TYPE = NamedBasicType("TCOLUMN")  # T for token
 GENERIC_COLUMN_TYPE = MultiMatchNamedBasicType("GCOLUMN", [STRING_COLUMN_TYPE, DATE_COLUMN_TYPE,
@@ -107,7 +107,7 @@ add_common_name_with_type("filter_number_lesser_equals", "F13", ROW_FILTER_WITH_
 add_common_name_with_type("filter_number_equals", "F14", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
 add_common_name_with_type("filter_number_not_equals", "F15", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
 
-# <r,<y,<d,r>>>
+# <r,<m,<d,r>>>
 add_common_name_with_type("filter_date_greater", "F20", ROW_FILTER_WITH_COLUMN_AND_DATE)
 add_common_name_with_type("filter_date_greater_equals", "F21", ROW_FILTER_WITH_COLUMN_AND_DATE)
 add_common_name_with_type("filter_date_lesser", "F22", ROW_FILTER_WITH_COLUMN_AND_DATE)
