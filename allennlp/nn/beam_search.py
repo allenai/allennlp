@@ -26,8 +26,8 @@ class BeamSearch:
         The maximum number of candidates to consider per node, at each step in the search.
         If not given, this just defaults to ``beam_size``. Setting this parameter
         to a number smaller than ``beam_size`` may give better results, as it can introduce
-        more diversity into the search. See Freitag and Al-Onaizan 2017,
-        "Beam Search Strategies for Neural Machine Translation".
+        more diversity into the search. See `Freitag and Al-Onaizan 2017,
+        "Beam Search Strategies for Neural Machine Translation" <http://arxiv.org/abs/1702.01806>`_.
     """
 
     def __init__(self,
@@ -46,7 +46,8 @@ class BeamSearch:
                step: StepFunctionType,
                first_step: StepFunctionType = None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Use beam search decoding to find the highest probability target sequences.
+        Given a starting state and a step function, apply beam search to find the
+        most likely target sequences.
 
         Parameters
         ----------
@@ -56,7 +57,7 @@ class BeamSearch:
             in the target vocabulary.
         start_state : ``StateType``
             The initial state passed to the ``first_step`` function. Each value of the state dict
-            should be a tensor of shape ``(batch_size, *)``, where `*` means any other
+            should be a tensor of shape ``(batch_size, *)``, where ``*`` means any other
             number of dimensions.
         step : ``StepFunctionType``
             A function that is responsible for computing the next most likely tokens,
@@ -70,7 +71,7 @@ class BeamSearch:
             is a tensor of shape ``(group_size, target_vocab_size)`` containing
             the log probabilities of the tokens for the next step, and the second
             element is the updated state. The tensor in the state should have shape
-            ``(group_size, *)``, where `*` means any other number of dimensions.
+            ``(group_size, *)``, where ``*`` means any other number of dimensions.
         first_step : ``StepFunctionType``, optional
             If the first step of decoding should be handled differently, then you can
             set this function which will only be used during the first step. If not set,
@@ -79,7 +80,7 @@ class BeamSearch:
 
         Returns
         -------
-        `Tuple[torch.Tensor, torch.Tensor]`
+        Tuple[torch.Tensor, torch.Tensor]
             Tuple of ``(predictions, log_probabilities)``, where ``predictions``
             has shape ``(batch_size, beam_size, max_steps)`` and ``log_probabilities``
             has shape ``(batch_size, beam_size)``.

@@ -51,8 +51,8 @@ class SimpleSeq2Seq(Model):
         the predictions from the previous time step for the whole batch. If this value is 0.0
         (default), this corresponds to teacher forcing, and if it is 1.0, it corresponds to not
         using target side ground truth labels.  See the following paper for more information:
-        Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks. Bengio et al.,
-        2015.
+        `Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks. Bengio et al.,
+        2015 <https://arxiv.org/abs/1506.03099>`_.
     """
 
     def __init__(self,
@@ -133,7 +133,7 @@ class SimpleSeq2Seq(Model):
 
         Returns
         -------
-        ``Dict[str, torch.Tensor]``
+        Dict[str, torch.Tensor]
         """
         embedded_input = self._source_embedder(source_tokens)
         # shape: (batch_size, max_input_sequence_length, encoder_input_dim)
@@ -294,7 +294,36 @@ class SimpleSeq2Seq(Model):
     def take_step(self,
                   last_predictions: torch.Tensor,
                   state: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
-        """Take a decoding step. This is called by the beam search class."""
+        """
+        Take a decoding step. This is called by the beam search class.
+
+        Parameters
+        ----------
+        last_predictions : ``torch.Tensor``
+            A tensor of shape ``(group_size,)``, which gives the indices of the predictions
+            during the last time step.
+        state : ``Dict[str, torch.Tensor]``
+            A dictionary of tensors that contain the current state information
+            needed to predict the next step, which includes the encoder outputs,
+            the source mask, and the decoder hidden state and context. Each of these
+            tensors has shape ``(group_size, *)``, where ``*`` can be any other number
+            of dimensions.
+
+        Returns
+        -------
+        Tuple[torch.Tensor, Dict[str, torch.Tensor]]
+            A tuple of ``(log_probabilities, updated_state)``, where ``log_probabilities``
+            is a tensor of shape ``(group_size, num_classes)`` containing the predicted
+            log probability of each class for the next step, for each item in the group,
+            while ``updated_state`` is a dictionary of tensors containing the encoder outputs,
+            source mask, and updated decoder hidden state and context.
+
+        Notes
+        -----
+            We treat the inputs as a batch, even though ``group_size`` is not necessarily
+            equal to ``batch_size``, since the group may contain multiple states
+            for each source sentence in the batch.
+        """
         encoder_outputs = state["encoder_outputs"]
         # shape: (group_size, max_input_sequence_length, encoder_output_dim)
 
@@ -351,7 +380,7 @@ class SimpleSeq2Seq(Model):
 
         Returns
         -------
-        ``torch.Tensor``, (batch_size, encoder_output_dim)
+        torch.Tensor, (batch_size, encoder_output_dim)
         """
         # Ensure mask is also a FloatTensor. Or else the multiplication within
         # attention will complain.
