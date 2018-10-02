@@ -3,8 +3,10 @@
 from typing import Dict, Tuple
 
 import numpy as np
+import pytest
 import torch
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.beam_search import BeamSearch
 
@@ -70,12 +72,10 @@ class BeamSearchTest(AllenNlpTestCase):
 
         # top_k should be shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(top_k.size())[:-1] == [batch_size, beam_size]
+        np.testing.assert_array_equal(top_k[0].numpy(), expected_top_k)
 
         # log_probs should be shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(log_probs.size()) == [batch_size, beam_size]
-
-        np.testing.assert_array_equal(top_k[0].numpy(), expected_top_k)
-
         np.testing.assert_allclose(log_probs[0].numpy(), expected_log_probs)
 
     def test_search(self):
@@ -93,6 +93,9 @@ class BeamSearchTest(AllenNlpTestCase):
                             beam_search=beam_search)
 
     def test_early_stopping(self):
+        """
+        Checks case where beam search will reach `max_steps` before finding end tokens.
+        """
         beam_search = BeamSearch(self.end_index, beam_size=3, max_steps=3)
         expected_top_k = np.array(
                 [[1, 2, 3],
@@ -112,3 +115,13 @@ class BeamSearchTest(AllenNlpTestCase):
         # per_node_beam_size = 2
         beam_search = BeamSearch(self.end_index, beam_size=3, per_node_beam_size=2)
         self._check_results(beam_search=beam_search)
+
+    def test_catch_bad_config(self):
+        """
+        If `per_node_beam_size` (which defaults to `beam_size`) is larger than
+        the size of the target vocabulary, `BeamSearch.search` should raise
+        a ConfigurationError.
+        """
+        beam_search = BeamSearch(self.end_index, beam_size=20)
+        with pytest.raises(ConfigurationError):
+            self._check_results(beam_search=beam_search)
