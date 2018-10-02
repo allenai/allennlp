@@ -18,7 +18,7 @@ class TestTableQuestionContext(AllenNlpTestCase):
         test_file = f'{self.FIXTURES_ROOT}/data/corenlp_processed_tables/TEST-7.table'
         table_question_context = TableQuestionContext.read_from_file(test_file, question_tokens)
         _, number_entities = table_question_context.get_entities_from_question()
-        assert number_entities == [("191617", "191617"), ("100", "100")]
+        assert number_entities == [("191617", 5), ("100", 16)]
 
     def test_date_extraction(self):
         question = "how many laps did matt kenset complete on february 26, 2006."
@@ -26,7 +26,7 @@ class TestTableQuestionContext(AllenNlpTestCase):
         test_file = f'{self.FIXTURES_ROOT}/data/corenlp_processed_tables/TEST-8.table'
         table_question_context = TableQuestionContext.read_from_file(test_file, question_tokens)
         _, number_entities = table_question_context.get_entities_from_question()
-        assert number_entities == [("2", "february"), ("26", "26"), ("2006", "2006")]
+        assert number_entities == [("2", 8), ("26", 9), ("2006", 11)]
 
     def test_date_extraction_2(self):
         question = """how many different players scored for the san jose earthquakes during their
@@ -35,7 +35,7 @@ class TestTableQuestionContext(AllenNlpTestCase):
         test_file = f'{self.FIXTURES_ROOT}/data/corenlp_processed_tables/TEST-6.table'
         table_question_context = TableQuestionContext.read_from_file(test_file, question_tokens)
         _, number_entities = table_question_context.get_entities_from_question()
-        assert number_entities[0] == ("1979", "1979")
+        assert number_entities == [("1979", 12)]
 
     def test_multiword_entity_extraction(self):
         question = "was the positioning better the year of the france venue or the year of the south korea venue?"
@@ -51,7 +51,7 @@ class TestTableQuestionContext(AllenNlpTestCase):
         test_file = f'{self.FIXTURES_ROOT}/data/corenlp_processed_tables/TEST-1.table'
         table_question_context = TableQuestionContext.read_from_file(test_file, question_tokens)
         _, numbers = table_question_context.get_entities_from_question()
-        assert numbers[0] == ("1", "first")
+        assert numbers == [("1", 3), ('1943', 9)]
 
     def test_null_extraction(self):
         question = "on what date did the eagles score the least points?"
@@ -59,6 +59,7 @@ class TestTableQuestionContext(AllenNlpTestCase):
         test_file = f'{self.FIXTURES_ROOT}/data/corenlp_processed_tables/TEST-2.table'
         table_question_context = TableQuestionContext.read_from_file(test_file, question_tokens)
         entities, numbers = table_question_context.get_entities_from_question()
+        # "Eagles" does not appear in the table.
         assert entities == []
         assert numbers == []
 

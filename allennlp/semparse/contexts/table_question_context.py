@@ -80,7 +80,6 @@ class TableQuestionContext:
     https://github.com/crazydonkey200/neural-symbolic-machines/blob/master/table/wtq/preprocess.py
     for extracting entities from a question given a table and type its columns with <string> | <date> | <number>
     """
-    # TODO(shikhar/pradeep): Fix variable names
     def __init__(self,
                  cell_values: Set[str],
                  column_type_statistics: List[Dict[str, int]],
@@ -104,9 +103,9 @@ class TableQuestionContext:
         index = 1
         while lines[index][0] == '-1':
             # column names start with fb:row.row.
-            curr_line = lines[index]
-            column_name_sempre = curr_line[2]
-            column_index = int(curr_line[1])
+            current_line = lines[index]
+            column_name_sempre = current_line[2]
+            column_index = int(current_line[1])
             column_name = column_name_sempre.replace('fb:row.row.', '')
             column_index_to_name[column_index] = column_name
             index += 1
@@ -153,8 +152,8 @@ class TableQuestionContext:
         extracted_numbers = self._get_numbers_from_tokens(self.question_tokens)
         # filter out number entities to avoid repitition
         if extracted_numbers:
-            _, number_token_text = list(zip(*extracted_numbers))
-            number_token_text = list(number_token_text)
+            _, number_token_indices = list(zip(*extracted_numbers))
+            number_token_text = [self.question_tokens[i].text for i in number_token_indices]
             expanded_string_entities = []
             for ent in entity_data:
                 if ent['value'] not in number_token_text:
@@ -168,7 +167,7 @@ class TableQuestionContext:
 
 
     @staticmethod
-    def _get_numbers_from_tokens(tokens: List[Token]) -> List[Tuple[str, str]]:
+    def _get_numbers_from_tokens(tokens: List[Token]) -> List[Tuple[str, int]]:
         """
         Finds numbers in the input tokens and returns them as strings.  We do some simple heuristic
         number recognition, finding ordinals and cardinals expressed as text ("one", "first",
@@ -178,7 +177,7 @@ class TableQuestionContext:
         We also handle year ranges expressed as decade or centuries ("1800s" or "1950s"), adding
         the endpoints of the range as possible numbers to generate.
 
-        We return a list of tuples, where each tuple is the (number_string, token_text) for a
+        We return a list of tuples, where each tuple is the (number_string, token_index) for a
         number found in the input tokens.
         """
         numbers = []
@@ -219,7 +218,7 @@ class TableQuestionContext:
                     number_string = '%.3f' % number
                 else:
                     number_string = '%d' % number
-                numbers.append((number_string, token_text))
+                numbers.append((number_string, i))
                 if is_range:
                     # TODO(mattg): both numbers in the range will have the same text, and so the
                     # linking score won't have any way to differentiate them...  We should figure
@@ -227,7 +226,7 @@ class TableQuestionContext:
                     num_zeros = 1
                     while text[-(num_zeros + 1)] == '0':
                         num_zeros += 1
-                    numbers.append((str(int(number + 10 ** num_zeros)), token_text))
+                    numbers.append((str(int(number + 10 ** num_zeros)), i))
         return numbers
 
     def _string_in_table(self, candidate: str) -> bool:
@@ -240,10 +239,10 @@ class TableQuestionContext:
         raise NotImplementedError
 
     def _expand_entities(self, question, entity_data):
-        new_ents = []
+        new_entities = []
         for entity in entity_data:
             # to ensure the same strings are not used over and over
-            if new_ents and entity['token_end'] <= new_ents[-1]['token_end']:
+            if new_entities and entity['token_end'] <= new_entities[-1]['token_end']:
                 continue
             current_start = entity['token_start']
             current_end = entity['token_end']
@@ -262,8 +261,10 @@ class TableQuestionContext:
                 else:
                     break
 
-            new_ents.append({'token_start' : current_start, 'token_end' : current_end, 'value' : current_token})
-        return new_ents
+            new_entities.append({'token_start' : current_start,
+                                 'token_end' : current_end,
+                                 'value' : current_token})
+        return new_entities
 
     @staticmethod
     def _normalize_string(string: str) -> str:
