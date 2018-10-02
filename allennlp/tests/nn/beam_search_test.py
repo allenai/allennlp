@@ -103,3 +103,12 @@ class BeamSearchTest(AllenNlpTestCase):
         self._check_results(expected_top_k=expected_top_k,
                             expected_log_probs=expected_log_probs,
                             beam_search=beam_search)
+
+    def test_different_per_node_beam_size(self):
+        # per_node_beam_size = 1
+        beam_search = BeamSearch(self.end_index, beam_size=3, per_node_beam_size=1)
+        self._check_results(beam_search=beam_search)
+
+        # per_node_beam_size = 2
+        beam_search = BeamSearch(self.end_index, beam_size=3, per_node_beam_size=2)
+        self._check_results(beam_search=beam_search)
