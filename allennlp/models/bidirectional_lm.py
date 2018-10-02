@@ -39,6 +39,19 @@ class BidirectionalLanguageModel(Model):
         self._loss_scale_fac = loss_scale_fac
         self._remove_bos_eos = remove_bos_eos
 
+    def _get_target_token_embedding(self,
+                                    token_embeddings: torch.Tensor,
+                                    mask: torch.Tensor,
+                                    direction: int) -> torch.Tensor:
+        # Need to shift the mask in the correct direction
+        zero_col = token_embeddings.new_zeros(mask.size(0), 1).byte()
+        if direction == 0:
+            # forward direction, get token to right
+            shifted_mask = torch.cat([zero_col, mask[:, 0:-1]], dim=1)
+        else:
+            shifted_mask = torch.cat([mask[:, 1:], zero_col], dim=1)
+        return token_embeddings.masked_select(shifted_mask.unsqueeze(-1)).view(-1, self._forward_dim)
+
     def _compute_loss(self,
                       lm_embeddings: torch.Tensor,
                       token_embeddings: torch.Tensor,
@@ -86,11 +99,11 @@ class BidirectionalLanguageModel(Model):
 
         Returns:
             {'loss': averaged forward/backward negative log likelihood,
-            'forward_loss': forward loss,
-            'backward_loss': backward_loss,
-            'lm_embeddings': (batch_size, timesteps, embed_dim) with the top
+             'forward_loss': forward loss,
+             'backward_loss': backward_loss,
+             'lm_embeddings': (batch_size, timesteps, embed_dim) with the top
                 layer contextual representations,
-            'n_samples': number of non-masked target tokens in the batch
+             'n_samples': number of non-masked target tokens in the batch
             }
         """
         # pylint: disable=arguments-differ

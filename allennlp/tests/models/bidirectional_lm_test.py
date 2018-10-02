@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import ModelTestCase
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.iterators import BasicIterator
@@ -14,11 +14,12 @@ from allennlp.modules.softmax import Softmax
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
 from allennlp.modules.token_embedders.cnn_highway_encoder import CnnHighwayEncoder
 from allennlp.nn.util import get_text_field_mask
+from allennlp.training import Trainer
 
 BOS_TOKEN = "<s>"
 EOS_TOKEN = "</s>"
 
-class TestBidirectionalLM(AllenNlpTestCase):
+class TestBidirectionalLM(ModelTestCase):
     def setUp(self):
         super().setUp()
 
@@ -39,8 +40,6 @@ class TestBidirectionalLM(AllenNlpTestCase):
         }
 
         self.vocab = Vocabulary.from_instances(self.instances, tokens_to_add=tokens_to_add)
-
-
 
     def test_lm_can_run(self):
         encoder = CnnHighwayEncoder(
@@ -87,6 +86,8 @@ class TestBidirectionalLM(AllenNlpTestCase):
             result = model(**batch)
 
             assert set(result) == {"loss", "forward_loss", "backward_loss", "lm_embeddings"}
+
+            # The model should have removed the BOS / EOS tokens.
             embeddings = result["lm_embeddings"]
             assert tuple(embeddings.shape) == (2, 6, 14)
 
@@ -95,3 +96,15 @@ class TestBidirectionalLM(AllenNlpTestCase):
             backward_loss = result["backward_loss"].item()
 
             np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2)
+
+        # Try training it
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+
+        trainer = Trainer(model=model,
+                          optimizer=optimizer,
+                          iterator=iterator,
+                          train_dataset=self.instances,
+                          num_epochs=1000)
+
+        trainer.train()
+        assert False
