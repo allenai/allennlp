@@ -4,6 +4,7 @@ import os
 import pathlib
 import shutil
 import subprocess
+import requests
 
 from allennlp.common.file_utils import cached_path
 
@@ -76,16 +77,12 @@ class WikiTablesSempreExecutor:
             r = requests.get(ABBREVIATIONS_FILE)  
             with open(abbreviations_path, 'wb') as f:
                 f.write(r.content)
-            # subprocess.run(f'wget {ABBREVIATIONS_FILE}', shell=True)
-            # subprocess.run(f'mv wikitables-abbreviations.tsv {abbreviations_path}', shell=True)
 
         grammar_path = os.path.join(SEMPRE_DIR, 'grow.grammar')
         if not os.path.exists(grammar_path):
             r = requests.get(GROW_FILE)  
             with open(grammar_path, 'wb') as f:
                 f.write(r.content)
-            # subprocess.run(f'wget {GROW_FILE}', shell=True)
-            # subprocess.run(f'mv wikitables-grow.grammar {grammar_path}', shell=True)
 
         args = ['java', '-jar', cached_path(SEMPRE_EXECUTOR_JAR), 'serve', self._table_directory]
         self._executor_process = subprocess.Popen(args,

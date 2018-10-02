@@ -43,16 +43,11 @@ class WikiTablesParserPredictor(Predictor):
             with open(abbreviations_path, 'wb') as f:
                 f.write(r.content)
 
-            # run(f'wget {ABBREVIATIONS_FILE}', shell=True)
-            # run(f'mv wikitables-abbreviations.tsv {abbreviations_path}', shell=True)
-
         grammar_path = os.path.join(SEMPRE_DIR, 'grow.grammar')
         if not os.path.exists(grammar_path):
             r = requests.get(GROW_FILE)  
             with open(grammar_path, 'wb') as f:
                 f.write(r.content)
-            # run(f'wget {GROW_FILE}', shell=True)
-            # run(f'mv wikitables-grow.grammar {grammar_path}', shell=True)
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
