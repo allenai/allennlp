@@ -7,12 +7,23 @@ import argparse
 
 import os
 import shutil
+import subprocess
+from subprocess import check_output
 from subprocess import run
 from subprocess import CalledProcessError
 import sys
 
+def check_for_java() -> bool:
+    java_version = subprocess.check_output(['java', '-version'], stderr=subprocess.STDOUT)
+    if 'version' in java_version.decode():
+        return True
+    else:
+        raise RuntimeError('Java is not installed.')
+
 def main(checks):
     try:
+        check_for_java()
+
         print("Verifying with " + str(checks))
         if "pytest" in checks:
             print("Tests (pytest):", flush=True)
