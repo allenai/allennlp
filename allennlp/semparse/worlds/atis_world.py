@@ -8,7 +8,7 @@ from parsimonious.expressions import Expression, OneOf, Sequence, Literal
 
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
 from allennlp.semparse.contexts.atis_sql_table_context import AtisSqlTableContext, KEYWORDS
-from allennlp.semparse.contexts.sql_context_utils import SqlVisitor, format_action
+from allennlp.semparse.contexts.sql_context_utils import SqlVisitor, format_action, intialize_valid_actions
 
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
@@ -53,26 +53,28 @@ class AtisWorld():
     """
 
     database_file = "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
-    sql_table_context = AtisSqlTableContext(ALL_TABLES,
-                                            TABLES_WITH_STRINGS,
-                                            database_file)
+    sql_table_context = None
 
     def __init__(self,
                  utterances: List[str],
                  tokenizer: Tokenizer = None) -> None:
-
+        if AtisWorld.sql_table_context is None:
+            AtisWorld.sql_table_context = AtisSqlTableContext(ALL_TABLES,
+                                                              TABLES_WITH_STRINGS,
+                                                              AtisWorld.database_file)
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]
         self.linked_entities = self._get_linked_entities()
         self.dates = self._get_dates()
 
-        self.valid_actions: Dict[str, List[str]] = self._update_valid_actions()
+        # self.valid_actions: Dict[str, List[str]] = self._update_valid_actions()
+        self.valid_actions = sql_context_utils.
         entities, linking_scores = self._flatten_entities()
         # This has shape (num_entities, num_utterance_tokens).
         self.linking_scores: numpy.ndarray = linking_scores
         self.entities: List[str] = entities
-        self.grammar = self.update_grammar()
+        self.grammar: Grammar = self.update_grammar()
 
     def update_grammar(self):
         """
@@ -80,12 +82,51 @@ class AtisWorld():
         has the new entities that are extracted from the utterance. Stitching together the expressions
         to form the grammar is a little tedious here, but it is worth it because we don't have to create
         a new grammar from scratch. Creating a new grammar is expensive because we have many production
-        rules that have all database values in the column on the right hand side.
+        rules that have all database values in the column on the right hand side. We update the expressions
+        bottom up, since the higher level expressions may refer to the lower level ones. For example, the
+        ternary expression will refer to the start and end times. 
         """
 
         # This will give us a shallow copy, but that's OK because everything
         # inside is immutable so we get a new copy of it.
         new_grammar = AtisWorld.sql_table_context.grammar._copy()
+
+        numbers = self._get_numeric_database_values('number')
+        number_literals = [Literal(number) for number in numbers]
+        new_grammar['number'] = OneOf(*number_literals, name='number')
+        self._update_expression_reference(new_grammar, 'pos_value', 'number')
+
+        time_range_start = self._get_numeric_database_values('time_range_start')
+        time_range_start_literals = [Literal(time) for time in time_range_start]
+        new_grammar['time_range_start'] = OneOf(*time_range_start_literals, name='time_range_start')
+
+        time_range_end = self._get_numeric_database_values('time_range_end')
+        time_range_end_literals = [Literal(time) for time in time_range_end]
+        new_grammar['time_range_end'] = OneOf(*time_range_end_literals, name='time_range_end')
+
+        ternary_expressions = [self._get_sequence_with_spacing(new_grammar,
+                                                               [new_grammar['col_ref'],
+                                                                Literal('BETWEEN'),
+                                                                new_grammar['time_range_start'],
+                                                                Literal(f'AND'),
+                                                                new_grammar['time_range_end']]),
+                               self._get_sequence_with_spacing(new_grammar,
+                                                               [new_grammar['col_ref'],
+                                                                Literal('NOT'),
+                                                                Literal('BETWEEN'),
+                                                                new_grammar['time_range_start'],
+                                                                Literal(f'AND'),
+                                                                new_grammar['time_range_end']]),
+                               self._get_sequence_with_spacing(new_grammar,
+                                                               [new_grammar['col_ref'],
+                                                                Literal('not'),
+                                                                Literal('BETWEEN'),
+                                                                new_grammar['time_range_start'],
+                                                                Literal(f'AND'),
+                                                                new_grammar['time_range_end']])]
+
+        new_grammar['ternaryexpr'] = OneOf(*ternary_expressions, name='ternaryexpr')
+        self._update_expression_reference(new_grammar, 'condition', 'ternaryexpr')
 
         if self.dates:
             new_binary_expressions = []
@@ -96,7 +137,6 @@ class AtisWorld():
                                                                       new_grammar['binaryop'],
                                                                       Literal(f'{self.dates[0].year}')])
             new_binary_expressions.append(year_binary_expression)
-
             for date in self.dates:
                 month_binary_expression = self._get_sequence_with_spacing(new_grammar,
                                                                           [Literal('date_day'),
@@ -115,56 +155,37 @@ class AtisWorld():
                                                day_binary_expression])
 
             new_grammar['biexpr'].members = new_grammar['biexpr'].members + tuple(new_binary_expressions)
-
-        numbers = sorted([value[1] for key, value in self.linked_entities['number'].items()
-                          if value[0] == 'number'], reverse=True)
-        number_literals = [Literal(number) for number in numbers]
-        new_grammar['number'] = OneOf(*number_literals, name='number')
-        new_grammar['pos_value'].members = [member if member.name != 'number' else new_grammar['number']
-                                            for member in new_grammar['pos_value'].members]
-
-
-        time_range_start = sorted([value[1] for key, value in self.linked_entities['number'].items()
-                                   if value[0] == 'time_range_start'], reverse=True)
-        time_range_start_literals = [Literal(time) for time in time_range_start]
-        new_grammar['time_range_start'] = OneOf(*time_range_start_literals, name='time_range_start')
-
-        time_range_end = sorted([value[1] for key, value in self.linked_entities['number'].items()
-                                   if value[0] == 'time_range_end'], reverse=True)
-        time_range_end_literals = [Literal(time) for time in time_range_end]
-        new_grammar['time_range_end'] = OneOf(*time_range_end_literals, name='time_range_end')
-
-        ternary_expressions = [self._get_sequence_with_spacing(new_grammar,
-                                                               [new_grammar['col_ref'],
-                                                                Literal('BETWEEN'),
-                                                                new_grammar['time_range_start'],
-                                                                Literal(f'AND'),
-                                                                new_grammar['time_range_end']]),
-                               self._get_sequence_with_spacing(new_grammar,
-                                                              [new_grammar['col_ref'],
-                                                               Literal('NOT'),
-                                                               Literal('BETWEEN'),
-                                                               new_grammar['time_range_start'],
-                                                               Literal(f'AND'),
-                                                               new_grammar['time_range_end']]),
-                               self._get_sequence_with_spacing(new_grammar,
-                                                              [new_grammar['col_ref'],
-                                                               Literal('not'),
-                                                               Literal('BETWEEN'),
-                                                               new_grammar['time_range_start'],
-                                                               Literal(f'AND'),
-                                                               new_grammar['time_range_end']])]
-                              
-        new_grammar['ternaryexpr'] = OneOf(*ternary_expressions, name='ternaryexpr')
-        new_grammar['condition'].members = [member if member.name != 'ternaryexpr' else new_grammar['ternaryexpr']
-                                            for member in new_grammar['condition'].members]
         return new_grammar
+
+    def _get_numeric_database_values(self,
+                                     nonterminal: str) -> List[str]:
+        return sorted([value[1] for key, value in self.linked_entities['number'].items()
+                       if value[0] == nonterminal], reverse=True)
+
+    def _update_expression_reference(self,
+                                     grammar: Grammar,
+                                     parent_expression_nonterminal: str,
+                                     child_expression_nonterminal: str) -> None:
+        """
+        When we add a new expression, there may be other expressions that refer to
+        it, and we need to update those to point to the new expression.
+        """
+        grammar[parent_expression_nonterminal].members = \
+                [member if member.name != child_expression_nonterminal 
+                 else grammar[child_expression_nonterminal]
+                 for member in grammar[parent_expression_nonterminal].members]
 
     def _get_sequence_with_spacing(self,
                                    new_grammar,
                                    expressions: List[Expression],
                                    name: str = '') -> Sequence:
-        expressions = [subexpression for expression in expressions for subexpression in (expression, new_grammar['ws'])]
+        """
+        This is a helper method for generating sequences, since we often want a list of expressions
+        with whitespaces between them.
+        """
+        expressions = [subexpression
+                       for expression in expressions
+                       for subexpression in (expression, new_grammar['ws'])]
         return Sequence(*expressions, name=name)
 
     def get_valid_actions(self) -> Dict[str, List[str]]:
@@ -323,6 +344,5 @@ class AtisWorld():
         if isinstance(self, other.__class__):
             return all([self.valid_actions == other.valid_actions,
                         numpy.array_equal(self.linking_scores, other.linking_scores),
-                        self.utterances == other.utterances,
-                        self.grammar_string == other.grammar_string])
+                        self.utterances == other.utterances])
         return False
