@@ -13,12 +13,12 @@ class SimpleSeq2SeqTest(ModelTestCase):
                           self.FIXTURES_ROOT / "data" / "seq2seq_copy.tsv")
 
     def test_model_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.param_file)
+        self.ensure_model_can_train_save_and_load(self.param_file, tolerance=1e-2)
 
     def test_bidirectional_model_can_train_save_and_load(self):
         param_file = self.FIXTURES_ROOT / "encoder_decoder" / \
                      "simple_seq2seq" / "experiment_bidirectional.json"
-        self.ensure_model_can_train_save_and_load(param_file)
+        self.ensure_model_can_train_save_and_load(param_file, tolerance=1e-2)
 
     def test_loss_is_computed_correctly(self):
         batch_size = 5
