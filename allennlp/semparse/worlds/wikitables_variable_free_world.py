@@ -101,38 +101,42 @@ class WikiTablesVariableFreeWorld(World):
     def get_valid_starting_types(self) -> Set[Type]:
         return types.STARTING_TYPES
 
+    def _translate_name_and_add_mapping(self, name: str) -> str:
+        if "_column:" in name:
+            # Column name
+            translated_name = "C%d" % self._column_counter
+            self._column_counter += 1
+            if name.startswith("number_column:"):
+                column_type = types.NUMBER_COLUMN_TYPE
+            elif name.startswith("string_column:"):
+                column_type = types.STRING_COLUMN_TYPE
+            else:
+                column_type = types.DATE_COLUMN_TYPE
+            self._add_name_mapping(name, translated_name, column_type)
+            self._column_productions_for_agenda[name] = f"{column_type} -> {name}"
+        elif name.startswith("string:"):
+            # We do not need to translate these names.
+            original_name = name.replace("string:", "")
+            translated_name = name
+            self._add_name_mapping(original_name, translated_name, types.STRING_TYPE)
+        elif name.startswith("num:"):
+            # NLTK throws an error if it sees a "." in constants, which will most likely happen
+            # within numbers as a decimal point. We're changing those to underscores.
+            translated_name = name.replace(".", "_")
+            if re.match("num:-[0-9_]+", translated_name):
+                # The string is a negative number. This makes NLTK interpret this as a negated
+                # expression and force its type to be TRUTH_VALUE (t).
+                translated_name = translated_name.replace("-", "~")
+            original_name = name.replace("num:", "")
+            self._add_name_mapping(original_name, translated_name, types.NUMBER_TYPE)
+        return translated_name
+
     @overrides
     def _map_name(self, name: str, keep_mapping: bool = False) -> str:
         if name not in types.COMMON_NAME_MAPPING and name not in self.local_name_mapping:
             if not keep_mapping:
                 raise ParsingError(f"Encountered un-mapped name: {name}")
-            if "_column:" in name:
-                # Column name
-                translated_name = "C%d" % self._column_counter
-                self._column_counter += 1
-                if name.startswith("number_column:"):
-                    column_type = types.NUMBER_COLUMN_TYPE
-                elif name.startswith("string_column:"):
-                    column_type = types.STRING_COLUMN_TYPE
-                else:
-                    column_type = types.DATE_COLUMN_TYPE
-                self._add_name_mapping(name, translated_name, column_type)
-                self._column_productions_for_agenda[name] = f"{column_type} -> {name}"
-            elif name.startswith("string:"):
-                # We do not need to translate these names.
-                original_name = name.replace("string:", "")
-                translated_name = name
-                self._add_name_mapping(original_name, translated_name, types.STRING_TYPE)
-            elif name.startswith("num:"):
-                # NLTK throws an error if it sees a "." in constants, which will most likely happen
-                # within numbers as a decimal point. We're changing those to underscores.
-                translated_name = name.replace(".", "_")
-                if re.match("num:-[0-9_]+", translated_name):
-                    # The string is a negative number. This makes NLTK interpret this as a negated
-                    # expression and force its type to be TRUTH_VALUE (t).
-                    translated_name = translated_name.replace("-", "~")
-                original_name = name.replace("num:", "")
-                self._add_name_mapping(original_name, translated_name, types.NUMBER_TYPE)
+            translated_name = self._translate_name_and_add_mapping(name)
         else:
             if name in types.COMMON_NAME_MAPPING:
                 translated_name = types.COMMON_NAME_MAPPING[name]

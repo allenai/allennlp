@@ -141,16 +141,22 @@ class TableQuestionContext:
             elif node_info['content'] != '—':
                 column_node_type_info[column_index]['string'] += 1
             last_row_index = row_index
-        column_types = {column_index_to_name[column_index]: max(column_node_type_info[column_index],
-                                                                key=column_node_type_info[column_index].get)
-                        for column_index in column_index_to_name}
+        column_types: Dict[str, str] = {}
+        for column_index, column_name in column_index_to_name.items():
+            current_column_type_info = column_node_type_info[column_index]
+            if current_column_type_info["string"] > 0:
+                # There is at least one value that is neither date nor number.
+                column_types[column_name] = "string"
+            elif current_column_type_info["date"] > current_column_type_info["number"]:
+                column_types[column_name] = "date"
+            else:
+                column_types[column_name] = "number"
         return cls(table_data, column_types, question_tokens)
 
     @classmethod
     def read_from_file(cls, filename: str, question_tokens: List[Token]) -> 'TableQuestionContext':
         with open(filename, 'r') as file_pointer:
             reader = csv.reader(file_pointer, delimiter='\t', quoting=csv.QUOTE_NONE)
-            # obtain column information
             lines = [line for line in reader]
             return cls.read_from_lines(lines, question_tokens)
 
