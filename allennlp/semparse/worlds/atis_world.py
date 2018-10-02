@@ -162,7 +162,7 @@ class AtisWorld():
         return sorted([value[1] for key, value in self.linked_entities['number'].items()
                        if value[0] == nonterminal], reverse=True)
 
-    def _update_expression_reference(self, # pylint disable=no-self-use
+    def _update_expression_reference(self, # pylint: disable=no-self-use
                                      grammar: Grammar,
                                      parent_expression_nonterminal: str,
                                      child_expression_nonterminal: str) -> None:
@@ -175,7 +175,7 @@ class AtisWorld():
                  else grammar[child_expression_nonterminal]
                  for member in grammar[parent_expression_nonterminal].members]
 
-    def _get_sequence_with_spacing(self, # pylint disable=no-self-use
+    def _get_sequence_with_spacing(self, # pylint: disable=no-self-use
                                    new_grammar,
                                    expressions: List[Expression],
                                    name: str = '') -> Sequence:
