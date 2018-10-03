@@ -1,5 +1,5 @@
 from typing import List, Dict, Tuple, Set, Callable
-from copy import copy
+from copy import copy, deepcopy
 import numpy
 from nltk import ngrams
 
