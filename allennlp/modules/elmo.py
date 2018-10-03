@@ -6,11 +6,11 @@ import warnings
 import torch
 from torch.nn.modules import Dropout
 
-from overrides import overrides
 import numpy
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
+from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
@@ -242,16 +242,21 @@ def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
     dataset.index_instances(vocab)
     return dataset.as_tensor_dict()['elmo']['character_ids']
 
+
 class _ElmoCharacterEncoder(torch.nn.Module):
     """
     Compute context insensitive token representation using pretrained biLM.
+
     This embedder has input character ids of size (batch_size, sequence_length, 50)
     and returns (batch_size, sequence_length + 2, embedding_dim), where embedding_dim
     is specified in the options file (typically 512).
+
     We add special entries at the beginning and end of each sequence corresponding
     to <S> and </S>, the beginning and end of sentence tokens.
+
     Note: this is a lower level class useful for advanced usage.  Most users should
     use ``ElmoTokenEmbedder`` or ``allennlp.modules.Elmo`` instead.
+
     Parameters
     ----------
     options_file : ``str``
@@ -260,9 +265,12 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         ELMo hdf5 weight file
     requires_grad: ``bool``, optional
         If True, compute gradient of ELMo parameters for fine tuning.
+
     The relevant section of the options file is something like:
     .. example-code::
+
         .. code-block:: python
+
             {'char_cnn': {
                 'activation': 'relu',
                 'embedding': {'dim': 4},
@@ -303,11 +311,13 @@ class _ElmoCharacterEncoder(torch.nn.Module):
     def forward(self, inputs: torch.Tensor) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
         """
         Compute context insensitive token embeddings for ELMo representations.
+
         Parameters
         ----------
         inputs: ``torch.Tensor``
             Shape ``(batch_size, sequence_length, 50)`` of character ids representing the
             current batch.
+
         Returns
         -------
         Dict with keys:
@@ -498,7 +508,7 @@ class _ElmoBiLm(torch.nn.Module):
                  vocab_to_cache: List[str] = None) -> None:
         super(_ElmoBiLm, self).__init__()
 
-        self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad)
+        self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=requires_grad)
 
         self._requires_grad = requires_grad
         if requires_grad and vocab_to_cache:
