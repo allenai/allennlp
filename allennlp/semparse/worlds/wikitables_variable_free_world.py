@@ -16,7 +16,7 @@ from overrides import overrides
 
 from allennlp.semparse.worlds.world import ParsingError, World
 from allennlp.semparse.type_declarations import wikitables_variable_free as types
-from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
+from allennlp.semparse.contexts import TableQuestionContext
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -37,7 +37,8 @@ class WikiTablesVariableFreeWorld(World):
     # series of one-argument function applications.  See `world._get_transitions` for more info.
     curried_functions = {
             types.SELECT_TYPE: 2,
-            types.ROW_FILTER_WITH_COLUMN: 2,
+            types.ROW_FILTER_WITH_GENERIC_COLUMN: 2,
+            types.ROW_FILTER_WITH_COMPARABLE_COLUMN: 2,
             types.ROW_NUM_OP: 2,
             types.ROW_FILTER_WITH_COLUMN_AND_NUMBER: 3,
             types.ROW_FILTER_WITH_COLUMN_AND_DATE: 3,
@@ -45,44 +46,48 @@ class WikiTablesVariableFreeWorld(World):
             types.NUM_DIFF_WITH_COLUMN: 3,
             }
 
-    def __init__(self, table_graph: TableQuestionKnowledgeGraph) -> None:
+    def __init__(self, table_context: TableQuestionContext) -> None:
         super().__init__(constant_type_prefixes={"string": types.STRING_TYPE,
                                                  "num": types.NUMBER_TYPE},
                          global_type_signatures=types.COMMON_TYPE_SIGNATURE,
                          global_name_mapping=types.COMMON_NAME_MAPPING)
-        self.table_graph = table_graph
+        # TODO (pradeep): Do we need constant type prefixes?
+        self.table_context = table_context
 
         # TODO (pradeep): Define an executor in this world when we have a new context class.
         # Something like the following:
         # self._executor = WikiTablesVariableFreeExecutor(self.table_graph.table_data)
 
-        # For every new Sempre column name seen, we update this counter to map it to a new NLTK name.
+        # For every new column name seen, we update this counter to map it to a new NLTK name.
         self._column_counter = 0
 
-        # This adds all of the cell and column names to our local name mapping.
-        for entity in table_graph.entities:
-            self._map_name(entity, keep_mapping=True)
+        # Adding entities and numbers seen in questions to the mapping.
+        self._question_entities, question_numbers = table_context.get_entities_from_question()
+        self._question_numbers = [number for number, _ in question_numbers]
+        for entity in self._question_entities:
+            self._map_name(f"string:{entity}", keep_mapping=True)
 
-        self._entity_set = set(table_graph.entities)
-        self.terminal_productions: Dict[str, str] = {}
-        for entity in self._entity_set:
-            mapped_name = self.local_name_mapping[entity]
-            signature = self.local_type_signatures[mapped_name]
-            self.terminal_productions[entity] = f"{signature} -> {entity}"
+        for number_in_question in self._question_numbers:
+            self._map_name(f"num:{number_in_question}", keep_mapping=True)
 
+        # Adding -1 to mapping because we need it for dates where not all three fields are
+        # specified.
+        self._map_name(f"num:-1", keep_mapping=True)
+
+        # Adding column names to the local name mapping.
+        for column_name, column_type in table_context.column_types.items():
+            self._map_name(f"{column_type}_column:{column_name}", keep_mapping=True)
+
+
+        # TODO (pradeep): Update agenda definition and rethink this field.
+        self.global_terminal_productions: Dict[str, str] = {}
         for predicate, mapped_name in self.global_name_mapping.items():
             if mapped_name in self.global_type_signatures:
                 signature = self.global_type_signatures[mapped_name]
-                self.terminal_productions[predicate] = f"{signature} -> {predicate}"
+                self.global_terminal_productions[predicate] = f"{signature} -> {predicate}"
 
         # We don't need to recompute this ever; let's just compute it once and cache it.
         self._valid_actions: Dict[str, List[str]] = None
-
-    def is_table_entity(self, entity_name: str) -> bool:
-        """
-        Returns ``True`` if the given entity is one of the entities in the table.
-        """
-        return entity_name in self._entity_set
 
     @overrides
     def _get_curried_functions(self) -> Dict[Type, int]:
@@ -101,41 +106,46 @@ class WikiTablesVariableFreeWorld(World):
         if name not in types.COMMON_NAME_MAPPING and name not in self.local_name_mapping:
             if not keep_mapping:
                 raise ParsingError(f"Encountered un-mapped name: {name}")
-            if name.startswith("fb:row.row"):
+            if "_column:" in name:
                 # Column name
                 translated_name = "C%d" % self._column_counter
                 self._column_counter += 1
-                self._add_name_mapping(name, translated_name, types.COLUMN_TYPE)
-            elif name.startswith("fb:cell"):
-                # Cell name
-                translated_name = "string:%s" % name.split(".")[-1]
-                self._add_name_mapping(name, translated_name, types.STRING_TYPE)
-            elif name.startswith("fb:part"):
-                # part name
-                translated_name = "string:%s" % name.split(".")[-1]
-                self._add_name_mapping(name, translated_name, types.STRING_TYPE)
-            else:
-                # The only other unmapped names we should see are numbers.
+                if name.startswith("number_column:"):
+                    self._add_name_mapping(name, translated_name, types.NUMBER_COLUMN_TYPE)
+                elif name.startswith("string_column:"):
+                    self._add_name_mapping(name, translated_name, types.STRING_COLUMN_TYPE)
+                else:
+                    self._add_name_mapping(name, translated_name, types.DATE_COLUMN_TYPE)
+            elif name.startswith("string:"):
+                # We do not need to translate these names.
+                original_name = name.replace("string:", "")
+                translated_name = name
+                self._add_name_mapping(original_name, translated_name, types.STRING_TYPE)
+            elif name.startswith("num:"):
                 # NLTK throws an error if it sees a "." in constants, which will most likely happen
                 # within numbers as a decimal point. We're changing those to underscores.
                 translated_name = name.replace(".", "_")
-                if re.match("-[0-9_]+", translated_name):
+                if re.match("num:-[0-9_]+", translated_name):
                     # The string is a negative number. This makes NLTK interpret this as a negated
                     # expression and force its type to be TRUTH_VALUE (t).
                     translated_name = translated_name.replace("-", "~")
-                translated_name = f"num:{translated_name}"
-                self._add_name_mapping(name, translated_name, types.NUMBER_TYPE)
+                original_name = name.replace("num:", "")
+                self._add_name_mapping(original_name, translated_name, types.NUMBER_TYPE)
         else:
             if name in types.COMMON_NAME_MAPPING:
                 translated_name = types.COMMON_NAME_MAPPING[name]
             else:
                 translated_name = self.local_name_mapping[name]
-        return translated_name
+        try:
+            return translated_name
+        except UnboundLocalError:
+            print("CALLED MAP NAME WITH", name)
+            print("LOCAL MAPPING WAS", self.local_name_mapping)
+            raise UnboundLocalError
 
     def get_agenda(self):
-        agenda_items = self.table_graph.get_linked_agenda_items()
-        # Global rules
-        question_tokens = [token.text for token in self.table_graph.question_tokens]
+        agenda_items = []
+        question_tokens = [token.text for token in self.table_context.question_tokens]
         question = " ".join(question_tokens)
         for token in question_tokens:
             if token in ["next", "after", "below"]:
@@ -169,8 +179,18 @@ class WikiTablesVariableFreeWorld(World):
                 # accurate. The question could also be asking for a value that is in the table.
                 agenda_items.append("count")
         agenda = []
+        # Adding productions from the global set.
         for agenda_item in set(agenda_items):
-            agenda.append(self.terminal_productions[agenda_item])
+            agenda.append(self.global_terminal_productions[agenda_item])
+
+        # Adding all productions that lead to entities and numbers extracted from the question.
+        for entity in self._question_entities:
+            agenda.append(f"{types.STRING_TYPE} -> {entity}")
+        for number in self._question_numbers:
+            agenda.append(f"{types.NUMBER_TYPE} -> {number}")
+        # TODO(pradeep): Also add mapping to column names. May be enumerate over column productions
+        # and check if terminals are in the question.
+
         return agenda
 
     def execute(self, logical_form: str) -> Union[List[str], int]:

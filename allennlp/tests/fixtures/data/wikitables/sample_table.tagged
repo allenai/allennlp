@@ -1,0 +1,22 @@
+row	col	id	content	tokens	lemmaTokens	posTags	nerTags	nerValues	number	date	num2	list	listId
+-1	0	fb:row.row.year	Year	year	year	NN	DURATION						
+-1	1	fb:row.row.division	Division	division	Division	NNP	O						
+-1	2	fb:row.row.league	League	league	League	NNP	O						
+-1	3	fb:row.row.regular_season	Regular Season	regular|season	regular|season	JJ|NN	O|O	|					
+-1	4	fb:row.row.playoffs	Playoffs	playoffs	playoff	NNS	O						
+-1	5	fb:row.row.open_cup	Open Cup	open|cup	Open|Cup	NNP|NNP	MISC|MISC	|					
+-1	6	fb:row.row.avg_attendance	Avg. Attendance	avg|.|attendance	avg|.|attendance	NN|.|NN	O|O|O	||					
+0	0	fb:cell.2001	2001	2001	2001	CD	DATE	2001	2001.0	2001-xx-xx			
+0	1	fb:cell.2	2	2	2	CD	NUMBER	2.0	2.0				
+0	2	fb:cell.usl_a_league	USL A-League	usl|a|league	USL|A|League	NNP|NNP|NNP	MISC|MISC|MISC	||					
+0	3	fb:cell.4th_western	4th, Western	4th|,|western	4th|,|western	JJ|,|JJ	ORDINAL|O|MISC	4.0||	4.0			4th|Western	fb:part.4th|fb:part.western
+0	4	fb:cell.quarterfinals	Quarterfinals	quarterfinals	quarterfinal	NNS	O						
+0	5	fb:cell.did_not_qualify	Did not qualify	did|not|qualify	do|not|qualify	VBD-AUX|RB|VB	O|O|O	||					
+0	6	fb:cell.7_169	7,169	7,169	7,169	CD	NUMBER	7169.0	7169.0				
+1	0	fb:cell.2005	2005	2005	2005	CD	DATE	2005	2005.0	2005-xx-xx			
+1	1	fb:cell.2	2	2	2	CD	NUMBER	2.0	2.0				
+1	2	fb:cell.usl_first_division	USL First Division	usl|first|division	USL|First|Division	NNP|NNP|NNP	MISC|ORDINAL|O	|1.0|					
+1	3	fb:cell.5th	5th	5th	5th	NN	ORDINAL	5.0	5.0			5th	fb:part.5th
+1	4	fb:cell.quarterfinals	Quarterfinals	quarterfinals	quarterfinal	NNS	O						
+1	5	fb:cell.4th_round	4th Round	4th|round	4th|Round	JJ|NNP	ORDINAL|O	4.0|	4.0				
+1	6	fb:cell.6_028	6,028	6,028	6,028	CD	NUMBER	6028.0	6028.0				
