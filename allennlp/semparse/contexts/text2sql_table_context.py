@@ -5,6 +5,7 @@ for the any of the text2sql datasets, with the grammar and the valid actions.
 """
 from typing import List, Dict
 from copy import deepcopy
+from sqlite3 import Cursor
 
 from parsimonious.grammar import Grammar
 
@@ -107,14 +108,16 @@ class Text2SqlTableContext:
         names of the tables that map to lists of the table's column names.
     """
     def __init__(self,
-                 schema_path: str = None) -> None:
+                 schema_path: str = None,
+                 cursor: Cursor = None) -> None:
+
         self.grammar_dictionary = deepcopy(GRAMMAR_DICTIONARY)
-        schema = read_dataset_schema(schema_path)
-        self.schema = schema
-        self.all_tables = {k: [x.name for x in v] for k, v in schema.items()}
+        self.schema = read_dataset_schema(schema_path)
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)
         self.valid_actions: Dict[str, List[str]] = initialize_valid_actions(self.grammar)
+
+        self.cursor = cursor
 
     def get_grammar_dictionary(self) -> Dict[str, List[str]]:
         return self.grammar_dictionary
@@ -124,15 +127,28 @@ class Text2SqlTableContext:
 
     def initialize_grammar_str(self):
         # Add all the table and column names to the grammar.
-        if self.all_tables:
+        if self.schema:
             table_names = sorted([f'"{table}"' for table in
-                                  list(self.all_tables.keys())], reverse=True)
+                                  list(self.schema.keys())], reverse=True)
             self.grammar_dictionary['table_name'] = table_names
 
             all_columns = set()
-            for columns in self.all_tables.values():
-                all_columns.update(columns)
+            for table in self.schema.values():
+                all_columns.update([column.name for column in table])
             sorted_columns = sorted([f'"{column}"' for column in all_columns], reverse=True)
             self.grammar_dictionary['column_name'] = sorted_columns
+
+        # Now if we have strings in the table, we need to be able to
+        # produce them, so we find all of the strings in the tables here
+        # and create production rules from them.
+        def has_string_type(col):
+            return col.column_type == "string"
+
+        for table_name, columns in self.schema.items():
+            for column in columns:
+
+                if has_string_type(column):
+                    self.cursor.execute(f'SELECT DISTINCT {table_name} . {column} FROM {table_name}')
+                    results = self.cursor.fetchall()
 
         return format_grammar_string(self.grammar_dictionary)

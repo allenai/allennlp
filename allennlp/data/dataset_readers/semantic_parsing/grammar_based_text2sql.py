@@ -3,6 +3,7 @@ import logging
 import json
 import glob
 import os
+import sqlite3
 
 from overrides import overrides
 from parsimonious.exceptions import ParseError
@@ -16,6 +17,7 @@ from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.dataset_readers.dataset_utils import text2sql_utils
 from allennlp.semparse.contexts.text2sql_table_context import Text2SqlTableContext
 from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld
+from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -31,6 +33,8 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
     ----------
     schema_path : ``str``, required.
         The path to the database schema.
+    database_path : ``str``, required.
+        The path to a database.
     use_all_sql : ``bool``, optional (default = False)
         Whether to use all of the sql queries which have identical semantics,
         or whether to just use the first one.
@@ -48,6 +52,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
     """
     def __init__(self,
                  schema_path: str,
+                 database_file: str,
                  use_all_sql: bool = False,
                  remove_unneeded_aliases: bool = True,
                  token_indexers: Dict[str, TokenIndexer] = None,
@@ -59,7 +64,12 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         self._remove_unneeded_aliases = remove_unneeded_aliases
         self._cross_validation_split_to_exclude = str(cross_validation_split_to_exclude)
 
-        self._sql_table_context = Text2SqlTableContext(schema_path)
+        self._database_file = cached_path(database_file)
+        self._connection = sqlite3.connect(self._database_file)
+        self._cursor = self._connection.cursor()
+
+        self._schema_path = schema_path
+        self._sql_table_context = Text2SqlTableContext(schema_path, self._cursor)
         self._world = Text2SqlWorld(self._sql_table_context)
 
     @overrides
@@ -79,6 +89,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         """
         files = [p for p in glob.glob(file_path)
                  if self._cross_validation_split_to_exclude not in os.path.basename(p)]
+        schema = read_dataset_schema(self._schema_path)
 
         for path in files:
             with open(cached_path(path), "r") as data_file:
@@ -87,8 +98,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
             for sql_data in text2sql_utils.process_sql_data(data,
                                                             use_all_sql=self._use_all_sql,
                                                             remove_unneeded_aliases=self._remove_unneeded_aliases,
-                                                            # TODO(Mark): Horrible hack, remove
-                                                            schema=self._sql_table_context.schema):
+                                                            schema=schema):
                 instance = self.text_to_instance(sql_data.text, sql_data)
                 if instance is not None:
                     yield instance
