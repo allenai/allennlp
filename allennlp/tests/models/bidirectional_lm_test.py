@@ -12,7 +12,8 @@ from allennlp.models.bidirectional_lm import BidirectionalLanguageModel
 from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
 from allennlp.modules.softmax import Softmax
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
-from allennlp.modules.token_embedders.cnn_highway_encoder import CnnHighwayEncoder
+from allennlp.modules.token_embedders import TokenCharactersEncoder, Embedding
+from allennlp.modules.seq2vec_encoders.cnn_highway_encoder import CnnHighwayEncoder
 from allennlp.nn.util import get_text_field_mask
 from allennlp.training import Trainer
 
@@ -46,13 +47,16 @@ class TestBidirectionalLM(ModelTestCase):
                 activation='relu',
                 embedding_dim=4,
                 filters=[[1, 4], [2, 8], [3, 16], [4, 32], [5, 64]],
-                num_characters=262,
                 num_highway=2,
                 projection_dim=16,
                 projection_location='after_cnn'
         )
 
-        text_field_embedder = BasicTextFieldEmbedder({"token_characters": encoder},
+        embedding = Embedding(num_embeddings=262, embedding_dim=4)
+        tce = TokenCharactersEncoder(embedding=embedding,
+                                     encoder=encoder)
+
+        text_field_embedder = BasicTextFieldEmbedder({"token_characters": tce},
                                                      allow_unmatched_keys=True)
 
         lstm = torch.nn.LSTM(bidirectional=True, num_layers=3, input_size=16, hidden_size=7, batch_first=True)
@@ -95,7 +99,7 @@ class TestBidirectionalLM(ModelTestCase):
             forward_loss = result["forward_loss"].item()
             backward_loss = result["backward_loss"].item()
 
-            np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2)
+            np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2, decimal=3)
 
         # Try training it
         optimizer = torch.optim.SGD(model.parameters(), lr=0.01)

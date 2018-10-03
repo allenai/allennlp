@@ -6,12 +6,12 @@ import numpy as np
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.highway import Highway
 from allennlp.modules.masked_layer_norm import MaskedLayerNorm
-from allennlp.modules.token_embedders import TokenEmbedder
+from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
 
 _VALID_PROJECTION_LOCATIONS = {'after_cnn', 'after_highway', None}
 
-@TokenEmbedder.register('cnn-highway')
-class CnnHighwayEncoder(TokenEmbedder):
+@Seq2VecEncoder.register('cnn-highway')
+class CnnHighwayEncoder(Seq2VecEncoder):
     """
     The character CNN + highway encoder from Kim et al "Character aware neural language models"
     https://arxiv.org/abs/1508.06615
@@ -31,8 +31,6 @@ class CnnHighwayEncoder(TokenEmbedder):
         The activation function for the convolutional layers.
     max_characters_per_token: int, optional (default = 50)
         The maximum length of any token.
-    num_characters: int, optional (default = 262)
-        The number of characters in the vocabulary.
     projection_location: str, optional (default = 'after_highway')
         Where to apply the projection layer. Valid values are
         'after_highway', 'after_cnn', and None.
@@ -45,7 +43,6 @@ class CnnHighwayEncoder(TokenEmbedder):
                  num_highway: int,
                  projection_dim: int,
                  activation: str = 'relu',
-                 num_characters: int = 262,
                  projection_location: str = 'after_highway',
                  do_layer_norm: bool = False) -> None:
         super().__init__()
@@ -53,8 +50,8 @@ class CnnHighwayEncoder(TokenEmbedder):
         if projection_location not in _VALID_PROJECTION_LOCATIONS:
             raise ConfigurationError(f"unknown projection location: {projection_location}")
 
+        self.input_dim = embedding_dim
         self.output_dim = projection_dim
-        self._num_characters = num_characters
         self._projection_location = projection_location
 
         if activation == 'tanh':
@@ -63,10 +60,6 @@ class CnnHighwayEncoder(TokenEmbedder):
             self._activation = torch.nn.functional.relu
         else:
             raise ConfigurationError(f"unknown activation {activation}")
-
-        # char embedding
-        weights = np.random.uniform(-1, 1, (num_characters, embedding_dim)).astype('float32')
-        self._char_embedding_weights = torch.nn.Parameter(torch.FloatTensor(weights))
 
         # Create the convolutions
         self._convolutions: List[torch.nn.Module] = []
@@ -106,69 +99,63 @@ class CnnHighwayEncoder(TokenEmbedder):
         else:
             self._layer_norm = None
 
-    def forward(self, inputs: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self,
+                inputs: torch.Tensor,
+                mask: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
         Compute context insensitive token embeddings for ELMo representations.
 
         Parameters
         ----------
         inputs:
-            Shape ``(batch_size, sequence_length, max_characters_per_token)`` of character ids
-            representing the current batch.
+            Shape ``(batch_size, num_tokens, embedding_dim)``
+            of character embeddings representing the current batch.
+        mask:
+            Shape ``(batch_size, num_tokens)``
+            mask for the current batch.
 
         Returns
         -------
-        ``token_embedding``:
-            Shape ``(batch_size, sequence_length, embedding_dim)`` tensor
+        ``encoding``:
+            Shape ``(batch_size, sequence_length, embedding_dim2)`` tensor
             with context-insensitive token representations. If bos_characters and eos_characters
             are being added, the second dimension will be ``sequence_length + 2``.
         """
         # pylint: disable=arguments-differ
-        max_characters_per_token = inputs.size(2)
 
-        char_id_mask = (inputs > 0).long()  # (batch_size, sequence_length, max_characters_per_token)
-        mask = (char_id_mask.sum(dim=-1) > 0).long()  # (batch_size, sequence_length)
-
-        # character_id embedding
-        # (batch_size * sequence_length, max_chars_per_token, embed_dim)
-        character_embedding = torch.nn.functional.embedding(inputs.view(-1, max_characters_per_token),
-                                                            self._char_embedding_weights)
-
-        # (batch_size * sequence_length, embed_dim, max_chars_per_token)
-        character_embedding = character_embedding.transpose(1, 2)
+        # convolutions want (batch_size, embedding_dim, num_tokens)
+        inputs = inputs.transpose(1, 2)
 
         convolutions = []
         for i in range(len(self._convolutions)):
             char_conv_i = getattr(self, f"char_conv_{i}")
-            convolved = char_conv_i(character_embedding)
+            convolved = char_conv_i(inputs)
 
-            # (batch_size * sequence_length, n_filters for this width)
+            # (batch_size, n_filters for this width)
             convolved, _ = torch.max(convolved, dim=-1)
             convolved = self._activation(convolved)
             convolutions.append(convolved)
 
-        # (batch_size * sequence_length, n_filters)
+        # (batch_size, n_filters)
         token_embedding = torch.cat(convolutions, dim=-1)
 
         if self._projection_location == 'after_cnn':
             token_embedding = self._projection(token_embedding)
 
-        # apply the highway layers (batch_size * sequence_length, highway_dim)
+        # apply the highway layers (batch_size, highway_dim)
         token_embedding = self._highways(token_embedding)
 
         if self._projection_location == 'after_highway':
-            # final projection  (batch_size * sequence_length, embedding_dim)
+            # final projection  (batch_size, embedding_dim)
             token_embedding = self._projection(token_embedding)
 
-        # reshape to (batch_size, sequence_length, embedding_dim)
-        batch_size, sequence_length, _ = inputs.size()
-
-        token_embedding_reshaped = token_embedding.view(batch_size, sequence_length, -1)
-
         if self._layer_norm:
-            token_embedding_reshaped = self._layer_norm(token_embedding_reshaped, mask)
+            token_embedding = self._layer_norm(token_embedding, mask)
 
-        return token_embedding_reshaped
+        return token_embedding
+
+    def get_input_dim(self) -> int:
+        return self.input_dim
 
     def get_output_dim(self) -> int:
         return self.output_dim
