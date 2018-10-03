@@ -4,7 +4,7 @@ AllenNLP and its models are configured correctly.
 """
 
 import logging
-
+import subprocess
 from torch import cuda
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -43,3 +43,10 @@ def check_for_gpu(device_id: int):
         raise ConfigurationError("Experiment specified a GPU but none is available;"
                                  " if you want to run on CPU use the override"
                                  " 'trainer.cuda_device=-1' in the json config file.")
+
+def check_for_java() -> bool:
+    try:
+        java_version = subprocess.check_output(['java', '-version'], stderr=subprocess.STDOUT)
+        return 'version' in java_version.decode()
+    except FileNotFoundError:
+        return False

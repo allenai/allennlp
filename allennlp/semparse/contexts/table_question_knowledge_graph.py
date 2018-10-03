@@ -61,6 +61,7 @@ NUMBER_WORDS = {
         **MONTH_NUMBERS,
         }
 
+
 class TableQuestionKnowledgeGraph(KnowledgeGraph):
     """
     A ``TableQuestionKnowledgeGraph`` represents the linkable entities in a table and a question

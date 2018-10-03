@@ -171,7 +171,7 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                                       hidden_state: torch.Tensor,
                                       attention_weights: torch.Tensor,
                                       predicted_action_embeddings: torch.Tensor
-                                     ) -> Dict[int, List[Tuple[int, Any, Any, List[int]]]]:
+                                     ) -> Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]]:
         # We take a couple of extra arguments here because subclasses might use them.
         # pylint: disable=unused-argument,no-self-use
 
@@ -185,7 +185,7 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         group_size = len(state.batch_indices)
         actions = state.get_valid_actions()
 
-        batch_results: Dict[int, List[Tuple[int, torch.Tensor, torch.Tensor, List[int]]]] = defaultdict(list)
+        batch_results: Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]] = defaultdict(list)
         for group_index in range(group_size):
             instance_actions = actions[group_index]
             predicted_action_embedding = predicted_action_embeddings[group_index]
@@ -201,6 +201,7 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
             log_probs = state.score[group_index] + current_log_probs
             batch_results[state.batch_indices[group_index]].append((group_index,
                                                                     log_probs,
+                                                                    current_log_probs,
                                                                     output_action_embeddings,
                                                                     action_ids))
         return batch_results
@@ -208,7 +209,7 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
     def _construct_next_states(self,
                                state: GrammarBasedState,
                                updated_rnn_state: Dict[str, torch.Tensor],
-                               batch_action_probs: Dict[int, List[Tuple[int, Any, Any, List[int]]]],
+                               batch_action_probs: Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]],
                                max_actions: int,
                                allowed_actions: List[Set[int]]):
         # pylint: disable=no-self-use
@@ -241,10 +242,10 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                                         state.rnn_state[group_index].encoder_outputs,
                                         state.rnn_state[group_index].encoder_output_mask)
             batch_index = state.batch_indices[group_index]
-            for i, log_probs, _, actions in batch_action_probs[batch_index]:
+            for i, _, current_log_probs, _, actions in batch_action_probs[batch_index]:
                 if i == group_index:
                     considered_actions = actions
-                    probabilities = log_probs.exp().cpu()
+                    probabilities = current_log_probs.exp().cpu()
                     break
             return state.new_state_from_group_index(group_index,
                                                     action,
@@ -259,7 +260,7 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
             if allowed_actions and not max_actions:
                 # If we're given a set of allowed actions, and we're not just keeping the top k of
                 # them, we don't need to do any sorting, so we can speed things up quite a bit.
-                for group_index, log_probs, action_embeddings, actions in results:
+                for group_index, log_probs, _, action_embeddings, actions in results:
                     for log_prob, action_embedding, action in zip(log_probs, action_embeddings, actions):
                         if action in allowed_actions[group_index]:
                             new_states.append(make_state(group_index, action, log_prob, action_embedding))
@@ -270,7 +271,7 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                 group_log_probs: List[torch.Tensor] = []
                 group_action_embeddings = []
                 group_actions = []
-                for group_index, log_probs, action_embeddings, actions in results:
+                for group_index, log_probs, _, action_embeddings, actions in results:
                     group_indices.extend([group_index] * len(actions))
                     group_log_probs.append(log_probs)
                     group_action_embeddings.append(action_embeddings)

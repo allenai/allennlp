@@ -1,0 +1,97 @@
+row	col	id	content	tokens	lemmaTokens	posTags	nerTags	nerValues	number	date	num2	list	listId
+-1	0	fb:row.row.district	District	district	District	NNP	O						
+-1	1	fb:row.row.counties_represented	Counties Represented	counties|represented	county|represent	NNS|VBD	O|O	|					
+-1	2	fb:row.row.delegate	Delegate	delegate	Delegate	NNP	O						
+-1	3	fb:row.row.party	Party	party	Party	NNP	O						
+-1	4	fb:row.row.first_elected	First Elected	first|elected	first|elect	JJ|VBN	ORDINAL|O	1.0|					
+-1	5	fb:row.row.committee	Committee	committee	Committee	NNP	O						
+0	0	fb:cell.1a	1A	1a	1a	NN	O		1.0				
+0	1	fb:cell.allegany_garrett	Allegany, Garrett	allegany|,|garrett	Allegany|,|Garrett	NNP|,|NNP	O|O|PERSON	||				Allegany|Garrett	fb:part.allegany|fb:part.garrett
+0	2	fb:cell.wendell_r_beitzel	Wendell R. Beitzel	wendell|r.|beitzel	Wendell|R.|Beitzel	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				Wendell R. Beitzel	fb:part.wendell_r_beitzel
+0	3	fb:cell.republican	Republican	republican	Republican	NNP	MISC						
+0	4	fb:cell.2006	2006	2006	2006	CD	DATE	2006	2006.0	2006-xx-xx			
+0	5	fb:cell.health_and_government_operations	Health and Government Operations	health|and|government|operations	Health|and|Government|Operations	NNP|CC|NNP|NNP	O|O|O|O	|||					
+1	0	fb:cell.1b	1B	1b	1b	NN	O		1.0				
+1	1	fb:cell.allegany	Allegany	allegany	Allegany	NNP	LOCATION					Allegany	fb:part.allegany
+1	2	fb:cell.kevin_kelly	Kevin Kelly	kevin|kelly	Kevin|Kelly	NNP|NNP	PERSON|PERSON	|				Kevin Kelly	fb:part.kevin_kelly
+1	3	fb:cell.democratic	Democratic	democratic	democratic	JJ	MISC						
+1	4	fb:cell.1986	1986	1986	1986	CD	DATE	1986	1986.0	1986-xx-xx			
+1	5	fb:cell.judiciary	Judiciary	judiciary	Judiciary	NNP	O						
+2	0	fb:cell.1c	1C	1c	1c	NN	O		1.0				
+2	1	fb:cell.allegany_washington	Allegany, Washington	allegany|,|washington	Allegany|,|Washington	NNP|,|NNP	LOCATION|O|LOCATION	||				Allegany|Washington	fb:part.allegany|fb:part.washington
+2	2	fb:cell.leroy_e_myers_jr	LeRoy E. Myers, Jr.	leroy|e.|myers|,|jr.|.	LeRoy|E.|Myers|,|Jr.|.	NNP|NNP|NNP|,|NNP|.	PERSON|PERSON|PERSON|O|O|O	|||||				LeRoy E. Myers|Jr.	fb:part.leroy_e_myers|fb:part.jr
+2	3	fb:cell.republican	Republican	republican	Republican	NNP	MISC						
+2	4	fb:cell.2002	2002	2002	2002	CD	DATE	2002	2002.0	2002-xx-xx			
+2	5	fb:cell.appropriations	Appropriations	appropriations	appropriation	NNS	O						
+3	0	fb:cell.2a	2A	2a	2a	NN	O		2.0				
+3	1	fb:cell.washington	Washington	washington	Washington	NNP	LOCATION					Washington	fb:part.washington
+3	2	fb:cell.andrew_a_serafini	Andrew A. Serafini	andrew|a.|serafini	Andrew|A.|Serafini	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				Andrew A. Serafini	fb:part.andrew_a_serafini
+3	3	fb:cell.republican	Republican	republican	Republican	NNP	MISC						
+3	4	fb:cell.2008	2008	2008	2008	CD	DATE	2008	2008.0	2008-xx-xx			
+3	5	fb:cell.ways_and_means	Ways and Means	ways|and|means	Ways|and|Means	NNP|CC|NNP	O|O|O	||					
+4	0	fb:cell.2b	2B	2b	2b	NN	O		2.0				
+4	1	fb:cell.washington	Washington	washington	Washington	NNP	LOCATION					Washington	fb:part.washington
+4	2	fb:cell.christopher_b_shank	Christopher B. Shank	christopher|b.|shank	Christopher|B.|Shank	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				Christopher B. Shank	fb:part.christopher_b_shank
+4	3	fb:cell.republican	Republican	republican	Republican	NNP	MISC						
+4	4	fb:cell.1998	1998	1998	1998	CD	DATE	1998	1998.0	1998-xx-xx			
+4	5	fb:cell.judiciary	Judiciary	judiciary	Judiciary	NNP	O						
+5	0	fb:cell.2c	2C	2c	2c	NN	O		2.0				
+5	1	fb:cell.washington	Washington	washington	Washington	NNP	LOCATION					Washington	fb:part.washington
+5	2	fb:cell.john_p_donoghue	John P. Donoghue	john|p.|donoghue	John|P.|Donoghue	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				John P. Donoghue	fb:part.john_p_donoghue
+5	3	fb:cell.democratic	Democratic	democratic	democratic	JJ	MISC						
+5	4	fb:cell.1990	1990	1990	1990	CD	DATE	1990	1990.0	1990-xx-xx			
+5	5	fb:cell.health_and_government_operations	Health and Government Operations	health|and|government|operations	Health|and|Government|Operations	NNP|CC|NNP|NNP	O|O|O|O	|||					
+6	0	fb:cell.3a	3A	3a	3a	NN	O		3.0				
+6	1	fb:cell.frederick	Frederick	frederick	Frederick	NNP	PERSON					Frederick	fb:part.frederick
+6	2	fb:cell.galen_r_clagett	Galen R. Clagett	galen|r.|clagett	Galen|R.|Clagett	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				Galen R. Clagett	fb:part.galen_r_clagett
+6	3	fb:cell.democratic	Democratic	democratic	democratic	JJ	MISC						
+6	4	fb:cell.2002	2002	2002	2002	CD	DATE	2002	2002.0	2002-xx-xx			
+6	5	fb:cell.appropriations	Appropriations	appropriations	appropriation	NNS	O						
+7	0	fb:cell.3a	3A	3a	3a	NN	O		3.0				
+7	1	fb:cell.frederick	Frederick	frederick	Frederick	NNP	PERSON					Frederick	fb:part.frederick
+7	2	fb:cell.sue_hecht	Sue Hecht	sue|hecht	sue|Hecht	VB|NNP	O|PERSON	|				Sue Hecht	fb:part.sue_hecht
+7	3	fb:cell.democratic	Democratic	democratic	democratic	JJ	MISC						
+7	4	fb:cell.1994	1994	1994	1994	CD	DATE	1994	1994.0	1994-xx-xx			
+7	5	fb:cell.economic_matters	Economic Matters	economic|matters	Economic|matter	NNP|NNS	O|O	|					
+8	0	fb:cell.3b	3B	3b	3b	NN	O		3.0				
+8	1	fb:cell.frederick_washington	Frederick, Washington	frederick|,|washington	Frederick|,|Washington	NNP|,|NNP	PERSON|O|LOCATION	||				Frederick|Washington	fb:part.frederick|fb:part.washington
+8	2	fb:cell.michael_hough	Michael Hough	michael|hough	Michael|Hough	NNP|NNP	PERSON|PERSON	|				Michael Hough	fb:part.michael_hough
+8	3	fb:cell.republican	Republican	republican	Republican	NNP	MISC						
+8	4	fb:cell.2002	2002	2002	2002	CD	DATE	2002	2002.0	2002-xx-xx			
+8	5	fb:cell.health_and_government_operations	Health and Government Operations	health|and|government|operations	Health|and|Government|Operations	NNP|CC|NNP|NNP	O|O|O|O	|||					
+9	0	fb:cell.4a	4A	4a	4a	NN	O		4.0				
+9	1	fb:cell.frederick	Frederick	frederick	Frederick	NNP	PERSON					Frederick	fb:part.frederick
+9	2	fb:cell.joseph_r_bartlett	Joseph R. Bartlett	joseph|r.|bartlett	Joseph|R.|Bartlett	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				Joseph R. Bartlett	fb:part.joseph_r_bartlett
+9	3	fb:cell.republican	Republican	republican	Republican	NNP	MISC						
+9	4	fb:cell.1998	1998	1998	1998	CD	DATE	1998	1998.0	1998-xx-xx			
+9	5	fb:cell.ways_and_means	Ways and Means	ways|and|means	Ways|and|Means	NNP|CC|NNP	O|O|O	||					
+10	0	fb:cell.4a	4A	4a	4a	NN	O		4.0				
+10	1	fb:cell.frederick	Frederick	frederick	Frederick	NNP	PERSON					Frederick	fb:part.frederick
+10	2	fb:cell.kelly_m_schulz	Kelly M. Schulz	kelly|m.|schulz	Kelly|M.|Schulz	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				Kelly M. Schulz	fb:part.kelly_m_schulz
+10	3	fb:cell.republican	Republican	republican	Republican	NNP	MISC						
+10	4	fb:cell.2011	2011	2011	2011	CD	DATE	2011	2011.0	2011-xx-xx			
+10	5	fb:cell.environmental_matters	Environmental Matters	environmental|matters	environmental|matter	JJ|NNS	O|O	|					
+11	0	fb:cell.4b	4B	4b	4b	NN	O		4.0				
+11	1	fb:cell.carroll_frederick	Carroll, Frederick	carroll|,|frederick	Carroll|,|Frederick	NNP|,|NNP	PERSON|O|PERSON	||				Carroll|Frederick	fb:part.carroll|fb:part.frederick
+11	2	fb:cell.donald_b_elliott	Donald B. Elliott	donald|b.|elliott	Donald|B.|Elliott	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				Donald B. Elliott	fb:part.donald_b_elliott
+11	3	fb:cell.republican	Republican	republican	Republican	NNP	MISC						
+11	4	fb:cell.1986	1986	1986	1986	CD	DATE	1986	1986.0	1986-xx-xx			
+11	5	fb:cell.health_and_government_operations	Health and Government Operations	health|and|government|operations	Health|and|Government|Operations	NNP|CC|NNP|NNP	O|O|O|O	|||					
+12	0	fb:cell.5a	5A	5a	5a	NN	O		5.0				
+12	1	fb:cell.carroll	Carroll	carroll	Carroll	NNP	PERSON					Carroll	fb:part.carroll
+12	2	fb:cell.tanya_thornton_shewell	Tanya Thornton Shewell	tanya|thornton|shewell	Tanya|Thornton|Shewell	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				Tanya Thornton Shewell	fb:part.tanya_thornton_shewell
+12	3	fb:cell.republican	Republican	republican	Republican	NNP	MISC						
+12	4	fb:cell.2004	2004	2004	2004	CD	DATE	2004	2004.0	2004-xx-xx			
+12	5	fb:cell.environmental_matters	Environmental Matters	environmental|matters	environmental|matter	JJ|NNS	O|O	|					
+13	0	fb:cell.5a	5A	5a	5a	NN	O		5.0				
+13	1	fb:cell.carroll	Carroll	carroll	Carroll	NNP	PERSON					Carroll	fb:part.carroll
+13	2	fb:cell.nancy_r_stocksdale	Nancy R. Stocksdale	nancy|r.|stocksdale	Nancy|R.|Stocksdale	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				Nancy R. Stocksdale	fb:part.nancy_r_stocksdale
+13	3	fb:cell.republican	Republican	republican	Republican	NNP	MISC						
+13	4	fb:cell.1994	1994	1994	1994	CD	DATE	1994	1994.0	1994-xx-xx			
+13	5	fb:cell.appropriations	Appropriations	appropriations	appropriation	NNS	O						
+14	0	fb:cell.9b	9B	9b	9b	NN	O		9.0				
+14	1	fb:cell.carroll	Carroll	carroll	Carroll	NNP	PERSON					Carroll	fb:part.carroll
+14	2	fb:cell.susan_w_krebs	Susan W. Krebs	susan|w.|krebs	Susan|W.|Krebs	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				Susan W. Krebs	fb:part.susan_w_krebs
+14	3	fb:cell.republican	Republican	republican	Republican	NNP	MISC						
+14	4	fb:cell.2002	2002	2002	2002	CD	DATE	2002	2002.0	2002-xx-xx			
+14	5	fb:cell.ways_and_means	Ways and Means	ways|and|means	Ways|and|Means	NNP|CC|NNP	O|O|O	||					

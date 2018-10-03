@@ -71,7 +71,7 @@ class AtisDatasetReader(DatasetReader):
                  database_file: str = None) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
-        self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
+        self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter())
         self._database_file = database_file
         # TODO(kevin): Add a keep_unparseable_utterances flag so that during validation, we do not skip queries that
         # cannot be parsed.
