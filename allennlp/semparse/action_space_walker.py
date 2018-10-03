@@ -1,9 +1,13 @@
 from collections import defaultdict
 from typing import List, Dict, Set
+import logging
 
 from allennlp.common.util import START_SYMBOL
 from allennlp.semparse.worlds.world import World
 from allennlp.semparse.type_declarations import type_declaration as types
+
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class ActionSpaceWalker:
@@ -108,6 +112,9 @@ class ActionSpaceWalker:
     def get_logical_forms_with_agenda(self,
                                       agenda: List[str],
                                       max_num_logical_forms: int = None) -> List[str]:
+        if not agenda:
+            logger.warning("Agenda is empty! Returning all paths instead.")
+            return self.get_all_logical_forms(max_num_logical_forms)
         if self._completed_paths is None:
             self._walk()
         agenda_path_indices = [self._terminal_path_index[action] for action in agenda]
