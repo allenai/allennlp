@@ -16,7 +16,7 @@ from allennlp.semparse.executors import WikiTablesSempreExecutor
 from allennlp.semparse.type_declarations import type_declaration
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import WikiTablesWorld
-from allennlp.state_machines.states import GrammarBasedState, GrammarStatelet, RnnStatelet
+from allennlp.state_machines.states import GrammarBasedState, LambdaGrammarStatelet, RnnStatelet
 from allennlp.training.metrics import Average
 
 
@@ -143,10 +143,11 @@ class WikiTablesSemanticParser(Model):
                                            world: List[WikiTablesWorld],
                                            actions: List[List[ProductionRuleArray]],
                                            outputs: Dict[str, Any]) -> Tuple[List[RnnStatelet],
-                                                                             List[GrammarStatelet]]:
+                                                                             List[LambdaGrammarStatelet]]:
         """
         Encodes the question and table, computes a linking between the two, and constructs an
-        initial RnnStatelet and GrammarStatelet for each batch instance to pass to the decoder.
+        initial RnnStatelet and LambdaGrammarStatelet for each batch instance to pass to the
+        decoder.
 
         We take ``outputs`` as a parameter here and `modify` it, adding things that we want to
         visualize in a demo.
@@ -513,11 +514,20 @@ class WikiTablesSemanticParser(Model):
                               world: WikiTablesWorld,
                               possible_actions: List[ProductionRuleArray],
                               linking_scores: torch.Tensor,
-                              entity_types: torch.Tensor) -> GrammarStatelet:
+                              entity_types: torch.Tensor) -> LambdaGrammarStatelet:
         """
-        This method creates the GrammarStatelet object that's used for decoding.  Part of creating
-        that is creating the `valid_actions` dictionary, which contains embedded representations of
-        all of the valid actions.  So, we create that here as well.
+        This method creates the LambdaGrammarStatelet object that's used for decoding.  Part of
+        creating that is creating the `valid_actions` dictionary, which contains embedded
+        representations of all of the valid actions.  So, we create that here as well.
+
+        The way we represent the valid expansions is a little complicated: we use a
+        dictionary of `action types`, where the key is the action type (like "global", "linked", or
+        whatever your model is expecting), and the value is a tuple representing all actions of
+        that type.  The tuple is (input tensor, output tensor, action id).  The input tensor has
+        the representation that is used when `selecting` actions, for all actions of this type.
+        The output tensor has the representation that is used when feeding the action to the next
+        step of the decoder (this could just be the same as the input tensor).  The action ids are
+        a list of indices into the main action list for each batch instance.
 
         The inputs to this method are for a `single instance in the batch`; none of the tensors we
         create here are batched.  We grab the global action ids from the input
@@ -536,6 +546,7 @@ class WikiTablesSemanticParser(Model):
         entity_types : ``torch.Tensor``
             Assumed to have shape ``(num_entities,)`` (i.e., there is no batch dimension).
         """
+        # TODO(mattg): Move the "valid_actions" construction to another method.
         action_map = {}
         for action_index, action in enumerate(possible_actions):
             action_string = action[0]
@@ -602,11 +613,11 @@ class WikiTablesSemanticParser(Model):
                 output_embedding = self._output_action_embedder(action[2])
                 context_actions[action[0]] = (input_embedding, output_embedding, action_id)
 
-        return GrammarStatelet([START_SYMBOL],
-                               {},
-                               translated_valid_actions,
-                               context_actions,
-                               type_declaration.is_nonterminal)
+        return LambdaGrammarStatelet([START_SYMBOL],
+                                     {},
+                                     translated_valid_actions,
+                                     context_actions,
+                                     type_declaration.is_nonterminal)
 
     def _compute_validation_outputs(self,
                                     actions: List[List[ProductionRuleArray]],
