@@ -4,6 +4,7 @@ import os
 import pathlib
 import shutil
 import subprocess
+import requests
 
 from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import check_for_java
@@ -74,13 +75,15 @@ class WikiTablesSempreExecutor:
         os.makedirs(SEMPRE_DIR, exist_ok=True)
         abbreviations_path = os.path.join(SEMPRE_DIR, 'abbreviations.tsv')
         if not os.path.exists(abbreviations_path):
-            subprocess.run(f'wget {ABBREVIATIONS_FILE}', shell=True)
-            subprocess.run(f'mv wikitables-abbreviations.tsv {abbreviations_path}', shell=True)
+            result = requests.get(ABBREVIATIONS_FILE)
+            with open(abbreviations_path, 'wb') as downloaded_file:
+                downloaded_file.write(result.content)
 
         grammar_path = os.path.join(SEMPRE_DIR, 'grow.grammar')
         if not os.path.exists(grammar_path):
-            subprocess.run(f'wget {GROW_FILE}', shell=True)
-            subprocess.run(f'mv wikitables-grow.grammar {grammar_path}', shell=True)
+            result = requests.get(GROW_FILE)
+            with open(grammar_path, 'wb') as downloaded_file:
+                downloaded_file.write(result.content)
 
         if not check_for_java():
             raise RuntimeError('Java is not installed properly.')

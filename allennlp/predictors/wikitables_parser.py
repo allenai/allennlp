@@ -3,6 +3,7 @@ import pathlib
 from subprocess import run
 from typing import List
 import shutil
+import requests
 
 from overrides import overrides
 
@@ -39,13 +40,15 @@ class WikiTablesParserPredictor(Predictor):
         os.makedirs(SEMPRE_DIR, exist_ok=True)
         abbreviations_path = os.path.join(SEMPRE_DIR, 'abbreviations.tsv')
         if not os.path.exists(abbreviations_path):
-            run(f'wget {ABBREVIATIONS_FILE}', shell=True)
-            run(f'mv wikitables-abbreviations.tsv {abbreviations_path}', shell=True)
+            result = requests.get(ABBREVIATIONS_FILE)
+            with open(abbreviations_path, 'wb') as downloaded_file:
+                downloaded_file.write(result.content)
 
         grammar_path = os.path.join(SEMPRE_DIR, 'grow.grammar')
         if not os.path.exists(grammar_path):
-            run(f'wget {GROW_FILE}', shell=True)
-            run(f'mv wikitables-grow.grammar {grammar_path}', shell=True)
+            result = requests.get(GROW_FILE)
+            with open(grammar_path, 'wb') as downloaded_file:
+                downloaded_file.write(result.content)
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
