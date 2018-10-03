@@ -40,18 +40,18 @@ ROW_FILTER_WITH_COLUMN = ComplexType(ROW_TYPE, ComplexType(COLUMN_TYPE, ROW_TYPE
 
 # "filter_number_greater", "filter_number_equals" etc.
 ROW_FILTER_WITH_COLUMN_AND_NUMBER = ComplexType(ROW_TYPE,
-                                                ComplexType(NUMBER_TYPE,
-                                                            ComplexType(COLUMN_TYPE, ROW_TYPE)))
+                                                ComplexType(COLUMN_TYPE,
+                                                            ComplexType(NUMBER_TYPE, ROW_TYPE)))
 
 # "filter_date_greater", "filter_date_equals" etc.
 ROW_FILTER_WITH_COLUMN_AND_DATE = ComplexType(ROW_TYPE,
-                                              ComplexType(DATE_TYPE,
-                                                          ComplexType(COLUMN_TYPE, ROW_TYPE)))
+                                              ComplexType(COLUMN_TYPE,
+                                                          ComplexType(DATE_TYPE, ROW_TYPE)))
 
 # "filter_in" and "filter_not_in"
 ROW_FILTER_WITH_COLUMN_AND_STRING = ComplexType(ROW_TYPE,
-                                                ComplexType(STRING_TYPE,
-                                                            ComplexType(COLUMN_TYPE, ROW_TYPE)))
+                                                ComplexType(COLUMN_TYPE,
+                                                            ComplexType(STRING_TYPE, ROW_TYPE)))
 
 ROW_FILTER = ComplexType(ROW_TYPE, ROW_TYPE)  # first, last, previous, next etc.
 
@@ -90,7 +90,7 @@ add_common_name_with_type("argmax", "F00", ROW_FILTER_WITH_COLUMN)
 add_common_name_with_type("argmin", "F01", ROW_FILTER_WITH_COLUMN)
 add_common_name_with_type("same_as", "F02", ROW_FILTER_WITH_COLUMN)
 
-# <r,<n,<l,r>>>
+# <r,<l,<n,r>>>
 add_common_name_with_type("filter_number_greater", "F10", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
 add_common_name_with_type("filter_number_greater_equals", "F11", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
 add_common_name_with_type("filter_number_lesser", "F12", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
@@ -98,7 +98,7 @@ add_common_name_with_type("filter_number_lesser_equals", "F13", ROW_FILTER_WITH_
 add_common_name_with_type("filter_number_equals", "F14", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
 add_common_name_with_type("filter_number_not_equals", "F15", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
 
-# <r,<d,<l,r>>>
+# <r,<l,<d,r>>>
 add_common_name_with_type("filter_date_greater", "F20", ROW_FILTER_WITH_COLUMN_AND_DATE)
 add_common_name_with_type("filter_date_greater_equals", "F21", ROW_FILTER_WITH_COLUMN_AND_DATE)
 add_common_name_with_type("filter_date_lesser", "F22", ROW_FILTER_WITH_COLUMN_AND_DATE)
@@ -106,7 +106,7 @@ add_common_name_with_type("filter_date_lesser_equals", "F23", ROW_FILTER_WITH_CO
 add_common_name_with_type("filter_date_equals", "F24", ROW_FILTER_WITH_COLUMN_AND_DATE)
 add_common_name_with_type("filter_date_not_equals", "F25", ROW_FILTER_WITH_COLUMN_AND_DATE)
 
-# <r,<s,<l,r>>>
+# <r,<l,<s,r>>>
 add_common_name_with_type("filter_in", "F30", ROW_FILTER_WITH_COLUMN_AND_STRING)
 add_common_name_with_type("filter_not_in", "F31", ROW_FILTER_WITH_COLUMN_AND_STRING)
 

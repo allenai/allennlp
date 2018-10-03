@@ -267,7 +267,7 @@ class WikiTablesDatasetReader(DatasetReader):
         tokenized_question = tokenized_question or self._tokenizer.tokenize(question.lower())
         question_field = TextField(tokenized_question, self._question_token_indexers)
         metadata: Dict[str, Any] = {"question_tokens": [x.text for x in tokenized_question]}
-        metadata["original_table"] = "".join(table_lines)
+        metadata["original_table"] = "\n".join(table_lines)
         table_knowledge_graph = TableQuestionKnowledgeGraph.read_from_lines(table_lines, tokenized_question)
         table_metadata = MetadataField(table_lines)
         table_field = KnowledgeGraphField(table_knowledge_graph,

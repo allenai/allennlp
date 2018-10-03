@@ -7,8 +7,9 @@ an executor for the variable-free logical forms.
 """
 # TODO(pradeep): Merge this class with the `WikiTablesWorld` class, and move all the
 # language-specific functionality into type declarations.
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Union
 import re
+import logging
 
 from nltk.sem.logic import Type
 from overrides import overrides
@@ -16,6 +17,8 @@ from overrides import overrides
 from allennlp.semparse.worlds.world import ParsingError, World
 from allennlp.semparse.type_declarations import wikitables_variable_free as types
 from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class WikiTablesVariableFreeWorld(World):
@@ -48,6 +51,10 @@ class WikiTablesVariableFreeWorld(World):
                          global_type_signatures=types.COMMON_TYPE_SIGNATURE,
                          global_name_mapping=types.COMMON_NAME_MAPPING)
         self.table_graph = table_graph
+
+        # TODO (pradeep): Define an executor in this world when we have a new context class.
+        # Something like the following:
+        # self._executor = WikiTablesVariableFreeExecutor(self.table_graph.table_data)
 
         # For every new Sempre column name seen, we update this counter to map it to a new NLTK name.
         self._column_counter = 0
@@ -165,3 +172,6 @@ class WikiTablesVariableFreeWorld(World):
         for agenda_item in set(agenda_items):
             agenda.append(self.terminal_productions[agenda_item])
         return agenda
+
+    def execute(self, logical_form: str) -> Union[List[str], int]:
+        raise NotImplementedError

@@ -32,13 +32,16 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
     encoder_output_dim : ``int``
     action_embedding_dim : ``int``
     input_attention : ``Attention``
-    num_start_types : ``int``
     activation : ``Activation``, optional (default=relu)
         The activation that gets applied to the decoder LSTM input and to the action query.
     predict_start_type_separately : ``bool``, optional (default=True)
         If ``True``, we will predict the initial action (which is typically the base type of the
         logical form) using a different mechanism than our typical action decoder.  We basically
         just do a projection of the hidden state, and don't update the decoder RNN.
+    num_start_types : ``int``, optional (default=None)
+        If ``predict_start_type_separately`` is ``True``, this is the number of start types that
+        are in the grammar.  We need this so we can construct parameters with the right shape.
+        This is unused if ``predict_start_type_separately`` is ``False``.
     add_action_bias : ``bool``, optional (default=True)
         If ``True``, there has been a bias dimension added to the embedding of each action, which
         gets used when predicting the next action.  We add a dimension of ones to our predicted
@@ -49,9 +52,9 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                  encoder_output_dim: int,
                  action_embedding_dim: int,
                  input_attention: Attention,
-                 num_start_types: int,
                  activation: Activation = Activation.by_name('relu')(),
                  predict_start_type_separately: bool = True,
+                 num_start_types: int = None,
                  add_action_bias: bool = True,
                  dropout: float = 0.0) -> None:
         super().__init__()
@@ -59,12 +62,13 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         self._add_action_bias = add_action_bias
         self._activation = activation
 
-        self._num_start_types = num_start_types
         self._predict_start_type_separately = predict_start_type_separately
         if predict_start_type_separately:
             self._start_type_predictor = Linear(encoder_output_dim, num_start_types)
+            self._num_start_types = num_start_types
         else:
             self._start_type_predictor = None
+            self._num_start_types = None
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with the final hidden state of the encoder.
@@ -167,7 +171,7 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                                       hidden_state: torch.Tensor,
                                       attention_weights: torch.Tensor,
                                       predicted_action_embeddings: torch.Tensor
-                                     ) -> Dict[int, List[Tuple[int, Any, Any, List[int]]]]:
+                                     ) -> Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]]:
         # We take a couple of extra arguments here because subclasses might use them.
         # pylint: disable=unused-argument,no-self-use
 
@@ -181,7 +185,7 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         group_size = len(state.batch_indices)
         actions = state.get_valid_actions()
 
-        batch_results: Dict[int, List[Tuple[int, torch.Tensor, torch.Tensor, List[int]]]] = defaultdict(list)
+        batch_results: Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]] = defaultdict(list)
         for group_index in range(group_size):
             instance_actions = actions[group_index]
             predicted_action_embedding = predicted_action_embeddings[group_index]
@@ -197,6 +201,7 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
             log_probs = state.score[group_index] + current_log_probs
             batch_results[state.batch_indices[group_index]].append((group_index,
                                                                     log_probs,
+                                                                    current_log_probs,
                                                                     output_action_embeddings,
                                                                     action_ids))
         return batch_results
@@ -204,7 +209,7 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
     def _construct_next_states(self,
                                state: GrammarBasedState,
                                updated_rnn_state: Dict[str, torch.Tensor],
-                               batch_action_probs: Dict[int, List[Tuple[int, Any, Any, List[int]]]],
+                               batch_action_probs: Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]],
                                max_actions: int,
                                allowed_actions: List[Set[int]]):
         # pylint: disable=no-self-use
@@ -237,10 +242,10 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                                         state.rnn_state[group_index].encoder_outputs,
                                         state.rnn_state[group_index].encoder_output_mask)
             batch_index = state.batch_indices[group_index]
-            for i, log_probs, _, actions in batch_action_probs[batch_index]:
+            for i, _, current_log_probs, _, actions in batch_action_probs[batch_index]:
                 if i == group_index:
                     considered_actions = actions
-                    probabilities = log_probs.exp().cpu()
+                    probabilities = current_log_probs.exp().cpu()
                     break
             return state.new_state_from_group_index(group_index,
                                                     action,
@@ -255,7 +260,7 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
             if allowed_actions and not max_actions:
                 # If we're given a set of allowed actions, and we're not just keeping the top k of
                 # them, we don't need to do any sorting, so we can speed things up quite a bit.
-                for group_index, log_probs, action_embeddings, actions in results:
+                for group_index, log_probs, _, action_embeddings, actions in results:
                     for log_prob, action_embedding, action in zip(log_probs, action_embeddings, actions):
                         if action in allowed_actions[group_index]:
                             new_states.append(make_state(group_index, action, log_prob, action_embedding))
@@ -266,7 +271,7 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                 group_log_probs: List[torch.Tensor] = []
                 group_action_embeddings = []
                 group_actions = []
-                for group_index, log_probs, action_embeddings, actions in results:
+                for group_index, log_probs, _, action_embeddings, actions in results:
                     group_indices.extend([group_index] * len(actions))
                     group_log_probs.append(log_probs)
                     group_action_embeddings.append(action_embeddings)

@@ -266,7 +266,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         batch_size = len(rnn_state)
         initial_score = rnn_state[0].hidden_state.new_zeros(batch_size)
         initial_score_list = [initial_score[i] for i in range(batch_size)]
-        initial_state = CoverageState(batch_indices=list(range(batch_size)),
+        initial_state = CoverageState(batch_indices=list(range(batch_size)),  # type: ignore
                                       action_history=[[] for _ in range(batch_size)],
                                       score=initial_score_list,
                                       rnn_state=rnn_state,
@@ -390,7 +390,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         action_strings = [state.possible_actions[batch_index][i][0] for i in action_history]
         logical_form = world.get_logical_form(action_strings)
         lisp_string = state.extras[batch_index]
-        if self._denotation_accuracy.evaluate_logical_form(logical_form, lisp_string):
+        if self._executor.evaluate_logical_form(logical_form, lisp_string):
             cost = checklist_cost
         else:
             cost = checklist_cost + (1 - self._checklist_cost_weight) * denotation_cost

@@ -10,6 +10,7 @@ from allennlp.data import Vocabulary
 from allennlp.training.metrics import SpanBasedF1Measure, Metric
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
 from allennlp.common.params import Params
+from allennlp.common.checks import ConfigurationError
 
 
 class SpanBasedF1Test(AllenNlpTestCase):
@@ -268,3 +269,34 @@ class SpanBasedF1Test(AllenNlpTestCase):
         num_correct_arg1_instances_from_perl_evaluation = int([token for token in
                                                                stdout_lines[8].split(" ") if token][1])
         assert num_correct_arg1_instances_from_perl_evaluation == metric._true_positives["ARG1"]
+
+    def test_span_f1_accepts_tags_to_spans_function_argument(self):
+        def mock_tags_to_spans_function(tag_sequence, classes_to_ignore=None):  # pylint: disable=W0613
+            return [('mock', (42, 42))]
+
+        # Should be ignore.
+        bio_tags = ["B-ARG1", "O", "B-C-ARG1", "B-V", "B-ARGM-ADJ", "O"]
+        gold_indices = [self.vocab.get_token_index(x, "tags") for x in bio_tags]
+        gold_tensor = torch.Tensor([gold_indices])
+        prediction_tensor = torch.rand([1, 6, self.vocab.get_vocab_size("tags")])
+
+        metric = SpanBasedF1Measure(
+                self.vocab,
+                "tags",
+                label_encoding=None,
+                tags_to_spans_function=mock_tags_to_spans_function,
+                )
+
+        metric(prediction_tensor, gold_tensor)
+        metric_dict = metric.get_metric()
+
+        numpy.testing.assert_almost_equal(metric_dict["recall-overall"], 1.0)
+        numpy.testing.assert_almost_equal(metric_dict["precision-overall"], 1.0)
+        numpy.testing.assert_almost_equal(metric_dict["f1-measure-overall"], 1.0)
+
+        with self.assertRaises(ConfigurationError):
+            SpanBasedF1Measure(self.vocab, label_encoding='INVALID')
+        with self.assertRaises(ConfigurationError):
+            SpanBasedF1Measure(self.vocab, tags_to_spans_function=mock_tags_to_spans_function)
+        with self.assertRaises(ConfigurationError):
+            SpanBasedF1Measure(self.vocab, label_encoding=None, tags_to_spans_function=None)
