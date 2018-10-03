@@ -710,24 +710,8 @@ class QuarelSemanticParser(Model):
                                                            entity_type_embeddings,
                                                            list(linked_action_ids))
 
-        # Lastly, we need to also create embedded representations of context-specific actions.  In
-        # this case, those are only variable productions, like "r -> x".  Note that our language
-        # only permits one lambda at a time, so we don't need to worry about how nested lambdas
-        # might impact this.
-        context_actions = {}
-        for action_id, action in enumerate(possible_actions):
-            if action[0].endswith(" -> x"):
-                input_embedding = self._action_embedder(action[2])
-                if self._add_action_bias:
-                    input_bias = self._action_biases(action[2])
-                    input_embedding = torch.cat([input_embedding, input_bias], dim=-1)
-                output_embedding = self._output_action_embedder(action[2])
-                context_actions[action[0]] = (input_embedding, output_embedding, action_id)
-
         return GrammarStatelet([START_SYMBOL],
-                               {},
                                translated_valid_actions,
-                               context_actions,
                                type_declaration.is_nonterminal)
 
     @overrides
