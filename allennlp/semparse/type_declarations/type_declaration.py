@@ -109,7 +109,7 @@ class NamedBasicType(BasicType):
 
     Parameters
     ----------
-    string_rep : str
+    string_rep : ``str``
         String representation of the type.
     """
     def __init__(self, string_rep) -> None:
@@ -125,6 +125,30 @@ class NamedBasicType(BasicType):
 
     def str(self):
         return self._string_rep
+
+
+class MultiMatchNamedBasicType(NamedBasicType):
+    """
+    A ``NamedBasicType`` that matches with any type within a list of ``BasicTypes`` that it takes
+    as an additional argument during instantiation. We just override the ``matches`` method in
+    ``BasicType`` to match against any of the types given by the list.
+
+    Parameters
+    ----------
+    string_rep : ``str``
+        String representation of the type, passed to super class.
+    types_to_match : ``List[BasicType]``
+        List of types that this type should match with.
+    """
+    def __init__(self,
+                 string_rep,
+                 types_to_match: List[BasicType]) -> None:
+        super().__init__(string_rep)
+        self._types_to_match = set(types_to_match)
+
+    @overrides
+    def matches(self, other):
+        return super().matches(other) or other in self._types_to_match
 
 
 class PlaceholderType(ComplexType):
