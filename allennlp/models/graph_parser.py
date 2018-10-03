@@ -169,7 +169,7 @@ class GraphParser(Model):
         head_tag_representation = self._dropout(self.head_tag_feedforward(encoded_text))
         child_tag_representation = self._dropout(self.child_tag_feedforward(encoded_text))
         # shape (batch_size, sequence_length, sequence_length)
-        attended_arcs = self.arc_attention(head_arc_representation,
+        arc_scores = self.arc_attention(head_arc_representation,
                                            child_arc_representation)
         # shape (batch_size, num_tags, sequence_length, sequence_length)
         arc_tag_logits = self.tag_bilinear(head_tag_representation,
@@ -179,9 +179,9 @@ class GraphParser(Model):
 
         minus_inf = -1e8
         minus_mask = (1 - float_mask) * minus_inf
-        attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
+        arc_scores = arc_scores + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
-        arc_probs, arc_tag_probs = self._greedy_decode(attended_arcs,
+        arc_probs, arc_tag_probs = self._greedy_decode(arc_scores,
                                                        arc_tag_logits,
                                                        mask)
 
@@ -193,7 +193,7 @@ class GraphParser(Model):
                 }
 
         if arc_tags is not None:
-            arc_nll, tag_nll = self._construct_loss(attended_arcs=attended_arcs,
+            arc_nll, tag_nll = self._construct_loss(arc_scores=arc_scores,
                                                     arc_tag_logits=arc_tag_logits,
                                                     arc_tags=arc_tags,
                                                     mask=mask)
@@ -239,7 +239,7 @@ class GraphParser(Model):
         return output_dict
 
     def _construct_loss(self,
-                        attended_arcs: torch.Tensor,
+                        arc_scores: torch.Tensor,
                         arc_tag_logits: torch.Tensor,
                         arc_tags: torch.Tensor,
                         mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -248,7 +248,7 @@ class GraphParser(Model):
 
         Parameters
         ----------
-        attended_arcs : ``torch.Tensor``, required.
+        arc_scores : ``torch.Tensor``, required.
             A tensor of shape (batch_size, sequence_length, sequence_length) used to generate a
             binary classification decision for whether an edge is present between two words.
         arc_tag_logits : ``torch.Tensor``, required.
@@ -273,7 +273,7 @@ class GraphParser(Model):
         # Make the arc tags not have negative values anywhere
         # (by default, no edge is indicated with -1).
         arc_tags = arc_tags * arc_indices
-        arc_nll = self._arc_loss(attended_arcs, arc_indices) * float_mask.unsqueeze(1) * float_mask.unsqueeze(2)
+        arc_nll = self._arc_loss(arc_scores, arc_indices) * float_mask.unsqueeze(1) * float_mask.unsqueeze(2)
         # We want the mask for the tags to only include the unmasked words
         # and we only care about the loss with respect to the gold arcs.
         tag_mask = float_mask.unsqueeze(1) * float_mask.unsqueeze(2) * arc_indices
@@ -291,7 +291,7 @@ class GraphParser(Model):
         return arc_nll, tag_nll
 
     @staticmethod
-    def _greedy_decode(attended_arcs: torch.Tensor,
+    def _greedy_decode(arc_scores: torch.Tensor,
                        arc_tag_logits: torch.Tensor,
                        mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -301,7 +301,7 @@ class GraphParser(Model):
 
         Parameters
         ----------
-        attended_arcs : ``torch.Tensor``, required.
+        arc_scores : ``torch.Tensor``, required.
             A tensor of shape (batch_size, sequence_length, sequence_length) used to generate
             a distribution over attachements of a given word to all other words.
         arc_tag_logits : ``torch.Tensor``, required.
@@ -320,16 +320,16 @@ class GraphParser(Model):
             representing the distribution over edge tags for a given edge.
         """
         # Mask the diagonal, because we don't self edges.
-        inf_diagonal_mask = torch.diag(attended_arcs.new(mask.size(1)).fill_(-numpy.inf))
-        attended_arcs = attended_arcs + inf_diagonal_mask
+        inf_diagonal_mask = torch.diag(arc_scores.new(mask.size(1)).fill_(-numpy.inf))
+        arc_scores = arc_scores + inf_diagonal_mask
         # shape (batch_size, sequence_length, sequence_length, num_tags)
         arc_tag_logits = arc_tag_logits + inf_diagonal_mask.unsqueeze(0).unsqueeze(-1)
         # Mask padded tokens, because we only want to consider actual word -> word edges.
         minus_mask = (1 - mask).byte().unsqueeze(2)
-        attended_arcs.masked_fill_(minus_mask, -numpy.inf)
+        arc_scores.masked_fill_(minus_mask, -numpy.inf)
         arc_tag_logits.masked_fill_(minus_mask.unsqueeze(-1), -numpy.inf)
         # shape (batch_size, sequence_length, sequence_length)
-        arc_probs = attended_arcs.sigmoid()
+        arc_probs = arc_scores.sigmoid()
         # shape (batch_size, sequence_length, sequence_length, num_tags)
         arc_tag_probs = torch.nn.functional.softmax(arc_tag_logits, dim=-1)
         return arc_probs, arc_tag_probs
