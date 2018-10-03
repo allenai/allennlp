@@ -104,7 +104,6 @@ class TestBidirectionalLM(ModelTestCase):
                           optimizer=optimizer,
                           iterator=iterator,
                           train_dataset=self.instances,
-                          num_epochs=1000)
+                          num_epochs=100)
 
         trainer.train()
-        assert False

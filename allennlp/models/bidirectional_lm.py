@@ -1,13 +1,14 @@
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union, Optional
 
 import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models import Model
-from allennlp.modules.softmax import Softmax
+from allennlp.modules.masked_layer_norm import MaskedLayerNorm
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
+from allennlp.modules.softmax import Softmax
 from allennlp.nn.util import get_text_field_mask
 
 @Model.register('bidirectional-language-model')
@@ -21,11 +22,14 @@ class BidirectionalLanguageModel(Model):
                  text_field_embedder: TextFieldEmbedder,
                  contextualizer: Seq2SeqEncoder,
                  softmax: Softmax,
+                 layer_norm: Optional[MaskedLayerNorm] = None,
                  dropout: float = None,
                  loss_scale_fac: Union[float, str] = 1.0,
-                 remove_bos_eos: bool = True) -> None:
+                 remove_bos_eos: bool = True,
+                 return_all_layers: bool = False) -> None:
         super().__init__(vocab)
         self._text_field_embedder = text_field_embedder
+        self._layer_norm = layer_norm
         self._contextualizer = contextualizer
         self._forward_dim = contextualizer.get_output_dim() // 2
 
@@ -38,6 +42,7 @@ class BidirectionalLanguageModel(Model):
             self._dropout = None
         self._loss_scale_fac = loss_scale_fac
         self._remove_bos_eos = remove_bos_eos
+        self._return_all_layers = return_all_layers
 
     def _get_target_token_embedding(self,
                                     token_embeddings: torch.Tensor,
@@ -121,8 +126,12 @@ class BidirectionalLanguageModel(Model):
         forward_targets[:, 0:-1] = token_ids[:, 1:]
         backward_targets[:, 1:] = token_ids[:, 0:-1]
 
-        non_contextual_embeddings = self._text_field_embedder(tokens)
-        contextual_embeddings = self._contextualizer(non_contextual_embeddings, mask)
+        embeddings = self._text_field_embedder(tokens)
+
+        if self._layer_norm is not None:
+            embeddings = self._layer_norm(embeddings)
+
+        contextual_embeddings = self._contextualizer(embeddings, mask)
 
         # add dropout
         if self._dropout:
@@ -130,7 +139,7 @@ class BidirectionalLanguageModel(Model):
 
         # compute softmax loss
         forward_loss, backward_loss = self._compute_loss(contextual_embeddings,
-                                                         non_contextual_embeddings,
+                                                         embeddings,
                                                          forward_targets,
                                                          backward_targets)
 
@@ -164,8 +173,8 @@ class BidirectionalLanguageModel(Model):
 
         # TODO: add non-loss functions to the output
         if self._remove_bos_eos:
-            return_dict['lm_embeddings'] = contextual_embeddings[:, 1:-1]
-        else:
-            return_dict['lm_embeddings'] = contextual_embeddings
+            contextual_embeddings = contextual_embeddings[:, 1:-1]
+
+        return_dict['lm_embeddings'] = contextual_embeddings
 
         return return_dict
