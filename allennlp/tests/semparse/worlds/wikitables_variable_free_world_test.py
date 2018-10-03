@@ -196,10 +196,12 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '2000', '?']]
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {'n -> 2000',
-                                           '<r,<c,r>> -> argmax'}
+                                           '<r,<c,r>> -> argmax',
+                                           'm -> date_column:year'}
         tokens = [Token(x) for x in ['what', 'was', 'the', 'difference', 'in', 'attendance',
                                      'between', 'years', '2001', 'and', '2005', '?']]
         world = self._get_world_with_question_tokens(tokens)
+        # "year" column does not match because "years" occurs in the question.
         assert set(world.get_agenda()) == {'n -> 2001',
                                            'n -> 2005',
                                            '<r,<r,<f,n>>> -> diff'}
@@ -208,10 +210,11 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {'n -> 2001',
                                            'n -> 2005',
-                                           '<r,<f,n>> -> sum'}
+                                           '<r,<f,n>> -> sum',
+                                           'f -> number_column:avg_attendance'}
         tokens = [Token(x) for x in ['when', 'was', 'the', 'least', 'avg.', 'attendance', '?']]
         world = self._get_world_with_question_tokens(tokens)
-        assert set(world.get_agenda()) == {'<r,<c,r>> -> argmin'}
+        assert set(world.get_agenda()) == {'<r,<c,r>> -> argmin', 'f -> number_column:avg_attendance'}
         tokens = [Token(x) for x in ['what', 'is', 'the', 'least', 'avg.', 'attendance', '?']]
         world = self._get_world_with_question_tokens(tokens)
-        assert set(world.get_agenda()) == {'<r,<f,n>> -> min'}
+        assert set(world.get_agenda()) == {'<r,<f,n>> -> min', 'f -> number_column:avg_attendance'}

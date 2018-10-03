@@ -191,8 +191,11 @@ class WikiTablesVariableFreeWorld(World):
             agenda.append(f"{types.NUMBER_TYPE} -> {number}")
 
         question_with_underscores = "_".join(question_tokens)
-        for column_name, signature in self._column_productions_for_agenda.items():
-            if column_name in question_with_underscores:
+        normalized_question = re.sub("[^a-z0-9_]", "", question_with_underscores)
+        for column_name_with_type, signature in self._column_productions_for_agenda.items():
+            column_name = column_name_with_type.split(":")[1]
+            # Underscores ensure that the match is of whole words.
+            if f"_{column_name}_" in normalized_question:
                 agenda.append(signature)
         return agenda
 
