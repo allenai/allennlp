@@ -170,7 +170,7 @@ class GraphParser(Model):
         child_tag_representation = self._dropout(self.child_tag_feedforward(encoded_text))
         # shape (batch_size, sequence_length, sequence_length)
         arc_scores = self.arc_attention(head_arc_representation,
-                                           child_arc_representation)
+                                        child_arc_representation)
         # shape (batch_size, num_tags, sequence_length, sequence_length)
         arc_tag_logits = self.tag_bilinear(head_tag_representation,
                                            child_tag_representation)

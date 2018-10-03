@@ -56,7 +56,7 @@ class AdjacencyField(Field[torch.Tensor]):
         self.sequence_field = sequence_field
         self._label_namespace = label_namespace
         self._padding_value = padding_value
-        self._indexed_labels = None
+        self._indexed_labels: List[int] = None
 
         self._maybe_warn_for_namespace(label_namespace)
         field_length = sequence_field.sequence_length()
