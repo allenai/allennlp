@@ -184,12 +184,7 @@ class GraphParser(Model):
         arc_probs, arc_tag_probs = self._greedy_decode(attended_arcs,
                                                        arc_tag_logits,
                                                        mask)
-        # Make the arc tags not have negative values anywhere
-        # (by default, no edge is indicated with -1).
-        arc_indices = (arc_tags != -1).float()
-        tag_mask = float_mask.unsqueeze(1) * float_mask.unsqueeze(2)
-        one_minus_arc_probs = 1 - arc_probs
-        self._unlabelled_f1(torch.stack([one_minus_arc_probs, arc_probs], -1), arc_indices, tag_mask)
+
         output_dict = {
                 "arc_probs": arc_probs,
                 "arc_tag_probs": arc_tag_probs,
@@ -205,6 +200,15 @@ class GraphParser(Model):
             output_dict["loss"] = arc_nll + tag_nll
             output_dict["arc_loss"] = arc_nll
             output_dict["tag_loss"] = tag_nll
+
+            # Make the arc tags not have negative values anywhere
+            # (by default, no edge is indicated with -1).
+            arc_indices = (arc_tags != -1).float()
+            tag_mask = float_mask.unsqueeze(1) * float_mask.unsqueeze(2)
+            one_minus_arc_probs = 1 - arc_probs
+            # We stack scores here because the f1 measure expects a
+            # distribution, rather than a single value.
+            self._unlabelled_f1(torch.stack([one_minus_arc_probs, arc_probs], -1), arc_indices, tag_mask)
 
         return output_dict
 
@@ -293,9 +297,7 @@ class GraphParser(Model):
         """
         Decodes the head and head tag predictions by decoding the unlabeled arcs
         independently for each word and then again, predicting the head tags of
-        these greedily chosen arcs indpendently. Note that this method of decoding
-        is not guaranteed to produce trees (i.e. there maybe be multiple roots,
-        or cycles when children are attached to their parents).
+        these greedily chosen arcs indpendently.
 
         Parameters
         ----------
@@ -305,6 +307,8 @@ class GraphParser(Model):
         arc_tag_logits : ``torch.Tensor``, required.
             A tensor of shape (batch_size, sequence_length, sequence_length, num_tags) used to
             generate a distribution over tags for each arc.
+        mask : ``torch.Tensor``, required.
+            A mask of shape (batch_size, sequence_length).
 
         Returns
         -------
@@ -321,10 +325,9 @@ class GraphParser(Model):
         # shape (batch_size, sequence_length, sequence_length, num_tags)
         arc_tag_logits = arc_tag_logits + inf_diagonal_mask.unsqueeze(0).unsqueeze(-1)
         # Mask padded tokens, because we only want to consider actual word -> word edges.
-        if mask is not None:
-            minus_mask = (1 - mask).byte().unsqueeze(2)
-            attended_arcs.masked_fill_(minus_mask, -numpy.inf)
-            arc_tag_logits.masked_fill_(minus_mask.unsqueeze(-1), -numpy.inf)
+        minus_mask = (1 - mask).byte().unsqueeze(2)
+        attended_arcs.masked_fill_(minus_mask, -numpy.inf)
+        arc_tag_logits.masked_fill_(minus_mask.unsqueeze(-1), -numpy.inf)
         # shape (batch_size, sequence_length, sequence_length)
         arc_probs = attended_arcs.sigmoid()
         # shape (batch_size, sequence_length, sequence_length, num_tags)

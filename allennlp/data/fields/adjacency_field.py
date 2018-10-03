@@ -91,7 +91,7 @@ class AdjacencyField(Field[torch.Tensor]):
     @overrides
     def index(self, vocab: Vocabulary):
         if self._indexed_labels is None and self.labels is not None:
-            self._indexed_labels = [vocab.get_token_index(label, self._label_namespace)  # type: ignore
+            self._indexed_labels = [vocab.get_token_index(label, self._label_namespace)
                                     for label in self.labels]
 
     @overrides
@@ -99,19 +99,17 @@ class AdjacencyField(Field[torch.Tensor]):
         return {'num_tokens': self.sequence_field.sequence_length()}
 
     @overrides
-    def as_tensor(self,
-                  padding_lengths: Dict[str, int],
-                  cuda_device: int = -1) -> torch.Tensor:
+    def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
         desired_num_tokens = padding_lengths['num_tokens']
         tensor = torch.ones(desired_num_tokens, desired_num_tokens) * self._padding_value
         labels = self._indexed_labels or [1 for _  in range(len(self.indices))]
 
         for index, label in zip(self.indices, labels):
             tensor[index] = label
-        return tensor if cuda_device == -1 else tensor.cuda(cuda_device)
+        return tensor
 
     @overrides
-    def empty_field(self) -> 'AdjacencyField':  # pylint: disable=no-self-use
+    def empty_field(self) -> 'AdjacencyField':
         # pylint: disable=protected-access
         # The empty_list here is needed for mypy
         empty_list: List[Tuple[int, int]] = []
