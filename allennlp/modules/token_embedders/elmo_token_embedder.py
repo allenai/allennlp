@@ -3,6 +3,7 @@ import torch
 
 from allennlp.common import Params
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
+from allennlp.modules.elmo import Elmo
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.data import Vocabulary
 
@@ -48,9 +49,6 @@ class ElmoTokenEmbedder(TokenEmbedder):
                  projection_dim: int = None,
                  vocab_to_cache: List[str] = None) -> None:
         super(ElmoTokenEmbedder, self).__init__()
-
-        # Import here to avoid circular references
-        from allennlp.modules.elmo import Elmo
 
         self._elmo = Elmo(options_file,
                           weight_file,
