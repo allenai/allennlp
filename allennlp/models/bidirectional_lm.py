@@ -126,11 +126,11 @@ class BidirectionalLanguageModel(Model):
         return losses[0], losses[1]
 
     def forward(self,  # type: ignore
-                inputs: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
+                tokens: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
         """
         Computes the averaged forward and backward LM loss from the batch.
 
-        By convention, ``inputs`` is required to have at least a ``"tokens"``
+        By convention, the input dict is required to have at least a ``"tokens"``
         entry that's the output of a ``SingleIdTokenIndexer``, which is used
         to compute the language model targets.
 
@@ -140,7 +140,7 @@ class BidirectionalLanguageModel(Model):
 
         Parameters
         ----------
-        inputs: ``torch.Tensor``, required.
+        tokens: ``torch.Tensor``, required.
             The output of ``Batch.as_tensor_dict()`` for a batch of sentences.
 
         Returns
@@ -159,10 +159,10 @@ class BidirectionalLanguageModel(Model):
             (batch_size, timesteps) mask for the embeddings
         """
         # pylint: disable=arguments-differ
-        mask = get_text_field_mask(inputs)
+        mask = get_text_field_mask(tokens)
 
         # We must have token_ids so that we can compute targets
-        token_ids = inputs.get("tokens")
+        token_ids = tokens.get("tokens")
         if token_ids is None:
             raise ConfigurationError("Your data must have a 'tokens': SingleIdTokenIndexer() "
                                      "in order to use the BidirectionalLM")
@@ -173,7 +173,7 @@ class BidirectionalLanguageModel(Model):
         forward_targets[:, 0:-1] = token_ids[:, 1:]
         backward_targets[:, 1:] = token_ids[:, 0:-1]
 
-        embeddings = self._text_field_embedder(inputs)
+        embeddings = self._text_field_embedder(tokens)
 
         # Apply LayerNorm if appropriate.
         embeddings = self._layer_norm(embeddings)

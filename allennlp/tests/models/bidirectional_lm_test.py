@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 
+from allennlp.commands.evaluate import evaluate
 from allennlp.common.testing import ModelTestCase
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
@@ -69,32 +70,32 @@ class TestBidirectionalLM(ModelTestCase):
                                            contextualizer=contextualizer)
 
         # Try the pieces individually
-        for batch in iterator(self.instances, num_epochs=1):
-            token_dict = batch['tokens']
-            mask = get_text_field_mask(token_dict)
-            output = text_field_embedder(token_dict)
+        batch = next(iterator(self.instances, num_epochs=1))
+        token_dict = batch['tokens']
+        mask = get_text_field_mask(token_dict)
+        output = text_field_embedder(token_dict)
 
-            # Sequence length is 8 because of BOS / EOS.
-            assert tuple(output.shape) == (2, 8, 16)
+        # Sequence length is 8 because of BOS / EOS.
+        assert tuple(output.shape) == (2, 8, 16)
 
-            contextualized = contextualizer(output, mask)
-            assert tuple(contextualized.shape) == (2, 8, 14)
+        contextualized = contextualizer(output, mask)
+        assert tuple(contextualized.shape) == (2, 8, 14)
 
         # Try the whole thing
-        for batch in iterator(self.instances, num_epochs=1):
-            result = model(**batch)
+        batch = next(iterator(self.instances, num_epochs=1))
+        result = model(**batch)
 
-            assert set(result) == {"loss", "forward_loss", "backward_loss", "lm_embeddings", "mask"}
+        assert set(result) == {"loss", "forward_loss", "backward_loss", "lm_embeddings", "mask"}
 
-            # The model should have removed the BOS / EOS tokens.
-            embeddings = result["lm_embeddings"]
-            assert tuple(embeddings.shape) == (2, 6, 14)
+        # The model should have removed the BOS / EOS tokens.
+        embeddings = result["lm_embeddings"]
+        assert tuple(embeddings.shape) == (2, 6, 14)
 
-            loss = result["loss"].item()
-            forward_loss = result["forward_loss"].item()
-            backward_loss = result["backward_loss"].item()
+        loss = result["loss"].item()
+        forward_loss = result["forward_loss"].item()
+        backward_loss = result["backward_loss"].item()
 
-            np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2, decimal=3)
+        np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2, decimal=3)
 
         # Try training it
         optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
@@ -103,6 +104,13 @@ class TestBidirectionalLM(ModelTestCase):
                           optimizer=optimizer,
                           iterator=iterator,
                           train_dataset=self.instances,
-                          num_epochs=100)
+                          num_epochs=10)
 
         trainer.train()
+
+        # Loss should be lower
+        batch = next(iterator(self.instances, num_epochs=1))
+        result = model(**batch)
+        new_loss = result["loss"].item()
+
+        assert new_loss < loss
