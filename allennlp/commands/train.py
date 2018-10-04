@@ -273,9 +273,11 @@ def train_model(params: Params,
              if key in datasets_for_vocab_creation)
     )
 
+    model = Model.from_params(vocab=vocab, params=params.pop('model'))
+
+    # Initializing the model can have side effect of expanding the vocabulary
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
-    model = Model.from_params(vocab=vocab, params=params.pop('model'))
     iterator = DataIterator.from_params(params.pop("iterator"))
     iterator.index_with(vocab)
     validation_iterator_params = params.pop("validation_iterator", None)
