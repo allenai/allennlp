@@ -159,22 +159,26 @@ class WikiTablesVariableFreeWorld(World):
                 agenda_items.append("diff")
             if token == "average":
                 agenda_items.append("average")
-            if token in ["least", "top", "first", "smallest", "shortest", "lowest"]:
+            if token in ["least", "top", "smallest", "shortest", "lowest"]:
                 # This condition is too brittle. But for most logical forms with "min", there are
                 # semantically equivalent ones with "argmin". The exceptions are rare.
                 if "what is the least" in question:
                     agenda_items.append("min")
                 else:
                     agenda_items.append("argmin")
-            if token in ["last", "most", "largest", "highest", "longest", "greatest"]:
+            if token in ["most", "largest", "highest", "longest", "greatest"]:
                 # This condition is too brittle. But for most logical forms with "max", there are
                 # semantically equivalent ones with "argmax". The exceptions are rare.
                 if "what is the most" in question:
                     agenda_items.append("max")
                 else:
                     agenda_items.append("argmax")
+            if token == "first":
+                agenda_items.append("first")
+            if token == "last":
+                agenda_items.append("last")
 
-        if "how many" in question or "number" in question:
+        if "how many" in question:
             if "sum" not in agenda_items and "average" not in agenda_items:
                 # The question probably just requires counting the rows. But this is not very
                 # accurate. The question could also be asking for a value that is in the table.
@@ -184,19 +188,36 @@ class WikiTablesVariableFreeWorld(World):
         for agenda_item in set(agenda_items):
             agenda.append(self.global_terminal_productions[agenda_item])
 
-        # Adding all productions that lead to entities and numbers extracted from the question.
-        for entity in self._question_entities:
-            agenda.append(f"{types.STRING_TYPE} -> {entity}")
-        for number in self._question_numbers:
-            agenda.append(f"{types.NUMBER_TYPE} -> {number}")
-
+        # Adding column names that occur in question.
         question_with_underscores = "_".join(question_tokens)
         normalized_question = re.sub("[^a-z0-9_]", "", question_with_underscores)
+        # We keep track of tokens that are in column names being added to the agenda. We will not
+        # add string productions to the agenda if those tokens were already captured as column
+        # names.
+        # Note: If the same string occurs multiple times, this may cause string productions being
+        # omitted from the agenda unnecessarily. That is fine, as we want to err on the side of
+        # adding fewer rules to the agenda.
+        tokens_in_column_names: Set[str] = set()
         for column_name_with_type, signature in self._column_productions_for_agenda.items():
             column_name = column_name_with_type.split(":")[1]
             # Underscores ensure that the match is of whole words.
             if f"_{column_name}_" in normalized_question:
                 agenda.append(signature)
+                for token in column_name.split("_"):
+                    tokens_in_column_names.add(token)
+
+        # Adding all productions that lead to entities and numbers extracted from the question.
+        for entity in self._question_entities and entity not in tokens_in_column_names:
+            agenda.append(f"{types.STRING_TYPE} -> {entity}")
+
+        for number in self._question_numbers:
+            # The reason we check for the presence of the number in the question again is because
+            # some of these numbers are extracted from number words like month names and ordinals
+            # like "first". On looking at some agenda outputs, I found that they hurt more than help
+            # in the agenda.
+            if f"_{number}_" in normalized_question:
+                agenda.append(f"{types.NUMBER_TYPE} -> {number}")
+
         return agenda
 
     def execute(self, logical_form: str) -> Union[List[str], int]:

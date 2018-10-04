@@ -97,7 +97,7 @@ class TableQuestionContext:
                 self.table_data[-1][typed_column_name] = cell_value
                 self._cell_values.add(cell_value)
 
-    MAX_TOKENS_FOR_NUM_CELL = 1
+    MAX_TOKENS_FOR_NUM_CELL = 2
 
     @classmethod
     def read_from_lines(cls,
