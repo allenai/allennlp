@@ -112,7 +112,9 @@ More information at: https://homes.cs.washington.edu/~msap/debug/event2mind/docs
 * [event2mind-2018.09.17.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/event2mind-2018.09.17.tar.gz) (52 MB)
 
 ```
-$ allennlp evaluate https://s3-us-west-2.amazonaws.com/allennlp/models/event2mind-2018.09.17.tar.gz  https://raw.githubusercontent.com/uwnlp/event2mind/master/docs/data/test.csv
+$ allennlp evaluate \
+    https://s3-us-west-2.amazonaws.com/allennlp/models/event2mind-2018.09.17.tar.gz  \
+    https://raw.githubusercontent.com/uwnlp/event2mind/master/docs/data/test.csv
 
 Metrics (unigram recall):
 xintent: 0.36
