@@ -61,9 +61,11 @@ The rest of this tutorial will walk you through the pieces of the semantic parsi
 
 <sub><a name="footnote1">1</a>: There are much more efficient ways to implement standard seq2seq models
 than using a transition system.  If that's what you want to do, maybe look at our [SimpleSeq2Seq
-model](https://github.com/allenai/allennlp/blob/master/allennlp/models/encoder_decoders/simple_seq2seq.py)</sub>
+model](https://github.com/allenai/allennlp/blob/master/allennlp/models/encoder_decoders/simple_seq2seq.py).</sub>
 
-## Training a transition function<a name="section1"></a>
+
+<a name="section1"></a>
+## Training a transition function
 
 The fundamental piece of the semantic parsing framework is the `TransitionFunction`.  This is a
 pytorch `Module` that parameterizes state transitions.  That is, given a `State`, the
@@ -133,7 +135,8 @@ for each action.  This allows for predicting actions at test time that were neve
 time, to do various kinds of zero-shot prediction.
 
 
-## Tracking the State of the decoder<a name="section2"></a>
+<a name="section2"></a>
+## Tracking the State of the decoder
 
 Our `TransitionFunctions` operate on `States`, scoring actions available at each `State` and
 returning ranked lists of new ones.  In order for this to work, we need some way of representing
@@ -234,7 +237,9 @@ As you can see, this keeps track of the basic things that any `State` needs (lis
 indices, action histories, and scores), along with the `RnnStatelets` and `GrammarStatelets`
 discussed above, and a few other fields that are helpful during decoding.
 
-## Defining a language and an execution engine<a name="section3"></a>
+
+<a name="section3"></a>
+## Defining a language and an execution engine
 
 The previous two sections of this tutorial dealt with a general architecture for training state
 machines, which can be used for any transition system, not just a semantic parser.  For the rest of
@@ -280,7 +285,9 @@ We have some ideas around how to combine the language definition and the executo
 piece of python code, but we're still working on that.  Hopefully this piece will be easier in the
 not-too-distant future.
 
-## Adding context to a model<a name="section4"></a>
+
+<a name="section4"></a>
+## Adding context to a model
 
 Many semantic parsing tasks have some additional piece of context as input, like a knowledge graph,
 a table, or a SQL database.  We have code for representing some of these additional contexts in
@@ -290,7 +297,9 @@ them.  The `SqlTableContext` takes a SQL database and reads its tables and colum
 SQL grammar that gets generated, so you can only produce queries that reference columns that are
 actually in the table.
 
-## Combining the context, language and execution together into a World<a name="section5"></a>
+
+<a name="section5"></a>
+## Combining the context, language and execution together into a World
 
 We put all of these pieces together for any particular `Instance` in a `World` class.  This class
 knows what language is being used, what `Instance`-specific context there is, and how to execute
@@ -318,7 +327,9 @@ important functionality for getting the type system to work correctly (e.g., the
 converts logical forms to action sequences and back actually lives partially in `World`).  This
 could probably use a bit of refactoring.
 
-## Putting it all together: a quick summary<a name="section6"></a>
+
+<a name="section6"></a>
+## Putting it all together: a quick summary
 
 There are a bunch of moving pieces to get a semantic parser working.  To summarize, we have:
 
