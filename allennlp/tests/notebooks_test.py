@@ -11,7 +11,6 @@ except ModuleNotFoundError:
 
 from allennlp.common.testing import AllenNlpTestCase
 
-@pytest.ignore
 class TestNotebooks(AllenNlpTestCase):
     @pytest.mark.skip(reason="these tests are brittle and fail with small dependency changes")
     def test_vocabulary_tutorial(self):
