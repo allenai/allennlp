@@ -43,9 +43,3 @@ allennlp.modules.token_embedders
    :members:
    :undoc-members:
    :show-inheritance:
-
-.. _cnn-highway-encoder:
-.. automodule:: allennlp.modules.token_embedders.cnn_highway_encoder
-   :members:
-   :undoc-members:
-   :show-inheritance:
