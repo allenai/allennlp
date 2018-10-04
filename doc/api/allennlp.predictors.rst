@@ -18,6 +18,7 @@ allennlp.predictors
 * :ref:`SimpleSeq2SeqPredictor<simple-seq2seq>`
 * :ref:`WikiTablesParserPredictor<wikitables-parser>`
 * :ref:`NlvrParserPredictor<nlvr-parser>`
+* :ref:`QuarelParserPredictor<quarel-parser>`
 * :ref:`OpenIePredictor<open-information-extraction>`
 * :ref:`Event2MindPredictor<event2mind>`
 * :ref:`AtisParserPredictor<atis-parser>`
@@ -85,6 +86,12 @@ allennlp.predictors
 
 .. _nlvr-parser:
 .. automodule:: allennlp.predictors.nlvr_parser
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _quarel-parser:
+.. automodule:: allennlp.predictors.quarel_parser
    :members:
    :undoc-members:
    :show-inheritance:

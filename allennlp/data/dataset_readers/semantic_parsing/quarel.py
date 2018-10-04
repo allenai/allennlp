@@ -23,8 +23,8 @@ from allennlp.data.fields import IndexField, ListField, MetadataField, Productio
 from allennlp.data.fields import SequenceLabelField
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
-from allennlp.semparse.helpers.quarel_utils import WorldTaggerExtractor, words_from_entity_string
-from allennlp.semparse.helpers.quarel_utils import LEXICAL_CUES, align_entities
+from allennlp.semparse.contexts.quarel_utils import WorldTaggerExtractor, words_from_entity_string
+from allennlp.semparse.contexts.quarel_utils import LEXICAL_CUES, align_entities
 from allennlp.semparse.worlds.quarel_world import QuarelWorld
 
 

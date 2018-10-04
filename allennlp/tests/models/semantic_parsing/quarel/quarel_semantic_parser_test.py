@@ -1,6 +1,6 @@
 # pylint: disable=invalid-name,no-self-use,protected-access
 from allennlp.common.testing import ModelTestCase
-from allennlp.semparse.helpers.quarel_utils import group_worlds, to_qr_spec_string
+from allennlp.semparse.contexts.quarel_utils import group_worlds, to_qr_spec_string
 
 
 class QuarelSemanticParserTest(ModelTestCase):

@@ -40,3 +40,8 @@ allennlp.semparse.contexts
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.semparse.contexts.quarel_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
