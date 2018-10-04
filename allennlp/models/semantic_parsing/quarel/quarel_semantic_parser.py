@@ -443,7 +443,6 @@ class QuarelSemanticParser(Model):
                     outputs['logical_form'].append(logical_form)
                     outputs['denotation_acc'].append(denotation_accuracy)
                     outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
-                    outputs['entities'].append(world[i].table_graph.entities)
                 else:
                     outputs['parse_acc'].append(0)
                     outputs['logical_form'].append('')
