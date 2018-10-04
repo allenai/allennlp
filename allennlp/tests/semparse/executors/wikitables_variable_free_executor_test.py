@@ -1,6 +1,8 @@
 # pylint: disable=no-self-use,invalid-name,too-many-public-methods
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.tokenizers import WordTokenizer
 from allennlp.semparse.worlds.world import ExecutionError
+from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.semparse.executors import WikiTablesVariableFreeExecutor
 from allennlp.semparse.executors.wikitables_variable_free_executor import Date
 
@@ -366,3 +368,13 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
         assert (Date(2018, -1, 1) < Date(2018, -1, 3)) == False
         # TODO (pradeep): Figure out whether this is expected behavior by looking at data.
         assert (Date(2018, -1, 1) >= Date(2018, -1, 3)) == False
+
+    def test_number_comparison_works(self):
+        # TableQuestionContext normlaizes all strings according to some rules. We want to ensure
+        # that the original numerical values of number cells is being correctly processed here.
+        tokens = WordTokenizer().tokenize("when was the attendance the highest?")
+        tagged_file = self.FIXTURES_ROOT / "data" / "corenlp_processed_tables" / "TEST-2.table"
+        context = TableQuestionContext.read_from_file(tagged_file, tokens)
+        executor = WikiTablesVariableFreeExecutor(context.table_data)
+        result = executor.execute("(select (argmax all_rows number_column:attendance) date_column:date)")
+        assert result == ["november_10"]
