@@ -125,13 +125,13 @@ initial `State` (the return value is a dictionary so you can return whatever els
 There are several examples of `DecoderTrainers` and `TransitionFunctions` already in the library,
 and you can create your own if what we have doesn't fit your needs (and if you implement your own
 that you think would be useful for others, please consider contributing it back!).  Here are a few
-examples (not an exhaustive list): TODO: add links
+examples (not an exhaustive list):
 
 `DecoderTrainers`:
 - [`MaximumMarginalLikelihood`](../../allennlp/state_machines/trainers/maximum_marginal_likelihood.py)
   (when you have a set of possibly correct action sequences, e.g., after you've done a search for
 action sequences that match the correct answer to a question)
-- [`EmpiricalRiskMinimization`](../../allennlp/state_machines/trainers/expected_risk_minimization.py)
+- [`ExpectedRiskMinimization`](../../allennlp/state_machines/trainers/expected_risk_minimization.py)
   (when you have a reward function, e.g., for finished states that tells you whether the logical
 form executed correctly)
 
@@ -144,6 +144,14 @@ each state.
 linking to words in the utterance, instead of having an embedding for each action.  This allows for
 predicting actions at test time that were never seen at training time, to do various kinds of
 zero-shot prediction.
+
+We'll note here that separating the pieces out this way makes it relatively easy to try out
+different training algorithms.  Our models for
+[`WikiTableQuestions`](../../allennlp/models/semantic_parsing/wikitables/) and
+[`NLVR`](../../allennlp/models/semantic_parsing/nlvr) both have versions using
+`MaximumMarginalLikelihood` and `ExpectedRiskMinimization`, and for many semantic parsers, either
+the `BasicTransitionFunction` or the `LinkingTransitionFunction` should be all you need for a
+standard decoder, and all you have to implement in your model is the encoder.
 
 
 <a name="section2"></a>
@@ -316,8 +324,9 @@ github and we'll see what we can do.
 For executing logical forms, we have put our execution engines in
 [`semparse.executors`](../../allennlp/semparse/executors); you can see what is available there.
 There isn't any consistent theme for defining the execution engine - some of the executors call
-subprocesses to execute the logical form (for SQL and for using SEMPRE to evaluate lambda-DCS), and
-some of them have executors that are just python code.
+subprocesses to execute the logical form (for SQL and for using
+[SEMPRE](https://github.com/percyliang/sempre) to evaluate lambda-DCS), and some of them have
+executors that are just python code.
 
 We have some ideas around how to combine the language definition and the executor into one simple
 piece of python code, but we're still working on that.  Hopefully this piece will be easier in the
@@ -369,10 +378,11 @@ to the grammar.
 
 As with defining the language, if you have your own way of performing those six functions, you can
 bypass our `World` code and still use whatever other components you find helpful.  If you are using
-our `nltk`-based logic system to define your language, however, the base `World` class has some
-important functionality for getting the type system to work correctly (e.g., the logic that
-converts logical forms to action sequences and back actually lives partially in `World`).  This
-could probably use a bit of refactoring.
+our `nltk`-based logic system to define your language, however, the base
+[`World`](../../allennlp/semparse/worlds/world.py) class has some important functionality for
+getting the type system to work correctly (e.g., the logic that converts logical forms to action
+sequences and back actually lives partially in `World`).  This could probably use a bit of
+refactoring.
 
 
 <a name="section6"></a>
@@ -404,8 +414,9 @@ These are the datasets that are currently supported:
   dataset of questions over tables extracted from Wikipedia
 ([paper](https://www.semanticscholar.org/paper/Compositional-Semantic-Parsing-on-Semi-Structured-Pasupat-Liang/41ab97376fcbd67d05bad648b40d92d96a3f1c1c),
 [website](https://nlp.stanford.edu/blog/wikitablequestions-a-complex-real-world-question-understanding-dataset/)).
-We support the lambda-DCS language by interfacing with SEMPRE, and very soon we will also support
-the variable-free language in [Chen Liang's MAPO
+We support the lambda-DCS language by interfacing with
+[SEMPRE](https://github.com/percyliang/sempre), and very soon we will also support the
+variable-free language in [Chen Liang's MAPO
 paper](https://www.semanticscholar.org/paper/Memory-Augmented-Policy-Optimization-for-Program-Liang-Norouzi/16a32fb65e75963e763151636587c16f6ab7b5cf).
 - [Cornell Natural Language Visual Reasoning
   (NLVR)](../../allennlp/data/dataset_readers/semantic_parsing/nlvr.py), a dataset of true/false
