@@ -218,3 +218,6 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         tokens = [Token(x) for x in ['what', 'is', 'the', 'least', 'avg.', 'attendance', '?']]
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {'<r,<f,n>> -> min', 'f -> number_column:avg_attendance'}
+        tokens = [Token(x) for x in ['when', 'did', 'the', 'team', 'not', 'qualify', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'s -> string:qualify'}

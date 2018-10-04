@@ -208,7 +208,7 @@ class WikiTablesVariableFreeWorld(World):
         # Adding all productions that lead to entities and numbers extracted from the question.
         for entity in self._question_entities:
             if entity not in tokens_in_column_names:
-                agenda.append(f"{types.STRING_TYPE} -> {entity}")
+                agenda.append(f"{types.STRING_TYPE} -> string:{entity}")
 
         for number in self._question_numbers:
             # The reason we check for the presence of the number in the question again is because
