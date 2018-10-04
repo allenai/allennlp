@@ -1,4 +1,4 @@
-from typing import Sequence, Dict, List
+from typing import Sequence, Dict, List, Callable
 
 import torch
 import numpy as np
@@ -95,9 +95,9 @@ class CnnHighwayEncoder(Seq2VecEncoder):
 
         # And add a layer norm
         if do_layer_norm:
-            self._layer_norm = MaskedLayerNorm(self.output_dim, gamma0=0.1)
+            self._layer_norm: Callable = MaskedLayerNorm(self.output_dim, gamma0=0.1)
         else:
-            self._layer_norm = lambda x: x
+            self._layer_norm = lambda tensor, mask: tensor
 
     def forward(self,
                 inputs: torch.Tensor,

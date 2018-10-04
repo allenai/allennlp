@@ -12,7 +12,6 @@ allennlp.modules.token_embedders
 * :ref:`TokenCharactersEncoder<token-characters-encoder>`
 * :ref:`ELMoTokenEmbedder<elmo-token-embedder>`
 * :ref:`OpenaiTransformerEmbedder<openai-transformer-embedder>`
-* :ref:`CnnHighwayEncoder<cnn-highway-encoder>`
 
 .. _token-embedder:
 .. automodule:: allennlp.modules.token_embedders.token_embedder

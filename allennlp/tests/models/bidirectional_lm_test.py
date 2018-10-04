@@ -10,7 +10,6 @@ from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.bidirectional_lm import BidirectionalLanguageModel
 from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
-from allennlp.modules.softmax import Softmax
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
 from allennlp.modules.token_embedders import TokenCharactersEncoder, Embedding
 from allennlp.modules.seq2vec_encoders.cnn_highway_encoder import CnnHighwayEncoder
