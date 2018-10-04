@@ -5,6 +5,7 @@ that ends up as an array in a model.
 
 from allennlp.data.fields.field import Field
 from allennlp.data.fields.array_field import ArrayField
+from allennlp.data.fields.adjacency_field import AdjacencyField
 from allennlp.data.fields.index_field import IndexField
 from allennlp.data.fields.knowledge_graph_field import KnowledgeGraphField
 from allennlp.data.fields.label_field import LabelField

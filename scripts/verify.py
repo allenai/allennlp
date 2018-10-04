@@ -44,7 +44,7 @@ def main(checks):
 
         if "check-requirements" in checks:
             print("Checking requirements.txt against setup.py", flush=True)
-            run("./scripts/check_requirements_and_setup.py")
+            run("./scripts/check_requirements_and_setup.py", shell=True, check=True)
             print("check requirements passed")
 
     except CalledProcessError:

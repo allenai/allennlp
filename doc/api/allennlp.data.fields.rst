@@ -19,6 +19,7 @@ allennlp.data.fields
 * :ref:`SequenceField<sequence-field>`
 * :ref:`SequenceLabelField<sequence-label-field>`
 * :ref:`TextField<text-field>`
+* :ref:`AdjacencyField<adjacency-field>`
 
 .. _field:
 .. automodule:: allennlp.data.fields.field
@@ -94,6 +95,12 @@ allennlp.data.fields
 
 .. _text-field:
 .. automodule:: allennlp.data.fields.text_field
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _adjacency-field:
+.. automodule:: allennlp.data.fields.adjacency_field
    :members:
    :undoc-members:
    :show-inheritance:
