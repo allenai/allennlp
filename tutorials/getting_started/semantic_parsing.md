@@ -443,4 +443,7 @@ There are models implemented for most of these datasets, many of which you can s
 
 Is there a dataset or model that you really want to work on that's not here?  We'd love to hear
 about it, or to have contributions to add more capability to this framework.  Just open an issue or
-a pull request on github.
+a pull request on github.  If you want to use a relatively standard model on some new dataset, the
+main piece you'll have to worry about is the transition system, making a way to go from the logical
+forms in your training data to action sequences that we can use to train.  Once you have that, you
+should be able to copy one of our examples and swap out the pieces that are specific to your data.
