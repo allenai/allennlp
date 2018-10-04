@@ -116,9 +116,8 @@ class WikiTablesVariableFreeWorld(World):
             self._column_productions_for_agenda[name] = f"{column_type} -> {name}"
         elif name.startswith("string:"):
             # We do not need to translate these names.
-            original_name = name.replace("string:", "")
             translated_name = name
-            self._add_name_mapping(original_name, translated_name, types.STRING_TYPE)
+            self._add_name_mapping(name, translated_name, types.STRING_TYPE)
         elif name.startswith("num:"):
             # NLTK throws an error if it sees a "." in constants, which will most likely happen
             # within numbers as a decimal point. We're changing those to underscores.
