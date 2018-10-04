@@ -7,6 +7,15 @@
 An [Apache 2.0](https://github.com/allenai/allennlp/blob/master/LICENSE) NLP research library, built on PyTorch,
 for developing state-of-the-art deep learning models on a wide variety of linguistic tasks.
 
+## Quick Links
+
+* [Website](http://www.allennlp.org/)
+* [Tutorial](https://allennlp.org/tutorials)
+* [Documentation](https://allenai.github.io/allennlp-docs/)
+* [Contributing Guidelines](CONTRIBUTING.md)
+* [Model List](MODELS.md)
+* [Continuous Build](http://build.allennlp.org/)
+
 ## Installation
 
 AllenNLP requires Python 3.6.1 or later. The preferred way to install AllenNLP is via `pip`.  Just run `pip install allennlp` in your Python environment and you're good to go!
