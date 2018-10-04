@@ -184,7 +184,7 @@ class AtisWorld():
             
             
             
-        new_binary_expressions = new_grammar['biexpr'].members + tuple(new_binary_expressions)
+        new_binary_expressions = tuple(new_binary_expressions) + new_grammar['biexpr'].members
         new_grammar['biexpr'] = OneOf(*new_binary_expressions, name='biexpr')
         self._update_expression_reference(new_grammar, 'condition', 'biexpr')
         return new_grammar
@@ -284,7 +284,7 @@ class AtisWorld():
                                           current_tokenized_utterance,
                                           'time_range_end')
 
-        self.add_to_number_linking_scores({'0', '1'},
+        self.add_to_number_linking_scores({'0', '1', '60', '41'},
                                           number_linking_scores,
                                           get_numbers_from_utterance,
                                           current_tokenized_utterance,

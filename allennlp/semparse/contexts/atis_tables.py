@@ -207,7 +207,7 @@ def get_time_range_end_from_utterance(utterance: str, # pylint: disable=unused-a
 def get_costs_from_utterance(utterance: str, # pylint: disable=unused-argument
                              tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     dollars_indices = {index for index, token in enumerate(tokenized_utterance)
-                       if token.text == 'dollars'}
+                       if token.text == 'dollars' or token.text == 'dollar'}
 
     costs_linking_dict: Dict[str, List[int]] = defaultdict(list)
     for token_index, token in enumerate(tokenized_utterance):
@@ -459,6 +459,7 @@ TIME_RANGE_START_DICT = {'morning': ['0'],
                          'mornings': ['1200'],
                          'afternoon': ['1200'],
                          'afternoons': ['1200'],
+                         'after noon': ['1200'],
                          'late afternoon': ['1600'],
                          'evening': ['1800'],
                          'late evening': ['2000']}
@@ -469,6 +470,7 @@ TIME_RANGE_END_DICT = {'early morning': ['800'],
                        'early afternoon': ['1400'],
                        'afternoon': ['1800'],
                        'afternoons': ['1800'],
+                       'after noon': ['1800'],
                        'evening': ['2200']}
 
 ALL_TABLES = {'aircraft': ['aircraft_code', 'aircraft_description', 'capacity',
@@ -517,7 +519,7 @@ TABLES_WITH_STRINGS = {'airline' : ['airline_code', 'airline_name'],
                        'state' : ['state_name', 'state_code'],
                        'fare_basis' : ['fare_basis_code', 'class_type', 'economy', 'booking_class'],
                        'class_of_service' : ['booking_class', 'class_description'],
-                       'aircraft' : ['basic_type', 'manufacturer', 'aircraft_code'],
+                       'aircraft' : ['basic_type', 'manufacturer', 'aircraft_code', 'propulsion'],
                        'restriction' : ['restriction_code'],
                        'ground_service' : ['transport_type'],
                        'days' : ['day_name', 'days_code'],
