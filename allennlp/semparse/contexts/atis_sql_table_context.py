@@ -32,6 +32,8 @@ from allennlp.semparse.contexts.sql_context_utils import initialize_valid_action
 GRAMMAR_DICTIONARY = {}
 GRAMMAR_DICTIONARY['statement'] = ['query ws ";" ws']
 GRAMMAR_DICTIONARY['query'] = ['(ws "(" ws "SELECT" ws distinct ws select_results ws '
+                               '"FROM" ws table_refs ws where_clause ws group_by_clause ws ")" ws)',
+                               '(ws "(" ws "SELECT" ws distinct ws select_results ws '
                                '"FROM" ws table_refs ws where_clause ws ")" ws)',
                                '(ws "SELECT" ws distinct ws select_results ws '
                                '"FROM" ws table_refs ws where_clause ws)']
@@ -41,6 +43,7 @@ GRAMMAR_DICTIONARY['agg_func'] = ['"MIN"', '"min"', '"MAX"', '"max"', '"COUNT"',
 GRAMMAR_DICTIONARY['col_refs'] = ['(col_ref ws "," ws col_refs)', '(col_ref)']
 GRAMMAR_DICTIONARY['table_refs'] = ['(table_name ws "," ws table_refs)', '(table_name)']
 GRAMMAR_DICTIONARY['where_clause'] = ['("WHERE" ws "(" ws conditions ws ")" ws)', '("WHERE" ws conditions ws)']
+GRAMMAR_DICTIONARY['group_by_clause'] = ['("GROUP" ws "BY" ws col_ref)']
 GRAMMAR_DICTIONARY['conditions'] = ['(condition ws conj ws conditions)',
                                     '(condition ws conj ws "(" ws conditions ws ")")',
                                     '("(" ws conditions ws ")" ws conj ws conditions)',
@@ -123,7 +126,7 @@ class AtisSqlTableContext:
             grammar_dictionary['table_name'] = \
                     sorted([f'"{table}"'
                             for table in list(self.all_tables.keys())], reverse=True)
-            grammar_dictionary['col_ref'] = ['"*"']
+            grammar_dictionary['col_ref'] = ['"*"', 'agg']
             for table, columns in self.all_tables.items():
                 grammar_dictionary['col_ref'].extend([f'("{table}" ws "." ws "{column}")'
                                                       for column in columns])
@@ -137,7 +140,8 @@ class AtisSqlTableContext:
                 for column in columns:
                     self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
                     results = self.cursor.fetchall()
-
+                    if table == 'flight' and column == 'airline_code':
+                        results.append(('EA',))
                     strings_list.extend([(format_action(f"{table}_{column}_string",
                                                         str(row[0]),
                                                         is_string=not 'number' in column,

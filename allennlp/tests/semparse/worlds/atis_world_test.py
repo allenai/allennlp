@@ -1,8 +1,10 @@
 # pylint: disable=too-many-lines
 from datetime import datetime
 import json
+from copy import deepcopy
 
 from parsimonious.expressions import Literal, Sequence
+from parsimonious.exceptions import ParseError 
 
 from allennlp.common.file_utils import cached_path
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
@@ -12,7 +14,7 @@ from allennlp.semparse.worlds.atis_world import AtisWorld
 class TestAtisWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        test_filename = self.FIXTURES_ROOT / "data" / "atis" / "sample.json"
+        test_filename = self.FIXTURES_ROOT / "data" / "atis" / "dev.json"
         self.data = open(test_filename).readlines()
         self.database_file = cached_path("https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db")
 
@@ -773,6 +775,34 @@ class TestAtisWorld(AllenNlpTestCase):
                                                          world.grammar['ws'])
     def test_atis_debug(self): # pylint: disable=no-self-use
         # Check if the triggers activate correcty
-        world = AtisWorld(["show me the flights on eastern air"]) 
+        world = AtisWorld(['how many first class flights are provided by american airlines', 'how many cities are served by american airline with first class flights', 'how many cities are served by continental with first class flights', 'how many cities are served by delta airlines with first class flights', 'how many cities are served by twa with first class flights', 'how many cities are served by eastern with first class flights', 'how many cities are served by lufthansa with first class flights', 'how many business class flights are provided by each airline']) 
 
-        print(world.entities) 
+        action_sequence = world.get_action_sequence('''( SELECT DISTINCT flight.airline_code , count(*) FROM flight WHERE flight . flight_id IN ( SELECT flight_fare . flight_id FROM flight_fare WHERE flight_fare . fare_id IN ( SELECT fare . fare_id FROM fare WHERE fare . fare_basis_code IN ( SELECT fare_basis . fare_basis_code FROM fare_basis WHERE fare_basis.class_type = 'BUSINESS' ))) GROUP BY flight.airline_code  ) ;''')
+        print(action_sequence)
+
+    def test_atis_parse_coverage(self):
+        num_queries = 0
+        num_parsed = 0
+
+        for line in self.data:
+            jline = json.loads(line)
+            utterances = []
+            for current_interaction in jline['interaction']:
+                if not current_interaction['sql']:
+                    continue
+                utterances.append(current_interaction['utterance'])
+                world = AtisWorld(deepcopy(utterances))
+                try:
+                    num_queries += 1
+                    action_sequence = world.get_action_sequence(current_interaction['sql'].split('\n')[0])
+                    num_parsed+= 1
+                    print("Parsed {} out of {}, coverage: {}".format(num_parsed, num_queries, num_parsed/num_queries))
+
+                except ParseError as error:
+                    print('Failed to parse:')
+                    print(error)
+                    print(utterances)
+                    print(current_interaction['sql'].split('\n')[0])
+                    continue
+            
+        print("Parsed {} out of {}, coverage: {}".format(num_parsed, num_queries, num_parsed/num_queries))

@@ -88,6 +88,21 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
     if year_result:
         year = int(year_result[0])
 
+    fivegrams = ngrams([token.text for token in tokenized_utterance], 5)
+    for tens, digit, of, year_in_fivegram, month in fivegrams:
+        # This will match something like ``september twenty first``.
+        day = ' '.join([tens, digit])
+        if month in MONTH_NUMBERS and day in DAY_NUMBERS and year_in_fivegram.isdigit():
+            try:
+                dates.append(datetime(int(year_in_fivegram), MONTH_NUMBERS[month], DAY_NUMBERS[day]))
+            except ValueError:
+                print('invalid month day')
+        if month in MONTH_NUMBERS and digit in DAY_NUMBERS and year_in_fivegram.isdigit():
+            try:
+                dates.append(datetime(int(year_in_fivegram), MONTH_NUMBERS[month], DAY_NUMBERS[digit]))
+            except ValueError:
+                print('invalid month day')
+
     trigrams = ngrams([token.text for token in tokenized_utterance], 3)
     for month, tens, digit in trigrams:
         # This will match something like ``september twenty first``.
@@ -439,14 +454,16 @@ MISC_TIME_TRIGGERS = {'lunch': ['1400'],
 
 TIME_RANGE_START_DICT = {'morning': ['0'],
                          'afternoon': ['1200'],
+                         'afternoons': ['1200'],
                          'late afternoon': ['1600'],
                          'evening': ['1800'],
                          'late evening': ['2000']}
 
 TIME_RANGE_END_DICT = {'early morning': ['800'],
-                       'morning': ['1200'],
+                       'morning': ['1200', '800'],
                        'early afternoon': ['1400'],
                        'afternoon': ['1800'],
+                       'afternoons': ['1800'],
                        'evening': ['2200']}
 
 ALL_TABLES = {'aircraft': ['aircraft_code', 'aircraft_description', 'capacity',
@@ -489,17 +506,17 @@ ALL_TABLES = {'aircraft': ['aircraft_code', 'aircraft_description', 'capacity',
 TABLES_WITH_STRINGS = {'airline' : ['airline_code', 'airline_name'],
                        'city' : ['city_name', 'state_code', 'city_code'],
                        'fare' : ['round_trip_required', 'fare_basis_code', 'restriction_code'],
-                       'flight' : ['airline_code', 'flight_days', 'flight_number'],
+                       'flight' : ['airline_code', 'flight_days', 'flight_number', 'airline_flight'],
                        'flight_stop' : ['stop_airport'],
-                       'airport' : ['airport_code'],
+                       'airport' : ['airport_code', 'airport_name'],
                        'state' : ['state_name', 'state_code'],
                        'fare_basis' : ['fare_basis_code', 'class_type', 'economy'],
-                       'class_of_service' : ['booking_class'],
-                       'aircraft' : ['basic_type', 'manufacturer'],
+                       'class_of_service' : ['booking_class', 'class_description'],
+                       'aircraft' : ['basic_type', 'manufacturer', 'aircraft_code'],
                        'restriction' : ['restriction_code'],
                        'ground_service' : ['transport_type'],
                        'days' : ['day_name', 'days_code'],
-                       'food_service': ['meal_description']}
+                       'food_service': ['meal_description', 'compartment']}
 
 DAY_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
 
