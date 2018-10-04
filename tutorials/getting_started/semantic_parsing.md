@@ -26,7 +26,8 @@ the pieces of the meaning representation.  Our focus is on cases where the meani
 is directly executable, and we'll talk about defining languages and execution engines for this, but
 you could conceivably use pieces of this framework for other kinds of semantic parsing if you want.
 
-![Image credit: Ray Mooney](./semantic_parsing_example.png)
+![An example of semantic parsing](./semantic_parsing_example.png)
+<sub>Image credit: Ray Mooney</sub>
 
 We approach this problem in AllenNLP with encoder-decoder models, similar to the seq2seq models
 used in neural machine translation or summarization.  That is, we encode the input utterance (and
@@ -39,25 +40,30 @@ with ")" - that wouldn't be a valid program.
 We accomplish this with a generic state machine decoder, where the model defines a transition
 system stipulating which actions are valid at any particular state.  If the "actions" are all of
 the tokens in some output vocabulary, and all actions are valid at every state, this would be a
-standard seq2seq model (FOOTNOTE: while identical semantically this approach would be inefficient).
-By changing what the actions represent, or constraining the valid actions at each timestep of
-decoding, however, we can learn better models that are tailored for our task.  For semantic
-parsing, the "actions" will incrementally build up a statement in some formal language, with
-constraints on the allowed actions at each step to ensure that only valid statements are generated.
-Note, however, that state machines are more general than semantic parsers, and you can use this
-framework for any structured prediction problem that you can formulate as a transition system.
+standard seq2seq model.<sup>[1](#footnote1)</sup> By changing what the actions represent, or
+constraining the valid actions at each timestep of decoding, however, we can learn better models
+that are tailored for our task.  For semantic parsing, the "actions" will incrementally build up a
+statement in some formal language, with constraints on the allowed actions at each step to ensure
+that only valid statements are generated.  Note, however, that state machines are more general than
+semantic parsers, and you can use this framework for any structured prediction problem that you can
+formulate as a transition system.
 
-The rest of this tutorial will walk you through the pieces of the semantic parsing framework (TODO:
-make these links):
+The rest of this tutorial will walk you through the pieces of the semantic parsing framework:
 
-- Transition functions and training algorithms
-- Keeping track of the decoder's state
-- Defining a transition system (or a logical form language) to specify what actions there are and
-  when they can be taken, and an execution engine for that language
-- Adding context to your model (like a table or a database)
-- Putting the context, the transition system, and the execution engine together into a `World`
+- [Transition functions and training algorithms](#section1)
+- [Keeping track of the decoder's state](#section2)
+- [Defining a transition system (or a logical form language) to specify what actions there are and
+  when they can be taken, and an execution engine for that language](#section3)
+- [Adding context to your model (like a table or a database)](#section4)
+- [Putting the context, the transition system, and the execution engine together into a
+  `World`](#section5)
+- [Summary of what's available](#section6)
 
-## Training a transition function
+<sub><a name="footnote1">1</a>: There are much more efficient ways to implement standard seq2seq models
+than using a transition system.  If that's what you want to do, maybe look at our [SimpleSeq2Seq
+model](https://github.com/allenai/allennlp/blob/master/allennlp/models/encoder_decoders/simple_seq2seq.py)</sub>
+
+## Training a transition function<a name="section1"></a>
 
 The fundamental piece of the semantic parsing framework is the `TransitionFunction`.  This is a
 pytorch `Module` that parameterizes state transitions.  That is, given a `State`, the
@@ -127,7 +133,7 @@ for each action.  This allows for predicting actions at test time that were neve
 time, to do various kinds of zero-shot prediction.
 
 
-## Tracking the State of the decoder
+## Tracking the State of the decoder<a name="section2"></a>
 
 Our `TransitionFunctions` operate on `States`, scoring actions available at each `State` and
 returning ranked lists of new ones.  In order for this to work, we need some way of representing
@@ -228,7 +234,7 @@ As you can see, this keeps track of the basic things that any `State` needs (lis
 indices, action histories, and scores), along with the `RnnStatelets` and `GrammarStatelets`
 discussed above, and a few other fields that are helpful during decoding.
 
-## Defining a language and an execution engine
+## Defining a language and an execution engine<a name="section3"></a>
 
 The previous two sections of this tutorial dealt with a general architecture for training state
 machines, which can be used for any transition system, not just a semantic parser.  For the rest of
@@ -274,7 +280,7 @@ We have some ideas around how to combine the language definition and the executo
 piece of python code, but we're still working on that.  Hopefully this piece will be easier in the
 not-too-distant future.
 
-## Adding context to a model
+## Adding context to a model<a name="section4"></a>
 
 Many semantic parsing tasks have some additional piece of context as input, like a knowledge graph,
 a table, or a SQL database.  We have code for representing some of these additional contexts in
@@ -284,7 +290,7 @@ them.  The `SqlTableContext` takes a SQL database and reads its tables and colum
 SQL grammar that gets generated, so you can only produce queries that reference columns that are
 actually in the table.
 
-## Combining the context, language and execution together into a World
+## Combining the context, language and execution together into a World<a name="section5"></a>
 
 We put all of these pieces together for any particular `Instance` in a `World` class.  This class
 knows what language is being used, what `Instance`-specific context there is, and how to execute
@@ -312,7 +318,7 @@ important functionality for getting the type system to work correctly (e.g., the
 converts logical forms to action sequences and back actually lives partially in `World`).  This
 could probably use a bit of refactoring.
 
-## Putting it all together: a quick summary
+## Putting it all together: a quick summary<a name="section6"></a>
 
 There are a bunch of moving pieces to get a semantic parser working.  To summarize, we have:
 
