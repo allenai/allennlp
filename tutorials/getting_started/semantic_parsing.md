@@ -1,19 +1,32 @@
 # The AllenNLP Semantic Parsing Framework
 
 _Semantic parsing_ is the task of mapping language to some kind of formal meaning representation.
-This meaning representation could be a logical statement in lambda calculus, a set of instructions
-for a robot to follow, or even a Python, Java, or SQL program.  In some cases these meaning
-representations are directly executable in some environment (like executing a query against a
-database, or running python code), and in others they are simply an attempt to normalize the
-semantics of a natural language utterance (like Abstract Meaning Representations or open-domain CCG
-semantics).  The thing all of these variations have in common is that they try to capture the
-meaning of language in some form, and there typically isn't a direct mapping from words in the
-utterance to the pieces of the meaning representation.  Our focus is on cases where the meaning
-representation is directly executable, and we'll talk about defining languages and execution
-engines for this, but you could conceivably use pieces of this framework for other kinds of
-semantic parsing if you want.  (TODO: add links above)
+This meaning representation could be a [logical
+statement](https://www.semanticscholar.org/paper/Online-Learning-of-Relaxed-CCG-Grammars-for-Parsing-Zettlemoyer-Collins/674ec285ce3a2d0a28d5dbf555f9885764bb6b45)
+in [lambda
+calculus](https://www.semanticscholar.org/paper/Learning-Executable-Semantic-Parsers-for-Natural-Liang/6ff9c6e43be86d7608a391b83de4cd44d707ea8d),
+a [set of
+instructions](https://www.semanticscholar.org/paper/Weakly-Supervised-Learning-of-Semantic-Parsers-for-Artzi-Zettlemoyer/14ea9a076ee744959d4ab2188a06d0ce64d362bf)
+for a [robot to
+follow](https://www.semanticscholar.org/paper/Simpler-Context-Dependent-Logical-Forms-via-Model-Long-Pasupat/7306437b2145677fe7bf3b7711ac8aa25989f1e3),
+or even a
+[Python](https://www.semanticscholar.org/paper/Learning-to-Generate-Pseudo-Code-from-Source-Code-Oda-Fudaba/27e1dbe9f7c71cd6cc1b0357f49aef497e572d09),
+[Java](https://www.semanticscholar.org/paper/Mapping-Language-to-Code-in-Programmatic-Context-Iyer-Konstas/503440e95aea0e410a1f05682315748467b0dc78),
+or [SQL
+program](https://www.semanticscholar.org/paper/Learning-a-Neural-Semantic-Parser-from-User-Iyer-Konstas/32ce5467ff884d2f90a233f4d9606c6e18b1a9d6).
+In some cases these meaning representations are directly executable in some environment (like
+executing a query against a database, or running python code), and in others they are simply an
+attempt to normalize the semantics of a natural language utterance (like [Abstract Meaning
+Representations](https://www.semanticscholar.org/paper/Abstract-Meaning-Representation-for-Sembanking-Banarescu-Bonial/d5b1adc8277e601139b777c250d3cdb41ffc29c8)
+or [open-domain CCG
+semantics](https://www.semanticscholar.org/paper/A*-CCG-Parsing-with-a-Supertag-factored-Model-Lewis-Steedman/0551fa57a42ae0fff9c670dffecfc0c63e0ec89d)).
+The thing all of these variations have in common is that they try to capture the meaning of
+language in some form, and there typically isn't a direct mapping from words in the utterance to
+the pieces of the meaning representation.  Our focus is on cases where the meaning representation
+is directly executable, and we'll talk about defining languages and execution engines for this, but
+you could conceivably use pieces of this framework for other kinds of semantic parsing if you want.
 
-TODO: add a couple of pictures in here with some examples
+![Image credit: Ray Mooney](./semantic_parsing_example.png)
 
 We approach this problem in AllenNLP with encoder-decoder models, similar to the seq2seq models
 used in neural machine translation or summarization.  That is, we encode the input utterance (and
@@ -31,7 +44,7 @@ By changing what the actions represent, or constraining the valid actions at eac
 decoding, however, we can learn better models that are tailored for our task.  For semantic
 parsing, the "actions" will incrementally build up a statement in some formal language, with
 constraints on the allowed actions at each step to ensure that only valid statements are generated.
-Note also that state machines are more general than semantic parsers, and you can use this
+Note, however, that state machines are more general than semantic parsers, and you can use this
 framework for any structured prediction problem that you can formulate as a transition system.
 
 The rest of this tutorial will walk you through the pieces of the semantic parsing framework (TODO:
