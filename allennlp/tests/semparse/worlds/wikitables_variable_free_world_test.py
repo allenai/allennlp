@@ -144,7 +144,7 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
             self.world_with_usl_a_league.parse_logical_form(logical_form_with_2013)
 
     def test_world_processes_logical_forms_correctly(self):
-        logical_form = "(select (filter_in all_rows string_column:league usl_a_league) date_column:year)"
+        logical_form = "(select (filter_in all_rows string_column:league string:usl_a_league) date_column:year)"
         expression = self.world_with_usl_a_league.parse_logical_form(logical_form)
         f = types.name_mapper.get_alias
         # Cells (and parts) get mapped to strings.
@@ -153,16 +153,16 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         assert str(expression) == f"{f('select')}({f('filter_in')}({f('all_rows')},C2,string:usl_a_league),C0)"
 
     def test_world_gets_correct_actions(self):
-        logical_form = "(select (filter_in all_rows string_column:league usl_a_league) date_column:year)"
+        logical_form = "(select (filter_in all_rows string_column:league string:usl_a_league) date_column:year)"
         expression = self.world_with_usl_a_league.parse_logical_form(logical_form)
         expected_sequence = ['@start@ -> s', 's -> [<r,<g,s>>, r, m]', '<r,<g,s>> -> select',
                              'r -> [<r,<t,<s,r>>>, r, t, s]', '<r,<t,<s,r>>> -> filter_in',
-                             'r -> all_rows', 't -> string_column:league', 's -> usl_a_league',
+                             'r -> all_rows', 't -> string_column:league', 's -> string:usl_a_league',
                              'm -> date_column:year']
         assert self.world_with_usl_a_league.get_action_sequence(expression) == expected_sequence
 
     def test_world_gets_logical_form_from_actions(self):
-        logical_form = "(select (filter_in all_rows string_column:league usl_a_league) date_column:year)"
+        logical_form = "(select (filter_in all_rows string_column:league string:usl_a_league) date_column:year)"
         expression = self.world_with_usl_a_league.parse_logical_form(logical_form)
         action_sequence = self.world_with_usl_a_league.get_action_sequence(expression)
         reconstructed_logical_form = self.world_with_usl_a_league.get_logical_form(action_sequence)

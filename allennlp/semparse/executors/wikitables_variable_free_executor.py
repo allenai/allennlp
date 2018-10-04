@@ -118,8 +118,8 @@ class WikiTablesVariableFreeExecutor:
             return float(constant)
         except ValueError:
             # The constant is not a number. Returning as-is if it is a string.
-            if isinstance(constant, str):
-                return constant
+            if constant.startswith("string:"):
+                return constant.replace("string:", "")
             raise ExecutionError(f"Cannot handle constant: {constant}")
 
     @staticmethod
