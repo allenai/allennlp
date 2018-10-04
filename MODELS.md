@@ -16,7 +16,7 @@ $ docker run allennlp/allennlp:v0.6.1 \
     evaluate \
     https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz \
     https://s3-us-west-2.amazonaws.com/allennlp/datasets/squad/squad-dev-v1.1.json
-    
+
 Metrics:
 start_acc: 0.642
   end_acc: 0.671
@@ -36,7 +36,7 @@ $ docker run allennlp/allennlp:v0.6.1 \
     evaluate \
     https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-elmo-2018.02.19.tar.gz \
     https://s3-us-west-2.amazonaws.com/allennlp/datasets/snli/snli_1.0_test.jsonl
-  
+
 Metrics:
 accuracy: 0.864
 ```
@@ -100,7 +100,7 @@ f1: 0.941
 
 ### Wikitables
 
-#### [wikitables-model-2018.09.14.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/wikitables-model-2018.09.14.tar.gz)
+#### [wikitables-model-2018.09.14.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/wikitables-model-2018.09.14.tar.gz) (5 MB)
 
 **Caveat:** that this is trained on only part of the data and not officially evaluated.
 
@@ -109,14 +109,14 @@ f1: 0.941
 Based on [Event2Mind: Commonsense Inference on Events, Intents, and Reactions](https://homes.cs.washington.edu/~msap/debug/event2mind/docs/data/rashkin2018event2mind.pdf)
 More information at: https://homes.cs.washington.edu/~msap/debug/event2mind/docs/
 
-* [event2mind-2018.09.17.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/event2mind-2018.09.17.tar.gz)
+* [event2mind-2018.09.17.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/event2mind-2018.09.17.tar.gz) (52 MB)
 
 
 ## BiMPM
 
 Based on [Bilateral Multi-Perspective Matching for Natural Language Sentences](https://arxiv.org/abs/1702.03814)
 
-* [bimpm-quora-2018.08.17.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/datasets/quora-question-paraphrase/test.tsv)
+* [bimpm-quora-2018.08.17.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/datasets/quora-question-paraphrase/test.tsv) (147 MB)
 
 ```
 ```
@@ -125,4 +125,4 @@ Based on [Bilateral Multi-Perspective Matching for Natural Language Sentences](h
 
 Based on [Enhanced LSTM for Natural Language Inference](https://arxiv.org/pdf/1609.06038.pdf) and uses ELMo
 
-* [esim-elmo-2018.05.17.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/esim-elmo-2018.05.17.tar.gz)
+* [esim-elmo-2018.05.17.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/esim-elmo-2018.05.17.tar.gz) (684 MB)
