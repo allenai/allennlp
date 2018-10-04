@@ -2,7 +2,7 @@
 Reader for QuaRel dataset
 """
 
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 import json
 import logging
 import re
@@ -12,6 +12,7 @@ from overrides import overrides
 
 import tqdm
 
+from allennlp.common.file_utils import cached_path
 from allennlp.common.util import JsonDict
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
@@ -202,7 +203,9 @@ class QuarelDatasetReader(DatasetReader):
         return output
 
     @overrides
-    def _read(self, file_path: str) -> Iterable[Instance]:
+    def _read(self, file_path: str):
+        # if `file_path` is a URL, redirect to the cache
+        file_path = cached_path(file_path)
         # Set debug_counter to, say, 5 to get extra information logged for first 5 instances
         debug_counter = 5
         counter = self._sample
