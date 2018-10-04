@@ -6,7 +6,7 @@ import numpy as np
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.highway import Highway
 from allennlp.modules.masked_layer_norm import MaskedLayerNorm
-from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
+from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 
 _VALID_PROJECTION_LOCATIONS = {'after_cnn', 'after_highway', None}
 

@@ -4,7 +4,7 @@ import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.models import Model
+from allennlp.models.model import Model
 from allennlp.modules.masked_layer_norm import MaskedLayerNorm
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
