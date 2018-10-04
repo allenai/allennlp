@@ -5,7 +5,7 @@
     "sample": -1,
     "replace_world_entities": true,
     "align_world_extractions": true,
-    "world_extraction_model": "https://s3-us-west-2.amazonaws.com/allennlp/models/quarel-tagger-model-2018.09.26.tar.gz",
+    "world_extraction_model": "https://s3-us-west-2.amazonaws.com/allennlp/models/quarel-tagger-2018.10.03.tar.gz",
     "lf_syntax": "quarel_v1",
     "question_token_indexers": {
       "tokens": {
@@ -23,7 +23,7 @@
     "sample": -1,
     "replace_world_entities": true,
     "align_world_extractions": false,
-    "world_extraction_model": "https://s3-us-west-2.amazonaws.com/allennlp/models/quarel-tagger-model-2018.09.26.tar.gz",
+    "world_extraction_model": "https://s3-us-west-2.amazonaws.com/allennlp/models/quarel-tagger-2018.10.03.tar.gz",
     "lf_syntax": "quarel_v1",
     "question_token_indexers": {
       "tokens": {
@@ -38,8 +38,8 @@
   "vocabulary": {
     "non_padded_namespaces": ["actions"]
   },
-  "train_data_path": "/path/to/quarel-v1-train.jsonl",
-  "validation_data_path": "/path/to/quarel-v1-dev.jsonl",
+  "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/quarel/quarel-v1-train.jsonl",
+  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/quarel/quarel-v1-dev.jsonl",
   "model": {
     "type": "quarel_parser",
     "question_embedder": {
@@ -87,7 +87,7 @@
       "patience": 10
     },
     "num_serialized_models_to_keep": 2,
-    "cuda_device": 0,
+    "cuda_device": -1,
     "optimizer": {
       "type": "adam"
     }
