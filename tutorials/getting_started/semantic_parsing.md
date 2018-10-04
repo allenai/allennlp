@@ -440,3 +440,7 @@ general SQL grammar that we wrote with `parsimonious`.
 
 There are models implemented for most of these datasets, many of which you can see in our
 [demo](http://demo.allennlp.org).
+
+Is there a dataset or model that you really want to work on that's not here?  We'd love to hear
+about it, or to have contributions to add more capability to this framework.  Just open an issue or
+a pull request on github.
