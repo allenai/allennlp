@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 
-from allennlp.commands.evaluate import evaluate
 from allennlp.common.testing import ModelTestCase
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
