@@ -2,7 +2,7 @@
 
 _Semantic parsing_ is the task of mapping language to some kind of formal meaning representation.
 This meaning representation could be a logical statement in lambda calculus, a set of instructions
-for a robot to follow, or even a python, java, or SQL program.  In some cases these meaning
+for a robot to follow, or even a Python, Java, or SQL program.  In some cases these meaning
 representations are directly executable in some environment (like executing a query against a
 database, or running python code), and in others they are simply an attempt to normalize the
 semantics of a natural language utterance (like Abstract Meaning Representations or open-domain CCG
@@ -26,7 +26,7 @@ with ")" - that wouldn't be a valid program.
 We accomplish this with a generic state machine decoder, where the model defines a transition
 system stipulating which actions are valid at any particular state.  If the "actions" are all of
 the tokens in some output vocabulary, and all actions are valid at every state, this would be a
-standard seq2seq model (FOOTNOTE: though a much less efficient one than other ways of doing this).
+standard seq2seq model (FOOTNOTE: while identical semantically this approach would be inefficient).
 By changing what the actions represent, or constraining the valid actions at each timestep of
 decoding, however, we can learn better models that are tailored for our task.  For semantic
 parsing, the "actions" will incrementally build up a statement in some formal language, with
@@ -68,8 +68,8 @@ a beam search with size `k`, or if you're training and only need to score a few 
 sequences.
 
 The `TransitionFunction` (along with a `State` object which we'll get to later TODO: add link)
-forms the basis of our decoder state machine, and now we need some way to train it.  There are a
-lot of ways to train state machines, depending on what kind of supervision you have.  You could
+forms the basis of our decoder state machine, and now we need some way to train it.  There are many
+ways to train state machines, depending on what kind of supervision you have.  You could
 have fully-labeled correct action sequences (e.g., questions paired with SQL queries), a set of
 possibly correct action sequences (questions paired a set of logical forms that evaluate to the
 correct answer), a way to check the correctness of finished states (questions paired with answers),
