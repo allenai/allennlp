@@ -324,8 +324,12 @@ class TableQuestionContext:
         string = re.sub("[\\u0220-\\uFFFF]", "", string).strip()
         string = string.replace("\\n", "_")
         string = re.sub("\\s+", " ", string)
-        # Canonicalization rules from Sempre
-        string = re.sub("[^\\w]", "_", string)
+        # Canonicalization rules from Sempre. We changed it to let dots be if there are numbers in
+        # the string, because the dots could be decimal points.
+        if re.match("[0-9]+", string):
+            string = re.sub("[^\\w.]", "_", string)
+        else:
+            string = re.sub("[^\\w]", "_", string)
         string = re.sub("_+", "_", string)
         string = re.sub("_$", "", string)
         return unidecode(string.lower())
