@@ -32,7 +32,6 @@ class TokenCharactersEncoder(TokenEmbedder):
         return self._encoder._module.get_output_dim()  # pylint: disable=protected-access
 
     def forward(self, token_characters: torch.Tensor) -> torch.Tensor:  # pylint: disable=arguments-differ
-        print("tc", token_characters.size())
         mask = (token_characters != 0).long()
         return self._dropout(self._encoder(self._embedding(token_characters), mask))
 
