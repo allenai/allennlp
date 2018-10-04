@@ -1,8 +1,8 @@
 from typing import Dict, List
+import itertools
 
 from overrides import overrides
 
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
@@ -26,19 +26,13 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
     def __init__(self,
                  namespace: str = 'tokens',
                  lowercase_tokens: bool = False,
-                 bos_token: str = None,
-                 eos_token: str = None) -> None:
+                 start_tokens: List[str] = None,
+                 end_tokens: List[str] = None) -> None:
         self.namespace = namespace
         self.lowercase_tokens = lowercase_tokens
 
-        if bos_token and eos_token:
-            self._bos_token = bos_token
-            self._eos_token = eos_token
-        elif bos_token or eos_token:
-            raise ConfigurationError("must specify both bos_token and eos_token or neither")
-        else:
-            self._bos_token = None
-            self._eos_token = None
+        self._start_tokens = [Token(st) for st in (start_tokens or [])]
+        self._end_tokens = [Token(et) for et in (end_tokens or [])]
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -50,21 +44,14 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
                 text = text.lower()
             counter[self.namespace][text] += 1
 
-    def _add_bos_eos(self, tokens: List[Token]) -> List[Token]:
-        if self._bos_token:
-            return [Token(self._bos_token)] + tokens + [Token(self._eos_token)]
-        else:
-            return tokens
-
     @overrides
     def tokens_to_indices(self,
                           tokens: List[Token],
                           vocabulary: Vocabulary,
                           index_name: str) -> Dict[str, List[int]]:
         indices: List[int] = []
-        tokens = self._add_bos_eos(tokens)
 
-        for token in tokens:
+        for token in itertools.chain(self._start_tokens, tokens, self._end_tokens):
             if getattr(token, 'text_id', None) is not None:
                 # `text_id` being set on the token means that we aren't using the vocab, we just use
                 # this id instead.

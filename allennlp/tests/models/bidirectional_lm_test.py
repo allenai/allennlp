@@ -17,8 +17,8 @@ from allennlp.modules.seq2vec_encoders.cnn_highway_encoder import CnnHighwayEnco
 from allennlp.nn.util import get_text_field_mask
 from allennlp.training import Trainer
 
-BOS_TOKEN = "<s>"
-EOS_TOKEN = "</s>"
+START_TOKENS = ["<s>"]
+END_TOKENS = ["</s>"]
 
 class TestBidirectionalLM(ModelTestCase):
     def setUp(self):
@@ -26,8 +26,8 @@ class TestBidirectionalLM(ModelTestCase):
 
         sentences = ["This is the first sentence.", "This is yet another sentence."]
         token_indexers = {
-                "tokens": SingleIdTokenIndexer(bos_token=BOS_TOKEN, eos_token=EOS_TOKEN),
-                "token_characters": TokenCharactersIndexer(bos_token=BOS_TOKEN, eos_token=EOS_TOKEN)
+                "tokens": SingleIdTokenIndexer(start_tokens=START_TOKENS, end_tokens=END_TOKENS),
+                "token_characters": TokenCharactersIndexer(start_tokens=START_TOKENS, end_tokens=END_TOKENS)
         }
         tokenizer = WordTokenizer()
 
@@ -36,8 +36,8 @@ class TestBidirectionalLM(ModelTestCase):
 
 
         tokens_to_add = {
-                "tokens": [BOS_TOKEN, EOS_TOKEN],
-                "token_characters": [c for c in BOS_TOKEN + EOS_TOKEN]
+                "tokens": START_TOKENS + END_TOKENS,
+                "token_characters": [c for token in START_TOKENS + END_TOKENS for c in token]
         }
 
         self.vocab = Vocabulary.from_instances(self.instances, tokens_to_add=tokens_to_add)
@@ -62,16 +62,12 @@ class TestBidirectionalLM(ModelTestCase):
         lstm = torch.nn.LSTM(bidirectional=True, num_layers=3, input_size=16, hidden_size=7, batch_first=True)
         contextualizer = PytorchSeq2SeqWrapper(lstm)
 
-        softmax = Softmax(num_words=self.vocab.get_vocab_size("tokens"),
-                          embedding_dim=7)
-
         iterator = BasicIterator(batch_size=32)
         iterator.index_with(self.vocab)
 
         model = BidirectionalLanguageModel(vocab=self.vocab,
                                            text_field_embedder=text_field_embedder,
-                                           contextualizer=contextualizer,
-                                           softmax=softmax)
+                                           contextualizer=contextualizer)
 
         # Try the pieces individually
         for batch in iterator(self.instances, num_epochs=1):
@@ -89,7 +85,7 @@ class TestBidirectionalLM(ModelTestCase):
         for batch in iterator(self.instances, num_epochs=1):
             result = model(**batch)
 
-            assert set(result) == {"loss", "forward_loss", "backward_loss", "lm_embeddings"}
+            assert set(result) == {"loss", "forward_loss", "backward_loss", "lm_embeddings", "mask"}
 
             # The model should have removed the BOS / EOS tokens.
             embeddings = result["lm_embeddings"]
