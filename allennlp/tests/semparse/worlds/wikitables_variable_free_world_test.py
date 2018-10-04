@@ -196,7 +196,7 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '2000', '?']]
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {'n -> 2000',
-                                           '<r,<c,r>> -> argmax',
+                                           '<r,r> -> last',
                                            'm -> date_column:year'}
         tokens = [Token(x) for x in ['what', 'was', 'the', 'difference', 'in', 'attendance',
                                      'between', 'years', '2001', 'and', '2005', '?']]
