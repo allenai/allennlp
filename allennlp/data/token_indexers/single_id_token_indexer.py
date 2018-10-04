@@ -21,6 +21,10 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
     lowercase_tokens : ``bool``, optional (default=``False``)
         If ``True``, we will call ``token.lower()`` before getting an index for the token from the
         vocabulary.
+    start_tokens : ``List[str]``, optional (default=``None``)
+        These are prepended to the tokens provided to ``tokens_to_indices``.
+    end_tokens : ``List[str]``, optional (default=``None``)
+        These are appended to the tokens provided to ``tokens_to_indices``.
     """
     # pylint: disable=no-self-use
     def __init__(self,

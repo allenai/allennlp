@@ -26,6 +26,10 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         options for byte encoding and other things.  The default here is to instantiate a
         ``CharacterTokenizer`` with its default parameters, which uses unicode characters and
         retains casing.
+    start_tokens : ``List[str]``, optional (default=``None``)
+        These are prepended to the tokens provided to ``tokens_to_indices``.
+    end_tokens : ``List[str]``, optional (default=``None``)
+        These are appended to the tokens provided to ``tokens_to_indices``.
     """
     # pylint: disable=no-self-use
     def __init__(self,
