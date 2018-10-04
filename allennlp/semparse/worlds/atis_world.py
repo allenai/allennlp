@@ -62,7 +62,7 @@ class AtisWorld():
             AtisWorld.sql_table_context = AtisSqlTableContext(ALL_TABLES,
                                                               TABLES_WITH_STRINGS,
                                                               AtisWorld.database_file)
-        self.utterances: List[str] = deepcopy(utterances)
+        self.utterances: List[str] = utterances 
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]
         self.linked_entities = self._get_linked_entities()
@@ -158,7 +158,6 @@ class AtisWorld():
                                                      new_grammar['fare_one_direction_cost']])
 
         new_binary_expressions.append(fare_one_direction_cost_expression)
-
         if self.dates:
             year_binary_expression = self._get_sequence_with_spacing(new_grammar,
                                                                      [Literal('date_day'),
@@ -188,7 +187,6 @@ class AtisWorld():
         new_binary_expressions = new_grammar['biexpr'].members + tuple(new_binary_expressions)
         new_grammar['biexpr'] = OneOf(*new_binary_expressions, name='biexpr')
         self._update_expression_reference(new_grammar, 'condition', 'biexpr')
-
         return new_grammar
 
     def _get_numeric_database_values(self,
@@ -310,6 +308,7 @@ class AtisWorld():
             string_linking_dict = get_strings_from_utterance(tokenized_utterance)
         strings_list = AtisWorld.sql_table_context.strings_list
         strings_list.append(('flight_airline_code_string -> ["\'EA\'"]', 'EA'))
+        strings_list.append(('airline_airline_name_string-> ["\'EA\'"]', 'EA'))
         # We construct the linking scores for strings from the ``string_linking_dict`` here.
         for string in strings_list:
             entity_linking = [0 for token in current_tokenized_utterance]
@@ -330,7 +329,24 @@ class AtisWorld():
             dates.extend(get_date_from_utterance(tokenized_utterance))
         return dates
 
+    def _ignore_dates(self, query: str):
+        tokens = query.split(' ')
+        year_indices = [index for index, token in enumerate(tokens) if token.endswith('year')] 
+        month_indices = [index for index, token in enumerate(tokens) if token.endswith('month_number')] 
+        day_indices = [index for index, token in enumerate(tokens) if token.endswith('day_number')] 
+        
+        if self.dates:
+            for token_index, token in enumerate(tokens):
+                if token_index - 2 in year_indices:
+                    tokens[token_index] = str(self.dates[0].year)
+                if token_index - 2 in month_indices:
+                    tokens[token_index] = str(self.dates[0].month)
+                if token_index - 2 in day_indices:
+                    tokens[token_index] = str(self.dates[0].day)
+        return ' '.join(tokens)
+
     def get_action_sequence(self, query: str) -> List[str]:
+        query = self._ignore_dates(query)
         sql_visitor = SqlVisitor(self.grammar, keywords_to_uppercase=KEYWORDS)
         if query:
             action_sequence = sql_visitor.parse(query)

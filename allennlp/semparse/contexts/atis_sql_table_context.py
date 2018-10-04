@@ -38,7 +38,7 @@ GRAMMAR_DICTIONARY['query'] = ['(ws "(" ws "SELECT" ws distinct ws select_result
                                '(ws "SELECT" ws distinct ws select_results ws '
                                '"FROM" ws table_refs ws where_clause ws)']
 GRAMMAR_DICTIONARY['select_results'] = ['col_refs', 'agg']
-GRAMMAR_DICTIONARY['agg'] = ['agg_func ws "(" ws col_ref ws ")"']
+GRAMMAR_DICTIONARY['agg'] = ['( agg_func ws "(" ws col_ref ws ")" )', '(agg_func ws "(" ws col ws ")" )']
 GRAMMAR_DICTIONARY['agg_func'] = ['"MIN"', '"min"', '"MAX"', '"max"', '"COUNT"', '"count"']
 GRAMMAR_DICTIONARY['col_refs'] = ['(col_ref ws "," ws col_refs)', '(col_ref)']
 GRAMMAR_DICTIONARY['table_refs'] = ['(table_name ws "," ws table_refs)', '(table_name)']
@@ -127,10 +127,13 @@ class AtisSqlTableContext:
                     sorted([f'"{table}"'
                             for table in list(self.all_tables.keys())], reverse=True)
             grammar_dictionary['col_ref'] = ['"*"', 'agg']
+            all_columns = []
             for table, columns in self.all_tables.items():
                 grammar_dictionary['col_ref'].extend([f'("{table}" ws "." ws "{column}")'
                                                       for column in columns])
+                all_columns.extend(columns) 
             grammar_dictionary['col_ref'] = sorted(grammar_dictionary['col_ref'], reverse=True)
+            grammar_dictionary['col'] = sorted([f'"{column}"' for column in all_columns], reverse=True)
 
         biexprs = []
         if self.tables_with_strings:
