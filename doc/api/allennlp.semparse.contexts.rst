@@ -16,6 +16,11 @@ allennlp.semparse.contexts
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.semparse.contexts.table_question_context
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.semparse.contexts.atis_tables
    :members:
    :undoc-members:

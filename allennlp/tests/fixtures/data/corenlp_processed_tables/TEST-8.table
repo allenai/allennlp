@@ -1,0 +1,191 @@
+row	col	id	content	tokens	lemmaTokens	posTags	nerTags	nerValues	number	date	num2	list	listId
+-1	0	fb:row.row.year	Year	year	year	NN	DURATION						
+-1	1	fb:row.row.date	Date	date	date	NN	O						
+-1	2	fb:row.row.driver	Driver	driver	driver	NN	O						
+-1	3	fb:row.row.team	Team	team	Team	NNP	O						
+-1	4	fb:row.row.manufacturer	Manufacturer	manufacturer	manufacturer	NN	O						
+-1	5	fb:row.row.race_distance_laps	Race Distance\nLaps	race|distance|laps	race|Distance|Laps	NN|NNP|NNP	O|O|O	||					
+-1	6	fb:row.row.race_distance_miles_km	Race Distance\nMiles (km)	race|distance|miles|-lrb-|km|-rrb-	race|Distance|Miles|-lrb-|km|-rrb-	NN|NNP|NNP|-LRB-|NN|-RRB-	O|O|O|O|O|O	|||||					
+-1	7	fb:row.row.race_time	Race Time	race|time	race|time	NN|NN	O|O	|					
+-1	8	fb:row.row.average_speed_mph	Average Speed\n(mph)	average|speed|-lrb-|mph|-rrb-	average|speed|-lrb-|mph|-rrb-	JJ|NN|-LRB-|NN|-RRB-	O|O|O|O|O	||||					
+-1	9	fb:row.row.report	Report	report	Report	NNP	O						
+0	0	fb:cell.1997	1997	1997	1997	CD	DATE	1997	1997.0	1997-xx-xx			
+0	1	fb:cell.june_22	June 22	june|22	June|22	NNP|CD	DATE|DATE	XXXX-06-22|XXXX-06-22	22.0	xxxx-06-22		June 22	fb:part.june_22
+0	2	fb:cell.jeff_gordon	Jeff Gordon	jeff|gordon	Jeff|Gordon	NNP|NNP	PERSON|PERSON	|					
+0	3	fb:cell.hendrick_motorsports	Hendrick Motorsports	hendrick|motorsports	Hendrick|Motorsports	NNP|NNPS	PERSON|PERSON	|					
+0	4	fb:cell.chevrolet	Chevrolet	chevrolet	Chevrolet	NNP	O						
+0	5	fb:cell.250	250	250	250	CD	NUMBER	250.0	250.0				
+0	6	fb:cell.500_804_672	500 (804.672)	500|-lrb-|804.672|-rrb-	500|-lrb-|804.672|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	500.0||804.672|	500.0		804.672		
+0	7	fb:cell.3_13_32	3:13:32	3:13:32	3:13:32	CD	TIME	T03:13:32	3.0		13.0		
+0	8	fb:cell.155_012	155.012	155.012	155.012	CD	NUMBER	155.012	155.012				
+0	9	fb:cell.report	Report	report	Report	NNP	O						
+1	0	fb:cell.1998	1998	1998	1998	CD	DATE	1998	1998.0	1998-xx-xx			
+1	1	fb:cell.may_3	May 3	may|3	May|3	VBD-AUX|CD	DATE|DATE	XXXX-05-03|XXXX-05-03	3.0	xxxx-05-03		May 3	fb:part.may_3
+1	2	fb:cell.mark_martin	Mark Martin	mark|martin	Mark|Martin	NNP|NNP	PERSON|PERSON	|					
+1	3	fb:cell.roush_racing	Roush Racing	roush|racing	Roush|race	NNP|VBG	ORGANIZATION|ORGANIZATION	|					
+1	4	fb:cell.ford	Ford	ford	Ford	NNP	O						
+1	5	fb:cell.250	250	250	250	CD	NUMBER	250.0	250.0				
+1	6	fb:cell.500_804_672	500 (804.672)	500|-lrb-|804.672|-rrb-	500|-lrb-|804.672|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	500.0||804.672|	500.0		804.672		
+1	7	fb:cell.3_33_57	3:33:57	3:33:57	3:33:57	CD	TIME	T03:33:57	3.0		33.0		
+1	8	fb:cell.140_22	140.22	140.22	140.22	CD	NUMBER	140.22	140.22				
+1	9	fb:cell.report	Report	report	Report	NNP	O						
+2	0	fb:cell.1999	1999	1999	1999	CD	DATE	1999	1999.0	1999-xx-xx			
+2	1	fb:cell.may_2	May 2	may|2	May|2	VBD-AUX|CD	DATE|DATE	XXXX-05-02|XXXX-05-02	2.0	xxxx-05-02		May 2	fb:part.may_2
+2	2	fb:cell.jeff_gordon	Jeff Gordon	jeff|gordon	Jeff|Gordon	NNP|NNP	PERSON|PERSON	|					
+2	3	fb:cell.hendrick_motorsports	Hendrick Motorsports	hendrick|motorsports	Hendrick|Motorsports	NNP|NNPS	PERSON|PERSON	|					
+2	4	fb:cell.chevrolet	Chevrolet	chevrolet	Chevrolet	NNP	O						
+2	5	fb:cell.250	250	250	250	CD	NUMBER	250.0	250.0				
+2	6	fb:cell.500_804_672	500 (804.672)	500|-lrb-|804.672|-rrb-	500|-lrb-|804.672|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	500.0||804.672|	500.0		804.672		
+2	7	fb:cell.3_19_38	3:19:38	3:19:38	3:19:38	CD	TIME	T03:19:38	3.0		19.0		
+2	8	fb:cell.150_276	150.276	150.276	150.276	CD	NUMBER	150.276	150.276				
+2	9	fb:cell.report	Report	report	Report	NNP	O						
+3	0	fb:cell.2000	2000	2000	2000	CD	DATE	2000	2000.0	2000-xx-xx			
+3	1	fb:cell.april_30	April 30	april|30	April|30	NNP|CD	DATE|DATE	XXXX-04-30|XXXX-04-30	30.0	xxxx-04-30		April 30	fb:part.april_30
+3	2	fb:cell.jeremy_mayfield	Jeremy Mayfield	jeremy|mayfield	Jeremy|Mayfield	NNP|NNP	PERSON|PERSON	|					
+3	3	fb:cell.penske_racing	Penske Racing	penske|racing	Penske|race	NNP|VBG	O|O	|					
+3	4	fb:cell.ford	Ford	ford	Ford	NNP	O						
+3	5	fb:cell.250	250	250	250	CD	NUMBER	250.0	250.0				
+3	6	fb:cell.500_804_672	500 (804.672)	500|-lrb-|804.672|-rrb-	500|-lrb-|804.672|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	500.0||804.672|	500.0		804.672		
+3	7	fb:cell.3_20_50	3:20:50	3:20:50	3:20:50	CD	TIME	T03:20:50	3.0		20.0		
+3	8	fb:cell.149_378	149.378	149.378	149.378	CD	NUMBER	149.378	149.378				
+3	9	fb:cell.report	Report	report	Report	NNP	O						
+4	0	fb:cell.2001	2001	2001	2001	CD	DATE	2001	2001.0	2001-xx-xx			
+4	1	fb:cell.april_29	April 29	april|29	April|29	NNP|CD	DATE|DATE	XXXX-04-29|XXXX-04-29	29.0	xxxx-04-29		April 29	fb:part.april_29
+4	2	fb:cell.rusty_wallace	Rusty Wallace	rusty|wallace	Rusty|Wallace	NNP|NNP	PERSON|PERSON	|					
+4	3	fb:cell.penske_racing	Penske Racing	penske|racing	Penske|race	NNP|VBG	O|O	|					
+4	4	fb:cell.ford	Ford	ford	Ford	NNP	O						
+4	5	fb:cell.250	250	250	250	CD	NUMBER	250.0	250.0				
+4	6	fb:cell.500_804_672	500 (804.672)	500|-lrb-|804.672|-rrb-	500|-lrb-|804.672|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	500.0||804.672|	500.0		804.672		
+4	7	fb:cell.3_29_37	3:29:37	3:29:37	3:29:37	CD	TIME	T03:29:37	3.0		29.0		
+4	8	fb:cell.143_118	143.118	143.118	143.118	CD	NUMBER	143.118	143.118				
+4	9	fb:cell.report	Report	report	Report	NNP	O						
+5	0	fb:cell.2002	2002	2002	2002	CD	DATE	2002	2002.0	2002-xx-xx			
+5	1	fb:cell.april_28	April 28	april|28	April|28	NNP|CD	DATE|DATE	XXXX-04-28|XXXX-04-28	28.0	xxxx-04-28		April 28	fb:part.april_28
+5	2	fb:cell.jimmie_johnson	Jimmie Johnson	jimmie|johnson	Jimmie|Johnson	NNP|NNP	PERSON|PERSON	|					
+5	3	fb:cell.hendrick_motorsports	Hendrick Motorsports	hendrick|motorsports	Hendrick|Motorsports	NNP|NNPS	PERSON|PERSON	|					
+5	4	fb:cell.chevrolet	Chevrolet	chevrolet	Chevrolet	NNP	O						
+5	5	fb:cell.250	250	250	250	CD	NUMBER	250.0	250.0				
+5	6	fb:cell.500_804_672	500 (804.672)	500|-lrb-|804.672|-rrb-	500|-lrb-|804.672|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	500.0||804.672|	500.0		804.672		
+5	7	fb:cell.3_19_53	3:19:53	3:19:53	3:19:53	CD	TIME	T03:19:53	3.0		19.0		
+5	8	fb:cell.150_088	150.088	150.088	150.088	CD	NUMBER	150.088	150.088				
+5	9	fb:cell.report	Report	report	Report	NNP	O						
+6	0	fb:cell.2003	2003	2003	2003	CD	DATE	2003	2003.0	2003-xx-xx			
+6	1	fb:cell.april_27	April 27	april|27	April|27	NNP|CD	DATE|DATE	XXXX-04-27|XXXX-04-27	27.0	xxxx-04-27		April 27	fb:part.april_27
+6	2	fb:cell.kurt_busch	Kurt Busch	kurt|busch	Kurt|Busch	NNP|NNP	PERSON|PERSON	|					
+6	3	fb:cell.roush_racing	Roush Racing	roush|racing	Roush|race	NNP|VBG	ORGANIZATION|ORGANIZATION	|					
+6	4	fb:cell.ford	Ford	ford	Ford	NNP	O						
+6	5	fb:cell.250	250	250	250	CD	NUMBER	250.0	250.0				
+6	6	fb:cell.500_804_672	500 (804.672)	500|-lrb-|804.672|-rrb-	500|-lrb-|804.672|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	500.0||804.672|	500.0		804.672		
+6	7	fb:cell.3_34_07	3:34:07	3:34:07	3:34:07	CD	TIME	T03:34:07	3.0		34.0		
+6	8	fb:cell.140_111	140.111	140.111	140.111	CD	NUMBER	140.111	140.111				
+6	9	fb:cell.report	Report	report	Report	NNP	O						
+7	0	fb:cell.2004	2004	2004	2004	CD	DATE	2004	2004.0	2004-xx-xx			
+7	1	fb:cell.may_2	May 2	may|2	May|2	VBD-AUX|CD	DATE|DATE	XXXX-05-02|XXXX-05-02	2.0	xxxx-05-02		May 2	fb:part.may_2
+7	2	fb:cell.jeff_gordon	Jeff Gordon	jeff|gordon	Jeff|Gordon	NNP|NNP	PERSON|PERSON	|					
+7	3	fb:cell.hendrick_motorsports	Hendrick Motorsports	hendrick|motorsports	Hendrick|Motorsports	NNP|NNPS	PERSON|PERSON	|					
+7	4	fb:cell.chevrolet	Chevrolet	chevrolet	Chevrolet	NNP	O						
+7	5	fb:cell.250	250	250	250	CD	NUMBER	250.0	250.0				
+7	6	fb:cell.500_804_672	500 (804.672)	500|-lrb-|804.672|-rrb-	500|-lrb-|804.672|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	500.0||804.672|	500.0		804.672		
+7	7	fb:cell.3_38_33	3:38:33	3:38:33	3:38:33	CD	TIME	T03:38:33	3.0		38.0		
+7	8	fb:cell.137_268	137.268	137.268	137.268	CD	NUMBER	137.268	137.268				
+7	9	fb:cell.report	Report	report	Report	NNP	O						
+8	0	fb:cell.2005	2005	2005	2005	CD	DATE	2005	2005.0	2005-xx-xx			
+8	1	fb:cell.february_27	February 27	february|27	February|27	NNP|CD	DATE|DATE	XXXX-02-27|XXXX-02-27	27.0	xxxx-02-27		February 27	fb:part.february_27
+8	2	fb:cell.greg_biffle	Greg Biffle	greg|biffle	Greg|Biffle	NNP|NNP	PERSON|PERSON	|					
+8	3	fb:cell.roush_racing	Roush Racing	roush|racing	Roush|race	NNP|VBG	ORGANIZATION|ORGANIZATION	|					
+8	4	fb:cell.ford	Ford	ford	Ford	NNP	O						
+8	5	fb:cell.250	250	250	250	CD	NUMBER	250.0	250.0				
+8	6	fb:cell.500_804_672	500 (804.672)	500|-lrb-|804.672|-rrb-	500|-lrb-|804.672|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	500.0||804.672|	500.0		804.672		
+8	7	fb:cell.3_34_45	3:34:45	3:34:45	3:34:45	CD	TIME	T03:34:45	3.0		34.0		
+8	8	fb:cell.139_697	139.697	139.697	139.697	CD	NUMBER	139.697	139.697				
+8	9	fb:cell.report	Report	report	Report	NNP	O						
+9	0	fb:cell.2006	2006	2006	2006	CD	DATE	2006	2006.0	2006-xx-xx			
+9	1	fb:cell.february_26	February 26	february|26	February|26	NNP|CD	DATE|DATE	XXXX-02-26|XXXX-02-26	26.0	xxxx-02-26		February 26	fb:part.february_26
+9	2	fb:cell.matt_kenseth	Matt Kenseth	matt|kenseth	Matt|Kenseth	NNP|NNP	PERSON|PERSON	|					
+9	3	fb:cell.roush_racing	Roush Racing	roush|racing	Roush|race	NNP|VBG	ORGANIZATION|ORGANIZATION	|					
+9	4	fb:cell.ford	Ford	ford	Ford	NNP	O						
+9	5	fb:cell.251	251*	251|\\*	251|\\*	CD|SYM	NUMBER|O	251.0|	251.0				
+9	6	fb:cell.502_807_89	502 (807.89)	502|-lrb-|807.89|-rrb-	502|-lrb-|807.89|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	502.0||807.89|	502.0		807.89		
+9	7	fb:cell.3_23_43	3:23:43	3:23:43	3:23:43	CD	TIME	T03:23:43	3.0		23.0		
+9	8	fb:cell.147_852	147.852	147.852	147.852	CD	NUMBER	147.852	147.852				
+9	9	fb:cell.report	Report	report	Report	NNP	O						
+10	0	fb:cell.2007	2007	2007	2007	CD	DATE	2007	2007.0	2007-xx-xx			
+10	1	fb:cell.february_25	February 25	february|25	February|25	NNP|CD	DATE|DATE	XXXX-02-25|XXXX-02-25	25.0	xxxx-02-25		February 25	fb:part.february_25
+10	2	fb:cell.matt_kenseth	Matt Kenseth	matt|kenseth	Matt|Kenseth	NNP|NNP	PERSON|PERSON	|					
+10	3	fb:cell.roush_fenway_racing	Roush Fenway Racing	roush|fenway|racing	Roush|Fenway|race	NNP|NNP|VBG	ORGANIZATION|ORGANIZATION|ORGANIZATION	||					
+10	4	fb:cell.ford	Ford	ford	Ford	NNP	O						
+10	5	fb:cell.250	250	250	250	CD	NUMBER	250.0	250.0				
+10	6	fb:cell.500_804_672	500 (804.672)	500|-lrb-|804.672|-rrb-	500|-lrb-|804.672|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	500.0||804.672|	500.0		804.672		
+10	7	fb:cell.3_36_41	3:36:41	3:36:41	3:36:41	CD	TIME	T03:36:41	3.0		36.0		
+10	8	fb:cell.138_451	138.451	138.451	138.451	CD	NUMBER	138.451	138.451				
+10	9	fb:cell.report	Report	report	Report	NNP	O						
+11	0	fb:cell.2008	2008	2008	2008	CD	DATE	2008	2008.0	2008-xx-xx			
+11	1	fb:cell.feb_24_25	Feb 24/25*	feb|24\\/25|\\*	Feb|24\\/25|\\*	NNP|CD|SYM	DATE|NUMBER|O	XXXX-02||	24.0		25.0	Feb 24|25*	fb:part.feb_24|fb:part.25
+11	2	fb:cell.carl_edwards	Carl Edwards	carl|edwards	Carl|Edwards	NNP|NNP	PERSON|PERSON	|					
+11	3	fb:cell.roush_fenway_racing	Roush Fenway Racing	roush|fenway|racing	Roush|Fenway|race	NNP|NNP|VBG	ORGANIZATION|ORGANIZATION|ORGANIZATION	||					
+11	4	fb:cell.ford	Ford	ford	Ford	NNP	O						
+11	5	fb:cell.250	250	250	250	CD	NUMBER	250.0	250.0				
+11	6	fb:cell.500_804_672	500 (804.672)	500|-lrb-|804.672|-rrb-	500|-lrb-|804.672|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	500.0||804.672|	500.0		804.672		
+11	7	fb:cell.3_46_04	3:46:04	3:46:04	3:46:04	CD	TIME	T03:46:04	3.0		46.0		
+11	8	fb:cell.132_704	132.704	132.704	132.704	CD	NUMBER	132.704	132.704				
+11	9	fb:cell.report	Report	report	Report	NNP	O						
+12	0	fb:cell.2009	2009	2009	2009	CD	DATE	2009	2009.0	2009-xx-xx			
+12	1	fb:cell.february_22	February 22	february|22	February|22	NNP|CD	DATE|DATE	XXXX-02-22|XXXX-02-22	22.0	xxxx-02-22		February 22	fb:part.february_22
+12	2	fb:cell.matt_kenseth	Matt Kenseth	matt|kenseth	Matt|Kenseth	NNP|NNP	PERSON|PERSON	|					
+12	3	fb:cell.roush_fenway_racing	Roush Fenway Racing	roush|fenway|racing	Roush|Fenway|race	NNP|NNP|VBG	ORGANIZATION|ORGANIZATION|ORGANIZATION	||					
+12	4	fb:cell.ford	Ford	ford	Ford	NNP	O						
+12	5	fb:cell.250	250	250	250	CD	NUMBER	250.0	250.0				
+12	6	fb:cell.500_804_672	500 (804.672)	500|-lrb-|804.672|-rrb-	500|-lrb-|804.672|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	500.0||804.672|	500.0		804.672		
+12	7	fb:cell.3_40_51	3:40:51	3:40:51	3:40:51	CD	TIME	T03:40:51	3.0		40.0		
+12	8	fb:cell.135_839	135.839	135.839	135.839	CD	NUMBER	135.839	135.839				
+12	9	fb:cell.report	Report	report	Report	NNP	O						
+13	0	fb:cell.2010	2010	2010	2010	CD	DATE	2010	2010.0	2010-xx-xx			
+13	1	fb:cell.february_21	February 21	february|21	February|21	NNP|CD	DATE|DATE	XXXX-02-21|XXXX-02-21	21.0	xxxx-02-21		February 21	fb:part.february_21
+13	2	fb:cell.jimmie_johnson	Jimmie Johnson	jimmie|johnson	Jimmie|Johnson	NNP|NNP	PERSON|PERSON	|					
+13	3	fb:cell.hendrick_motorsports	Hendrick Motorsports	hendrick|motorsports	Hendrick|Motorsports	NNP|NNPS	PERSON|PERSON	|					
+13	4	fb:cell.chevrolet	Chevrolet	chevrolet	Chevrolet	NNP	O						
+13	5	fb:cell.250	250	250	250	CD	NUMBER	250.0	250.0				
+13	6	fb:cell.500_804_672	500 (804.672)	500|-lrb-|804.672|-rrb-	500|-lrb-|804.672|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	500.0||804.672|	500.0		804.672		
+13	7	fb:cell.3_31_24	3:31:24	3:31:24	3:31:24	CD	TIME	T03:31:24	3.0		31.0		
+13	8	fb:cell.141_911	141.911	141.911	141.911	CD	NUMBER	141.911	141.911				
+13	9	fb:cell.report	Report	report	Report	NNP	O						
+14	0	fb:cell.2011	2011*	2011|\\*	2011|\\*	CD|SYM	DATE|O	2011|	2011.0				
+14	1	fb:cell.march_27	March 27	march|27	March|27	NNP|CD	DATE|DATE	XXXX-03-27|XXXX-03-27	27.0	xxxx-03-27		March 27	fb:part.march_27
+14	2	fb:cell.kevin_harvick	Kevin Harvick	kevin|harvick	Kevin|Harvick	NNP|NNP	PERSON|PERSON	|					
+14	3	fb:cell.richard_childress_racing	Richard Childress Racing	richard|childress|racing	Richard|Childress|race	NNP|NNP|VBG	PERSON|PERSON|O	||					
+14	4	fb:cell.chevrolet	Chevrolet	chevrolet	Chevrolet	NNP	O						
+14	5	fb:cell.200	200	200	200	CD	NUMBER	200.0	200.0				
+14	6	fb:cell.400_643_737	400 (643.737)	400|-lrb-|643.737|-rrb-	400|-lrb-|643.737|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	400.0||643.737|	400.0		643.737		
+14	7	fb:cell.2_39_06	2:39:06	2:39:06	2:39:06	CD	TIME	T02:39:06	2.0		39.0		
+14	8	fb:cell.150_849	150.849	150.849	150.849	CD	NUMBER	150.849	150.849				
+14	9	fb:cell.report	Report	report	Report	NNP	O						
+15	0	fb:cell.2012	2012	2012	2012	CD	DATE	2012	2012.0	2012-xx-xx			
+15	1	fb:cell.march_25	March 25	march|25	March|25	NNP|CD	DATE|DATE	XXXX-03-25|XXXX-03-25	25.0	xxxx-03-25		March 25	fb:part.march_25
+15	2	fb:cell.tony_stewart	Tony Stewart	tony|stewart	Tony|Stewart	NNP|NNP	PERSON|PERSON	|					
+15	3	fb:cell.stewart_haas_racing	Stewart-Haas Racing	stewart|haas|racing	Stewart|Haas|race	NNP|NNP|VBG	PERSON|PERSON|O	||					
+15	4	fb:cell.chevrolet	Chevrolet	chevrolet	Chevrolet	NNP	O						
+15	5	fb:cell.129	129*	129|\\*	129|\\*	CD|SYM	NUMBER|O	129.0|	129.0				
+15	6	fb:cell.258_415_21	258 (415.21)	258|-lrb-|415.21|-rrb-	258|-lrb-|415.21|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	258.0||415.21|	258.0		415.21		
+15	7	fb:cell.1_36_39	1:36:39	1:36:39	1:36:39	CD	TIME	T01:36:39	1.0		36.0		
+15	8	fb:cell.160_166	160.166	160.166	160.166	CD	NUMBER	160.166	160.166				
+15	9	fb:cell.report	Report	report	Report	NNP	O						
+16	0	fb:cell.2013	2013	2013	2013	CD	DATE	2013	2013.0	2013-xx-xx			
+16	1	fb:cell.march_24	March 24	march|24	March|24	NNP|CD	DATE|DATE	XXXX-03-24|XXXX-03-24	24.0	xxxx-03-24		March 24	fb:part.march_24
+16	2	fb:cell.kyle_busch	Kyle Busch	kyle|busch	Kyle|Busch	NNP|NNP	PERSON|PERSON	|					
+16	3	fb:cell.joe_gibbs_racing	Joe Gibbs Racing	joe|gibbs|racing	Joe|Gibbs|race	NNP|NNP|VBG	PERSON|PERSON|O	||					
+16	4	fb:cell.toyota	Toyota	toyota	Toyota	NNP	O						
+16	5	fb:cell.200	200	200	200	CD	NUMBER	200.0	200.0				
+16	6	fb:cell.400_643_737	400 (643.737)	400|-lrb-|643.737|-rrb-	400|-lrb-|643.737|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	400.0||643.737|	400.0		643.737		
+16	7	fb:cell.2_57_19	2:57:19	2:57:19	2:57:19	CD	TIME	T02:57:19	2.0		57.0		
+16	8	fb:cell.135_351	135.351	135.351	135.351	CD	NUMBER	135.351	135.351				
+16	9	fb:cell.report	Report	report	Report	NNP	O						
+17	0	fb:cell.2014	2014	2014	2014	CD	DATE	2014	2014.0	2014-xx-xx			
+17	1	fb:cell.march_23	March 23	march|23	March|23	NNP|CD	DATE|DATE	XXXX-03-23|XXXX-03-23	23.0	xxxx-03-23		March 23	fb:part.march_23
+17	2	fb:cell.kyle_busch	Kyle Busch	kyle|busch	Kyle|Busch	NNP|NNP	PERSON|PERSON	|					
+17	3	fb:cell.joe_gibbs_racing	Joe Gibbs Racing	joe|gibbs|racing	Joe|Gibbs|race	NNP|NNP|VBG	PERSON|PERSON|O	||					
+17	4	fb:cell.toyota	Toyota	toyota	Toyota	NNP	O						
+17	5	fb:cell.206	206*	206|\\*	206|\\*	CD|SYM	NUMBER|O	206.0|	206.0				
+17	6	fb:cell.412_663_05	412 (663.05)	412|-lrb-|663.05|-rrb-	412|-lrb-|663.05|-rrb-	CD|-LRB-|CD|-RRB-	NUMBER|O|NUMBER|O	412.0||663.05|	412.0		663.05		
+17	7	fb:cell.3_05_53	3:05:53	3:05:53	3:05:53	CD	TIME	T03:05:53	3.0		5.0		
+17	8	fb:cell.132_987	132.987	132.987	132.987	CD	NUMBER	132.987	132.987				
+17	9	fb:cell.report	Report	report	Report	NNP	O						
