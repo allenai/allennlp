@@ -1,30 +1,38 @@
 # The AllenNLP Semantic Parsing Framework
 
 _Semantic parsing_ is the task of mapping language to some kind of formal meaning representation.
-This meaning representation could be a logical statement in lambda calculus or lambda-DCS, a set of
-instructions for a robot to follow, or even a python, java, or SQL program.  In some cases these
-meaning representations are directly executable in some environment (like executing a query against
-a database, or running python code), and in others they are simply an attempt to normalize the
+This meaning representation could be a logical statement in lambda calculus, a set of instructions
+for a robot to follow, or even a python, java, or SQL program.  In some cases these meaning
+representations are directly executable in some environment (like executing a query against a
+database, or running python code), and in others they are simply an attempt to normalize the
 semantics of a natural language utterance (like Abstract Meaning Representations or open-domain CCG
 semantics).  The thing all of these variations have in common is that they try to capture the
 meaning of language in some form, and there typically isn't a direct mapping from words in the
-utterance to the pieces of the meaning representation.  (TODO: add links above)
+utterance to the pieces of the meaning representation.  Our focus is on cases where the meaning
+representation is directly executable, and we'll talk about defining languages and execution
+engines for this, but you could conceivably use pieces of this framework for other kinds of
+semantic parsing if you want.  (TODO: add links above)
+
+TODO: add a couple of pictures in here with some examples
 
 We approach this problem in AllenNLP with encoder-decoder models, similar to the seq2seq models
 used in neural machine translation or summarization.  That is, we encode the input utterance (and
 whatever other context is available) using some neural encoder, then use a decoder to produce a
 statement in the output language. Because the output language in semantic parsing is a formal
 language, however, we use _constrained decoding_, forcing the model to only produce valid meaning
-representations.
+representations.  That is, if we're producing code in a lisp-like language, we know we can't start
+with ")" - that wouldn't be a valid program.
 
 We accomplish this with a generic state machine decoder, where the model defines a transition
 system stipulating which actions are valid at any particular state.  If the "actions" are all of
-the tokens in your output vocabulary, and all actions are valid at every state, this would be a
+the tokens in some output vocabulary, and all actions are valid at every state, this would be a
 standard seq2seq model (FOOTNOTE: though a much less efficient one than other ways of doing this).
 By changing what the actions represent, or constraining the valid actions at each timestep of
-decoding, however, we can learn better models that are tailored for our task.  Note also that state
-machines are more general than semantic parsers, and you can use this framework for any structured
-prediction problem that you can formulate as a transition system.
+decoding, however, we can learn better models that are tailored for our task.  For semantic
+parsing, the "actions" will incrementally build up a statement in some formal language, with
+constraints on the allowed actions at each step to ensure that only valid statements are generated.
+Note also that state machines are more general than semantic parsers, and you can use this
+framework for any structured prediction problem that you can formulate as a transition system.
 
 The rest of this tutorial will walk you through the pieces of the semantic parsing framework (TODO:
 make these links):
@@ -62,10 +70,12 @@ sequences.
 The `TransitionFunction` (along with a `State` object which we'll get to later TODO: add link)
 forms the basis of our decoder state machine, and now we need some way to train it.  There are a
 lot of ways to train state machines, depending on what kind of supervision you have.  You could
-have fully-labeled correct action sequences, a set of possibly correct action sequences, a way to
-check the correctness of finished states, or just a reward function on finished or intermediate
-states.  To handle the variety of supervision signals that could be used, we provide a simple
-`DecoderTrainer` interface that's generic over the supervision type:
+have fully-labeled correct action sequences (e.g., questions paired with SQL queries), a set of
+possibly correct action sequences (questions paired a set of logical forms that evaluate to the
+correct answer), a way to check the correctness of finished states (questions paired with answers),
+or just a reward function on finished or intermediate states (general reinforcement learning).  To
+handle the variety of supervision signals that could be used, we provide a simple `DecoderTrainer`
+interface that's generic over the supervision type:
 
 ```python
 class DecoderTrainer(Generic[SupervisionType]):
@@ -90,8 +100,10 @@ that you think would be useful for others, please consider contributing it back!
 examples (not an exhaustive list): TODO: add links
 
 `DecoderTrainers`:
-- MaximumMarginalLikelihood (when you have a set of possibly correct action sequences)
-- EmpiricalRiskMinimization (when you have a reward function)
+- MaximumMarginalLikelihood (when you have a set of possibly correct action sequences, e.g., after
+  you've done a search for action sequences that match the correct answer to a question)
+- EmpiricalRiskMinimization (when you have a reward function, e.g., for finished states that tells
+  you whether the logical form executed correctly)
 
 `TransitionFunctions`:
 - `BasicTransitionFunction`: a simple LSTM decoder with attention that uses a grammar to constrain
@@ -213,22 +225,28 @@ or programs in a specific context.
 
 And, I'll warn you ahead of time, the way we currently define languages is a bit convoluted and
 difficult to work with.  Sorry.  We're working on a better way to do this, but this is what we have
-for now.
+for now.  The main issue is that all of our models currently do _grammar-based decoding_.  That is,
+instead of outputting tokens in the target language directly, we build an abstract syntax tree of
+the target program, linearize that tree, and produce it sequentially.  You can see an example of
+this in our WikiTableQuestions parser demo (ADD LINK), if you look at the predicted actions.  Each
+action expands a non-terminal in the tree.  Constructing this grammar over abstract syntax trees is
+a bit messy.
 
-There are currently two ways that you can define a language to parse into with our framework: you
-can use an `nltk`-based logic system, seen in `semparse.transition_functions`, or you can use
-`parsimonious` to write a context-free grammar.  With the `nltk`-based system, you define the
-functions that are available in your (lisp-like) language, with their type signatures, and our code
-builds a grammar for you that can parse statements in that language.  With the `parsimonious`
-system, you have to come up with the grammar yourself, but you have more flexibility in the
-language that is parsed (we use this for SQL, which is not lisp-like).
+There are currently two ways to do this with our framework: you can use an `nltk`-based logic
+system, seen in `semparse.transition_functions`, or you can use `parsimonious` to write a
+context-free grammar.  With the `nltk`-based system, you define the functions that are available in
+your (lisp-like) language, with their type signatures, and our code builds a grammar for you that
+can parse statements in that language.  With the `parsimonious` system, you have to come up with
+the grammar yourself, but you have more flexibility in the language that is parsed (we use this for
+SQL, which is not lisp-like).
 
 The key functionality of both of these systems is to (1) go from a logical form or program to a
 sequence of actions that the parser can output, (2) define the allowed actions at each timestep
 (which is determined by the current grammar state), and (3) go from a sequence of actions back to a
 logical form.  If you have your own method of getting this functionality that doesn't need either
-of our two options, then you can bypass these pieces of the framework entirely - just pass the
-action sequences and the set of valid actions into your model however you want.
+of our two options (for example, by using a compiler's abstract syntax tree), then you can bypass
+these pieces of the framework entirely - just pass the action sequences and the set of valid
+actions into your model however you want.
 
 Instead of describing in detail how these two systems work, we'll just point you to some examples
 and their documentation (ADD LINK).  If you are trying to implement your own language using these
