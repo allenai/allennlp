@@ -97,7 +97,7 @@ class CnnHighwayEncoder(Seq2VecEncoder):
         if do_layer_norm:
             self._layer_norm = MaskedLayerNorm(self.output_dim, gamma0=0.1)
         else:
-            self._layer_norm = None
+            self._layer_norm = lambda x: x
 
     def forward(self,
                 inputs: torch.Tensor,
@@ -149,8 +149,8 @@ class CnnHighwayEncoder(Seq2VecEncoder):
             # final projection  (batch_size, embedding_dim)
             token_embedding = self._projection(token_embedding)
 
-        if self._layer_norm:
-            token_embedding = self._layer_norm(token_embedding, mask)
+        # Apply layer norm if appropriate
+        token_embedding = self._layer_norm(token_embedding, mask)
 
         return token_embedding
 
