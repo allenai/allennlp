@@ -118,10 +118,22 @@ class ActionSpaceWalker:
         if self._completed_paths is None:
             self._walk()
         agenda_path_indices = [self._terminal_path_index[action] for action in agenda]
+        if all([not path_indices for path_indices in agenda_path_indices]):
+            logger.warning("""None of the agenda items is in any of the paths found. Returning all
+                            paths.""")
+            return self.get_all_logical_forms(max_num_logical_forms)
+        # We omit any agenda items that are not in any of the paths, since they would cause the
+        # final intersection to be null.
         # TODO (pradeep): Sort the indices and do intersections in order, so that we can return the
         # set with maximal coverage if the full intersection is null.
-        return_set = agenda_path_indices[0]
-        for next_set in agenda_path_indices[1:]:
+        filtered_path_indices = []
+        for agenda_item, path_indices in zip(agenda, agenda_path_indices):
+            if not path_indices:
+                logger.warning(f"{agenda_item} is not in any of the paths found! Ignoring it.")
+                continue
+            filtered_path_indices.append(path_indices)
+        return_set = filtered_path_indices[0]
+        for next_set in filtered_path_indices[1:]:
             return_set = return_set.intersection(next_set)
         paths = [self._completed_paths[index] for index in return_set]
         if max_num_logical_forms is not None:
