@@ -100,7 +100,7 @@ def format_action(nonterminal: str,
 
     else:
         right_hand_side = right_hand_side.lstrip("(").rstrip(")")
-        child_strings = [token for token in re.split(" wsp |wsp | wsp| ws |ws | ws|", right_hand_side) if token]
+        child_strings = [token for token in WHITESPACE_REGEX.split(right_hand_side) if token]
         child_strings = [tok.upper() if tok.upper() in keywords_to_uppercase else tok for tok in child_strings]
         return f"{nonterminal} -> [{', '.join(child_strings)}]"
 
