@@ -87,9 +87,10 @@ class AtisWorld():
         ternary expression will refer to the start and end times.
         """
 
-        # This will give us a shallow copy. Some of the compound expressions such as
-        # ``OneOf`` contain lists of their members, so we have to be careful to update them.
-        new_grammar = copy(AtisWorld.sql_table_context.grammar)
+        # This will give us a shallow copy. We have to be careful here because the ``Grammar`` object
+        # contains ``Expression`` objects that have tuples containing the members of that expression.
+        # We have to create new sub-expression objects so that original grammar is not mutated.
+        new_grammar = AtisWorld.sql_table_context.grammar._copy()
 
         numbers = self._get_numeric_database_values('number')
         number_literals = [Literal(number) for number in numbers]
