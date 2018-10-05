@@ -155,7 +155,7 @@ class AtisWorld():
                 new_binary_expressions.extend([month_binary_expression,
                                                day_binary_expression])
 
-                new_binary_expressions = tuple(new_binary_expressions) + new_grammar['biexpr'].members
+                new_binary_expressions = new_binary_expressions + list(new_grammar['biexpr'].members)
                 new_grammar['biexpr'] = OneOf(*new_binary_expressions, name='biexpr')
                 self._update_expression_reference(new_grammar, 'condition', 'biexpr')
         return new_grammar
