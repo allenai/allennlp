@@ -28,8 +28,8 @@ class QuarelWorld(World):
         self._syntax = syntax
         self.types = QuarelTypeDeclaration(syntax)
         super(QuarelWorld, self).__init__(
-                global_type_signatures=self.types.common_type_signature,
-                global_name_mapping=self.types.common_name_mapping)
+                global_type_signatures=self.types.name_mapper.common_type_signature,
+                global_name_mapping=self.types.name_mapper.common_name_mapping)
         self.table_graph = table_graph
 
         # Keep map and counter for each entity type encountered (first letter in entity string)
@@ -69,8 +69,8 @@ class QuarelWorld(World):
     @overrides
     def _map_name(self, name: str, keep_mapping: bool = False) -> str:
         translated_name = name
-        if name in self.types.common_name_mapping:
-            translated_name = self.types.common_name_mapping[name]
+        if name in self.types.name_mapper.common_name_mapping:
+            translated_name = self.types.name_mapper.common_name_mapping[name]
         elif name in self.local_name_mapping:
             translated_name = self.local_name_mapping[name]
         elif name.startswith("a:"):

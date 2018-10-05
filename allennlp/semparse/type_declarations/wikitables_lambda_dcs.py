@@ -6,9 +6,10 @@ from overrides import overrides
 
 from nltk.sem.logic import Type, BasicType, ANY_TYPE, ComplexType as NltkComplexType
 
-from allennlp.semparse.type_declarations.type_declaration import ComplexType, HigherOrderType
-from allennlp.semparse.type_declarations.type_declaration import PlaceholderType, NamedBasicType
-from allennlp.semparse.type_declarations.type_declaration import UnaryOpType, BinaryOpType
+from allennlp.semparse.type_declarations.type_declaration import (ComplexType, HigherOrderType,
+                                                                  PlaceholderType, NamedBasicType,
+                                                                  UnaryOpType, BinaryOpType,
+                                                                  NameMapper)
 
 
 class ReverseType(PlaceholderType, HigherOrderType):
@@ -209,40 +210,39 @@ CONJUNCTION_TYPE = BinaryOpType()
 # argmax, argmin
 ARG_EXTREME_TYPE = ArgExtremeType()
 
+name_mapper = NameMapper(language_has_lambda=True)  # pylint: disable=invalid-name
 
-COMMON_NAME_MAPPING = {"lambda": "\\", "var": "V", "x": "X"}
+# We hardcode some the names "V" and "X" to mean "var" and "x" in the DynamicTypeLogicParser to deal
+# with these special types appropriately. So forcing their aliases here.
+name_mapper.map_name_with_signature(name="var", signature=IDENTITY_TYPE, alias="V")
+name_mapper.map_name_with_signature(name="x", signature=ANY_TYPE, alias="X")
 
+name_mapper.map_name_with_signature("reverse", REVERSE_TYPE)
+name_mapper.map_name_with_signature("argmax", ARG_EXTREME_TYPE)
+name_mapper.map_name_with_signature("argmin", ARG_EXTREME_TYPE)
+name_mapper.map_name_with_signature("max", UNARY_DATE_NUM_OP_TYPE)
+name_mapper.map_name_with_signature("min", UNARY_DATE_NUM_OP_TYPE)
+name_mapper.map_name_with_signature("and", CONJUNCTION_TYPE)
+name_mapper.map_name_with_signature("or", CONJUNCTION_TYPE)
+name_mapper.map_name_with_signature("fb:row.row.next", ROW_TO_ROW_TYPE)
+name_mapper.map_name_with_signature("number", NUMBER_FUNCTION_TYPE)
+name_mapper.map_name_with_signature("date", DATE_FUNCTION_TYPE)
+name_mapper.map_name_with_signature("fb:cell.cell.part", PART_TO_CELL_TYPE)
+name_mapper.map_name_with_signature("fb:cell.cell.date", DATE_TO_CELL_TYPE)
+name_mapper.map_name_with_signature("fb:cell.cell.number", NUM_TO_CELL_TYPE)
+name_mapper.map_name_with_signature("fb:cell.cell.num2", NUM_TO_CELL_TYPE)
+name_mapper.map_name_with_signature("fb:row.row.index", ROW_INDEX_TYPE)
+name_mapper.map_name_with_signature("fb:type.row", ROW_TYPE)
+name_mapper.map_name_with_signature("fb:type.object.type", ROW_TO_ROW_TYPE)
+name_mapper.map_name_with_signature("count", COUNT_TYPE)
+name_mapper.map_name_with_signature("!=", IDENTITY_TYPE)
+name_mapper.map_name_with_signature(">", UNARY_DATE_NUM_OP_TYPE)
+name_mapper.map_name_with_signature(">=", UNARY_DATE_NUM_OP_TYPE)
+name_mapper.map_name_with_signature("<", UNARY_DATE_NUM_OP_TYPE)
+name_mapper.map_name_with_signature("<=", UNARY_DATE_NUM_OP_TYPE)
+name_mapper.map_name_with_signature("sum", UNARY_NUM_OP_TYPE)
+name_mapper.map_name_with_signature("avg", UNARY_NUM_OP_TYPE)
+name_mapper.map_name_with_signature("-", BINARY_NUM_OP_TYPE)  # subtraction
 
-COMMON_TYPE_SIGNATURE = {"V": IDENTITY_TYPE, "X": ANY_TYPE}
-
-
-def add_common_name_with_type(name, mapping, type_signature):
-    COMMON_NAME_MAPPING[name] = mapping
-    COMMON_TYPE_SIGNATURE[mapping] = type_signature
-
-add_common_name_with_type("reverse", "R", REVERSE_TYPE)
-add_common_name_with_type("argmax", "A0", ARG_EXTREME_TYPE)
-add_common_name_with_type("argmin", "A1", ARG_EXTREME_TYPE)
-add_common_name_with_type("max", "M0", UNARY_DATE_NUM_OP_TYPE)
-add_common_name_with_type("min", "M1", UNARY_DATE_NUM_OP_TYPE)
-add_common_name_with_type("and", "A", CONJUNCTION_TYPE)
-add_common_name_with_type("or", "O", CONJUNCTION_TYPE)
-add_common_name_with_type("fb:row.row.next", "N", ROW_TO_ROW_TYPE)
-add_common_name_with_type("number", "I", NUMBER_FUNCTION_TYPE)
-add_common_name_with_type("date", "D0", DATE_FUNCTION_TYPE)
-add_common_name_with_type("fb:cell.cell.part", "P", PART_TO_CELL_TYPE)
-add_common_name_with_type("fb:cell.cell.date", "D1", DATE_TO_CELL_TYPE)
-add_common_name_with_type("fb:cell.cell.number", "I1", NUM_TO_CELL_TYPE)
-add_common_name_with_type("fb:cell.cell.num2", "I2", NUM_TO_CELL_TYPE)
-add_common_name_with_type("fb:row.row.index", "W", ROW_INDEX_TYPE)
-add_common_name_with_type("fb:type.row", "T0", ROW_TYPE)
-add_common_name_with_type("fb:type.object.type", "T", ROW_TO_ROW_TYPE)
-add_common_name_with_type("count", "C", COUNT_TYPE)
-add_common_name_with_type("!=", "Q", IDENTITY_TYPE)
-add_common_name_with_type(">", "G0", UNARY_DATE_NUM_OP_TYPE)
-add_common_name_with_type(">=", "G1", UNARY_DATE_NUM_OP_TYPE)
-add_common_name_with_type("<", "L0", UNARY_DATE_NUM_OP_TYPE)
-add_common_name_with_type("<=", "L1", UNARY_DATE_NUM_OP_TYPE)
-add_common_name_with_type("sum", "S0", UNARY_NUM_OP_TYPE)
-add_common_name_with_type("avg", "S1", UNARY_NUM_OP_TYPE)
-add_common_name_with_type("-", "F", BINARY_NUM_OP_TYPE)  # subtraction
+COMMON_NAME_MAPPING = name_mapper.common_name_mapping
+COMMON_TYPE_SIGNATURE = name_mapper.common_type_signature
