@@ -253,7 +253,13 @@ class Model(torch.nn.Module, Registrable):
 
         # Load vocabulary from file
         vocab_dir = os.path.join(serialization_dir, 'vocabulary')
-        vocab = Vocabulary.from_files(vocab_dir)
+        vocab_type = Vocabulary
+        if "vocabulary" in config:
+            vocab_params = config["vocabulary"]
+            vocab_type = vocab_params.pop("type", None)
+            if vocab_type is not None:
+                vocab_type = Vocabulary.by_name(vocab_type)
+        vocab = vocab_type.from_files(vocab_dir)
 
         model_params = config.get('model')
 
