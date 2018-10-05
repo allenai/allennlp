@@ -101,7 +101,7 @@ class SimpleSeq2Seq(Model):
         # Our decoder input will be the concatenation of the decoder hidden state and the previous
         # action embedding, and we'll project that down to the decoder's input dimension.
         self._input_projection_layer = \
-            Linear(self.encoder_output_dim + target_embedding_dim, self.decoder_input_dim)
+            Linear(self.decoder_output_dim + target_embedding_dim, self.decoder_input_dim)
 
         # We'll use an LSTM cell as the recurrent cell that produces a hidden state
         # for the decoder at each time step.
@@ -113,6 +113,47 @@ class SimpleSeq2Seq(Model):
 
         # At prediction time, we use a beam search to find the most likely sequence of target tokens.
         self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
+
+    def take_step(self,
+                  last_predictions: torch.Tensor,
+                  state: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+        """
+        Take a decoding step. This is called by the beam search class.
+
+        Parameters
+        ----------
+        last_predictions : ``torch.Tensor``
+            A tensor of shape ``(group_size,)``, which gives the indices of the predictions
+            during the last time step.
+        state : ``Dict[str, torch.Tensor]``
+            A dictionary of tensors that contain the current state information
+            needed to predict the next step, which includes the encoder outputs,
+            the source mask, and the decoder hidden state and context. Each of these
+            tensors has shape ``(group_size, *)``, where ``*`` can be any other number
+            of dimensions.
+
+        Returns
+        -------
+        Tuple[torch.Tensor, Dict[str, torch.Tensor]]
+            A tuple of ``(log_probabilities, updated_state)``, where ``log_probabilities``
+            is a tensor of shape ``(group_size, num_classes)`` containing the predicted
+            log probability of each class for the next step, for each item in the group,
+            while ``updated_state`` is a dictionary of tensors containing the encoder outputs,
+            source mask, and updated decoder hidden state and context.
+
+        Notes
+        -----
+            We treat the inputs as a batch, even though ``group_size`` is not necessarily
+            equal to ``batch_size``, since the group may contain multiple states
+            for each source sentence in the batch.
+        """
+        output_projections, state = self._prepare_output_projections(last_predictions, state)
+        # shape: (group_size, num_classes)
+
+        class_log_probabilities = F.log_softmax(output_projections, dim=-1)
+        # shape: (group_size, num_classes)
+
+        return class_log_probabilities, state
 
     @overrides
     def forward(self,  # type: ignore
@@ -135,6 +176,47 @@ class SimpleSeq2Seq(Model):
         -------
         Dict[str, torch.Tensor]
         """
+        state = self._init_encoded_state(source_tokens)
+
+        if target_tokens:
+            return self._forward_train(target_tokens, state)
+
+        return self._forward_predict(state)
+
+    @overrides
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Finalize predictions.
+
+        This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
+        time, to finalize predictions. The logic for the decoder part of the encoder-decoder lives
+        within the ``forward`` method.
+
+        This method trims the output predictions to the first end symbol, replaces indices with
+        corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
+        """
+        predicted_indices = output_dict["predictions"]
+        if not isinstance(predicted_indices, numpy.ndarray):
+            predicted_indices = predicted_indices.detach().cpu().numpy()
+        all_predicted_tokens = []
+        for top_k in predicted_indices:
+            top_k_tokens = []
+            for indices in top_k:
+                indices = list(indices)
+                # Collect indices till the first end_symbol
+                if self._end_index in indices:
+                    indices = indices[:indices.index(self._end_index)]
+                predicted_tokens = [self.vocab.get_token_from_index(x, namespace=self._target_namespace)
+                                    for x in indices]
+                top_k_tokens.append(predicted_tokens)
+            all_predicted_tokens.append(top_k_tokens)
+        output_dict["predicted_tokens"] = all_predicted_tokens
+        return output_dict
+
+    def _init_encoded_state(self, source_tokens: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Initialize the encoded state to be passed to the first decoding time step.
+        """
         embedded_input = self._source_embedder(source_tokens)
         # shape: (batch_size, max_input_sequence_length, encoder_input_dim)
 
@@ -152,7 +234,7 @@ class SimpleSeq2Seq(Model):
                 self._encoder.is_bidirectional())
         # shape: (batch_size, encoder_output_dim)
 
-        # Initialize the decoder hidden state the final output of the encoder.
+        # Initialize the decoder hidden state with the final output of the encoder.
         decoder_hidden = final_encoder_output
         # shape: (batch_size, decoder_output_dim)
 
@@ -166,26 +248,15 @@ class SimpleSeq2Seq(Model):
                 "decoder_context": decoder_context
         }
 
-        if target_tokens:
-            return self._forward_train(target_tokens, state)
+        return state
 
-        return self._forward_predict(state)
 
     def _forward_train(self,
                        target_tokens: Dict[str, torch.LongTensor],
                        state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Make forward pass during training."""
-        encoder_outputs = state["encoder_outputs"]
-        # shape: (batch_size, max_input_sequence_length, encoder_output_dim)
-
         source_mask = state["source_mask"]
         # shape: (batch_size, max_input_sequence_length)
-
-        decoder_hidden = state["decoder_hidden"]
-        # shape: (batch_size, decoder_output_dim)
-
-        decoder_context = state["decoder_context"]
-        # shape: (batch_size, decoder_output_dim)
 
         targets = target_tokens["tokens"]
         # shape: (batch_size, max_target_sequence_length)
@@ -214,25 +285,7 @@ class SimpleSeq2Seq(Model):
                     input_choices = last_predictions
                     # shape: (batch_size,)
 
-            embedded_input = self._target_embedder(input_choices)
-            # shape: (batch_size, target_embedding_dim)
-
-            attended_input = self._prepare_attended_input(
-                    decoder_hidden,
-                    encoder_outputs,
-                    source_mask)
-            # shape: (batch_size, encoder_output_dim)
-
-            decoder_input = self._input_projection_layer(torch.cat((attended_input, embedded_input), -1))
-            # shape: (batch_size, decoder_input_dim)
-
-            decoder_hidden, decoder_context = self._decoder_cell(
-                    decoder_input,
-                    (decoder_hidden, decoder_context))
-            # shape (decoder_hidden): (batch_size, decoder_output_dim)
-            # shape (decoder_context): (batch_size, decoder_output_dim)
-
-            output_projections = self._output_projection_layer(decoder_hidden)
+            output_projections, state = self._prepare_output_projections(input_choices, state)
             # shape: (batch_size, num_classes)
 
             step_logits.append(output_projections.unsqueeze(1))
@@ -291,38 +344,15 @@ class SimpleSeq2Seq(Model):
         }
         return output_dict
 
-    def take_step(self,
-                  last_predictions: torch.Tensor,
-                  state: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    def _prepare_output_projections(self,
+                                    last_predictions: torch.Tensor,
+                                    state: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:  # pylint: disable=line-too-long
         """
-        Take a decoding step. This is called by the beam search class.
+        Decode current state and last prediction to produce produce projections
+        into the target space, which can then be used to get probabilities of
+        each target token for the next step.
 
-        Parameters
-        ----------
-        last_predictions : ``torch.Tensor``
-            A tensor of shape ``(group_size,)``, which gives the indices of the predictions
-            during the last time step.
-        state : ``Dict[str, torch.Tensor]``
-            A dictionary of tensors that contain the current state information
-            needed to predict the next step, which includes the encoder outputs,
-            the source mask, and the decoder hidden state and context. Each of these
-            tensors has shape ``(group_size, *)``, where ``*`` can be any other number
-            of dimensions.
-
-        Returns
-        -------
-        Tuple[torch.Tensor, Dict[str, torch.Tensor]]
-            A tuple of ``(log_probabilities, updated_state)``, where ``log_probabilities``
-            is a tensor of shape ``(group_size, num_classes)`` containing the predicted
-            log probability of each class for the next step, for each item in the group,
-            while ``updated_state`` is a dictionary of tensors containing the encoder outputs,
-            source mask, and updated decoder hidden state and context.
-
-        Notes
-        -----
-            We treat the inputs as a batch, even though ``group_size`` is not necessarily
-            equal to ``batch_size``, since the group may contain multiple states
-            for each source sentence in the batch.
+        Inputs are the same as for `take_step()`.
         """
         encoder_outputs = state["encoder_outputs"]
         # shape: (group_size, max_input_sequence_length, encoder_output_dim)
@@ -357,31 +387,13 @@ class SimpleSeq2Seq(Model):
         output_projections = self._output_projection_layer(decoder_hidden)
         # shape: (group_size, num_classes)
 
-        class_log_probabilities = F.log_softmax(output_projections, dim=-1)
-        # shape: (group_size, num_classes)
-
-        return class_log_probabilities, state
+        return output_projections, state
 
     def _prepare_attended_input(self,
                                 decoder_hidden_state: torch.LongTensor = None,
                                 encoder_outputs: torch.LongTensor = None,
                                 encoder_outputs_mask: torch.LongTensor = None) -> torch.Tensor:
-        """
-        Apply attention over encoder outputs and decoder state.
-
-        Parameters
-        ----------
-        decoder_hidden_state : ``torch.LongTensor``, (batch_size, decoder_output_dim)
-            Output of from the decoder at the last time step. Needed only if using attention.
-        encoder_outputs : ``torch.LongTensor``, (batch_size, max_input_sequence_length, encoder_output_dim)
-            Encoder outputs from all time steps. Needed only if using attention.
-        encoder_outputs_mask : ``torch.LongTensor``, (batch_size, max_input_sequence_length, encoder_output_dim)
-            Masks on encoder outputs. Needed only if using attention.
-
-        Returns
-        -------
-        torch.Tensor, (batch_size, encoder_output_dim)
-        """
+        """Apply attention over encoder outputs and decoder state."""
         # Ensure mask is also a FloatTensor. Or else the multiplication within
         # attention will complain.
         encoder_outputs_mask = encoder_outputs_mask.float()
@@ -432,33 +444,3 @@ class SimpleSeq2Seq(Model):
         # shape: (batch_size, num_decoding_steps)
 
         return util.sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask)
-
-    @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        """
-        Finalize predictions.
-
-        This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
-        time, to finalize predictions. The logic for the decoder part of the encoder-decoder lives
-        within the ``forward`` method.
-
-        This method trims the output predictions to the first end symbol, replaces indices with
-        corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
-        """
-        predicted_indices = output_dict["predictions"]
-        if not isinstance(predicted_indices, numpy.ndarray):
-            predicted_indices = predicted_indices.detach().cpu().numpy()
-        all_predicted_tokens = []
-        for top_k in predicted_indices:
-            top_k_tokens = []
-            for indices in top_k:
-                indices = list(indices)
-                # Collect indices till the first end_symbol
-                if self._end_index in indices:
-                    indices = indices[:indices.index(self._end_index)]
-                predicted_tokens = [self.vocab.get_token_from_index(x, namespace=self._target_namespace)
-                                    for x in indices]
-                top_k_tokens.append(predicted_tokens)
-            all_predicted_tokens.append(top_k_tokens)
-        output_dict["predicted_tokens"] = all_predicted_tokens
-        return output_dict
