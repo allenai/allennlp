@@ -33,7 +33,6 @@ which to write the results.
 """
 from typing import Dict, Iterable
 import argparse
-import json
 import logging
 import os
 import re
@@ -45,7 +44,7 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import Params
 from allennlp.common.util import prepare_environment, prepare_global_logging, \
-                                 get_frozen_and_tunable_parameter_names
+                                 get_frozen_and_tunable_parameter_names, dump_metrics
 from allennlp.data import Vocabulary
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -274,9 +273,11 @@ def train_model(params: Params,
              if key in datasets_for_vocab_creation)
     )
 
+    model = Model.from_params(vocab=vocab, params=params.pop('model'))
+
+    # Initializing the model can have side effect of expanding the vocabulary
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
-    model = Model.from_params(vocab=vocab, params=params.pop('model'))
     iterator = DataIterator.from_params(params.pop("iterator"))
     iterator.index_with(vocab)
     validation_iterator_params = params.pop("validation_iterator", None)
@@ -348,9 +349,6 @@ def train_model(params: Params,
         logger.info("To evaluate on the test set after training, pass the "
                     "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
 
-    metrics_json = json.dumps(metrics, indent=2)
-    with open(os.path.join(serialization_dir, "metrics.json"), "w") as metrics_file:
-        metrics_file.write(metrics_json)
-    logger.info("Metrics: %s", metrics_json)
+    dump_metrics(os.path.join(serialization_dir, "metrics.json"), metrics, log=True)
 
     return best_model

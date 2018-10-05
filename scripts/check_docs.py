@@ -26,6 +26,13 @@ MODULES_THAT_NEED_NO_DOCS: Set[str] = {
         'allennlp.modules.alternating_highway_lstm',
         # Private base class, no docs needed.
         'allennlp.modules.encoder_base',
+        # Deprecated module name (renamed to allennlp.modules.pruner). This can be removed once the
+        # module is removed (probably in version 0.8).
+        'allennlp.modules.span_pruner',
+        # Moved to dataset_readers/semantic_parsing. TODO(Mark): remove in version 0.8.
+        'allennlp.data.dataset_readers.atis',
+        'allennlp.data.dataset_readers.nlvr',
+        'allennlp.data.dataset_readers.wikitables',
         # Deprecated in favor of allennlp.predictors.
         'allennlp.service.predictors.*',
 }

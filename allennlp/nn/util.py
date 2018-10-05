@@ -3,15 +3,52 @@ Assorted utilities for working with neural networks in AllenNLP.
 """
 # pylint: disable=too-many-lines
 from collections import defaultdict
-from typing import Dict, List, Optional, Any, Tuple, Callable
+from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar
 import logging
-
 import math
+import warnings
+
 import torch
 
 from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+T = TypeVar('T')
+
+
+def has_tensor(obj) -> bool:
+    """
+    Given a possibly complex data structure,
+    check if it has any torch.Tensors in it.
+    """
+    if isinstance(obj, torch.Tensor):
+        return True
+    elif isinstance(obj, dict):
+        return any(has_tensor(value) for value in obj.values())
+    elif isinstance(obj, (list, tuple)):
+        return any(has_tensor(item) for item in obj)
+    else:
+        return False
+
+
+def move_to_device(obj, cuda_device: int):
+    """
+    Given a structure (possibly) containing Tensors on the CPU,
+    move all the Tensors to the specified GPU (or do nothing, if they should be on the CPU).
+    """
+    if cuda_device < 0 or not has_tensor(obj):
+        return obj
+    elif isinstance(obj, torch.Tensor):
+        return obj.cuda(cuda_device)
+    elif isinstance(obj, dict):
+        return {key: move_to_device(value, cuda_device) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [move_to_device(item, cuda_device) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple([move_to_device(item, cuda_device) for item in obj])
+    else:
+        return obj
 
 
 def batch_tensor_dicts(tensor_dicts: List[Dict[str, torch.Tensor]],
@@ -176,35 +213,44 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
     return dropout_mask
 
 
-def masked_softmax(vector, mask):
+def masked_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) -> torch.Tensor:
     """
     ``torch.nn.functional.softmax(vector)`` does not work if some elements of ``vector`` should be
     masked.  This performs a softmax on just the non-masked portions of ``vector``.  Passing
     ``None`` in for the mask is also acceptable; you'll just get a regular softmax.
 
-    We assume that both ``vector`` and ``mask`` (if given) have shape ``(batch_size, vector_dim)``.
+    ``vector`` can have an arbitrary number of dimensions; the only requirement is that ``mask`` is
+    broadcastable to ``vector's`` shape.  If ``mask`` has fewer dimensions than ``vector``, we will
+    unsqueeze on dimension 1 until they match.  If you need a different unsqueezing of your mask,
+    do it yourself before passing the mask into this function.
 
     In the case that the input vector is completely masked, this function returns an array
     of ``0.0``. This behavior may cause ``NaN`` if this is used as the last layer of a model
     that uses categorical cross-entropy loss.
     """
     if mask is None:
-        result = torch.nn.functional.softmax(vector, dim=-1)
+        result = torch.nn.functional.softmax(vector, dim=dim)
     else:
+        mask = mask.float()
+        while mask.dim() < vector.dim():
+            mask = mask.unsqueeze(1)
         # To limit numerical errors from large vector elements outside the mask, we zero these out.
-        result = torch.nn.functional.softmax(vector * mask, dim=-1)
+        result = torch.nn.functional.softmax(vector * mask, dim=dim)
         result = result * mask
-        result = result / (result.sum(dim=1, keepdim=True) + 1e-13)
+        result = result / (result.sum(dim=dim, keepdim=True) + 1e-13)
     return result
 
 
-def masked_log_softmax(vector, mask):
+def masked_log_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) -> torch.Tensor:
     """
     ``torch.nn.functional.log_softmax(vector)`` does not work if some elements of ``vector`` should be
     masked.  This performs a log_softmax on just the non-masked portions of ``vector``.  Passing
     ``None`` in for the mask is also acceptable; you'll just get a regular log_softmax.
 
-    We assume that both ``vector`` and ``mask`` (if given) have shape ``(batch_size, vector_dim)``.
+    ``vector`` can have an arbitrary number of dimensions; the only requirement is that ``mask`` is
+    broadcastable to ``vector's`` shape.  If ``mask`` has fewer dimensions than ``vector``, we will
+    unsqueeze on dimension 1 until they match.  If you need a different unsqueezing of your mask,
+    do it yourself before passing the mask into this function.
 
     In the case that the input vector is completely masked, the return value of this function is
     arbitrary, but not ``nan``.  You should be masking the result of whatever computation comes out
@@ -217,13 +263,16 @@ def masked_log_softmax(vector, mask):
     extreme, you've got bigger problems than this.
     """
     if mask is not None:
+        mask = mask.float()
+        while mask.dim() < vector.dim():
+            mask = mask.unsqueeze(1)
         # vector + mask.log() is an easy way to zero out masked elements in logspace, but it
         # results in nans when the whole vector is masked.  We need a very small value instead of a
         # zero in the mask for these cases.  log(1 + 1e-45) is still basically 0, so we can safely
         # just add 1e-45 before calling mask.log().  We use 1e-45 because 1e-46 is so small it
         # becomes 0 - this is just the smallest value we can actually use.
         vector = vector + (mask + 1e-45).log()
-    return torch.nn.functional.log_softmax(vector, dim=1)
+    return torch.nn.functional.log_softmax(vector, dim=dim)
 
 
 def masked_max(vector: torch.Tensor,
@@ -424,34 +473,20 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
     else:
         raise ValueError("Expected a tensor with dimension 2 or 3, found {}".format(smallest_dim))
 
-def _last_dimension_applicator(function_to_apply: Callable[[torch.Tensor, Optional[torch.Tensor]], torch.Tensor],
-                               tensor: torch.Tensor,
-                               mask: Optional[torch.Tensor] = None):
-    """
-    Takes a tensor with 3 or more dimensions and applies a function over the last dimension.  We
-    assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
-    has shape ``(batch_size, sequence_length)``.  We first unsqueeze and expand the mask so that it
-    has the same shape as the tensor, then flatten them both to be 2D, pass them through
-    the function and put the tensor back in its original shape.
-    """
-    tensor_shape = tensor.size()
-    reshaped_tensor = tensor.view(-1, tensor.size()[-1])
-    if mask is not None:
-        while mask.dim() < tensor.dim():
-            mask = mask.unsqueeze(1)
-        mask = mask.expand_as(tensor).contiguous().float()
-        mask = mask.view(-1, mask.size()[-1])
-    reshaped_result = function_to_apply(reshaped_tensor, mask)
-    return reshaped_result.view(*tensor_shape)
-
 
 def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
     """
     Takes a tensor with 3 or more dimensions and does a masked softmax over the last dimension.  We
     assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
     has shape ``(batch_size, sequence_length)``.
+
+    .. deprecated:: 0.6.1
+           ``last_dim_softmax`` was deprecated in favor of just using ``masked_softmax`` in version
+           0.6.1.  It will be removed in version 0.8.
     """
-    return _last_dimension_applicator(masked_softmax, tensor, mask)
+    warnings.warn("``last_dim_softmax`` was deprecated in favor of just using ``masked_softmax`` "
+                  "in version 0.6.1.  It will be removed in version 0.8.", DeprecationWarning)
+    return masked_softmax(tensor, mask, dim=-1)
 
 
 def last_dim_log_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
@@ -459,8 +494,15 @@ def last_dim_log_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = No
     Takes a tensor with 3 or more dimensions and does a masked log softmax over the last dimension.
     We assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
     has shape ``(batch_size, sequence_length)``.
+
+    .. deprecated:: 0.6.1
+           ``last_dim_log_softmax`` was deprecated in favor of just using ``masked_log_softmax`` in
+           version 0.6.1.  It will be removed in version 0.8.
     """
-    return _last_dimension_applicator(masked_log_softmax, tensor, mask)
+    warnings.warn("``last_dim_log_softmax`` was deprecated in favor of just using "
+                  "``masked_log_softmax`` in version 0.6.1.  It will be removed in version 0.8.",
+                  DeprecationWarning)
+    return masked_log_softmax(tensor, mask, dim=-1)
 
 
 def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
@@ -505,7 +547,8 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
 def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        targets: torch.LongTensor,
                                        weights: torch.FloatTensor,
-                                       batch_average: bool = True,
+                                       batch_average: bool = None,
+                                       average: str = "batch",
                                        label_smoothing: float = None) -> torch.FloatTensor:
     """
     Computes the cross entropy loss of a sequence, weighted with respect to
@@ -524,9 +567,19 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         index of the true class for each corresponding step.
     weights : ``torch.FloatTensor``, required.
         A ``torch.FloatTensor`` of size (batch, sequence_length)
-    batch_average : bool, optional, (default = True).
+    batch_average : bool, optional, (default = None).
         A bool indicating whether the loss should be averaged across the batch,
         or returned as a vector of losses per batch element.
+
+        .. deprecated:: 0.6.2
+           ``batch_average`` was deprecated and replaced with
+           the more general ``average`` in version 0.6.2. It will be removed
+           in version 0.8.
+
+    average: str, optional (default = "batch")
+        If "batch", average the loss across the batches. If "token", average
+        the loss across each item in the input. If ``None``, return a vector
+        of losses per batch element.
     label_smoothing : ``float``, optional (default = None)
         Whether or not to apply label smoothing to the cross-entropy loss.
         For example, with a label smoothing value of 0.2, a 4 class classifcation
@@ -536,10 +589,26 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     Returns
     -------
     A torch.FloatTensor representing the cross entropy loss.
-    If ``batch_average == True``, the returned loss is a scalar.
-    If ``batch_average == False``, the returned loss is a vector of shape (batch_size,).
+    If ``average=="batch"`` or ``average=="token"``, the returned loss is a scalar.
+    If ``average is None``, the returned loss is a vector of shape (batch_size,).
 
     """
+    if batch_average is not None:
+        # Maintain old behavior
+        if batch_average:
+            warnings.warn("batch_average=True was deprecated and replaced "
+                          "with average='batch' in version 0.6.2. It will be "
+                          "removed in version 0.8.", DeprecationWarning)
+            average = "batch"
+        else:
+            warnings.warn("batch_average=False was deprecated and replaced "
+                          "with average=None in version 0.6.2. It will be "
+                          "removed in version 0.8.", DeprecationWarning)
+            average = None
+    if average not in {None, "token", "batch"}:
+        raise ValueError("Got average f{average}, expected one of "
+                         "None, 'token', or 'batch'")
+
     # shape : (batch * sequence_length, num_classes)
     logits_flat = logits.view(-1, logits.size(-1))
     # shape : (batch * sequence_length, num_classes)
@@ -565,13 +634,18 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     negative_log_likelihood = negative_log_likelihood_flat.view(*targets.size())
     # shape : (batch, sequence_length)
     negative_log_likelihood = negative_log_likelihood * weights.float()
-    # shape : (batch_size,)
-    per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1).float() + 1e-13)
 
-    if batch_average:
+    if average == "batch":
+        # shape : (batch_size,)
+        per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1).float() + 1e-13)
         num_non_empty_sequences = ((weights.sum(1) > 0).float().sum() + 1e-13)
         return per_batch_loss.sum() / num_non_empty_sequences
-    return per_batch_loss
+    elif average == "token":
+        return negative_log_likelihood.sum() / (weights.sum().float() + 1e-13)
+    else:
+        # shape : (batch_size,)
+        per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1).float() + 1e-13)
+        return per_batch_loss
 
 
 def replace_masked_values(tensor: torch.Tensor, mask: torch.Tensor, replace_with: float) -> torch.Tensor:
@@ -625,18 +699,19 @@ def tensors_equal(tensor1: torch.Tensor, tensor2: torch.Tensor, tolerance: float
             raise
 
 
-
 def device_mapping(cuda_device: int):
     """
     In order to `torch.load()` a GPU-trained model onto a CPU (or specific GPU),
     you have to supply a `map_location` function. Call this with
     the desired `cuda_device` to get the function that `torch.load()` needs.
     """
+
     def inner_device_mapping(storage: torch.Storage, location) -> torch.Storage:  # pylint: disable=unused-argument
         if cuda_device >= 0:
             return storage.cuda(cuda_device)
         else:
             return storage
+
     return inner_device_mapping
 
 
@@ -669,6 +744,27 @@ def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tens
     combination = combination.replace('x', '1').replace('y', '2')
     to_concatenate = [_get_combination(piece, tensors) for piece in combination.split(',')]
     return torch.cat(to_concatenate, dim=-1)
+
+
+def _rindex(sequence: Sequence[T], obj: T) -> int:
+    """
+    Return zero-based index in the sequence of the last item whose value is equal to obj.  Raises a
+    ValueError if there is no such item.
+
+    Parameters
+    ----------
+    sequence : ``Sequence[T]``
+    obj : ``T``
+
+    Returns
+    -------
+    zero-based index associated to the position of the last item equal to obj
+    """
+    for i in range(len(sequence) - 1, -1, -1):
+        if sequence[i] == obj:
+            return i
+
+    raise ValueError(f"Unable to find {obj} in sequence {sequence}.")
 
 
 def _get_combination(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
@@ -749,10 +845,10 @@ def _get_combination_and_multiply(combination: str,
             if first_tensor.dim() > 4 or second_tensor.dim() > 4:
                 raise ValueError("Tensors with dim > 4 not currently supported")
             if first_tensor.dim() == 4:
-                expanded_dim = first_tensor.size().index(1)
+                expanded_dim = _rindex(first_tensor.size(), 1)
                 first_tensor = first_tensor.squeeze(expanded_dim)
             if second_tensor.dim() == 4:
-                expanded_dim = second_tensor.size().index(1)
+                expanded_dim = _rindex(second_tensor.size(), 1)
                 second_tensor = second_tensor.squeeze(expanded_dim)
             intermediate = first_tensor * weight
             return torch.matmul(intermediate, second_tensor.transpose(-1, -2)).squeeze(-1)
@@ -760,10 +856,10 @@ def _get_combination_and_multiply(combination: str,
             if first_tensor.dim() > 4 or second_tensor.dim() > 4:
                 raise ValueError("Tensors with dim > 4 not currently supported")
             if first_tensor.dim() == 4:
-                expanded_dim = first_tensor.size().index(1)
+                expanded_dim = _rindex(first_tensor.size(), 1)
                 first_tensor = first_tensor.squeeze(expanded_dim)
             if second_tensor.dim() == 4:
-                expanded_dim = second_tensor.size().index(1)
+                expanded_dim = _rindex(second_tensor.size(), 1)
                 second_tensor = second_tensor.squeeze(expanded_dim)
             intermediate = first_tensor * weight
             return torch.matmul(intermediate, second_tensor.pow(-1).transpose(-1, -2)).squeeze(-1)
@@ -836,6 +932,7 @@ def logsumexp(tensor: torch.Tensor,
         stable_vec = tensor - max_score.unsqueeze(dim)
     return max_score + (stable_vec.exp().sum(dim, keepdim=keepdim)).log()
 
+
 def get_device_of(tensor: torch.Tensor) -> int:
     """
     Returns the device of the tensor.
@@ -844,6 +941,7 @@ def get_device_of(tensor: torch.Tensor) -> int:
         return -1
     else:
         return tensor.get_device()
+
 
 def flatten_and_batch_shift_indices(indices: torch.Tensor,
                                     sequence_length: int) -> torch.Tensor:
@@ -1015,7 +1113,7 @@ def bucket_values(distances: torch.Tensor,
     # We do this to make the buckets more granular in the initial range, where we expect
     # most values to fall. We then add (num_identity_buckets - 1) because we want these indices
     # to start _after_ the fixed number of buckets which we specified would only hold single values.
-    logspace_index = (distances.float().log()/math.log(2)).floor().long() + (num_identity_buckets - 1)
+    logspace_index = (distances.float().log() / math.log(2)).floor().long() + (num_identity_buckets - 1)
     # create a mask for values which will go into single number buckets (i.e not a range).
     use_identity_mask = (distances <= num_identity_buckets).long()
     use_buckets_mask = 1 + (-1 * use_identity_mask)
@@ -1024,6 +1122,7 @@ def bucket_values(distances: torch.Tensor,
     combined_index = use_identity_mask * distances + use_buckets_mask * logspace_index
     # Clamp to put anything > num_total_buckets into the final bucket.
     return combined_index.clamp(0, num_total_buckets - 1)
+
 
 def add_sentence_boundary_token_ids(tensor: torch.Tensor,
                                     mask: torch.Tensor,
@@ -1080,6 +1179,7 @@ def add_sentence_boundary_token_ids(tensor: torch.Tensor,
         raise ValueError("add_sentence_boundary_token_ids only accepts 2D and 3D input")
 
     return tensor_with_boundary_tokens, new_mask
+
 
 def remove_sentence_boundaries(tensor: torch.Tensor,
                                mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:

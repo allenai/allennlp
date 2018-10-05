@@ -7,22 +7,32 @@ allennlp.training.metrics
    :show-inheritance:
 
 * :ref:`Metric<metric>`
+* :ref:`AttachmentScores<attachment-scores>`
 * :ref:`Average<average>`
 * :ref:`BooleanAccuracy<boolean-accuracy>`
 * :ref:`CategoricalAccuracy<categorical-accuracy>`
 * :ref:`ConllCorefScores<conll-coref-scores>`
+* :ref:`Covariance<covariance>`
 * :ref:`Entropy<entropy>`
 * :ref:`EvalbBracketingScorer<evalb>`
 * :ref:`F1Measure<f1-measure>`
+* :ref:`MeanAbsoluteError<mean-absolute-error>`
 * :ref:`MentionRecall<mention-recall>`
+* :ref:`PearsonCorrelation<pearson-correlation>`
+* :ref:`SequenceAccuracy<sequence-accuracy>`
 * :ref:`SpanBasedF1Measure<span-based-f1-measure>`
 * :ref:`SquadEmAndF1<squad-em-and-f1>`
-* :ref:`WikiTablesAccuracy<wikitables-accuracy>`
-* :ref:`AttachmentScores<attachment-scores>`
+* :ref:`UnigramRecall<unigram-recall>`
 
 
 .. _metric:
 .. automodule:: allennlp.training.metrics.metric
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _attachment-scores:
+.. automodule:: allennlp.training.metrics.attachment_scores
    :members:
    :undoc-members:
    :show-inheritance:
@@ -51,6 +61,12 @@ allennlp.training.metrics
    :undoc-members:
    :show-inheritance:
 
+.. _covariance:
+.. automodule:: allennlp.training.metrics.covariance
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. _entropy:
 .. automodule:: allennlp.training.metrics.entropy
    :members:
@@ -69,8 +85,26 @@ allennlp.training.metrics
    :undoc-members:
    :show-inheritance:
 
+.. _mean-absolute-error:
+.. automodule:: allennlp.training.metrics.mean_absolute_error
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. _mention-recall:
 .. automodule:: allennlp.training.metrics.mention_recall
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _pearson-correlation:
+.. automodule:: allennlp.training.metrics.pearson_correlation
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _sequence-accuracy:
+.. automodule:: allennlp.training.metrics.sequence_accuracy
    :members:
    :undoc-members:
    :show-inheritance:
@@ -87,14 +121,8 @@ allennlp.training.metrics
    :undoc-members:
    :show-inheritance:
 
-.. _wikitables-accuracy:
-.. automodule:: allennlp.training.metrics.wikitables_accuracy
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. _attachment-scores:
-.. automodule:: allennlp.training.metrics.attachment_scores
+.. _unigram-recall:
+.. automodule:: allennlp.training.metrics.unigram_recall
    :members:
    :undoc-members:
    :show-inheritance:

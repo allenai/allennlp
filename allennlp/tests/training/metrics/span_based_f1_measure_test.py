@@ -10,6 +10,7 @@ from allennlp.data import Vocabulary
 from allennlp.training.metrics import SpanBasedF1Measure, Metric
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
 from allennlp.common.params import Params
+from allennlp.common.checks import ConfigurationError
 
 
 class SpanBasedF1Test(AllenNlpTestCase):
@@ -30,6 +31,12 @@ class SpanBasedF1Test(AllenNlpTestCase):
         vocab.add_token_to_namespace("I-C-ARG1", "tags")
         vocab.add_token_to_namespace("B-ARGM-ADJ", "tags")
         vocab.add_token_to_namespace("I-ARGM-ADJ", "tags")
+
+        # BMES.
+        vocab.add_token_to_namespace("B", "bmes_tags")
+        vocab.add_token_to_namespace("M", "bmes_tags")
+        vocab.add_token_to_namespace("E", "bmes_tags")
+        vocab.add_token_to_namespace("S", "bmes_tags")
 
         self.vocab = vocab
 
@@ -167,6 +174,40 @@ class SpanBasedF1Test(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(metric_dict["precision-overall"], 0.5)
         numpy.testing.assert_almost_equal(metric_dict["f1-measure-overall"], 0.5)
 
+    def test_bmes_span_metrics_are_computed_correctly(self):
+        # (bmes_tags) B:0, M:1, E:2, S:3.
+        # [S, B, M, E, S]
+        # [S, S, S, S, S]
+        gold_indices = [[3, 0, 1, 2, 3],
+                        [3, 3, 3, 3, 3]]
+        gold_tensor = torch.Tensor(gold_indices)
+
+        prediction_tensor = torch.rand([2, 5, 4])
+        # [S, B, E, S, S]
+        # TP: 2, FP: 2, FN: 1.
+        prediction_tensor[0, 0, 3] = 1 # (True positive)
+        prediction_tensor[0, 1, 0] = 1 # (False positive
+        prediction_tensor[0, 2, 2] = 1 # *)
+        prediction_tensor[0, 3, 3] = 1 # (False positive)
+        prediction_tensor[0, 4, 3] = 1 # (True positive)
+        # [B, E, S, B, E]
+        # TP: 1, FP: 2, FN: 4.
+        prediction_tensor[1, 0, 0] = 1 # (False positive
+        prediction_tensor[1, 1, 2] = 1 # *)
+        prediction_tensor[1, 2, 3] = 1 # (True positive)
+        prediction_tensor[1, 3, 0] = 1 # (False positive
+        prediction_tensor[1, 4, 2] = 1 # *)
+
+        metric = SpanBasedF1Measure(self.vocab, "bmes_tags", label_encoding="BMES")
+        metric(prediction_tensor, gold_tensor)
+
+        # TP: 3, FP: 4, FN: 5.
+        metric_dict = metric.get_metric()
+
+        numpy.testing.assert_almost_equal(metric_dict["recall-overall"], 0.375)
+        numpy.testing.assert_almost_equal(metric_dict["precision-overall"], 0.428, decimal=3)
+        numpy.testing.assert_almost_equal(metric_dict["f1-measure-overall"], 0.4)
+
     def test_span_f1_can_build_from_params(self):
         params = Params({"type": "span_f1", "tag_namespace": "tags", "ignore_classes": ["V"]})
         metric = Metric.from_params(params=params, vocabulary=self.vocab)
@@ -228,3 +269,34 @@ class SpanBasedF1Test(AllenNlpTestCase):
         num_correct_arg1_instances_from_perl_evaluation = int([token for token in
                                                                stdout_lines[8].split(" ") if token][1])
         assert num_correct_arg1_instances_from_perl_evaluation == metric._true_positives["ARG1"]
+
+    def test_span_f1_accepts_tags_to_spans_function_argument(self):
+        def mock_tags_to_spans_function(tag_sequence, classes_to_ignore=None):  # pylint: disable=W0613
+            return [('mock', (42, 42))]
+
+        # Should be ignore.
+        bio_tags = ["B-ARG1", "O", "B-C-ARG1", "B-V", "B-ARGM-ADJ", "O"]
+        gold_indices = [self.vocab.get_token_index(x, "tags") for x in bio_tags]
+        gold_tensor = torch.Tensor([gold_indices])
+        prediction_tensor = torch.rand([1, 6, self.vocab.get_vocab_size("tags")])
+
+        metric = SpanBasedF1Measure(
+                self.vocab,
+                "tags",
+                label_encoding=None,
+                tags_to_spans_function=mock_tags_to_spans_function,
+                )
+
+        metric(prediction_tensor, gold_tensor)
+        metric_dict = metric.get_metric()
+
+        numpy.testing.assert_almost_equal(metric_dict["recall-overall"], 1.0)
+        numpy.testing.assert_almost_equal(metric_dict["precision-overall"], 1.0)
+        numpy.testing.assert_almost_equal(metric_dict["f1-measure-overall"], 1.0)
+
+        with self.assertRaises(ConfigurationError):
+            SpanBasedF1Measure(self.vocab, label_encoding='INVALID')
+        with self.assertRaises(ConfigurationError):
+            SpanBasedF1Measure(self.vocab, tags_to_spans_function=mock_tags_to_spans_function)
+        with self.assertRaises(ConfigurationError):
+            SpanBasedF1Measure(self.vocab, label_encoding=None, tags_to_spans_function=None)

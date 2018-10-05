@@ -186,7 +186,7 @@ class BidirectionalAttentionFlow(Model):
         # Shape: (batch_size, passage_length, question_length)
         passage_question_similarity = self._matrix_attention(encoded_passage, encoded_question)
         # Shape: (batch_size, passage_length, question_length)
-        passage_question_attention = util.last_dim_softmax(passage_question_similarity, question_mask)
+        passage_question_attention = util.masked_softmax(passage_question_similarity, question_mask)
         # Shape: (batch_size, passage_length, encoding_dim)
         passage_question_vectors = util.weighted_sum(encoded_question, passage_question_attention)
 

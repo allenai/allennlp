@@ -239,7 +239,7 @@ class DialogQA(Model):
         # Shape: (batch_size * max_qa_count, passage_length, question_length)
         passage_question_similarity = self._matrix_attention(repeated_encoded_passage, encoded_question)
         # Shape: (batch_size * max_qa_count, passage_length, question_length)
-        passage_question_attention = util.last_dim_softmax(passage_question_similarity, question_mask)
+        passage_question_attention = util.masked_softmax(passage_question_similarity, question_mask)
         # Shape: (batch_size * max_qa_count, passage_length, encoding_dim)
         passage_question_vectors = util.weighted_sum(encoded_question, passage_question_attention)
 
@@ -250,8 +250,7 @@ class DialogQA(Model):
                                                        -1e7)
 
         question_passage_similarity = masked_similarity.max(dim=-1)[0].squeeze(-1)
-        question_passage_attention = util.last_dim_softmax(question_passage_similarity,
-                                                           repeated_passage_mask)
+        question_passage_attention = util.masked_softmax(question_passage_similarity, repeated_passage_mask)
         # Shape: (batch_size * max_qa_count, encoding_dim)
         question_passage_vector = util.weighted_sum(repeated_encoded_passage, question_passage_attention)
         tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(total_qa_count,
@@ -271,13 +270,13 @@ class DialogQA(Model):
                                                                           repeated_passage_mask))
         self_attention_matrix = self._self_attention(residual_layer, residual_layer)
 
-        mask = repeated_passage_mask.resize(total_qa_count, passage_length, 1) \
-               * repeated_passage_mask.resize(total_qa_count, 1, passage_length)
+        mask = repeated_passage_mask.reshape(total_qa_count, passage_length, 1) \
+               * repeated_passage_mask.reshape(total_qa_count, 1, passage_length)
         self_mask = torch.eye(passage_length, passage_length, device=self_attention_matrix.device)
-        self_mask = self_mask.resize(1, passage_length, passage_length)
+        self_mask = self_mask.reshape(1, passage_length, passage_length)
         mask = mask * (1 - self_mask)
 
-        self_attention_probs = util.last_dim_softmax(self_attention_matrix, mask)
+        self_attention_probs = util.masked_softmax(self_attention_matrix, mask)
 
         # (batch, passage_len, passage_len) * (batch, passage_len, dim) -> (batch, passage_len, dim)
         self_attention_vecs = torch.matmul(self_attention_probs, residual_layer)

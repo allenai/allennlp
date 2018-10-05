@@ -6,14 +6,25 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.nn.util import sequence_cross_entropy_with_logits
 
 
-class SimpleSeq2SeqWithoutAttentionTest(ModelTestCase):
+class SimpleSeq2SeqTest(ModelTestCase):
     def setUp(self):
-        super(SimpleSeq2SeqWithoutAttentionTest, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / "encoder_decoder" / "simple_seq2seq" / "experiment.json",
                           self.FIXTURES_ROOT / "data" / "seq2seq_copy.tsv")
 
-    def test_encoder_decoder_can_train_save_and_load(self):
+    def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
+
+    def test_bidirectional_model_can_train_save_and_load(self):
+        self.ensure_model_can_train_save_and_load(
+                self.param_file,
+                overrides="{model: {encoder: {bidirectional: true}}}"
+                )
+
+    def test_model_with_attention_can_train_save_and_load(self):
+        param_file = self.FIXTURES_ROOT / "encoder_decoder" / \
+                     "simple_seq2seq" / "experiment_with_attention.json"
+        self.ensure_model_can_train_save_and_load(param_file)
 
     def test_loss_is_computed_correctly(self):
         batch_size = 5
@@ -37,13 +48,3 @@ class SimpleSeq2SeqWithoutAttentionTest(ModelTestCase):
         decode_output_dict = self.model.decode(output_dict)
         # ``decode`` should have added a ``predicted_tokens`` field to ``output_dict``. Checking if it's there.
         assert "predicted_tokens" in decode_output_dict
-
-class SimpleSeq2SeqWithAttentionTest(ModelTestCase):
-    def setUp(self):
-        super(SimpleSeq2SeqWithAttentionTest, self).setUp()
-        self.set_up_model(self.FIXTURES_ROOT / "encoder_decoder" /
-                          "simple_seq2seq" / "experiment_with_attention.json",
-                          self.FIXTURES_ROOT / "data" / "seq2seq_copy.tsv")
-
-    def test_encoder_decoder_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.param_file)

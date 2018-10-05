@@ -6,13 +6,13 @@ import torch
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
-from allennlp.models.semantic_parsing.wikitables.linking_transition_function import LinkingTransitionFunction
 from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
 from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
-from allennlp.nn.decoding import BeamSearch
-from allennlp.nn.decoding.decoder_trainers import MaximumMarginalLikelihood
 from allennlp.semparse.worlds import WikiTablesWorld
+from allennlp.state_machines import BeamSearch
+from allennlp.state_machines.states import GrammarBasedState
+from allennlp.state_machines.trainers import MaximumMarginalLikelihood
+from allennlp.state_machines.transition_functions import LinkingTransitionFunction
 
 
 @Model.register("wikitables_mml_parser")
@@ -177,14 +177,14 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
         batch_size = len(rnn_state)
         initial_score = rnn_state[0].hidden_state.new_zeros(batch_size)
         initial_score_list = [initial_score[i] for i in range(batch_size)]
-        initial_state = GrammarBasedDecoderState(batch_indices=list(range(batch_size)),
-                                                 action_history=[[] for _ in range(batch_size)],
-                                                 score=initial_score_list,
-                                                 rnn_state=rnn_state,
-                                                 grammar_state=grammar_state,
-                                                 possible_actions=actions,
-                                                 extras=example_lisp_string,
-                                                 debug_info=None)
+        initial_state = GrammarBasedState(batch_indices=list(range(batch_size)),  # type: ignore
+                                          action_history=[[] for _ in range(batch_size)],
+                                          score=initial_score_list,
+                                          rnn_state=rnn_state,
+                                          grammar_state=grammar_state,
+                                          possible_actions=actions,
+                                          extras=example_lisp_string,
+                                          debug_info=None)
 
         if target_action_sequences is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).

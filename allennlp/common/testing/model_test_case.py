@@ -45,7 +45,8 @@ class ModelTestCase(AllenNlpTestCase):
                                              param_file: str,
                                              tolerance: float = 1e-4,
                                              cuda_device: int = -1,
-                                             gradients_to_ignore: Set[str] = None):
+                                             gradients_to_ignore: Set[str] = None,
+                                             overrides: str = ""):
         """
         Parameters
         ----------
@@ -65,10 +66,12 @@ class ModelTestCase(AllenNlpTestCase):
             recommended unless you're `really` sure you don't need to have non-zero gradients for
             those parameters (e.g., some of the beam search / state machine models have
             infrequently-used parameters that are hard to force the model to use in a small test).
+        overrides : ``str``, optional (default = "")
+            A JSON string that we will use to override values in the input parameter file.
         """
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
-        model = train_model_from_file(param_file, save_dir)
+        model = train_model_from_file(param_file, save_dir, overrides=overrides)
         loaded_model = load_archive(archive_file, cuda_device=cuda_device).model
         state_keys = model.state_dict().keys()
         loaded_state_keys = loaded_model.state_dict().keys()
@@ -92,11 +95,11 @@ class ModelTestCase(AllenNlpTestCase):
         # the same result out.
         model_dataset = reader.read(params['validation_data_path'])
         iterator.index_with(model.vocab)
-        model_batch = next(iterator(model_dataset, shuffle=False, cuda_device=cuda_device))
+        model_batch = next(iterator(model_dataset, shuffle=False))
 
         loaded_dataset = reader.read(params['validation_data_path'])
         iterator2.index_with(loaded_model.vocab)
-        loaded_batch = next(iterator2(loaded_dataset, shuffle=False, cuda_device=cuda_device))
+        loaded_batch = next(iterator2(loaded_dataset, shuffle=False))
 
         # Check gradients are None for non-trainable parameters and check that
         # trainable parameters receive some gradient if they are trainable.

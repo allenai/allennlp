@@ -144,7 +144,6 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
                 if isinstance(subparams, str):
                     kwargs[name] = annotation.by_name(subparams)()
                 else:
-                    print(annotation)
                     kwargs[name] = annotation.from_params(params=subparams, **subextras)
             elif not optional:
                 # Not optional and not supplied, that's an error!

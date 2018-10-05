@@ -1,11 +1,13 @@
 # Library dependencies for the python code.  You need to install these with
 # `pip install -r requirements.txt` before you can run this.
+# NOTE: all essential packages must be placed under a section named 'ESSENTIAL ...'
+# so that the script `./scripts/check_requirements_and_setup.py` can find them.
 
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
 
 # This installs Pytorch for CUDA 8 only. If you are using a newer version,
 # please visit http://pytorch.org/ and install the relevant version.
-torch>=0.4.0,<0.5.0
+torch>=0.4.1,<0.5.0
 
 # Parameter parsing (but not on Windows).
 jsonnet==0.10.0 ; sys.platform != 'win32'
@@ -39,15 +41,15 @@ cffi==1.11.5
 
 # aws commandline tools for running on Docker remotely.
 # second requirement is to get botocore < 1.11, to avoid the below bug
-awscli>=1.11.91,<=1.15.85
+awscli>=1.11.91
 
-# Accessing files from S3 directly. Pin to 1.7.80 to avoid https://github.com/spulec/moto/issues/1793
-boto3==1.7.80
+# Accessing files from S3 directly.
+boto3
 
 # REST interface for models
-flask==0.12.3
+flask==0.12.4
 flask-cors==3.0.3
-gevent==1.3.5
+gevent==1.3.6
 
 # Used by semantic parsing code to strip diacritics from unicode strings.
 unidecode
@@ -55,7 +57,13 @@ unidecode
 # Used by semantic parsing code to parse SQL
 parsimonious==0.8.0
 
-#### LIBRARIES USED IN SCRIPTS ####
+# Used by semantic parsing code to format and postprocess SQL
+sqlparse==0.2.4
+
+# For text normalization
+ftfy
+
+#### ESSENTIAL LIBRARIES USED IN SCRIPTS ####
 # Used for downloading datasets over HTTP
 requests>=2.18
 
@@ -71,6 +79,9 @@ h5py
 # For timezone utilities
 pytz==2017.3
 
+# Reads Universal Dependencies files.
+conllu==0.11
+
 #### ESSENTIAL TESTING-RELATED PACKAGES ####
 
 # We'll use pytest to run our tests; this isn't really necessary to run the code, but it is to run
@@ -83,8 +94,8 @@ flaky
 # Required to mock out `requests` calls
 responses>=0.7
 
-# Reads Universal Dependencies files.
-conllu==0.11
+# For mocking s3.
+moto==1.3.4
 
 #### TESTING-RELATED PACKAGES ####
 
@@ -92,6 +103,8 @@ conllu==0.11
 pylint==1.8.1
 
 # Tutorial notebooks
+# see: https://github.com/jupyter/jupyter/issues/370 for ipykernel
+ipykernel<5.0.0
 jupyter
 
 # Static type checking
@@ -106,9 +119,6 @@ codecov
 
 # Required to run sanic tests
 aiohttp
-
-# For mocking s3.
-moto==1.3.4
 
 #### DOC-RELATED PACKAGES ####
 

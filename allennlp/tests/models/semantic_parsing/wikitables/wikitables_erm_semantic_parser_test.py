@@ -1,9 +1,10 @@
 # pylint: disable=no-self-use
 import os
 import pytest
+from flaky import flaky
 
 from allennlp.common.testing import ModelTestCase
-from allennlp.training.metrics.wikitables_accuracy import SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH
+from allennlp.semparse.executors.wikitables_sempre_executor import SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH
 
 @pytest.mark.java
 class WikiTablesErmSemanticParserTest(ModelTestCase):
@@ -34,6 +35,7 @@ class WikiTablesErmSemanticParserTest(ModelTestCase):
         if self.should_remove_root_sempre_grammar and os.path.exists(self.module_root_grammar_path):
             os.remove(self.module_root_grammar_path)
 
+    @flaky
     def test_model_can_train_save_and_load(self):
         # We have very few embedded actions on our agenda, and so it's rare that this parameter
         # actually gets used.  We know this parameter works from our NLVR ERM test, so it's easier

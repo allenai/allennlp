@@ -208,9 +208,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
         return padding_lengths
 
     @overrides
-    def as_tensor(self,
-                  padding_lengths: Dict[str, int],
-                  cuda_device: int = -1) -> Dict[str, torch.Tensor]:
+    def as_tensor(self, padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
         tensors = {}
         desired_num_entities = padding_lengths['num_entities']
         desired_num_entity_tokens = padding_lengths['num_entity_tokens']
@@ -226,7 +224,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                                                           padding_lengths)['key']
                 padded_arrays.append(padded_array)
             tensor = torch.LongTensor(padded_arrays)
-            tensors[indexer_name] = tensor if cuda_device == -1 else tensor.cuda(cuda_device)
+            tensors[indexer_name] = tensor
         padded_linking_features = util.pad_sequence_to_length(self.linking_features,
                                                               desired_num_entities,
                                                               default_value=lambda: [])
@@ -238,8 +236,6 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                                                           default_value=default_feature_value)
             padded_linking_arrays.append(padded_features)
         linking_features_tensor = torch.FloatTensor(padded_linking_arrays)
-        if cuda_device != -1:
-            linking_features_tensor = linking_features_tensor.cuda(cuda_device)
         return {'text': tensors, 'linking': linking_features_tensor}
 
     def _compute_linking_features(self) -> List[List[List[float]]]:
@@ -403,9 +399,13 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             # Some tables have empty cells.
             return 0
         seen_entity_words = set()
+        token_index_left = token_index
         while token_index < len(tokens) and tokens[token_index].text in entity_words:
             seen_entity_words.add(tokens[token_index].text)
             token_index += 1
+        while token_index_left >= 0 and tokens[token_index_left].text in entity_words:
+            seen_entity_words.add(tokens[token_index_left].text)
+            token_index_left -= 1
         return len(seen_entity_words) / len(entity_words)
 
     def _span_lemma_overlap_fraction(self,
@@ -419,9 +419,13 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             # Some tables have empty cells.
             return 0
         seen_entity_lemmas = set()
+        token_index_left = token_index
         while token_index < len(tokens) and tokens[token_index].lemma_ in entity_lemmas:
             seen_entity_lemmas.add(tokens[token_index].lemma_)
             token_index += 1
+        while token_index_left >= 0 and tokens[token_index_left].lemma_ in entity_lemmas:
+            seen_entity_lemmas.add(tokens[token_index_left].lemma_)
+            token_index_left -= 1
         return len(seen_entity_lemmas) / len(entity_lemmas)
 
     # pylint: enable=unused-argument,no-self-use
