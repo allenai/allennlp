@@ -113,6 +113,10 @@ class AtisWorld():
         fare_one_direction_cost_literals = [Literal(fare) for fare in fare_one_direction_cost]
         new_grammar['fare_one_direction_cost'] = OneOf(*fare_one_direction_cost_literals, name='fare_one_direction_cost')
 
+        flight_numbers = self._get_numeric_database_values('flight_number')
+        flight_numbers_literals = [Literal(number) for number in flight_numbers]
+        new_grammar['flight_number'] = OneOf(*flight_numbers_literals, name='flight_number')
+
         ternary_expressions = [self._get_sequence_with_spacing(new_grammar,
                                                                [new_grammar['col_ref'],
                                                                 Literal('BETWEEN'),
@@ -146,7 +150,6 @@ class AtisWorld():
                                                      Literal('round_trip_cost'),
                                                      new_grammar['binaryop'],
                                                      new_grammar['fare_round_trip_cost']])
-
         new_binary_expressions.append(fare_round_trip_cost_expression)
 
         fare_one_direction_cost_expression = \
@@ -158,6 +161,16 @@ class AtisWorld():
                                                      new_grammar['fare_one_direction_cost']])
 
         new_binary_expressions.append(fare_one_direction_cost_expression)
+
+        flight_number_expression = \
+                    self._get_sequence_with_spacing(new_grammar,
+                                                    [Literal('flight'),
+                                                     Literal('.'),
+                                                     Literal('flight_number'),
+                                                     new_grammar['binaryop'],
+                                                     new_grammar['flight_number']])
+        new_binary_expressions.append(flight_number_expression)
+
         if self.dates:
             year_binary_expression = self._get_sequence_with_spacing(new_grammar,
                                                                      [Literal('date_day'),
@@ -184,7 +197,7 @@ class AtisWorld():
             
             
             
-        new_binary_expressions = tuple(new_binary_expressions) + new_grammar['biexpr'].members
+        new_binary_expressions = new_binary_expressions + list(new_grammar['biexpr'].members)
         new_grammar['biexpr'] = OneOf(*new_binary_expressions, name='biexpr')
         self._update_expression_reference(new_grammar, 'condition', 'biexpr')
         return new_grammar
@@ -302,6 +315,12 @@ class AtisWorld():
                                           current_tokenized_utterance,
                                           'fare_one_direction_cost')
 
+        self.add_to_number_linking_scores({'0'},
+                                          number_linking_scores,
+                                          get_flight_numbers_from_utterance,
+                                          current_tokenized_utterance,
+                                          'flight_number')
+
         # Add string linking dict.
         string_linking_dict: Dict[str, List[int]] = {}
         for tokenized_utterance in self.tokenized_utterances:
@@ -380,6 +399,9 @@ class AtisWorld():
         for entity in sorted(self.linked_entities['string']):
             entities.append(entity)
             linking_scores.append(self.linked_entities['string'][entity][2])
+
+        for entity, score in zip(entities, linking_scores):
+            print(entity, score)
         return entities, numpy.array(linking_scores)
 
 

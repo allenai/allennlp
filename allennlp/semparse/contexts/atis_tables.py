@@ -215,6 +215,22 @@ def get_costs_from_utterance(utterance: str, # pylint: disable=unused-argument
             costs_linking_dict[token.text].append(token_index)
     return costs_linking_dict
 
+def get_flight_numbers_from_utterance(utterance: str, # pylint: disable=unused-argument
+                                      tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
+    indices_words_preceding_flight_number = {index for index, token in enumerate(tokenized_utterance)
+                                             if token.text in {'flight', 'number'} or token.text.upper() in AIRLINE_CODE_LIST} 
+
+    indices_words_succeeding_flight_number = {index for index, token in enumerate(tokenized_utterance)
+                                             if token.text == 'flight'} 
+
+    flight_numbers_linking_dict: Dict[str, List[int]] = defaultdict(list)
+    for token_index, token in enumerate(tokenized_utterance):
+        if token.text.isdigit():
+            if token_index - 1 in indices_words_preceding_flight_number:
+                flight_numbers_linking_dict[token.text].append(token_index)
+            if token_index + 1 in indices_words_succeeding_flight_number:
+                flight_numbers_linking_dict[token.text].append(token_index)
+    return flight_numbers_linking_dict 
 
 def digit_to_query_time(digit: str) -> List[int]:
     """
@@ -513,7 +529,7 @@ ALL_TABLES = {'aircraft': ['aircraft_code', 'aircraft_description', 'capacity',
 TABLES_WITH_STRINGS = {'airline' : ['airline_code', 'airline_name'],
                        'city' : ['city_name', 'state_code', 'city_code'],
                        'fare' : ['round_trip_required', 'fare_basis_code', 'restriction_code'],
-                       'flight' : ['airline_code', 'flight_days', 'flight_number'],
+                       'flight' : ['airline_code', 'flight_days'],
                        'flight_stop' : ['stop_airport'],
                        'airport' : ['airport_code', 'airport_name'],
                        'state' : ['state_name', 'state_code'],
