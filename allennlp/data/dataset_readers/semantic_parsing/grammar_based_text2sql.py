@@ -106,23 +106,23 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
                                                             remove_unneeded_aliases=self._remove_unneeded_aliases,
                                                             schema=schema):
 
-                instance = self.text_to_instance(sql_data.text, sql_data)
+                instance = self.text_to_instance(sql_data.text, sql_data.sql_variables, sql_data.sql)
                 if instance is not None:
                     yield instance
 
     @overrides
     def text_to_instance(self,  # type: ignore
                          query: List[str],
-                         sql: text2sql_utils.SqlData = None) -> Instance:
+                         prelinked_entities: Dict[str, str] = None,
+                         sql: List[str] = None) -> Instance:
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
         tokens = TextField([Token(t) for t in query], self._token_indexers)
         fields["tokens"] = tokens
-        prelinked_entities = sql.sql_variables if self._use_entity_prelinking else None
 
         if sql is not None:
             try:
-                action_sequence, all_actions = self._world.get_action_sequence_and_all_actions(sql.sql,
+                action_sequence, all_actions = self._world.get_action_sequence_and_all_actions(sql,
                                                                                                prelinked_entities)
             except ParseError:
                 return None

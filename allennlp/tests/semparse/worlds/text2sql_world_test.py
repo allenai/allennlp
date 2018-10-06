@@ -36,10 +36,25 @@ class TestText2SqlWorld(AllenNlpTestCase):
         sql_visitor = SqlVisitor(grammar)
         sql_visitor.parse(" ".join(sql))
 
+    def test_grammar_from_world_can_produce_entities_as_values(self):
+        world = Text2SqlWorld(self.schema)
+        sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',',
+               'RESTAURANT', 'WHERE', 'LOCATION', '.', 'CITY_NAME', '=',
+               "'city_name0'", 'AND', 'RESTAURANT', '.', 'NAME', '=', 'LOCATION',
+               '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
+
+        entities = {"city_name0": "San fran", "name0": "Matt Gardinios Pizza"}
+        action_sequence, actions = world.get_action_sequence_and_all_actions(sql, entities)
+
+        assert 'value -> ["\'city_name0\'"]' in action_sequence
+        assert 'value -> ["\'name0\'"]' in action_sequence
+        assert 'value -> ["\'city_name0\'"]' in actions
+        assert 'value -> ["\'name0\'"]' in actions
+
     def test_world_adds_values_from_tables(self):
         connection = sqlite3.connect(self.database_path)
         cursor = connection.cursor()
-        world = Text2SqlWorld(self.schema, cursor=cursor)
+        world = Text2SqlWorld(self.schema, cursor=cursor, use_prelinked_entities=False)
         assert world.base_grammar_dictionary["number"] == ['"229"', '"228"', '"227"', '"226"',
                                                            '"225"', '"5"', '"4"', '"3"', '"2"',
                                                            '"1"', '"833"', '"430"', '"242"',

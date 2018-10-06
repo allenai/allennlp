@@ -24,15 +24,17 @@ class Text2SqlWorld:
     """
     def __init__(self,
                  schema_path: str,
-                 cursor: Cursor = None) -> None:
-        # NOTE: This base dictionary should not be modified.
-
+                 cursor: Cursor = None,
+                 use_prelinked_entities: bool = True) -> None:
         self.cursor = cursor
         self.schema = read_dataset_schema(schema_path)
+        self.use_prelinked_entities = use_prelinked_entities
+
+        # NOTE: This base dictionary should not be modified.
         self.base_grammar_dictionary = self._initialize_grammar_dictionary(deepcopy(GRAMMAR_DICTIONARY))
 
     def get_action_sequence_and_all_actions(self,
-                                            query: List[str],
+                                            query: List[str] = None,
                                             prelinked_entities: Dict[str, str] = None) -> Tuple[List[str], List[str]]: # pylint: disable=line-too-long
         grammar_with_context = deepcopy(self.base_grammar_dictionary)
 
@@ -57,10 +59,13 @@ class Text2SqlWorld:
         if self.schema:
             update_grammar_with_tables(grammar_dictionary, self.schema)
 
-            if self.cursor is not None:
+            if self.cursor is not None and not self.use_prelinked_entities:
                 # Now if we have strings in the table, we need to be able to
                 # produce them, so we find all of the strings in the tables here
-                # and create production rules from them.
+                # and create production rules from them. We only do this if
+                # we haven't pre-linked entities, because if we have, we don't
+                # need to be able to generate the values - just the placeholder
+                # symbols which link to them.
                 grammar_dictionary["number"] = []
                 grammar_dictionary["string"] = []
 
