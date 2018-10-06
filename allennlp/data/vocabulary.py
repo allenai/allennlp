@@ -644,5 +644,4 @@ class Vocabulary(Registrable):
 
 
 # the tricky part is that `Vocabulary` is both the base class and the default implementation
-Vocabulary.register("default)(Vocabulary)
-
+Vocabulary.register("default")(Vocabulary)
