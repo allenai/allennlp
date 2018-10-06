@@ -1,5 +1,7 @@
 # pylint: disable=invalid-name
 
+import sqlite3
+
 from allennlp.semparse.contexts.text2sql_table_context import Text2SqlTableContext
 from allennlp.semparse.contexts.sql_context_utils import SqlVisitor
 from allennlp.common.testing import AllenNlpTestCase
@@ -27,3 +29,10 @@ class TestText2sqlTableContext(AllenNlpTestCase):
 
         sql_visitor = SqlVisitor(context.grammar)
         sql_visitor.parse(" ".join(sql))
+
+
+    def test_context_adds_values_from_tables(self):
+        database_path = str(self.PROJECT_ROOT / "restaurants.db")
+        connection = sqlite3.connect(database_path)
+        cursor = connection.cursor()
+        context = Text2SqlTableContext(self.schema, cursor=cursor)

@@ -10,7 +10,8 @@ from sqlite3 import Cursor
 from parsimonious.grammar import Grammar
 
 from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions, format_grammar_string
-from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
+from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema, TableColumn
+from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_numeric_type, column_has_string_type
 
 GRAMMAR_DICTIONARY = {}
 GRAMMAR_DICTIONARY["statement"] = ['(query ws ";")', '(query ws)']
@@ -93,6 +94,31 @@ GRAMMAR_DICTIONARY["binaryop"] = ['"+"', '"-"', '"*"', '"/"', '"="', '"<>"',
                                   '">="', '"<="', '">"', '"<"', '"AND"', '"OR"', '"LIKE"']
 GRAMMAR_DICTIONARY["unaryop"] = ['"+"', '"-"', '"not"', '"NOT"']
 
+def update_grammar_with_tables(grammar_dictionary: Dict[str, List[str]],
+                               schema: Dict[str, List[TableColumn]]) -> None:
+    table_names = sorted([f'"{table}"' for table in
+                          list(schema.keys())], reverse=True)
+    grammar_dictionary['table_name'] = table_names
+
+    all_columns = set()
+    for table in schema.values():
+        all_columns.update([column.name for column in table])
+    sorted_columns = sorted([f'"{column}"' for column in all_columns], reverse=True)
+    grammar_dictionary['column_name'] = sorted_columns
+
+def update_grammar_with_table_values(grammar_dictionary: Dict[str, List[str]],
+                                     schema: Dict[str, List[TableColumn]],
+                                     cursor: Cursor) -> None:
+
+    for table_name, columns in schema.items():
+        for column in columns:
+            if column_has_string_type(column):
+                print(table_name)
+                print(column.name)
+                cursor.execute(f'SELECT DISTINCT {table_name}.{column.name} FROM {table_name}')
+                results = [x[0] for x in cursor.fetchall()]
+                print(results)
+
 class Text2SqlTableContext:
     """
     This context is minimally constrained in terms of table productions,
@@ -111,13 +137,14 @@ class Text2SqlTableContext:
                  schema_path: str = None,
                  cursor: Cursor = None) -> None:
 
+        self.cursor = cursor
         self.grammar_dictionary = deepcopy(GRAMMAR_DICTIONARY)
         self.schema = read_dataset_schema(schema_path)
+
         self.grammar_str: str = self.initialize_grammar_str()
         self.grammar: Grammar = Grammar(self.grammar_str)
         self.valid_actions: Dict[str, List[str]] = initialize_valid_actions(self.grammar)
 
-        self.cursor = cursor
 
     def get_grammar_dictionary(self) -> Dict[str, List[str]]:
         return self.grammar_dictionary
@@ -128,27 +155,11 @@ class Text2SqlTableContext:
     def initialize_grammar_str(self):
         # Add all the table and column names to the grammar.
         if self.schema:
-            table_names = sorted([f'"{table}"' for table in
-                                  list(self.schema.keys())], reverse=True)
-            self.grammar_dictionary['table_name'] = table_names
+            update_grammar_with_tables(self.grammar_dictionary, self.schema)
 
-            all_columns = set()
-            for table in self.schema.values():
-                all_columns.update([column.name for column in table])
-            sorted_columns = sorted([f'"{column}"' for column in all_columns], reverse=True)
-            self.grammar_dictionary['column_name'] = sorted_columns
-
-        # Now if we have strings in the table, we need to be able to
-        # produce them, so we find all of the strings in the tables here
-        # and create production rules from them.
-        def has_string_type(col):
-            return col.column_type == "string"
-
-        for table_name, columns in self.schema.items():
-            for column in columns:
-
-                if has_string_type(column):
-                    self.cursor.execute(f'SELECT DISTINCT {table_name} . {column} FROM {table_name}')
-                    results = self.cursor.fetchall()
+            # Now if we have strings in the table, we need to be able to
+            # produce them, so we find all of the strings in the tables here
+            # and create production rules from them.
+            update_grammar_with_table_values(self.grammar_dictionary, self.schema, self.cursor)
 
         return format_grammar_string(self.grammar_dictionary)
