@@ -34,9 +34,7 @@ class AtisGrammarStateletTest(AllenNlpTestCase):
                       'distinct -> ["DISTINCT"]']
 
         grammar_state = GrammarStatelet(['statement'],
-                                        {},
                                         world.valid_actions,
-                                        {},
                                         AtisSemanticParser.is_nonterminal,
                                         reverse_productions=False)
         for action in action_seq:

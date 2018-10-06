@@ -6,7 +6,7 @@ from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.models import Model
-from allennlp.service.predictors.predictor import Predictor
+from allennlp.predictors.predictor import Predictor
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.data.tokenizers import Token
 

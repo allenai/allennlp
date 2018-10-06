@@ -11,8 +11,7 @@ from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.semparse.executors import SqlExecutor
 from allennlp.models.model import Model
-from allennlp.modules import Attention, Seq2SeqEncoder, TextFieldEmbedder, \
-        Embedding
+from allennlp.modules import Attention, Seq2SeqEncoder, TextFieldEmbedder, Embedding
 from allennlp.nn import util
 from allennlp.semparse.worlds import AtisWorld
 from allennlp.semparse.contexts.sql_context_utils import action_sequence_to_sql
@@ -367,7 +366,6 @@ class AtisSemanticParser(Model):
             return False
         return True
 
-
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         """
@@ -476,9 +474,7 @@ class AtisSemanticParser(Model):
                                                            list(linked_action_ids))
 
         return GrammarStatelet(['statement'],
-                               {},
                                translated_valid_actions,
-                               {},
                                self.is_nonterminal,
                                reverse_productions=False)
 

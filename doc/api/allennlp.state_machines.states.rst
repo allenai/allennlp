@@ -31,6 +31,11 @@ allennlp.state_machines.states
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.state_machines.states.lambda_grammar_statelet
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.state_machines.states.checklist_statelet
    :members:
    :undoc-members:

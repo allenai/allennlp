@@ -1,32 +1,25 @@
-from typing import Callable, Dict, List, Tuple
-
-import torch
+from typing import Callable, Dict, Generic, List, TypeVar
 
 from allennlp.nn import util
 
+ActionRepresentation = TypeVar('ActionRepresentation')  # pylint: disable=invalid-name
 
-class GrammarStatelet:
+
+class GrammarStatelet(Generic[ActionRepresentation]):
     """
-    A ``GrammarStatelet`` specifies the currently valid actions at every step of decoding.
+    A ``GrammarStatelet`` keeps track of the currently valid actions at every step of decoding.
 
-    If we had a global context-free grammar, this would not be necessary - the currently valid
-    actions would always be the same, and we would not need to represent the current state.
-    However, our grammar is not context free (we have lambda expressions that introduce
-    context-dependent production rules), and it is not global (each instance can have its own
-    entities of a particular type, or its own functions).
+    This class is relatively simple: we have a non-terminal stack which tracks which non-terminals
+    we still need to expand.  At every timestep of decoding, we take an action that pops something
+    off of the non-terminal stack, and possibly pushes more things on.  The grammar state is
+    "finished" when the non-terminal stack is empty.
 
-    We thus recognize three different sources of valid actions.  The first are actions that come
-    from the type declaration; these are defined once by the model and shared across all
-    ``GrammarStatelets`` produced by that model.  The second are actions that come from the current
-    instance; these are defined by the ``World`` that corresponds to each instance, and are shared
-    across all decoding states for that instance.  The last are actions that come from the current
-    state of the decoder; these are updated after every action taken by the decoder, though only
-    some actions initiate changes.
-
-    In practice, we use the ``World`` class to get the first two sources of valid actions at the
-    same time, and we take as input a ``valid_actions`` dictionary that is computed by the
-    ``World``.  These will not change during the course of decoding.  The ``GrammarStatelet``
-    object itself maintains the context-dependent valid actions.
+    At any point during decoding, you can query this object to get a representation of all of the
+    valid actions in the current state.  The representation is something that you provide when
+    constructing the initial state, in whatever form you want, and we just hold on to it for you
+    and return it when you ask.  Putting this in here is purely for convenience, to group together
+    pieces of state that are related to taking actions - if you want to handle the action
+    representations outside of this class, that would work just fine too.
 
     Parameters
     ----------
@@ -35,47 +28,28 @@ class GrammarStatelet:
         [START_SYMBOL], and decoding ends when this is empty.  Every time we take an action, we
         update the non-terminal stack and the context-dependent valid actions, and we use what's on
         the stack to decide which actions are valid in the current state.
-    lambda_stacks : ``Dict[Tuple[str, str], List[str]]``
-        The lambda stack keeps track of when we're in the scope of a lambda function.  The
-        dictionary is keyed by the production rule we are adding (like "r -> x", separated into
-        left hand side and right hand side, where the LHS is the type of the lambda variable and
-        the RHS is the variable itself), and the value is a nonterminal stack much like
-        ``nonterminal_stack``.  When the stack becomes empty, we remove the lambda entry.
-    valid_actions : ``Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]]``
+    valid_actions : ``Dict[str, ActionRepresentation]``
         A mapping from non-terminals (represented as strings) to all valid expansions of that
-        non-terminal.  The way we represent the valid expansions is a little complicated: we use a
-        dictionary of `action types`, where the key is the action type (like "global", "linked", or
-        whatever your model is expecting), and the value is a tuple representing all actions of
-        that type.  The tuple is (input tensor, output tensor, action id).  The input tensor has
-        the representation that is used when `selecting` actions, for all actions of this type.
-        The output tensor has the representation that is used when feeding the action to the next
-        step of the decoder (this could just be the same as the input tensor).  The action ids are
-        a list of indices into the main action list for each batch instance.
-    context_actions : ``Dict[str, Tuple[torch.Tensor, torch.Tensor, int]]``
-        Variable actions are never included in the ``valid_actions`` dictionary, because they are
-        only valid depending on the current grammar state.  This dictionary maps from the string
-        representation of all such actions to the tensor representations of the actions.  These
-        will get added onto the "global" key in the ``valid_actions`` when they are allowed.
+        non-terminal.  The class that constructs this object can pick how it wants the actions to
+        be represented.
     is_nonterminal : ``Callable[[str], bool]``
         A function that is used to determine whether each piece of the RHS of the action string is
         a non-terminal that needs to be added to the non-terminal stack.  You can use
         ``type_declaraction.is_nonterminal`` here, or write your own function if that one doesn't
         work for your domain.
-    reverse_productions: ``bool``
-        A flag that reverse the production rules when True. If the production rules are reversed, then
-        the first non-terminal in the production will be popped off the stack.
+    reverse_productions: ``bool``, optional (default=True)
+        A flag that reverses the production rules when ``True``. If the production rules are
+        reversed, then the first non-terminal in the production will be popped off the stack first,
+        giving us left-to-right production.  If this is ``False``, you will get right-to-left
+        production.
     """
     def __init__(self,
                  nonterminal_stack: List[str],
-                 lambda_stacks: Dict[Tuple[str, str], List[str]],
-                 valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]],
-                 context_actions: Dict[str, Tuple[torch.Tensor, torch.Tensor, int]],
+                 valid_actions: Dict[str, ActionRepresentation],
                  is_nonterminal: Callable[[str], bool],
                  reverse_productions: bool = True) -> None:
         self._nonterminal_stack = nonterminal_stack
-        self._lambda_stacks = lambda_stacks
         self._valid_actions = valid_actions
-        self._context_actions = context_actions
         self._is_nonterminal = is_nonterminal
         self._reverse_productions = reverse_productions
 
@@ -86,91 +60,46 @@ class GrammarStatelet:
         """
         return not self._nonterminal_stack
 
-    def get_valid_actions(self) -> Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]:
+    def get_valid_actions(self) -> ActionRepresentation:
         """
-        Returns the valid actions in the current grammar state.  See the class docstring for a
-        description of what we're returning here.
+        Returns the valid actions in the current grammar state.  The `Model` determines what
+        exactly this looks like when it constructs the `valid_actions` dictionary.
         """
-        actions = self._valid_actions[self._nonterminal_stack[-1]]
-        context_actions = []
-        for type_, variable in self._lambda_stacks:
-            if self._nonterminal_stack[-1] == type_:
-                production_string = f"{type_} -> {variable}"
-                context_actions.append(self._context_actions[production_string])
-        if context_actions:
-            input_tensor, output_tensor, action_ids = actions['global']
-            new_inputs = [input_tensor] + [x[0] for x in context_actions]
-            input_tensor = torch.cat(new_inputs, dim=0)
-            new_outputs = [output_tensor] + [x[1] for x in context_actions]
-            output_tensor = torch.cat(new_outputs, dim=0)
-            new_action_ids = action_ids + [x[2] for x in context_actions]
-            # We can't just reassign to actions['global'], because that would modify the state of
-            # self._valid_actions.  Instead, we need to construct a new actions dictionary.
-            new_actions = {**actions}
-            new_actions['global'] = (input_tensor, output_tensor, new_action_ids)
-            actions = new_actions
-        return actions
+        return self._valid_actions[self._nonterminal_stack[-1]]
 
     def take_action(self, production_rule: str) -> 'GrammarStatelet':
         """
         Takes an action in the current grammar state, returning a new grammar state with whatever
         updates are necessary.  The production rule is assumed to be formatted as "LHS -> RHS".
 
-        This will update the non-terminal stack and the context-dependent actions.  Updating the
-        non-terminal stack involves popping the non-terminal that was expanded off of the stack,
-        then pushing on any non-terminals in the production rule back on the stack.
-
-        If ``self._reverse_production`` is set to True then we push the non-terminals on in `reverse` order,
-        which means that the first non-terminal in the production rule gets popped off the stack first.
+        This will update the non-terminal stack.  Updating the non-terminal stack involves popping
+        the non-terminal that was expanded off of the stack, then pushing on any non-terminals in
+        the production rule back on the stack.
 
         For example, if our current ``nonterminal_stack`` is ``["r", "<e,r>", "d"]``, and
         ``action`` is ``d -> [<e,d>, e]``, the resulting stack will be ``["r", "<e,r>", "e",
         "<e,d>"]``.
+
+        If ``self._reverse_productions`` is set to ``False`` then we push the non-terminals on in
+        in their given order, which means that the first non-terminal in the production rule gets
+        popped off the stack `last`.
         """
         left_side, right_side = production_rule.split(' -> ')
         assert self._nonterminal_stack[-1] == left_side, (f"Tried to expand {self._nonterminal_stack[-1]}"
                                                           f"but got rule {left_side} -> {right_side}")
-        assert all(self._lambda_stacks[key][-1] == left_side for key in self._lambda_stacks)
 
         new_stack = self._nonterminal_stack[:-1]
-        new_lambda_stacks = {key: self._lambda_stacks[key][:-1] for key in self._lambda_stacks}
 
         productions = self._get_productions_from_string(right_side)
-        # Looking for lambda productions, but not for cells or columns with the word "lambda" in
-        # them.
-        if 'lambda' in productions[0] and 'fb:' not in productions[0]:
-            production = productions[0]
-            if production[0] == "'" and production[-1] == "'":
-                # The production rule with a lambda is typically "<t,d> -> ['lambda x', d]".  We
-                # need to strip the quotes.
-                production = production[1:-1]
-            lambda_variable = production.split(' ')[1]
-            # The left side must be formatted as "<t,d>", where "t" is the type of the lambda
-            # variable, and "d" is the return type of the lambda function.  We need to pull out the
-            # "t" here.  TODO(mattg): this is pretty limiting, but I'm not sure how general we
-            # should make this.
-            if len(left_side) != 5:
-                raise NotImplementedError("Can't handle this type yet:", left_side)
-            lambda_type = left_side[1]
-            new_lambda_stacks[(lambda_type, lambda_variable)] = []
-
         if self._reverse_productions:
             productions = list(reversed(productions))
 
         for production in productions:
             if self._is_nonterminal(production):
                 new_stack.append(production)
-                for lambda_stack in new_lambda_stacks.values():
-                    lambda_stack.append(production)
-
-        # If any of the lambda stacks have now become empty, we remove them from our dictionary.
-        new_lambda_stacks = {key: new_lambda_stacks[key]
-                             for key in new_lambda_stacks if new_lambda_stacks[key]}
 
         return GrammarStatelet(nonterminal_stack=new_stack,
-                               lambda_stacks=new_lambda_stacks,
                                valid_actions=self._valid_actions,
-                               context_actions=self._context_actions,
                                is_nonterminal=self._is_nonterminal,
                                reverse_productions=self._reverse_productions)
 
@@ -191,9 +120,8 @@ class GrammarStatelet:
             # pylint: disable=protected-access
             return all([
                     self._nonterminal_stack == other._nonterminal_stack,
-                    self._lambda_stacks == other._lambda_stacks,
                     util.tensors_equal(self._valid_actions, other._valid_actions),
-                    util.tensors_equal(self._context_actions, other._context_actions),
                     self._is_nonterminal == other._is_nonterminal,
+                    self._reverse_productions == other._reverse_productions,
                     ])
         return NotImplemented

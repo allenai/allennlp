@@ -196,9 +196,7 @@ class NlvrSemanticParser(Model):
                                                        global_input_embeddings,
                                                        list(global_action_ids))
         return GrammarStatelet([START_SYMBOL],
-                               {},
                                translated_valid_actions,
-                               {},
                                type_declaration.is_nonterminal)
 
     @overrides
