@@ -11,6 +11,7 @@ class TestText2sqlTableContext(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.schema = str(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
+        self.database_path = str(self.FIXTURES_ROOT / "data" / "text2sql" / "restaurants.db")
 
     def test_context_modifies_unconstrained_grammar_correctly(self):
         context = Text2SqlTableContext(self.schema)
@@ -32,7 +33,21 @@ class TestText2sqlTableContext(AllenNlpTestCase):
 
 
     def test_context_adds_values_from_tables(self):
-        database_path = str(self.PROJECT_ROOT / "restaurants.db")
-        connection = sqlite3.connect(database_path)
+        connection = sqlite3.connect(self.database_path)
         cursor = connection.cursor()
         context = Text2SqlTableContext(self.schema, cursor=cursor)
+        assert context.grammar_dictionary["number"] == ['"229"', '"228"', '"227"', '"226"',
+                                                        '"225"', '"5"', '"4"', '"3"', '"2"',
+                                                        '"1"', '"833"', '"430"', '"242"',
+                                                        '"135"', '"1103"']
+
+        assert context.grammar_dictionary["string"] == ['"tommy\'s"', '"rod\'s hickory pit restaurant"',
+                                                        '"lyons restaurant"', '"jamerican cuisine"',
+                                                        '"denny\'s restaurant"', '"american"', '"vallejo"',
+                                                        '"w. el camino real"', '"el camino real"',
+                                                        '"e. el camino real"', '"church st"',
+                                                        '"broadway"', '"sunnyvale"', '"san francisco"',
+                                                        '"san carlos"', '"american canyon"', '"alviso"',
+                                                        '"albany"', '"alamo"', '"alameda"', '"unknown"',
+                                                        '"santa clara county"', '"contra costa county"',
+                                                        '"alameda county"', '"bay area"']

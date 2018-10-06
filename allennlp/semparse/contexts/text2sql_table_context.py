@@ -112,12 +112,15 @@ def update_grammar_with_table_values(grammar_dictionary: Dict[str, List[str]],
 
     for table_name, columns in schema.items():
         for column in columns:
+            cursor.execute(f'SELECT DISTINCT {table_name}.{column.name} FROM {table_name}')
+            results = [x[0] for x in cursor.fetchall()]
             if column_has_string_type(column):
-                print(table_name)
-                print(column.name)
-                cursor.execute(f'SELECT DISTINCT {table_name}.{column.name} FROM {table_name}')
-                results = [x[0] for x in cursor.fetchall()]
-                print(results)
+                productions = sorted([f'"{str(result)}"' for result in results], reverse=True)
+                grammar_dictionary["string"].extend(productions)
+            elif column_has_numeric_type(column):
+                productions = sorted([f'"{str(result)}"' for result in results], reverse=True)
+                grammar_dictionary["number"].extend(productions)
+
 
 class Text2SqlTableContext:
     """
@@ -157,9 +160,13 @@ class Text2SqlTableContext:
         if self.schema:
             update_grammar_with_tables(self.grammar_dictionary, self.schema)
 
-            # Now if we have strings in the table, we need to be able to
-            # produce them, so we find all of the strings in the tables here
-            # and create production rules from them.
-            update_grammar_with_table_values(self.grammar_dictionary, self.schema, self.cursor)
+            if self.cursor is not None:
+                # Now if we have strings in the table, we need to be able to
+                # produce them, so we find all of the strings in the tables here
+                # and create production rules from them.
+                self.grammar_dictionary["number"] = []
+                self.grammar_dictionary["string"] = []
+
+                update_grammar_with_table_values(self.grammar_dictionary, self.schema, self.cursor)
 
         return format_grammar_string(self.grammar_dictionary)

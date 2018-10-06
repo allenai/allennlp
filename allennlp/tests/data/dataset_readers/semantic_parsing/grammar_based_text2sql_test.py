@@ -9,8 +9,9 @@ class TestGrammarBasdText2SqlDatasetReader(AllenNlpTestCase):
         super().setUp()
         self.data_path = str(self.FIXTURES_ROOT / 'data' / 'text2sql'/ '*.json')
         self.schema = str(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
+        self.database = str(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants.db')
 
-        self.reader = GrammarBasedText2SqlDatasetReader(self.schema)
+        self.reader = GrammarBasedText2SqlDatasetReader(self.schema, self.database)
 
     def test_reader_can_read_data(self):
         # TODO(Mark): fill in this test.
