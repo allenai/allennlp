@@ -16,7 +16,6 @@ from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.dataset_readers.dataset_utils import text2sql_utils
-from allennlp.semparse.contexts.text2sql_table_context import Text2SqlTableContext
 from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
 
@@ -77,8 +76,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         self._cursor = self._connection.cursor()
 
         self._schema_path = schema_path
-        self._sql_table_context = Text2SqlTableContext(schema_path, self._cursor)
-        self._world = Text2SqlWorld(self._sql_table_context)
+        self._world = Text2SqlWorld(schema_path, self._cursor)
 
     @overrides
     def _read(self, file_path: str):

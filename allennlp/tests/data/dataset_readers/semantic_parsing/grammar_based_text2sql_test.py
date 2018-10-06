@@ -18,6 +18,5 @@ class TestGrammarBasdText2SqlDatasetReader(AllenNlpTestCase):
 
         assert len(instances) == 5
 
-
         for instance in instances:
             print(instance)

@@ -4,13 +4,10 @@ A ``Text2SqlTableContext`` represents the SQL context in which an utterance appe
 for the any of the text2sql datasets, with the grammar and the valid actions.
 """
 from typing import List, Dict
-from copy import deepcopy
 from sqlite3 import Cursor
 
-from parsimonious.grammar import Grammar
 
-from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions, format_grammar_string
-from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema, TableColumn
+from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import TableColumn
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_numeric_type
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_string_type
 
@@ -121,54 +118,3 @@ def update_grammar_with_table_values(grammar_dictionary: Dict[str, List[str]],
             elif column_has_numeric_type(column):
                 productions = sorted([f'"{str(result)}"' for result in results], reverse=True)
                 grammar_dictionary["number"].extend(productions)
-
-
-class Text2SqlTableContext:
-    """
-    This context is minimally constrained in terms of table productions,
-    meaning that we don't even constrain columns to be associated with the correct
-    table. We just augment the grammar to know what columns and tables are,
-    with no constraints.
-
-    Parameters
-    ----------
-    schema_path: ``str``
-        A path to a schema file which we read into a dictionary
-        representing the SQL tables in the dataset, the keys are the
-        names of the tables that map to lists of the table's column names.
-    """
-    def __init__(self,
-                 schema_path: str = None,
-                 cursor: Cursor = None) -> None:
-
-        self.cursor = cursor
-        self.grammar_dictionary = deepcopy(GRAMMAR_DICTIONARY)
-        self.schema = read_dataset_schema(schema_path)
-
-        self.grammar_str: str = self.initialize_grammar_str()
-        self.grammar: Grammar = Grammar(self.grammar_str)
-        self.valid_actions: Dict[str, List[str]] = initialize_valid_actions(self.grammar)
-
-
-    def get_grammar_dictionary(self) -> Dict[str, List[str]]:
-        return self.grammar_dictionary
-
-    def get_valid_actions(self) -> Dict[str, List[str]]:
-        return self.valid_actions
-
-    def initialize_grammar_str(self):
-        # Add all the table and column names to the grammar.
-        if self.schema:
-            update_grammar_with_tables(self.grammar_dictionary, self.schema)
-
-            if self.cursor is not None:
-                # Now if we have strings in the table, we need to be able to
-                # produce them, so we find all of the strings in the tables here
-                # and create production rules from them.
-                self.grammar_dictionary["number"] = []
-                self.grammar_dictionary["string"] = []
-
-
-                update_grammar_with_table_values(self.grammar_dictionary, self.schema, self.cursor)
-
-        return format_grammar_string(self.grammar_dictionary)
