@@ -1,0 +1,66 @@
+row	col	id	content	tokens	lemmaTokens	posTags	nerTags	nerValues	number	date	num2	list	listId
+-1	0	fb:row.row.year	Year	year	year	NN	DURATION						
+-1	1	fb:row.row.competition	Competition	competition	competition	NN	O						
+-1	2	fb:row.row.venue	Venue	venue	venue	NN	O						
+-1	3	fb:row.row.position	Position	position	position	NN	O						
+-1	4	fb:row.row.notes	Notes	notes	note	NNS	O						
+0	0	fb:cell.2002	2002	2002	2002	CD	DATE	2002	2002.0	2002-xx-xx			
+0	1	fb:cell.european_championships	European Championships	european|championships	european|championship	JJ|NNS	MISC|MISC	|					
+0	2	fb:cell.munich_germany	Munich, Germany	munich|,|germany	Munich|,|Germany	NNP|,|NNP	LOCATION|O|LOCATION	||				Munich|Germany	fb:part.munich|fb:part.germany
+0	3	fb:cell.6th	6th	6th	6th	JJ	ORDINAL	6.0	6.0				
+0	4	fb:cell.7_78_m	7.78 m	7.78|m	7.78|m	CD|NN	NUMBER|O	7.78|	7.78				
+1	0	fb:cell.2003	2003	2003	2003	CD	DATE	2003	2003.0	2003-xx-xx			
+1	1	fb:cell.world_championships	World Championships	world|championships	World|Championships	NNP|NNP	MISC|MISC	|					
+1	2	fb:cell.paris_france	Paris, France	paris|,|france	Paris|,|France	NNP|,|NNP	LOCATION|O|LOCATION	||				Paris|France	fb:part.paris|fb:part.france
+1	3	fb:cell.9th	9th	9th	9th	JJ	ORDINAL	9.0	9.0				
+1	4	fb:cell.7_93_m	7.93 m	7.93|m	7.93|m	CD|NN	NUMBER|O	7.93|	7.93				
+2	0	fb:cell.2004	2004	2004	2004	CD	DATE	2004	2004.0	2004-xx-xx			
+2	1	fb:cell.olympic_games	Olympic Games	olympic|games	Olympic|Games	NNP|NNPS	MISC|MISC	|					
+2	2	fb:cell.athens_greece	Athens, Greece	athens|,|greece	Athens|,|Greece	NNP|,|NNP	LOCATION|O|LOCATION	||				Athens|Greece	fb:part.athens|fb:part.greece
+2	3	fb:cell.5th	5th	5th	5th	NN	ORDINAL	5.0	5.0				
+2	4	fb:cell.8_25_m	8.25 m	8.25|m	8.25|m	CD|NN	NUMBER|O	8.25|	8.25				
+3	0	fb:cell.2006	2006	2006	2006	CD	DATE	2006	2006.0	2006-xx-xx			
+3	1	fb:cell.european_championships	European Championships	european|championships	european|championship	JJ|NNS	MISC|MISC	|					
+3	2	fb:cell.gothenburg_sweden	Gothenburg, Sweden	gothenburg|,|sweden	Gothenburg|,|Sweden	NNP|,|NNP	LOCATION|O|LOCATION	||				Gothenburg|Sweden	fb:part.gothenburg|fb:part.sweden
+3	3	fb:cell.9th	9th	9th	9th	JJ	ORDINAL	9.0	9.0				
+3	4	fb:cell.7_74_m	7.74 m	7.74|m	7.74|m	CD|NN	NUMBER|O	7.74|	7.74				
+4	0	fb:cell.2008	2008	2008	2008	CD	DATE	2008	2008.0	2008-xx-xx			
+4	1	fb:cell.world_indoor_championships	World Indoor Championships	world|indoor|championships	World|Indoor|Championships	NNP|NNP|NNP	MISC|MISC|MISC	||					
+4	2	fb:cell.valencia_spain	Valencia, Spain	valencia|,|spain	Valencia|,|Spain	NNP|,|NNP	LOCATION|O|LOCATION	||				Valencia|Spain	fb:part.valencia|fb:part.spain
+4	3	fb:cell.2nd	2nd	2nd	2nd	JJ	ORDINAL	2.0	2.0				
+4	4	fb:cell.8_06_m	8.06 m	8.06|m	8.06|m	CD|NN	NUMBER|O	8.06|	8.06				
+5	0	fb:cell.2008	2008	2008	2008	CD	DATE	2008	2008.0	2008-xx-xx			
+5	1	fb:cell.olympic_games	Olympic Games	olympic|games	Olympic|Games	NNP|NNPS	MISC|MISC	|					
+5	2	fb:cell.beijing_china	Beijing, China	beijing|,|china	Beijing|,|China	NNP|,|NNP	LOCATION|O|LOCATION	||				Beijing|China	fb:part.beijing|fb:part.china
+5	3	fb:cell.27thq	27thq	27thq	27thq	NN	O		27.0				
+5	4	fb:cell.7_70_m	7.70 m	7.70|m	7.70|m	CD|NN	NUMBER|O	7.7|	7.7				
+6	0	fb:cell.2009	2009	2009	2009	CD	DATE	2009	2009.0	2009-xx-xx			
+6	1	fb:cell.world_championships	World Championships	world|championships	World|Championships	NNP|NNP	MISC|MISC	|					
+6	2	fb:cell.berlin_germany	Berlin, Germany	berlin|,|germany	Berlin|,|Germany	NNP|,|NNP	LOCATION|O|LOCATION	||				Berlin|Germany	fb:part.berlin|fb:part.germany
+6	3	fb:cell.8th	8th	8th	8th	JJ	ORDINAL	8.0	8.0				
+6	4	fb:cell.8_06_m	8.06 m	8.06|m	8.06|m	CD|NN	NUMBER|O	8.06|	8.06				
+7	0	fb:cell.2010	2010	2010	2010	CD	DATE	2010	2010.0	2010-xx-xx			
+7	1	fb:cell.european_championships	European Championships	european|championships	european|championship	JJ|NNS	MISC|MISC	|					
+7	2	fb:cell.barcelona_spain	Barcelona, Spain	barcelona|,|spain	Barcelona|,|Spain	NNP|,|NNP	ORGANIZATION|O|LOCATION	||				Barcelona|Spain	fb:part.barcelona|fb:part.spain
+7	3	fb:cell.3rd	3rd	3rd	3rd	IN	ORDINAL	3.0	3.0				
+7	4	fb:cell.8_23_m	8.23 m	8.23|m	8.23|m	CD|NN	NUMBER|O	8.23|	8.23				
+8	0	fb:cell.2011	2011	2011	2011	CD	DATE	2011	2011.0	2011-xx-xx			
+8	1	fb:cell.european_team_championships	European Team Championships	european|team|championships	european|Team|Championships	JJ|NNP|NNPS	MISC|MISC|MISC	||					
+8	2	fb:cell.stockholm_sweden	Stockholm, Sweden	stockholm|,|sweden	Stockholm|,|Sweden	NNP|,|NNP	O|O|LOCATION	||				Stockholm|Sweden	fb:part.stockholm|fb:part.sweden
+8	3	fb:cell.3rd	3rd	3rd	3rd	IN	ORDINAL	3.0	3.0				
+8	4	fb:cell.8_12_m	8.12 m	8.12|m	8.12|m	CD|NN	NUMBER|O	8.12|	8.12				
+9	0	fb:cell.2011	2011	2011	2011	CD	DATE	2011	2011.0	2011-xx-xx			
+9	1	fb:cell.world_championships	World Championships	world|championships	World|Championships	NNP|NNP	MISC|MISC	|					
+9	2	fb:cell.daegu_south_korea	Daegu, South Korea	daegu|,|south|korea	Daegu|,|South|Korea	NNP|,|NNP|NNP	LOCATION|O|LOCATION|LOCATION	|||				Daegu|South Korea	fb:part.daegu|fb:part.south_korea
+9	3	fb:cell.11th	11th	11th	11th	JJ	ORDINAL	11.0	11.0				
+9	4	fb:cell.7_87_m	7.87 m	7.87|m	7.87|m	CD|NN	NUMBER|O	7.87|	7.87				
+10	0	fb:cell.2012	2012	2012	2012	CD	DATE	2012	2012.0	2012-xx-xx			
+10	1	fb:cell.olympic_games	Olympic Games	olympic|games	Olympic|Games	NNP|NNPS	MISC|MISC	|					
+10	2	fb:cell.london_england	London, England	london|,|england	London|,|England	NNP|,|NNP	LOCATION|O|LOCATION	||				London|England	fb:part.london|fb:part.england
+10	3	fb:cell.6th	6th	6th	6th	JJ	ORDINAL	6.0	6.0				
+10	4	fb:cell.8_07_m	8.07 m	8.07|m	8.07|m	CD|NN	NUMBER|O	8.07|	8.07				
+11	0	fb:cell.2013	2013	2013	2013	CD	DATE	2013	2013.0	2013-xx-xx			
+11	1	fb:cell.european_indoor_championships	European Indoor Championships	european|indoor|championships	european|Indoor|championship	JJ|NNP|NNS	MISC|MISC|MISC	||					
+11	2	fb:cell.gothenburg_sweden	Gothenburg, Sweden	gothenburg|,|sweden	Gothenburg|,|Sweden	NNP|,|NNP	LOCATION|O|LOCATION	||				Gothenburg|Sweden	fb:part.gothenburg|fb:part.sweden
+11	3	fb:cell.7th	7th	7th	7th	IN	ORDINAL	7.0	7.0				
+11	4	fb:cell.7_95_m	7.95 m	7.95|m	7.95|m	CD|NN	NUMBER|O	7.95|	7.95				

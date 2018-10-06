@@ -109,7 +109,7 @@ class NamedBasicType(BasicType):
 
     Parameters
     ----------
-    string_rep : str
+    string_rep : ``str``
         String representation of the type.
     """
     def __init__(self, string_rep) -> None:
@@ -125,6 +125,30 @@ class NamedBasicType(BasicType):
 
     def str(self):
         return self._string_rep
+
+
+class MultiMatchNamedBasicType(NamedBasicType):
+    """
+    A ``NamedBasicType`` that matches with any type within a list of ``BasicTypes`` that it takes
+    as an additional argument during instantiation. We just override the ``matches`` method in
+    ``BasicType`` to match against any of the types given by the list.
+
+    Parameters
+    ----------
+    string_rep : ``str``
+        String representation of the type, passed to super class.
+    types_to_match : ``List[BasicType]``
+        List of types that this type should match with.
+    """
+    def __init__(self,
+                 string_rep,
+                 types_to_match: List[BasicType]) -> None:
+        super().__init__(string_rep)
+        self._types_to_match = set(types_to_match)
+
+    @overrides
+    def matches(self, other):
+        return super().matches(other) or other in self._types_to_match
 
 
 class PlaceholderType(ComplexType):
@@ -452,6 +476,55 @@ class DynamicTypeLogicParser(LogicParser):
         if isinstance(self, other.__class__):
             return self.__dict__ == other.__dict__
         return NotImplemented
+
+
+class NameMapper:
+    """
+    The ``LogicParser`` we use has some naming conventions for functions (i.e. they should start
+    with an upper case letter, and the remaining characters can only be digits). This means that we
+    have to internally represent functions with unintuitive names. This class will automatically
+    give unique names following the convention, and populate central mappings with these names. If
+    for some reason you need to manually define the alias, you can do so by passing an alias to
+    `map_name_with_signature`.
+
+    Parameters
+    ----------
+    language_has_lambda : ``bool`` (optional, default=False)
+        If your language has lambda functions, the word "lambda" needs to be in the common name
+        mapping, mapped to the alias "\". NLTK understands this symbol, and it doesn't need a type
+        signature for it. Setting this flag to True adds the mapping to `common_name_mapping`.
+    """
+    def __init__(self, language_has_lambda: bool = False) -> None:
+        self.common_name_mapping: Dict[str, str] = {}
+        if language_has_lambda:
+            self.common_name_mapping["lambda"] = "\\"
+        self.common_type_signature: Dict[str, Type] = {}
+        self._name_counter = 0
+
+    def map_name_with_signature(self,
+                                name: str,
+                                signature: Type,
+                                alias: str = None) -> None:
+        if name in self.common_name_mapping:
+            alias = self.common_name_mapping[name]
+            old_signature = self.common_type_signature[alias]
+            if old_signature != signature:
+                raise RuntimeError(f"{name} already added with signature {old_signature}. "
+                                   f"Cannot add it again with {signature}!")
+        else:
+            alias = alias or f"F{self._name_counter}"
+            self._name_counter += 1
+            self.common_name_mapping[name] = alias
+            self.common_type_signature[alias] = signature
+
+    def get_alias(self, name: str) -> str:
+        if name not in self.common_name_mapping:
+            raise RuntimeError(f"Unmapped name: {name}")
+        return self.common_name_mapping[name]
+
+    def get_signature(self, name: str) -> Type:
+        alias = self.get_alias(name)
+        return self.common_type_signature[alias]
 
 
 def substitute_any_type(type_: Type, basic_types: Set[BasicType]) -> List[Type]:

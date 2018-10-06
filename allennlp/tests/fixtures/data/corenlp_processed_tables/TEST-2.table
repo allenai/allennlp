@@ -1,0 +1,79 @@
+row	col	id	content	tokens	lemmaTokens	posTags	nerTags	nerValues	number	date	num2	list	listId
+-1	0	fb:row.row.date	Date	date	date	NN	O						
+-1	1	fb:row.row.opponent	Opponent#	opponent|#	opponent|#	NN|#	O|O	|					
+-1	2	fb:row.row.rank	Rank#	rank|#	Rank|#	NNP|#	O|O	|					
+-1	3	fb:row.row.site	Site	site	site	NN	O						
+-1	4	fb:row.row.result	Result	result	result	NN	O						
+-1	5	fb:row.row.attendance	Attendance	attendance	attendance	NN	O						
+0	0	fb:cell.september_1	September 1	september|1	September|1	NNP|CD	DATE|DATE	XXXX-09-01|XXXX-09-01	1.0	xxxx-09-01			
+0	1	fb:cell.delta_state	Delta State*	delta|state|\\*	Delta|State|\\*	NNP|NNP|SYM	O|O|O	||					
+0	2	fb:cell.null											
+0	3	fb:cell.m_m_roberts_stadium_hattiesburg_ms	M.M. Roberts Stadium • Hattiesburg, MS	m.m.|roberts|stadium|•|hattiesburg|,|ms	M.M.|Roberts|Stadium|•|Hattiesburg|,|m	NNP|NNP|NNP|NNP|NNP|,|NN	PERSON|PERSON|O|O|LOCATION|O|O	||||||				M.M. Roberts Stadium • Hattiesburg|MS	fb:part.m_m_roberts_stadium_hattiesburg|fb:part.ms
+0	4	fb:cell.w_12_0	W 12-0	w|12-0	W|12-0	NNP|CD	O|NUMBER	|12.0 - 0.0	12.0		0.0		
+0	5	fb:cell.17_590	17,590	17,590	17,590	CD	NUMBER	17590.0	17590.0				
+1	0	fb:cell.september_8	September 8	september|8	September|8	NNP|CD	DATE|DATE	XXXX-09-08|XXXX-09-08	8.0	xxxx-09-08			
+1	1	fb:cell.at_13_alabama	at #13 Alabama*	at|#|13|alabama|\\*	at|#|13|Alabama|\\*	IN|#|CD|NNP|SYM	O|MONEY|MONEY|LOCATION|O	|£13.0|£13.0||	13.0				
+1	2	fb:cell.null											
+1	3	fb:cell.legion_field_birmingham_al	Legion Field • Birmingham, AL	legion|field|•|birmingham|,|al	Legion|Field|•|Birmingham|,|AL	NNP|NNP|NNP|NNP|,|NNP	O|O|O|LOCATION|O|LOCATION	|||||				Legion Field • Birmingham|AL	fb:part.legion_field_birmingham|fb:part.al
+1	4	fb:cell.w_27_24	W 27-24	w|27-24	W|27-24	NNP|CD	O|DATE	|******27/******24	27.0		24.0		
+1	5	fb:cell.75_962	75,962	75,962	75,962	CD	NUMBER	75962.0	75962.0				
+2	0	fb:cell.september_15	September 15	september|15	September|15	NNP|CD	DATE|DATE	XXXX-09-15|XXXX-09-15	15.0	xxxx-09-15			
+2	1	fb:cell.at_georgia	at Georgia*	at|georgia|\\*	at|Georgia|\\*	IN|NNP|SYM	O|LOCATION|O	||					
+2	2	fb:cell.null											
+2	3	fb:cell.sanford_stadium_athens_ga	Sanford Stadium • Athens, GA	sanford|stadium|•|athens|,|ga	Sanford|Stadium|•|Athens|,|GA	NNP|NNP|NNP|NNP|,|NNP	O|O|O|LOCATION|O|O	|||||				Sanford Stadium • Athens|GA	fb:part.sanford_stadium_athens|fb:part.ga
+2	4	fb:cell.l_17_18	L 17-18	l|17-18	l|17-18	NN|CD	O|DATE	|******17/******18	17.0		18.0		
+2	5	fb:cell.79_812	79,812	79,812	79,812	CD	NUMBER	79812.0	79812.0				
+3	0	fb:cell.september_22	September 22	september|22	September|22	NNP|CD	DATE|DATE	XXXX-09-22|XXXX-09-22	22.0	xxxx-09-22			
+3	1	fb:cell.at_mississippi_state	at Mississippi State*	at|mississippi|state|\\*	at|Mississippi|State|\\*	IN|NNP|NNP|SYM	O|LOCATION|O|O	|||					
+3	2	fb:cell.null											
+3	3	fb:cell.scott_field_starkville_ms	Scott Field • Starkville, MS	scott|field|•|starkville|,|ms	Scott|Field|•|Starkville|,|m	NNP|NNP|NNP|NNP|,|NN	O|O|O|LOCATION|O|O	|||||				Scott Field • Starkville|MS	fb:part.scott_field_starkville|fb:part.ms
+3	4	fb:cell.l_10_13	L 10-13	l|10-13	l|10-13	NN|CD	O|DATE	|******10/******13	10.0		13.0		
+3	5	fb:cell.40_115	40,115	40,115	40,115	CD	NUMBER	40115.0	40115.0				
+4	0	fb:cell.september_29	September 29	september|29	September|29	NNP|CD	DATE|DATE	XXXX-09-29|XXXX-09-29	29.0	xxxx-09-29			
+4	1	fb:cell.louisville	Louisville*	louisville|\\*	Louisville|\\*	NNP|SYM	LOCATION|O	|					
+4	2	fb:cell.null											
+4	3	fb:cell.m_m_roberts_stadium_hattiesburg_ms	M.M. Roberts Stadium • Hattiesburg, MS	m.m.|roberts|stadium|•|hattiesburg|,|ms	M.M.|Roberts|Stadium|•|Hattiesburg|,|m	NNP|NNP|NNP|NNP|NNP|,|NN	PERSON|PERSON|O|O|LOCATION|O|O	||||||				M.M. Roberts Stadium • Hattiesburg|MS	fb:part.m_m_roberts_stadium_hattiesburg|fb:part.ms
+4	4	fb:cell.w_25_13	W 25-13	w|25-13	W|25-13	NNP|CD	O|DATE	|******25/******13	25.0		13.0		
+4	5	fb:cell.20_545	20,545	20,545	20,545	CD	NUMBER	20545.0	20545.0				
+5	0	fb:cell.october_6	October 6	october|6	October|6	NNP|CD	DATE|DATE	XXXX-10-06|XXXX-10-06	6.0	xxxx-10-06			
+5	1	fb:cell.at_east_carolina	at East Carolina*	at|east|carolina|\\*	at|East|Carolina|\\*	IN|NNP|NNP|SYM	O|LOCATION|LOCATION|O	|||					
+5	2	fb:cell.null											
+5	3	fb:cell.ficklen_memorial_stadium_greenville_nc	Ficklen Memorial Stadium • Greenville, NC	ficklen|memorial|stadium|•|greenville|,|nc	Ficklen|Memorial|Stadium|•|Greenville|,|NC	NNP|NNP|NNP|NNP|NNP|,|NNP	O|O|O|O|LOCATION|O|O	||||||				Ficklen Memorial Stadium • Greenville|NC	fb:part.ficklen_memorial_stadium_greenville|fb:part.nc
+5	4	fb:cell.w_16_7	W 16-7	w|16-7	W|16-7	NNP|CD	O|NUMBER	|16.0 - 7.0	16.0		7.0		
+5	5	fb:cell.31_305	31,305	31,305	31,305	CD	NUMBER	31305.0	31305.0				
+6	0	fb:cell.october_13	October 13	october|13	October|13	NNP|CD	DATE|DATE	XXXX-10-13|XXXX-10-13	13.0	xxxx-10-13			
+6	1	fb:cell.at_tulane	at Tulane*	at|tulane|\\*	at|Tulane|\\*	IN|NNP|SYM	O|LOCATION|O	||					
+6	2	fb:cell.null											
+6	3	fb:cell.louisiana_superdome_new_orleans_la	Louisiana Superdome • New Orleans, LA	louisiana|superdome|•|new|orleans|,|la	Louisiana|Superdome|•|New|Orleans|,|LA	NNP|NNP|NNP|NNP|NNP|,|NNP	ORGANIZATION|ORGANIZATION|O|LOCATION|LOCATION|O|LOCATION	||||||				Louisiana Superdome • New Orleans|LA	fb:part.louisiana_superdome_new_orleans|fb:part.la
+6	4	fb:cell.w_20_14	W 20-14	w|20-14	W|20-14	NNP|CD	O|DATE	|******20/******14	20.0		14.0		
+6	5	fb:cell.26_662	26,662	26,662	26,662	CD	NUMBER	26662.0	26662.0				
+7	0	fb:cell.october_20	October 20	october|20	October|20	NNP|CD	DATE|DATE	XXXX-10-20|XXXX-10-20	20.0	xxxx-10-20			
+7	1	fb:cell.memphis_state	Memphis State*	memphis|state|\\*	Memphis|State|\\*	NNP|NNP|SYM	O|O|O	||					
+7	2	fb:cell.null											
+7	3	fb:cell.m_m_roberts_stadium_hattiesburg_ms	M.M. Roberts Stadium • Hattiesburg, MS	m.m.|roberts|stadium|•|hattiesburg|,|ms	M.M.|Roberts|Stadium|•|Hattiesburg|,|m	NNP|NNP|NNP|NNP|NNP|,|NN	PERSON|PERSON|O|O|LOCATION|O|O	||||||				M.M. Roberts Stadium • Hattiesburg|MS	fb:part.m_m_roberts_stadium_hattiesburg|fb:part.ms
+7	4	fb:cell.w_23_7	W 23-7	w|23-7	W|23-7	NNP|CD	O|NUMBER	|23.0 - 7.0	23.0		7.0		
+7	5	fb:cell.24_520	24,520	24,520	24,520	CD	NUMBER	24520.0	24520.0				
+8	0	fb:cell.october_27	October 27	october|27	October|27	NNP|CD	DATE|DATE	XXXX-10-27|XXXX-10-27	27.0	xxxx-10-27			
+8	1	fb:cell.at_virginia_tech	at Virginia Tech*	at|virginia|tech|\\*	at|Virginia|Tech|\\*	IN|NNP|NNP|SYM	O|O|O|O	|||					
+8	2	fb:cell.null											
+8	3	fb:cell.lane_stadium_blacksburg_va	Lane Stadium • Blacksburg, VA	lane|stadium|•|blacksburg|,|va	Lane|Stadium|•|Blacksburg|,|VA	NNP|NNP|NNP|NNP|,|NNP	O|O|O|LOCATION|O|LOCATION	|||||				Lane Stadium • Blacksburg|VA	fb:part.lane_stadium_blacksburg|fb:part.va
+8	4	fb:cell.l_16_20	L 16-20	l|16-20	l|16-20	NN|CD	O|DATE	|******16/******20	16.0		20.0		
+8	5	fb:cell.37_462	37,462	37,462	37,462	CD	NUMBER	37462.0	37462.0				
+9	0	fb:cell.november_3	November 3	november|3	November|3	NNP|CD	DATE|DATE	XXXX-11-03|XXXX-11-03	3.0	xxxx-11-03			
+9	1	fb:cell.at_sw_louisiana	at SW Louisiana*	at|sw|louisiana|\\*	at|SW|Louisiana|\\*	IN|NNP|NNP|SYM	O|O|LOCATION|O	|||					
+9	2	fb:cell.null											
+9	3	fb:cell.cajun_field_lafayette_la	Cajun Field • Lafayette, LA	cajun|field|•|lafayette|,|la	Cajun|Field|•|Lafayette|,|LA	NNP|NNP|NNP|NNP|,|NNP	O|O|O|LOCATION|O|LOCATION	|||||				Cajun Field • Lafayette|LA	fb:part.cajun_field_lafayette|fb:part.la
+9	4	fb:cell.w_14_13	W 14-13	w|14-13	W|14-13	NNP|CD	O|DATE	|******14/******13	14.0		13.0		
+9	5	fb:cell.17_860	17,860	17,860	17,860	CD	NUMBER	17860.0	17860.0				
+10	0	fb:cell.november_10	November 10	november|10	November|10	NNP|CD	DATE|DATE	XXXX-11-10|XXXX-11-10	10.0	xxxx-11-10			
+10	1	fb:cell.at_15_auburn	at #15 Auburn*	at|#|15|auburn|\\*	at|#|15|Auburn|\\*	IN|#|CD|NNP|SYM	O|MONEY|MONEY|O|O	|£15.0|£15.0||	15.0				
+10	2	fb:cell.null											
+10	3	fb:cell.jordan_hare_stadium_auburn_al	Jordan-Hare Stadium • Auburn, AL	jordan|hare|stadium|•|auburn|,|al	Jordan|Hare|Stadium|•|Auburn|,|AL	NNP|NNP|NNP|NNP|NNP|,|NNP	LOCATION|O|O|O|O|O|LOCATION	||||||				Jordan-Hare Stadium • Auburn|AL	fb:part.jordan_hare_stadium_auburn|fb:part.al
+10	4	fb:cell.w_13_12	W 13-12	w|13-12	W|13-12	NNP|CD	O|DATE	|******13/******12	13.0		12.0		
+10	5	fb:cell.85_214	85,214	85,214	85,214	CD	NUMBER	85214.0	85214.0				
+11	0	fb:cell.december_28	December 28	december|28	December|28	NNP|CD	DATE|DATE	XXXX-12-28|XXXX-12-28	28.0	xxxx-12-28			
+11	1	fb:cell.vs_nc_state	vs. NC State*	vs.|nc|state|\\*	vs.|nc|state|\\*	CC|NN|NN|SYM	O|O|O|O	|||					
+11	2	fb:cell._23	#23	#|23	#|23	#|CD	MONEY|MONEY	£23.0|£23.0	23.0				
+11	3	fb:cell.legion_field_birmingham_al_all_american_bowl	Legion Field • Birmingham, AL (All-American Bowl)	legion|field|•|birmingham|,|al|-lrb-|all|american|bowl|-rrb-	Legion|Field|•|Birmingham|,|AL|-lrb-|All|American|Bowl|-rrb-	NNP|NNP|NNP|NNP|,|NNP|-LRB-|NNP|NNP|NNP|-RRB-	O|O|O|LOCATION|O|O|O|O|MISC|MISC|O	||||||||||				Legion Field • Birmingham|AL (All-American Bowl)	fb:part.legion_field_birmingham|fb:part.al_all_american_bowl
+11	4	fb:cell.l_27_31	L 27-31	l|27-31	l|27-31	NN|CD	O|DATE	|******27/******31	27.0		31.0		
+11	5	fb:cell.44_000	44,000	44,000	44,000	CD	NUMBER	44000.0	44000.0				

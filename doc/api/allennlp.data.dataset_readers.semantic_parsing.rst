@@ -30,3 +30,8 @@ allennlp.data.dataset_readers.semantic_parsing
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.data.dataset_readers.semantic_parsing.quarel
+   :members:
+   :undoc-members:
+   :show-inheritance:
