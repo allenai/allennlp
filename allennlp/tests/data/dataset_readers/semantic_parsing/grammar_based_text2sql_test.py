@@ -1,5 +1,4 @@
 # pylint: disable=invalid-name
-from allennlp.semparse.contexts.text2sql_table_context import Text2SqlTableContext
 from allennlp.data.dataset_readers.semantic_parsing.grammar_based_text2sql import GrammarBasedText2SqlDatasetReader
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -13,6 +12,12 @@ class TestGrammarBasdText2SqlDatasetReader(AllenNlpTestCase):
 
         self.reader = GrammarBasedText2SqlDatasetReader(self.schema, self.database)
 
-    def test_reader_can_read_data(self):
-        # TODO(Mark): fill in this test.
-        _ = self.reader.read(self.data_path)
+    def test_reader_can_read_data_with_entity_pre_linking(self):
+        instances = self.reader.read(self.data_path)
+        instances = list(instances)
+
+        assert len(instances) == 5
+
+
+        for instance in instances:
+            print(instance)

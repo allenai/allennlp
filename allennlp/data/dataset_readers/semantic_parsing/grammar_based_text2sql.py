@@ -9,6 +9,7 @@ from overrides import overrides
 from parsimonious.exceptions import ParseError
 
 from allennlp.common.file_utils import cached_path
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, Field, ProductionRuleField, ListField, IndexField
 from allennlp.data.instance import Instance
@@ -55,6 +56,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
                  database_file: str,
                  use_all_sql: bool = False,
                  remove_unneeded_aliases: bool = True,
+                 use_entity_pre_linking: bool = True,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  cross_validation_split_to_exclude: int = None,
                  lazy: bool = False) -> None:
@@ -62,6 +64,12 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._use_all_sql = use_all_sql
         self._remove_unneeded_aliases = remove_unneeded_aliases
+        self._use_entity_prelinking = use_entity_pre_linking
+
+        if not self._use_entity_prelinking:
+            raise ConfigurationError("The grammar based text2sql dataset reader "
+                                     "currently requires the use of entity pre-linking.")
+
         self._cross_validation_split_to_exclude = str(cross_validation_split_to_exclude)
 
         self._database_file = cached_path(database_file)
@@ -99,6 +107,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
                                                             use_all_sql=self._use_all_sql,
                                                             remove_unneeded_aliases=self._remove_unneeded_aliases,
                                                             schema=schema):
+
                 instance = self.text_to_instance(sql_data.text, sql_data)
                 if instance is not None:
                     yield instance
@@ -111,10 +120,12 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         fields: Dict[str, Field] = {}
         tokens = TextField([Token(t) for t in query], self._token_indexers)
         fields["tokens"] = tokens
+        prelinked_entities = sql.sql_variables if self._use_entity_prelinking else None
 
         if sql is not None:
             try:
-                action_sequence, all_actions = self._world.get_action_sequence_and_all_actions(sql.sql)
+                action_sequence, all_actions = self._world.get_action_sequence_and_all_actions(sql.sql,
+                                                                                               prelinked_entities)
             except ParseError:
                 return None
 
@@ -134,14 +145,6 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
                       for i, action in enumerate(valid_actions_field.field_list)}
 
         for production_rule in action_sequence:
-            # Temporarily skipping this production to
-            # make a PR smaller. The next PR will constrain
-            # the strings produced to be from the table,
-            # but at the moment they are blank so they
-            # aren't present in the global actions.
-            # TODO(Mark): fix the above.
-            if production_rule.startswith("string"):
-                continue
             index_fields.append(IndexField(action_map[production_rule], valid_actions_field))
 
         action_sequence_field = ListField(index_fields)

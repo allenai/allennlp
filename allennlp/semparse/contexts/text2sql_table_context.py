@@ -167,6 +167,7 @@ class Text2SqlTableContext:
                 self.grammar_dictionary["number"] = []
                 self.grammar_dictionary["string"] = []
 
+
                 update_grammar_with_table_values(self.grammar_dictionary, self.schema, self.cursor)
 
         return format_grammar_string(self.grammar_dictionary)

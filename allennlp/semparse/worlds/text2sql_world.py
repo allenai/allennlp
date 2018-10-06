@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from copy import deepcopy
 
 from parsimonious import Grammar
@@ -23,9 +23,15 @@ class Text2SqlWorld:
         self.sql_table_context = sql_table_context
         self.base_grammar_dictionary = sql_table_context.get_grammar_dictionary()
 
-    def get_action_sequence_and_all_actions(self, query: List[str]) -> Tuple[List[str], List[str]]:
-        # TODO(Mark): Add in modifications here
+    def get_action_sequence_and_all_actions(self,
+                                            query: List[str],
+                                            prelinked_entities: Dict[str, str] = None) -> Tuple[List[str], List[str]]: # pylint: disable=line-too-long
         grammar_with_context = deepcopy(self.base_grammar_dictionary)
+
+        prelinked_entities = prelinked_entities or {}
+        for token in prelinked_entities.keys():
+            grammar_with_context["value"] = [f'"\'{token}\'"'] + grammar_with_context["value"]
+
         grammar = Grammar(format_grammar_string(grammar_with_context))
 
         valid_actions = initialize_valid_actions(grammar)
