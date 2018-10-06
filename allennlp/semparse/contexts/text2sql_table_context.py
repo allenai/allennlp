@@ -11,7 +11,8 @@ from parsimonious.grammar import Grammar
 
 from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions, format_grammar_string
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema, TableColumn
-from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_numeric_type, column_has_string_type
+from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_numeric_type
+from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_string_type
 
 GRAMMAR_DICTIONARY = {}
 GRAMMAR_DICTIONARY["statement"] = ['(query ws ";")', '(query ws)']
