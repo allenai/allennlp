@@ -4,6 +4,7 @@ from sqlite3 import Cursor
 
 from parsimonious import Grammar
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.semparse.contexts.sql_context_utils import SqlVisitor
 from allennlp.semparse.contexts.sql_context_utils import format_grammar_string, initialize_valid_actions
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
@@ -21,6 +22,13 @@ class Text2SqlWorld:
         A path to a schema file which we read into a dictionary
         representing the SQL tables in the dataset, the keys are the
         names of the tables that map to lists of the table's column names.
+    cursor : ``Cursor``, optional (default = None)
+        An optional cursor for a database, which is used to add
+        database values to the grammar.
+    use_prelinked_entities : ``bool``, (default = True)
+        Whether or not to use the pre-linked entities from the text2sql data.
+        We take this parameter here because it effects whether we need to add
+        table values to the grammar.
     """
     def __init__(self,
                  schema_path: str,
@@ -38,6 +46,9 @@ class Text2SqlWorld:
                                             prelinked_entities: Dict[str, str] = None) -> Tuple[List[str], List[str]]: # pylint: disable=line-too-long
         grammar_with_context = deepcopy(self.base_grammar_dictionary)
 
+        if not self.use_prelinked_entities and prelinked_entities is not None:
+            raise ConfigurationError("The Text2SqlWorld was specified to not use prelinked "
+                                     "entities, but prelinked entities were passed.")
         prelinked_entities = prelinked_entities or {}
         for token in prelinked_entities.keys():
             grammar_with_context["value"] = [f'"\'{token}\'"'] + grammar_with_context["value"]
@@ -70,6 +81,10 @@ class Text2SqlWorld:
                 grammar_dictionary["string"] = []
 
                 update_grammar_with_table_values(grammar_dictionary, self.schema, self.cursor)
+            else:
+                # TODO(Mark): The grammar can be tightened here if we don't need to
+                # produce concrete values.
+                pass
 
         return grammar_dictionary
 

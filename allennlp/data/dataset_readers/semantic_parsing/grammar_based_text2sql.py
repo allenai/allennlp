@@ -41,6 +41,8 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
     remove_unneeded_aliases : ``bool``, (default = True)
         Whether or not to remove table aliases in the SQL which
         are not required.
+    use_prelinked_entities : ``bool``, (default = True)
+        Whether or not to use the pre-linked entities in the text2sql data.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
@@ -55,7 +57,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
                  database_file: str,
                  use_all_sql: bool = False,
                  remove_unneeded_aliases: bool = True,
-                 use_entity_pre_linking: bool = True,
+                 use_prelinked_entities: bool = True,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  cross_validation_split_to_exclude: int = None,
                  lazy: bool = False) -> None:
@@ -63,9 +65,9 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._use_all_sql = use_all_sql
         self._remove_unneeded_aliases = remove_unneeded_aliases
-        self._use_entity_prelinking = use_entity_pre_linking
+        self._use_prelinked_entities = use_prelinked_entities
 
-        if not self._use_entity_prelinking:
+        if not self._use_prelinked_entities:
             raise ConfigurationError("The grammar based text2sql dataset reader "
                                      "currently requires the use of entity pre-linking.")
 
@@ -76,7 +78,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         self._cursor = self._connection.cursor()
 
         self._schema_path = schema_path
-        self._world = Text2SqlWorld(schema_path, self._cursor)
+        self._world = Text2SqlWorld(schema_path, self._cursor, use_prelinked_entities=use_prelinked_entities)
 
     @overrides
     def _read(self, file_path: str):
@@ -105,8 +107,8 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
                                                             use_all_sql=self._use_all_sql,
                                                             remove_unneeded_aliases=self._remove_unneeded_aliases,
                                                             schema=schema):
-
-                instance = self.text_to_instance(sql_data.text, sql_data.sql_variables, sql_data.sql)
+                linked_entities = sql_data.sql_variables if self._use_prelinked_entities else None
+                instance = self.text_to_instance(sql_data.text, linked_entities, sql_data.sql)
                 if instance is not None:
                     yield instance
 
