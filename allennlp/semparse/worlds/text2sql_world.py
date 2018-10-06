@@ -88,8 +88,8 @@ class Text2SqlWorld:
 
         return grammar_dictionary
 
-
-
-    @staticmethod
-    def is_global_rule(nonterminal: str) -> bool: # pylint: disable=unused-argument
+    def is_global_rule(self, production_rule: str) -> bool:
+        if self.use_prelinked_entities:
+            if "value" in production_rule and production_rule[-4].isnumeric():
+                return False
         return True

@@ -36,6 +36,10 @@ class TestText2SqlWorld(AllenNlpTestCase):
         sql_visitor = SqlVisitor(grammar)
         sql_visitor.parse(" ".join(sql))
 
+    def test_world_identifies_non_global_rules(self):
+        world = Text2SqlWorld(self.schema)
+        assert not world.is_global_rule('value -> ["\'food_type0\'"]')
+
     def test_grammar_from_world_can_produce_entities_as_values(self):
         world = Text2SqlWorld(self.schema)
         sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',',
