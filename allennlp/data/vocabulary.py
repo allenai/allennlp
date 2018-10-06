@@ -201,6 +201,8 @@ class Vocabulary(Registrable):
         the tokens to.  This is a way to be sure that certain items appear in your vocabulary,
         regardless of any other vocabulary computation.
     """
+    default_implementation = "default"
+    
     def __init__(self,
                  counter: Dict[str, Dict[str, int]] = None,
                  min_count: Dict[str, int] = None,
@@ -639,3 +641,7 @@ class Vocabulary(Registrable):
             # _retained_counter would be set only if instances were used for vocabulary construction.
             logger.info("Vocabulary statistics cannot be printed since " \
                         "dataset instances were not used for its construction.")
+
+
+# the tricky part is that `Vocabulary` is both the base class and the default implementation
+Vocabulary.register("default)(Vocabulary)
