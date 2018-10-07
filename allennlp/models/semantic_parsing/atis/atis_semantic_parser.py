@@ -325,8 +325,10 @@ class AtisSemanticParser(Model):
 
         for batch_index, world in enumerate(worlds):
             types = []
+            numeric_nonterminals = ['number', 'time_range_start', 'time_range_end', 'fare_round_trip_cost', 'fare_one_direction_cost', 'flight_number', 'day_number', 'month_number', 'year_number']
             entities = [('number', entity)
-                        if 'number' or 'time_range' in entity
+                        if any([entity.startswith(numeric_nonterminal)
+                                for numeric_nonterminal in numeric_nonterminals])
                         else ('string', entity)
                         for entity in world.entities]
 

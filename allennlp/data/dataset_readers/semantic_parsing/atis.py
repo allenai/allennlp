@@ -170,7 +170,8 @@ class AtisDatasetReader(DatasetReader):
 
     @staticmethod
     def _is_global_rule(nonterminal: str) -> bool:
-        if nonterminal in ['number', 'time_range_start', 'time_range_end']:
+        if nonterminal in ['number', 'time_range_start', 'time_range_end', 'fare_round_trip_cost',
+                           'fare_one_direction_cost', 'flight_number', 'day_number', 'month_number', 'year_number']:
             return False
         elif nonterminal.endswith('string'):
             return False

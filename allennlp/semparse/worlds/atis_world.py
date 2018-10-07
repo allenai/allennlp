@@ -1,7 +1,7 @@
 from typing import List, Dict, Tuple, Set, Callable
 from copy import copy, deepcopy
 import numpy
-from nltk import ngrams
+from nltk import ngrams, bigrams
 
 from parsimonious.grammar import Grammar
 from parsimonious.expressions import Expression, OneOf, Sequence, Literal
@@ -65,8 +65,8 @@ class AtisWorld():
         self.utterances: List[str] = utterances 
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]
-        self.linked_entities = self._get_linked_entities()
         self.dates = self._get_dates()
+        self.linked_entities = self._get_linked_entities()
 
         entities, linking_scores = self._flatten_entities()
         # This has shape (num_entities, num_utterance_tokens).
@@ -172,31 +172,37 @@ class AtisWorld():
         new_binary_expressions.append(flight_number_expression)
 
         if self.dates:
+            year_number_literals = [Literal(str(date.year)) for date in self.dates]
+            new_grammar['year_number'] = OneOf(*year_number_literals, name='year_number')
+
+            month_number_literals = [Literal(str(date.month)) for date in self.dates]
+            new_grammar['month_number'] = OneOf(*month_number_literals, name='month_number')
+
+            day_number_literals = [Literal(str(date.day)) for date in self.dates]
+            new_grammar['day_number'] = OneOf(*day_number_literals, name='day_number')
+
             year_binary_expression = self._get_sequence_with_spacing(new_grammar,
                                                                      [Literal('date_day'),
                                                                       Literal('.'),
                                                                       Literal('year'),
                                                                       new_grammar['binaryop'],
-                                                                      Literal(f'{self.dates[0].year}')])
-            new_binary_expressions.append(year_binary_expression)
-            for date in self.dates:
-                month_binary_expression = self._get_sequence_with_spacing(new_grammar,
-                                                                          [Literal('date_day'),
-                                                                           Literal('.'),
-                                                                           Literal('month_number'),
-                                                                           new_grammar['binaryop'],
-                                                                           Literal(f'{date.month}')])
-                day_binary_expression = self._get_sequence_with_spacing(new_grammar,
-                                                                        [Literal('date_day'),
-                                                                         Literal('.'),
-                                                                         Literal('day_number'),
-                                                                         new_grammar['binaryop'],
-                                                                         Literal(f'{date.day}')])
-                new_binary_expressions.extend([month_binary_expression,
-                                               day_binary_expression])
-            
-            
-            
+                                                                      new_grammar['year_number']])
+            month_binary_expression = self._get_sequence_with_spacing(new_grammar,
+                                                                      [Literal('date_day'),
+                                                                       Literal('.'),
+                                                                       Literal('month_number'),
+                                                                       new_grammar['binaryop'],
+                                                                       new_grammar['month_number']])
+            day_binary_expression = self._get_sequence_with_spacing(new_grammar,
+                                                                    [Literal('date_day'),
+                                                                     Literal('.'),
+                                                                     Literal('day_number'),
+                                                                     new_grammar['binaryop'],
+                                                                     new_grammar['day_number']])
+            new_binary_expressions.extend([year_binary_expression,
+                                           month_binary_expression,
+                                           day_binary_expression])
+
         new_binary_expressions = new_binary_expressions + list(new_grammar['biexpr'].members)
         new_grammar['biexpr'] = OneOf(*new_binary_expressions, name='biexpr')
         self._update_expression_reference(new_grammar, 'condition', 'biexpr')
@@ -235,6 +241,43 @@ class AtisWorld():
 
     def get_valid_actions(self) -> Dict[str, List[str]]:
         return self.valid_actions
+
+    def add_dates_to_number_linking_scores(self,
+            number_linking_scores: Dict[str, Tuple[str, str, List[int]]],
+            current_tokenized_utterance: List[Token]) -> None:
+
+        dates_linking_dict: Dict[str, List[int]] = defaultdict(list)
+        month_reverse_lookup = {str(number): string for string, number in MONTH_NUMBERS.items()}
+        day_reverse_lookup = {str(number) : string for string, number in DAY_NUMBERS.items()}
+
+        if self.dates:
+            for date in self.dates: 
+                # Add the year linking score
+                entity_linking = [0 for token in current_tokenized_utterance]
+                for token_index, token in enumerate(current_tokenized_utterance):
+                    if token.text == str(date.year):
+                        entity_linking[token_index] = 1
+                action = format_action(nonterminal='year_number', right_hand_side=str(date.year), is_number=True, keywords_to_uppercase=KEYWORDS)
+                number_linking_scores[action] = ('year_number', str(date.year), entity_linking)
+    
+
+                entity_linking = [0 for token in current_tokenized_utterance]
+                for token_index, token in enumerate(current_tokenized_utterance):
+                    if token.text == month_reverse_lookup[str(date.month)]:
+                        entity_linking[token_index] = 1
+                action = format_action(nonterminal='month_number', right_hand_side=str(date.month), is_number=True, keywords_to_uppercase=KEYWORDS)
+                number_linking_scores[action] = ('month_number', str(date.month), entity_linking)
+
+                entity_linking = [0 for token in current_tokenized_utterance]
+                for token_index, token in enumerate(current_tokenized_utterance):
+                    if token.text == day_reverse_lookup[str(date.day)]:
+                        entity_linking[token_index] = 1
+                for bigram_index, bigram in enumerate(bigrams([token.text for token in current_tokenized_utterance])):
+                    if ' '.join(bigram) == day_reverse_lookup[str(date.day)]:
+                        entity_linking[bigram_index] = 1
+                        entity_linking[bigram_index + 1] = 1
+                action = format_action(nonterminal='day_number', right_hand_side=str(date.day), is_number=True, keywords_to_uppercase=KEYWORDS)
+                number_linking_scores[action] = ('day_number', str(date.day), entity_linking)
 
     def add_to_number_linking_scores(self,
                                      all_numbers: Set[str],
@@ -321,6 +364,9 @@ class AtisWorld():
                                           current_tokenized_utterance,
                                           'flight_number')
 
+        self.add_dates_to_number_linking_scores(number_linking_scores,
+                                                current_tokenized_utterance)
+
         # Add string linking dict.
         string_linking_dict: Dict[str, List[int]] = {}
         for tokenized_utterance in self.tokenized_utterances:
@@ -399,11 +445,7 @@ class AtisWorld():
         for entity in sorted(self.linked_entities['string']):
             entities.append(entity)
             linking_scores.append(self.linked_entities['string'][entity][2])
-
-        for entity, score in zip(entities, linking_scores):
-            print(entity, score)
         return entities, numpy.array(linking_scores)
-
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
