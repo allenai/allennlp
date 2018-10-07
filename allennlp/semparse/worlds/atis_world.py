@@ -31,7 +31,12 @@ def get_strings_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, Li
 
     trigrams = ngrams([token.text for token in tokenized_utterance], 3)
     for index, trigram in enumerate(trigrams):
-        for string in ATIS_TRIGGER_DICT.get(' '.join(trigram).lower(), []):
+        if trigram[0] == 'st':
+            natural_language_key = f'st. {trigram[2]}'.lower()
+        else:
+            natural_language_key = ' '.join(trigram).lower()
+        print('nl key', natural_language_key)
+        for string in ATIS_TRIGGER_DICT.get(natural_language_key, []):
             string_linking_scores[string].extend([index,
                                                   index + 1,
                                                   index + 2])
@@ -445,6 +450,7 @@ class AtisWorld():
         for entity in sorted(self.linked_entities['string']):
             entities.append(entity)
             linking_scores.append(self.linked_entities['string'][entity][2])
+
         return entities, numpy.array(linking_scores)
 
     def __eq__(self, other):
