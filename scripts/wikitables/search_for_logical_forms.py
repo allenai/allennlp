@@ -4,7 +4,6 @@
 import sys
 import os
 import argparse
-from pyparsing import OneOrMore, nestedExpr
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir)))))
 
@@ -13,6 +12,7 @@ from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.semparse.worlds import WikiTablesVariableFreeWorld
 from allennlp.semparse.worlds.world import ExecutionError
 from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.dataset_readers.semantic_parsing.wikitables import util as wikitables_util
 from allennlp.tools import wikitables_evaluator as evaluator
 
 
@@ -26,28 +26,25 @@ def search(tables_directory: str,
            max_path_length: int,
            max_num_logical_forms: int,
            use_agenda: bool) -> None:
-    lisp_parser = OneOrMore(nestedExpr())
-    data = lisp_parser.parseFile(input_examples_file)
+    data = [wikitables_util.parse_example_line(example_line) for example_line in
+            open(input_examples_file)]
     tokenizer = WordTokenizer()
     with open(output_file, "w") as output_file_pointer:
         for instance_data in data:
-            utterance = instance_data[2][1]
-            question_id = instance_data[1][1]
+            utterance = instance_data["question"]
+            question_id = instance_data["id"]
             if utterance.startswith('"') and utterance.endswith('"'):
                 utterance = utterance[1:-1]
             # For example: csv/200-csv/47.csv -> tagged/200-tagged/47.tagged
-            table_file = instance_data[3][1][2].replace("csv", "tagged")
-            # The first element is the word "list"
-            sempre_target_list = instance_data[4][1].asList()[1:]
-            # Each item in the list is of the form ["description", "item"]. Removing "description"s.
-            target_list = []
-            for list_item in sempre_target_list:
-                target = list_item[1]
-                if target.startswith('"') and target.endswith('"'):
-                    target = list_item[1][1:-1]
-                # pylint: disable=protected-access
-                target_list.append(TableQuestionContext._normalize_string(target))
-            target_value_list = evaluator.to_value_list(target_list)
+            table_file = instance_data["table_filename"].replace("csv", "tagged")
+            # pylint: disable=protected-access
+            target_list = [TableQuestionContext._normalize_string(value) for value in
+                           instance_data["target_values"]]
+            try:
+                target_value_list = evaluator.to_value_list(target_list)
+            except:
+                print(target_list)
+                target_value_list = evaluator.to_value_list(target_list)
             tokenized_question = tokenizer.tokenize(utterance)
             table_file = f"{tables_directory}/{table_file}"
             context = TableQuestionContext.read_from_file(table_file, tokenized_question)

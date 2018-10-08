@@ -179,7 +179,7 @@ class NumberValue(Value):
                 amount = float(text)
                 assert not isnan(amount) and not isinf(amount)
                 return amount
-            except ValueError:
+            except (ValueError, AssertionError):
                 return None
 
 
@@ -243,7 +243,7 @@ class DateValue(Value):
             assert month == -1 or 1 <= month <= 12
             assert day == -1 or 1 <= day <= 31
             return (year, month, day)
-        except ValueError:
+        except (ValueError, AssertionError):
             return None
 
 
