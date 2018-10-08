@@ -1,62 +1,63 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# This is the official evaluator taken from the original dataset, with the only changes being
-# related to making it Python3 compatible.
-u"""Official Evaluator for WikiTableQuestions Dataset
-
-There are 3 value types
-1. String (unicode)
-2. Number (float)
-3. Date (a struct with 3 fields: year, month, and date)
-   Some fields (but not all) can be left unspecified. However, if only the year
-   is specified, the date is automatically converted into a number.
-
-Target denotation = a set of items
-- Each item T is a raw unicode string from Mechanical Turk
-- If T can be converted to a number or date (via Stanford CoreNLP), the
-    converted value (number T_N or date T_D) is precomputed
-
-Predicted denotation = a set of items
-- Each item P is a string, a number, or a date
-- If P is read from a text file, assume the following
-  - A string that can be converted into a number (float) is converted into a
-    number
-  - A string of the form "yyyy-mm-dd" is converted into a date. Unspecified
-    fields can be marked as "xx". For example, "xx-01-02" represents the date
-    January 2nd of an unknown year.
-  - Otherwise, it is kept as a string
-
-The predicted denotation is correct if
-1. The sizes of the target denotation and the predicted denotation are equal
-2. Each item in the target denotation matches an item in the predicted
-    denotation
-
-A target item T matches a predicted item P if one of the following is true:
-1. normalize(raw string of T) and normalize(string form of P) are identical.
-   The normalize method performs the following normalizations on strings:
-   - Remove diacritics (é → e)
-   - Convert smart quotes (‘’´`“”) and dashes (‐‑‒–—−) into ASCII ones
-   - Remove citations (trailing •♦†‡*#+ or [...])
-   - Remove details in parenthesis (trailing (...))
-   - Remove outermost quotation marks
-   - Remove trailing period (.)
-   - Convert to lowercase
-   - Collapse multiple whitespaces and strip outermost whitespaces
-2. T can be interpreted as a number T_N, P is a number, and P = T_N
-3. T can be interpreted as a date T_D, P is a date, and P = T_D
-   (exact match on all fields; e.g., xx-01-12 and 1990-01-12 do not match)
 """
+This is the official evaluator taken from the original dataset. I made minimal changes to make it
+Python 3 compatible, and conform to our style guidelines.
+"""
+
+#Official Evaluator for WikiTableQuestions Dataset
+#
+#There are 3 value types
+#1. String (unicode)
+#2. Number (float)
+#3. Date (a struct with 3 fields: year, month, and date)
+#Some fields (but not all) can be left unspecified. However, if only the year
+#is specified, the date is automatically converted into a number.
+#
+#Target denotation is a set of items
+#- Each item T is a raw unicode string from Mechanical Turk
+#- If T can be converted to a number or date (via Stanford CoreNLP), the converted value is precomputed
+#
+#Predicted denotation is a set of items
+#- Each item P is a string, a number, or a date
+#- If P is read from a text file, assume the following
+#  - A string that can be converted into a number (float) is converted into a number
+#  - A string of the form "yyyy-mm-dd" is converted into a date. Unspecified fields can be marked as
+#  "xx". For example, "xx-01-02" represents the date January 2nd of an unknown year.
+#  - Otherwise, it is kept as a string
+#
+#The predicted denotation is correct if
+#1. The sizes of the target denotation and the predicted denotation are equal
+#2. Each item in the target denotation matches an item in the predicted denotation
+#
+#A target item T matches a predicted item P if one of the following is true:
+#1. normalize(raw string of T) and normalize(string form of P) are identical.
+#   The normalize method performs the following normalizations on strings:
+#   - Remove diacritics (é → e)
+#   - Convert smart quotes (‘’´`“”) and dashes (‐‑‒–—−) into ASCII ones
+#   - Remove citations (trailing •♦†‡*#+ or [...])
+#   - Remove details in parenthesis (trailing (...))
+#   - Remove outermost quotation marks
+#   - Remove trailing period (.)
+#   - Convert to lowercase
+#   - Collapse multiple whitespaces and strip outermost whitespaces
+#2. T can be interpreted as a number T_N, P is a number, and P = T_N
+#3. T can be interpreted as a date T_D, P is a date, and P = T_D
+#   (exact match on all fields; e.g., xx-01-12 and 1990-01-12 do not match)
 __version__ = '1.0.2'
 
-import sys, os, re, argparse
+import sys
+import os
+import re
+import argparse
 import unicodedata
-from codecs import open
+from codecs import open as codecs_open
 from math import isnan, isinf
 from abc import ABCMeta, abstractmethod
 
+# pylint: disable=invalid-name
 ################ String Normalization ################
-
 def normalize(x):
     # Remove diacritics
     x = ''.join(c for c in unicodedata.normalize('NFKD', x)
@@ -173,12 +174,12 @@ class NumberValue(Value):
         """
         try:
             return int(text)
-        except:
+        except ValueError:
             try:
                 amount = float(text)
                 assert not isnan(amount) and not isinf(amount)
                 return amount
-            except:
+            except ValueError:
                 return None
 
 
@@ -189,15 +190,15 @@ class DateValue(Value):
         assert isinstance(year, int)
         assert isinstance(month, int) and (month == -1 or 1 <= month <= 12)
         assert isinstance(day, int) and (day == -1 or 1 <= day <= 31)
-        assert not (year == month == day == -1)
+        assert not year == month == day == -1
         self._year = year
         self._month = month
         self._day = day
         if not original_string:
             self._normalized = '{}-{}-{}'.format(
-                year if year != -1 else 'xx',
-                month if month != -1 else 'xx',
-                day if day != '-1' else 'xx')
+                    year if year != -1 else 'xx',
+                    month if month != -1 else 'xx',
+                    day if day != '-1' else 'xx')
         else:
             self._normalized = normalize(original_string)
         self._hash = hash((self._year, self._month, self._day))
@@ -238,11 +239,11 @@ class DateValue(Value):
             year = -1 if ymd[0] in ('xx', 'xxxx') else int(ymd[0])
             month = -1 if ymd[1] == 'xx' else int(ymd[1])
             day = -1 if ymd[2] == 'xx' else int(ymd[2])
-            assert not (year == month == day == -1)
+            assert not year == month == day == -1
             assert month == -1 or 1 <= month <= 12
             assert day == -1 or 1 <= day <= 31
             return (year, month, day)
-        except:
+        except ValueError:
             return None
 
 
@@ -290,7 +291,7 @@ def to_value_list(original_strings, corenlp_values=None):
         assert isinstance(corenlp_values, (list, tuple, set))
         assert len(original_strings) == len(corenlp_values)
         return list(set(to_value(x, y) for (x, y)
-                in zip(original_strings, corenlp_values)))
+                        in zip(original_strings, corenlp_values)))
     else:
         return list(set(to_value(x) for x in original_strings))
 
@@ -299,7 +300,7 @@ def to_value_list(original_strings, corenlp_values=None):
 
 def check_denotation(target_values, predicted_values):
     """Return True if the predicted denotation is correct.
-    
+
     Args:
         target_values (list[Value])
         predicted_values (list[Value])
@@ -319,16 +320,20 @@ def check_denotation(target_values, predicted_values):
 ################ Batch Mode ################
 
 def tsv_unescape(x):
-    """Unescape strings in the TSV file.
+    """
+    Unescape strings in the TSV file.
     Escaped characters include:
-        newline (0x10) -> backslash + n
-        vertical bar (0x7C) -> backslash + p
-        backslash (0x5C) -> backslash + backslash
+    - newline (0x10) -> backslash + n
+    - vertical bar (0x7C) -> backslash + p
+    - backslash (0x5C) -> backslash + backslash
 
-    Args:
-        x (str or unicode)
-    Returns:
-        a unicode
+    Parameters
+    ----------
+    x : ``str``
+
+    Returns
+    -------
+    ``str``
     """
     return x.replace(r'\n', '\n').replace(r'\p', '|').replace('\\\\', '\\')
 
@@ -346,19 +351,19 @@ def tsv_unescape_list(x):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--tagged-dataset-path',
-            default=os.path.join('.', 'tagged', 'data'),
-            help='Directory containing CoreNLP-tagged dataset TSV file')
+                        default=os.path.join('.', 'tagged', 'data'),
+                        help='Directory containing CoreNLP-tagged dataset TSV file')
     parser.add_argument('prediction_path',
-            help='Path to the prediction file. Each line contains '
-                 'ex_id <tab> item1 <tab> item2 <tab> ...')
+                        help='Path to the prediction file. Each line contains '
+                        'ex_id <tab> item1 <tab> item2 <tab> ...')
     args = parser.parse_args()
-    
+
     # ID string --> list[Value]
     target_values_map = {}
     for filename in os.listdir(args.tagged_dataset_path):
         filename = os.path.join(args.tagged_dataset_path, filename)
-        print >> sys.stderr, 'Reading dataset from', filename
-        with open(filename, 'r', 'utf8') as fin:
+        print('Reading dataset from', filename, file=sys.stderr)
+        with codecs_open(filename, 'r', 'utf8') as fin:
             header = fin.readline().rstrip('\n').split('\t')
             for line in fin:
                 stuff = dict(zip(header, line.rstrip('\n').split('\t')))
@@ -367,11 +372,11 @@ def main():
                 canon_strings = tsv_unescape_list(stuff['targetCanon'])
                 target_values_map[ex_id] = to_value_list(
                         original_strings, canon_strings)
-    print >> sys.stderr, 'Read', len(target_values_map), 'examples'
+    print('Read', len(target_values_map), 'examples', file=sys.stderr)
 
-    print >> sys.stderr, 'Reading predictions from', args.prediction_path
+    print('Reading predictions from', args.prediction_path, file=sys.stderr)
     num_examples, num_correct = 0, 0
-    with open(args.prediction_path, 'r', 'utf8') as fin:
+    with codecs_open(args.prediction_path, 'r', 'utf8') as fin:
         for line in fin:
             line = line.rstrip('\n').split('\t')
             ex_id = line[0]
@@ -386,10 +391,9 @@ def main():
                 num_examples += 1
                 if correct:
                     num_correct += 1
-    print >> sys.stderr, 'Examples:', num_examples
-    print >> sys.stderr, 'Correct:', num_correct
-    print >> sys.stderr, 'Accuracy:', round(
-            (num_correct + 1e-9) / (num_examples + 1e-9), 4)
+    print('Examples:', num_examples, file=sys.stderr)
+    print('Correct:', num_correct, file=sys.stderr)
+    print('Accuracy:', round((num_correct + 1e-9) / (num_examples + 1e-9), 4), file=sys.stderr)
 
 if __name__ == '__main__':
     main()
