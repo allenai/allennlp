@@ -35,7 +35,6 @@ def get_strings_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, Li
             natural_language_key = f'st. {trigram[2]}'.lower()
         else:
             natural_language_key = ' '.join(trigram).lower()
-        print('nl key', natural_language_key)
         for string in ATIS_TRIGGER_DICT.get(natural_language_key, []):
             string_linking_scores[string].extend([index,
                                                   index + 1,

@@ -220,7 +220,9 @@ def get_costs_from_utterance(utterance: str, # pylint: disable=unused-argument
 def get_flight_numbers_from_utterance(utterance: str, # pylint: disable=unused-argument
                                       tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     indices_words_preceding_flight_number = {index for index, token in enumerate(tokenized_utterance)
-                                             if token.text in {'flight', 'number'} or token.text.upper() in AIRLINE_CODE_LIST} 
+                                             if token.text in {'flight', 'number'}
+                                             or token.text.upper() in AIRLINE_CODE_LIST
+                                             or token.text.lower() in AIRLINE_CODES.keys()} 
 
     indices_words_succeeding_flight_number = {index for index, token in enumerate(tokenized_utterance)
                                              if token.text == 'flight'} 
@@ -429,11 +431,14 @@ MONTH_NUMBERS = {'january': 1,
 GROUND_SERVICE = {'air taxi': ['AIR TAXI OPERATION'],
                   'car': ['RENTAL CAR'],
                   'limo': ['LIMOUSINE'],
+                  'limousine': ['LIMOUSINE'],
                   'rapid': ['RAPID TRANSIT'],
                   'rental': ['RENTAL CAR'],
                   'taxi': ['TAXI']}
 
-MISC_STR = {"every day" : ["DAILY"]}
+MISC_STR = {"every day" : ["DAILY"],
+            "saint petersburg": ["ST. PETERSBURG"],
+            "saint louis": ["ST. LOUIS"]}
 
 DAY_NUMBERS = {'first': 1,
                'second': 2,
@@ -608,7 +613,12 @@ CITY_CODE_LIST = ['BBNA', 'BBOS', 'BBUR', 'BBWI', 'CCHI', 'CCLE', 'CCLT', 'CCMH'
                   'MATL', 'MMEM', 'MMIA', 'MMKC', 'MMKE', 'MMSP', 'NNYC', 'OOAK', 'OONT', 'OORL',
                   'PPHL', 'PPHX', 'PPIT', 'SMSP', 'SSAN', 'SSEA', 'SSFO', 'SSJC', 'SSLC', 'SSTL',
                   'STPA', 'TSEA', 'TTPA', 'WWAS', 'YYMQ', 'YYTO']
-CLASS = ['COACH', 'BUSINESS', 'FIRST', 'THRIST', 'STANDARD', 'SHUTTLE']
+
+CLASS = ['COACH', 'BUSINESS', 'FIRST', 'THRIFT', 'STANDARD', 'SHUTTLE']
+
+AIRCRAFT_MANUFACTURERS = ['BOEING', 'MCDONNELL DOUGLAS', 'FOKKER']
+
+AIRCRAFT_BASIC_CODES = ['DC9', '737', '767', '747', 'DC10', '757', 'MD80']
 
 DAY_OF_WEEK_INDEX = {idx : [day] for idx, day in enumerate(DAY_OF_WEEK)}
 
@@ -617,7 +627,10 @@ TRIGGER_LISTS = [CITIES, AIRPORT_CODES,
                  FARE_BASIS_CODE, CLASS,
                  AIRLINE_CODE_LIST, DAY_OF_WEEK,
                  CITY_CODE_LIST, MEALS,
-                 RESTRICT_CODES]
+                 RESTRICT_CODES,
+                 AIRCRAFT_MANUFACTURERS,
+                 AIRCRAFT_BASIC_CODES]
+
 TRIGGER_DICTS = [CITY_AIRPORT_CODES,
                  AIRLINE_CODES,
                  CITY_CODES,
