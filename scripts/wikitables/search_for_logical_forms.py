@@ -13,10 +13,8 @@ from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.semparse.worlds import WikiTablesVariableFreeWorld
 from allennlp.semparse.worlds.world import ExecutionError
 from allennlp.data.tokenizers import WordTokenizer
+from allennlp.tools import wikitables_evaluator as evaluator
 
-sys.path.insert(0, (os.path.abspath(os.curdir)))
-
-import evaluator
 
 # TODO (pradeep): Use a DatasetReader (when available) instead of directly reading from the examples
 # file.
