@@ -202,7 +202,7 @@ class Vocabulary(Registrable):
         regardless of any other vocabulary computation.
     """
     default_implementation = "default"
-    
+
     def __init__(self,
                  counter: Dict[str, Dict[str, int]] = None,
                  min_count: Dict[str, int] = None,
