@@ -41,7 +41,7 @@
     "batch_size" : 32
   },
   "trainer": {
-    "num_epochs": 20,
+    "num_epochs": 30,
     "patience": 10,
     "cuda_device": 0,
     "validation_metric": "+denotation_acc",
