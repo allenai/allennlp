@@ -12,7 +12,7 @@ work better for a particular application.
 Based on [BiDAF (Seo et al, 2017)](https://www.semanticscholar.org/paper/Bidirectional-Attention-Flow-for-Machine-Comprehen-Seo-Kembhavi/007ab5528b3bd310a80d553cccad4b78dc496b02)
 
 ```
-$ docker run allennlp/allennlp:v0.6.1 \
+$ docker run allennlp/allennlp:v0.7.0 \
     evaluate \
     https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz \
     https://s3-us-west-2.amazonaws.com/allennlp/datasets/squad/squad-dev-v1.1.json
@@ -32,7 +32,7 @@ start_acc: 0.642
 Based on [Parikh et al, 2017](https://www.semanticscholar.org/paper/A-Decomposable-Attention-Model-for-Natural-Languag-Parikh-T%C3%A4ckstr%C3%B6m/07a9478e87a8304fc3267fa16e83e9f3bbd98b27)
 
 ```
-$ docker run allennlp/allennlp:v0.6.1 \
+$ docker run allennlp/allennlp:v0.7.0 \
     evaluate \
     https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-elmo-2018.02.19.tar.gz \
     https://s3-us-west-2.amazonaws.com/allennlp/datasets/snli/snli_1.0_test.jsonl

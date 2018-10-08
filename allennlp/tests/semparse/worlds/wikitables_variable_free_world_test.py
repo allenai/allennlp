@@ -4,6 +4,7 @@ from typing import List
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import Token
 from allennlp.semparse.contexts import TableQuestionContext
+from allennlp.semparse.type_declarations import wikitables_variable_free as types
 from allennlp.semparse.worlds import WikiTablesVariableFreeWorld
 from allennlp.semparse import ParsingError
 
@@ -145,8 +146,11 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
     def test_world_processes_logical_forms_correctly(self):
         logical_form = "(select (filter_in all_rows string_column:league usl_a_league) date_column:year)"
         expression = self.world_with_usl_a_league.parse_logical_form(logical_form)
+        f = types.name_mapper.get_alias
         # Cells (and parts) get mapped to strings.
-        assert str(expression) == "S0(F30(R,C2,string:usl_a_league),C0)"
+        # Column names are mapped in local name mapping. For the global names, we can get their
+        # aliases from the name mapper.
+        assert str(expression) == f"{f('select')}({f('filter_in')}({f('all_rows')},C2,string:usl_a_league),C0)"
 
     def test_world_gets_correct_actions(self):
         logical_form = "(select (filter_in all_rows string_column:league usl_a_league) date_column:year)"
@@ -171,15 +175,22 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         logical_form = """(select (filter_number_greater all_rows number_column:avg_attendance 3000)
                            date_column:year)"""
         expression = world.parse_logical_form(logical_form)
+        f = types.name_mapper.get_alias
         # Cells (and parts) get mapped to strings.
-        assert str(expression) == "S0(F10(R,C6,num:3000),C0)"
+        # Column names are mapped in local name mapping. For the global names, we can get their
+        # aliases from the name mapper.
+        assert str(expression) == f"{f('select')}({f('filter_number_greater')}({f('all_rows')},C6,num:3000),C0)"
 
     def test_world_processes_logical_forms_with_date_correctly(self):
         logical_form = """(select (filter_date_greater all_rows date_column:year (date 2013 -1 -1))
                            date_column:year)"""
         expression = self.world_with_2013.parse_logical_form(logical_form)
+        f = types.name_mapper.get_alias
         # Cells (and parts) get mapped to strings.
-        assert str(expression) == "S0(F20(R,C0,T0(num:2013,num:~1,num:~1)),C0)"
+        # Column names are mapped in local name mapping. For the global names, we can get their
+        # aliases from the name mapper.
+        assert str(expression) == \
+        f"{f('select')}({f('filter_date_greater')}({f('all_rows')},C0,{f('date')}(num:2013,num:~1,num:~1)),C0)"
 
     def test_get_agenda(self):
         tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '2000', '?']]
