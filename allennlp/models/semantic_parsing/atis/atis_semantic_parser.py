@@ -478,7 +478,7 @@ class AtisSemanticParser(Model):
         return GrammarStatelet(['statement'],
                                translated_valid_actions,
                                self.is_nonterminal,
-                               reverse_productions=False)
+                               reverse_productions=True)
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:

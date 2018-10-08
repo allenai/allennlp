@@ -4,9 +4,13 @@ from collections import defaultdict
 
 from overrides import overrides
 
+from sys import version_info, exc_info
+
 from parsimonious.expressions import Literal, OneOf, Sequence
 from parsimonious.nodes import Node, NodeVisitor
 from parsimonious.grammar import Grammar
+from parsimonious.exceptions import VisitationError, UndefinedLabel
+
 
 WHITESPACE_REGEX = re.compile(" wsp |wsp | wsp| ws |ws | ws")
 
@@ -186,3 +190,32 @@ class SqlVisitor(NodeVisitor):
 
             rule = nonterminal + right_hand_side
             self.action_sequence = [rule] + self.action_sequence
+
+    @overrides
+    def visit(self, node):
+        """Walk a parse tree, transforming it into another representation.
+        Recursively descend a parse tree, dispatching to the method named after
+        the rule in the :class:`~parsimonious.grammar.Grammar` that produced
+        each node. If, for example, a rule was... ::
+            bold = '<b>'
+        ...the ``visit_bold()`` method would be called. It is your
+        responsibility to subclass :class:`NodeVisitor` and implement those
+        methods.
+        """
+        method = getattr(self, 'visit_' + node.expr_name, self.generic_visit)
+
+        # Call that method, and show where in the tree it failed if it blows
+        # up.
+        try:
+            # Changing this to reverse here!
+            return method(node, [self.visit(n) for n in reversed(list(node))])
+        except (VisitationError, UndefinedLabel):
+            # Don't catch and re-wrap already-wrapped exceptions.
+            raise
+        except self.unwrapped_exceptions:
+            raise
+        except Exception:
+            # Catch any exception, and tack on a parse tree so it's easier to
+            # see where it went wrong.
+            exc_class, exc, tb = exc_info()
+            reraise(VisitationError, VisitationError(exc, exc_class, node), tb)
