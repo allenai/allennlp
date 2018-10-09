@@ -4,12 +4,12 @@ A ``Text2SqlTableContext`` represents the SQL context in which an utterance appe
 for the any of the text2sql datasets, with the grammar and the valid actions.
 """
 from typing import List, Dict
-from copy import deepcopy
+from sqlite3 import Cursor
 
-from parsimonious.grammar import Grammar
 
-from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions, format_grammar_string
-from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
+from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import TableColumn
+from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_numeric_type
+from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_string_type
 
 GRAMMAR_DICTIONARY = {}
 GRAMMAR_DICTIONARY["statement"] = ['(query ws ";")', '(query ws)']
@@ -92,47 +92,29 @@ GRAMMAR_DICTIONARY["binaryop"] = ['"+"', '"-"', '"*"', '"/"', '"="', '"<>"',
                                   '">="', '"<="', '">"', '"<"', '"AND"', '"OR"', '"LIKE"']
 GRAMMAR_DICTIONARY["unaryop"] = ['"+"', '"-"', '"not"', '"NOT"']
 
-class Text2SqlTableContext:
-    """
-    This context is minimally constrained in terms of table productions,
-    meaning that we don't even constrain columns to be associated with the correct
-    table. We just augment the grammar to know what columns and tables are,
-    with no constraints.
+def update_grammar_with_tables(grammar_dictionary: Dict[str, List[str]],
+                               schema: Dict[str, List[TableColumn]]) -> None:
+    table_names = sorted([f'"{table}"' for table in
+                          list(schema.keys())], reverse=True)
+    grammar_dictionary['table_name'] = table_names
 
-    Parameters
-    ----------
-    schema_path: ``str``
-        A path to a schema file which we read into a dictionary
-        representing the SQL tables in the dataset, the keys are the
-        names of the tables that map to lists of the table's column names.
-    """
-    def __init__(self,
-                 schema_path: str = None) -> None:
-        self.grammar_dictionary = deepcopy(GRAMMAR_DICTIONARY)
-        schema = read_dataset_schema(schema_path)
-        self.schema = schema
-        self.all_tables = {k: [x.name for x in v] for k, v in schema.items()}
-        self.grammar_str: str = self.initialize_grammar_str()
-        self.grammar: Grammar = Grammar(self.grammar_str)
-        self.valid_actions: Dict[str, List[str]] = initialize_valid_actions(self.grammar)
+    all_columns = set()
+    for table in schema.values():
+        all_columns.update([column.name for column in table])
+    sorted_columns = sorted([f'"{column}"' for column in all_columns], reverse=True)
+    grammar_dictionary['column_name'] = sorted_columns
 
-    def get_grammar_dictionary(self) -> Dict[str, List[str]]:
-        return self.grammar_dictionary
+def update_grammar_with_table_values(grammar_dictionary: Dict[str, List[str]],
+                                     schema: Dict[str, List[TableColumn]],
+                                     cursor: Cursor) -> None:
 
-    def get_valid_actions(self) -> Dict[str, List[str]]:
-        return self.valid_actions
-
-    def initialize_grammar_str(self):
-        # Add all the table and column names to the grammar.
-        if self.all_tables:
-            table_names = sorted([f'"{table}"' for table in
-                                  list(self.all_tables.keys())], reverse=True)
-            self.grammar_dictionary['table_name'] = table_names
-
-            all_columns = set()
-            for columns in self.all_tables.values():
-                all_columns.update(columns)
-            sorted_columns = sorted([f'"{column}"' for column in all_columns], reverse=True)
-            self.grammar_dictionary['column_name'] = sorted_columns
-
-        return format_grammar_string(self.grammar_dictionary)
+    for table_name, columns in schema.items():
+        for column in columns:
+            cursor.execute(f'SELECT DISTINCT {table_name}.{column.name} FROM {table_name}')
+            results = [x[0] for x in cursor.fetchall()]
+            if column_has_string_type(column):
+                productions = sorted([f'"{str(result)}"' for result in results], reverse=True)
+                grammar_dictionary["string"].extend(productions)
+            elif column_has_numeric_type(column):
+                productions = sorted([f'"{str(result)}"' for result in results], reverse=True)
+                grammar_dictionary["number"].extend(productions)

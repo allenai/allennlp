@@ -5,8 +5,9 @@ Memory Augmented Policy Optimization for Program Synthesis with Generalization.
 """
 
 
-from allennlp.semparse.type_declarations.type_declaration import (Type, NamedBasicType, ComplexType,
-                                                                  MultiMatchNamedBasicType)
+from allennlp.semparse.type_declarations.type_declaration import (NamedBasicType, ComplexType,
+                                                                  MultiMatchNamedBasicType,
+                                                                  NameMapper)
 
 
 # Basic types
@@ -77,65 +78,61 @@ DATE_FUNCTION_TYPE = ComplexType(NUMBER_TYPE, ComplexType(NUMBER_TYPE, ComplexTy
                                                                                    DATE_TYPE)))
 
 
-COMMON_NAME_MAPPING = {}
-COMMON_TYPE_SIGNATURE = {}
+name_mapper = NameMapper()  # pylint: disable=invalid-name
 
-
-def add_common_name_with_type(name: str, mapping: str, type_signature: Type) -> None:
-    COMMON_NAME_MAPPING[name] = mapping
-    COMMON_TYPE_SIGNATURE[mapping] = type_signature
-
-
-add_common_name_with_type("all_rows", "R", ROW_TYPE)
+name_mapper.map_name_with_signature("all_rows", ROW_TYPE)
 
 # <r,<g,s>>
-add_common_name_with_type("select", "S0", SELECT_TYPE)
-add_common_name_with_type("mode", "S1", SELECT_TYPE)
+name_mapper.map_name_with_signature("select", SELECT_TYPE)
+name_mapper.map_name_with_signature("mode", SELECT_TYPE)
 
 # <r,<c,r>>
-add_common_name_with_type("argmax", "F00", ROW_FILTER_WITH_COMPARABLE_COLUMN)
-add_common_name_with_type("argmin", "F01", ROW_FILTER_WITH_COMPARABLE_COLUMN)
+name_mapper.map_name_with_signature("argmax", ROW_FILTER_WITH_COMPARABLE_COLUMN)
+name_mapper.map_name_with_signature("argmin", ROW_FILTER_WITH_COMPARABLE_COLUMN)
 
 # <r,<g,r>>
-add_common_name_with_type("same_as", "F02", ROW_FILTER_WITH_GENERIC_COLUMN)
+name_mapper.map_name_with_signature("same_as", ROW_FILTER_WITH_GENERIC_COLUMN)
 
 # <r,<f,<n,r>>>
-add_common_name_with_type("filter_number_greater", "F10", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
-add_common_name_with_type("filter_number_greater_equals", "F11", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
-add_common_name_with_type("filter_number_lesser", "F12", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
-add_common_name_with_type("filter_number_lesser_equals", "F13", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
-add_common_name_with_type("filter_number_equals", "F14", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
-add_common_name_with_type("filter_number_not_equals", "F15", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
+name_mapper.map_name_with_signature("filter_number_greater", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
+name_mapper.map_name_with_signature("filter_number_greater_equals", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
+name_mapper.map_name_with_signature("filter_number_lesser", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
+name_mapper.map_name_with_signature("filter_number_lesser_equals", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
+name_mapper.map_name_with_signature("filter_number_equals", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
+name_mapper.map_name_with_signature("filter_number_not_equals", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
 
 # <r,<y,<d,r>>>
-add_common_name_with_type("filter_date_greater", "F20", ROW_FILTER_WITH_COLUMN_AND_DATE)
-add_common_name_with_type("filter_date_greater_equals", "F21", ROW_FILTER_WITH_COLUMN_AND_DATE)
-add_common_name_with_type("filter_date_lesser", "F22", ROW_FILTER_WITH_COLUMN_AND_DATE)
-add_common_name_with_type("filter_date_lesser_equals", "F23", ROW_FILTER_WITH_COLUMN_AND_DATE)
-add_common_name_with_type("filter_date_equals", "F24", ROW_FILTER_WITH_COLUMN_AND_DATE)
-add_common_name_with_type("filter_date_not_equals", "F25", ROW_FILTER_WITH_COLUMN_AND_DATE)
+name_mapper.map_name_with_signature("filter_date_greater", ROW_FILTER_WITH_COLUMN_AND_DATE)
+name_mapper.map_name_with_signature("filter_date_greater_equals", ROW_FILTER_WITH_COLUMN_AND_DATE)
+name_mapper.map_name_with_signature("filter_date_lesser", ROW_FILTER_WITH_COLUMN_AND_DATE)
+name_mapper.map_name_with_signature("filter_date_lesser_equals", ROW_FILTER_WITH_COLUMN_AND_DATE)
+name_mapper.map_name_with_signature("filter_date_equals", ROW_FILTER_WITH_COLUMN_AND_DATE)
+name_mapper.map_name_with_signature("filter_date_not_equals", ROW_FILTER_WITH_COLUMN_AND_DATE)
 
 # <r,<t,<s,r>>>
-add_common_name_with_type("filter_in", "F30", ROW_FILTER_WITH_COLUMN_AND_STRING)
-add_common_name_with_type("filter_not_in", "F31", ROW_FILTER_WITH_COLUMN_AND_STRING)
+name_mapper.map_name_with_signature("filter_in", ROW_FILTER_WITH_COLUMN_AND_STRING)
+name_mapper.map_name_with_signature("filter_not_in", ROW_FILTER_WITH_COLUMN_AND_STRING)
 
 # <r,r>
-add_common_name_with_type("first", "R0", ROW_FILTER)
-add_common_name_with_type("last", "R1", ROW_FILTER)
-add_common_name_with_type("previous", "R2", ROW_FILTER)
-add_common_name_with_type("next", "R3", ROW_FILTER)
+name_mapper.map_name_with_signature("first", ROW_FILTER)
+name_mapper.map_name_with_signature("last", ROW_FILTER)
+name_mapper.map_name_with_signature("previous", ROW_FILTER)
+name_mapper.map_name_with_signature("next", ROW_FILTER)
 
 # <r,n>
-add_common_name_with_type("count", "C", COUNT_TYPE)
+name_mapper.map_name_with_signature("count", COUNT_TYPE)
 
 # <r,<f,n>>
-add_common_name_with_type("max", "N0", ROW_NUM_OP)
-add_common_name_with_type("min", "N1", ROW_NUM_OP)
-add_common_name_with_type("average", "N2", ROW_NUM_OP)
-add_common_name_with_type("sum", "N3", ROW_NUM_OP)
+name_mapper.map_name_with_signature("max", ROW_NUM_OP)
+name_mapper.map_name_with_signature("min", ROW_NUM_OP)
+name_mapper.map_name_with_signature("average", ROW_NUM_OP)
+name_mapper.map_name_with_signature("sum", ROW_NUM_OP)
 
 # <r,<r,<f,n>>>
-add_common_name_with_type("diff", "D0", NUM_DIFF_WITH_COLUMN)
+name_mapper.map_name_with_signature("diff", NUM_DIFF_WITH_COLUMN)
 
 # <n,<n,<n,d>>>
-add_common_name_with_type("date", "T0", DATE_FUNCTION_TYPE)
+name_mapper.map_name_with_signature("date", DATE_FUNCTION_TYPE)
+
+COMMON_NAME_MAPPING = name_mapper.common_name_mapping
+COMMON_TYPE_SIGNATURE = name_mapper.common_type_signature
