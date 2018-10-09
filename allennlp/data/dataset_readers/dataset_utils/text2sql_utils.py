@@ -9,16 +9,6 @@ from collections import defaultdict
 from allennlp.common import JsonDict
 
 
-GLOBAL_DATASET_VALUES: Dict[str, List[str]] = {
-        # These are used to check values are present, or numbers of authors.
-        "scholar": ["0", "1", "2"],
-        # 0 is used for "sea level", 750 is a "major" lake, and 150000 is a "major" city.
-        "geography": ["0", "750", "150000"],
-        # This defines what an "above average" restaurant is.
-        "restaurants": ["2.5"]
-}
-
-
 class SqlData(NamedTuple):
     """
     A utility class for reading in text2sql data.

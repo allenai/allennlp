@@ -92,6 +92,18 @@ GRAMMAR_DICTIONARY["binaryop"] = ['"+"', '"-"', '"*"', '"/"', '"="', '"<>"',
                                   '">="', '"<="', '">"', '"<"', '"AND"', '"OR"', '"LIKE"']
 GRAMMAR_DICTIONARY["unaryop"] = ['"+"', '"-"', '"not"', '"NOT"']
 
+
+
+GLOBAL_DATASET_VALUES: Dict[str, List[str]] = {
+        # These are used to check values are present, or numbers of authors.
+        "scholar": ["0", "1", "2"],
+        # 0 is used for "sea level", 750 is a "major" lake, and 150000 is a "major" city.
+        "geography": ["0", "750", "150000"],
+        # This defines what an "above average" restaurant is.
+        "restaurants": ["2.5"]
+}
+
+
 def update_grammar_with_tables(grammar_dictionary: Dict[str, List[str]],
                                schema: Dict[str, List[TableColumn]]) -> None:
     table_names = sorted([f'"{table}"' for table in
@@ -118,3 +130,10 @@ def update_grammar_with_table_values(grammar_dictionary: Dict[str, List[str]],
             elif column_has_numeric_type(column):
                 productions = sorted([f'"{str(result)}"' for result in results], reverse=True)
                 grammar_dictionary["number"].extend(productions)
+
+
+def update_grammar_with_global_values(grammar_dictionary: Dict[str, List[str]], dataset_name: str):
+
+    values = GLOBAL_DATASET_VALUES.get(dataset_name, [])
+    values_for_grammar = [f'"{str(value)}"' for value in values]
+    grammar_dictionary["value"] = values_for_grammar + grammar_dictionary["value"]
