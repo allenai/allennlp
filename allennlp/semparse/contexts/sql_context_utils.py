@@ -118,7 +118,7 @@ def action_sequence_to_sql(action_sequences: List[str]) -> str:
         if nonterminal == 'statement':
             query.extend(right_hand_side_tokens)
         else:
-            for query_index, token in reversed(list(enumerate(query))):
+            for query_index, token in list(enumerate(query)):
                 if token == nonterminal:
                     query = query[:query_index] + \
                             right_hand_side_tokens + \
