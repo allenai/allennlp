@@ -194,4 +194,5 @@ class WikiTablesDatasetReaderTest(AllenNlpTestCase):
         question = 'what was the last year where this team was a part of the usl a-league?'
         assert example_info == {'id': 'nt-0',
                                 'question': question,
-                                'table_filename': 'tables/590.csv'}
+                                'table_filename': 'tables/590.csv',
+                                'target_values': ['2004']}
