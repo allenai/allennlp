@@ -9,6 +9,16 @@ from collections import defaultdict
 from allennlp.common import JsonDict
 
 
+GLOBAL_DATASET_VALUES: Dict[str, List[str]] = {
+        # These are used to check values are present, or numbers of authors.
+        "scholar": ["0", "1", "2"],
+        # 0 is used for "sea level", 750 is a "major" lake, and 150000 is a "major" city.
+        "geography": ["0", "750", "150000"],
+        # This defines what an "above average" restaurant is.
+        "restaurants": ["2.5"]
+}
+
+
 class SqlData(NamedTuple):
     """
     A utility class for reading in text2sql data.
@@ -155,7 +165,8 @@ def read_dataset_schema(schema_path: str) -> Dict[str, List[TableColumn]]:
     mapping table names to their columns and respective types.
     This handles columns in an arbitrary order and also allows
     either ``{Table, Field}`` or ``{Table, Field} Name`` as headers,
-    because both appear in the data.
+    because both appear in the data. It also uppercases table and
+    column names if they are not already uppercase.
 
     Parameters
     ----------
@@ -178,7 +189,7 @@ def read_dataset_schema(schema_path: str) -> Dict[str, List[TableColumn]]:
             table = data.get("Table Name", None) or data.get("Table")
             column = data.get("Field Name", None) or data.get("Field")
             is_primary_key = data.get("Primary Key") == "y"
-            schema[table].append(TableColumn(column, data["Type"], is_primary_key))
+            schema[table.upper()].append(TableColumn(column.upper(), data["Type"], is_primary_key))
 
     return {**schema}
 
