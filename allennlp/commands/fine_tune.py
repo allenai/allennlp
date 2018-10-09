@@ -215,12 +215,20 @@ def fine_tune_model(model: Model,
     for name in tunable_parameter_names:
         logger.info(name)
 
-    trainer = Trainer.from_params(model,
-                                  serialization_dir,
-                                  iterator,
-                                  train_data,
-                                  validation_data,
-                                  trainer_params)
+    # If the config specifies a trainer subclass, we should use it.
+    # There must exist a trainer.
+    trainer_params = params.get("trainer")
+    trainer_choice = trainer_params.pop_choice("type",
+                                               Trainer.list_available(),
+                                               True)
+    trainer_cls = Trainer.by_name(trainer_choice)
+
+    trainer = trainer_cls.from_params(model,
+                                      serialization_dir,
+                                      iterator,
+                                      train_data,
+                                      validation_data,
+                                      trainer_params)
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
     params.assert_empty('base train command')
