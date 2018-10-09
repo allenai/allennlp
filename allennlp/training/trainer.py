@@ -1038,25 +1038,25 @@ class Trainer(Registrable):
         should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
 
         params.assert_empty(cls.__name__)
-        return Trainer(model, optimizer, iterator,
-                       train_data, validation_data,
-                       patience=patience,
-                       validation_metric=validation_metric,
-                       validation_iterator=validation_iterator,
-                       shuffle=shuffle,
-                       num_epochs=num_epochs,
-                       serialization_dir=serialization_dir,
-                       cuda_device=cuda_device,
-                       grad_norm=grad_norm,
-                       grad_clipping=grad_clipping,
-                       learning_rate_scheduler=scheduler,
-                       num_serialized_models_to_keep=num_serialized_models_to_keep,
-                       keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
-                       model_save_interval=model_save_interval,
-                       summary_interval=summary_interval,
-                       histogram_interval=histogram_interval,
-                       should_log_parameter_statistics=should_log_parameter_statistics,
-                       should_log_learning_rate=should_log_learning_rate)    
+        return cls(model, optimizer, iterator,
+                   train_data, validation_data,
+                   patience=patience,
+                   validation_metric=validation_metric,
+                   validation_iterator=validation_iterator,
+                   shuffle=shuffle,
+                   num_epochs=num_epochs,
+                   serialization_dir=serialization_dir,
+                   cuda_device=cuda_device,
+                   grad_norm=grad_norm,
+                   grad_clipping=grad_clipping,
+                   learning_rate_scheduler=scheduler,
+                   num_serialized_models_to_keep=num_serialized_models_to_keep,
+                   keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
+                   model_save_interval=model_save_interval,
+                   summary_interval=summary_interval,
+                   histogram_interval=histogram_interval,
+                   should_log_parameter_statistics=should_log_parameter_statistics,
+                   should_log_learning_rate=should_log_learning_rate)    
 
 
 Trainer.register("default")(Trainer)
