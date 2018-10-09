@@ -23,7 +23,7 @@ from torch.nn.parallel import replicate, parallel_apply
 from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
 from tensorboardX import SummaryWriter
 
-from allennlp.common import Params
+from allennlp.common import Params, Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import peak_memory_mb, gpu_memory_mb, dump_metrics
 from allennlp.common.tqdm import Tqdm
@@ -156,7 +156,9 @@ def str_to_time(time_str: str) -> datetime.datetime:
     return datetime.datetime(*pieces)
 
 
-class Trainer:
+class Trainer(Registrable):
+    default_implementation = "default"
+    
     def __init__(self,
                  model: Model,
                  optimizer: torch.optim.Optimizer,
@@ -1054,4 +1056,7 @@ class Trainer:
                        summary_interval=summary_interval,
                        histogram_interval=histogram_interval,
                        should_log_parameter_statistics=should_log_parameter_statistics,
-                       should_log_learning_rate=should_log_learning_rate)
+                       should_log_learning_rate=should_log_learning_rate)    
+
+
+Trainer.register("default")(Trainer)
