@@ -20,16 +20,7 @@ class TestLMDatasetReader(AllenNlpTestCase):
         dataset = LMDatasetReader()
 
         instance = dataset.text_to_instance('The only sentence')
-        self.assertTrue(
-            get_text('characters', instance) == ["@start@", "The", "only", "sentence", "@end@"]
-        )
-        self.assertTrue(get_text('tokens', instance) == ["@start@", "The", "only", "sentence", "@end@"])
-        self.assertTrue(
-            get_text('forward_targets', instance) == ["The", "only", "sentence", "@end@"]
-        )
-        self.assertTrue(
-            get_text('backward_targets', instance) == ["@@PADDING@@", "@start@", "The", "only", "sentence"]
-        )
+        self.assertTrue(get_text('source', instance) == ["The", "only", "sentence"])
 
     def test_lm_dataset_read(self):
         prefix = os.path.join(self.FIXTURES, 'single_sentence.txt')

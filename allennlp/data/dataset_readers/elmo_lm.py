@@ -3,13 +3,11 @@ import glob
 
 from overrides import overrides
 
-from allennlp.common.util import START_SYMBOL, END_SYMBOL
-
 from typing import Dict, List, Iterable
 
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField
-from allennlp.data import Instance, Token
+from allennlp.data import Instance, Token, Tokenizer, TokenIndexer
 from allennlp.data.token_indexers import SingleIdTokenIndexer, ELMoTokenCharactersIndexer
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.vocabulary import DEFAULT_PADDING_TOKEN
@@ -18,22 +16,17 @@ from allennlp.data.vocabulary import DEFAULT_PADDING_TOKEN
 @DatasetReader.register("lm_dataset_reader")
 class LMDatasetReader(DatasetReader):
     def __init__(self,
-                 max_sequence_length=None,
-                 test=False,
-                 queue=None,
-                 use_byte_pairs=False,
-                 add_suffix_char=False):
+                 tokenizer: Tokenizer = None,
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 max_sequence_length = None,
+                 test = False,
+                 queue = None):
         super().__init__(True)
-        self._tokenizer = WordTokenizer()
-        if use_byte_pairs:
-            # TODO(brendanr): Handle this.
-            #self._indexers = {
-            #    'token': BytePairTokenBatcher(vocab_file, add_suffix_char=add_suffix_char),
-            #}
-            raise NotImplementedError
-        else:
-            self._token_indexer = SingleIdTokenIndexer()
-            self._character_indexer = ELMoTokenCharactersIndexer()
+        self._tokenizer = tokenizer or WordTokenizer()
+        self._token_indexers = token_indexers or {
+            "tokens": SingleIdTokenIndexer(),
+            "characters": ELMoTokenCharactersIndexer()
+        }
         self._test = test
         self._queue = queue
 
@@ -86,18 +79,9 @@ class LMDatasetReader(DatasetReader):
 
     @overrides
     def text_to_instance(self, sentence: str) -> Instance:
-        raw_tokenized = self._tokenizer.tokenize(sentence)
-        tokenized = [Token(START_SYMBOL)] + raw_tokenized + [Token(END_SYMBOL)]
-        forward_targets = raw_tokenized + [Token(END_SYMBOL)]
-        # TODO(brendanr): Using padding token here may be breaking API boundaries. Are there alternatives?
-        backward_targets = [Token(DEFAULT_PADDING_TOKEN), Token(START_SYMBOL)] + raw_tokenized
-
+        tokenized = self._tokenizer.tokenize(sentence)
         return_instance = Instance({
-            'forward_targets': TextField(forward_targets, {"tokens": self._token_indexer}),
-            'backward_targets': TextField(backward_targets, {"tokens": self._token_indexer}),
-            # TODO(brendanr): Place these together under a single text field as is standard in AllenNLP?
-            'tokens': TextField(tokenized, {"tokens": self._token_indexer}),
-            'characters': TextField(tokenized, {"characters": self._character_indexer})
+            'source': TextField(tokenized, self._token_indexers),
         })
         return return_instance
 
