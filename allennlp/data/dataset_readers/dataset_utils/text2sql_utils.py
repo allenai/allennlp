@@ -44,7 +44,6 @@ class TableColumn(NamedTuple):
     is_primary_key: bool
 
 def column_has_string_type(column: TableColumn) -> bool:
-
     if "varchar" in column.column_type:
         return True
     elif column.column_type == "text":

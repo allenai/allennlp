@@ -90,6 +90,8 @@ class Text2SqlWorld:
 
     def is_global_rule(self, production_rule: str) -> bool:
         if self.use_prelinked_entities:
+            # we are checking -4 as is not a global rule if we
+            # see the 0 in the a rule like 'value -> ["\'city_name0\'"]'
             if "value" in production_rule and production_rule[-4].isnumeric():
                 return False
         return True
