@@ -1,6 +1,6 @@
 import random
 import glob
-from typing import Dict, Iterable
+from typing import Dict, Iterable, List
 
 from overrides import overrides
 
@@ -45,8 +45,8 @@ class ElmoLMDatasetReader(DatasetReader):
         }
         self._max_sequence_length = max_sequence_length
         self._loop_indefinitely = loop_indefinitely
-        self._all_shards = None
-        self._shards_to_choose = []
+        self._all_shards: List[str] = []
+        self._shards_to_choose: List[str] = []
 
         print("Creating LMDatasetReader")
         print("max_sequence_length={}".format(max_sequence_length))
@@ -91,7 +91,8 @@ class ElmoLMDatasetReader(DatasetReader):
         return shard_name
 
     @overrides
-    def text_to_instance(self, sentence: str) -> Instance:
+    def text_to_instance(self,  # type: ignore
+                         sentence: str) -> Instance:
         # pylint: disable=arguments-differ
         tokenized = self._tokenizer.tokenize(sentence)
         return_instance = Instance({
