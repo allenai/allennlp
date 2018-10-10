@@ -1,7 +1,7 @@
-allennlp.data.dataset_readers.event2mind
+allennlp.data.dataset_readers.elmo_lm
 ========================================
 
-.. automodule:: allennlp.data.dataset_readers.event2mind
+.. automodule:: allennlp.data.dataset_readers.elmo_lm
    :members:
    :undoc-members:
    :show-inheritance:
