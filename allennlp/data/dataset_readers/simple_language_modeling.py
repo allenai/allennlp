@@ -13,8 +13,8 @@ from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 
 
-@DatasetReader.register("elmo_lm_dataset_reader")
-class ElmoLMDatasetReader(DatasetReader):
+@DatasetReader.register("simple_language_modeling")
+class SimpleLanguageModelingDatasetReader(DatasetReader):
     """
     Reads sentences, one per line, from sharded files for language modeling.
 
