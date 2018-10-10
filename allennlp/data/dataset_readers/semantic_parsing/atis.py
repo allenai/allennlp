@@ -72,7 +72,7 @@ class AtisDatasetReader(DatasetReader):
                  lazy: bool = False,
                  tokenizer: Tokenizer = None,
                  database_file: str = None,
-                 num_turns_to_concatenate = None) -> None:
+                 num_turns_to_concatenate: int = 1) -> None:
         super().__init__(lazy)
         self._keep_if_unparseable = keep_if_unparseable
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
@@ -114,7 +114,7 @@ class AtisDatasetReader(DatasetReader):
         """
         if self._num_turns_to_concatenate:
             utterances[-1] = f' {END_OF_UTTERANCE_TOKEN} '.join(utterances[-self._num_turns_to_concatenate:])
-        
+
         utterance = utterances[-1]
         action_sequence: List[str] = []
 

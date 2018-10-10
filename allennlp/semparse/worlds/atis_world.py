@@ -1,5 +1,5 @@
 from typing import List, Dict, Tuple, Set, Callable
-from copy import copy, deepcopy
+from copy import copy
 import numpy
 from nltk import ngrams, bigrams
 
@@ -66,7 +66,7 @@ class AtisWorld():
             AtisWorld.sql_table_context = AtisSqlTableContext(ALL_TABLES,
                                                               TABLES_WITH_STRINGS,
                                                               AtisWorld.database_file)
-        self.utterances: List[str] = utterances 
+        self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]
         self.dates = self._get_dates()
@@ -96,31 +96,12 @@ class AtisWorld():
         # We have to create new sub-expression objects so that original grammar is not mutated.
         new_grammar = copy(AtisWorld.sql_table_context.grammar)
 
-        numbers = self._get_numeric_database_values('number')
-        number_literals = [Literal(number) for number in numbers]
-        new_grammar['number'] = OneOf(*number_literals, name='number')
+        for numeric_nonterminal in ['number', 'time_range_start', 'time_range_end',
+                                    'fare_round_trip_cost', 'fare_one_direction_cost',
+                                    'flight_number']:
+            self._add_numeric_nonterminal_to_grammar(numeric_nonterminal, new_grammar)
         self._update_expression_reference(new_grammar, 'pos_value', 'number')
-
-        time_range_start = self._get_numeric_database_values('time_range_start')
-        time_range_start_literals = [Literal(time) for time in time_range_start]
-        new_grammar['time_range_start'] = OneOf(*time_range_start_literals, name='time_range_start')
-
-        time_range_end = self._get_numeric_database_values('time_range_end')
-        time_range_end_literals = [Literal(time) for time in time_range_end]
-        new_grammar['time_range_end'] = OneOf(*time_range_end_literals, name='time_range_end')
-
-        fare_round_trip_cost= self._get_numeric_database_values('fare_round_trip_cost')
-        fare_round_trip_cost_literals = [Literal(fare) for fare in fare_round_trip_cost]
-        new_grammar['fare_round_trip_cost'] = OneOf(*fare_round_trip_cost_literals, name='fare_round_trip_cost')
-
-        fare_one_direction_cost= self._get_numeric_database_values('fare_one_direction_cost')
-        fare_one_direction_cost_literals = [Literal(fare) for fare in fare_one_direction_cost]
-        new_grammar['fare_one_direction_cost'] = OneOf(*fare_one_direction_cost_literals, name='fare_one_direction_cost')
-
-        flight_numbers = self._get_numeric_database_values('flight_number')
-        flight_numbers_literals = [Literal(number) for number in flight_numbers]
-        new_grammar['flight_number'] = OneOf(*flight_numbers_literals, name='flight_number')
-
+       
         ternary_expressions = [self._get_sequence_with_spacing(new_grammar,
                                                                [new_grammar['col_ref'],
                                                                 Literal('BETWEEN'),
@@ -216,6 +197,13 @@ class AtisWorld():
                                      nonterminal: str) -> List[str]:
         return sorted([value[1] for key, value in self.linked_entities['number'].items()
                        if value[0] == nonterminal], reverse=True)
+    
+    def _add_numeric_nonterminal_to_grammar(self,
+                                            nonterminal: str,
+                                            new_grammar: Grammar) -> None:
+        numbers = self._get_numeric_database_values(nonterminal)
+        number_literals = [Literal(number) for number in numbers]
+        new_grammar[nonterminal] = OneOf(*number_literals, name=nonterminal)
 
     def _update_expression_reference(self, # pylint: disable=no-self-use
                                      grammar: Grammar,
@@ -250,12 +238,11 @@ class AtisWorld():
             number_linking_scores: Dict[str, Tuple[str, str, List[int]]],
             current_tokenized_utterance: List[Token]) -> None:
 
-        dates_linking_dict: Dict[str, List[int]] = defaultdict(list)
         month_reverse_lookup = {str(number): string for string, number in MONTH_NUMBERS.items()}
         day_reverse_lookup = {str(number) : string for string, number in DAY_NUMBERS.items()}
 
         if self.dates:
-            for date in self.dates: 
+            for date in self.dates:
                 # Add the year linking score
                 entity_linking = [0 for token in current_tokenized_utterance]
                 for token_index, token in enumerate(current_tokenized_utterance):
@@ -263,7 +250,7 @@ class AtisWorld():
                         entity_linking[token_index] = 1
                 action = format_action(nonterminal='year_number', right_hand_side=str(date.year), is_number=True, keywords_to_uppercase=KEYWORDS)
                 number_linking_scores[action] = ('year_number', str(date.year), entity_linking)
-    
+
 
                 entity_linking = [0 for token in current_tokenized_utterance]
                 for token_index, token in enumerate(current_tokenized_utterance):
@@ -393,25 +380,25 @@ class AtisWorld():
         return entity_linking_scores
 
     def _get_dates(self):
-        dates = [] 
+        dates = []
         for tokenized_utterance in self.tokenized_utterances:
             dates.extend(get_date_from_utterance(tokenized_utterance))
         return dates
 
     def _ignore_dates(self, query: str):
         tokens = query.split(' ')
-        year_indices = [index for index, token in enumerate(tokens) if token.endswith('year')] 
-        month_indices = [index for index, token in enumerate(tokens) if token.endswith('month_number')] 
-        day_indices = [index for index, token in enumerate(tokens) if token.endswith('day_number')] 
-        
+        year_indices = [index for index, token in enumerate(tokens) if token.endswith('year')]
+        month_indices = [index for index, token in enumerate(tokens) if token.endswith('month_number')]
+        day_indices = [index for index, token in enumerate(tokens) if token.endswith('day_number')]
+
         if self.dates:
             for token_index, token in enumerate(tokens):
                 if token_index - 2 in year_indices:
-                    tokens[token_index] = str(self.dates[0].year)
+                    token = str(self.dates[0].year)
                 if token_index - 2 in month_indices:
-                    tokens[token_index] = str(self.dates[0].month)
+                    token = str(self.dates[0].month)
                 if token_index - 2 in day_indices:
-                    tokens[token_index] = str(self.dates[0].day)
+                    token = str(self.dates[0].day)
         return ' '.join(tokens)
 
     def get_action_sequence(self, query: str) -> List[str]:

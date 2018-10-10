@@ -11,6 +11,8 @@ from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.atis_world import AtisWorld
 
+from pprint import pprint
+
 class TestAtisWorld(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
@@ -381,97 +383,99 @@ class TestAtisWorld(AllenNlpTestCase):
         assert action_sequence == ['statement -> [query, ";"]',
                                    'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
                                    'where_clause, ")"]',
+                                   'distinct -> ["DISTINCT"]',
+                                   'select_results -> [col_refs]',
+                                   'col_refs -> [col_ref, ",", col_refs]',
+                                   'col_ref -> ["city", ".", "city_code"]',
+                                   'col_refs -> [col_ref]',
+                                   'col_ref -> ["city", ".", "city_name"]',
+                                   'table_refs -> [table_name]',
+                                   'table_name -> ["city"]',
                                    'where_clause -> ["WHERE", "(", conditions, ")"]',
                                    'conditions -> [condition]',
                                    'condition -> [biexpr]',
                                    'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
-                                   'city_city_name_string -> ["\'BOSTON\'"]',
                                    'binaryop -> ["="]',
-                                   'table_refs -> [table_name]',
-                                   'table_name -> ["city"]',
-                                   'select_results -> [col_refs]',
-                                   'col_refs -> [col_ref, ",", col_refs]',
-                                   'col_refs -> [col_ref]',
-                                   'col_ref -> ["city", ".", "city_name"]',
-                                   'col_ref -> ["city", ".", "city_code"]',
-                                   'distinct -> ["DISTINCT"]']
+                                   'city_city_name_string -> ["\'BOSTON\'"]'] 
+
         action_sequence = world.get_action_sequence(("( SELECT airport_service . airport_code "
                                                      "FROM airport_service "
                                                      "WHERE airport_service . city_code IN ( "
                                                      "SELECT city . city_code FROM city "
                                                      "WHERE city.city_name = 'BOSTON' ) ) ;"))
-        assert action_sequence == ['statement -> [query, ";"]',
-                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
-                                   'where_clause, ")"]',
-                                   'where_clause -> ["WHERE", conditions]',
-                                   'conditions -> [condition]',
-                                   'condition -> [in_clause]',
-                                   'in_clause -> [col_ref, "IN", query]',
-                                   'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
-                                   'where_clause, ")"]',
-                                   'where_clause -> ["WHERE", conditions]',
-                                   'conditions -> [condition]',
-                                   'condition -> [biexpr]',
-                                   'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
-                                   'city_city_name_string -> ["\'BOSTON\'"]',
-                                   'binaryop -> ["="]',
-                                   'table_refs -> [table_name]',
-                                   'table_name -> ["city"]',
-                                   'select_results -> [col_refs]',
-                                   'col_refs -> [col_ref]',
-                                   'col_ref -> ["city", ".", "city_code"]',
-                                   'distinct -> [""]',
-                                   'col_ref -> ["airport_service", ".", "city_code"]',
-                                   'table_refs -> [table_name]',
-                                   'table_name -> ["airport_service"]',
-                                   'select_results -> [col_refs]',
-                                   'col_refs -> [col_ref]',
-                                   'col_ref -> ["airport_service", ".", "airport_code"]',
-                                   'distinct -> [""]']
+        assert action_sequence == \
+                ['statement -> [query, ";"]',
+                 'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                 'where_clause, ")"]',
+                 'distinct -> [""]',
+                 'select_results -> [col_refs]',
+                 'col_refs -> [col_ref]',
+                 'col_ref -> ["airport_service", ".", "airport_code"]',
+                 'table_refs -> [table_name]',
+                 'table_name -> ["airport_service"]',
+                 'where_clause -> ["WHERE", conditions]',
+                 'conditions -> [condition]',
+                 'condition -> [in_clause]',
+                 'in_clause -> [col_ref, "IN", query]',
+                 'col_ref -> ["airport_service", ".", "city_code"]',
+                 'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                 'where_clause, ")"]',
+                 'distinct -> [""]',
+                 'select_results -> [col_refs]',
+                 'col_refs -> [col_ref]',
+                 'col_ref -> ["city", ".", "city_code"]',
+                 'table_refs -> [table_name]',
+                 'table_name -> ["city"]',
+                 'where_clause -> ["WHERE", conditions]',
+                 'conditions -> [condition]',
+                 'condition -> [biexpr]',
+                 'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
+                 'binaryop -> ["="]',
+                 'city_city_name_string -> ["\'BOSTON\'"]']
         action_sequence = world.get_action_sequence(("( SELECT airport_service . airport_code "
                                                      "FROM airport_service WHERE airport_service . city_code IN "
                                                      "( SELECT city . city_code FROM city "
                                                      "WHERE city.city_name = 'BOSTON' ) AND 1 = 1) ;"))
         assert action_sequence == \
-               ['statement -> [query, ";"]',
-                'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
-                'where_clause, ")"]',
-                'where_clause -> ["WHERE", conditions]',
-                'conditions -> [condition, conj, conditions]',
-                'conditions -> [condition]',
-                'condition -> [biexpr]',
-                'biexpr -> [value, binaryop, value]',
-                'value -> [pos_value]',
-                'pos_value -> [number]',
-                'number -> ["1"]',
-                'binaryop -> ["="]',
-                'value -> [pos_value]',
-                'pos_value -> [number]',
-                'number -> ["1"]',
-                'conj -> ["AND"]',
-                'condition -> [in_clause]',
-                'in_clause -> [col_ref, "IN", query]',
-                'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
-                'where_clause, ")"]',
-                'where_clause -> ["WHERE", conditions]',
-                'conditions -> [condition]',
-                'condition -> [biexpr]',
-                'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
-                'city_city_name_string -> ["\'BOSTON\'"]',
-                'binaryop -> ["="]',
-                'table_refs -> [table_name]',
-                'table_name -> ["city"]',
-                'select_results -> [col_refs]',
-                'col_refs -> [col_ref]',
-                'col_ref -> ["city", ".", "city_code"]',
-                'distinct -> [""]',
-                'col_ref -> ["airport_service", ".", "city_code"]',
-                'table_refs -> [table_name]',
-                'table_name -> ["airport_service"]',
-                'select_results -> [col_refs]',
-                'col_refs -> [col_ref]',
-                'col_ref -> ["airport_service", ".", "airport_code"]',
-                'distinct -> [""]']
+                ['statement -> [query, ";"]',
+                 'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                 'where_clause, ")"]',
+                 'distinct -> [""]',
+                 'select_results -> [col_refs]',
+                 'col_refs -> [col_ref]',
+                 'col_ref -> ["airport_service", ".", "airport_code"]',
+                 'table_refs -> [table_name]',
+                 'table_name -> ["airport_service"]',
+                 'where_clause -> ["WHERE", conditions]',
+                 'conditions -> [condition, conj, conditions]',
+                 'condition -> [in_clause]',
+                 'in_clause -> [col_ref, "IN", query]',
+                 'col_ref -> ["airport_service", ".", "city_code"]',
+                 'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                 'where_clause, ")"]',
+                 'distinct -> [""]',
+                 'select_results -> [col_refs]',
+                 'col_refs -> [col_ref]',
+                 'col_ref -> ["city", ".", "city_code"]',
+                 'table_refs -> [table_name]',
+                 'table_name -> ["city"]',
+                 'where_clause -> ["WHERE", conditions]',
+                 'conditions -> [condition]',
+                 'condition -> [biexpr]',
+                 'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
+                 'binaryop -> ["="]',
+                 'city_city_name_string -> ["\'BOSTON\'"]',
+                 'conj -> ["AND"]',
+                 'conditions -> [condition]',
+                 'condition -> [biexpr]',
+                 'biexpr -> [value, binaryop, value]',
+                 'value -> [pos_value]',
+                 'pos_value -> [number]',
+                 'number -> ["1"]',
+                 'binaryop -> ["="]',
+                 'value -> [pos_value]',
+                 'pos_value -> [number]',
+                 'number -> ["1"]']
         world = AtisWorld([("give me all flights from boston to "
                             "philadelphia next week arriving after lunch")])
 
@@ -487,44 +491,44 @@ class TestAtisWorld(AllenNlpTestCase):
             ['statement -> [query, ";"]',
              'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
              'where_clause, ")"]',
+             'distinct -> ["DISTINCT"]',
+             'select_results -> [col_refs]',
+             'col_refs -> [col_ref]',
+             'col_ref -> ["flight", ".", "flight_id"]',
+             'table_refs -> [table_name]',
+             'table_name -> ["flight"]',
              'where_clause -> ["WHERE", "(", conditions, ")"]',
              'conditions -> [condition]',
              'condition -> [in_clause]',
              'in_clause -> [col_ref, "IN", query]',
+             'col_ref -> ["flight", ".", "from_airport"]',
              'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
              'where_clause, ")"]',
+             'distinct -> [""]',
+             'select_results -> [col_refs]',
+             'col_refs -> [col_ref]',
+             'col_ref -> ["airport_service", ".", "airport_code"]',
+             'table_refs -> [table_name]',
+             'table_name -> ["airport_service"]',
              'where_clause -> ["WHERE", conditions]',
              'conditions -> [condition]',
              'condition -> [in_clause]',
              'in_clause -> [col_ref, "IN", query]',
+             'col_ref -> ["airport_service", ".", "city_code"]',
              'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
              'where_clause, ")"]',
+             'distinct -> [""]',
+             'select_results -> [col_refs]',
+             'col_refs -> [col_ref]',
+             'col_ref -> ["city", ".", "city_code"]',
+             'table_refs -> [table_name]',
+             'table_name -> ["city"]',
              'where_clause -> ["WHERE", conditions]',
              'conditions -> [condition]',
              'condition -> [biexpr]',
              'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
-             'city_city_name_string -> ["\'BOSTON\'"]',
              'binaryop -> ["="]',
-             'table_refs -> [table_name]',
-             'table_name -> ["city"]',
-             'select_results -> [col_refs]',
-             'col_refs -> [col_ref]',
-             'col_ref -> ["city", ".", "city_code"]',
-             'distinct -> [""]',
-             'col_ref -> ["airport_service", ".", "city_code"]',
-             'table_refs -> [table_name]',
-             'table_name -> ["airport_service"]',
-             'select_results -> [col_refs]',
-             'col_refs -> [col_ref]',
-             'col_ref -> ["airport_service", ".", "airport_code"]',
-             'distinct -> [""]',
-             'col_ref -> ["flight", ".", "from_airport"]',
-             'table_refs -> [table_name]',
-             'table_name -> ["flight"]',
-             'select_results -> [col_refs]',
-             'col_refs -> [col_ref]',
-             'col_ref -> ["flight", ".", "flight_id"]',
-             'distinct -> ["DISTINCT"]']
+             'city_city_name_string -> ["\'BOSTON\'"]']
 
     def test_atis_long_action_sequence(self): # pylint: disable=no-self-use
         world = AtisWorld([("what is the earliest flight in morning "
@@ -561,7 +565,6 @@ class TestAtisWorld(AllenNlpTestCase):
                                                     "SELECT city . city_code "
                                                     "FROM city "
                                                     "WHERE city.city_name = 'PITTSBURGH' )) ) ) )   ) ;")
-
         assert action_sequence == \
                 ['statement -> [query, ";"]',
                  'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '

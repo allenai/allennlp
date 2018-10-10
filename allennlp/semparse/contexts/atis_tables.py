@@ -91,7 +91,7 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
         year = int(year_result[0])
 
     fivegrams = ngrams([token.text for token in tokenized_utterance], 5)
-    for tens, digit, of, year_in_fivegram, month in fivegrams:
+    for tens, digit, _, year_in_fivegram, month in fivegrams:
         # This will match something like ``twenty first of 1993 july``.
         day = ' '.join([tens, digit])
         if month in MONTH_NUMBERS and day in DAY_NUMBERS and year_in_fivegram.isdigit():
@@ -222,10 +222,10 @@ def get_flight_numbers_from_utterance(utterance: str, # pylint: disable=unused-a
     indices_words_preceding_flight_number = {index for index, token in enumerate(tokenized_utterance)
                                              if token.text in {'flight', 'number'}
                                              or token.text.upper() in AIRLINE_CODE_LIST
-                                             or token.text.lower() in AIRLINE_CODES.keys()} 
+                                             or token.text.lower() in AIRLINE_CODES.keys()}
 
     indices_words_succeeding_flight_number = {index for index, token in enumerate(tokenized_utterance)
-                                             if token.text == 'flight'} 
+                                              if token.text == 'flight'}
 
     flight_numbers_linking_dict: Dict[str, List[int]] = defaultdict(list)
     for token_index, token in enumerate(tokenized_utterance):
@@ -234,7 +234,7 @@ def get_flight_numbers_from_utterance(utterance: str, # pylint: disable=unused-a
                 flight_numbers_linking_dict[token.text].append(token_index)
             if token_index + 1 in indices_words_succeeding_flight_number:
                 flight_numbers_linking_dict[token.text].append(token_index)
-    return flight_numbers_linking_dict 
+    return flight_numbers_linking_dict
 
 def digit_to_query_time(digit: str) -> List[int]:
     """
@@ -476,7 +476,7 @@ DAY_NUMBERS = {'first': 1,
 MISC_TIME_TRIGGERS = {'lunch': ['1400'],
                       'noon': ['1200'],
                       'early evening': ['1800', '2000'],
-                      'morning': ['0','1200'],
+                      'morning': ['0', '1200'],
                       'night': ['1800', '2400']}
 
 TIME_RANGE_START_DICT = {'morning': ['0'],

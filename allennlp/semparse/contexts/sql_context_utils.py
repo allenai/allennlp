@@ -1,10 +1,9 @@
 import re
 from typing import List, Dict, Set
 from collections import defaultdict
-
+from sys import exc_info
+from six import reraise
 from overrides import overrides
-
-from sys import version_info, exc_info
 
 from parsimonious.expressions import Literal, OneOf, Sequence
 from parsimonious.nodes import Node, NodeVisitor
@@ -217,5 +216,5 @@ class SqlVisitor(NodeVisitor):
         except Exception:
             # Catch any exception, and tack on a parse tree so it's easier to
             # see where it went wrong.
-            exc_class, exc, tb = exc_info()
-            reraise(VisitationError, VisitationError(exc, exc_class, node), tb)
+            exc_class, exc, traceback = exc_info()
+            reraise(VisitationError, VisitationError(exc, exc_class, node), traceback)
