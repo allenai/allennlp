@@ -394,11 +394,11 @@ class AtisWorld():
         if self.dates:
             for token_index, token in enumerate(tokens):
                 if token_index - 2 in year_indices:
-                    token = str(self.dates[0].year)
+                    tokens[token_index] = str(self.dates[0].year)
                 if token_index - 2 in month_indices:
-                    token = str(self.dates[0].month)
+                    tokens[token_index] = str(self.dates[0].month)
                 if token_index - 2 in day_indices:
-                    token = str(self.dates[0].day)
+                    tokens[token_index] = str(self.dates[0].day)
         return ' '.join(tokens)
 
     def get_action_sequence(self, query: str) -> List[str]:
