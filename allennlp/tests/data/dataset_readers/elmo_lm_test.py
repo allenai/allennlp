@@ -4,7 +4,7 @@ from typing import cast
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.fields import TextField
 
-from allennlp.data.dataset_readers.elmo_lm import ElmoLMDatasetReader
+from allennlp.data.dataset_readers import ElmoLMDatasetReader
 
 
 class TestElmoLMDatasetReader(AllenNlpTestCase):
