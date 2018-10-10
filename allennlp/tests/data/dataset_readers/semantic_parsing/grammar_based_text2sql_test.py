@@ -24,7 +24,6 @@ class TestGrammarBasdText2SqlDatasetReader(AllenNlpTestCase):
 
         action_sequence = fields["action_sequence"].field_list
         indices = [x.sequence_index for x in action_sequence]
-        print(indices)
         assert indices == [101, 75, 81, 125, 33, 5, 33, 5, 33, 5, 33, 5,
                            33, 5, 39, 115, 13, 119, 21, 27, 108, 16, 119,
                            21, 30, 107, 13, 119, 21, 30, 108, 16, 114, 13,
