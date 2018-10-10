@@ -195,7 +195,6 @@ def fine_tune_model(model: Model,
 
     iterator = DataIterator.from_params(params.pop("iterator"))
     iterator.index_with(model.vocab)
-    # If the config specifies a validation_iterator, use it.
     validation_iterator_params = params.pop("validation_iterator", None)
     if validation_iterator_params:
         validation_iterator = DataIterator.from_params(validation_iterator_params)
@@ -207,7 +206,6 @@ def fine_tune_model(model: Model,
     validation_data = all_datasets.get('validation')
     test_data = all_datasets.get('test')
 
-    # There must exist a trainer.
     trainer_params = params.pop("trainer")
     no_grad_regexes = trainer_params.pop("no_grad", ())
     for name, parameter in model.named_parameters():
@@ -223,7 +221,6 @@ def fine_tune_model(model: Model,
     for name in tunable_parameter_names:
         logger.info(name)
 
-    # If the config specifies a trainer subclass, we should use it.
     trainer_choice = trainer_params.pop_choice("type",
                                                Trainer.list_available(),
                                                default_to_first_choice=True)

@@ -158,7 +158,7 @@ def str_to_time(time_str: str) -> datetime.datetime:
 
 class Trainer(Registrable):
     default_implementation = "default"
-    
+
     def __init__(self,
                  model: Model,
                  optimizer: torch.optim.Optimizer,
@@ -1000,14 +1000,14 @@ class Trainer(Registrable):
 
     # Requires custom from_params.
     @classmethod
-    def from_params(cls,  # pylint: disable=arguments-differ
+    def from_params(cls,  # type: ignore
                     model: Model,
                     serialization_dir: str,
                     iterator: DataIterator,
                     train_data: Iterable[Instance],
                     validation_data: Optional[Iterable[Instance]],
                     params: Params,
-                    validation_iterator: DataIterator = None) -> 'Trainer':  # type: ignore
+                    validation_iterator: DataIterator = None) -> 'Trainer':
         # pylint: disable=arguments-differ
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
@@ -1056,7 +1056,7 @@ class Trainer(Registrable):
                    summary_interval=summary_interval,
                    histogram_interval=histogram_interval,
                    should_log_parameter_statistics=should_log_parameter_statistics,
-                   should_log_learning_rate=should_log_learning_rate)    
+                   should_log_learning_rate=should_log_learning_rate)
 
 
 Trainer.register("default")(Trainer)
