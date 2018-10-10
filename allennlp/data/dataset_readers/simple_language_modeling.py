@@ -39,7 +39,7 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._max_sequence_length = max_sequence_length
 
-        print("Creating LMDatasetReader")
+        print("Creating SimpleLanguageModelingDatasetReader")
         print("max_sequence_length={}".format(max_sequence_length))
 
     @overrides
