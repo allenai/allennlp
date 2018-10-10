@@ -8,9 +8,7 @@ def parse_example_line(lisp_string: str) -> Dict:
                  (context (graph tables.TableKnowledgeGraph <table-filename>))
                  (targetValue (list (description <answer1>) (description <answer2>) ...)))
 
-    We parse such strings and return the parsed information here.  We don't actually use the
-    target value right now, because we use a pre-computed set of logical forms.  So we don't
-    bother parsing it; we can change that if we ever need to.
+    We parse such strings and return the parsed information here.
     """
     id_piece, rest = lisp_string.split(') (utterance "')
     example_id = id_piece.split('(id ')[1]
