@@ -46,4 +46,3 @@ class TestSimpleLanguageModelingDatasetReader(AllenNlpTestCase):
         for k, _ in enumerate(dataset.read(prefix)):
             pass
         self.assertEqual(k, 19)
-
