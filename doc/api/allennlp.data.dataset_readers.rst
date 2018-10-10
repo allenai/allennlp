@@ -14,7 +14,6 @@ allennlp.data.dataset_readers
   allennlp.data.dataset_readers.conll2000
   allennlp.data.dataset_readers.conll2003
   allennlp.data.dataset_readers.coreference_resolution
-  allennlp.data.dataset_readers.elmo_lm
   allennlp.data.dataset_readers.event2mind
   allennlp.data.dataset_readers.language_modeling
   allennlp.data.dataset_readers.multiprocess_dataset_reader
@@ -27,6 +26,7 @@ allennlp.data.dataset_readers
   allennlp.data.dataset_readers.semantic_role_labeling
   allennlp.data.dataset_readers.seq2seq
   allennlp.data.dataset_readers.sequence_tagging
+  allennlp.data.dataset_readers.simple_language_modeling
   allennlp.data.dataset_readers.snli
   allennlp.data.dataset_readers.stanford_sentiment_tree_bank
   allennlp.data.dataset_readers.universal_dependencies
