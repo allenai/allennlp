@@ -10,14 +10,14 @@ from allennlp.data.dataset_readers import SimpleLanguageModelingDatasetReader
 class TestSimpleLanguageModelingDatasetReader(AllenNlpTestCase):
     FIXTURES = AllenNlpTestCase.FIXTURES_ROOT / "elmo_port"
 
-    def test_lm_dataset_text_to_instance(self):
+    def test_text_to_instance(self):
         dataset = SimpleLanguageModelingDatasetReader()
 
         instance = dataset.text_to_instance('The only sentence.')
         text = [t.text for t in cast(TextField, instance.fields["source"]).tokens]
         self.assertEqual(text, ["The", "only", "sentence", "."])
 
-    def test_lm_dataset_read(self):
+    def test_read_single_sentence(self):
         prefix = os.path.join(self.FIXTURES, 'single_sentence.txt')
         dataset = SimpleLanguageModelingDatasetReader()
         with open(prefix, 'r') as fin:
@@ -31,28 +31,19 @@ class TestSimpleLanguageModelingDatasetReader(AllenNlpTestCase):
         for k in expected_batch.fields.keys():
             self.assertTrue(str(expected_batch.fields[k]) == str(batch.fields[k]))
 
-    def test_lm_dataset_read_shards(self):
-        prefix = os.path.join(self.FIXTURES, 'shards/*')
-        dataset = SimpleLanguageModelingDatasetReader(loop_indefinitely=False)
+    def test_read_multiple_sentences(self):
+        prefix = os.path.join(self.FIXTURES, 'shards/shard0')
+        dataset = SimpleLanguageModelingDatasetReader()
         k = -1
         for k, _ in enumerate(dataset.read(prefix)):
             pass
-        self.assertEqual(k, 999)
+        self.assertEqual(k, 99)
 
     def test_max_sequence_length(self):
-        prefix = os.path.join(self.FIXTURES, 'shards/*')
-        dataset = SimpleLanguageModelingDatasetReader(loop_indefinitely=False, max_sequence_length=10)
+        prefix = os.path.join(self.FIXTURES, 'shards/shard0')
+        dataset = SimpleLanguageModelingDatasetReader(max_sequence_length=10)
         k = -1
         for k, _ in enumerate(dataset.read(prefix)):
             pass
-        self.assertEqual(k, 148)
+        self.assertEqual(k, 19)
 
-    def test_loops_indefinitely(self):
-        prefix = os.path.join(self.FIXTURES, 'shards/*')
-        dataset = SimpleLanguageModelingDatasetReader(loop_indefinitely=True)
-        k = -1
-        for k, _ in enumerate(dataset.read(prefix)):
-            if k == 1000:
-                break
-        # There are 1000 instances in the fixture shards. We'd like to verify we loop at least once.
-        self.assertTrue(k > 999)
