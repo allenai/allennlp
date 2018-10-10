@@ -87,8 +87,9 @@ class AtisWorld():
         ternary expression will refer to the start and end times.
         """
 
-        # This will give us a shallow copy, but that's OK because everything
-        # inside is immutable so we get a new copy of it.
+        # This will give us a shallow copy. We have to be careful here because the ``Grammar`` object
+        # contains ``Expression`` objects that have tuples containing the members of that expression.
+        # We have to create new sub-expression objects so that original grammar is not mutated.
         new_grammar = copy(AtisWorld.sql_table_context.grammar)
 
         numbers = self._get_numeric_database_values('number')
@@ -154,7 +155,9 @@ class AtisWorld():
                 new_binary_expressions.extend([month_binary_expression,
                                                day_binary_expression])
 
-            new_grammar['biexpr'].members = new_grammar['biexpr'].members + tuple(new_binary_expressions)
+                new_binary_expressions = new_binary_expressions + list(new_grammar['biexpr'].members)
+                new_grammar['biexpr'] = OneOf(*new_binary_expressions, name='biexpr')
+                self._update_expression_reference(new_grammar, 'condition', 'biexpr')
         return new_grammar
 
     def _get_numeric_database_values(self,

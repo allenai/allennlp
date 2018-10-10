@@ -1,6 +1,8 @@
 # pylint: disable=no-self-use,invalid-name,too-many-public-methods
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.tokenizers import WordTokenizer
 from allennlp.semparse.worlds.world import ExecutionError
+from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.semparse.executors import WikiTablesVariableFreeExecutor
 from allennlp.semparse.executors.wikitables_variable_free_executor import Date
 
@@ -190,14 +192,14 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
 
     def test_execute_works_with_filter_in(self):
         # Selecting "regular season" from rows that have "did not qualify" in "open cup" column.
-        logical_form = """(select (filter_in all_rows string_column:open_cup did_not_qualify)
+        logical_form = """(select (filter_in all_rows string_column:open_cup string:did_not_qualify)
                                   string_column:regular_season)"""
         cell_list = self.executor.execute(logical_form)
         assert cell_list == ["4th_western"]
 
     def test_execute_works_with_filter_not_in(self):
         # Selecting "regular season" from rows that do not have "did not qualify" in "open cup" column.
-        logical_form = """(select (filter_not_in all_rows string_column:open_cup did_not_qualify)
+        logical_form = """(select (filter_not_in all_rows string_column:open_cup string:did_not_qualify)
                                    string_column:regular_season)"""
         cell_list = self.executor.execute(logical_form)
         assert cell_list == ["5th"]
@@ -296,7 +298,7 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
     def test_execute_works_with_same_as(self):
         # Select the "league" from all the rows that have the same value under "playoffs" as the
         # row that has the string "a league" under "league".
-        logical_form = """(select (same_as (filter_in all_rows string_column:league a_league)
+        logical_form = """(select (same_as (filter_in all_rows string_column:league string:a_league)
                                    string_column:playoffs)
                            string_column:league)"""
         cell_list = self.executor.execute(logical_form)
@@ -308,7 +310,7 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
         sum_value = self.executor.execute(logical_form)
         assert sum_value == 13197
         # Total "avg attendance" where "playoffs" has "quarterfinals"
-        logical_form = """(sum (filter_in all_rows string_column:playoffs quarterfinals)
+        logical_form = """(sum (filter_in all_rows string_column:playoffs string:quarterfinals)
                                 number_column:avg_attendance)"""
         sum_value = self.executor.execute(logical_form)
         assert sum_value == 13197
@@ -319,7 +321,7 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
         avg_value = self.executor.execute(logical_form)
         assert avg_value == 6598.5
         # Average "avg attendance" where "playoffs" has "quarterfinals"
-        logical_form = """(average (filter_in all_rows string_column:playoffs quarterfinals)
+        logical_form = """(average (filter_in all_rows string_column:playoffs string:quarterfinals)
                                 number_column:avg_attendance)"""
         avg_value = self.executor.execute(logical_form)
         assert avg_value == 6598.5
@@ -327,15 +329,15 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
     def test_execute_works_with_diff(self):
         # Difference in "avg attendance" between rows with "usl_a_league" and "usl_first_division"
         # in "league" columns.
-        logical_form = """(diff (filter_in all_rows string_column:league usl_a_league)
-                                (filter_in all_rows string_column:league usl_first_division)
+        logical_form = """(diff (filter_in all_rows string_column:league string:usl_a_league)
+                                (filter_in all_rows string_column:league string:usl_first_division)
                                 number_column:avg_attendance)"""
         avg_value = self.executor.execute(logical_form)
         assert avg_value == 1141
 
     def test_execute_fails_with_diff_on_non_numerical_columns(self):
-        logical_form = """(diff (filter_in all_rows string_column:league usl_a_league)
-                                (filter_in all_rows string_column:league usl_first_division)
+        logical_form = """(diff (filter_in all_rows string_column:league string:usl_a_league)
+                                (filter_in all_rows string_column:league string:usl_first_division)
                                 string_column:league)"""
         with self.assertRaises(ExecutionError):
             self.executor.execute(logical_form)
@@ -366,3 +368,13 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
         assert (Date(2018, -1, 1) < Date(2018, -1, 3)) == False
         # TODO (pradeep): Figure out whether this is expected behavior by looking at data.
         assert (Date(2018, -1, 1) >= Date(2018, -1, 3)) == False
+
+    def test_number_comparison_works(self):
+        # TableQuestionContext normlaizes all strings according to some rules. We want to ensure
+        # that the original numerical values of number cells is being correctly processed here.
+        tokens = WordTokenizer().tokenize("when was the attendance the highest?")
+        tagged_file = self.FIXTURES_ROOT / "data" / "corenlp_processed_tables" / "TEST-2.table"
+        context = TableQuestionContext.read_from_file(tagged_file, tokens)
+        executor = WikiTablesVariableFreeExecutor(context.table_data)
+        result = executor.execute("(select (argmax all_rows number_column:attendance) date_column:date)")
+        assert result == ["november_10"]

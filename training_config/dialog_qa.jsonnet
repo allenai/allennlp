@@ -46,7 +46,7 @@
             "type": "gru",
             "bidirectional": true,
             "hidden_size": 100,
-            "input_size": 1144,
+            "input_size": 1124,
             "num_layers": 1
         },
         "residual_encoder": {

@@ -116,9 +116,8 @@ class WikiTablesVariableFreeWorld(World):
             self._column_productions_for_agenda[name] = f"{column_type} -> {name}"
         elif name.startswith("string:"):
             # We do not need to translate these names.
-            original_name = name.replace("string:", "")
             translated_name = name
-            self._add_name_mapping(original_name, translated_name, types.STRING_TYPE)
+            self._add_name_mapping(name, translated_name, types.STRING_TYPE)
         elif name.startswith("num:"):
             # NLTK throws an error if it sees a "." in constants, which will most likely happen
             # within numbers as a decimal point. We're changing those to underscores.
@@ -175,25 +174,39 @@ class WikiTablesVariableFreeWorld(World):
                 agenda_items.append("diff")
             if token == "average":
                 agenda_items.append("average")
+<<<<<<< HEAD
 
 
             if token in ["least", "smallest", "shortest", "lowest"] and "at least" not in question:
+=======
+            if token in ["least", "top", "smallest", "shortest", "lowest"]:
+>>>>>>> pradeeps_fork1/run_action_space_walker
                 # This condition is too brittle. But for most logical forms with "min", there are
                 # semantically equivalent ones with "argmin". The exceptions are rare.
                 if "what is the least" in question:
                     agenda_items.append("min")
                 else:
                     agenda_items.append("argmin")
+<<<<<<< HEAD
             if token in ["most", "largest", "highest", "longest", "greatest"] and "at most" not in question:
+=======
+            if token in ["most", "largest", "highest", "longest", "greatest"]:
+>>>>>>> pradeeps_fork1/run_action_space_walker
                 # This condition is too brittle. But for most logical forms with "max", there are
                 # semantically equivalent ones with "argmax". The exceptions are rare.
                 if "what is the most" in question:
                     agenda_items.append("max")
                 else:
                     agenda_items.append("argmax")
+<<<<<<< HEAD
             if token in ["first", "top"]:
                 agenda_items.append("first")
             if token == ["last", "bottom"]:
+=======
+            if token == "first":
+                agenda_items.append("first")
+            if token == "last":
+>>>>>>> pradeeps_fork1/run_action_space_walker
                 agenda_items.append("last")
 
         if "how many" in question:
@@ -227,7 +240,11 @@ class WikiTablesVariableFreeWorld(World):
         # Adding all productions that lead to entities and numbers extracted from the question.
         for entity in self._question_entities:
             if entity not in tokens_in_column_names:
+<<<<<<< HEAD
                 agenda.append(f"{types.STRING_TYPE} -> {entity}")
+=======
+                agenda.append(f"{types.STRING_TYPE} -> string:{entity}")
+>>>>>>> pradeeps_fork1/run_action_space_walker
 
         for number in self._question_numbers:
             # The reason we check for the presence of the number in the question again is because

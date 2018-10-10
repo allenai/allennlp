@@ -73,11 +73,7 @@ class WikiTablesVariableFreeExecutor:
     ----------
     table_data : ``List[Dict[str, str]]``
         All the rows in the table on which the executor will be used. The class expects each row to
-        be represented as a dict from column names to corresponding cell values. For now, we assume
-        the cell values and column names to be represented in the SEMPRE's normalized string format
-        (i.e. cells as 'fb:cell.[cell_value]' and columns as 'fb:row.row.[column_name]'). We still
-        rely on `TableQuestionKnowledgeGraph` to do this normalization, but when we have a
-        replaceent for that class, this assumption will change.
+        be represented as a dict from column names to corresponding cell values.
     """
     def __init__(self, table_data: List[Dict[str, str]]) -> None:
         self._table_data = table_data
@@ -122,8 +118,8 @@ class WikiTablesVariableFreeExecutor:
             return float(constant)
         except ValueError:
             # The constant is not a number. Returning as-is if it is a string.
-            if isinstance(constant, str):
-                return constant
+            if constant.startswith("string:"):
+                return constant.replace("string:", "")
             raise ExecutionError(f"Cannot handle constant: {constant}")
 
     @staticmethod
@@ -137,7 +133,9 @@ class WikiTablesVariableFreeExecutor:
         if not row_list:
             return []
         try:
-            cell_row_pairs = [(float(row[column_name].replace('fb:cell.', '')), row) for row in row_list]
+            # Various symbols like commas, dollar signs would have been converted to _. Removing
+            # them for float conversion.
+            cell_row_pairs = [(float(row[column_name].replace('_', '')), row) for row in row_list]
         except ValueError:
             # This means that at least one of the cells is not numerical.
             return []
@@ -153,8 +151,7 @@ class WikiTablesVariableFreeExecutor:
         """
         if not row_list:
             return []
-        cell_row_pairs = [(self._make_date(row[column_name].replace('fb:cell.', '')), row)
-                          for row in row_list]
+        cell_row_pairs = [(self._make_date(row[column_name]), row) for row in row_list]
         return cell_row_pairs
 
     @staticmethod
@@ -181,7 +178,7 @@ class WikiTablesVariableFreeExecutor:
         # month name. Note that this will not consider strings with just years as dates. That's fine
         # because we can compare them as numbers.
         values_are_dates = False
-        cell_value_parts = cell_value.replace('fb:cell.', '').split('_')
+        cell_value_parts = cell_value.split('_')
         # Check if the number of parts in the string are 3 or fewer. If not, it's probably neither a
         # date nor a number.
         if len(cell_value_parts) <= 3:
@@ -534,7 +531,7 @@ class WikiTablesVariableFreeExecutor:
         # for spaces, so we do not need to replace them here.
         result_list = []
         for row in row_list:
-            if filter_value in row[column_name].replace("fb:cell.", ""):
+            if filter_value in row[column_name]:
                 result_list.append(row)
         return result_list
 
@@ -562,7 +559,7 @@ class WikiTablesVariableFreeExecutor:
         # for spaces, so we do not need to replace them here.
         result_list = []
         for row in row_list:
-            if filter_value not in row[column_name].replace("fb:cell.", ""):
+            if filter_value not in row[column_name]:
                 result_list.append(row)
         return result_list
 
@@ -749,8 +746,8 @@ class WikiTablesVariableFreeExecutor:
         first_row = first_row_list[0]
         second_row = second_row_list[0]
         try:
-            first_value = float(first_row[column_name].replace("fb:cell.", ""))
-            second_value = float(second_row[column_name].replace("fb:cell.", ""))
+            first_value = float(first_row[column_name])
+            second_value = float(second_row[column_name])
             return first_value - second_value
         except ValueError:
             raise ExecutionError(f"Invalid column for diff: {column_name}")

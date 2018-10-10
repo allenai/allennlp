@@ -1,6 +1,7 @@
 import re
 import csv
-from typing import Dict, List, Set, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
+from collections import defaultdict
 
 from unidecode import unidecode
 from allennlp.data.tokenizers import Token
@@ -88,14 +89,18 @@ class TableQuestionContext:
         self.column_types = column_types
         self.question_tokens = question_tokens
         self.table_data: List[Dict[str, str]] = []
-        self._cell_values: Set[str] = set()
+        # Mapping from cell values to the types of the columns they are under.
+        cell_values_with_types: Dict[str, List[str]] = defaultdict(list)
         for table_row in table_data:
             self.table_data.append({})
             for column_name, cell_value in table_row.items():
                 column_type = column_types[column_name]
                 typed_column_name = f"{column_type}_column:{column_name}"
                 self.table_data[-1][typed_column_name] = cell_value
-                self._cell_values.add(cell_value)
+                cell_values_with_types[cell_value].append(column_type)
+        # We want the object to raise KeyError when checking if a specific string is a cell in the
+        # table.
+        self._cell_values_with_types = dict(cell_values_with_types)
 
     MAX_TOKENS_FOR_NUM_CELL = 2
 
@@ -118,7 +123,10 @@ class TableQuestionContext:
             index += 1
         column_node_type_info = [{'string' : 0, 'number' : 0, 'date' : 0}
                                  for col in column_index_to_name]
+<<<<<<< HEAD
         cell_values = set()
+=======
+>>>>>>> pradeeps_fork1/run_action_space_walker
         last_row_index = -1
         for current_line in lines[1:]:
             row_index = int(current_line[0])
@@ -131,7 +139,10 @@ class TableQuestionContext:
             cell_value = cls._normalize_string(node_info['content'])
             column_name = column_index_to_name[column_index]
             table_data[-1][column_name] = cell_value
+<<<<<<< HEAD
             cell_values.add(cell_value)
+=======
+>>>>>>> pradeeps_fork1/run_action_space_walker
             num_tokens = len(node_info['tokens'].split('|'))
             if node_info['date']:
                 column_node_type_info[column_index]['date'] += 1
@@ -169,24 +180,20 @@ class TableQuestionContext:
             normalized_token_text = self._normalize_string(token_text)
             if not normalized_token_text:
                 continue
-            if self._string_in_table(normalized_token_text):
-                entity_data.append({'value' : normalized_token_text,
-                                    'token_start' : i, 'token_end' : i+1})
+            token_type_in_table = self._string_type_in_table(normalized_token_text)
+            if token_type_in_table:
+                entity_data.append({'value': normalized_token_text,
+                                    'token_start': i,
+                                    'token_end': i+1,
+                                    'token_type': token_type_in_table})
 
         extracted_numbers = self._get_numbers_from_tokens(self.question_tokens)
-        # filter out number entities to avoid repitition
-        if extracted_numbers:
-            _, number_token_indices = list(zip(*extracted_numbers))
-            number_token_text = [self.question_tokens[i].text for i in number_token_indices]
-            expanded_string_entities = []
-            for entity in entity_data:
-                if entity['value'] not in number_token_text:
-                    expanded_string_entities.append(entity)
-            expanded_entities = [entity['value'] for entity in
-                                 self._expand_entities(self.question_tokens, expanded_string_entities)]
-        else:
-            expanded_entities = [entity['value'] for entity in
-                                 self._expand_entities(self.question_tokens, entity_data)]
+        # filter out number entities to avoid repetition
+        expanded_entities = []
+        for entity in self._expand_entities(self.question_tokens, entity_data):
+            if entity["token_type"] == "string":
+                expanded_entities.append(entity["value"])
+
         return expanded_entities, extracted_numbers  #TODO(shikhar) Handle conjunctions
 
 
@@ -253,11 +260,28 @@ class TableQuestionContext:
                     numbers.append((str(int(number + 10 ** num_zeros)), i))
         return numbers
 
-    def _string_in_table(self, candidate: str) -> bool:
-        for cell_value in self._cell_values:
-            if candidate in cell_value:
-                return True
-        return False
+    def _string_type_in_table(self, candidate: str) -> Optional[str]:
+        """
+        Checks if the string occurs in the table, and if it does, returns the type of the column
+        under which it occurs. If it does not, returns None.
+        """
+        candidate_column_types: List[str] = []
+        # First check if the entire candidate occurs as a cell.
+        if candidate in self._cell_values_with_types:
+            candidate_column_types = self._cell_values_with_types[candidate]
+        # If not, check if it is a substring pf any cell value.
+        if not candidate_column_types:
+            for cell_value, column_types in self._cell_values_with_types.items():
+                if candidate in cell_value:
+                    candidate_column_types = column_types
+                    break
+        if not candidate_column_types:
+            return None
+        candidate_column_types = list(set(candidate_column_types))
+        # Note: if candidate_column_types is now a list with more than one element, it means that
+        # the candidate matched a cell value that occurs under columns with multiple types. This is
+        # unusual, and we are ignoring such cases, and simply returning the first type.
+        return candidate_column_types[0]
 
     def _process_conjunction(self, entity_data):
         raise NotImplementedError
@@ -271,6 +295,7 @@ class TableQuestionContext:
             current_start = entity['token_start']
             current_end = entity['token_end']
             current_token = entity['value']
+            current_token_type = entity['token_type']
 
             while current_end < len(question):
                 next_token = question[current_end].text
@@ -279,7 +304,8 @@ class TableQuestionContext:
                     current_end += 1
                     continue
                 candidate = "%s_%s" %(current_token, next_token_normalized)
-                if self._string_in_table(candidate):
+                candidate_type = self._string_type_in_table(candidate)
+                if candidate_type is not None and candidate_type == current_token_type:
                     current_end += 1
                     current_token = candidate
                 else:
@@ -287,7 +313,8 @@ class TableQuestionContext:
 
             new_entities.append({'token_start' : current_start,
                                  'token_end' : current_end,
-                                 'value' : current_token})
+                                 'value' : current_token,
+                                 'token_type': current_token_type})
         return new_entities
 
     @staticmethod
@@ -324,8 +351,12 @@ class TableQuestionContext:
         string = re.sub("[\\u0220-\\uFFFF]", "", string).strip()
         string = string.replace("\\n", "_")
         string = re.sub("\\s+", " ", string)
-        # Canonicalization rules from Sempre
-        string = re.sub("[^\\w]", "_", string)
+        # Canonicalization rules from Sempre. We changed it to let dots be if there are numbers in
+        # the string, because the dots could be decimal points.
+        if re.match("[0-9]+", string):
+            string = re.sub("[^\\w.]", "_", string)
+        else:
+            string = re.sub("[^\\w]", "_", string)
         string = re.sub("_+", "_", string)
         string = re.sub("_$", "", string)
         return unidecode(string.lower())
