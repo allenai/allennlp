@@ -23,70 +23,80 @@ class TestAtisWorld(AllenNlpTestCase):
     def test_atis_global_actions(self): # pylint: disable=no-self-use
         world = AtisWorld(utterances=[])
         valid_actions = world.valid_actions
-        assert set(valid_actions.keys()) == {'agg',
-                                             'agg_func',
-                                             'agg_results',
-                                             'aircraft_basic_type_string',
-                                             'aircraft_manufacturer_string',
-                                             'airline_airline_code_string',
-                                             'airline_airline_name_string',
-                                             'airport_airport_code_string',
-                                             'biexpr',
-                                             'binaryop',
-                                             'boolean',
-                                             'city_city_code_string',
-                                             'city_city_name_string',
-                                             'city_state_code_string',
-                                             'class_of_service_booking_class_string',
-                                             'col_ref',
-                                             'col_refs',
-                                             'condition',
-                                             'conditions',
-                                             'conj',
-                                             'days_day_name_string',
-                                             'days_days_code_string',
-                                             'distinct',
-                                             'fare_basis_class_type_string',
-                                             'fare_basis_economy_string',
-                                             'fare_basis_fare_basis_code_string',
-                                             'fare_fare_basis_code_string',
-                                             'fare_restriction_code_string',
-                                             'fare_round_trip_cost',
-                                             'fare_one_direction_cost',
-                                             'fare_round_trip_required_string',
-                                             'flight_airline_code_string',
-                                             'flight_flight_days_string',
-                                             'flight_flight_number_string',
-                                             'flight_stop_stop_airport_string',
-                                             'food_service_meal_description_string',
-                                             'ground_service_transport_type_string',
-                                             'in_clause',
-                                             'number',
-                                             'pos_value',
-                                             'query',
-                                             'restriction_restriction_code_string',
-                                             'select_results',
-                                             'state_state_code_string',
-                                             'state_state_name_string',
-                                             'statement',
-                                             'table_name',
-                                             'table_refs',
-                                             'ternaryexpr',
-                                             'time_range_end',
-                                             'time_range_start',
-                                             'value',
-                                             'where_clause'}
-
+        assert set(valid_actions.keys()) == \
+            {'agg',
+             'agg_func',
+             'agg_results',
+             'aircraft_aircraft_code_string',
+             'aircraft_basic_type_string',
+             'aircraft_manufacturer_string',
+             'aircraft_propulsion_string',
+             'airline_airline_code_string',
+             'airline_airline_name_string',
+             'airport_airport_code_string',
+             'airport_airport_name_string',
+             'biexpr',
+             'binaryop',
+             'boolean',
+             'city_city_code_string',
+             'city_city_name_string',
+             'city_state_code_string',
+             'class_of_service_booking_class_string',
+             'class_of_service_class_description_string',
+             'col',
+             'col_ref',
+             'col_refs',
+             'condition',
+             'conditions',
+             'conj',
+             'days_day_name_string',
+             'days_days_code_string',
+             'distinct',
+             'fare_basis_booking_class_string',
+             'fare_basis_class_type_string',
+             'fare_basis_economy_string',
+             'fare_basis_fare_basis_code_string',
+             'fare_fare_basis_code_string',
+             'fare_one_direction_cost',
+             'fare_restriction_code_string',
+             'fare_round_trip_cost',
+             'fare_round_trip_required_string',
+             'flight_airline_code_string',
+             'flight_flight_days_string',
+             'flight_number',
+             'flight_stop_stop_airport_string',
+             'food_service_compartment_string',
+             'food_service_meal_description_string',
+             'ground_service_transport_type_string',
+             'group_by_clause',
+             'in_clause',
+             'number',
+             'pos_value',
+             'query',
+             'restriction_restriction_code_string',
+             'select_results',
+             'state_state_code_string',
+             'state_state_name_string',
+             'statement',
+             'table_name',
+             'table_refs',
+             'ternaryexpr',
+             'time_range_end',
+             'time_range_start',
+             'value',
+             'where_clause'}
         assert set(valid_actions['statement']) == {'statement -> [query, ";"]'}
         assert set(valid_actions['query']) == \
                 {'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
                  'where_clause, ")"]',
+                 'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+                 'where_clause, group_by_clause, ")"]',
                  'query -> ["SELECT", distinct, select_results, "FROM", table_refs, '
                  'where_clause]'}
         assert set(valid_actions['select_results']) == \
                 {'select_results -> [agg]', 'select_results -> [col_refs]'}
         assert set(valid_actions['agg']) == \
-                {'agg -> [agg_func, "(", col_ref, ")"]'}
+                {'agg -> [agg_func, "(", col, ")"]', 'agg -> [agg_func, "(", col_ref, ")"]'}
         assert set(valid_actions['agg_func']) == \
                 {'agg_func -> ["COUNT"]',
                  'agg_func -> ["MAX"]',
@@ -112,32 +122,42 @@ class TestAtisWorld(AllenNlpTestCase):
         assert set(valid_actions['in_clause']) == \
                 {'in_clause -> [col_ref, "IN", query]'}
         assert set(valid_actions['biexpr']) == \
-                {'biexpr -> ["aircraft", ".", "basic_type", binaryop, '
+                {'biexpr -> ["aircraft", ".", "aircraft_code", binaryop, '
+                 'aircraft_aircraft_code_string]',
+                 'biexpr -> ["aircraft", ".", "basic_type", binaryop, '
                  'aircraft_basic_type_string]',
                  'biexpr -> ["aircraft", ".", "manufacturer", binaryop, '
                  'aircraft_manufacturer_string]',
+                 'biexpr -> ["aircraft", ".", "propulsion", binaryop, '
+                 'aircraft_propulsion_string]',
                  'biexpr -> ["airline", ".", "airline_code", binaryop, '
                  'airline_airline_code_string]',
                  'biexpr -> ["airline", ".", "airline_name", binaryop, '
                  'airline_airline_name_string]',
                  'biexpr -> ["airport", ".", "airport_code", binaryop, '
                  'airport_airport_code_string]',
+                 'biexpr -> ["airport", ".", "airport_name", binaryop, '
+                 'airport_airport_name_string]',
                  'biexpr -> ["city", ".", "city_code", binaryop, city_city_code_string]',
                  'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
                  'biexpr -> ["city", ".", "state_code", binaryop, city_state_code_string]',
                  'biexpr -> ["class_of_service", ".", "booking_class", binaryop, '
                  'class_of_service_booking_class_string]',
+                 'biexpr -> ["class_of_service", ".", "class_description", binaryop, '
+                 'class_of_service_class_description_string]',
                  'biexpr -> ["days", ".", "day_name", binaryop, days_day_name_string]',
                  'biexpr -> ["days", ".", "days_code", binaryop, days_days_code_string]',
                  'biexpr -> ["fare", ".", "fare_basis_code", binaryop, '
                  'fare_fare_basis_code_string]',
+                 'biexpr -> ["fare", ".", "one_direction_cost", binaryop, '
+                 'fare_one_direction_cost]',
                  'biexpr -> ["fare", ".", "restriction_code", binaryop, '
                  'fare_restriction_code_string]',
                  'biexpr -> ["fare", ".", "round_trip_cost", binaryop, fare_round_trip_cost]',
-                 'biexpr -> ["fare", ".", "one_direction_cost", binaryop, '
-                 'fare_one_direction_cost]',
                  'biexpr -> ["fare", ".", "round_trip_required", binaryop, '
                  'fare_round_trip_required_string]',
+                 'biexpr -> ["fare_basis", ".", "booking_class", binaryop, '
+                 'fare_basis_booking_class_string]',
                  'biexpr -> ["fare_basis", ".", "class_type", binaryop, '
                  'fare_basis_class_type_string]',
                  'biexpr -> ["fare_basis", ".", "economy", binaryop, '
@@ -148,10 +168,11 @@ class TestAtisWorld(AllenNlpTestCase):
                  'flight_airline_code_string]',
                  'biexpr -> ["flight", ".", "flight_days", binaryop, '
                  'flight_flight_days_string]',
-                 'biexpr -> ["flight", ".", "flight_number", binaryop, '
-                 'flight_flight_number_string]',
+                 'biexpr -> ["flight", ".", "flight_number", binaryop, flight_number]',
                  'biexpr -> ["flight_stop", ".", "stop_airport", binaryop, '
                  'flight_stop_stop_airport_string]',
+                 'biexpr -> ["food_service", ".", "compartment", binaryop, '
+                 'food_service_compartment_string]',
                  'biexpr -> ["food_service", ".", "meal_description", binaryop, '
                  'food_service_meal_description_string]',
                  'biexpr -> ["ground_service", ".", "transport_type", binaryop, '
@@ -200,9 +221,12 @@ class TestAtisWorld(AllenNlpTestCase):
                 {'distinct -> [""]', 'distinct -> ["DISTINCT"]'}
         assert set(valid_actions['number']) == \
                 {'number -> ["0"]',
-                 'number -> ["1"]'}
+                 'number -> ["1"]',
+                 'number -> ["60"]',
+                 'number -> ["41"]'}
         assert set(valid_actions['col_ref']) == \
                 {'col_ref -> ["*"]',
+                 'col_ref -> [agg]',
                  'col_ref -> ["aircraft", ".", "aircraft_code"]',
                  'col_ref -> ["aircraft", ".", "aircraft_description"]',
                  'col_ref -> ["aircraft", ".", "basic_type"]',
