@@ -43,6 +43,25 @@ class TableColumn(NamedTuple):
     column_type: str
     is_primary_key: bool
 
+def column_has_string_type(column: TableColumn) -> bool:
+    if "varchar" in column.column_type:
+        return True
+    elif column.column_type == "text":
+        return True
+    elif column.column_type == "longtext":
+        return True
+
+    return False
+
+def column_has_numeric_type(column: TableColumn) -> bool:
+    if "int" in column.column_type:
+        return True
+    elif "float" in column.column_type:
+        return True
+    elif "double" in column.column_type:
+        return True
+    return False
+
 def replace_variables(sentence: List[str],
                       sentence_variables: Dict[str, str]) -> Tuple[List[str], List[str]]:
     """
