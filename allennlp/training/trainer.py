@@ -1000,15 +1000,15 @@ class Trainer(Registrable):
 
     # Requires custom from_params.
     @classmethod
-    def from_params(cls,
+    def from_params(cls,  # pylint: disable=arguments-differ
                     model: Model,
                     serialization_dir: str,
                     iterator: DataIterator,
                     train_data: Iterable[Instance],
                     validation_data: Optional[Iterable[Instance]],
                     params: Params,
-                    validation_iterator: DataIterator = None) -> 'Trainer':
-
+                    validation_iterator: DataIterator = None) -> 'Trainer':    # type: ignore
+        # pylint: disable=arguments-differ
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
         shuffle = params.pop_bool("shuffle", True)
