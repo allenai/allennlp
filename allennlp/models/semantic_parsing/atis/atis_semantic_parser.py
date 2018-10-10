@@ -14,6 +14,7 @@ from allennlp.models.model import Model
 from allennlp.modules import Attention, Seq2SeqEncoder, TextFieldEmbedder, Embedding
 from allennlp.nn import util
 from allennlp.semparse.worlds import AtisWorld
+from allennlp.semparse.contexts.atis_sql_table_context import NUMERIC_NONTERMINALS 
 from allennlp.semparse.contexts.sql_context_utils import action_sequence_to_sql
 from allennlp.state_machines.states import GrammarBasedState
 from allennlp.state_machines.transition_functions.linking_transition_function import LinkingTransitionFunction
@@ -325,10 +326,9 @@ class AtisSemanticParser(Model):
 
         for batch_index, world in enumerate(worlds):
             types = []
-            numeric_nonterminals = ['number', 'time_range_start', 'time_range_end', 'fare_round_trip_cost', 'fare_one_direction_cost', 'flight_number', 'day_number', 'month_number', 'year_number']
             entities = [('number', entity)
                         if any([entity.startswith(numeric_nonterminal)
-                                for numeric_nonterminal in numeric_nonterminals])
+                                for numeric_nonterminal in NUMERIC_NONTERMINALS])
                         else ('string', entity)
                         for entity in world.entities]
 
@@ -477,8 +477,7 @@ class AtisSemanticParser(Model):
 
         return GrammarStatelet(['statement'],
                                translated_valid_actions,
-                               self.is_nonterminal,
-                               reverse_productions=True)
+                               self.is_nonterminal)
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:

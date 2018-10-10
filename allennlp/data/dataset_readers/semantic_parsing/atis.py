@@ -16,6 +16,7 @@ from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
 from allennlp.semparse.worlds.atis_world import AtisWorld
+from allennlp.semparse.contexts.atis_sql_table_context import NUMERIC_NONTERMINALS
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -170,8 +171,7 @@ class AtisDatasetReader(DatasetReader):
 
     @staticmethod
     def _is_global_rule(nonterminal: str) -> bool:
-        if nonterminal in ['number', 'time_range_start', 'time_range_end', 'fare_round_trip_cost',
-                           'fare_one_direction_cost', 'flight_number', 'day_number', 'month_number', 'year_number']:
+        if nonterminal in NUMERIC_NONTERMINALS:
             return False
         elif nonterminal.endswith('string'):
             return False

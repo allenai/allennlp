@@ -15,6 +15,7 @@ MINS_IN_HOUR = 60
 APPROX_WORDS = ['about', 'around', 'approximately']
 WORDS_PRECEDING_TIME = ['at', 'between', 'to', 'before', 'after']
 
+
 def pm_map_match_to_query_value(match: str):
     if len(match.rstrip('pm')) < 3: # This will match something like ``5pm``.
         if match.startswith('12'):

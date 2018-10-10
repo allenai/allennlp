@@ -74,6 +74,10 @@ GRAMMAR_DICTIONARY['number'] = ['""']
 KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"', '"IN"', '"LIKE"',
             '"IS"', '"BETWEEN"', '"AND"', '"ALL"', '"ANY"', '"NULL"', '"OR"', '"DISTINCT"']
 
+NUMERIC_NONTERMINALS = ['number', 'time_range_start', 'time_range_end',
+                        'fare_round_trip_cost', 'fare_one_direction_cost',
+                        'flight_number', 'day_number', 'month_number', 'year_number']
+
 class AtisSqlTableContext:
     """
     An ``AtisSqlTableContext`` represents the SQL context with a grammar of SQL and the valid actions
