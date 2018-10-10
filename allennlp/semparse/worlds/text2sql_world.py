@@ -1,6 +1,7 @@
 from typing import List, Tuple, Dict
 from copy import deepcopy
 from sqlite3 import Cursor
+import os
 
 from parsimonious import Grammar
 
@@ -11,6 +12,7 @@ from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_data
 from allennlp.semparse.contexts.text2sql_table_context import GRAMMAR_DICTIONARY
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_table_values
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_tables
+from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_global_values
 
 class Text2SqlWorld:
     """
@@ -36,6 +38,7 @@ class Text2SqlWorld:
                  use_prelinked_entities: bool = True) -> None:
         self.cursor = cursor
         self.schema = read_dataset_schema(schema_path)
+        self.dataset_name = os.path.basename(schema_path).split("-")[0]
         self.use_prelinked_entities = use_prelinked_entities
 
         # NOTE: This base dictionary should not be modified.
@@ -67,24 +70,27 @@ class Text2SqlWorld:
 
     def _initialize_grammar_dictionary(self, grammar_dictionary: Dict[str, List[str]]) -> Dict[str, List[str]]:
         # Add all the table and column names to the grammar.
-        if self.schema:
-            update_grammar_with_tables(grammar_dictionary, self.schema)
+        update_grammar_with_tables(grammar_dictionary, self.schema)
 
-            if self.cursor is not None and not self.use_prelinked_entities:
-                # Now if we have strings in the table, we need to be able to
-                # produce them, so we find all of the strings in the tables here
-                # and create production rules from them. We only do this if
-                # we haven't pre-linked entities, because if we have, we don't
-                # need to be able to generate the values - just the placeholder
-                # symbols which link to them.
-                grammar_dictionary["number"] = []
-                grammar_dictionary["string"] = []
+        if self.cursor is not None and not self.use_prelinked_entities:
+            # Now if we have strings in the table, we need to be able to
+            # produce them, so we find all of the strings in the tables here
+            # and create production rules from them. We only do this if
+            # we haven't pre-linked entities, because if we have, we don't
+            # need to be able to generate the values - just the placeholder
+            # symbols which link to them.
+            grammar_dictionary["number"] = []
+            grammar_dictionary["string"] = []
 
-                update_grammar_with_table_values(grammar_dictionary, self.schema, self.cursor)
-            else:
-                # TODO(Mark): The grammar can be tightened here if we don't need to
-                # produce concrete values.
-                pass
+            update_grammar_with_table_values(grammar_dictionary, self.schema, self.cursor)
+        else:
+            # TODO(Mark): The grammar can be tightened here if we don't need to
+            # produce concrete values.
+            pass
+
+        # Finally, update the grammar with global, non-variable values
+        # found in the dataset, if present.
+        update_grammar_with_global_values(grammar_dictionary, self.dataset_name)
 
         return grammar_dictionary
 

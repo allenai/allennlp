@@ -24,11 +24,11 @@ class TestGrammarBasdText2SqlDatasetReader(AllenNlpTestCase):
 
         action_sequence = fields["action_sequence"].field_list
         indices = [x.sequence_index for x in action_sequence]
-        assert indices == [101, 75, 81, 124, 33, 5, 33, 5, 33, 5, 33, 5, 33, 5,
-                           39, 115, 13, 118, 21, 27, 108, 16, 118, 21, 30, 107, 13,
-                           118, 21, 30, 108, 16, 114, 13, 118, 21, 23, 107, 46, 95,
-                           96, 94, 100, 108, 94, 100, 107, 90, 88, 80, 39, 119,
-                           48, 2, 42, 92]
+        assert indices == [101, 75, 81, 125, 33, 5, 33, 5, 33, 5, 33, 5,
+                           33, 5, 39, 115, 13, 119, 21, 27, 108, 16, 119,
+                           21, 30, 107, 13, 119, 21, 30, 108, 16, 114, 13,
+                           119, 21, 23, 107, 46, 95, 96, 94, 100, 108,
+                           94, 100, 107, 90, 88, 80, 39, 120, 48, 2, 42, 92]
 
         action_fields = fields["valid_actions"].field_list
         production_rules = [(x.rule, x.is_global_rule) for x in action_fields]
@@ -146,6 +146,7 @@ class TestGrammarBasdText2SqlDatasetReader(AllenNlpTestCase):
                                     ('unaryop -> ["not"]', True),
                                     ('value -> ["\'city_name0\'"]', True),
                                     ('value -> ["\'name0\'"]', True),
+                                    ('value -> ["2.5"]', True),
                                     ('value -> ["YEAR(CURDATE())"]', True),
                                     ('value -> [boolean]', True),
                                     ('value -> [col_ref]', True),

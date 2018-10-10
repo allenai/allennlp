@@ -25,6 +25,14 @@ class TestText2SqlWorld(AllenNlpTestCase):
                                                      '"RATING"', '"NAME"', '"HOUSE_NUMBER"',
                                                      '"FOOD_TYPE"', '"COUNTY"', '"CITY_NAME"']
 
+    def test_world_modifies_grammar_with_global_values_for_dataset(self):
+        world = Text2SqlWorld(self.schema)
+        grammar_dictionary = world.base_grammar_dictionary
+        # Should have added 2.5 because it is a global value
+        # for the restaurants dataset.
+        assert grammar_dictionary["value"] == ['"2.5"', 'parenval', '"YEAR(CURDATE())"',
+                                               'number', 'boolean', 'function', 'col_ref', 'string']
+
     def test_grammar_from_world_can_parse_statements(self):
         world = Text2SqlWorld(self.schema)
         sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',',
