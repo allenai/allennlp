@@ -1,11 +1,11 @@
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable
 
 from overrides import overrides
 
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import SingleIdTokenIndexer, ELMoTokenCharactersIndexer
+from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.tokenizer import Tokenizer
@@ -63,8 +63,8 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
         # Remove sentences longer than the maximum.
         if self._max_sequence_length is not None:
             sentences_raw = [
-                sentence for sentence in all_sentences_raw
-                if len(self._tokenizer.tokenize(sentence)) <= self._max_sequence_length + 2
+                    sentence for sentence in all_sentences_raw
+                    if len(self._tokenizer.tokenize(sentence)) <= self._max_sequence_length + 2
             ]
         else:
             sentences_raw = all_sentences_raw
