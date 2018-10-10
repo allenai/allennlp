@@ -290,7 +290,8 @@ def train_model(params: Params,
     train_data = all_datasets['train']
     validation_data = all_datasets.get('validation')
     test_data = all_datasets.get('test')
-
+   
+    # There must exist a trainer.
     trainer_params = params.pop("trainer")
     no_grad_regexes = trainer_params.pop("no_grad", ())
     for name, parameter in model.named_parameters():
@@ -306,13 +307,17 @@ def train_model(params: Params,
     for name in tunable_parameter_names:
         logger.info(name)
 
-    trainer = Trainer.from_params(model,
-                                  serialization_dir,
-                                  iterator,
-                                  train_data,
-                                  validation_data,
-                                  trainer_params,
-                                  validation_iterator=validation_iterator)
+    # If the config specifies a trainer subclass, we should use it.
+    trainer_choice = trainer_params.pop_choice("type",
+                                               Trainer.list_available(),
+                                               default_to_first_choice=True)
+    trainer = Trainer.by_name(trainer_choice).from_params(model,
+                                                          serialization_dir,
+                                                          iterator,
+                                                          train_data,
+                                                          validation_data,
+                                                          trainer_params,
+                                                          validation_iterator=validation_iterator)
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
     params.assert_empty('base train command')
