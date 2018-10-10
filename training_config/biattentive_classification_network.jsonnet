@@ -12,6 +12,7 @@
   "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/sst/train.txt",
   "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/sst/dev.txt",
   "test_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/sst/test.txt",
+  "evaluate_on_test": true,
   "model": {
     "type": "bcn",
     "text_field_embedder": {
