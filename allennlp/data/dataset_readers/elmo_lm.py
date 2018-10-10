@@ -1,9 +1,8 @@
 import random
 import glob
+from typing import Dict, Iterable
 
 from overrides import overrides
-
-from typing import Dict, Iterable
 
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField
@@ -41,11 +40,13 @@ class ElmoLMDatasetReader(DatasetReader):
         super().__init__(True)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {
-            "tokens": SingleIdTokenIndexer(),
-            "characters": ELMoTokenCharactersIndexer()
+                "tokens": SingleIdTokenIndexer(),
+                "characters": ELMoTokenCharactersIndexer()
         }
         self._max_sequence_length = max_sequence_length
         self._loop_indefinitely = loop_indefinitely
+        self._all_shards = None
+        self._shards_to_choose = []
 
         print("Creating LMDatasetReader")
         print("max_sequence_length={}".format(max_sequence_length))
@@ -55,14 +56,14 @@ class ElmoLMDatasetReader(DatasetReader):
 
         print('Loading data from {}'.format(next_shard_name))
 
-        with open(next_shard_name) as f:
-            all_sentences_raw = [line for line in f.readlines()]
+        with open(next_shard_name) as shard:
+            all_sentences_raw = [line for line in shard.readlines()]
 
         # Remove sentences longer than the maximum.
         if self._max_sequence_length is not None:
             sentences_raw = [
-                sentence for sentence in all_sentences_raw
-                if len(self._tokenizer.tokenize(sentence)) <= self._max_sequence_length + 2
+                    sentence for sentence in all_sentences_raw
+                    if len(self._tokenizer.tokenize(sentence)) <= self._max_sequence_length + 2
             ]
         else:
             sentences_raw = all_sentences_raw
@@ -75,14 +76,14 @@ class ElmoLMDatasetReader(DatasetReader):
         """Randomly select a file."""
 
         if not self._loop_indefinitely:
-            if len(self._all_shards) == 0:
+            if not self._all_shards:
                 # We've loaded all the data. This will propagate up to _read and stop iterating.
                 shard_name = None
             else:
                 shard_name = self._all_shards.pop()
         else:
             # Just pick a random shard.
-            if len(self._shards_to_choose) == 0:
+            if not self._shards_to_choose:
                 self._shards_to_choose = list(self._all_shards)
                 random.shuffle(self._shards_to_choose)
             shard_name = self._shards_to_choose.pop()
@@ -91,16 +92,17 @@ class ElmoLMDatasetReader(DatasetReader):
 
     @overrides
     def text_to_instance(self, sentence: str) -> Instance:
+        # pylint: disable=arguments-differ
         tokenized = self._tokenizer.tokenize(sentence)
         return_instance = Instance({
-            'source': TextField(tokenized, self._token_indexers),
+                'source': TextField(tokenized, self._token_indexers),
         })
         return return_instance
 
     @overrides
     def _read(self, file_prefix: str) -> Iterable[Instance]:
+        # pylint: disable=arguments-differ
         self._all_shards = glob.glob(file_prefix)
-        self._shards_to_choose = []
 
         while True:
             next_shard_name = self._get_next_shard_name()

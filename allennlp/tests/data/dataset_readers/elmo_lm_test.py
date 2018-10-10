@@ -8,9 +8,7 @@ from allennlp.data.dataset_readers import ElmoLMDatasetReader
 
 
 class TestElmoLMDatasetReader(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
-        self.FIXTURES = self.FIXTURES_ROOT / "elmo_port"
+    FIXTURES = AllenNlpTestCase.FIXTURES_ROOT / "elmo_port"
 
     def test_lm_dataset_text_to_instance(self):
         dataset = ElmoLMDatasetReader()
@@ -25,6 +23,7 @@ class TestElmoLMDatasetReader(AllenNlpTestCase):
         with open(prefix, 'r') as fin:
             sentence = fin.read().strip()
         expected_batch = dataset.text_to_instance(sentence)
+        batch = None
         for batch in dataset.read(prefix):
             break
         self.assertEqual(sorted(list(expected_batch.fields.keys())),
@@ -35,20 +34,23 @@ class TestElmoLMDatasetReader(AllenNlpTestCase):
     def test_lm_dataset_read_shards(self):
         prefix = os.path.join(self.FIXTURES, 'shards/*')
         dataset = ElmoLMDatasetReader(loop_indefinitely=False)
+        k = -1
         for k, _ in enumerate(dataset.read(prefix)):
             pass
         self.assertEqual(k, 999)
 
-    def test_lm_dataset_read_shards_max_sequence_length(self):
+    def test_max_sequence_length(self):
         prefix = os.path.join(self.FIXTURES, 'shards/*')
         dataset = ElmoLMDatasetReader(loop_indefinitely=False, max_sequence_length=10)
+        k = -1
         for k, _ in enumerate(dataset.read(prefix)):
             pass
         self.assertEqual(k, 148)
 
-    def test_lm_dataset_read_shards_loops_indefinitely(self):
+    def test_loops_indefinitely(self):
         prefix = os.path.join(self.FIXTURES, 'shards/*')
         dataset = ElmoLMDatasetReader(loop_indefinitely=True)
+        k = -1
         for k, _ in enumerate(dataset.read(prefix)):
             if k == 1000:
                 break
