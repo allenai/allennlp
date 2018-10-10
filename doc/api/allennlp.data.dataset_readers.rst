@@ -14,6 +14,7 @@ allennlp.data.dataset_readers
   allennlp.data.dataset_readers.conll2000
   allennlp.data.dataset_readers.conll2003
   allennlp.data.dataset_readers.coreference_resolution
+  allennlp.data.dataset_readers.elmo_lm
   allennlp.data.dataset_readers.event2mind
   allennlp.data.dataset_readers.language_modeling
   allennlp.data.dataset_readers.multiprocess_dataset_reader
