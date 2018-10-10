@@ -4,14 +4,14 @@ from typing import cast
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.fields import TextField
 
-from allennlp.data.dataset_readers import ElmoLMDatasetReader
+from allennlp.data.dataset_readers import SimpleLanguageModelingDatasetReader
 
 
-class TestElmoLMDatasetReader(AllenNlpTestCase):
+class TestSimpleLanguageModelingDatasetReader(AllenNlpTestCase):
     FIXTURES = AllenNlpTestCase.FIXTURES_ROOT / "elmo_port"
 
     def test_lm_dataset_text_to_instance(self):
-        dataset = ElmoLMDatasetReader()
+        dataset = SimpleLanguageModelingDatasetReader()
 
         instance = dataset.text_to_instance('The only sentence.')
         text = [t.text for t in cast(TextField, instance.fields["source"]).tokens]
@@ -19,7 +19,7 @@ class TestElmoLMDatasetReader(AllenNlpTestCase):
 
     def test_lm_dataset_read(self):
         prefix = os.path.join(self.FIXTURES, 'single_sentence.txt')
-        dataset = ElmoLMDatasetReader()
+        dataset = SimpleLanguageModelingDatasetReader()
         with open(prefix, 'r') as fin:
             sentence = fin.read().strip()
         expected_batch = dataset.text_to_instance(sentence)
@@ -33,7 +33,7 @@ class TestElmoLMDatasetReader(AllenNlpTestCase):
 
     def test_lm_dataset_read_shards(self):
         prefix = os.path.join(self.FIXTURES, 'shards/*')
-        dataset = ElmoLMDatasetReader(loop_indefinitely=False)
+        dataset = SimpleLanguageModelingDatasetReader(loop_indefinitely=False)
         k = -1
         for k, _ in enumerate(dataset.read(prefix)):
             pass
@@ -41,7 +41,7 @@ class TestElmoLMDatasetReader(AllenNlpTestCase):
 
     def test_max_sequence_length(self):
         prefix = os.path.join(self.FIXTURES, 'shards/*')
-        dataset = ElmoLMDatasetReader(loop_indefinitely=False, max_sequence_length=10)
+        dataset = SimpleLanguageModelingDatasetReader(loop_indefinitely=False, max_sequence_length=10)
         k = -1
         for k, _ in enumerate(dataset.read(prefix)):
             pass
@@ -49,7 +49,7 @@ class TestElmoLMDatasetReader(AllenNlpTestCase):
 
     def test_loops_indefinitely(self):
         prefix = os.path.join(self.FIXTURES, 'shards/*')
-        dataset = ElmoLMDatasetReader(loop_indefinitely=True)
+        dataset = SimpleLanguageModelingDatasetReader(loop_indefinitely=True)
         k = -1
         for k, _ in enumerate(dataset.read(prefix)):
             if k == 1000:
