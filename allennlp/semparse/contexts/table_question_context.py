@@ -256,7 +256,7 @@ class TableQuestionContext:
         Checks if the string occurs in the table, and if it does, returns the type of the column
         under which it occurs. If it does not, returns None.
         """
-        candidate_column_types = []
+        candidate_column_types: List[str] = []
         # First check if the entire candidate occurs as a cell.
         if candidate in self._cell_values_with_types:
             candidate_column_types = self._cell_values_with_types[candidate]
