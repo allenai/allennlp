@@ -12,8 +12,8 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer, ELMoTokenCharacte
 from allennlp.data.tokenizers import WordTokenizer
 
 
-@DatasetReader.register("lm_dataset_reader")
-class LMDatasetReader(DatasetReader):
+@DatasetReader.register("elmo_lm_dataset_reader")
+class ElmoLMDatasetReader(DatasetReader):
     """
     Reads sentences, one per line, from sharded files for language modeling.
 

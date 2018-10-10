@@ -4,16 +4,16 @@ from typing import cast
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.fields import TextField
 
-from allennlp.data.dataset_readers.elmo_lm import LMDatasetReader
+from allennlp.data.dataset_readers.elmo_lm import ElmoLMDatasetReader
 
 
-class TestLMDatasetReader(AllenNlpTestCase):
+class TestElmoLMDatasetReader(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.FIXTURES = self.FIXTURES_ROOT / "elmo_port"
 
     def test_lm_dataset_text_to_instance(self):
-        dataset = LMDatasetReader()
+        dataset = ElmoLMDatasetReader()
 
         instance = dataset.text_to_instance('The only sentence.')
         text = [t.text for t in cast(TextField, instance.fields["source"]).tokens]
@@ -21,7 +21,7 @@ class TestLMDatasetReader(AllenNlpTestCase):
 
     def test_lm_dataset_read(self):
         prefix = os.path.join(self.FIXTURES, 'single_sentence.txt')
-        dataset = LMDatasetReader()
+        dataset = ElmoLMDatasetReader()
         with open(prefix, 'r') as fin:
             sentence = fin.read().strip()
         expected_batch = dataset.text_to_instance(sentence)
@@ -34,21 +34,21 @@ class TestLMDatasetReader(AllenNlpTestCase):
 
     def test_lm_dataset_read_shards(self):
         prefix = os.path.join(self.FIXTURES, 'shards/*')
-        dataset = LMDatasetReader(loop_indefinitely=False)
+        dataset = ElmoLMDatasetReader(loop_indefinitely=False)
         for k, _ in enumerate(dataset.read(prefix)):
             pass
         self.assertEqual(k, 999)
 
     def test_lm_dataset_read_shards_max_sequence_length(self):
         prefix = os.path.join(self.FIXTURES, 'shards/*')
-        dataset = LMDatasetReader(loop_indefinitely=False, max_sequence_length=10)
+        dataset = ElmoLMDatasetReader(loop_indefinitely=False, max_sequence_length=10)
         for k, _ in enumerate(dataset.read(prefix)):
             pass
         self.assertEqual(k, 148)
 
     def test_lm_dataset_read_shards_loops_indefinitely(self):
         prefix = os.path.join(self.FIXTURES, 'shards/*')
-        dataset = LMDatasetReader(loop_indefinitely=True)
+        dataset = ElmoLMDatasetReader(loop_indefinitely=True)
         for k, _ in enumerate(dataset.read(prefix)):
             if k == 1000:
                 break
