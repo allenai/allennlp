@@ -1007,7 +1007,7 @@ class Trainer(Registrable):
                     train_data: Iterable[Instance],
                     validation_data: Optional[Iterable[Instance]],
                     params: Params,
-                    validation_iterator: DataIterator = None) -> 'Trainer':    # type: ignore
+                    validation_iterator: DataIterator = None) -> 'Trainer':  # type: ignore
         # pylint: disable=arguments-differ
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
