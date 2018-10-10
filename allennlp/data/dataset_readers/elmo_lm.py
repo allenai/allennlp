@@ -7,9 +7,11 @@ from typing import Dict, Iterable
 
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField
-from allennlp.data import Instance, Tokenizer, TokenIndexer
+from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, ELMoTokenCharactersIndexer
+from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers.tokenizer import Tokenizer
 
 
 @DatasetReader.register("elmo_lm_dataset_reader")
