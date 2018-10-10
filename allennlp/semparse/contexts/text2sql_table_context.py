@@ -137,3 +137,28 @@ def update_grammar_with_global_values(grammar_dictionary: Dict[str, List[str]], 
     values = GLOBAL_DATASET_VALUES.get(dataset_name, [])
     values_for_grammar = [f'"{str(value)}"' for value in values]
     grammar_dictionary["value"] = values_for_grammar + grammar_dictionary["value"]
+
+
+def update_grammar_to_be_variable_free(grammar_dictionary: Dict[str, List[str]]):
+    """
+    SQL is a predominately variable free language in terms of simple usage, in the
+    sense that most queries do not create references to variables which are not
+    already static tables in a dataset. However, it is possible to do this via
+    derived tables. If we don't require this functionality, we can tighten the
+    grammar, because we don't need to support aliased tables.
+    """
+
+    # Tables in variable free grammars cannot be aliased, so we
+    # remove this functionality from the grammar.
+    grammar_dictionary["select_result"] = ['sel_res_all_star', 'sel_res_tab_star', 'expr']
+    del grammar_dictionary['sel_res_val']
+    del grammar_dictionary['sel_res_col']
+
+    # Similarly, collapse the definition of a source table
+    # to not contain aliases and modify references to subqueries.
+    grammar_dictionary["single_source"] = ['table_name', '("(" ws query ws ")")']
+    del grammar_dictionary["source_subq"]
+    del grammar_dictionary["source_table"]
+
+    grammar_dictionary["expr"] = ['in_expr', 'like_expr', 'between_expr', 'binary_expr',
+                                  'unary_expr', 'null_check_expr', '("(" ws query ws ")")', 'value']
