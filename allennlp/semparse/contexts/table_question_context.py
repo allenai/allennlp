@@ -88,15 +88,12 @@ class TableQuestionContext:
         self.table_data = table_data
         self.column_types = column_types
         self.question_tokens = question_tokens
-        self.table_data: List[Dict[str, str]] = []
         # Mapping from cell values to the types of the columns they are under.
         cell_values_with_types: Dict[str, List[str]] = defaultdict(list)
         for table_row in table_data:
-            self.table_data.append({})
             for column_name, cell_value in table_row.items():
-                column_type = column_types[column_name]
-                typed_column_name = f"{column_type}_column:{column_name}"
-                self.table_data[-1][typed_column_name] = cell_value
+                # "string_column:name" -> "string"
+                column_type = column_name.split(":")[0].replace("_column", "")
                 cell_values_with_types[cell_value].append(column_type)
         # We want the object to raise KeyError when checking if a specific string is a cell in the
         # table.
@@ -154,7 +151,15 @@ class TableQuestionContext:
                 column_types[column_name] = "date"
             else:
                 column_types[column_name] = "number"
-        return cls(table_data, column_types, question_tokens)
+        # Now that we determined the column types, let us prefix the column names with those.
+        table_data_with_column_types: List[Dict[str, str]] = []
+        for table_row in table_data:
+            table_data_with_column_types.append({})
+            for column_name, cell_value in table_row.items():
+                column_type = column_types[column_name]
+                typed_column_name = f"{column_type}_column:{column_name}"
+                table_data_with_column_types[-1][typed_column_name] = cell_value
+        return cls(table_data_with_column_types, column_types, question_tokens)
 
     @classmethod
     def read_from_file(cls, filename: str, question_tokens: List[Token]) -> 'TableQuestionContext':
