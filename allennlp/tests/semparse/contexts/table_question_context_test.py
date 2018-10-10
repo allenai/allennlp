@@ -15,7 +15,20 @@ class TestTableQuestionContext(AllenNlpTestCase):
         question_tokens = self.tokenizer.tokenize(question)
         test_file = f'{self.FIXTURES_ROOT}/data/wikitables/sample_table.tagged'
         table_question_context = TableQuestionContext.read_from_file(test_file, question_tokens)
-        print(table_question_context.table_data)
+        assert table_question_context.table_data == [{'date_column:year': '2001',
+                                                      'number_column:division': '2',
+                                                      'string_column:league': 'usl_a_league',
+                                                      'string_column:regular_season': '4th_western',
+                                                      'string_column:playoffs': 'quarterfinals',
+                                                      'string_column:open_cup': 'did_not_qualify',
+                                                      'number_column:avg_attendance': '7_169'},
+                                                     {'date_column:year': '2005',
+                                                      'number_column:division': '2',
+                                                      'string_column:league': 'usl_first_division',
+                                                      'string_column:regular_season': '5th',
+                                                      'string_column:playoffs': 'quarterfinals',
+                                                      'string_column:open_cup': '4th_round',
+                                                      'number_column:avg_attendance': '6_028'}]
 
     def test_number_extraction(self):
         question = """how many players on the 191617 illinois fighting illini men's basketball team
@@ -108,3 +121,12 @@ class TestTableQuestionContext(AllenNlpTestCase):
         assert predicted_types["advocate"] == "string"
         assert predicted_types["notability"] == "string"
         assert predicted_types["name"] == "string"
+
+    def test_number_and_entity_extraction(self):
+        question = "other than m1 how many notations have 1 in them?"
+        question_tokens = self.tokenizer.tokenize(question)
+        test_file = f"{self.FIXTURES_ROOT}/data/corenlp_processed_tables/TEST-11.table"
+        table_question_context = TableQuestionContext.read_from_file(test_file, question_tokens)
+        string_entities, number_entities = table_question_context.get_entities_from_question()
+        assert string_entities == ["m1"]
+        assert number_entities == [("1", 2), ("1", 7)]
