@@ -19,6 +19,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
+from allennlp.data.dataset_readers.semantic_parsing.wikitables import util
 from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
 from allennlp.semparse.type_declarations import wikitables_lambda_dcs as wt_types
 from allennlp.semparse.worlds import WikiTablesWorld
@@ -176,7 +177,7 @@ class WikiTablesDatasetReader(DatasetReader):
                 if not line:
                     continue
                 num_lines += 1
-                parsed_info = self._parse_example_line(line)
+                parsed_info = util.parse_example_line(line)
                 question = parsed_info["question"]
                 # We want the TSV file, but the ``*.examples`` files typically point to CSV.
                 table_filename = os.path.join(self._tables_directory,
@@ -409,25 +410,6 @@ class WikiTablesDatasetReader(DatasetReader):
     @staticmethod
     def _read_tokens_from_json_list(json_list) -> List[Token]:
         return [Token(text=json_obj['text'], lemma=json_obj['lemma']) for json_obj in json_list]
-
-    @staticmethod
-    def _parse_example_line(lisp_string: str) -> Dict[str, str]:
-        """
-        Training data in WikitableQuestions comes with examples in the form of lisp strings in the format:
-            (example (id <example-id>)
-                     (utterance <question>)
-                     (context (graph tables.TableKnowledgeGraph <table-filename>))
-                     (targetValue (list (description <answer1>) (description <answer2>) ...)))
-
-        We parse such strings and return the parsed information here.  We don't actually use the
-        target value right now, because we use a pre-computed set of logical forms.  So we don't
-        bother parsing it; we can change that if we ever need to.
-        """
-        id_piece, rest = lisp_string.split(') (utterance "')
-        example_id = id_piece.split('(id ')[1]
-        question, rest = rest.split('") (context (graph tables.TableKnowledgeGraph ')
-        table_filename, rest = rest.split(')) (targetValue (list')
-        return {'id': example_id, 'question': question, 'table_filename': table_filename}
 
     @staticmethod
     def _should_keep_logical_form(logical_form: str) -> bool:

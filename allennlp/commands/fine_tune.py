@@ -195,6 +195,12 @@ def fine_tune_model(model: Model,
 
     iterator = DataIterator.from_params(params.pop("iterator"))
     iterator.index_with(model.vocab)
+    validation_iterator_params = params.pop("validation_iterator", None)
+    if validation_iterator_params:
+        validation_iterator = DataIterator.from_params(validation_iterator_params)
+        validation_iterator.index_with(vocab)
+    else:
+        validation_iterator = None
 
     train_data = all_datasets['train']
     validation_data = all_datasets.get('validation')
@@ -215,12 +221,16 @@ def fine_tune_model(model: Model,
     for name in tunable_parameter_names:
         logger.info(name)
 
-    trainer = Trainer.from_params(model,
-                                  serialization_dir,
-                                  iterator,
-                                  train_data,
-                                  validation_data,
-                                  trainer_params)
+    trainer_choice = trainer_params.pop_choice("type",
+                                               Trainer.list_available(),
+                                               default_to_first_choice=True)
+    trainer = Trainer.by_name(trainer_choice).from_params(model=model,
+                                                          serialization_dir=serialization_dir,
+                                                          iterator=iterator,
+                                                          train_data=train_data,
+                                                          validation_data=validation_data,
+                                                          params=trainer_params,
+                                                          validation_iterator=validation_iterator)
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
     params.assert_empty('base train command')
