@@ -3,45 +3,60 @@ import glob
 
 from overrides import overrides
 
-from typing import Dict, List, Iterable
+from typing import Dict, Iterable
 
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField
-from allennlp.data import Instance, Token, Tokenizer, TokenIndexer
+from allennlp.data import Instance, Tokenizer, TokenIndexer
 from allennlp.data.token_indexers import SingleIdTokenIndexer, ELMoTokenCharactersIndexer
 from allennlp.data.tokenizers import WordTokenizer
-from allennlp.data.vocabulary import DEFAULT_PADDING_TOKEN
 
 
 @DatasetReader.register("lm_dataset_reader")
 class LMDatasetReader(DatasetReader):
+    """
+    Reads sentences, one per line, from sharded files for language modeling.
+
+    Parameters
+    ----------
+    tokenizer : ``Tokenizer``, optional
+        Tokenizer to use to split the input sentences into words or other kinds of tokens. Defaults
+        to ``WordTokenizer()``.
+    token_indexers : ``Dict[str, TokenIndexer]``, optional
+        Indexers used to define input token representations. Defaults to
+        ``{"tokens": SingleIdTokenIndexer(), "characters": ELMoTokenCharactersIndexer()}``.
+    max_sequence_length: ``int``, optional
+        If specified sentences with more than this number of tokens will be dropped.
+    loop_indefinitely: ``bool``, optional
+        Whether to re-read the shards indefinitely. Defaults to true.
+    """
     def __init__(self,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
-                 max_sequence_length = None,
-                 test = False,
-                 queue = None):
+                 max_sequence_length: int = None,
+                 loop_indefinitely: bool = True) -> None:
+        # Always lazy to handle looping indefinitely.
         super().__init__(True)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {
             "tokens": SingleIdTokenIndexer(),
             "characters": ELMoTokenCharactersIndexer()
         }
-        self._test = test
-        self._queue = queue
-
         self._max_sequence_length = max_sequence_length
+        self._loop_indefinitely = loop_indefinitely
 
         print("Creating LMDatasetReader")
         print("max_sequence_length={}".format(max_sequence_length))
 
-    def _load_shard(self, next_shard_name):
+    def _load_shard(self, next_shard_name: str) -> Iterable[Instance]:
+        """Iterate over the instances in the given shard."""
+
         print('Loading data from {}'.format(next_shard_name))
 
         with open(next_shard_name) as f:
             all_sentences_raw = [line for line in f.readlines()]
 
-        # remove sentences longer than the maximum
+        # Remove sentences longer than the maximum.
         if self._max_sequence_length is not None:
             sentences_raw = [
                 sentence for sentence in all_sentences_raw
@@ -54,22 +69,17 @@ class LMDatasetReader(DatasetReader):
             yield self.text_to_instance(sentence)
 
 
-    def _get_next_shard_name(self):
+    def _get_next_shard_name(self) -> str:
         """Randomly select a file."""
-        if self._queue is not None:
-            # just get the next shard from the queue
-            return self._queue.get()
 
-        if self._test:
+        if not self._loop_indefinitely:
             if len(self._all_shards) == 0:
-                # we've loaded all the data
-                # this will propogate up to the generator in get_batch
-                # and stop iterating
+                # We've loaded all the data. This will propagate up to _read and stop iterating.
                 shard_name = None
             else:
                 shard_name = self._all_shards.pop()
         else:
-            # just pick a random shard
+            # Just pick a random shard.
             if len(self._shards_to_choose) == 0:
                 self._shards_to_choose = list(self._all_shards)
                 random.shuffle(self._shards_to_choose)
@@ -86,7 +96,7 @@ class LMDatasetReader(DatasetReader):
         return return_instance
 
     @overrides
-    def _read(self, file_prefix):
+    def _read(self, file_prefix: str) -> Iterable[Instance]:
         self._all_shards = glob.glob(file_prefix)
         self._shards_to_choose = []
 

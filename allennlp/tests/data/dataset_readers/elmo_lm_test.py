@@ -1,15 +1,11 @@
-
 import os
 from typing import cast
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Instance
 from allennlp.data.fields import TextField
 
 from allennlp.data.dataset_readers.elmo_lm import LMDatasetReader
 
-def get_text(key: str, instance: Instance):
-    return [t.text for t in cast(TextField, instance.fields[key]).tokens]
 
 class TestLMDatasetReader(AllenNlpTestCase):
     def setUp(self):
@@ -19,8 +15,9 @@ class TestLMDatasetReader(AllenNlpTestCase):
     def test_lm_dataset_text_to_instance(self):
         dataset = LMDatasetReader()
 
-        instance = dataset.text_to_instance('The only sentence')
-        self.assertTrue(get_text('source', instance) == ["The", "only", "sentence"])
+        instance = dataset.text_to_instance('The only sentence.')
+        text = [t.text for t in cast(TextField, instance.fields["source"]).tokens]
+        self.assertEqual(text, ["The", "only", "sentence", "."])
 
     def test_lm_dataset_read(self):
         prefix = os.path.join(self.FIXTURES, 'single_sentence.txt')
@@ -37,14 +34,23 @@ class TestLMDatasetReader(AllenNlpTestCase):
 
     def test_lm_dataset_read_shards(self):
         prefix = os.path.join(self.FIXTURES, 'shards/*')
-        dataset = LMDatasetReader()
+        dataset = LMDatasetReader(loop_indefinitely=False)
         for k, _ in enumerate(dataset.read(prefix)):
             pass
-        self.assertTrue(True)
+        self.assertEqual(k, 999)
 
-    def test_lm_dataset_read_shards_test(self):
+    def test_lm_dataset_read_shards_max_sequence_length(self):
         prefix = os.path.join(self.FIXTURES, 'shards/*')
-        dataset = LMDatasetReader(test=True)
-        for _ in dataset.read(prefix):
+        dataset = LMDatasetReader(loop_indefinitely=False, max_sequence_length=10)
+        for k, _ in enumerate(dataset.read(prefix)):
             pass
-        self.assertTrue(True)
+        self.assertEqual(k, 148)
+
+    def test_lm_dataset_read_shards_loops_indefinitely(self):
+        prefix = os.path.join(self.FIXTURES, 'shards/*')
+        dataset = LMDatasetReader(loop_indefinitely=True)
+        for k, _ in enumerate(dataset.read(prefix)):
+            if k == 1000:
+                break
+        # There are 1000 instances in the fixture shards. We'd like to verify we loop at least once.
+        self.assertTrue(k > 999)
