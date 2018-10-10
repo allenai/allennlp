@@ -13,6 +13,7 @@ from allennlp.semparse.contexts.text2sql_table_context import GRAMMAR_DICTIONARY
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_table_values
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_tables
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_global_values
+from allennlp.semparse.contexts.text2sql_table_context import update_grammar_to_be_variable_free
 
 class Text2SqlWorld:
     """
@@ -31,15 +32,21 @@ class Text2SqlWorld:
         Whether or not to use the pre-linked entities from the text2sql data.
         We take this parameter here because it effects whether we need to add
         table values to the grammar.
+    variable_free : ``bool``, optional (default = True)
+        Denotes whether the data being parsed by the grammar is variable free.
+        If it is, the grammar is modified to be less expressive by removing
+        elements which are not necessary if the data is variable free.
     """
     def __init__(self,
                  schema_path: str,
                  cursor: Cursor = None,
-                 use_prelinked_entities: bool = True) -> None:
+                 use_prelinked_entities: bool = True,
+                 variable_free: bool = True) -> None:
         self.cursor = cursor
         self.schema = read_dataset_schema(schema_path)
         self.dataset_name = os.path.basename(schema_path).split("-")[0]
         self.use_prelinked_entities = use_prelinked_entities
+        self.variable_free = variable_free
 
         # NOTE: This base dictionary should not be modified.
         self.base_grammar_dictionary = self._initialize_grammar_dictionary(deepcopy(GRAMMAR_DICTIONARY))
@@ -91,6 +98,9 @@ class Text2SqlWorld:
         # Finally, update the grammar with global, non-variable values
         # found in the dataset, if present.
         update_grammar_with_global_values(grammar_dictionary, self.dataset_name)
+
+        if self.variable_free:
+            update_grammar_to_be_variable_free(grammar_dictionary)
 
         return grammar_dictionary
 
