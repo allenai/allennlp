@@ -113,7 +113,9 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
 
         # The question does not produce any strings. It produces just a number.
         check_productions_match(valid_actions['s'],
-                                ['[<r,<g,s>>, r, g]'])
+                                ['[<r,<g,s>>, r, m]',
+                                 '[<r,<g,s>>, r, f]',
+                                 '[<r,<g,s>>, r, t]'])
 
         check_productions_match(valid_actions['d'],
                                 ['[<n,<n,<n,d>>>, n, n, n]'])
@@ -128,8 +130,11 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         check_productions_match(valid_actions['r'],
                                 ['all_rows',
                                  '[<r,<m,<d,r>>>, r, m, d]',
-                                 '[<r,<g,r>>, r, g]',
-                                 '[<r,<c,r>>, r, c]',
+                                 '[<r,<g,r>>, r, m]',
+                                 '[<r,<g,r>>, r, f]',
+                                 '[<r,<g,r>>, r, t]',
+                                 '[<r,<c,r>>, r, m]',
+                                 '[<r,<c,r>>, r, f]',
                                  '[<r,<f,<n,r>>>, r, f, n]',
                                  '[<r,<t,<s,r>>>, r, t, s]',
                                  '[<r,r>, r]'])
