@@ -1,5 +1,5 @@
-allennlp.models.semantic_parsing.atis
-===========================================
+allennlp.models.semantic_parsing.quarel
+=======================================
 
 .. automodule:: allennlp.models.semantic_parsing.quarel
    :members:
