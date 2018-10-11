@@ -135,7 +135,7 @@ class AtisSqlTableContext:
             for table, columns in self.all_tables.items():
                 grammar_dictionary['col_ref'].extend([f'("{table}" ws "." ws "{column}")'
                                                       for column in columns])
-                all_columns.extend(columns) 
+                all_columns.extend(columns)
             grammar_dictionary['col_ref'] = sorted(grammar_dictionary['col_ref'], reverse=True)
             grammar_dictionary['col'] = sorted([f'"{column}"' for column in all_columns], reverse=True)
 
@@ -147,6 +147,8 @@ class AtisSqlTableContext:
                 for column in columns:
                     self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
                     results = self.cursor.fetchall()
+
+                    # Almost all the query values are in the database, we hardcode the rare case here.
                     if table == 'flight' and column == 'airline_code':
                         results.append(('EA',))
                     strings_list.extend([(format_action(f"{table}_{column}_string",

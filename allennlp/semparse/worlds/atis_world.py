@@ -23,9 +23,9 @@ def get_strings_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, Li
         for string in ATIS_TRIGGER_DICT.get(token.text.lower(), []):
             string_linking_scores[string].append(index)
 
-    bigrams = ngrams([token.text for token in tokenized_utterance], 2)
-    for index, bigram in enumerate(bigrams):
-        for string in ATIS_TRIGGER_DICT.get(' '.join(bigram).lower(), []):
+    token_bigrams = bigrams([token.text for token in tokenized_utterance])
+    for index, token_bigram in enumerate(token_bigrams):
+        for string in ATIS_TRIGGER_DICT.get(' '.join(token_bigram).lower(), []):
             string_linking_scores[string].extend([index,
                                                   index + 1])
 
@@ -101,7 +101,7 @@ class AtisWorld():
                                     'flight_number']:
             self._add_numeric_nonterminal_to_grammar(numeric_nonterminal, new_grammar)
         self._update_expression_reference(new_grammar, 'pos_value', 'number')
-       
+
         ternary_expressions = [self._get_sequence_with_spacing(new_grammar,
                                                                [new_grammar['col_ref'],
                                                                 Literal('BETWEEN'),
@@ -197,7 +197,7 @@ class AtisWorld():
                                      nonterminal: str) -> List[str]:
         return sorted([value[1] for key, value in self.linked_entities['number'].items()
                        if value[0] == nonterminal], reverse=True)
-    
+
     def _add_numeric_nonterminal_to_grammar(self,
                                             nonterminal: str,
                                             new_grammar: Grammar) -> None:
@@ -235,8 +235,8 @@ class AtisWorld():
         return self.valid_actions
 
     def add_dates_to_number_linking_scores(self,
-            number_linking_scores: Dict[str, Tuple[str, str, List[int]]],
-            current_tokenized_utterance: List[Token]) -> None:
+                                           number_linking_scores: Dict[str, Tuple[str, str, List[int]]],
+                                           current_tokenized_utterance: List[Token]) -> None:
 
         month_reverse_lookup = {str(number): string for string, number in MONTH_NUMBERS.items()}
         day_reverse_lookup = {str(number) : string for string, number in DAY_NUMBERS.items()}
@@ -248,7 +248,10 @@ class AtisWorld():
                 for token_index, token in enumerate(current_tokenized_utterance):
                     if token.text == str(date.year):
                         entity_linking[token_index] = 1
-                action = format_action(nonterminal='year_number', right_hand_side=str(date.year), is_number=True, keywords_to_uppercase=KEYWORDS)
+                action = format_action(nonterminal='year_number',
+                                       right_hand_side=str(date.year),
+                                       is_number=True,
+                                       keywords_to_uppercase=KEYWORDS)
                 number_linking_scores[action] = ('year_number', str(date.year), entity_linking)
 
 
@@ -256,18 +259,26 @@ class AtisWorld():
                 for token_index, token in enumerate(current_tokenized_utterance):
                     if token.text == month_reverse_lookup[str(date.month)]:
                         entity_linking[token_index] = 1
-                action = format_action(nonterminal='month_number', right_hand_side=str(date.month), is_number=True, keywords_to_uppercase=KEYWORDS)
+                action = format_action(nonterminal='month_number',
+                                       right_hand_side=str(date.month),
+                                       is_number=True,
+                                       keywords_to_uppercase=KEYWORDS)
+
                 number_linking_scores[action] = ('month_number', str(date.month), entity_linking)
 
                 entity_linking = [0 for token in current_tokenized_utterance]
                 for token_index, token in enumerate(current_tokenized_utterance):
                     if token.text == day_reverse_lookup[str(date.day)]:
                         entity_linking[token_index] = 1
-                for bigram_index, bigram in enumerate(bigrams([token.text for token in current_tokenized_utterance])):
+                for bigram_index, bigram in enumerate(bigrams([token.text
+                                                               for token in current_tokenized_utterance])):
                     if ' '.join(bigram) == day_reverse_lookup[str(date.day)]:
                         entity_linking[bigram_index] = 1
                         entity_linking[bigram_index + 1] = 1
-                action = format_action(nonterminal='day_number', right_hand_side=str(date.day), is_number=True, keywords_to_uppercase=KEYWORDS)
+                action = format_action(nonterminal='day_number',
+                                       right_hand_side=str(date.day),
+                                       is_number=True,
+                                       keywords_to_uppercase=KEYWORDS)
                 number_linking_scores[action] = ('day_number', str(date.day), entity_linking)
 
     def add_to_number_linking_scores(self,
@@ -393,11 +404,11 @@ class AtisWorld():
 
         if self.dates:
             for token_index, token in enumerate(tokens):
-                if token_index - 2 in year_indices:
+                if token_index - 2 in year_indices and token.isdigit():
                     tokens[token_index] = str(self.dates[0].year)
-                if token_index - 2 in month_indices:
+                if token_index - 2 in month_indices and token.isdigit():
                     tokens[token_index] = str(self.dates[0].month)
-                if token_index - 2 in day_indices:
+                if token_index - 2 in day_indices and token.isdigit():
                     tokens[token_index] = str(self.dates[0].day)
         return ' '.join(tokens)
 

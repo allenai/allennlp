@@ -192,14 +192,9 @@ class SqlVisitor(NodeVisitor):
 
     @overrides
     def visit(self, node):
-        """Walk a parse tree, transforming it into another representation.
-        Recursively descend a parse tree, dispatching to the method named after
-        the rule in the :class:`~parsimonious.grammar.Grammar` that produced
-        each node. If, for example, a rule was... ::
-            bold = '<b>'
-        ...the ``visit_bold()`` method would be called. It is your
-        responsibility to subclass :class:`NodeVisitor` and implement those
-        methods.
+        """
+        See the ``NodeVisitor`` visit method. This just changes the order in which
+        we visit nonterminals from right to left to left to right.
         """
         method = getattr(self, 'visit_' + node.expr_name, self.generic_visit)
 
@@ -207,13 +202,13 @@ class SqlVisitor(NodeVisitor):
         # up.
         try:
             # Changing this to reverse here!
-            return method(node, [self.visit(n) for n in reversed(list(node))])
+            return method(node, [self.visit(child) for child in reversed(list(node))])
         except (VisitationError, UndefinedLabel):
             # Don't catch and re-wrap already-wrapped exceptions.
             raise
         except self.unwrapped_exceptions:
             raise
-        except Exception:
+        except Exception: # pylint: disable=broad-except
             # Catch any exception, and tack on a parse tree so it's easier to
             # see where it went wrong.
             exc_class, exc, traceback = exc_info()

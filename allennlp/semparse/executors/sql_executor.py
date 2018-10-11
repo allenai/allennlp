@@ -7,7 +7,7 @@ from multiprocessing import Process
 from allennlp.common.file_utils import cached_path
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-multiprocessing_logger = multiprocessing.get_logger()
+MULTIPROCESSING_LOGGER = multiprocessing.get_logger()
 
 class SqlExecutor:
     """
@@ -25,7 +25,9 @@ class SqlExecutor:
     def evaluate_sql_query(self,
                            predicted_sql_query: str,
                            sql_query_labels: List[str]) -> int:
-        multiprocessing_logger.setLevel(logging.WARNING)
+        # We set the logging level for the subprocesses to warning, otherwise, it will
+        # log every time a process starts and stops.
+        MULTIPROCESSING_LOGGER.setLevel(logging.WARNING)
 
         # Since the query might hang, we run in another process and kill it if it
         # takes too long.
@@ -53,7 +55,7 @@ class SqlExecutor:
         exact same table. This method is only called by the subprocess, so we just exit with
         1 if it is correct and 0 otherwise.
         """
-                
+
         postprocessed_predicted_query = self.postprocess_query_sqlite(predicted_query)
 
         try:

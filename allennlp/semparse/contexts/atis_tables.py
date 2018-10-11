@@ -85,26 +85,11 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
     """
 
     dates = []
-    fivegrams = ngrams([token.text for token in tokenized_utterance], 5)
-    for tens, digit, _, year, month in fivegrams:
-        # This will match something like ``twenty first of 1993 july``.
-        day = ' '.join([tens, digit])
-        if month in MONTH_NUMBERS and day in DAY_NUMBERS and year.isdigit():
-            try:
-                dates.append(datetime(int(year), MONTH_NUMBERS[month], DAY_NUMBERS[day]))
-            except ValueError:
-                print('invalid month day')
-        if month in MONTH_NUMBERS and digit in DAY_NUMBERS and year.isdigit():
-            try:
-                dates.append(datetime(int(year), MONTH_NUMBERS[month], DAY_NUMBERS[digit]))
-            except ValueError:
-                print('invalid month day')
 
     utterance = ' '.join([token.text for token in tokenized_utterance])
     year_result = re.findall(r'199[0-4]', utterance)
     if year_result:
         year = int(year_result[0])
-    
     trigrams = ngrams([token.text for token in tokenized_utterance], 3)
     for month, tens, digit in trigrams:
         # This will match something like ``september twenty first``.
@@ -124,6 +109,20 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
             except ValueError:
                 print('invalid month day')
 
+    fivegrams = ngrams([token.text for token in tokenized_utterance], 5)
+    for tens, digit, _, year_match, month in fivegrams:
+        # This will match something like ``twenty first of 1993 july``.
+        day = ' '.join([tens, digit])
+        if month in MONTH_NUMBERS and day in DAY_NUMBERS and year_match.isdigit():
+            try:
+                dates.append(datetime(int(year_match), MONTH_NUMBERS[month], DAY_NUMBERS[day]))
+            except ValueError:
+                print('invalid month day')
+        if month in MONTH_NUMBERS and digit in DAY_NUMBERS and year_match.isdigit():
+            try:
+                dates.append(datetime(int(year_match), MONTH_NUMBERS[month], DAY_NUMBERS[digit]))
+            except ValueError:
+                print('invalid month day')
     return dates
 
 def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
@@ -599,7 +598,7 @@ AIRLINE_CODE_LIST = ['AR', '3J', 'AC', '9X', 'ZW', 'AS', '7V',
                      'OK', 'DL', '9E', 'QD', 'LH', 'XJ', 'MG',
                      'YX', 'NX', '2V', 'NW', 'RP', 'AT', 'SN',
                      'OO', 'WN', 'TG', 'FF', '9N', 'TW', 'RZ',
-                     'UA', 'US', 'OE']
+                     'UA', 'US', 'OE', 'EA']
 CITIES = ['NASHVILLE', 'BOSTON', 'BURBANK', 'BALTIMORE', 'CHICAGO', 'CLEVELAND',
           'CHARLOTTE', 'COLUMBUS', 'CINCINNATI', 'DENVER', 'DALLAS', 'DETROIT',
           'FORT WORTH', 'HOUSTON', 'WESTCHESTER COUNTY', 'INDIANAPOLIS', 'NEWARK',

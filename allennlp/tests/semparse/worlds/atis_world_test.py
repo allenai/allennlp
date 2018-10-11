@@ -388,22 +388,21 @@ class TestAtisWorld(AllenNlpTestCase):
                  'number -> ["1"]',
                  'number -> ["60"]',
                  'number -> ["41"]',
+                 'number -> ["1200"]',
                  'number -> ["2200"]',
                  'number -> ["1000"]'}
 
         assert set(world.valid_actions['time_range_start']) == \
                 {'time_range_start -> ["0"]'}
         assert set(world.valid_actions['time_range_end']) == \
-                {'time_range_end -> ["1200"]'}
-
-        date_binary_expressions = ['biexpr -> ["date_day", ".", "year", binaryop, "1991"]',
-                                   'biexpr -> ["date_day", ".", "month_number", binaryop, "8"]',
-                                   'biexpr -> ["date_day", ".", "day_number", binaryop, "26"]',
-                                   'biexpr -> ["date_day", ".", "year", binaryop, "1991"]',
-                                   'biexpr -> ["date_day", ".", "month_number", binaryop, "5"]',
-                                   'biexpr -> ["date_day", ".", "day_number", binaryop, "9"]']
-        for date_binary_expression in date_binary_expressions:
-            assert date_binary_expression in world.valid_actions['biexpr']
+                {'time_range_end -> ["1200"]',
+                 'time_range_end -> ["800"]'}
+        assert set(world.valid_actions['day_number']) == \
+                {'day_number -> ["26"]', 'day_number -> ["9"]'}
+        assert set(world.valid_actions['month_number']) == \
+                {'month_number -> ["5"]', 'month_number -> ["8"]'}
+        assert set(world.valid_actions['year_number']) == \
+                {'year_number -> ["1991"]'}
 
     def test_atis_simple_action_sequence(self): # pylint: disable=no-self-use
         world = AtisWorld([("give me all flights from boston to "
@@ -789,7 +788,7 @@ class TestAtisWorld(AllenNlpTestCase):
         world = AtisWorld([("what is the earliest flight in morning "
                             "1993 june fourth from boston to pittsburgh")])
         assert world.dates == [datetime(1993, 6, 4, 0, 0)]
-        assert world._get_numeric_database_values('time_range_end') == ['1200'] # pylint: disable=protected-access
+        assert world._get_numeric_database_values('time_range_end') == ['800', '1200'] # pylint: disable=protected-access
         assert world._get_sequence_with_spacing(world.grammar, # pylint: disable=protected-access
                                                 [world.grammar['col_ref'],
                                                  Literal('BETWEEN'),
