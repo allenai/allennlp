@@ -28,7 +28,7 @@ GRAMMAR_DICTIONARY["select_core"] = ['(select_with_distinct select_results from_
 GRAMMAR_DICTIONARY["select_with_distinct"] = ['(ws "SELECT" ws "DISTINCT")', '(ws "SELECT")']
 GRAMMAR_DICTIONARY["select_results"] = ['(ws select_result ws "," ws select_results)', '(ws select_result)']
 GRAMMAR_DICTIONARY["select_result"] = ['sel_res_all_star', 'sel_res_tab_star', 'sel_res_val', 'sel_res_col']
-GRAMMAR_DICTIONARY["sel_res_tab_star"] = ['name ".*"']
+GRAMMAR_DICTIONARY["sel_res_tab_star"] = ['table_name ".*"']
 GRAMMAR_DICTIONARY["sel_res_all_star"] = ['"*"']
 GRAMMAR_DICTIONARY['sel_res_val'] = ['(expr ws "AS" wsp name)', 'expr']
 GRAMMAR_DICTIONARY['sel_res_col'] = ['col_ref ws "AS" wsp name']
@@ -162,3 +162,8 @@ def update_grammar_to_be_variable_free(grammar_dictionary: Dict[str, List[str]])
 
     grammar_dictionary["expr"] = ['in_expr', 'like_expr', 'between_expr', 'binary_expr',
                                   'unary_expr', 'null_check_expr', '("(" ws query ws ")")', 'value']
+
+    # Finally, remove the ability to reference an arbitrary name,
+    # because now we don't have aliased tables, we don't need
+    # to recognise new variables.
+    del grammar_dictionary["name"]
