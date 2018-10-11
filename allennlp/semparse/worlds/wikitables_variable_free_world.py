@@ -158,23 +158,23 @@ class WikiTablesVariableFreeWorld(World):
                 agenda_items.append("diff")
             if token == "average":
                 agenda_items.append("average")
-            if token in ["least", "top", "smallest", "shortest", "lowest"]:
+            if token in ["least", "smallest", "shortest", "lowest"] and "at least" not in question:
                 # This condition is too brittle. But for most logical forms with "min", there are
                 # semantically equivalent ones with "argmin". The exceptions are rare.
                 if "what is the least" in question:
                     agenda_items.append("min")
                 else:
                     agenda_items.append("argmin")
-            if token in ["most", "largest", "highest", "longest", "greatest"]:
+            if token in ["most", "largest", "highest", "longest", "greatest"] and "at most" not in question:
                 # This condition is too brittle. But for most logical forms with "max", there are
                 # semantically equivalent ones with "argmax". The exceptions are rare.
                 if "what is the most" in question:
                     agenda_items.append("max")
                 else:
                     agenda_items.append("argmax")
-            if token == "first":
+            if token in ["first", "top"]:
                 agenda_items.append("first")
-            if token == "last":
+            if token == ["last", "bottom"]:
                 agenda_items.append("last")
 
         if "how many" in question:
