@@ -801,3 +801,6 @@ class TestAtisWorld(AllenNlpTestCase):
                                                          world.grammar['ws'],
                                                          world.grammar['time_range_end'],
                                                          world.grammar['ws'])
+
+        world = AtisWorld(['i plan to travel on the tenth of 1993 july'])
+        assert world.dates == [datetime.datetime(1993, 7, 10, 0, 0)]
