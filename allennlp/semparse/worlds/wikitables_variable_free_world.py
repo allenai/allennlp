@@ -89,6 +89,21 @@ class WikiTablesVariableFreeWorld(World):
         # We don't need to recompute this ever; let's just compute it once and cache it.
         self._valid_actions: Dict[str, List[str]] = None
 
+    @staticmethod
+    def is_instance_specific_entity(entity_name: str) -> bool:
+        """
+        Instance specific entities are column names, strings and numbers. Returns True if the entity
+        is one of those.
+        """
+        entity_is_number = False
+        try:
+            float(entity_name)
+            entity_is_number = True
+        except ValueError:
+            pass
+        # Column names start with "*_column:", strings start with "string:"
+        return "_column:" in entity_name or entity_name.startswith("string:") or entity_is_number
+
     @overrides
     def _get_curried_functions(self) -> Dict[Type, int]:
         return WikiTablesVariableFreeWorld.curried_functions

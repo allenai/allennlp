@@ -28,6 +28,7 @@ from allennlp.data.dataset_readers.stanford_sentiment_tree_bank import (
         StanfordSentimentTreeBankDatasetReader)
 from allennlp.data.dataset_readers.quora_paraphrase import QuoraParaphraseDatasetReader
 from allennlp.data.dataset_readers.semantic_parsing import (
-        WikiTablesDatasetReader, AtisDatasetReader, NlvrDatasetReader, TemplateText2SqlDatasetReader)
+        WikiTablesDatasetReader, AtisDatasetReader, NlvrDatasetReader,
+        TemplateText2SqlDatasetReader, WikiTablesVariableFreeDatasetReader)
 from allennlp.data.dataset_readers.semantic_parsing.quarel import QuarelDatasetReader
 from allennlp.data.dataset_readers.simple_language_modeling import SimpleLanguageModelingDatasetReader
