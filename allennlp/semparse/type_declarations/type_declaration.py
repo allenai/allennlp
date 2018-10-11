@@ -10,6 +10,7 @@ with the two improvements above.
 """
 from typing import Dict, List, Optional, Set, Tuple, Union
 from collections import defaultdict
+import itertools
 
 from overrides import overrides
 from nltk.sem.logic import Expression, ApplicationExpression, ConstantExpression, LogicParser, Variable
@@ -530,8 +531,8 @@ class NameMapper:
 def substitute_any_type(type_: Type, basic_types: Set[BasicType]) -> List[Type]:
     """
     Takes a type and a set of basic types, and substitutes all instances of ANY_TYPE with all
-    possible basic types, and returns a list with all possible combinations.  Note that this
-    substitution is unconstrained. That is, If you have a type with placeholders, <#1,#1> for
+    possible basic types and returns a list with all possible combinations.  Note that this
+    substitution is unconstrained.  That is, If you have a type with placeholders, <#1,#1> for
     example, this may substitute the placeholders with different basic types. In that case, you'd
     want to use ``_substitute_placeholder_type`` instead.
     """
@@ -548,16 +549,39 @@ def _make_production_string(source: Type, target: Union[List[Type], Type]) -> st
     return f"{source} -> {target}"
 
 
-def _get_complex_type_production(complex_type: ComplexType) -> Tuple[Type, str]:
+def _get_complex_type_production(complex_type: ComplexType) -> List[Tuple[Type, str]]:
     """
-    Takes a complex type (without any placeholders), gets its return value, and returns a single
-    production (perhaps with multiple arguments) that produces the return value.  For example, if
-    the complex is ``<a,<<b,c>,d>>``, this gives the following tuple:
-    ``('d', 'd -> [<a,<<b,c>,d>, a, <b,c>])``
+    Takes a complex type (without any placeholders), gets its return values, and returns productions
+    (perhaps each with multiple arguments) that produce the return values.  This method also takes
+    care of ``MultiMatchNamedBasicTypes``. If one of the arguments or the return types is a multi
+    match type, it gets all the substitutions of those types as forms a list with all possible
+    combinations of sustitutions. If the complex type passed to this method has no
+    ``MultiMatchNamedBasicTypes``, the returned list will contain a single tuple.  For example, if
+    the complex is type ``<a,<<b,c>,d>>``, and ``a`` is a multi match type that matches ``e`` and
+    ``f``, this gives the following list of tuples:
+    ``[('d', 'd -> [<a,<<b,c>,d>, e, <b,c>]), ('d', 'd -> [<a,<<b,c>,d>, f, <b,c>])]``
+    Note that we assume there will be no productions from the multi match type, and the list above
+    does not contain ``('d', 'd -> [<a,<<b,c>,d>, a, <b,c>>]')``.
     """
     return_type = complex_type.return_type()
+    if isinstance(return_type, MultiMatchNamedBasicType):
+        return_types_matched = list(return_type.types_to_match)
+    else:
+        return_types_matched = [return_type]
     arguments = complex_type.argument_types()
-    return return_type, _make_production_string(return_type, [complex_type] + arguments)
+    argument_types_matched = []
+    for argument_type in arguments:
+        if isinstance(argument_type, MultiMatchNamedBasicType):
+            argument_types_matched.append(list(argument_type.types_to_match))
+        else:
+            argument_types_matched.append([argument_type])
+    complex_type_productions: List[Tuple[Type, str]] = []
+    for matched_return_type in return_types_matched:
+        for matched_arguments in itertools.product(*argument_types_matched):
+            complex_type_productions.append((matched_return_type,
+                                             _make_production_string(return_type,
+                                                                     [complex_type] + list(matched_arguments))))
+    return complex_type_productions
 
 
 def get_valid_actions(name_mapping: Dict[str, str],
@@ -628,8 +652,8 @@ def get_valid_actions(name_mapping: Dict[str, str],
 
     for complex_type in complex_types:
         for substituted_type in substitute_any_type(complex_type, basic_types):
-            head, production = _get_complex_type_production(substituted_type)
-            valid_actions[str(head)].add(production)
+            for head, production in _get_complex_type_production(substituted_type):
+                valid_actions[str(head)].add(production)
 
     # We can produce complex types with a lambda expression, though we'll leave out
     # placeholder types for now.
