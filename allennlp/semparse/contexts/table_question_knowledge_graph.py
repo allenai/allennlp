@@ -1,4 +1,4 @@
-import re
+import re, itertools,nltk, json
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, List, Tuple, Union, Set
 
@@ -89,6 +89,8 @@ class TableQuestionKnowledgeGraph(KnowledgeGraph):
                  question_tokens: List[Token]) -> None:
         super().__init__(entities, neighbors, entity_text)
         self.question_tokens = question_tokens
+
+
         self._entity_prefixes: Dict[str, List[str]] = defaultdict(list)
         for entity, text in self.entity_text.items():
             parts = text.split()
