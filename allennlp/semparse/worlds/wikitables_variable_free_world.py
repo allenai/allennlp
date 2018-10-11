@@ -143,7 +143,7 @@ class WikiTablesVariableFreeWorld(World):
                 translated_name = self.local_name_mapping[name]
         return translated_name
 
-   def get_agenda(self):
+    def get_agenda(self):
         agenda_items = []
         question_tokens = [token.text for token in self.table_context.question_tokens]
         question = " ".join(question_tokens)
