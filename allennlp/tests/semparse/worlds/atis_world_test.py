@@ -1,17 +1,13 @@
 # pylint: disable=too-many-lines
 from datetime import datetime
 import json
-from copy import deepcopy
 
 from parsimonious.expressions import Literal, Sequence
-from parsimonious.exceptions import ParseError 
 
 from allennlp.common.file_utils import cached_path
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.atis_world import AtisWorld
-
-from pprint import pprint
 
 class TestAtisWorld(AllenNlpTestCase):
     def setUp(self):
@@ -425,7 +421,7 @@ class TestAtisWorld(AllenNlpTestCase):
                                    'condition -> [biexpr]',
                                    'biexpr -> ["city", ".", "city_name", binaryop, city_city_name_string]',
                                    'binaryop -> ["="]',
-                                   'city_city_name_string -> ["\'BOSTON\'"]'] 
+                                   'city_city_name_string -> ["\'BOSTON\'"]']
 
         action_sequence = world.get_action_sequence(("( SELECT airport_service . airport_code "
                                                      "FROM airport_service "
