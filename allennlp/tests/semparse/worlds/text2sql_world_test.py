@@ -81,13 +81,13 @@ class TestText2SqlWorld(AllenNlpTestCase):
                "'city_name0'", 'AND', 'RESTAURANT', '.', 'NAME', '=', 'LOCATION',
                '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
 
-        entities = {"city_name0": "San fran", "name0": "Matt Gardinios Pizza"}
+        entities = {"city_name0": {"text": "San fran", "type": "location"},
+                    "name0": {"text": "Matt Gardinios Pizza", "type": "restaurant"}}
         action_sequence, actions = world.get_action_sequence_and_all_actions(sql, entities)
-
-        assert 'value -> ["\'city_name0\'"]' in action_sequence
-        assert 'value -> ["\'name0\'"]' in action_sequence
-        assert 'value -> ["\'city_name0\'"]' in actions
-        assert 'value -> ["\'name0\'"]' in actions
+        assert 'string -> ["\'city_name0\'"]' in action_sequence
+        assert 'string -> ["\'name0\'"]' in action_sequence
+        assert 'string -> ["\'city_name0\'"]' in actions
+        assert 'string -> ["\'name0\'"]' in actions
 
     def test_world_adds_values_from_tables(self):
         connection = sqlite3.connect(self.database_path)

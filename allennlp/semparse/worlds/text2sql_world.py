@@ -9,6 +9,8 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.semparse.contexts.sql_context_utils import SqlVisitor
 from allennlp.semparse.contexts.sql_context_utils import format_grammar_string, initialize_valid_actions
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
+from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_numeric_type
+from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_string_type
 from allennlp.semparse.contexts.text2sql_table_context import GRAMMAR_DICTIONARY
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_table_values
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_tables
@@ -44,6 +46,7 @@ class Text2SqlWorld:
                  variable_free: bool = True) -> None:
         self.cursor = cursor
         self.schema = read_dataset_schema(schema_path)
+        self.columns = {column.name: column for table in self.schema.values() for column in table}
         self.dataset_name = os.path.basename(schema_path).split("-")[0]
         self.use_prelinked_entities = use_prelinked_entities
         self.variable_free = variable_free
@@ -53,15 +56,45 @@ class Text2SqlWorld:
 
     def get_action_sequence_and_all_actions(self,
                                             query: List[str] = None,
-                                            prelinked_entities: Dict[str, str] = None) -> Tuple[List[str], List[str]]: # pylint: disable=line-too-long
+                                            prelinked_entities: Dict[str, Dict[str, str]] = None) -> Tuple[List[str], List[str]]: # pylint: disable=line-too-long
         grammar_with_context = deepcopy(self.base_grammar_dictionary)
 
         if not self.use_prelinked_entities and prelinked_entities is not None:
             raise ConfigurationError("The Text2SqlWorld was specified to not use prelinked "
                                      "entities, but prelinked entities were passed.")
         prelinked_entities = prelinked_entities or {}
-        for token in prelinked_entities.keys():
-            grammar_with_context["value"] = [f'"\'{token}\'"'] + grammar_with_context["value"]
+
+
+        for variable, info in prelinked_entities.items():
+            variable_column = info["type"].upper()
+            matched_column = self.columns.get(variable_column, None)
+
+            if matched_column is not None:
+                # Try to infer the variable's type by matching it to a column in
+                # the database. If we can't, we just add it as a value.
+                if column_has_numeric_type(matched_column):
+                    grammar_with_context["number"] = [f'"\'{variable}\'"'] + grammar_with_context["number"]
+                elif column_has_string_type(matched_column):
+                    grammar_with_context["string"] = [f'"\'{variable}\'"'] + grammar_with_context["string"]
+                else:
+                    grammar_with_context["value"] = [f'"\'{variable}\'"'] + grammar_with_context["value"]
+            # Otherwise, try to infer by looking at the actual value:
+            else:
+                try:
+                    # This is what happens if you try and do type inference
+                    # in a grammar which parses _strings_ in _Python_.
+                    # We're just seeing if the python interpreter can convert
+                    # to to a float - if it can, we assume it's a number.
+                    float(info["text"])
+                    is_numeric = True
+                except ValueError:
+                    is_numeric = False
+                if is_numeric:
+                    grammar_with_context["number"] = [f'"\'{variable}\'"'] + grammar_with_context["number"]
+                elif info["text"].replace(" ", "").isalpha():
+                    grammar_with_context["string"] = [f'"\'{variable}\'"'] + grammar_with_context["string"]
+                else:
+                    grammar_with_context["value"] = [f'"\'{variable}\'"'] + grammar_with_context["value"]
 
         grammar = Grammar(format_grammar_string(grammar_with_context))
 
@@ -88,12 +121,7 @@ class Text2SqlWorld:
             # symbols which link to them.
             grammar_dictionary["number"] = []
             grammar_dictionary["string"] = []
-
             update_grammar_with_table_values(grammar_dictionary, self.schema, self.cursor)
-        else:
-            # TODO(Mark): The grammar can be tightened here if we don't need to
-            # produce concrete values.
-            pass
 
         # Finally, update the grammar with global, non-variable values
         # found in the dataset, if present.
