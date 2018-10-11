@@ -7,7 +7,7 @@ from parsimonious.grammar import Grammar
 from parsimonious.expressions import Expression, OneOf, Sequence, Literal
 
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
-from allennlp.semparse.contexts.atis_sql_table_context import AtisSqlTableContext, KEYWORDS
+from allennlp.semparse.contexts.atis_sql_table_context import AtisSqlTableContext, KEYWORDS, NUMERIC_NONTERMINALS
 from allennlp.semparse.contexts.sql_context_utils import SqlVisitor, format_action, initialize_valid_actions
 
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
@@ -96,9 +96,7 @@ class AtisWorld():
         # We have to create new sub-expression objects so that original grammar is not mutated.
         new_grammar = copy(AtisWorld.sql_table_context.grammar)
 
-        for numeric_nonterminal in ['number', 'time_range_start', 'time_range_end',
-                                    'fare_round_trip_cost', 'fare_one_direction_cost',
-                                    'flight_number']:
+        for numeric_nonterminal in NUMERIC_NONTERMINALS:
             self._add_numeric_nonterminal_to_grammar(numeric_nonterminal, new_grammar)
         self._update_expression_reference(new_grammar, 'pos_value', 'number')
 
@@ -157,15 +155,6 @@ class AtisWorld():
         new_binary_expressions.append(flight_number_expression)
 
         if self.dates:
-            year_number_literals = [Literal(str(date.year)) for date in self.dates]
-            new_grammar['year_number'] = OneOf(*year_number_literals, name='year_number')
-
-            month_number_literals = [Literal(str(date.month)) for date in self.dates]
-            new_grammar['month_number'] = OneOf(*month_number_literals, name='month_number')
-
-            day_number_literals = [Literal(str(date.day)) for date in self.dates]
-            new_grammar['day_number'] = OneOf(*day_number_literals, name='day_number')
-
             year_binary_expression = self._get_sequence_with_spacing(new_grammar,
                                                                      [Literal('date_day'),
                                                                       Literal('.'),
@@ -203,7 +192,8 @@ class AtisWorld():
                                             new_grammar: Grammar) -> None:
         numbers = self._get_numeric_database_values(nonterminal)
         number_literals = [Literal(number) for number in numbers]
-        new_grammar[nonterminal] = OneOf(*number_literals, name=nonterminal)
+        if number_literals:
+            new_grammar[nonterminal] = OneOf(*number_literals, name=nonterminal)
 
     def _update_expression_reference(self, # pylint: disable=no-self-use
                                      grammar: Grammar,
