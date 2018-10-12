@@ -28,15 +28,15 @@ class SqlData(NamedTuple):
         The tokens in the SQL query which corresponds to the text.
     text_variables : ``Dict[str, str]``
         A dictionary of variables associated with the text, e.g. {"city_name0": "san fransisco"}
-    sql_variables : ``Dict[str, str]``
-        A dictionary of variables associated with the sql query.
+    sql_variables : ``Dict[str, Dict[str, str]]``
+        A dictionary of variables and column references associated with the sql query.
     """
     text: List[str]
     text_with_variables: List[str]
     variable_tags: List[str]
     sql: List[str]
     text_variables: Dict[str, str]
-    sql_variables: Dict[str, str]
+    sql_variables: Dict[str, Dict[str, str]]
 
 class TableColumn(NamedTuple):
     name: str
@@ -242,7 +242,7 @@ def process_sql_data(data: List[JsonDict],
 
                 sql_variables = {}
                 for variable in example['variables']:
-                    sql_variables[variable['name']] = variable['example']
+                    sql_variables[variable['name']] = {'text': variable['example'], 'type': variable['type']}
 
                 sql_data = SqlData(text=query_tokens,
                                    text_with_variables=text_with_variables,
