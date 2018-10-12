@@ -4,12 +4,12 @@ A ``Text2SqlTableContext`` represents the SQL context in which an utterance appe
 for the any of the text2sql datasets, with the grammar and the valid actions.
 """
 from typing import List, Dict
-from copy import deepcopy
+from sqlite3 import Cursor
 
-from parsimonious.grammar import Grammar
 
-from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions, format_grammar_string
-from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
+from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import TableColumn
+from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_numeric_type
+from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_string_type
 
 GRAMMAR_DICTIONARY = {}
 GRAMMAR_DICTIONARY["statement"] = ['(query ws ";")', '(query ws)']
@@ -28,7 +28,7 @@ GRAMMAR_DICTIONARY["select_core"] = ['(select_with_distinct select_results from_
 GRAMMAR_DICTIONARY["select_with_distinct"] = ['(ws "SELECT" ws "DISTINCT")', '(ws "SELECT")']
 GRAMMAR_DICTIONARY["select_results"] = ['(ws select_result ws "," ws select_results)', '(ws select_result)']
 GRAMMAR_DICTIONARY["select_result"] = ['sel_res_all_star', 'sel_res_tab_star', 'sel_res_val', 'sel_res_col']
-GRAMMAR_DICTIONARY["sel_res_tab_star"] = ['name ".*"']
+GRAMMAR_DICTIONARY["sel_res_tab_star"] = ['table_name ".*"']
 GRAMMAR_DICTIONARY["sel_res_all_star"] = ['"*"']
 GRAMMAR_DICTIONARY['sel_res_val'] = ['(expr ws "AS" wsp name)', 'expr']
 GRAMMAR_DICTIONARY['sel_res_col'] = ['col_ref ws "AS" wsp name']
@@ -92,47 +92,78 @@ GRAMMAR_DICTIONARY["binaryop"] = ['"+"', '"-"', '"*"', '"/"', '"="', '"<>"',
                                   '">="', '"<="', '">"', '"<"', '"AND"', '"OR"', '"LIKE"']
 GRAMMAR_DICTIONARY["unaryop"] = ['"+"', '"-"', '"not"', '"NOT"']
 
-class Text2SqlTableContext:
+
+
+GLOBAL_DATASET_VALUES: Dict[str, List[str]] = {
+        # These are used to check values are present, or numbers of authors.
+        "scholar": ["0", "1", "2"],
+        # 0 is used for "sea level", 750 is a "major" lake, and 150000 is a "major" city.
+        "geography": ["0", "750", "150000"],
+        # This defines what an "above average" restaurant is.
+        "restaurants": ["2.5"]
+}
+
+
+def update_grammar_with_tables(grammar_dictionary: Dict[str, List[str]],
+                               schema: Dict[str, List[TableColumn]]) -> None:
+    table_names = sorted([f'"{table}"' for table in
+                          list(schema.keys())], reverse=True)
+    grammar_dictionary['table_name'] = table_names
+
+    all_columns = set()
+    for table in schema.values():
+        all_columns.update([column.name for column in table])
+    sorted_columns = sorted([f'"{column}"' for column in all_columns], reverse=True)
+    grammar_dictionary['column_name'] = sorted_columns
+
+def update_grammar_with_table_values(grammar_dictionary: Dict[str, List[str]],
+                                     schema: Dict[str, List[TableColumn]],
+                                     cursor: Cursor) -> None:
+
+    for table_name, columns in schema.items():
+        for column in columns:
+            cursor.execute(f'SELECT DISTINCT {table_name}.{column.name} FROM {table_name}')
+            results = [x[0] for x in cursor.fetchall()]
+            if column_has_string_type(column):
+                productions = sorted([f'"{str(result)}"' for result in results], reverse=True)
+                grammar_dictionary["string"].extend(productions)
+            elif column_has_numeric_type(column):
+                productions = sorted([f'"{str(result)}"' for result in results], reverse=True)
+                grammar_dictionary["number"].extend(productions)
+
+
+def update_grammar_with_global_values(grammar_dictionary: Dict[str, List[str]], dataset_name: str):
+
+    values = GLOBAL_DATASET_VALUES.get(dataset_name, [])
+    values_for_grammar = [f'"{str(value)}"' for value in values]
+    grammar_dictionary["value"] = values_for_grammar + grammar_dictionary["value"]
+
+
+def update_grammar_to_be_variable_free(grammar_dictionary: Dict[str, List[str]]):
     """
-    This context is minimally constrained in terms of table productions,
-    meaning that we don't even constrain columns to be associated with the correct
-    table. We just augment the grammar to know what columns and tables are,
-    with no constraints.
-
-    Parameters
-    ----------
-    schema_path: ``str``
-        A path to a schema file which we read into a dictionary
-        representing the SQL tables in the dataset, the keys are the
-        names of the tables that map to lists of the table's column names.
+    SQL is a predominately variable free language in terms of simple usage, in the
+    sense that most queries do not create references to variables which are not
+    already static tables in a dataset. However, it is possible to do this via
+    derived tables. If we don't require this functionality, we can tighten the
+    grammar, because we don't need to support aliased tables.
     """
-    def __init__(self,
-                 schema_path: str = None) -> None:
-        self.grammar_dictionary = deepcopy(GRAMMAR_DICTIONARY)
-        schema = read_dataset_schema(schema_path)
-        self.schema = schema
-        self.all_tables = {k: [x.name for x in v] for k, v in schema.items()}
-        self.grammar_str: str = self.initialize_grammar_str()
-        self.grammar: Grammar = Grammar(self.grammar_str)
-        self.valid_actions: Dict[str, List[str]] = initialize_valid_actions(self.grammar)
 
-    def get_grammar_dictionary(self) -> Dict[str, List[str]]:
-        return self.grammar_dictionary
+    # Tables in variable free grammars cannot be aliased, so we
+    # remove this functionality from the grammar.
+    grammar_dictionary["select_result"] = ['sel_res_all_star', 'sel_res_tab_star', 'expr']
+    del grammar_dictionary['sel_res_val']
+    del grammar_dictionary['sel_res_col']
 
-    def get_valid_actions(self) -> Dict[str, List[str]]:
-        return self.valid_actions
+    # Similarly, collapse the definition of a source table
+    # to not contain aliases and modify references to subqueries.
+    grammar_dictionary["single_source"] = ['table_name', '("(" ws query ws ")")']
+    del grammar_dictionary["source_subq"]
+    del grammar_dictionary["source_table"]
 
-    def initialize_grammar_str(self):
-        # Add all the table and column names to the grammar.
-        if self.all_tables:
-            table_names = sorted([f'"{table}"' for table in
-                                  list(self.all_tables.keys())], reverse=True)
-            self.grammar_dictionary['table_name'] = table_names
+    grammar_dictionary["expr"] = ['in_expr', 'like_expr', 'between_expr', 'binary_expr',
+                                  'unary_expr', 'null_check_expr', '("(" ws query ws ")")', 'value']
 
-            all_columns = set()
-            for columns in self.all_tables.values():
-                all_columns.update(columns)
-            sorted_columns = sorted([f'"{column}"' for column in all_columns], reverse=True)
-            self.grammar_dictionary['column_name'] = sorted_columns
-
-        return format_grammar_string(self.grammar_dictionary)
+    # Finally, remove the ability to reference an arbitrary name,
+    # because now we don't have aliased tables, we don't need
+    # to recognise new variables.
+    del grammar_dictionary["name"]

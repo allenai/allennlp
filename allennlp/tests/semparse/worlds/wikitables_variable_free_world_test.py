@@ -4,6 +4,7 @@ from typing import List
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import Token
 from allennlp.semparse.contexts import TableQuestionContext
+from allennlp.semparse.type_declarations import wikitables_variable_free as types
 from allennlp.semparse.worlds import WikiTablesVariableFreeWorld
 from allennlp.semparse import ParsingError
 
@@ -42,14 +43,14 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
                 "<r,<r,<f,n>>>",
                 "<r,<t,<s,r>>>",
                 "<n,<n,<n,d>>>",
-                "<r,<y,<d,r>>>",
+                "<r,<m,<d,r>>>",
                 "<r,<f,n>>",
                 "<r,r>",
                 "<r,n>",
                 "d",
                 "n",
                 "s",
-                "y",
+                "m",
                 "t",
                 "f",
                 "r",
@@ -79,7 +80,7 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         check_productions_match(valid_actions['<n,<n,<n,d>>>'],
                                 ['date'])
 
-        check_productions_match(valid_actions['<r,<y,<d,r>>>'],
+        check_productions_match(valid_actions['<r,<m,<d,r>>>'],
                                 ['filter_date_equals', 'filter_date_greater',
                                  'filter_date_greater_equals', 'filter_date_lesser',
                                  'filter_date_lesser_equals', 'filter_date_not_equals'])
@@ -94,7 +95,7 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
                                 ['count'])
 
         # These are the columns in table, and are instance specific.
-        check_productions_match(valid_actions['y'],
+        check_productions_match(valid_actions['m'],
                                 ['date_column:year'])
 
         check_productions_match(valid_actions['f'],
@@ -126,7 +127,7 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
 
         check_productions_match(valid_actions['r'],
                                 ['all_rows',
-                                 '[<r,<y,<d,r>>>, r, y, d]',
+                                 '[<r,<m,<d,r>>>, r, m, d]',
                                  '[<r,<g,r>>, r, g]',
                                  '[<r,<c,r>>, r, c]',
                                  '[<r,<f,<n,r>>>, r, f, n]',
@@ -143,22 +144,25 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
             self.world_with_usl_a_league.parse_logical_form(logical_form_with_2013)
 
     def test_world_processes_logical_forms_correctly(self):
-        logical_form = "(select (filter_in all_rows string_column:league usl_a_league) date_column:year)"
+        logical_form = "(select (filter_in all_rows string_column:league string:usl_a_league) date_column:year)"
         expression = self.world_with_usl_a_league.parse_logical_form(logical_form)
+        f = types.name_mapper.get_alias
         # Cells (and parts) get mapped to strings.
-        assert str(expression) == "S0(F30(R,C2,string:usl_a_league),C0)"
+        # Column names are mapped in local name mapping. For the global names, we can get their
+        # aliases from the name mapper.
+        assert str(expression) == f"{f('select')}({f('filter_in')}({f('all_rows')},C2,string:usl_a_league),C0)"
 
     def test_world_gets_correct_actions(self):
-        logical_form = "(select (filter_in all_rows string_column:league usl_a_league) date_column:year)"
+        logical_form = "(select (filter_in all_rows string_column:league string:usl_a_league) date_column:year)"
         expression = self.world_with_usl_a_league.parse_logical_form(logical_form)
-        expected_sequence = ['@start@ -> s', 's -> [<r,<g,s>>, r, y]', '<r,<g,s>> -> select',
+        expected_sequence = ['@start@ -> s', 's -> [<r,<g,s>>, r, m]', '<r,<g,s>> -> select',
                              'r -> [<r,<t,<s,r>>>, r, t, s]', '<r,<t,<s,r>>> -> filter_in',
-                             'r -> all_rows', 't -> string_column:league', 's -> usl_a_league',
-                             'y -> date_column:year']
+                             'r -> all_rows', 't -> string_column:league', 's -> string:usl_a_league',
+                             'm -> date_column:year']
         assert self.world_with_usl_a_league.get_action_sequence(expression) == expected_sequence
 
     def test_world_gets_logical_form_from_actions(self):
-        logical_form = "(select (filter_in all_rows string_column:league usl_a_league) date_column:year)"
+        logical_form = "(select (filter_in all_rows string_column:league string:usl_a_league) date_column:year)"
         expression = self.world_with_usl_a_league.parse_logical_form(logical_form)
         action_sequence = self.world_with_usl_a_league.get_action_sequence(expression)
         reconstructed_logical_form = self.world_with_usl_a_league.get_logical_form(action_sequence)
@@ -171,24 +175,33 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         logical_form = """(select (filter_number_greater all_rows number_column:avg_attendance 3000)
                            date_column:year)"""
         expression = world.parse_logical_form(logical_form)
+        f = types.name_mapper.get_alias
         # Cells (and parts) get mapped to strings.
-        assert str(expression) == "S0(F10(R,C6,num:3000),C0)"
+        # Column names are mapped in local name mapping. For the global names, we can get their
+        # aliases from the name mapper.
+        assert str(expression) == f"{f('select')}({f('filter_number_greater')}({f('all_rows')},C6,num:3000),C0)"
 
     def test_world_processes_logical_forms_with_date_correctly(self):
         logical_form = """(select (filter_date_greater all_rows date_column:year (date 2013 -1 -1))
                            date_column:year)"""
         expression = self.world_with_2013.parse_logical_form(logical_form)
+        f = types.name_mapper.get_alias
         # Cells (and parts) get mapped to strings.
-        assert str(expression) == "S0(F20(R,C0,T0(num:2013,num:~1,num:~1)),C0)"
+        # Column names are mapped in local name mapping. For the global names, we can get their
+        # aliases from the name mapper.
+        assert str(expression) == \
+        f"{f('select')}({f('filter_date_greater')}({f('all_rows')},C0,{f('date')}(num:2013,num:~1,num:~1)),C0)"
 
     def test_get_agenda(self):
         tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '2000', '?']]
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {'n -> 2000',
-                                           '<r,<c,r>> -> argmax'}
+                                           '<r,r> -> last',
+                                           'm -> date_column:year'}
         tokens = [Token(x) for x in ['what', 'was', 'the', 'difference', 'in', 'attendance',
                                      'between', 'years', '2001', 'and', '2005', '?']]
         world = self._get_world_with_question_tokens(tokens)
+        # "year" column does not match because "years" occurs in the question.
         assert set(world.get_agenda()) == {'n -> 2001',
                                            'n -> 2005',
                                            '<r,<r,<f,n>>> -> diff'}
@@ -197,10 +210,14 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {'n -> 2001',
                                            'n -> 2005',
-                                           '<r,<f,n>> -> sum'}
+                                           '<r,<f,n>> -> sum',
+                                           'f -> number_column:avg_attendance'}
         tokens = [Token(x) for x in ['when', 'was', 'the', 'least', 'avg.', 'attendance', '?']]
         world = self._get_world_with_question_tokens(tokens)
-        assert set(world.get_agenda()) == {'<r,<c,r>> -> argmin'}
+        assert set(world.get_agenda()) == {'<r,<c,r>> -> argmin', 'f -> number_column:avg_attendance'}
         tokens = [Token(x) for x in ['what', 'is', 'the', 'least', 'avg.', 'attendance', '?']]
         world = self._get_world_with_question_tokens(tokens)
-        assert set(world.get_agenda()) == {'<r,<f,n>> -> min'}
+        assert set(world.get_agenda()) == {'<r,<f,n>> -> min', 'f -> number_column:avg_attendance'}
+        tokens = [Token(x) for x in ['when', 'did', 'the', 'team', 'not', 'qualify', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'s -> string:qualify'}
