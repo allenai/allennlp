@@ -147,35 +147,27 @@ class WikiTablesVariableFreeWorld(World):
         agenda_items = []
         question_tokens = [token.text for token in self.table_context.question_tokens]
         question = " ".join(question_tokens)
-
         if "at least" in question:
             agenda_items.append("filter_number_greater_equals")
         if "at most" in question:
             agenda_items.append("filter_number_lesser_equals")
 
         comparison_triggers = ["greater", "larger", "more"]
-
         if any("no %s than" %word in question for word in comparison_triggers):
             agenda_items.append("filter_number_lesser_equals")
         elif any("%s than" %word in question for word in comparison_triggers):
             agenda_items.append("filter_number_greater")
-
-
         for token in question_tokens:
             if token in ["next", "after", "below"]:
                 agenda_items.append("next")
             if token in ["previous", "before", "above"]:
                 agenda_items.append("previous")
-
-
             if token == "total":
                 agenda_items.append("sum")
             if token == "difference":
                 agenda_items.append("diff")
             if token == "average":
                 agenda_items.append("average")
-
-
             if token in ["least", "smallest", "shortest", "lowest"] and "at least" not in question:
                 # This condition is too brittle. But for most logical forms with "min", there are
                 # semantically equivalent ones with "argmin". The exceptions are rare.
@@ -192,7 +184,7 @@ class WikiTablesVariableFreeWorld(World):
                     agenda_items.append("argmax")
             if token in ["first", "top"]:
                 agenda_items.append("first")
-            if token == ["last", "bottom"]:
+            if token in ["last", "bottom"]:
                 agenda_items.append("last")
 
         if "how many" in question:
@@ -235,7 +227,6 @@ class WikiTablesVariableFreeWorld(World):
             # in the agenda.
             if f"_{number}_" in normalized_question:
                 agenda.append(f"{types.NUMBER_TYPE} -> {number}")
-
         return agenda
 
 
