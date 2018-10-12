@@ -174,8 +174,6 @@ class WikiTablesVariableFreeWorld(World):
                 agenda_items.append("diff")
             if token == "average":
                 agenda_items.append("average")
-
-
             if token in ["least", "smallest", "shortest", "lowest"] and "at least" not in question:
                 # This condition is too brittle. But for most logical forms with "min", there are
                 # semantically equivalent ones with "argmin". The exceptions are rare.

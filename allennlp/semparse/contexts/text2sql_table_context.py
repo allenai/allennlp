@@ -28,7 +28,7 @@ GRAMMAR_DICTIONARY["select_core"] = ['(select_with_distinct select_results from_
 GRAMMAR_DICTIONARY["select_with_distinct"] = ['(ws "SELECT" ws "DISTINCT")', '(ws "SELECT")']
 GRAMMAR_DICTIONARY["select_results"] = ['(ws select_result ws "," ws select_results)', '(ws select_result)']
 GRAMMAR_DICTIONARY["select_result"] = ['sel_res_all_star', 'sel_res_tab_star', 'sel_res_val', 'sel_res_col']
-GRAMMAR_DICTIONARY["sel_res_tab_star"] = ['name ".*"']
+GRAMMAR_DICTIONARY["sel_res_tab_star"] = ['table_name ".*"']
 GRAMMAR_DICTIONARY["sel_res_all_star"] = ['"*"']
 GRAMMAR_DICTIONARY['sel_res_val'] = ['(expr ws "AS" wsp name)', 'expr']
 GRAMMAR_DICTIONARY['sel_res_col'] = ['col_ref ws "AS" wsp name']
@@ -92,6 +92,18 @@ GRAMMAR_DICTIONARY["binaryop"] = ['"+"', '"-"', '"*"', '"/"', '"="', '"<>"',
                                   '">="', '"<="', '">"', '"<"', '"AND"', '"OR"', '"LIKE"']
 GRAMMAR_DICTIONARY["unaryop"] = ['"+"', '"-"', '"not"', '"NOT"']
 
+
+
+GLOBAL_DATASET_VALUES: Dict[str, List[str]] = {
+        # These are used to check values are present, or numbers of authors.
+        "scholar": ["0", "1", "2"],
+        # 0 is used for "sea level", 750 is a "major" lake, and 150000 is a "major" city.
+        "geography": ["0", "750", "150000"],
+        # This defines what an "above average" restaurant is.
+        "restaurants": ["2.5"]
+}
+
+
 def update_grammar_with_tables(grammar_dictionary: Dict[str, List[str]],
                                schema: Dict[str, List[TableColumn]]) -> None:
     table_names = sorted([f'"{table}"' for table in
@@ -118,3 +130,40 @@ def update_grammar_with_table_values(grammar_dictionary: Dict[str, List[str]],
             elif column_has_numeric_type(column):
                 productions = sorted([f'"{str(result)}"' for result in results], reverse=True)
                 grammar_dictionary["number"].extend(productions)
+
+
+def update_grammar_with_global_values(grammar_dictionary: Dict[str, List[str]], dataset_name: str):
+
+    values = GLOBAL_DATASET_VALUES.get(dataset_name, [])
+    values_for_grammar = [f'"{str(value)}"' for value in values]
+    grammar_dictionary["value"] = values_for_grammar + grammar_dictionary["value"]
+
+
+def update_grammar_to_be_variable_free(grammar_dictionary: Dict[str, List[str]]):
+    """
+    SQL is a predominately variable free language in terms of simple usage, in the
+    sense that most queries do not create references to variables which are not
+    already static tables in a dataset. However, it is possible to do this via
+    derived tables. If we don't require this functionality, we can tighten the
+    grammar, because we don't need to support aliased tables.
+    """
+
+    # Tables in variable free grammars cannot be aliased, so we
+    # remove this functionality from the grammar.
+    grammar_dictionary["select_result"] = ['sel_res_all_star', 'sel_res_tab_star', 'expr']
+    del grammar_dictionary['sel_res_val']
+    del grammar_dictionary['sel_res_col']
+
+    # Similarly, collapse the definition of a source table
+    # to not contain aliases and modify references to subqueries.
+    grammar_dictionary["single_source"] = ['table_name', '("(" ws query ws ")")']
+    del grammar_dictionary["source_subq"]
+    del grammar_dictionary["source_table"]
+
+    grammar_dictionary["expr"] = ['in_expr', 'like_expr', 'between_expr', 'binary_expr',
+                                  'unary_expr', 'null_check_expr', '("(" ws query ws ")")', 'value']
+
+    # Finally, remove the ability to reference an arbitrary name,
+    # because now we don't have aliased tables, we don't need
+    # to recognise new variables.
+    del grammar_dictionary["name"]

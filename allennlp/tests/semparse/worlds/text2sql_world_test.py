@@ -2,7 +2,7 @@
 
 import sqlite3
 
-from parsimonious import Grammar
+from parsimonious import Grammar, ParseError
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld
@@ -24,6 +24,40 @@ class TestText2SqlWorld(AllenNlpTestCase):
         assert grammar_dictionary["column_name"] == ['"STREET_NAME"', '"RESTAURANT_ID"', '"REGION"',
                                                      '"RATING"', '"NAME"', '"HOUSE_NUMBER"',
                                                      '"FOOD_TYPE"', '"COUNTY"', '"CITY_NAME"']
+
+    def test_world_modifies_grammar_with_global_values_for_dataset(self):
+        world = Text2SqlWorld(self.schema)
+        grammar_dictionary = world.base_grammar_dictionary
+        # Should have added 2.5 because it is a global value
+        # for the restaurants dataset.
+        assert grammar_dictionary["value"] == ['"2.5"', 'parenval', '"YEAR(CURDATE())"',
+                                               'number', 'boolean', 'function', 'col_ref', 'string']
+
+    def test_variable_free_world_cannot_parse_as_statements(self):
+        world = Text2SqlWorld(self.schema)
+        grammar_dictionary = world.base_grammar_dictionary
+        for productions in grammar_dictionary.items():
+            assert "AS" not in productions
+
+        sql_with_as = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', 'AS', 'LOCATIONalias0', ',',
+                       'RESTAURANT', 'WHERE', 'LOCATION', '.', 'CITY_NAME', '=',
+                       "'city_name0'", 'AND', 'RESTAURANT', '.', 'NAME', '=', 'LOCATION',
+                       '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
+
+        grammar = Grammar(format_grammar_string(world.base_grammar_dictionary))
+        sql_visitor = SqlVisitor(grammar)
+
+        with self.assertRaises(ParseError):
+            sql_visitor.parse(" ".join(sql_with_as))
+
+        sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',',
+               'RESTAURANT', 'WHERE', 'LOCATION', '.', 'CITY_NAME', '=',
+               "'city_name0'", 'AND', 'RESTAURANT', '.', 'NAME', '=', 'LOCATION',
+               '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
+
+        # Without the AS we should still be able to parse it.
+        sql_visitor = SqlVisitor(grammar)
+        sql_visitor.parse(" ".join(sql))
 
     def test_grammar_from_world_can_parse_statements(self):
         world = Text2SqlWorld(self.schema)
@@ -47,13 +81,13 @@ class TestText2SqlWorld(AllenNlpTestCase):
                "'city_name0'", 'AND', 'RESTAURANT', '.', 'NAME', '=', 'LOCATION',
                '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
 
-        entities = {"city_name0": "San fran", "name0": "Matt Gardinios Pizza"}
+        entities = {"city_name0": {"text": "San fran", "type": "location"},
+                    "name0": {"text": "Matt Gardinios Pizza", "type": "restaurant"}}
         action_sequence, actions = world.get_action_sequence_and_all_actions(sql, entities)
-
-        assert 'value -> ["\'city_name0\'"]' in action_sequence
-        assert 'value -> ["\'name0\'"]' in action_sequence
-        assert 'value -> ["\'city_name0\'"]' in actions
-        assert 'value -> ["\'name0\'"]' in actions
+        assert 'string -> ["\'city_name0\'"]' in action_sequence
+        assert 'string -> ["\'name0\'"]' in action_sequence
+        assert 'string -> ["\'city_name0\'"]' in actions
+        assert 'string -> ["\'name0\'"]' in actions
 
     def test_world_adds_values_from_tables(self):
         connection = sqlite3.connect(self.database_path)

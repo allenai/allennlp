@@ -115,7 +115,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
     @overrides
     def text_to_instance(self,  # type: ignore
                          query: List[str],
-                         prelinked_entities: Dict[str, str] = None,
+                         prelinked_entities: Dict[str, Dict[str, str]] = None,
                          sql: List[str] = None) -> Instance:
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
