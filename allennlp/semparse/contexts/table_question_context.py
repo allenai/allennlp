@@ -200,10 +200,8 @@ class TableQuestionContext:
         number recognition, finding ordinals and cardinals expressed as text ("one", "first",
         etc.), as well as numerals ("7th", "3rd"), months (mapping "july" to 7), and units
         ("1ghz").
-
         We also handle year ranges expressed as decade or centuries ("1800s" or "1950s"), adding
         the endpoints of the range as possible numbers to generate.
-
         We return a list of tuples, where each tuple is the (number_string, token_index) for a
         number found in the input tokens.
         """
@@ -356,3 +354,4 @@ class TableQuestionContext:
         string = re.sub("_+", "_", string)
         string = re.sub("_$", "", string)
         return unidecode(string.lower())
+
