@@ -51,6 +51,8 @@ class LinkingTransitionFunction(BasicTransitionFunction):
         actions given the hidden state at every timestep of decoding, instead of concatenating the
         logits for both (where the logits may not be compatible with each other).
     dropout : ``float`` (optional, default=0.0)
+    num_layers: ``int`` (optional, default=1)
+        The number of layers in the decoder LSTM.
     """
     def __init__(self,
                  encoder_output_dim: int,
