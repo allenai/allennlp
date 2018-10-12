@@ -25,15 +25,12 @@ class TestGrammarBasdText2SqlDatasetReader(AllenNlpTestCase):
         action_sequence = fields["action_sequence"].field_list
         indices = [x.sequence_index for x in action_sequence]
 
-        assert indices ==[93, 75, 78, 118, 34, 5, 34, 5, 34, 5, 34, 5, 34, 5, 39, 116,
-                          96, 13, 112, 21, 27, 103, 16, 112, 21, 30, 102, 13, 112, 21,
-                          30, 103, 16, 116, 95, 13, 112, 21, 23, 102, 46, 91, 92, 90,
-                          103, 90, 102, 86, 82, 39, 113, 48, 2, 42, 88]
+        assert indices == [93, 75, 78, 88, 86, 82, 39, 113, 48, 42, 2, 46, 91, 90, 102, 92, 90, 103, 118, 34, 5,
+                           112, 21, 102, 23, 13, 34, 5, 116, 95, 16, 34, 5, 112, 21, 103, 30, 13, 34, 5, 112, 21,
+                           102, 30, 16, 34, 5, 112, 21, 103, 27, 13, 39, 116, 96]
+
         action_fields = fields["valid_actions"].field_list
         production_rules = [(x.rule, x.is_global_rule) for x in action_fields]
-
-        for x in production_rules:
-            print(x, ",")
 
         assert production_rules == [('arg_list -> [expr, ",", arg_list]', True) ,
                                     ('arg_list -> [expr]', True) ,
