@@ -278,8 +278,12 @@ class AtisSemanticParser(Model):
         utterance_mask_list = [utterance_mask[i] for i in range(batch_size)]
         initial_rnn_state = []
         for i in range(batch_size):
-            initial_rnn_state.append(RnnStatelet(final_encoder_output[i],
-                                                 memory_cell[i],
+            # TODO this really needs to be (num_layers, hidden_dim)
+            initial_rnn_state.append(RnnStatelet(
+                                                 final_encoder_output[i].unsqueeze(0),
+                                                 memory_cell[i].unsqueeze(0),
+                                                 # final_encoder_output[i],
+                                                 # memory_cell[i],
                                                  self._first_action_embedding,
                                                  self._first_attended_utterance,
                                                  encoder_output_list,

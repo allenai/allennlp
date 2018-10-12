@@ -18,8 +18,10 @@ class RnnStatelet:
     ----------
     hidden_state : ``torch.Tensor``
         This holds the LSTM hidden state, with shape ``(decoder_output_dim,)``.
+        This holds the LSTM hidden state, with shape ``(num_layers, decoder_output_dim)``.
     memory_cell : ``torch.Tensor``
         This holds the LSTM memory cell, with shape ``(decoder_output_dim,)``.
+        This holds the LSTM hidden state, with shape ``(num_layers, decoder_output_dim)``.
     previous_action_embedding : ``torch.Tensor``
         This holds the embedding for the action we took at the last timestep (which gets input to
         the decoder).  Has shape ``(action_embedding_dim,)``.

@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Set, Tuple
 from overrides import overrides
 
 import torch
-from torch.nn.modules.rnn import LSTMCell
+from torch.nn.modules.rnn import LSTMCell, LSTM
 from torch.nn.modules.linear import Linear
 
 from allennlp.modules import Attention
@@ -47,6 +47,8 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         gets used when predicting the next action.  We add a dimension of ones to our predicted
         action vector in this case to account for that.
     dropout : ``float`` (optional, default=0.0)
+    num_layers: ``int``, optional (default=1)
+        The number of layers in the decoder LSTM.
     """
     def __init__(self,
                  encoder_output_dim: int,
@@ -56,7 +58,8 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                  predict_start_type_separately: bool = True,
                  num_start_types: int = None,
                  add_action_bias: bool = True,
-                 dropout: float = 0.0) -> None:
+                 dropout: float = 0.0,
+                 num_layers: int = 1) -> None:
         super().__init__()
         self._input_attention = input_attention
         self._add_action_bias = add_action_bias
@@ -82,8 +85,8 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         # hidden state. Then we concatenate those with the decoder state and project to
         # `action_embedding_dim` to make a prediction.
         self._output_projection_layer = Linear(output_dim + encoder_output_dim, action_embedding_dim)
-
-        self._decoder_cell = LSTMCell(input_dim, output_dim)
+        # self._decoder_cell = LSTMCell(input_dim, output_dim)
+        self._decoder_cell = LSTM(input_dim, output_dim, num_layers)
 
         if dropout > 0:
             self._dropout = torch.nn.Dropout(p=dropout)
@@ -127,27 +130,34 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         # before doing these decoder operations.
 
         group_size = len(state.batch_indices)
+        # This will be (group_size, hidden_state_size). eg. (2, 80). We want it to be (num_layer, 2, 80)
+        # TODO
         attended_question = torch.stack([rnn_state.attended_input for rnn_state in state.rnn_state])
-        hidden_state = torch.stack([rnn_state.hidden_state for rnn_state in state.rnn_state])
-        memory_cell = torch.stack([rnn_state.memory_cell for rnn_state in state.rnn_state])
+        # hidden_state = torch.stack([rnn_state.hidden_state for rnn_state in state.rnn_state])
+        # memory_cell = torch.stack([rnn_state.memory_cell for rnn_state in state.rnn_state])
+        hidden_state = torch.stack([rnn_state.hidden_state for rnn_state in state.rnn_state], 1)
+        memory_cell = torch.stack([rnn_state.memory_cell for rnn_state in state.rnn_state], 1)
         previous_action_embedding = torch.stack([rnn_state.previous_action_embedding
                                                  for rnn_state in state.rnn_state])
 
         # (group_size, decoder_input_dim)
         projected_input = self._input_projection_layer(torch.cat([attended_question,
                                                                   previous_action_embedding], -1))
-        decoder_input = self._activation(projected_input)
-
-        hidden_state, memory_cell = self._decoder_cell(decoder_input, (hidden_state, memory_cell))
+        # This is (group_size, decoder_input_dim), eg. (2, 20). We want (seq len, group, decoder_input_dim)
+        decoder_input = self._activation(projected_input) 
+        # TODO
+        # hidden_state, memory_cell = self._decoder_cell(decoder_input, (hidden_state, memory_cell))
+        _ , (hidden_state, memory_cell) = self._decoder_cell(decoder_input.unsqueeze(0), (hidden_state, memory_cell))
         hidden_state = self._dropout(hidden_state)
+        print('memory_cell update decoder', type(memory_cell))
 
         # (group_size, encoder_output_dim)
         encoder_outputs = torch.stack([state.rnn_state[0].encoder_outputs[i] for i in state.batch_indices])
         encoder_output_mask = torch.stack([state.rnn_state[0].encoder_output_mask[i] for i in state.batch_indices])
-        attended_question, attention_weights = self.attend_on_question(hidden_state,
+        attended_question, attention_weights = self.attend_on_question(hidden_state[0], # TODO figure how attention with multiple layers
                                                                        encoder_outputs,
                                                                        encoder_output_mask)
-        action_query = torch.cat([hidden_state, attended_question], dim=-1)
+        action_query = torch.cat([hidden_state[0], attended_question], dim=-1) # TODO what is action_query for
 
         # (group_size, action_embedding_dim)
         projected_query = self._activation(self._output_projection_layer(action_query))
@@ -227,15 +237,25 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         # each time is more expensive than doing it once upfront.  These three lines give about a
         # 10% speedup in training time.
         group_size = len(state.batch_indices)
-        hidden_state = [x.squeeze(0) for x in updated_rnn_state['hidden_state'].chunk(group_size, 0)]
-        memory_cell = [x.squeeze(0) for x in updated_rnn_state['memory_cell'].chunk(group_size, 0)]
+        # hidden_state = [x.squeeze(0) for x in updated_rnn_state['hidden_state'].chunk(group_size, 0)]
+        # memory_cell = [x.squeeze(0) for x in updated_rnn_state['memory_cell'].chunk(group_size, 0)]
+        hidden_state = [x.squeeze(0) for x in updated_rnn_state['hidden_state'].chunk(group_size, 1)]
+        memory_cell = [x.squeeze(0) for x in updated_rnn_state['memory_cell'].chunk(group_size, 1)]
+
         attended_question = [x.squeeze(0) for x in updated_rnn_state['attended_question'].chunk(group_size, 0)]
+
+        # Hidden state is a list of tensors of shape (hidden_size)-> want list of tensors (num_layers, hidden_size)
+        print('hidden-state', len(hidden_state))
+        print('hidden-state[0]', hidden_state[0].shape)
 
         def make_state(group_index: int,
                        action: int,
                        new_score: torch.Tensor,
                        action_embedding: torch.Tensor) -> GrammarBasedState:
-            new_rnn_state = RnnStatelet(hidden_state[group_index],
+            new_rnn_state = RnnStatelet(
+                                        # hidden_state[:,group_index,:],
+                                        # memory_cell[:,group_index,:],
+                                        hidden_state[group_index],
                                         memory_cell[group_index],
                                         action_embedding,
                                         attended_question[group_index],
@@ -375,6 +395,10 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         method on the main parser module can call it on the initial hidden state, to simplify the
         logic in ``take_step``.
         """
+        print('query', query.shape)
+        print('encoder_outputs', encoder_outputs.shape)
+        # query is shape (group size, hidden_dim) eg. 4, 80
+        # encoder_outputs is shape (group, sequence length, hidden dim) eg. 4, 13, 80
         # (group_size, question_length)
         question_attention_weights = self._input_attention(query,
                                                            encoder_outputs,
