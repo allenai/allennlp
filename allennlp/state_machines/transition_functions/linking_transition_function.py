@@ -61,7 +61,8 @@ class LinkingTransitionFunction(BasicTransitionFunction):
                  num_start_types: int = None,
                  add_action_bias: bool = True,
                  mixture_feedforward: FeedForward = None,
-                 dropout: float = 0.0) -> None:
+                 dropout: float = 0.0,
+                 num_layers: int = 1) -> None:
         super().__init__(encoder_output_dim=encoder_output_dim,
                          action_embedding_dim=action_embedding_dim,
                          input_attention=input_attention,
@@ -69,7 +70,8 @@ class LinkingTransitionFunction(BasicTransitionFunction):
                          activation=activation,
                          predict_start_type_separately=predict_start_type_separately,
                          add_action_bias=add_action_bias,
-                         dropout=dropout)
+                         dropout=dropout,
+                         num_layers=num_layers)
         self._mixture_feedforward = mixture_feedforward
 
         if mixture_feedforward is not None:

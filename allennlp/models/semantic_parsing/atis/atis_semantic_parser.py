@@ -108,6 +108,7 @@ class AtisSemanticParser(Model):
 
         self._num_entity_types = 2  # TODO(kevin): get this in a more principled way somehow?
         self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
+        self._num_layers_decoder = 3
 
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
@@ -116,7 +117,8 @@ class AtisSemanticParser(Model):
                                                               input_attention=input_attention,
                                                               predict_start_type_separately=False,
                                                               add_action_bias=self._add_action_bias,
-                                                              dropout=dropout)
+                                                              dropout=dropout,
+                                                              num_layers=self._num_layers_decoder)
 
     @overrides
     def forward(self,  # type: ignore
@@ -190,7 +192,7 @@ class AtisSemanticParser(Model):
             best_final_states = self._beam_search.search(num_steps,
                                                          initial_state,
                                                          self._transition_function,
-                                                         keep_final_unfinished_states=False)
+                                                         keep_final_unfinished_states=True)
             outputs['best_action_sequence'] = []
             outputs['debug_info'] = []
             outputs['entities'] = []
@@ -278,12 +280,8 @@ class AtisSemanticParser(Model):
         utterance_mask_list = [utterance_mask[i] for i in range(batch_size)]
         initial_rnn_state = []
         for i in range(batch_size):
-            # TODO this really needs to be (num_layers, hidden_dim)
-            initial_rnn_state.append(RnnStatelet(
-                                                 final_encoder_output[i].unsqueeze(0),
-                                                 memory_cell[i].unsqueeze(0),
-                                                 # final_encoder_output[i],
-                                                 # memory_cell[i],
+            initial_rnn_state.append(RnnStatelet(final_encoder_output[i].repeat(self._num_layers_decoder, 1),
+                                                 memory_cell[i].repeat(self._num_layers_decoder, 1),
                                                  self._first_action_embedding,
                                                  self._first_attended_utterance,
                                                  encoder_output_list,
