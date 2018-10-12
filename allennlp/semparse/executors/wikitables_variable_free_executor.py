@@ -59,6 +59,9 @@ class Date:
             return False
         return self > other or self == other
 
+    def __str__(self):
+        return f"{self.year}-{self.month}-{self.day}"
+
 
 class WikiTablesVariableFreeExecutor:
     # pylint: disable=too-many-public-methods
@@ -70,11 +73,7 @@ class WikiTablesVariableFreeExecutor:
     ----------
     table_data : ``List[Dict[str, str]]``
         All the rows in the table on which the executor will be used. The class expects each row to
-        be represented as a dict from column names to corresponding cell values. For now, we assume
-        the cell values and column names to be represented in the SEMPRE's normalized string format
-        (i.e. cells as 'fb:cell.[cell_value]' and columns as 'fb:row.row.[column_name]'). We still
-        rely on `TableQuestionKnowledgeGraph` to do this normalization, but when we have a
-        replaceent for that class, this assumption will change.
+        be represented as a dict from column names to corresponding cell values.
     """
     def __init__(self, table_data: List[Dict[str, str]]) -> None:
         self._table_data = table_data
@@ -105,19 +104,22 @@ class WikiTablesVariableFreeExecutor:
             function_name = expression[0]
         else:
             # This is a constant (like "all_rows" or "2005")
-            return self._handle_constant(str(expression))
+            return self._handle_constant(expression)
         try:
             function = getattr(self, function_name)
             return function(*expression[1:])
         except AttributeError:
             raise ExecutionError(f"Function not found: {function_name}")
 
-    def _handle_constant(self, constant: str) -> Union[List[Dict[str, str]], float]:
+    def _handle_constant(self, constant: str) -> Union[List[Dict[str, str]], str, float]:
         if constant == "all_rows":
             return self._table_data
         try:
             return float(constant)
         except ValueError:
+            # The constant is not a number. Returning as-is if it is a string.
+            if constant.startswith("string:"):
+                return constant.replace("string:", "")
             raise ExecutionError(f"Cannot handle constant: {constant}")
 
     @staticmethod
@@ -131,7 +133,9 @@ class WikiTablesVariableFreeExecutor:
         if not row_list:
             return []
         try:
-            cell_row_pairs = [(float(row[column_name].replace('fb:cell.', '')), row) for row in row_list]
+            # Various symbols like commas, dollar signs would have been converted to _. Removing
+            # them for float conversion.
+            cell_row_pairs = [(float(row[column_name].replace('_', '')), row) for row in row_list]
         except ValueError:
             # This means that at least one of the cells is not numerical.
             return []
@@ -147,8 +151,7 @@ class WikiTablesVariableFreeExecutor:
         """
         if not row_list:
             return []
-        cell_row_pairs = [(self._make_date(row[column_name].replace('fb:cell.', '')), row)
-                          for row in row_list]
+        cell_row_pairs = [(self._make_date(row[column_name]), row) for row in row_list]
         return cell_row_pairs
 
     @staticmethod
@@ -175,7 +178,7 @@ class WikiTablesVariableFreeExecutor:
         # month name. Note that this will not consider strings with just years as dates. That's fine
         # because we can compare them as numbers.
         values_are_dates = False
-        cell_value_parts = cell_value.replace('fb:cell.', '').split('_')
+        cell_value_parts = cell_value.split('_')
         # Check if the number of parts in the string are 3 or fewer. If not, it's probably neither a
         # date nor a number.
         if len(cell_value_parts) <= 3:
@@ -225,7 +228,7 @@ class WikiTablesVariableFreeExecutor:
         if not value_row_pairs:
             return []
         # Returns a list containing the row with the max cell value.
-        return [sorted(value_row_pairs, reverse=True)[0][1]]
+        return [sorted(value_row_pairs, key=lambda x: x[0], reverse=True)[0][1]]
 
     def argmin(self, row_expression_list: NestedList, column_name: str) -> List[Dict[str, str]]:
         """
@@ -246,7 +249,7 @@ class WikiTablesVariableFreeExecutor:
         if not value_row_pairs:
             return []
         # Returns a list containing the row with the max cell value.
-        return [sorted(value_row_pairs)[0][1]]
+        return [sorted(value_row_pairs, key=lambda x: x[0])[0][1]]
 
     def filter_number_greater(self,
                               row_expression_list: NestedList,
@@ -507,7 +510,7 @@ class WikiTablesVariableFreeExecutor:
     def filter_in(self,
                   row_expression_list: NestedList,
                   column_name: str,
-                  filter_value: str) -> List[Dict[str, str]]:
+                  value_expression: NestedList) -> List[Dict[str, str]]:
         """
         Takes a list of rows, a column, and a string value and returns all the rows where the value
         in that column contains the given string.
@@ -515,18 +518,27 @@ class WikiTablesVariableFreeExecutor:
         row_list = self._handle_expression(row_expression_list)
         if not row_list:
             return []
-        # Assuming filter value is a simple string with underscores for spaces. The cell values also
-        # have underscores for spaces, so we do not need to replace them here.
+        expression_evaluation = self._handle_expression(value_expression)
+        if isinstance(expression_evaluation, list):
+            filter_value = expression_evaluation[0]
+        elif isinstance(expression_evaluation, str):
+            filter_value = expression_evaluation
+        else:
+            raise ExecutionError(f"Unexprected filter value for filter_in: {value_expression}")
+        if not isinstance(filter_value, str):
+            raise ExecutionError(f"Unexprected filter value for filter_in: {value_expression}")
+        # Assuming filter value has underscores for spaces. The cell values also have underscores
+        # for spaces, so we do not need to replace them here.
         result_list = []
         for row in row_list:
-            if filter_value in row[column_name].replace("fb:cell.", ""):
+            if filter_value in row[column_name]:
                 result_list.append(row)
         return result_list
 
     def filter_not_in(self,
                       row_expression_list: NestedList,
                       column_name: str,
-                      filter_value: str) -> List[Dict[str, str]]:
+                      value_expression: NestedList) -> List[Dict[str, str]]:
         """
         Takes a list of rows, a column, and a string value and returns all the rows where the value
         in that column does not contain the given string.
@@ -534,11 +546,20 @@ class WikiTablesVariableFreeExecutor:
         row_list = self._handle_expression(row_expression_list)
         if not row_list:
             return []
-        # Assuming filter value is a simple string with underscores for spaces. The cell values also
-        # have underscores for spaces, so we do not need to replace them here.
+        expression_evaluation = self._handle_expression(value_expression)
+        if isinstance(expression_evaluation, list):
+            filter_value = expression_evaluation[0]
+        elif isinstance(expression_evaluation, str):
+            filter_value = expression_evaluation
+        else:
+            raise ExecutionError(f"Unexprected filter value for filter_in: {value_expression}")
+        if not isinstance(filter_value, str):
+            raise ExecutionError(f"Unexprected filter value for filter_in: {value_expression}")
+        # Assuming filter value has underscores for spaces. The cell values also have underscores
+        # for spaces, so we do not need to replace them here.
         result_list = []
         for row in row_list:
-            if filter_value not in row[column_name].replace("fb:cell.", ""):
+            if filter_value not in row[column_name]:
                 result_list.append(row)
         return result_list
 
@@ -725,8 +746,8 @@ class WikiTablesVariableFreeExecutor:
         first_row = first_row_list[0]
         second_row = second_row_list[0]
         try:
-            first_value = float(first_row[column_name].replace("fb:cell.", ""))
-            second_value = float(second_row[column_name].replace("fb:cell.", ""))
+            first_value = float(first_row[column_name])
+            second_value = float(second_row[column_name])
             return first_value - second_value
         except ValueError:
             raise ExecutionError(f"Invalid column for diff: {column_name}")

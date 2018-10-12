@@ -399,9 +399,13 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             # Some tables have empty cells.
             return 0
         seen_entity_words = set()
+        token_index_left = token_index
         while token_index < len(tokens) and tokens[token_index].text in entity_words:
             seen_entity_words.add(tokens[token_index].text)
             token_index += 1
+        while token_index_left >= 0 and tokens[token_index_left].text in entity_words:
+            seen_entity_words.add(tokens[token_index_left].text)
+            token_index_left -= 1
         return len(seen_entity_words) / len(entity_words)
 
     def _span_lemma_overlap_fraction(self,
@@ -415,9 +419,13 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             # Some tables have empty cells.
             return 0
         seen_entity_lemmas = set()
+        token_index_left = token_index
         while token_index < len(tokens) and tokens[token_index].lemma_ in entity_lemmas:
             seen_entity_lemmas.add(tokens[token_index].lemma_)
             token_index += 1
+        while token_index_left >= 0 and tokens[token_index_left].lemma_ in entity_lemmas:
+            seen_entity_lemmas.add(tokens[token_index_left].lemma_)
+            token_index_left -= 1
         return len(seen_entity_lemmas) / len(entity_lemmas)
 
     # pylint: enable=unused-argument,no-self-use

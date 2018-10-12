@@ -1,13 +1,13 @@
 from typing import List, Dict, Tuple, Set, Callable
 from copy import copy
 import numpy
-from nltk import ngrams
+from nltk import ngrams, bigrams
 
 from parsimonious.grammar import Grammar
 from parsimonious.expressions import Expression, OneOf, Sequence, Literal
 
 from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
-from allennlp.semparse.contexts.atis_sql_table_context import AtisSqlTableContext, KEYWORDS
+from allennlp.semparse.contexts.atis_sql_table_context import AtisSqlTableContext, KEYWORDS, NUMERIC_NONTERMINALS
 from allennlp.semparse.contexts.sql_context_utils import SqlVisitor, format_action, initialize_valid_actions
 
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
@@ -23,15 +23,19 @@ def get_strings_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, Li
         for string in ATIS_TRIGGER_DICT.get(token.text.lower(), []):
             string_linking_scores[string].append(index)
 
-    bigrams = ngrams([token.text for token in tokenized_utterance], 2)
-    for index, bigram in enumerate(bigrams):
-        for string in ATIS_TRIGGER_DICT.get(' '.join(bigram).lower(), []):
+    token_bigrams = bigrams([token.text for token in tokenized_utterance])
+    for index, token_bigram in enumerate(token_bigrams):
+        for string in ATIS_TRIGGER_DICT.get(' '.join(token_bigram).lower(), []):
             string_linking_scores[string].extend([index,
                                                   index + 1])
 
     trigrams = ngrams([token.text for token in tokenized_utterance], 3)
     for index, trigram in enumerate(trigrams):
-        for string in ATIS_TRIGGER_DICT.get(' '.join(trigram).lower(), []):
+        if trigram[0] == 'st':
+            natural_language_key = f'st. {trigram[2]}'.lower()
+        else:
+            natural_language_key = ' '.join(trigram).lower()
+        for string in ATIS_TRIGGER_DICT.get(natural_language_key, []):
             string_linking_scores[string].extend([index,
                                                   index + 1,
                                                   index + 2])
@@ -65,8 +69,8 @@ class AtisWorld():
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
         self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]
-        self.linked_entities = self._get_linked_entities()
         self.dates = self._get_dates()
+        self.linked_entities = self._get_linked_entities()
 
         entities, linking_scores = self._flatten_entities()
         # This has shape (num_entities, num_utterance_tokens).
@@ -87,22 +91,14 @@ class AtisWorld():
         ternary expression will refer to the start and end times.
         """
 
-        # This will give us a shallow copy, but that's OK because everything
-        # inside is immutable so we get a new copy of it.
+        # This will give us a shallow copy. We have to be careful here because the ``Grammar`` object
+        # contains ``Expression`` objects that have tuples containing the members of that expression.
+        # We have to create new sub-expression objects so that original grammar is not mutated.
         new_grammar = copy(AtisWorld.sql_table_context.grammar)
 
-        numbers = self._get_numeric_database_values('number')
-        number_literals = [Literal(number) for number in numbers]
-        new_grammar['number'] = OneOf(*number_literals, name='number')
+        for numeric_nonterminal in NUMERIC_NONTERMINALS:
+            self._add_numeric_nonterminal_to_grammar(numeric_nonterminal, new_grammar)
         self._update_expression_reference(new_grammar, 'pos_value', 'number')
-
-        time_range_start = self._get_numeric_database_values('time_range_start')
-        time_range_start_literals = [Literal(time) for time in time_range_start]
-        new_grammar['time_range_start'] = OneOf(*time_range_start_literals, name='time_range_start')
-
-        time_range_end = self._get_numeric_database_values('time_range_end')
-        time_range_end_literals = [Literal(time) for time in time_range_end]
-        new_grammar['time_range_end'] = OneOf(*time_range_end_literals, name='time_range_end')
 
         ternary_expressions = [self._get_sequence_with_spacing(new_grammar,
                                                                [new_grammar['col_ref'],
@@ -128,39 +124,76 @@ class AtisWorld():
         new_grammar['ternaryexpr'] = OneOf(*ternary_expressions, name='ternaryexpr')
         self._update_expression_reference(new_grammar, 'condition', 'ternaryexpr')
 
+        new_binary_expressions = []
+
+        fare_round_trip_cost_expression = \
+                    self._get_sequence_with_spacing(new_grammar,
+                                                    [Literal('fare'),
+                                                     Literal('.'),
+                                                     Literal('round_trip_cost'),
+                                                     new_grammar['binaryop'],
+                                                     new_grammar['fare_round_trip_cost']])
+        new_binary_expressions.append(fare_round_trip_cost_expression)
+
+        fare_one_direction_cost_expression = \
+                    self._get_sequence_with_spacing(new_grammar,
+                                                    [Literal('fare'),
+                                                     Literal('.'),
+                                                     Literal('one_direction_cost'),
+                                                     new_grammar['binaryop'],
+                                                     new_grammar['fare_one_direction_cost']])
+
+        new_binary_expressions.append(fare_one_direction_cost_expression)
+
+        flight_number_expression = \
+                    self._get_sequence_with_spacing(new_grammar,
+                                                    [Literal('flight'),
+                                                     Literal('.'),
+                                                     Literal('flight_number'),
+                                                     new_grammar['binaryop'],
+                                                     new_grammar['flight_number']])
+        new_binary_expressions.append(flight_number_expression)
+
         if self.dates:
-            new_binary_expressions = []
             year_binary_expression = self._get_sequence_with_spacing(new_grammar,
                                                                      [Literal('date_day'),
                                                                       Literal('.'),
                                                                       Literal('year'),
                                                                       new_grammar['binaryop'],
-                                                                      Literal(f'{self.dates[0].year}')])
-            new_binary_expressions.append(year_binary_expression)
-            for date in self.dates:
-                month_binary_expression = self._get_sequence_with_spacing(new_grammar,
-                                                                          [Literal('date_day'),
-                                                                           Literal('.'),
-                                                                           Literal('month_number'),
-                                                                           new_grammar['binaryop'],
-                                                                           Literal(f'{date.month}')])
+                                                                      new_grammar['year_number']])
+            month_binary_expression = self._get_sequence_with_spacing(new_grammar,
+                                                                      [Literal('date_day'),
+                                                                       Literal('.'),
+                                                                       Literal('month_number'),
+                                                                       new_grammar['binaryop'],
+                                                                       new_grammar['month_number']])
+            day_binary_expression = self._get_sequence_with_spacing(new_grammar,
+                                                                    [Literal('date_day'),
+                                                                     Literal('.'),
+                                                                     Literal('day_number'),
+                                                                     new_grammar['binaryop'],
+                                                                     new_grammar['day_number']])
+            new_binary_expressions.extend([year_binary_expression,
+                                           month_binary_expression,
+                                           day_binary_expression])
 
-                day_binary_expression = self._get_sequence_with_spacing(new_grammar,
-                                                                        [Literal('date_day'),
-                                                                         Literal('.'),
-                                                                         Literal('day_number'),
-                                                                         new_grammar['binaryop'],
-                                                                         Literal(f'{date.day}')])
-                new_binary_expressions.extend([month_binary_expression,
-                                               day_binary_expression])
-
-            new_grammar['biexpr'].members = new_grammar['biexpr'].members + tuple(new_binary_expressions)
+        new_binary_expressions = new_binary_expressions + list(new_grammar['biexpr'].members)
+        new_grammar['biexpr'] = OneOf(*new_binary_expressions, name='biexpr')
+        self._update_expression_reference(new_grammar, 'condition', 'biexpr')
         return new_grammar
 
     def _get_numeric_database_values(self,
                                      nonterminal: str) -> List[str]:
         return sorted([value[1] for key, value in self.linked_entities['number'].items()
                        if value[0] == nonterminal], reverse=True)
+
+    def _add_numeric_nonterminal_to_grammar(self,
+                                            nonterminal: str,
+                                            new_grammar: Grammar) -> None:
+        numbers = self._get_numeric_database_values(nonterminal)
+        number_literals = [Literal(number) for number in numbers]
+        if number_literals:
+            new_grammar[nonterminal] = OneOf(*number_literals, name=nonterminal)
 
     def _update_expression_reference(self, # pylint: disable=no-self-use
                                      grammar: Grammar,
@@ -190,6 +223,53 @@ class AtisWorld():
 
     def get_valid_actions(self) -> Dict[str, List[str]]:
         return self.valid_actions
+
+    def add_dates_to_number_linking_scores(self,
+                                           number_linking_scores: Dict[str, Tuple[str, str, List[int]]],
+                                           current_tokenized_utterance: List[Token]) -> None:
+
+        month_reverse_lookup = {str(number): string for string, number in MONTH_NUMBERS.items()}
+        day_reverse_lookup = {str(number) : string for string, number in DAY_NUMBERS.items()}
+
+        if self.dates:
+            for date in self.dates:
+                # Add the year linking score
+                entity_linking = [0 for token in current_tokenized_utterance]
+                for token_index, token in enumerate(current_tokenized_utterance):
+                    if token.text == str(date.year):
+                        entity_linking[token_index] = 1
+                action = format_action(nonterminal='year_number',
+                                       right_hand_side=str(date.year),
+                                       is_number=True,
+                                       keywords_to_uppercase=KEYWORDS)
+                number_linking_scores[action] = ('year_number', str(date.year), entity_linking)
+
+
+                entity_linking = [0 for token in current_tokenized_utterance]
+                for token_index, token in enumerate(current_tokenized_utterance):
+                    if token.text == month_reverse_lookup[str(date.month)]:
+                        entity_linking[token_index] = 1
+                action = format_action(nonterminal='month_number',
+                                       right_hand_side=str(date.month),
+                                       is_number=True,
+                                       keywords_to_uppercase=KEYWORDS)
+
+                number_linking_scores[action] = ('month_number', str(date.month), entity_linking)
+
+                entity_linking = [0 for token in current_tokenized_utterance]
+                for token_index, token in enumerate(current_tokenized_utterance):
+                    if token.text == day_reverse_lookup[str(date.day)]:
+                        entity_linking[token_index] = 1
+                for bigram_index, bigram in enumerate(bigrams([token.text
+                                                               for token in current_tokenized_utterance])):
+                    if ' '.join(bigram) == day_reverse_lookup[str(date.day)]:
+                        entity_linking[bigram_index] = 1
+                        entity_linking[bigram_index + 1] = 1
+                action = format_action(nonterminal='day_number',
+                                       right_hand_side=str(date.day),
+                                       is_number=True,
+                                       keywords_to_uppercase=KEYWORDS)
+                number_linking_scores[action] = ('day_number', str(date.day), entity_linking)
 
     def add_to_number_linking_scores(self,
                                      all_numbers: Set[str],
@@ -246,23 +326,46 @@ class AtisWorld():
                                           current_tokenized_utterance,
                                           'time_range_start')
 
-        self.add_to_number_linking_scores({"1200"},
+        self.add_to_number_linking_scores({'1200'},
                                           number_linking_scores,
                                           get_time_range_end_from_utterance,
                                           current_tokenized_utterance,
                                           'time_range_end')
 
-        self.add_to_number_linking_scores({'0', '1'},
+        self.add_to_number_linking_scores({'0', '1', '60', '41'},
                                           number_linking_scores,
                                           get_numbers_from_utterance,
                                           current_tokenized_utterance,
                                           'number')
+
+        self.add_to_number_linking_scores({'0'},
+                                          number_linking_scores,
+                                          get_costs_from_utterance,
+                                          current_tokenized_utterance,
+                                          'fare_round_trip_cost')
+
+        self.add_to_number_linking_scores({'0'},
+                                          number_linking_scores,
+                                          get_costs_from_utterance,
+                                          current_tokenized_utterance,
+                                          'fare_one_direction_cost')
+
+        self.add_to_number_linking_scores({'0'},
+                                          number_linking_scores,
+                                          get_flight_numbers_from_utterance,
+                                          current_tokenized_utterance,
+                                          'flight_number')
+
+        self.add_dates_to_number_linking_scores(number_linking_scores,
+                                                current_tokenized_utterance)
 
         # Add string linking dict.
         string_linking_dict: Dict[str, List[int]] = {}
         for tokenized_utterance in self.tokenized_utterances:
             string_linking_dict = get_strings_from_utterance(tokenized_utterance)
         strings_list = AtisWorld.sql_table_context.strings_list
+        strings_list.append(('flight_airline_code_string -> ["\'EA\'"]', 'EA'))
+        strings_list.append(('airline_airline_name_string-> ["\'EA\'"]', 'EA'))
         # We construct the linking scores for strings from the ``string_linking_dict`` here.
         for string in strings_list:
             entity_linking = [0 for token in current_tokenized_utterance]
@@ -283,7 +386,24 @@ class AtisWorld():
             dates.extend(get_date_from_utterance(tokenized_utterance))
         return dates
 
+    def _ignore_dates(self, query: str):
+        tokens = query.split(' ')
+        year_indices = [index for index, token in enumerate(tokens) if token.endswith('year')]
+        month_indices = [index for index, token in enumerate(tokens) if token.endswith('month_number')]
+        day_indices = [index for index, token in enumerate(tokens) if token.endswith('day_number')]
+
+        if self.dates:
+            for token_index, token in enumerate(tokens):
+                if token_index - 2 in year_indices and token.isdigit():
+                    tokens[token_index] = str(self.dates[0].year)
+                if token_index - 2 in month_indices and token.isdigit():
+                    tokens[token_index] = str(self.dates[0].month)
+                if token_index - 2 in day_indices and token.isdigit():
+                    tokens[token_index] = str(self.dates[0].day)
+        return ' '.join(tokens)
+
     def get_action_sequence(self, query: str) -> List[str]:
+        query = self._ignore_dates(query)
         sql_visitor = SqlVisitor(self.grammar, keywords_to_uppercase=KEYWORDS)
         if query:
             action_sequence = sql_visitor.parse(query)
@@ -317,8 +437,8 @@ class AtisWorld():
         for entity in sorted(self.linked_entities['string']):
             entities.append(entity)
             linking_scores.append(self.linked_entities['string'][entity][2])
-        return entities, numpy.array(linking_scores)
 
+        return entities, numpy.array(linking_scores)
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):

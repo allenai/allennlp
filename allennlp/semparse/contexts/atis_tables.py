@@ -15,6 +15,7 @@ MINS_IN_HOUR = 60
 APPROX_WORDS = ['about', 'around', 'approximately']
 WORDS_PRECEDING_TIME = ['at', 'between', 'to', 'before', 'after']
 
+
 def pm_map_match_to_query_value(match: str):
     if len(match.rstrip('pm')) < 3: # This will match something like ``5pm``.
         if match.startswith('12'):
@@ -82,12 +83,13 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
     it is 1993 so we do the same here. If there is no mention of the month or day then
     we do not return any dates from the utterance.
     """
+
     dates = []
+
     utterance = ' '.join([token.text for token in tokenized_utterance])
     year_result = re.findall(r'199[0-4]', utterance)
     if year_result:
         year = int(year_result[0])
-
     trigrams = ngrams([token.text for token in tokenized_utterance], 3)
     for month, tens, digit in trigrams:
         # This will match something like ``september twenty first``.
@@ -107,6 +109,20 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
             except ValueError:
                 print('invalid month day')
 
+    fivegrams = ngrams([token.text for token in tokenized_utterance], 5)
+    for tens, digit, _, year_match, month in fivegrams:
+        # This will match something like ``twenty first of 1993 july``.
+        day = ' '.join([tens, digit])
+        if month in MONTH_NUMBERS and day in DAY_NUMBERS and year_match.isdigit():
+            try:
+                dates.append(datetime(int(year_match), MONTH_NUMBERS[month], DAY_NUMBERS[day]))
+            except ValueError:
+                print('invalid month day')
+        if month in MONTH_NUMBERS and digit in DAY_NUMBERS and year_match.isdigit():
+            try:
+                dates.append(datetime(int(year_match), MONTH_NUMBERS[month], DAY_NUMBERS[digit]))
+            except ValueError:
+                print('invalid month day')
     return dates
 
 def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
@@ -189,6 +205,35 @@ def get_time_range_end_from_utterance(utterance: str, # pylint: disable=unused-a
 
     return time_range_end_linking_dict
 
+def get_costs_from_utterance(utterance: str, # pylint: disable=unused-argument
+                             tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
+    dollars_indices = {index for index, token in enumerate(tokenized_utterance)
+                       if token.text == 'dollars' or token.text == 'dollar'}
+
+    costs_linking_dict: Dict[str, List[int]] = defaultdict(list)
+    for token_index, token in enumerate(tokenized_utterance):
+        if token_index + 1 in dollars_indices and token.text.isdigit():
+            costs_linking_dict[token.text].append(token_index)
+    return costs_linking_dict
+
+def get_flight_numbers_from_utterance(utterance: str, # pylint: disable=unused-argument
+                                      tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
+    indices_words_preceding_flight_number = {index for index, token in enumerate(tokenized_utterance)
+                                             if token.text in {'flight', 'number'}
+                                             or token.text.upper() in AIRLINE_CODE_LIST
+                                             or token.text.lower() in AIRLINE_CODES.keys()}
+
+    indices_words_succeeding_flight_number = {index for index, token in enumerate(tokenized_utterance)
+                                              if token.text == 'flight'}
+
+    flight_numbers_linking_dict: Dict[str, List[int]] = defaultdict(list)
+    for token_index, token in enumerate(tokenized_utterance):
+        if token.text.isdigit():
+            if token_index - 1 in indices_words_preceding_flight_number:
+                flight_numbers_linking_dict[token.text].append(token_index)
+            if token_index + 1 in indices_words_succeeding_flight_number:
+                flight_numbers_linking_dict[token.text].append(token_index)
+    return flight_numbers_linking_dict
 
 def digit_to_query_time(digit: str) -> List[int]:
     """
@@ -303,6 +348,7 @@ AIRLINE_CODES = {'alaska': ['AS'],
                  'mgm': ['MG'],
                  'midwest': ['YX'],
                  'nation': ['NX'],
+                 'nationair': ['NX'],
                  'northeast': ['2V'],
                  'northwest': ['NW'],
                  'ontario': ['GX'],
@@ -384,11 +430,14 @@ MONTH_NUMBERS = {'january': 1,
 GROUND_SERVICE = {'air taxi': ['AIR TAXI OPERATION'],
                   'car': ['RENTAL CAR'],
                   'limo': ['LIMOUSINE'],
+                  'limousine': ['LIMOUSINE'],
                   'rapid': ['RAPID TRANSIT'],
                   'rental': ['RENTAL CAR'],
                   'taxi': ['TAXI']}
 
-MISC_STR = {"every day" : ["DAILY"]}
+MISC_STR = {"every day" : ["DAILY"],
+            "saint petersburg": ["ST. PETERSBURG"],
+            "saint louis": ["ST. LOUIS"]}
 
 DAY_NUMBERS = {'first': 1,
                'second': 2,
@@ -424,18 +473,27 @@ DAY_NUMBERS = {'first': 1,
 
 
 MISC_TIME_TRIGGERS = {'lunch': ['1400'],
-                      'noon': ['1200']}
+                      'noon': ['1200'],
+                      'early evening': ['1800', '2000'],
+                      'morning': ['0', '1200'],
+                      'night': ['1800', '2400']}
 
 TIME_RANGE_START_DICT = {'morning': ['0'],
+                         'mornings': ['1200'],
                          'afternoon': ['1200'],
+                         'afternoons': ['1200'],
+                         'after noon': ['1200'],
                          'late afternoon': ['1600'],
                          'evening': ['1800'],
                          'late evening': ['2000']}
 
 TIME_RANGE_END_DICT = {'early morning': ['800'],
-                       'morning': ['1200'],
+                       'morning': ['1200', '800'],
+                       'mornings': ['1200', '800'],
                        'early afternoon': ['1400'],
                        'afternoon': ['1800'],
+                       'afternoons': ['1800'],
+                       'after noon': ['1800'],
                        'evening': ['2200']}
 
 ALL_TABLES = {'aircraft': ['aircraft_code', 'aircraft_description', 'capacity',
@@ -477,18 +535,18 @@ ALL_TABLES = {'aircraft': ['aircraft_code', 'aircraft_description', 'capacity',
 
 TABLES_WITH_STRINGS = {'airline' : ['airline_code', 'airline_name'],
                        'city' : ['city_name', 'state_code', 'city_code'],
-                       'fare' : ['round_trip_required', 'fare_basis_code'],
-                       'flight' : ['airline_code', 'flight_days', 'flight_number'],
+                       'fare' : ['round_trip_required', 'fare_basis_code', 'restriction_code'],
+                       'flight' : ['airline_code', 'flight_days'],
                        'flight_stop' : ['stop_airport'],
-                       'airport' : ['airport_code'],
-                       'state' : ['state_name'],
-                       'fare_basis' : ['fare_basis_code', 'class_type', 'economy'],
-                       'class_of_service' : ['booking_class'],
-                       'aircraft' : ['basic_type', 'manufacturer'],
+                       'airport' : ['airport_code', 'airport_name'],
+                       'state' : ['state_name', 'state_code'],
+                       'fare_basis' : ['fare_basis_code', 'class_type', 'economy', 'booking_class'],
+                       'class_of_service' : ['booking_class', 'class_description'],
+                       'aircraft' : ['basic_type', 'manufacturer', 'aircraft_code', 'propulsion'],
                        'restriction' : ['restriction_code'],
                        'ground_service' : ['transport_type'],
-                       'days' : ['day_name'],
-                       'food_service': ['meal_description']}
+                       'days' : ['day_name', 'days_code'],
+                       'food_service': ['meal_description', 'compartment']}
 
 DAY_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
 
@@ -518,7 +576,10 @@ CITY_AIRPORT_CODES = {'atlanta' : ['ATL'],
                       'charlotte': ['CLT'],
                       'dallas': ['DFW'],
                       'detroit': ['DTW'],
+                      'houston': ['IAH'],
                       'la guardia': ['LGA'],
+                      'love field': ['DAL'],
+                      'los angeles': ['LAX'],
                       'oakland': ['OAK'],
                       'philadelphia': ['PHL'],
                       'pittsburgh': ['PIT'],
@@ -537,7 +598,7 @@ AIRLINE_CODE_LIST = ['AR', '3J', 'AC', '9X', 'ZW', 'AS', '7V',
                      'OK', 'DL', '9E', 'QD', 'LH', 'XJ', 'MG',
                      'YX', 'NX', '2V', 'NW', 'RP', 'AT', 'SN',
                      'OO', 'WN', 'TG', 'FF', '9N', 'TW', 'RZ',
-                     'UA', 'US', 'OE']
+                     'UA', 'US', 'OE', 'EA']
 CITIES = ['NASHVILLE', 'BOSTON', 'BURBANK', 'BALTIMORE', 'CHICAGO', 'CLEVELAND',
           'CHARLOTTE', 'COLUMBUS', 'CINCINNATI', 'DENVER', 'DALLAS', 'DETROIT',
           'FORT WORTH', 'HOUSTON', 'WESTCHESTER COUNTY', 'INDIANAPOLIS', 'NEWARK',
@@ -551,7 +612,12 @@ CITY_CODE_LIST = ['BBNA', 'BBOS', 'BBUR', 'BBWI', 'CCHI', 'CCLE', 'CCLT', 'CCMH'
                   'MATL', 'MMEM', 'MMIA', 'MMKC', 'MMKE', 'MMSP', 'NNYC', 'OOAK', 'OONT', 'OORL',
                   'PPHL', 'PPHX', 'PPIT', 'SMSP', 'SSAN', 'SSEA', 'SSFO', 'SSJC', 'SSLC', 'SSTL',
                   'STPA', 'TSEA', 'TTPA', 'WWAS', 'YYMQ', 'YYTO']
-CLASS = ['COACH', 'BUSINESS', 'FIRST', 'THRIST', 'STANDARD', 'SHUTTLE']
+
+CLASS = ['COACH', 'BUSINESS', 'FIRST', 'THRIFT', 'STANDARD', 'SHUTTLE']
+
+AIRCRAFT_MANUFACTURERS = ['BOEING', 'MCDONNELL DOUGLAS', 'FOKKER']
+
+AIRCRAFT_BASIC_CODES = ['DC9', '737', '767', '747', 'DC10', '757', 'MD80']
 
 DAY_OF_WEEK_INDEX = {idx : [day] for idx, day in enumerate(DAY_OF_WEEK)}
 
@@ -560,7 +626,10 @@ TRIGGER_LISTS = [CITIES, AIRPORT_CODES,
                  FARE_BASIS_CODE, CLASS,
                  AIRLINE_CODE_LIST, DAY_OF_WEEK,
                  CITY_CODE_LIST, MEALS,
-                 RESTRICT_CODES]
+                 RESTRICT_CODES,
+                 AIRCRAFT_MANUFACTURERS,
+                 AIRCRAFT_BASIC_CODES]
+
 TRIGGER_DICTS = [CITY_AIRPORT_CODES,
                  AIRLINE_CODES,
                  CITY_CODES,
