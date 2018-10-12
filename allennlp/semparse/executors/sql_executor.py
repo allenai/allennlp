@@ -2,10 +2,12 @@ import logging
 from typing import List
 
 import sqlite3
+import multiprocessing
 from multiprocessing import Process
 from allennlp.common.file_utils import cached_path
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+MULTIPROCESSING_LOGGER = multiprocessing.get_logger()
 
 class SqlExecutor:
     """
@@ -23,6 +25,10 @@ class SqlExecutor:
     def evaluate_sql_query(self,
                            predicted_sql_query: str,
                            sql_query_labels: List[str]) -> int:
+        # We set the logging level for the subprocesses to warning, otherwise, it will
+        # log every time a process starts and stops.
+        MULTIPROCESSING_LOGGER.setLevel(logging.WARNING)
+
         # Since the query might hang, we run in another process and kill it if it
         # takes too long.
         process = Process(target=self._evaluate_sql_query_subprocess,
@@ -34,7 +40,7 @@ class SqlExecutor:
         denotation_correct = process.exitcode # type: ignore
 
         if process.is_alive():
-            logger.info("Evaluating query took over 3 seconds, skipping query")
+            logger.warning("Evaluating query took over 3 seconds, skipping query")
             process.terminate()
             process.join()
 
@@ -49,13 +55,14 @@ class SqlExecutor:
         exact same table. This method is only called by the subprocess, so we just exit with
         1 if it is correct and 0 otherwise.
         """
+
         postprocessed_predicted_query = self.postprocess_query_sqlite(predicted_query)
 
         try:
             self._cursor.execute(postprocessed_predicted_query)
             predicted_rows = self._cursor.fetchall()
         except sqlite3.Error as error:
-            logger.debug(f'Error executing predicted: {error}')
+            logger.warning(f'Error executing predicted: {error}')
             exit(0)
 
         # If predicted table matches any of the reference tables then it is counted as correct.
@@ -66,7 +73,7 @@ class SqlExecutor:
                 self._cursor.execute(postprocessed_sql_query_label)
                 target_rows = self._cursor.fetchall()
             except sqlite3.Error as error:
-                logger.debug(f'Error executing predicted: {error}')
+                logger.warning(f'Error executing predicted: {error}')
             if predicted_rows == target_rows:
                 exit(1)
         exit(0)
