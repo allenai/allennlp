@@ -66,6 +66,8 @@ class AtisDatasetReader(DatasetReader):
     database_file: ``str``, optional
         The directory to find the sqlite database file. We query the sqlite database to find the strings
         that are allowed.
+    num_turns_to_concatenate: ``str``, optional
+        The number of utterances to concatenate as the conversation context.
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
