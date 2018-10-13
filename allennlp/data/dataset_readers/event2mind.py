@@ -51,8 +51,15 @@ class Event2MindDatasetReader(DatasetReader):
     target_token_indexers : ``Dict[str, TokenIndexer]``, optional
         Indexers used to define output (target side) token representations. Defaults to
         ``source_token_indexers``.
-    source_add_start_token : bool, (optional, default=True)
-        Whether or not to add `START_SYMBOL` to the beginning of the source sequence.
+    source_add_start_token : ``bool``, (optional, default=True)
+        Whether or not to add ``START_SYMBOL`` to the beginning of the source sequence.
+    dummy_instances_for_vocab_generation : ``bool`` (optional, default=False)
+        Whether to generate instances that use each token of input precisely
+        once. Normally we instead generate all combinations of Source, Xintent,
+        Xemotion and Otheremotion columns whichs distort the underlying token
+        counts. This flag should be used exclusively with the ``dry-run``
+        command as the instances generated will be nonsensical outside the
+        context of vocabulary generation.
     """
     def __init__(self,
                  source_tokenizer: Tokenizer = None,
@@ -60,6 +67,7 @@ class Event2MindDatasetReader(DatasetReader):
                  source_token_indexers: Dict[str, TokenIndexer] = None,
                  target_token_indexers: Dict[str, TokenIndexer] = None,
                  source_add_start_token: bool = True,
+                 dummy_instances_for_vocab_generation: bool = False,
                  lazy: bool = False) -> None:
         super().__init__(lazy)
         self._source_tokenizer = source_tokenizer or WordTokenizer()
@@ -67,6 +75,7 @@ class Event2MindDatasetReader(DatasetReader):
         self._source_token_indexers = source_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._target_token_indexers = target_token_indexers or self._source_token_indexers
         self._source_add_start_token = source_add_start_token
+        self._dummy_instances_for_vocab_generation = dummy_instances_for_vocab_generation
 
     @overrides
     def _read(self, file_path):
@@ -84,17 +93,25 @@ class Event2MindDatasetReader(DatasetReader):
                 xintents = json.loads(line_parts[2])
                 xreacts = json.loads(line_parts[3])
                 oreacts = json.loads(line_parts[4])
-                for xintent in xintents:
-                    for xreact in xreacts:
-                        for oreact in oreacts:
-                            yield self.text_to_instance(source_sequence, xintent, xreact, oreact)
 
-                #for xintent in xintents:
-                #    yield self.text_to_instance(source_sequence, xintent, "none", "none")
-                #for xreact in xreacts:
-                #    yield self.text_to_instance("none", "none", xreact, "none")
-                #for oreact in oreacts:
-                #    yield self.text_to_instance("none", "none", "none", oreact)
+                if not self._dummy_instances_for_vocab_generation:
+                    # Generate all combinations.
+                    for xintent in xintents:
+                        for xreact in xreacts:
+                            for oreact in oreacts:
+                                yield self.text_to_instance(
+                                        source_sequence, xintent, xreact, oreact
+                                )
+                else:
+                    # Generate instances where each token of input appears once.
+                    for xintent in xintents:
+                        # Since "none" is a special token we don't mind it
+                        # appearing a disproportionate number of times.
+                        yield self.text_to_instance(source_sequence, xintent, "none", "none")
+                    for xreact in xreacts:
+                        yield self.text_to_instance("none", "none", xreact, "none")
+                    for oreact in oreacts:
+                        yield self.text_to_instance("none", "none", "none", oreact)
 
     @staticmethod
     def _preprocess_string(tokenizer, string: str) -> str:
