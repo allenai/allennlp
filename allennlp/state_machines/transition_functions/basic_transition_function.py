@@ -90,7 +90,7 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
             self._decoder_cell = LSTM(input_dim, output_dim, self._num_layers)
         else:
             # We use a ``LSTMCell`` if we just have one layer because it is slightly faster since we are
-            # just running the LSTM for one step each time. 
+            # just running the LSTM for one step each time.
             self._decoder_cell = LSTMCell(input_dim, output_dim)
 
         if dropout > 0:
@@ -152,7 +152,7 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         decoder_input = self._activation(projected_input)
         if self._num_layers > 1:
             _, (hidden_state, memory_cell) = self._decoder_cell(decoder_input.unsqueeze(0),
-                                                            (hidden_state, memory_cell))
+                                                                (hidden_state, memory_cell))
         else:
             hidden_state, memory_cell = self._decoder_cell(decoder_input, (hidden_state, memory_cell))
         hidden_state = self._dropout(hidden_state)
@@ -250,7 +250,7 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         # each time is more expensive than doing it once upfront.  These three lines give about a
         # 10% speedup in training time.
         group_size = len(state.batch_indices)
-        
+
         chunk_index = 1 if self._num_layers > 1 else 0
         hidden_state = [x.squeeze(chunk_index)
                         for x in updated_rnn_state['hidden_state'].chunk(group_size, chunk_index)]
