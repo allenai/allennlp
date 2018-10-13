@@ -1,4 +1,5 @@
 from typing import Dict, Iterable
+import logging
 
 from overrides import overrides
 
@@ -9,6 +10,8 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.tokenizer import Tokenizer
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @DatasetReader.register("simple_language_modeling")
@@ -33,14 +36,13 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  max_sequence_length: int = None) -> None:
-        # Always lazy to handle looping indefinitely.
         super().__init__(True)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._max_sequence_length = max_sequence_length
 
-        print("Creating SimpleLanguageModelingDatasetReader")
-        print("max_sequence_length={}".format(max_sequence_length))
+        logger.info("Creating SimpleLanguageModelingDatasetReader")
+        logger.info("max_sequence_length=%s", max_sequence_length)
 
     @overrides
     def text_to_instance(self,  # type: ignore
@@ -55,19 +57,14 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
     @overrides
     def _read(self, file_path: str) -> Iterable[Instance]:
         # pylint: disable=arguments-differ
-        print('Loading data from {}'.format(file_path))
+        logger.info('Loading data from %s', file_path)
 
         with open(file_path) as file:
-            all_sentences_raw = file.readlines()
-
-        # Remove sentences longer than the maximum.
-        if self._max_sequence_length is not None:
-            sentences_raw = [
-                    sentence for sentence in all_sentences_raw
-                    if len(self._tokenizer.tokenize(sentence)) <= self._max_sequence_length + 2
-            ]
-        else:
-            sentences_raw = all_sentences_raw
-
-        for sentence in sentences_raw:
-            yield self.text_to_instance(sentence)
+            for sentence in file:
+                instance = self.text_to_instance(sentence)
+                # Remove sentences longer than the maximum.
+                if self._max_sequence_length is not None:
+                    if instance.fields['source'].sequence_length() <= self._max_sequence_length + 2:
+                        yield instance
+                else:
+                    yield instance
