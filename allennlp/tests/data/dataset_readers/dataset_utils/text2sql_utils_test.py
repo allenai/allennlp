@@ -25,8 +25,10 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
                                 'RESTAURANT', 'AS', 'RESTAURANTalias0', 'WHERE', 'LOCATIONalias0', '.', 'CITY_NAME', '=',
                                 '\'city_name0\'', 'AND', 'RESTAURANTalias0', '.', 'ID', '=', 'LOCATIONalias0', '.', 'RESTAURANT_ID',
                                 'AND', 'RESTAURANTalias0', '.', 'NAME', '=', '\'name0\'', ';']
+
         assert sql_data.text_variables == {'city_name0': 'san francisco', 'name0': 'buttercup kitchen'}
-        assert sql_data.sql_variables == {'city_name0': 'san francisco', 'name0': 'buttercup kitchen'}
+        assert sql_data.sql_variables == {'city_name0': {'text': 'san francisco', 'type': 'city_name'},
+                                          'name0': {'text': 'buttercup kitchen', 'type': 'name'}}
 
 
         dataset = text2sql_utils.process_sql_data([data[1]])
@@ -47,7 +49,8 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
                                     '=', '\'region0\'', 'AND', 'RESTAURANTalias0', '.', 'CITY_NAME', '=', 'GEOGRAPHICalias0',
                                     '.', 'CITY_NAME', 'AND', 'RESTAURANTalias0', '.', 'FOOD_TYPE', '=', '\'food_type0\'', ';']
             assert sql_data.text_variables == {'region0': 'bay area', 'food_type0': 'chinese'}
-            assert sql_data.sql_variables == {'region0': 'bay area', 'food_type0': 'chinese'}
+            assert sql_data.sql_variables == {'region0': {'text': 'bay area', 'type': 'region'},
+                                              'food_type0': {'text': 'chinese', 'type': 'food_type'}}
             assert sql_data.text == correct_text[i][0]
             assert sql_data.text_with_variables == correct_text[i][1]
 
@@ -122,7 +125,5 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
         schema = text2sql_utils.read_dataset_schema(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
         sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'MAX', '(', 'LOCATION', '.', 'ID', ')', 'AS', 'LOCATIONalias0', ";"]
 
-
         resolved = text2sql_utils.resolve_primary_keys_in_schema(sql, schema)
-        print(resolved)
         assert resolved == ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'MAX', '(', 'LOCATION', '.', 'RESTAURANT_ID', ')', 'AS', 'LOCATIONalias0', ";"]

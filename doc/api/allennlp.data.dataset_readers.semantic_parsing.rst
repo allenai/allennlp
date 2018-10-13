@@ -1,6 +1,10 @@
 allennlp.data.dataset_readers.semantic_parsing
 ==============================================
 
+.. toctree::
+
+   allennlp.data.dataset_readers.semantic_parsing.wikitables
+
 .. automodule:: allennlp.data.dataset_readers.semantic_parsing
    :members:
    :undoc-members:
@@ -12,11 +16,6 @@ allennlp.data.dataset_readers.semantic_parsing
    :show-inheritance:
 
 .. automodule:: allennlp.data.dataset_readers.semantic_parsing.nlvr
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: allennlp.data.dataset_readers.semantic_parsing.wikitables
    :members:
    :undoc-members:
    :show-inheritance:

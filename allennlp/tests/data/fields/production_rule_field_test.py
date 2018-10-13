@@ -114,3 +114,7 @@ class TestProductionRuleField(AllenNlpTestCase):
         assert tensor_tuple[0] == ''
         assert tensor_tuple[1] is False
         assert tensor_tuple[2] is None
+
+    def test_production_rule_field_can_print(self):
+        field = ProductionRuleField('S -> [NP, VP]', is_global_rule=True)
+        print(field)
