@@ -17,11 +17,11 @@ class RnnStatelet:
     Parameters
     ----------
     hidden_state : ``torch.Tensor``
-        This holds the LSTM hidden state, with shape ``(decoder_output_dim,)``.
-        This holds the LSTM hidden state, with shape ``(num_layers, decoder_output_dim)``.
+        This holds the LSTM hidden state, with shape ``(decoder_output_dim,)`` if the decoder
+        has 1 layer and ``(num_layers, decoder_output_dim)`` otherwise.
     memory_cell : ``torch.Tensor``
-        This holds the LSTM memory cell, with shape ``(decoder_output_dim,)``.
-        This holds the LSTM hidden state, with shape ``(num_layers, decoder_output_dim)``.
+        This holds the LSTM memory cell, with shape ``(decoder_output_dim,)`` if the decoder has
+        1 layer and ``(num_layers, decoder_output_dim)`` otherwise.
     previous_action_embedding : ``torch.Tensor``
         This holds the embedding for the action we took at the last timestep (which gets input to
         the decoder).  Has shape ``(action_embedding_dim,)``.
@@ -52,8 +52,10 @@ class RnnStatelet:
                  attended_input: torch.Tensor,
                  encoder_outputs: List[torch.Tensor],
                  encoder_output_mask: List[torch.Tensor]) -> None:
-        self.hidden_state = hidden_state.unsqueeze(0) if len(hidden_state.shape) == 1 else hidden_state
-        self.memory_cell = memory_cell.unsqueeze(0) if len(memory_cell.shape) == 1 else memory_cell
+        # self.hidden_state = hidden_state.unsqueeze(0) if len(hidden_state.shape) == 1 else hidden_state
+        # self.memory_cell = memory_cell.unsqueeze(0) if len(memory_cell.shape) == 1 else memory_cell
+        self.hidden_state = hidden_state
+        self.memory_cell = memory_cell
         self.previous_action_embedding = previous_action_embedding
         self.attended_input = attended_input
         self.encoder_outputs = encoder_outputs
