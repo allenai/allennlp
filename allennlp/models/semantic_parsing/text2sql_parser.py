@@ -15,7 +15,6 @@ from allennlp.modules import Attention, Seq2SeqEncoder, TextFieldEmbedder, Embed
 from allennlp.nn import util
 from allennlp.nn.initializers import InitializerApplicator
 from allennlp.nn.regularizers import RegularizerApplicator
-from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld
 from allennlp.semparse.contexts.sql_context_utils import action_sequence_to_sql
 from allennlp.state_machines.states import GrammarBasedState
 from allennlp.state_machines.transition_functions import BasicTransitionFunction
@@ -77,11 +76,8 @@ class Text2SqlParser(Model):
         self._encoder = encoder
         self._max_decoding_steps = max_decoding_steps
         self._add_action_bias = add_action_bias
-        if dropout > 0:
-            self._dropout = torch.nn.Dropout(p=dropout)
-        else:
-            self._dropout = lambda x: x
-        self._rule_namespace = "rule_labels"
+        self._dropout = torch.nn.Dropout(p=dropout)
+
         self._exact_match = Average()
         self._valid_sql_query = Average()
         self._action_similarity = Average()
@@ -90,7 +86,7 @@ class Text2SqlParser(Model):
         self._executor = SqlExecutor(database_file)
         # the padding value used by IndexField
         self._action_padding_index = -1
-        num_actions = vocab.get_vocab_size(self._rule_namespace)
+        num_actions = vocab.get_vocab_size("rule_labels")
         if self._add_action_bias:
             input_action_dim = action_embedding_dim + 1
         else:
@@ -118,7 +114,6 @@ class Text2SqlParser(Model):
     @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
-                world: List[Text2SqlWorld],
                 actions: List[List[ProductionRuleArray]],
                 target_action_sequence: torch.LongTensor = None,
                 sql_queries: List[List[str]] = None) -> Dict[str, torch.Tensor]:
@@ -132,9 +127,6 @@ class Text2SqlParser(Model):
         tokens : Dict[str, torch.LongTensor]
             The output of ``TextField.as_array()`` applied on the tokens ``TextField``. This will
             be passed through a ``TextFieldEmbedder`` and then through an encoder.
-        world : ``List[AtisWorld]``
-            We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
-            how ``MetadataField`` works, this gets passed to us as a ``List[AtisWorld]``,
         actions : ``List[List[ProductionRuleArray]]``
             A list of all possible actions for each ``World`` in the batch, indexed into a
             ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
@@ -156,7 +148,7 @@ class Text2SqlParser(Model):
         # (batch_size, utterance_length, encoder_output_dim)
         encoder_outputs = self._dropout(self._encoder(embedded_utterance, mask))
 
-        initial_state = self._get_initial_state(encoder_outputs, mask, world, actions)
+        initial_state = self._get_initial_state(encoder_outputs, mask, actions)
 
         if target_action_sequence is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).
@@ -347,7 +339,8 @@ class Text2SqlParser(Model):
 
         actions_grouped_by_nonterminal: Dict[str, List[Tuple[ProductionRuleArray, int]]] = defaultdict(list)
         for i, action in enumerate(possible_actions):
-            actions_grouped_by_nonterminal[action.nonterminal].append((action, i))
+            if action.is_global_rule:
+                actions_grouped_by_nonterminal[action.nonterminal].append((action, i))
 
         for key, production_rule_arrays in actions_grouped_by_nonterminal.items():
             translated_valid_actions[key] = {}
@@ -357,8 +350,7 @@ class Text2SqlParser(Model):
 
             global_actions = []
             for production_rule_array, action_index in production_rule_arrays:
-                if production_rule_array.is_global_rule:
-                    global_actions.append((production_rule_array.rule_id, action_index))
+                global_actions.append((production_rule_array.rule_id, action_index))
 
             if global_actions:
                 global_action_tensors, global_action_ids = zip(*global_actions)
