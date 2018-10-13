@@ -7,23 +7,17 @@
         "type": "spacy"
       }
     },
-    "target_tokenizer": {
-      "type": "word"
-    },
     "source_token_indexers": {
       "tokens": {
         "type": "single_id",
         "namespace": "source_tokens"
       }
-    },
-    "target_token_indexers": {
-      "tokens": {
-        "namespace": "target_tokens"
-      }
     }
   },
   "vocabulary": {
-    "min_count": {"tokens": 2}
+    #"min_count": {"source_tokens": 2}
+    #,
+    "directory_path": "/home/brendanr/workbenches/event2mind/serialization_dir_DEBUG_10_hacked_count/vocabulary/"
   },
   "train_data_path": "https://raw.githubusercontent.com/uwnlp/event2mind/master/docs/data/train.csv",
   "validation_data_path": "https://raw.githubusercontent.com/uwnlp/event2mind/master/docs/data/dev.csv",
@@ -35,7 +29,7 @@
           "type": "embedding",
           "vocab_namespace": "source_tokens",
           # TODO(brendanr): Upload the w2v embeddings and use those if permissible.
-          "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
+          "pretrained_file": "/home/brendanr/workbenches/event2mind/word2vec/GoogleNews-vectors-negative300.allennlp.txt",
           "embedding_dim": 300,
           "trainable": false
         }
@@ -52,7 +46,8 @@
       "bidirectional": true
     },
     "max_decoding_steps": 10,
-    "target_namespace": "target_tokens"
+    # Following the original model we use a single namespace.
+    "target_namespace": "source_tokens"
   },
   "iterator": {
     "type": "bucket",
@@ -61,11 +56,12 @@
     "sorting_keys": [["source", "num_tokens"]]
   },
   "trainer": {
-    "num_epochs": 40,
+    "num_epochs": 10,
     "patience": 10,
     "cuda_device": 0,
     "optimizer": {
       "type": "adam"
-    }
+    },
+    "validation_metric": "+xintent"
   }
 }

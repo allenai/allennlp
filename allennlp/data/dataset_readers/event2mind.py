@@ -89,6 +89,13 @@ class Event2MindDatasetReader(DatasetReader):
                         for oreact in oreacts:
                             yield self.text_to_instance(source_sequence, xintent, xreact, oreact)
 
+                #for xintent in xintents:
+                #    yield self.text_to_instance(source_sequence, xintent, "none", "none")
+                #for xreact in xreacts:
+                #    yield self.text_to_instance("none", "none", xreact, "none")
+                #for oreact in oreacts:
+                #    yield self.text_to_instance("none", "none", "none", oreact)
+
     @staticmethod
     def _preprocess_string(tokenizer, string: str) -> str:
         """
