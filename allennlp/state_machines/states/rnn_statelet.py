@@ -52,8 +52,6 @@ class RnnStatelet:
                  attended_input: torch.Tensor,
                  encoder_outputs: List[torch.Tensor],
                  encoder_output_mask: List[torch.Tensor]) -> None:
-        # self.hidden_state = hidden_state.unsqueeze(0) if len(hidden_state.shape) == 1 else hidden_state
-        # self.memory_cell = memory_cell.unsqueeze(0) if len(memory_cell.shape) == 1 else memory_cell
         self.hidden_state = hidden_state
         self.memory_cell = memory_cell
         self.previous_action_embedding = previous_action_embedding
