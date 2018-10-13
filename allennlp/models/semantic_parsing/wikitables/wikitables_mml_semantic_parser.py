@@ -4,7 +4,7 @@ from overrides import overrides
 import torch
 
 from allennlp.data import Vocabulary
-from allennlp.data.fields.production_rule_field import ProductionRuleArray
+from allennlp.data.fields.production_rule_field import ProductionRule
 from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
 from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
@@ -128,7 +128,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                 question: Dict[str, torch.LongTensor],
                 table: Dict[str, torch.LongTensor],
                 world: List[WikiTablesWorld],
-                actions: List[List[ProductionRuleArray]],
+                actions: List[List[ProductionRule]],
                 example_lisp_string: List[str] = None,
                 target_action_sequences: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
@@ -152,9 +152,9 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
         world : ``List[WikiTablesWorld]``
             We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
             how ``MetadataField`` works, this gets passed to us as a ``List[WikiTablesWorld]``,
-        actions : ``List[List[ProductionRuleArray]]``
+        actions : ``List[List[ProductionRule]]``
             A list of all possible actions for each ``World`` in the batch, indexed into a
-            ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
+            ``ProductionRule`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
         example_lisp_string : ``List[str]``, optional (default = None)

@@ -8,7 +8,7 @@ from overrides import overrides
 import torch
 
 from allennlp.data import Vocabulary
-from allennlp.data.fields.production_rule_field import ProductionRuleArray
+from allennlp.data.fields.production_rule_field import ProductionRule
 from allennlp.semparse.executors import SqlExecutor
 from allennlp.models.model import Model
 from allennlp.modules import Attention, Seq2SeqEncoder, TextFieldEmbedder, Embedding
@@ -114,7 +114,7 @@ class Text2SqlParser(Model):
     @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
-                actions: List[List[ProductionRuleArray]],
+                actions: List[List[ProductionRule]],
                 target_action_sequence: torch.LongTensor = None,
                 sql_queries: List[List[str]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
@@ -127,9 +127,9 @@ class Text2SqlParser(Model):
         tokens : Dict[str, torch.LongTensor]
             The output of ``TextField.as_array()`` applied on the tokens ``TextField``. This will
             be passed through a ``TextFieldEmbedder`` and then through an encoder.
-        actions : ``List[List[ProductionRuleArray]]``
+        actions : ``List[List[ProductionRule]]``
             A list of all possible actions for each ``World`` in the batch, indexed into a
-            ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
+            ``ProductionRule`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
         target_action_sequence : torch.Tensor, optional (default=None)
@@ -228,7 +228,7 @@ class Text2SqlParser(Model):
     def _get_initial_state(self,
                            encoder_outputs: torch.Tensor,
                            mask: torch.Tensor,
-                           actions: List[List[ProductionRuleArray]]) -> GrammarBasedState:
+                           actions: List[List[ProductionRule]]) -> GrammarBasedState:
 
         batch_size = encoder_outputs.size(0)
         # This will be our initial hidden state and memory cell for the decoder LSTM.
@@ -315,7 +315,7 @@ class Text2SqlParser(Model):
                 'action_similarity': self._action_similarity.get_metric(reset)
                 }
 
-    def _create_grammar_state(self, possible_actions: List[ProductionRuleArray]) -> GrammarStatelet:
+    def _create_grammar_state(self, possible_actions: List[ProductionRule]) -> GrammarStatelet:
         """
         This method creates the GrammarStatelet object that's used for decoding.  Part of creating
         that is creating the `valid_actions` dictionary, which contains embedded representations of
@@ -323,19 +323,19 @@ class Text2SqlParser(Model):
 
         The inputs to this method are for a `single instance in the batch`; none of the tensors we
         create here are batched.  We grab the global action ids from the input
-        ``ProductionRuleArrays``, and we use those to embed the valid actions for every
+        ``ProductionRules``, and we use those to embed the valid actions for every
         non-terminal type.  We use the input ``linking_scores`` for non-global actions.
 
         Parameters
         ----------
-        possible_actions : ``List[ProductionRuleArray]``
+        possible_actions : ``List[ProductionRule]``
             From the input to ``forward`` for a single batch instance.
         """
 
         device = util.get_device_of(self._action_embedder.weight)
         translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
 
-        actions_grouped_by_nonterminal: Dict[str, List[Tuple[ProductionRuleArray, int]]] = defaultdict(list)
+        actions_grouped_by_nonterminal: Dict[str, List[Tuple[ProductionRule, int]]] = defaultdict(list)
         for i, action in enumerate(possible_actions):
             if action.is_global_rule:
                 actions_grouped_by_nonterminal[action.nonterminal].append((action, i))
