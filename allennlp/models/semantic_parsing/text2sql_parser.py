@@ -335,12 +335,17 @@ class Text2SqlParser(Model):
 
         translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
 
+        # TODO(Mark): Something is wrong here: I think I only have rhs -> lhs rules, and not all non-terminals.
+        # I think this is just meant to be a normal grammar traversal, recording all nonterminals....?
+
         actions_grouped_by_nonterminal: Dict[str, List[Tuple[ProductionRule, int]]] = defaultdict(list)
         for i, action in enumerate(possible_actions):
             if action.is_global_rule:
                 actions_grouped_by_nonterminal[action.nonterminal].append((action, i))
 
         for key, production_rule_arrays in actions_grouped_by_nonterminal.items():
+
+            print("KEY: ", key)
             translated_valid_actions[key] = {}
             # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid
             # productions of that non-terminal.  We'll first split those productions by global vs.
@@ -348,6 +353,7 @@ class Text2SqlParser(Model):
 
             global_actions = []
             for production_rule_array, action_index in production_rule_arrays:
+                print(production_rule_array)
                 global_actions.append((production_rule_array.rule_id, action_index))
 
             if global_actions:

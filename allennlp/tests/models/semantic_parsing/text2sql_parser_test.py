@@ -1,5 +1,3 @@
-
-
 from allennlp.common.testing import ModelTestCase
 
 

@@ -99,6 +99,9 @@ class Text2SqlWorld:
         grammar = Grammar(format_grammar_string(grammar_with_context))
 
         valid_actions = initialize_valid_actions(grammar)
+        for k, v in valid_actions.items():
+            print(k)
+            print(f"\t{v}")
         all_actions = set()
         for action_list in valid_actions.values():
             all_actions.update(action_list)

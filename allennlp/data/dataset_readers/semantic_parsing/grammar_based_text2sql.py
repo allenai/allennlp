@@ -135,6 +135,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         for production_rule in all_actions:
             nonterminal, _ = production_rule.split(' ->')
             production_rule = ' '.join(production_rule.split(' '))
+            print(production_rule)
             field = ProductionRuleField(production_rule,
                                         self._world.is_global_rule(nonterminal),
                                         nonterminal=nonterminal)
