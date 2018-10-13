@@ -9,7 +9,8 @@ from allennlp.data.vocabulary import Vocabulary
 class ProductionRuleArray(NamedTuple):
     rule: str
     is_global_rule: bool
-    rule_id: Optional[torch.LongTensor]
+    rule_id: Optional[torch.LongTensor] = None
+    nonterminal: Optional[str] = None
 
 # mypy doesn't like that we're using a crazy data type - the data type we use here is _supposed_ to
 # be in the bounds of DataArray, but ProductionRuleArray definitely isn't.  TODO(mattg): maybe we
@@ -44,13 +45,12 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
     training instance.  A model using this field will have to manually batch together rule
     representations after splitting apart the global rules from the ``Instance`` rules.
 
-    In a model, this will get represented as a ``ProductionRuleArray``, which is defined above as
-    ``Tuple[str, bool, Optional[torch.Tensor]]``.  This is a tuple of ``(rule_string,
-    is_global_rule, [rule_id])``, where the ``rule_id`` ``Tensor``, if present, will have shape
-    ``(1,)``.  We don't do any batching of the ``Tensors``, so this gets passed to
-    ``Model.forward()`` as a ``List[ProductionRuleArray]``.  We pass along the rule string because
-    there isn't another way to recover it for instance-specific rules that do not make it into the
-    vocabulary.
+    In a model, this will get represented as a ``ProductionRuleArray``, which is defined above.
+    This is a namedtuple of ``(rule_string, is_global_rule, [rule_id])``, where the ``rule_id``
+    ``Tensor``, if present, will have shape ``(1,)``.  We don't do any batching of the ``Tensors``,
+    so this gets passed to ``Model.forward()`` as a ``List[ProductionRuleArray]``.  We pass along
+    the rule string because there isn't another way to recover it for instance-specific rules that
+    do not make it into the vocabulary.
 
     Parameters
     ----------
@@ -67,8 +67,10 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
     def __init__(self,
                  rule: str,
                  is_global_rule: bool,
-                 vocab_namespace: str = 'rule_labels') -> None:
+                 vocab_namespace: str = 'rule_labels',
+                 nonterminal: str = None) -> None:
         self.rule = rule
+        self.nonterminal = nonterminal
         self.is_global_rule = is_global_rule
         self._vocab_namespace = vocab_namespace
         self._rule_id: int = None
@@ -95,7 +97,7 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
             tensor = torch.LongTensor([self._rule_id])
         else:
             tensor = None
-        return ProductionRuleArray(self.rule, self.is_global_rule, tensor)
+        return ProductionRuleArray(self.rule, self.is_global_rule, tensor, self.nonterminal)
 
     @overrides
     def empty_field(self): # pylint: disable=no-self-use

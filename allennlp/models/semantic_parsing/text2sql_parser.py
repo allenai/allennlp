@@ -1,22 +1,24 @@
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
+from collections import defaultdict
 
 import difflib
 import sqlparse
 from overrides import overrides
 import torch
 
-from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.semparse.executors import SqlExecutor
 from allennlp.models.model import Model
 from allennlp.modules import Attention, Seq2SeqEncoder, TextFieldEmbedder, Embedding
 from allennlp.nn import util
-from allennlp.semparse.worlds import AtisWorld
+from allennlp.nn.initializers import InitializerApplicator
+from allennlp.nn.regularizers import RegularizerApplicator
+from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld
 from allennlp.semparse.contexts.sql_context_utils import action_sequence_to_sql
 from allennlp.state_machines.states import GrammarBasedState
-from allennlp.state_machines.transition_functions.linking_transition_function import LinkingTransitionFunction
+from allennlp.state_machines.transition_functions import BasicTransitionFunction
 from allennlp.state_machines import BeamSearch
 from allennlp.state_machines.trainers import MaximumMarginalLikelihood
 from allennlp.state_machines.states import GrammarStatelet, RnnStatelet
@@ -54,9 +56,6 @@ class Text2SqlParser(Model):
     dropout : ``float``, optional (default=0)
         If greater than 0, we will apply dropout with this probability after all encoders (pytorch
         LSTMs do not apply dropout to their last layer).
-    rule_namespace : ``str``, optional (default=rule_labels)
-        The vocabulary namespace to use for production rules.  The default corresponds to the
-        default used in the dataset reader, so you likely don't need to modify this.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -70,8 +69,10 @@ class Text2SqlParser(Model):
                  add_action_bias: bool = True,
                  training_beam_size: int = None,
                  dropout: float = 0.0,
-                 rule_namespace: str = 'rule_labels') -> None:
-        super().__init__(vocab)
+                 initializer: InitializerApplicator = InitializerApplicator(),
+                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+        super().__init__(vocab, regularizer)
+
         self._utterance_embedder = utterance_embedder
         self._encoder = encoder
         self._max_decoding_steps = max_decoding_steps
@@ -80,14 +81,15 @@ class Text2SqlParser(Model):
             self._dropout = torch.nn.Dropout(p=dropout)
         else:
             self._dropout = lambda x: x
-        self._rule_namespace = rule_namespace
+        self._rule_namespace = "rule_labels"
         self._exact_match = Average()
         self._valid_sql_query = Average()
         self._action_similarity = Average()
         self._denotation_accuracy = Average()
 
         self._executor = SqlExecutor(database_file)
-        self._action_padding_index = -1  # the padding value used by IndexField
+        # the padding value used by IndexField
+        self._action_padding_index = -1
         num_actions = vocab.get_vocab_size(self._rule_namespace)
         if self._add_action_bias:
             input_action_dim = action_embedding_dim + 1
@@ -96,7 +98,6 @@ class Text2SqlParser(Model):
         self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=input_action_dim)
         self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
 
-
         # This is what we pass as input in the first step of decoding, when we don't have a
         # previous action, or a previous utterance attention.
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
@@ -104,24 +105,21 @@ class Text2SqlParser(Model):
         torch.nn.init.normal_(self._first_action_embedding)
         torch.nn.init.normal_(self._first_attended_utterance)
 
-        self._num_entity_types = 2  # TODO(kevin): get this in a more principled way somehow?
-        self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
-
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
-        self._transition_function = LinkingTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
-                                                              action_embedding_dim=action_embedding_dim,
-                                                              input_attention=input_attention,
-                                                              predict_start_type_separately=False,
-                                                              add_action_bias=self._add_action_bias,
-                                                              dropout=dropout)
+        self._transition_function = BasicTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
+                                                            action_embedding_dim=action_embedding_dim,
+                                                            input_attention=input_attention,
+                                                            predict_start_type_separately=False,
+                                                            add_action_bias=self._add_action_bias,
+                                                            dropout=dropout)
+        initializer(self)
 
     @overrides
     def forward(self,  # type: ignore
-                utterance: Dict[str, torch.LongTensor],
-                world: List[AtisWorld],
+                tokens: Dict[str, torch.LongTensor],
+                world: List[Text2SqlWorld],
                 actions: List[List[ProductionRuleArray]],
-                linking_scores: torch.Tensor,
                 target_action_sequence: torch.LongTensor = None,
                 sql_queries: List[List[str]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
@@ -131,8 +129,8 @@ class Text2SqlParser(Model):
 
         Parameters
         ----------
-        utterance : Dict[str, torch.LongTensor]
-            The output of ``TextField.as_array()`` applied on the utterance ``TextField``. This will
+        tokens : Dict[str, torch.LongTensor]
+            The output of ``TextField.as_array()`` applied on the tokens ``TextField``. This will
             be passed through a ``TextFieldEmbedder`` and then through an encoder.
         world : ``List[AtisWorld]``
             We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
@@ -142,10 +140,6 @@ class Text2SqlParser(Model):
             ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
-        linking_scores: ``torch.Tensor``
-            A matrix of the linking the utterance tokens and the entities. This is a binary matrix that
-            is deterministically generated where each entry indicates whether a token generated an entity.
-            This tensor has shape ``(batch_size, num_entities, num_utterance_tokens)``.
         target_action_sequence : torch.Tensor, optional (default=None)
             The action sequence for the correct action sequence, where each action is an index into the list
             of possible actions.  This tensor has shape ``(batch_size, sequence_length, 1)``. We remove the
@@ -153,8 +147,17 @@ class Text2SqlParser(Model):
         sql_queries : List[List[str]], optional (default=None)
             A list of the SQL queries that are given during training or validation.
         """
-        initial_state = self._get_initial_state(utterance, world, actions, linking_scores)
-        batch_size = linking_scores.shape[0]
+        embedded_utterance = self._utterance_embedder(tokens)
+        mask = util.get_text_field_mask(tokens).float()
+
+        batch_size = embedded_utterance.size(0)
+        # (batch_size, num_utterance_tokens, embedding_dim)
+
+        # (batch_size, utterance_length, encoder_output_dim)
+        encoder_outputs = self._dropout(self._encoder(embedded_utterance, mask))
+
+        initial_state = self._get_initial_state(encoder_outputs, mask, world, actions)
+
         if target_action_sequence is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).
             target_action_sequence = target_action_sequence.squeeze(-1)
@@ -163,19 +166,17 @@ class Text2SqlParser(Model):
             target_mask = None
 
         if self.training:
-            # target_action_sequence is of shape (batch_size, 1, sequence_length) here after we unsqueeze it for
-            # the MML trainer.
+            # target_action_sequence is of shape (batch_size, 1, sequence_length)
+            # here after we unsqueeze it for the MML trainer.
             return self._decoder_trainer.decode(initial_state,
                                                 self._transition_function,
                                                 (target_action_sequence.unsqueeze(1), target_mask.unsqueeze(1)))
         else:
-            # TODO(kevin) Move some of this functionality to a separate method for computing validation outputs.
             action_mapping = {}
             for batch_index, batch_actions in enumerate(actions):
                 for action_index, action in enumerate(batch_actions):
                     action_mapping[(batch_index, action_index)] = action[0]
             outputs: Dict[str, Any] = {'action_mapping': action_mapping}
-            outputs['linking_scores'] = linking_scores
             if target_action_sequence is not None:
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
                                                                self._transition_function,
@@ -230,41 +231,26 @@ class Text2SqlParser(Model):
                     self._denotation_accuracy(denotation_correct)
                     outputs['sql_queries'].append(sql_queries[i])
 
-                outputs['utterance'].append(world[i].utterances[-1])
-                outputs['tokenized_utterance'].append([token.text
-                                                       for token in world[i].tokenized_utterances[-1]])
-                outputs['entities'].append(world[i].entities)
                 outputs['best_action_sequence'].append(action_strings)
                 outputs['predicted_sql_query'].append(sqlparse.format(predicted_sql_query, reindent=True))
                 outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
             return outputs
 
+
     def _get_initial_state(self,
-                           utterance: Dict[str, torch.LongTensor],
-                           worlds: List[AtisWorld],
-                           actions: List[List[ProductionRuleArray]],
-                           linking_scores: torch.Tensor) -> GrammarBasedState:
-        embedded_utterance = self._utterance_embedder(utterance)
-        utterance_mask = util.get_text_field_mask(utterance).float()
+                           encoder_outputs: torch.Tensor,
+                           mask: torch.Tensor,
+                           actions: List[List[ProductionRuleArray]]) -> GrammarBasedState:
 
-        batch_size = embedded_utterance.size(0)
-        num_entities = max([len(world.entities) for world in worlds])
-
-        # entity_types: tensor with shape (batch_size, num_entities)
-        entity_types, _ = self._get_type_vector(worlds, num_entities, embedded_utterance)
-
-        # (batch_size, num_utterance_tokens, embedding_dim)
-        encoder_input = embedded_utterance
-
-        # (batch_size, utterance_length, encoder_output_dim)
-        encoder_outputs = self._dropout(self._encoder(encoder_input, utterance_mask))
-
+        batch_size = encoder_outputs.size(0)
         # This will be our initial hidden state and memory cell for the decoder LSTM.
         final_encoder_output = util.get_final_encoder_states(encoder_outputs,
-                                                             utterance_mask,
+                                                             mask,
                                                              self._encoder.is_bidirectional())
         memory_cell = encoder_outputs.new_zeros(batch_size, self._encoder.get_output_dim())
-        initial_score = embedded_utterance.data.new_zeros(batch_size)
+
+
+        initial_score = encoder_outputs.data.new_zeros(batch_size)
 
         # To make grouping states together in the decoder easier, we convert the batch dimension in
         # all of our tensors into an outer list.  For instance, the encoder outputs have shape
@@ -273,7 +259,7 @@ class Text2SqlParser(Model):
         # won't have to do any index selects, or anything, we'll just do some `torch.cat()`s.
         initial_score_list = [initial_score[i] for i in range(batch_size)]
         encoder_output_list = [encoder_outputs[i] for i in range(batch_size)]
-        utterance_mask_list = [utterance_mask[i] for i in range(batch_size)]
+        utterance_mask_list = [mask[i] for i in range(batch_size)]
         initial_rnn_state = []
         for i in range(batch_size):
             initial_rnn_state.append(RnnStatelet(final_encoder_output[i],
@@ -283,11 +269,7 @@ class Text2SqlParser(Model):
                                                  encoder_output_list,
                                                  utterance_mask_list))
 
-        initial_grammar_state = [self._create_grammar_state(worlds[i],
-                                                            actions[i],
-                                                            linking_scores[i],
-                                                            entity_types[i])
-                                 for i in range(batch_size)]
+        initial_grammar_state = [self._create_grammar_state(actions[i]) for i in range(batch_size)]
 
         initial_state = GrammarBasedState(batch_indices=list(range(batch_size)),
                                           action_history=[[] for _ in range(batch_size)],
@@ -297,56 +279,6 @@ class Text2SqlParser(Model):
                                           possible_actions=actions,
                                           debug_info=None)
         return initial_state
-
-    @staticmethod
-    def _get_type_vector(worlds: List[AtisWorld],
-                         num_entities: int,
-                         tensor: torch.Tensor = None) -> Tuple[torch.LongTensor, Dict[int, int]]:
-        """
-        Produces the encoding for each entity's type. In addition, a map from a flattened entity
-        index to type is returned to combine entity type operations into one method.
-
-        Parameters
-        ----------
-        worlds : ``List[AtisWorld]``
-        num_entities : ``int``
-        tensor : ``torch.Tensor``
-            Used for copying the constructed list onto the right device.
-
-        Returns
-        -------
-        A ``torch.LongTensor`` with shape ``(batch_size, num_entities, num_types)``.
-        entity_types : ``Dict[int, int]``
-            This is a mapping from ((batch_index * num_entities) + entity_index) to entity type id.
-        """
-        entity_types = {}
-        batch_types = []
-
-        for batch_index, world in enumerate(worlds):
-            types = []
-            entities = [('number', entity)
-                        if 'number' or 'time_range' in entity
-                        else ('string', entity)
-                        for entity in world.entities]
-
-            for entity_index, entity in enumerate(entities):
-                # We need numbers to be first, then strings, since our entities are going to be
-                # sorted. We do a split by type and then a merge later, and it relies on this sorting.
-                if entity[0] == 'number':
-                    entity_type = 1
-                else:
-                    entity_type = 0
-                types.append(entity_type)
-
-                # For easier lookups later, we're actually using a _flattened_ version
-                # of (batch_index, entity_index) for the key, because this is how the
-                # linking scores are stored.
-                flattened_entity_index = batch_index * num_entities + entity_index
-                entity_types[flattened_entity_index] = entity_type
-            padded = pad_sequence_to_length(types, num_entities, lambda: 0)
-            batch_types.append(padded)
-
-        return tensor.new_tensor(batch_types, dtype=torch.long), entity_types
 
     @staticmethod
     def _action_history_match(predicted: List[int], targets: torch.LongTensor) -> int:
@@ -395,11 +327,7 @@ class Text2SqlParser(Model):
                 'action_similarity': self._action_similarity.get_metric(reset)
                 }
 
-    def _create_grammar_state(self,
-                              world: AtisWorld,
-                              possible_actions: List[ProductionRuleArray],
-                              linking_scores: torch.Tensor,
-                              entity_types: torch.Tensor) -> GrammarStatelet:
+    def _create_grammar_state(self, possible_actions: List[ProductionRuleArray]) -> GrammarStatelet:
         """
         This method creates the GrammarStatelet object that's used for decoding.  Part of creating
         that is creating the `valid_actions` dictionary, which contains embedded representations of
@@ -412,65 +340,37 @@ class Text2SqlParser(Model):
 
         Parameters
         ----------
-        world : ``AtisWorld``
-            From the input to ``forward`` for a single batch instance.
         possible_actions : ``List[ProductionRuleArray]``
             From the input to ``forward`` for a single batch instance.
-        linking_scores : ``torch.Tensor``
-            Assumed to have shape ``(num_entities, num_utterance_tokens)`` (i.e., there is no batch
-            dimension).
-        entity_types : ``torch.Tensor``
-            Assumed to have shape ``(num_entities,)`` (i.e., there is no batch dimension).
         """
-        action_map = {}
-        for action_index, action in enumerate(possible_actions):
-            action_string = action[0]
-            action_map[action_string] = action_index
-
-        valid_actions = world.valid_actions
-        entity_map = {}
-        entities = world.entities
-
-        for entity_index, entity in enumerate(entities):
-            entity_map[entity] = entity_index
-
         translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
-        for key, action_strings in valid_actions.items():
+
+        actions_grouped_by_nonterminal: Dict[str, List[Tuple[ProductionRuleArray, int]]] = defaultdict(list)
+        for i, action in enumerate(possible_actions):
+            actions_grouped_by_nonterminal[action.nonterminal].append((action, i))
+
+        for key, production_rule_arrays in actions_grouped_by_nonterminal.items():
             translated_valid_actions[key] = {}
             # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid
             # productions of that non-terminal.  We'll first split those productions by global vs.
             # linked action.
 
-            action_indices = [action_map[action_string] for action_string in action_strings]
-            production_rule_arrays = [(possible_actions[index], index) for index in action_indices]
             global_actions = []
-            linked_actions = []
             for production_rule_array, action_index in production_rule_arrays:
-                if production_rule_array[1]:
-                    global_actions.append((production_rule_array[2], action_index))
-                else:
-                    linked_actions.append((production_rule_array[0], action_index))
+                if production_rule_array.is_global_rule:
+                    global_actions.append((production_rule_array.rule_id, action_index))
 
             if global_actions:
                 global_action_tensors, global_action_ids = zip(*global_actions)
                 global_action_tensor = entity_types.new_tensor(torch.cat(global_action_tensors, dim=0),
                                                                dtype=torch.long)
+
                 global_input_embeddings = self._action_embedder(global_action_tensor)
                 global_output_embeddings = self._output_action_embedder(global_action_tensor)
+
                 translated_valid_actions[key]['global'] = (global_input_embeddings,
                                                            global_output_embeddings,
                                                            list(global_action_ids))
-            if linked_actions:
-                linked_rules, linked_action_ids = zip(*linked_actions)
-                entities = linked_rules
-                entity_ids = [entity_map[entity] for entity in entities]
-                entity_linking_scores = linking_scores[entity_ids]
-                entity_type_tensor = entity_types[entity_ids]
-                entity_type_embeddings = self._entity_type_decoder_embedding(entity_type_tensor)
-                entity_type_embeddings = entity_types.new_tensor(entity_type_embeddings, dtype=torch.float)
-                translated_valid_actions[key]['linked'] = (entity_linking_scores,
-                                                           entity_type_embeddings,
-                                                           list(linked_action_ids))
 
         return GrammarStatelet(['statement'],
                                translated_valid_actions,
