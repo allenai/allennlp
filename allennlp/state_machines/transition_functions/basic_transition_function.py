@@ -89,6 +89,8 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         if self._num_layers > 1:
             self._decoder_cell = LSTM(input_dim, output_dim, self._num_layers)
         else:
+            # We use a ``LSTMCell`` if we just have one layer because it is slightly faster since we are
+            # just running the LSTM for one step each time. 
             self._decoder_cell = LSTMCell(input_dim, output_dim)
 
         if dropout > 0:
