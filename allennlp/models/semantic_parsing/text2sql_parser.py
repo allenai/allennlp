@@ -114,8 +114,8 @@ class Text2SqlParser(Model):
     @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
-                actions: List[List[ProductionRule]],
-                target_action_sequence: torch.LongTensor = None,
+                valid_actions: List[List[ProductionRule]],
+                action_sequence: torch.LongTensor = None,
                 sql_queries: List[List[str]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
@@ -127,7 +127,7 @@ class Text2SqlParser(Model):
         tokens : Dict[str, torch.LongTensor]
             The output of ``TextField.as_array()`` applied on the tokens ``TextField``. This will
             be passed through a ``TextFieldEmbedder`` and then through an encoder.
-        actions : ``List[List[ProductionRule]]``
+        valid_actions : ``List[List[ProductionRule]]``
             A list of all possible actions for each ``World`` in the batch, indexed into a
             ``ProductionRule`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
@@ -147,12 +147,12 @@ class Text2SqlParser(Model):
         # (batch_size, num_tokens, encoder_output_dim)
         encoder_outputs = self._dropout(self._encoder(embedded_utterance, mask))
 
-        initial_state = self._get_initial_state(encoder_outputs, mask, actions)
+        initial_state = self._get_initial_state(encoder_outputs, mask, valid_actions)
 
-        if target_action_sequence is not None:
+        if action_sequence is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).
-            target_action_sequence = target_action_sequence.squeeze(-1)
-            target_mask = target_action_sequence != self._action_padding_index
+            action_sequence = action_sequence.squeeze(-1)
+            target_mask = action_sequence != self._action_padding_index
         else:
             target_mask = None
 
@@ -161,17 +161,17 @@ class Text2SqlParser(Model):
             # here after we unsqueeze it for the MML trainer.
             return self._decoder_trainer.decode(initial_state,
                                                 self._transition_function,
-                                                (target_action_sequence.unsqueeze(1), target_mask.unsqueeze(1)))
+                                                (action_sequence.unsqueeze(1), target_mask.unsqueeze(1)))
         else:
             action_mapping = {}
-            for batch_index, batch_actions in enumerate(actions):
+            for batch_index, batch_actions in enumerate(valid_actions):
                 for action_index, action in enumerate(batch_actions):
                     action_mapping[(batch_index, action_index)] = action[0]
             outputs: Dict[str, Any] = {'action_mapping': action_mapping}
-            if target_action_sequence is not None:
+            if action_sequence is not None:
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
                                                                self._transition_function,
-                                                               (target_action_sequence.unsqueeze(1),
+                                                               (action_sequence.unsqueeze(1),
                                                                 target_mask.unsqueeze(1)))['loss']
             num_steps = self._max_decoding_steps
             # This tells the state to start keeping track of debug info, which we'll pass along in
@@ -204,9 +204,9 @@ class Text2SqlParser(Model):
                                   for action_index in best_action_indices]
                 predicted_sql_query = action_sequence_to_sql(action_strings)
 
-                if target_action_sequence is not None:
+                if action_sequence is not None:
                     # Use a Tensor, not a Variable, to avoid a memory leak.
-                    targets = target_action_sequence[i].data
+                    targets = action_sequence[i].data
                     sequence_in_targets = 0
                     sequence_in_targets = self._action_history_match(best_action_indices, targets)
                     self._exact_match(sequence_in_targets)
@@ -331,8 +331,8 @@ class Text2SqlParser(Model):
         possible_actions : ``List[ProductionRule]``
             From the input to ``forward`` for a single batch instance.
         """
-
         device = util.get_device_of(self._action_embedder.weight)
+
         translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
 
         actions_grouped_by_nonterminal: Dict[str, List[Tuple[ProductionRule, int]]] = defaultdict(list)
@@ -352,8 +352,9 @@ class Text2SqlParser(Model):
 
             if global_actions:
                 global_action_tensors, global_action_ids = zip(*global_actions)
-                global_action_tensor = torch.new_tensor(torch.cat(global_action_tensors, dim=0),
-                                                        dtype=torch.long).to(device)
+                global_action_tensor = torch.cat(global_action_tensors, dim=0).long()
+                if device >= 0:
+                    global_action_tensor = global_action_tensor.to(device)
 
                 global_input_embeddings = self._action_embedder(global_action_tensor)
                 global_output_embeddings = self._output_action_embedder(global_action_tensor)
