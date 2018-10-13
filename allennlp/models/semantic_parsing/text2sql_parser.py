@@ -143,9 +143,8 @@ class Text2SqlParser(Model):
         mask = util.get_text_field_mask(tokens).float()
 
         batch_size = embedded_utterance.size(0)
-        # (batch_size, num_utterance_tokens, embedding_dim)
 
-        # (batch_size, utterance_length, encoder_output_dim)
+        # (batch_size, num_tokens, encoder_output_dim)
         encoder_outputs = self._dropout(self._encoder(embedded_utterance, mask))
 
         initial_state = self._get_initial_state(encoder_outputs, mask, actions)
@@ -158,7 +157,7 @@ class Text2SqlParser(Model):
             target_mask = None
 
         if self.training:
-            # target_action_sequence is of shape (batch_size, 1, sequence_length)
+            # target_action_sequence is of shape (batch_size, 1, target_sequence_length)
             # here after we unsqueeze it for the MML trainer.
             return self._decoder_trainer.decode(initial_state,
                                                 self._transition_function,
@@ -184,11 +183,8 @@ class Text2SqlParser(Model):
                                                          keep_final_unfinished_states=False)
             outputs['best_action_sequence'] = []
             outputs['debug_info'] = []
-            outputs['entities'] = []
             outputs['predicted_sql_query'] = []
             outputs['sql_queries'] = []
-            outputs['utterance'] = []
-            outputs['tokenized_utterance'] = []
 
             for i in range(batch_size):
                 # Decoding may not have terminated with any completed valid SQL queries, if `num_steps`
@@ -335,6 +331,8 @@ class Text2SqlParser(Model):
         possible_actions : ``List[ProductionRuleArray]``
             From the input to ``forward`` for a single batch instance.
         """
+
+        device = util.get_device_of(self._action_embedder.weight)
         translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
 
         actions_grouped_by_nonterminal: Dict[str, List[Tuple[ProductionRuleArray, int]]] = defaultdict(list)
@@ -354,8 +352,8 @@ class Text2SqlParser(Model):
 
             if global_actions:
                 global_action_tensors, global_action_ids = zip(*global_actions)
-                global_action_tensor = entity_types.new_tensor(torch.cat(global_action_tensors, dim=0),
-                                                               dtype=torch.long)
+                global_action_tensor = torch.new_tensor(torch.cat(global_action_tensors, dim=0),
+                                                        dtype=torch.long).to(device)
 
                 global_input_embeddings = self._action_embedder(global_action_tensor)
                 global_output_embeddings = self._output_action_embedder(global_action_tensor)
