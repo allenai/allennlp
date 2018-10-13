@@ -61,9 +61,9 @@ class TestEvent2MindDatasetReader:
 
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_with_dummy_instances_for_vocab_generation(self, lazy):
-        reader = Event2MindDatasetReader(lazy=lazy, dummy_instances_for_vocab_generation = True)
+        reader = Event2MindDatasetReader(lazy=lazy, dummy_instances_for_vocab_generation=True)
         instances = reader.read(
-            str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'event2mind_small.csv')
+                str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'event2mind_small.csv')
         )
         instances = ensure_list(instances)
 
