@@ -94,20 +94,21 @@ class Event2MindDatasetReader(DatasetReader):
                 xreacts = json.loads(line_parts[3])
                 oreacts = json.loads(line_parts[4])
 
+                # Generate all combinations.
                 if not self._dummy_instances_for_vocab_generation:
-                    # Generate all combinations.
                     for xintent in xintents:
                         for xreact in xreacts:
                             for oreact in oreacts:
                                 yield self.text_to_instance(
                                         source_sequence, xintent, xreact, oreact
                                 )
+                # Generate instances where each token of input appears once.
                 else:
-                    # Generate instances where each token of input appears once.
+                    # Since "none" is a special token we don't mind it
+                    # appearing a disproportionate number of times.
+                    yield self.text_to_instance(source_sequence, "none", "none", "none")
                     for xintent in xintents:
-                        # Since "none" is a special token we don't mind it
-                        # appearing a disproportionate number of times.
-                        yield self.text_to_instance(source_sequence, xintent, "none", "none")
+                        yield self.text_to_instance("none", xintent, "none", "none")
                     for xreact in xreacts:
                         yield self.text_to_instance("none", "none", xreact, "none")
                     for oreact in oreacts:
