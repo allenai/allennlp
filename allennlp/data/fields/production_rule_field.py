@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, NamedTuple
 
 import torch
 from overrides import overrides
@@ -6,7 +6,10 @@ from overrides import overrides
 from allennlp.data.fields.field import Field
 from allennlp.data.vocabulary import Vocabulary
 
-ProductionRuleArray = Tuple[str, bool, Optional[torch.Tensor]]  # pylint: disable=invalid-name
+class ProductionRuleArray(NamedTuple):
+    rule: str
+    is_global_rule: bool
+    rule_id: Optional[torch.LongTensor]
 
 # mypy doesn't like that we're using a crazy data type - the data type we use here is _supposed_ to
 # be in the bounds of DataArray, but ProductionRuleArray definitely isn't.  TODO(mattg): maybe we
@@ -92,7 +95,7 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
             tensor = torch.LongTensor([self._rule_id])
         else:
             tensor = None
-        return (self.rule, self.is_global_rule, tensor)
+        return ProductionRuleArray(self.rule, self.is_global_rule, tensor)
 
     @overrides
     def empty_field(self): # pylint: disable=no-self-use
