@@ -69,6 +69,7 @@ class AtisSemanticParser(Model):
                  input_attention: Attention,
                  add_action_bias: bool = True,
                  training_beam_size: int = None,
+                 decoder_num_layers: int = 1,
                  dropout: float = 0.0,
                  rule_namespace: str = 'rule_labels',
                  database_file='/atis/atis.db') -> None:
@@ -108,6 +109,7 @@ class AtisSemanticParser(Model):
 
         self._num_entity_types = 2  # TODO(kevin): get this in a more principled way somehow?
         self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
+        self._decoder_num_layers = decoder_num_layers
 
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
@@ -116,7 +118,8 @@ class AtisSemanticParser(Model):
                                                               input_attention=input_attention,
                                                               predict_start_type_separately=False,
                                                               add_action_bias=self._add_action_bias,
-                                                              dropout=dropout)
+                                                              dropout=dropout,
+                                                              num_layers=self._decoder_num_layers)
 
     @overrides
     def forward(self,  # type: ignore
@@ -278,12 +281,21 @@ class AtisSemanticParser(Model):
         utterance_mask_list = [utterance_mask[i] for i in range(batch_size)]
         initial_rnn_state = []
         for i in range(batch_size):
-            initial_rnn_state.append(RnnStatelet(final_encoder_output[i],
-                                                 memory_cell[i],
-                                                 self._first_action_embedding,
-                                                 self._first_attended_utterance,
-                                                 encoder_output_list,
-                                                 utterance_mask_list))
+            if self._decoder_num_layers > 1:
+                initial_rnn_state.append(RnnStatelet(final_encoder_output[i].repeat(self._decoder_num_layers, 1),
+                                                     memory_cell[i].repeat(self._decoder_num_layers, 1),
+                                                     self._first_action_embedding,
+                                                     self._first_attended_utterance,
+                                                     encoder_output_list,
+                                                     utterance_mask_list))
+            else:
+                initial_rnn_state.append(RnnStatelet(final_encoder_output[i],
+                                                     memory_cell[i],
+                                                     self._first_action_embedding,
+                                                     self._first_attended_utterance,
+                                                     encoder_output_list,
+                                                     utterance_mask_list))
+
 
         initial_grammar_state = [self._create_grammar_state(worlds[i],
                                                             actions[i],
