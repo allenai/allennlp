@@ -36,7 +36,7 @@ GRAMMAR_DICTIONARY['sel_res_col'] = ['col_ref ws "AS" wsp name']
 GRAMMAR_DICTIONARY["from_clause"] = ['ws "FROM" ws source']
 GRAMMAR_DICTIONARY["source"] = ['(ws single_source ws "," ws source)', '(ws single_source)']
 GRAMMAR_DICTIONARY["single_source"] = ['source_table', 'source_subq']
-GRAMMAR_DICTIONARY["source_table"] = ['table_name', '(table_name ws "AS" wsp name)']
+GRAMMAR_DICTIONARY["source_table"] = ['(table_name ws "AS" wsp name)', 'table_name']
 GRAMMAR_DICTIONARY["source_subq"] = ['("(" ws query ws ")" ws "AS" ws name)', '("(" ws query ws ")")']
 
 GRAMMAR_DICTIONARY["where_clause"] = ['(ws "WHERE" wsp expr where_conj)', '(ws "WHERE" wsp expr)']
