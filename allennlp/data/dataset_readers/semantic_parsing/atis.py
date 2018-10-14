@@ -133,6 +133,7 @@ class AtisDatasetReader(DatasetReader):
             try:
                 action_sequence = world.get_action_sequence(sql_query)
             except ParseError:
+                action_sequence = []
                 logger.debug(f'Parsing error')
 
         tokenized_utterance = self._tokenizer.tokenize(utterance.lower())
@@ -159,12 +160,14 @@ class AtisDatasetReader(DatasetReader):
 
         if sql_query_labels != None:
             fields['sql_queries'] = MetadataField(sql_query_labels)
-            if action_sequence and not self._keep_if_unparseable:
+            if self._keep_if_unparseable or action_sequence:
                 for production_rule in action_sequence:
                     index_fields.append(IndexField(action_map[production_rule], action_field))
+                if not action_sequence:
+                    index_fields = [IndexField(-1, action_field)]
                 action_sequence_field = ListField(index_fields)
                 fields['target_action_sequence'] = action_sequence_field
-            elif not self._keep_if_unparseable:
+            else:
                 # If we are given a SQL query, but we are unable to parse it, and we do not specify explicitly
                 # to keep it, then we will skip the it.
                 return None
