@@ -61,10 +61,12 @@ class WikiTablesVariableFreeWorld(World):
         self._column_counter = 0
 
         # Adding entities and numbers seen in questions to the mapping.
-        self._question_entities, question_numbers = table_context.get_entities_from_question()
+        question_entities, question_numbers = table_context.get_entities_from_question()
+        self._question_entities = [entity for entity, _ in question_entities]
         self._question_numbers = [number for number, _ in question_numbers]
         for entity in self._question_entities:
-            self._map_name(f"string:{entity}", keep_mapping=True)
+            # These entities all have prefix "string:"
+            self._map_name(entity, keep_mapping=True)
 
         for number_in_question in self._question_numbers:
             self._map_name(f"num:{number_in_question}", keep_mapping=True)
@@ -232,8 +234,8 @@ class WikiTablesVariableFreeWorld(World):
 
         # Adding all productions that lead to entities and numbers extracted from the question.
         for entity in self._question_entities:
-            if entity not in tokens_in_column_names:
-                agenda.append(f"{types.STRING_TYPE} -> string:{entity}")
+            if entity.replace("string:", "") not in tokens_in_column_names:
+                agenda.append(f"{types.STRING_TYPE} -> {entity}")
 
         for number in self._question_numbers:
             # The reason we check for the presence of the number in the question again is because
@@ -247,3 +249,10 @@ class WikiTablesVariableFreeWorld(World):
 
     def execute(self, logical_form: str) -> Union[List[str], int]:
         return self._executor.execute(logical_form)
+
+    def evaluate_logical_form(self, logical_form: str, target_list: List[str]) -> bool:
+        """
+        Takes a logical forms and a list of target values as strings from the original lisp
+        representation of instances, and returns True iff the logical form executes to those values.
+        """
+        return self._executor.evaluate_logical_form(logical_form, target_list)

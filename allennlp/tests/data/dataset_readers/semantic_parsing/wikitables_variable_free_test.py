@@ -11,6 +11,7 @@ def assert_dataset_correct(dataset):
 
     assert instance.fields.keys() == {
             'question',
+            'table',
             'world',
             'actions',
             'target_action_sequences',
@@ -20,6 +21,10 @@ def assert_dataset_correct(dataset):
     question_tokens = ["what", "was", "the", "last", "year", "where", "this", "team", "was", "a",
                        "part", "of", "the", "usl", "a", "-", "league", "?"]
     assert [t.text for t in instance.fields["question"].tokens] == question_tokens
+
+    knowledge_graph = instance.fields["table"].knowledge_graph
+    entities = knowledge_graph.entities
+    assert sorted(entities) == ['string:usl_a_league', 'string_column:league']
 
     # The content of this will be tested indirectly by checking the actions; we'll just make
     # sure we get a WikiTablesWorld object in here.

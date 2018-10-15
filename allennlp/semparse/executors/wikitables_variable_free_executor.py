@@ -5,6 +5,8 @@ import logging
 from allennlp.semparse import util as semparse_util
 from allennlp.semparse.worlds.world import ExecutionError
 from allennlp.semparse.contexts.table_question_knowledge_graph import MONTH_NUMBERS
+from allennlp.semparse.contexts import TableQuestionContext
+from allennlp.tools import wikitables_evaluator as evaluator
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -92,6 +94,26 @@ class WikiTablesVariableFreeExecutor:
         # Removing the top most level of nesting.
         result = self._handle_expression(expression_as_list[0])
         return result
+
+    def evaluate_logical_form(self, logical_form: str, target_list: List[str]) -> bool:
+        """
+        Takes a logical form, and the list of target values as strings from the original lisp
+        string, and returns True iff the logical form executes to the target list.
+        """
+        normalized_target_list = [TableQuestionContext.normalize_string(value) for value in
+                                  target_list]
+        target_value_list = evaluator.to_value_list(normalized_target_list)
+        try:
+            denotation = self.execute(logical_form)
+        except ExecutionError:
+            logger.warning(f'Failed to execute: {logical_form}')
+            return False
+        if isinstance(denotation, list):
+            denotation_list = [str(denotation_item) for denotation_item in denotation]
+        else:
+            denotation_list = [str(denotation)]
+        denotation_value_list = evaluator.to_value_list(denotation_list)
+        return evaluator.check_denotation(target_value_list, denotation_value_list)
 
     ## Helper functions
     def _handle_expression(self, expression_list):

@@ -13,7 +13,7 @@ from overrides import overrides
 
 from allennlp.data.instance import Instance
 from allennlp.data.fields import (Field, TextField, MetadataField, ProductionRuleField,
-                                  ListField, IndexField)
+                                  ListField, IndexField, KnowledgeGraphField)
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.semantic_parsing.wikitables import util as wikitables_util
 from allennlp.data.tokenizers import WordTokenizer
@@ -44,6 +44,8 @@ class WikiTablesVariableFreeDatasetReader(DatasetReader):
                  tokenizer: Tokenizer = None,
                  question_token_indexers: Dict[str, TokenIndexer] = None,
                  table_token_indexers: Dict[str, TokenIndexer] = None,
+                 use_table_for_vocab: bool = False,
+                 max_table_tokens: int = None,
                  output_agendas: bool = False) -> None:
         super().__init__(lazy=lazy)
         self._tables_directory = tables_directory
@@ -53,6 +55,8 @@ class WikiTablesVariableFreeDatasetReader(DatasetReader):
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
         self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._table_token_indexers = table_token_indexers or self._question_token_indexers
+        self._use_table_for_vocab = use_table_for_vocab
+        self._max_table_tokens = max_table_tokens
         self._output_agendas = output_agendas
 
     @overrides
@@ -129,7 +133,15 @@ class WikiTablesVariableFreeDatasetReader(DatasetReader):
         target_values_field = MetadataField(target_values)
         world = WikiTablesVariableFreeWorld(table_context)
         world_field = MetadataField(world)
-
+        # TODO(pradeep): Not using any feature extractors for now. They seem to be hardcoded
+        # to work only with lambda-DCS at this point.
+        table_field = KnowledgeGraphField(table_context.get_table_knowledge_graph(),
+                                          tokenized_question,
+                                          self._table_token_indexers,
+                                          tokenizer=self._tokenizer,
+                                          feature_extractors=[],
+                                          include_in_vocab=self._use_table_for_vocab,
+                                          max_table_tokens=self._max_table_tokens)
         production_rule_fields: List[Field] = []
         for production_rule in world.all_possible_actions():
             _, rule_right_side = production_rule.split(' -> ')
@@ -139,6 +151,7 @@ class WikiTablesVariableFreeDatasetReader(DatasetReader):
         action_field = ListField(production_rule_fields)
 
         fields = {'question': question_field,
+                  'table': table_field,
                   'world': world_field,
                   'actions': action_field,
                   'target_values': target_values_field}

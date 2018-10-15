@@ -10,10 +10,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(
 from allennlp.semparse import ActionSpaceWalker
 from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.semparse.worlds import WikiTablesVariableFreeWorld
-from allennlp.semparse.worlds.world import ExecutionError
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.dataset_readers.semantic_parsing.wikitables import util as wikitables_util
-from allennlp.tools import wikitables_evaluator as evaluator
 
 
 # TODO (pradeep): Use a DatasetReader (when available) instead of directly reading from the examples
@@ -37,14 +35,7 @@ def search(tables_directory: str,
                 utterance = utterance[1:-1]
             # For example: csv/200-csv/47.csv -> tagged/200-tagged/47.tagged
             table_file = instance_data["table_filename"].replace("csv", "tagged")
-            # pylint: disable=protected-access
-            target_list = [TableQuestionContext._normalize_string(value) for value in
-                           instance_data["target_values"]]
-            try:
-                target_value_list = evaluator.to_value_list(target_list)
-            except:
-                print(target_list)
-                target_value_list = evaluator.to_value_list(target_list)
+            target_list = instance_data["target_values"]
             tokenized_question = tokenizer.tokenize(utterance)
             table_file = f"{tables_directory}/{table_file}"
             context = TableQuestionContext.read_from_file(table_file, tokenized_question)
@@ -60,18 +51,7 @@ def search(tables_directory: str,
             else:
                 all_logical_forms = walker.get_all_logical_forms(max_num_logical_forms=10000)
             for logical_form in all_logical_forms:
-                try:
-                    denotation = world.execute(logical_form)
-                except ExecutionError:
-                    print(f"Failed to execute: {logical_form}", file=sys.stderr)
-                    continue
-                if isinstance(denotation, list):
-                    denotation_list = [str(denotation_item) for denotation_item in denotation]
-                else:
-                    # For numbers and dates
-                    denotation_list = [str(denotation)]
-                denotation_value_list = evaluator.to_value_list(denotation_list)
-                if evaluator.check_denotation(target_value_list, denotation_value_list):
+                if world.evaluate_logical_form(logical_form, target_list):
                     correct_logical_forms.append(logical_form)
             if not correct_logical_forms:
                 print("NO LOGICAL FORMS FOUND!", file=output_file_pointer)

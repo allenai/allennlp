@@ -62,7 +62,8 @@ class TestTableQuestionContext(AllenNlpTestCase):
         test_file = f'{self.FIXTURES_ROOT}/data/corenlp_processed_tables/TEST-3.table'
         table_question_context = TableQuestionContext.read_from_file(test_file, question_tokens)
         entities, _ = table_question_context.get_entities_from_question()
-        assert entities == ["france", "south_korea"]
+        assert entities == [("string:france", "string_column:venue"),
+                            ("string:south_korea", "string_column:venue")]
 
     def test_rank_number_extraction(self):
         question = "what was the first tamil-language film in 1943?"
@@ -128,5 +129,24 @@ class TestTableQuestionContext(AllenNlpTestCase):
         test_file = f"{self.FIXTURES_ROOT}/data/corenlp_processed_tables/TEST-11.table"
         table_question_context = TableQuestionContext.read_from_file(test_file, question_tokens)
         string_entities, number_entities = table_question_context.get_entities_from_question()
-        assert string_entities == ["m1"]
+        assert string_entities == [("string:m1", "string_column:notation")]
         assert number_entities == [("1", 2), ("1", 7)]
+
+    def test_get_knowledge_graph(self):
+        question = "other than m1 how many notations have 1 in them?"
+        question_tokens = self.tokenizer.tokenize(question)
+        test_file = f"{self.FIXTURES_ROOT}/data/corenlp_processed_tables/TEST-11.table"
+        table_question_context = TableQuestionContext.read_from_file(test_file, question_tokens)
+        knowledge_graph = table_question_context.get_table_knowledge_graph()
+        entities = knowledge_graph.entities
+        assert sorted(entities) == ['1', 'string:m1', 'string_column:notation']
+        neighbors = knowledge_graph.neighbors
+        # Each number extracted from the question will have all number and date columns as
+        # neighbors. Each string entity extracted from the question will only have the corresponding
+        # column as the neighbor.
+        assert neighbors == {'1': ['number_column:position'],
+                             'number_column:position': ['1'],
+                             'string:m1': ['string_column:notation'],
+                             'string_column:notation': ['string:m1']}
+        entity_text = knowledge_graph.entity_text
+        assert entity_text == {'1': '1', 'string:m1': 'm1', 'string_column:notation': 'notation'}
