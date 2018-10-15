@@ -182,7 +182,6 @@ class Embedding(TokenEmbedder):
         norm_type = params.pop_float('norm_type', 2.)
         scale_grad_by_freq = params.pop_bool('scale_grad_by_freq', False)
         sparse = params.pop_bool('sparse', False)
-        min_pretrained_embeddings = params.pop_int("min_pretrained_embeddings", 0)
         params.assert_empty(cls.__name__)
 
         if pretrained_file:
@@ -192,10 +191,7 @@ class Embedding(TokenEmbedder):
             weight = _read_pretrained_embeddings_file(pretrained_file,
                                                       embedding_dim,
                                                       vocab,
-                                                      vocab_namespace,
-                                                      min_pretrained_embeddings)
-            if min_pretrained_embeddings > 0:
-                num_embeddings = vocab.get_vocab_size(vocab_namespace)
+                                                      vocab_namespace)
         else:
             weight = None
 
@@ -214,8 +210,7 @@ class Embedding(TokenEmbedder):
 def _read_pretrained_embeddings_file(file_uri: str,
                                      embedding_dim: int,
                                      vocab: Vocabulary,
-                                     namespace: str = "tokens",
-                                     min_pretrained_embeddings: int = None) -> torch.FloatTensor:
+                                     namespace: str = "tokens") -> torch.FloatTensor:
     """
     Returns and embedding matrix for the given vocabulary using the pretrained embeddings
     contained in the given file. Embeddings for tokens not found in the pretrained embedding file
@@ -249,9 +244,8 @@ def _read_pretrained_embeddings_file(file_uri: str,
         A Vocabulary object.
     namespace : str, (optional, default=tokens)
         The namespace of the vocabulary to find pretrained embeddings for.
-    min_pretrained_embeddings : int, (optional, default=None):
-        If given, will keep at least this number of embeddings from the start of the pretrained
-        embedding text file (typically the most common words)
+    trainable : bool, (optional, default=True)
+        Whether or not the embedding parameters should be optimized.
 
     Returns
     -------
@@ -267,14 +261,13 @@ def _read_pretrained_embeddings_file(file_uri: str,
 
     return _read_embeddings_from_text_file(file_uri,
                                            embedding_dim,
-                                           vocab, namespace, min_pretrained_embeddings)
+                                           vocab, namespace)
 
 
 def _read_embeddings_from_text_file(file_uri: str,
                                     embedding_dim: int,
                                     vocab: Vocabulary,
-                                    namespace: str = "tokens",
-                                    min_pretrained_embeddings: int = 0) -> torch.FloatTensor:
+                                    namespace: str = "tokens") -> torch.FloatTensor:
     """
     Read pre-trained word vectors from an eventually compressed text file, possibly contained
     inside an archive with multiple files. The text file is assumed to be utf-8 encoded with
@@ -285,15 +278,16 @@ def _read_embeddings_from_text_file(file_uri: str,
     The remainder of the docstring is identical to ``_read_pretrained_embeddings_file``.
     """
     tokens_to_keep = set(vocab.get_index_to_token_vocabulary(namespace).values())
+    vocab_size = vocab.get_vocab_size(namespace)
     embeddings = {}
 
     # First we read the embeddings from the file, only keeping vectors for the words we need.
     logger.info("Reading pretrained embeddings from file")
 
     with EmbeddingsTextFile(file_uri) as embeddings_file:
-        for index, line in Tqdm.tqdm(enumerate(embeddings_file)):
+        for line in Tqdm.tqdm(embeddings_file):
             token = line.split(' ', 1)[0]
-            if token in tokens_to_keep or index < min_pretrained_embeddings:
+            if token in tokens_to_keep:
                 fields = line.rstrip().split(' ')
                 if len(fields) - 1 != embedding_dim:
                     # Sometimes there are funny unicode parsing problems that lead to different
@@ -309,10 +303,6 @@ def _read_embeddings_from_text_file(file_uri: str,
 
                 vector = numpy.asarray(fields[1:], dtype='float32')
                 embeddings[token] = vector
-                if token not in tokens_to_keep:
-                    vocab.add_token_to_namespace(token, namespace)
-
-    vocab_size = vocab.get_vocab_size(namespace)
 
     if not embeddings:
         raise ConfigurationError("No embeddings of correct dimension found; you probably "

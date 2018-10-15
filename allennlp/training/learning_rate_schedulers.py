@@ -14,8 +14,24 @@ In addition, AllenNLP also provides a Noam schedule and `cosine with restarts
 <https://arxiv.org/abs/1608.03983>`_, which are registered as "noam" and "cosine", respectively.
 """
 
+# During training using the AllenNLP `Trainer`, this is the API and calling
+#sequence for `step` and `step_batch`.  Also note that `step` is called
+#once in `torch.optim.lr_scheduler._LRScheduler.__init__`.
+#
+#   scheduler = ... # creates scheduler, calls self.step(last_epoch + 1) in __init__
+#
+#   batch_num_total = 0
+#   for epoch in range(num_epochs):
+#       for batch in batchs_in_epoch:
+#           # compute loss, update parameters with current learning rates
+#           # call step_batch AFTER updating parameters
+#           batch_num_total += 1
+#           scheduler.step_batch(batch_num_total)
+#       # call step() at the END of each epoch
+#       scheduler.step(validation_metrics, epoch)
+
 import logging
-from typing import Optional
+from typing import Optional, List
 
 import numpy as np
 import torch.optim.lr_scheduler
@@ -184,6 +200,8 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
         self.gradual_unfreezing = gradual_unfreezing
         self.freezing_current = self.gradual_unfreezing
         self.is_first_epoch = True
+        # track the actual number of steps for each epoch
+        self.batch_num_total_epoch_end: List[int] = []
         if self.gradual_unfreezing:
             assert not optimizer.param_groups[-1]["params"], \
                 "The default group should be empty."
@@ -202,9 +220,15 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
                     self.base_lrs[i] = param_group['lr']
                     exponent += 1
         # set up for the first batch
+        self.last_batch_num_total = -1
         self.step_batch(0)
 
     def step(self, epoch=None):
+        if len(self.batch_num_total_epoch_end) == 0: # pylint: disable=len-as-condition
+            self.batch_num_total_epoch_end.append(0)
+        else:
+            self.batch_num_total_epoch_end.append(self.last_batch_num_total)
+
         if self.gradual_unfreezing:
             # the method is called once when initialising before the
             # first epoch (epoch 0) and then always at the end of each
@@ -224,26 +248,40 @@ class SlantedTriangular(torch.optim.lr_scheduler._LRScheduler): # pylint: disabl
                     # i = 0 is the default group; we care about i > 0
                     param.requires_grad = bool(i <= num_layers_to_unfreeze)
 
-    def step_batch(self, epoch=None):
-        if epoch is None:
-            epoch = self.last_epoch + 1
-        self.last_epoch = epoch
+    def step_batch(self, batch_num_total=None):
+        if batch_num_total is None:
+            batch_num_total = self.last_batch_num_total + 1
+        self.last_batch_num_total = batch_num_total
         for param_group, learning_rate in zip(self.optimizer.param_groups, self.get_lr()):
             param_group['lr'] = learning_rate
 
     def get_lr(self):
+        # get the actual number of batches per epoch seen in training
+        if len(self.batch_num_total_epoch_end) > 1:
+            # have finished an epoch
+            actual_num_steps_per_epoch = int(
+                    self.batch_num_total_epoch_end[-1] /
+                    (len(self.batch_num_total_epoch_end) - 1)
+            )
+        else:
+            actual_num_steps_per_epoch = max(self.num_steps_per_epoch,
+                                             self.last_batch_num_total)
+
         if self.freezing_current:
             # if we still freeze, we restrict the schedule to the current epoch
-            num_steps = self.num_steps_per_epoch
-            step = self.last_epoch % num_steps
+            num_steps = actual_num_steps_per_epoch
+            step = min(self.last_batch_num_total - self.batch_num_total_epoch_end[-1],
+                       num_steps)
         else:
             # otherwise we use the schedule for the rest of training
             if not self.gradual_unfreezing:
                 frozen_steps = 0
             else:
-                frozen_steps = (len(self.optimizer.param_groups) - 2) * self.num_steps_per_epoch
-            num_steps = self.num_epochs * self.num_steps_per_epoch - frozen_steps
-            step = (self.last_epoch - frozen_steps) % num_steps
+                num_frozen_epochs = len(self.optimizer.param_groups) - 2
+                frozen_steps = self.batch_num_total_epoch_end[num_frozen_epochs]
+            num_steps = self.num_epochs * actual_num_steps_per_epoch - frozen_steps
+            step = min(self.last_batch_num_total - frozen_steps,
+                       num_steps)
         cut = int(num_steps * self.cut_frac)
         prop = step / cut if step < cut else 1 - (step - cut) / (num_steps - cut)
         return [lr * (1 + prop * (self.ratio - 1)) / self.ratio for lr in self.base_lrs]

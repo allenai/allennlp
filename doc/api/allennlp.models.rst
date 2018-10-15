@@ -21,6 +21,7 @@ allennlp.models
   allennlp.models.ensemble
   allennlp.models.esim
   allennlp.models.event2mind
+  allennlp.models.graph_parser
   allennlp.models.reading_comprehension
   allennlp.models.semantic_parsing
   allennlp.models.semantic_role_labeler

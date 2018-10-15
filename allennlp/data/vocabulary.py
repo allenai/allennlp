@@ -95,18 +95,18 @@ class _IndexToTokenDefaultDict(_NamespaceDependentDefaultDict):
                                                        lambda: {})
 
 
-def _read_pretrained_tokens(embeddings_file_uri: str) -> Set[str]:
+def _read_pretrained_tokens(embeddings_file_uri: str) -> List[str]:
     # Moving this import to the top breaks everything (cycling import, I guess)
     from allennlp.modules.token_embedders.embedding import EmbeddingsTextFile
 
     logger.info('Reading pretrained tokens from: %s', embeddings_file_uri)
-    tokens = set()
+    tokens: List[str] = []
     with EmbeddingsTextFile(embeddings_file_uri) as embeddings_file:
         for line_number, line in enumerate(Tqdm.tqdm(embeddings_file), start=1):
             token_end = line.find(' ')
             if token_end >= 0:
                 token = line[:token_end]
-                tokens.add(token)
+                tokens.append(token)
             else:
                 line_begin = line[:20] + '...' if len(line) > 20 else line
                 logger.warning(f'Skipping line number %d: %s', line_number, line_begin)
@@ -185,6 +185,10 @@ class Vocabulary(Registrable):
         regardless of their count, depending on the value of ``only_include_pretrained_words``.
         Words which appear in the pretrained embedding file but not in the data are NOT included
         in the Vocabulary.
+    min_pretrained_embeddings : ``Dict[str, int]``, optional
+        If provided, specifies for each namespace a mininum number of lines (typically the
+        most common words) to keep from pretrained embedding files, even for words not
+        appearing in the data.
     only_include_pretrained_words : ``bool``, optional (default=False)
         This defines the stategy for using any pretrained embedding files which may have been
         specified in ``pretrained_files``. If False, an inclusive stategy is used: and words
@@ -197,6 +201,8 @@ class Vocabulary(Registrable):
         the tokens to.  This is a way to be sure that certain items appear in your vocabulary,
         regardless of any other vocabulary computation.
     """
+    default_implementation = "default"
+
     def __init__(self,
                  counter: Dict[str, Dict[str, int]] = None,
                  min_count: Dict[str, int] = None,
@@ -204,7 +210,8 @@ class Vocabulary(Registrable):
                  non_padded_namespaces: Iterable[str] = DEFAULT_NON_PADDED_NAMESPACES,
                  pretrained_files: Optional[Dict[str, str]] = None,
                  only_include_pretrained_words: bool = False,
-                 tokens_to_add: Dict[str, List[str]] = None) -> None:
+                 tokens_to_add: Dict[str, List[str]] = None,
+                 min_pretrained_embeddings: Dict[str, int] = None) -> None:
         self._padding_token = DEFAULT_PADDING_TOKEN
         self._oov_token = DEFAULT_OOV_TOKEN
         self._non_padded_namespaces = set(non_padded_namespaces)
@@ -222,7 +229,8 @@ class Vocabulary(Registrable):
                      non_padded_namespaces,
                      pretrained_files,
                      only_include_pretrained_words,
-                     tokens_to_add)
+                     tokens_to_add,
+                     min_pretrained_embeddings)
 
     def save_to_files(self, directory: str) -> None:
         """
@@ -264,7 +272,7 @@ class Vocabulary(Registrable):
         with codecs.open(os.path.join(directory, NAMESPACE_PADDING_FILE), 'r', 'utf-8') as namespace_file:
             non_padded_namespaces = [namespace_str.strip() for namespace_str in namespace_file]
 
-        vocab = Vocabulary(non_padded_namespaces=non_padded_namespaces)
+        vocab = cls(non_padded_namespaces=non_padded_namespaces)
 
         # Check every file in the directory.
         for namespace_filename in os.listdir(directory):
@@ -340,7 +348,8 @@ class Vocabulary(Registrable):
                        non_padded_namespaces: Iterable[str] = DEFAULT_NON_PADDED_NAMESPACES,
                        pretrained_files: Optional[Dict[str, str]] = None,
                        only_include_pretrained_words: bool = False,
-                       tokens_to_add: Dict[str, List[str]] = None) -> 'Vocabulary':
+                       tokens_to_add: Dict[str, List[str]] = None,
+                       min_pretrained_embeddings: Dict[str, int] = None) -> 'Vocabulary':
         """
         Constructs a vocabulary given a collection of `Instances` and some parameters.
         We count all of the vocabulary items in the instances, then pass those counts
@@ -352,13 +361,14 @@ class Vocabulary(Registrable):
         for instance in Tqdm.tqdm(instances):
             instance.count_vocab_items(namespace_token_counts)
 
-        return Vocabulary(counter=namespace_token_counts,
-                          min_count=min_count,
-                          max_vocab_size=max_vocab_size,
-                          non_padded_namespaces=non_padded_namespaces,
-                          pretrained_files=pretrained_files,
-                          only_include_pretrained_words=only_include_pretrained_words,
-                          tokens_to_add=tokens_to_add)
+        return cls(counter=namespace_token_counts,
+                   min_count=min_count,
+                   max_vocab_size=max_vocab_size,
+                   non_padded_namespaces=non_padded_namespaces,
+                   pretrained_files=pretrained_files,
+                   only_include_pretrained_words=only_include_pretrained_words,
+                   tokens_to_add=tokens_to_add,
+                   min_pretrained_embeddings=min_pretrained_embeddings)
 
     # There's enough logic here to require a custom from_params.
     @classmethod
@@ -426,6 +436,7 @@ class Vocabulary(Registrable):
         max_vocab_size = pop_max_vocab_size(params)
         non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
         pretrained_files = params.pop("pretrained_files", {})
+        min_pretrained_embeddings = params.pop("min_pretrained_embeddings", None)
         only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
         tokens_to_add = params.pop("tokens_to_add", None)
         params.assert_empty("Vocabulary - from dataset")
@@ -435,7 +446,8 @@ class Vocabulary(Registrable):
                                          non_padded_namespaces=non_padded_namespaces,
                                          pretrained_files=pretrained_files,
                                          only_include_pretrained_words=only_include_pretrained_words,
-                                         tokens_to_add=tokens_to_add)
+                                         tokens_to_add=tokens_to_add,
+                                         min_pretrained_embeddings=min_pretrained_embeddings)
 
     def _extend(self,
                 counter: Dict[str, Dict[str, int]] = None,
@@ -444,7 +456,8 @@ class Vocabulary(Registrable):
                 non_padded_namespaces: Iterable[str] = DEFAULT_NON_PADDED_NAMESPACES,
                 pretrained_files: Optional[Dict[str, str]] = None,
                 only_include_pretrained_words: bool = False,
-                tokens_to_add: Dict[str, List[str]] = None) -> None:
+                tokens_to_add: Dict[str, List[str]] = None,
+                min_pretrained_embeddings: Dict[str, int] = None) -> None:
         """
         This method can be used for extending already generated vocabulary.
         It takes same parameters as Vocabulary initializer. The token2index
@@ -456,6 +469,7 @@ class Vocabulary(Registrable):
             max_vocab_size = defaultdict(lambda: int_max_vocab_size)  # type: ignore
         min_count = min_count or {}
         pretrained_files = pretrained_files or {}
+        min_pretrained_embeddings = min_pretrained_embeddings or {}
         non_padded_namespaces = set(non_padded_namespaces)
         counter = counter or {}
         tokens_to_add = tokens_to_add or {}
@@ -485,8 +499,14 @@ class Vocabulary(Registrable):
         for namespace in counter:
             if namespace in pretrained_files:
                 pretrained_list = _read_pretrained_tokens(pretrained_files[namespace])
+                min_embeddings = min_pretrained_embeddings.get(namespace, 0)
+                if min_embeddings > 0:
+                    tokens_old = tokens_to_add.get(namespace, [])
+                    tokens_new = pretrained_list[:min_embeddings]
+                    tokens_to_add[namespace] = tokens_old + tokens_new
+                pretrained_set = set(pretrained_list)
             else:
-                pretrained_list = None
+                pretrained_set = None
             token_counts = list(counter[namespace].items())
             token_counts.sort(key=lambda x: x[1], reverse=True)
             try:
@@ -496,11 +516,11 @@ class Vocabulary(Registrable):
             if max_vocab:
                 token_counts = token_counts[:max_vocab]
             for token, count in token_counts:
-                if pretrained_list is not None:
+                if pretrained_set is not None:
                     if only_include_pretrained_words:
-                        if token in pretrained_list and count >= min_count.get(namespace, 1):
+                        if token in pretrained_set and count >= min_count.get(namespace, 1):
                             self.add_token_to_namespace(token, namespace)
-                    elif token in pretrained_list or count >= min_count.get(namespace, 1):
+                    elif token in pretrained_set or count >= min_count.get(namespace, 1):
                         self.add_token_to_namespace(token, namespace)
                 elif count >= min_count.get(namespace, 1):
                     self.add_token_to_namespace(token, namespace)
@@ -519,6 +539,7 @@ class Vocabulary(Registrable):
         max_vocab_size = pop_max_vocab_size(params)
         non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
         pretrained_files = params.pop("pretrained_files", {})
+        min_pretrained_embeddings = params.pop("min_pretrained_embeddings", None)
         only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
         tokens_to_add = params.pop("tokens_to_add", None)
         params.assert_empty("Vocabulary - from dataset")
@@ -533,7 +554,8 @@ class Vocabulary(Registrable):
                      non_padded_namespaces=non_padded_namespaces,
                      pretrained_files=pretrained_files,
                      only_include_pretrained_words=only_include_pretrained_words,
-                     tokens_to_add=tokens_to_add)
+                     tokens_to_add=tokens_to_add,
+                     min_pretrained_embeddings=min_pretrained_embeddings)
 
     def is_padded(self, namespace: str) -> bool:
         """
@@ -619,3 +641,7 @@ class Vocabulary(Registrable):
             # _retained_counter would be set only if instances were used for vocabulary construction.
             logger.info("Vocabulary statistics cannot be printed since " \
                         "dataset instances were not used for its construction.")
+
+
+# the tricky part is that `Vocabulary` is both the base class and the default implementation
+Vocabulary.register("default")(Vocabulary)

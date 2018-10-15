@@ -592,7 +592,7 @@ class TestVocabulary(AllenNlpTestCase):
         base_path = str(self.FIXTURES_ROOT / "embeddings/fake_embeddings.5d.txt")
         for ext in ['', '.gz', '.lzma', '.bz2', '.zip', '.tar.gz']:
             file_path = base_path + ext
-            words_read = _read_pretrained_tokens(file_path)
+            words_read = set(_read_pretrained_tokens(file_path))
             assert words_read == words, f"Wrong words for file {file_path}\n" \
                                         f"   Read: {sorted(words_read)}\n" \
                                         f"Correct: {sorted(words)}"
@@ -603,7 +603,7 @@ class TestVocabulary(AllenNlpTestCase):
         for ext in ['.zip', '.tar.gz']:
             archive_path = base_path + ext
             embeddings_file_uri = format_embeddings_file_uri(archive_path, file_path)
-            words_read = _read_pretrained_tokens(embeddings_file_uri)
+            words_read = set(_read_pretrained_tokens(embeddings_file_uri))
             assert words_read == words, f"Wrong words for file {archive_path}\n" \
                                         f"   Read: {sorted(words_read)}\n" \
                                         f"Correct: {sorted(words)}"
@@ -687,3 +687,15 @@ class TestVocabulary(AllenNlpTestCase):
         vocab = Vocabulary.from_params(params=params, instances=dataset)
         assert len(vocab.get_index_to_token_vocabulary("tokens").values()) == 3 # 1 + 2
         assert len(vocab.get_index_to_token_vocabulary("token_characters").values()) == 28 # 26 + 2
+
+    def test_min_pretrained_embeddings(self):
+        params = Params({
+                "pretrained_files": {
+                        "tokens": str(self.FIXTURES_ROOT / "embeddings/glove.6B.100d.sample.txt.gz")
+                },
+                "min_pretrained_embeddings": {"tokens": 50},
+        })
+
+        vocab = Vocabulary.from_params(params=params, instances=self.dataset)
+        assert vocab.get_vocab_size() >= 50
+        assert vocab.get_token_index("his") > 1  # not @@UNKNOWN@@

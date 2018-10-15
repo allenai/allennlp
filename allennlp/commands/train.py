@@ -273,9 +273,11 @@ def train_model(params: Params,
              if key in datasets_for_vocab_creation)
     )
 
+    model = Model.from_params(vocab=vocab, params=params.pop('model'))
+
+    # Initializing the model can have side effect of expanding the vocabulary
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
-    model = Model.from_params(vocab=vocab, params=params.pop('model'))
     iterator = DataIterator.from_params(params.pop("iterator"))
     iterator.index_with(vocab)
     validation_iterator_params = params.pop("validation_iterator", None)
@@ -304,13 +306,16 @@ def train_model(params: Params,
     for name in tunable_parameter_names:
         logger.info(name)
 
-    trainer = Trainer.from_params(model,
-                                  serialization_dir,
-                                  iterator,
-                                  train_data,
-                                  validation_data,
-                                  trainer_params,
-                                  validation_iterator=validation_iterator)
+    trainer_choice = trainer_params.pop_choice("type",
+                                               Trainer.list_available(),
+                                               default_to_first_choice=True)
+    trainer = Trainer.by_name(trainer_choice).from_params(model=model,
+                                                          serialization_dir=serialization_dir,
+                                                          iterator=iterator,
+                                                          train_data=train_data,
+                                                          validation_data=validation_data,
+                                                          params=trainer_params,
+                                                          validation_iterator=validation_iterator)
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
     params.assert_empty('base train command')

@@ -23,7 +23,7 @@ from torch.nn.parallel import replicate, parallel_apply
 from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
 from tensorboardX import SummaryWriter
 
-from allennlp.common import Params
+from allennlp.common import Params, Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import peak_memory_mb, gpu_memory_mb, dump_metrics
 from allennlp.common.tqdm import Tqdm
@@ -156,7 +156,9 @@ def str_to_time(time_str: str) -> datetime.datetime:
     return datetime.datetime(*pieces)
 
 
-class Trainer:
+class Trainer(Registrable):
+    default_implementation = "default"
+
     def __init__(self,
                  model: Model,
                  optimizer: torch.optim.Optimizer,
@@ -998,7 +1000,7 @@ class Trainer:
 
     # Requires custom from_params.
     @classmethod
-    def from_params(cls,
+    def from_params(cls,  # type: ignore
                     model: Model,
                     serialization_dir: str,
                     iterator: DataIterator,
@@ -1006,7 +1008,7 @@ class Trainer:
                     validation_data: Optional[Iterable[Instance]],
                     params: Params,
                     validation_iterator: DataIterator = None) -> 'Trainer':
-
+        # pylint: disable=arguments-differ
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
         shuffle = params.pop_bool("shuffle", True)
@@ -1036,22 +1038,25 @@ class Trainer:
         should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
 
         params.assert_empty(cls.__name__)
-        return Trainer(model, optimizer, iterator,
-                       train_data, validation_data,
-                       patience=patience,
-                       validation_metric=validation_metric,
-                       validation_iterator=validation_iterator,
-                       shuffle=shuffle,
-                       num_epochs=num_epochs,
-                       serialization_dir=serialization_dir,
-                       cuda_device=cuda_device,
-                       grad_norm=grad_norm,
-                       grad_clipping=grad_clipping,
-                       learning_rate_scheduler=scheduler,
-                       num_serialized_models_to_keep=num_serialized_models_to_keep,
-                       keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
-                       model_save_interval=model_save_interval,
-                       summary_interval=summary_interval,
-                       histogram_interval=histogram_interval,
-                       should_log_parameter_statistics=should_log_parameter_statistics,
-                       should_log_learning_rate=should_log_learning_rate)
+        return cls(model, optimizer, iterator,
+                   train_data, validation_data,
+                   patience=patience,
+                   validation_metric=validation_metric,
+                   validation_iterator=validation_iterator,
+                   shuffle=shuffle,
+                   num_epochs=num_epochs,
+                   serialization_dir=serialization_dir,
+                   cuda_device=cuda_device,
+                   grad_norm=grad_norm,
+                   grad_clipping=grad_clipping,
+                   learning_rate_scheduler=scheduler,
+                   num_serialized_models_to_keep=num_serialized_models_to_keep,
+                   keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
+                   model_save_interval=model_save_interval,
+                   summary_interval=summary_interval,
+                   histogram_interval=histogram_interval,
+                   should_log_parameter_statistics=should_log_parameter_statistics,
+                   should_log_learning_rate=should_log_learning_rate)
+
+
+Trainer.register("default")(Trainer)

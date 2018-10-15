@@ -51,6 +51,8 @@ class LinkingTransitionFunction(BasicTransitionFunction):
         actions given the hidden state at every timestep of decoding, instead of concatenating the
         logits for both (where the logits may not be compatible with each other).
     dropout : ``float`` (optional, default=0.0)
+    num_layers: ``int`` (optional, default=1)
+        The number of layers in the decoder LSTM.
     """
     def __init__(self,
                  encoder_output_dim: int,
@@ -61,7 +63,8 @@ class LinkingTransitionFunction(BasicTransitionFunction):
                  num_start_types: int = None,
                  add_action_bias: bool = True,
                  mixture_feedforward: FeedForward = None,
-                 dropout: float = 0.0) -> None:
+                 dropout: float = 0.0,
+                 num_layers: int = 1) -> None:
         super().__init__(encoder_output_dim=encoder_output_dim,
                          action_embedding_dim=action_embedding_dim,
                          input_attention=input_attention,
@@ -69,7 +72,8 @@ class LinkingTransitionFunction(BasicTransitionFunction):
                          activation=activation,
                          predict_start_type_separately=predict_start_type_separately,
                          add_action_bias=add_action_bias,
-                         dropout=dropout)
+                         dropout=dropout,
+                         num_layers=num_layers)
         self._mixture_feedforward = mixture_feedforward
 
         if mixture_feedforward is not None:
@@ -84,7 +88,7 @@ class LinkingTransitionFunction(BasicTransitionFunction):
                                       hidden_state: torch.Tensor,
                                       attention_weights: torch.Tensor,
                                       predicted_action_embeddings: torch.Tensor
-                                     ) -> Dict[int, List[Tuple[int, Any, Any, List[int]]]]:
+                                     ) -> Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]]:
         # In this section we take our predicted action embedding and compare it to the available
         # actions in our current state (which might be different for each group element).  For
         # computing action scores, we'll forget about doing batched / grouped computation, as it
@@ -95,7 +99,7 @@ class LinkingTransitionFunction(BasicTransitionFunction):
         group_size = len(state.batch_indices)
         actions = state.get_valid_actions()
 
-        batch_results: Dict[int, List[Tuple[int, torch.Tensor, torch.Tensor, List[int]]]] = defaultdict(list)
+        batch_results: Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]] = defaultdict(list)
         for group_index in range(group_size):
             instance_actions = actions[group_index]
             predicted_action_embedding = predicted_action_embeddings[group_index]
@@ -157,6 +161,7 @@ class LinkingTransitionFunction(BasicTransitionFunction):
             log_probs = state.score[group_index] + current_log_probs
             batch_results[state.batch_indices[group_index]].append((group_index,
                                                                     log_probs,
+                                                                    current_log_probs,
                                                                     output_action_embeddings,
                                                                     action_ids))
         return batch_results
