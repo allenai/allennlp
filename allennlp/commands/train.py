@@ -5,37 +5,40 @@ which to write the results.
 
 .. code-block:: bash
 
-   $ allennlp train --help
-   usage: allennlp train [-h] -s SERIALIZATION_DIR [-r] [-o OVERRIDES]
-                         [--file-friendly-logging]
-                         [--include-package INCLUDE_PACKAGE]
-                         param_path
+   $ usage: allennlp train [-h] -s SERIALIZATION_DIR -f FORCE [-r] [-o OVERRIDES]
+                          [--file-friendly-logging]
+                          [--include-package INCLUDE_PACKAGE]
+                          param_path
 
-   Train the specified model on the specified dataset.
+    Train the specified model on the specified dataset.
 
-   positional arguments:
-   param_path            path to parameter file describing the model to be
-                           trained
+    positional arguments:
+      param_path            path to parameter file describing the model to be
+                            trained
 
-   optional arguments:
-   -h, --help            show this help message and exit
-   -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
-                           directory in which to save the model and its logs
-   -r, --recover         recover training from the state in serialization_dir
-   -o OVERRIDES, --overrides OVERRIDES
-                           a JSON structure used to override the experiment
-                           configuration
-   --include-package INCLUDE_PACKAGE
-                           additional packages to include
-   --file-friendly-logging
-                           outputs tqdm status on separate lines and slows tqdm
-                           refresh rate
+    optional arguments:
+      -h, --help            show this help message and exit
+      -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
+                            directory in which to save the model and its logs
+      -f FORCE, --force FORCE
+                            overwrite the output directory if it exists
+      -r, --recover         recover training from the state in serialization_dir
+      -o OVERRIDES, --overrides OVERRIDES
+                            a JSON structure used to override the experiment
+                            configuration
+      --file-friendly-logging
+                            outputs tqdm status on separate lines and slows tqdm
+                            refresh rate
+      --include-package INCLUDE_PACKAGE
+                            additional packages to include
 """
+
 from typing import Dict, Iterable
 import argparse
 import logging
 import os
 import re
+import shutil
 
 import torch
 
@@ -76,6 +79,11 @@ class Train(Subcommand):
                                default=False,
                                help='recover training from the state in serialization_dir')
 
+        subparser.add_argument('-f', '--force',
+                               action='store_true',
+                               required=False,
+                               help='overwrite the output directory if it exists')
+
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
@@ -98,14 +106,16 @@ def train_model_from_args(args: argparse.Namespace):
                           args.serialization_dir,
                           args.overrides,
                           args.file_friendly_logging,
-                          args.recover)
+                          args.recover,
+                          args.force)
 
 
 def train_model_from_file(parameter_filename: str,
                           serialization_dir: str,
                           overrides: str = "",
                           file_friendly_logging: bool = False,
-                          recover: bool = False) -> Model:
+                          recover: bool = False,
+                          force: bool = False) -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
@@ -128,7 +138,7 @@ def train_model_from_file(parameter_filename: str,
     """
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename, overrides)
-    return train_model(params, serialization_dir, file_friendly_logging, recover)
+    return train_model(params, serialization_dir, file_friendly_logging, recover, force)
 
 
 def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
@@ -163,7 +173,11 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
 
     return datasets
 
-def create_serialization_dir(params: Params, serialization_dir: str, recover: bool) -> None:
+def create_serialization_dir(
+        params: Params,
+        serialization_dir: str,
+        recover: bool,
+        force: bool) -> None:
     """
     This function creates the serialization directory if it doesn't exist.  If it already exists
     and is non-empty, then it verifies that we're recovering from a training with an identical configuration.
@@ -178,8 +192,13 @@ def create_serialization_dir(params: Params, serialization_dir: str, recover: bo
         If ``True``, we will try to recover from an existing serialization directory, and crash if
         the directory doesn't exist, or doesn't match the configuration we're given.
     """
+    if recover and force:
+        raise ConfigurationError("Illegal arguments: both force and recover are true.")
+
     if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
-        if not recover:
+        if force:
+            shutil.rmtree(serialization_dir)
+        elif not recover:
             raise ConfigurationError(f"Serialization directory ({serialization_dir}) already exists and is "
                                      f"not empty. Specify --recover to recover training from existing output.")
 
@@ -224,7 +243,8 @@ def create_serialization_dir(params: Params, serialization_dir: str, recover: bo
 def train_model(params: Params,
                 serialization_dir: str,
                 file_friendly_logging: bool = False,
-                recover: bool = False) -> Model:
+                recover: bool = False,
+                force: bool = False) -> Model:
     """
     Trains the model specified in the given :class:`Params` object, using the data and training
     parameters also specified in that object, and saves the results in ``serialization_dir``.
@@ -250,7 +270,7 @@ def train_model(params: Params,
     """
     prepare_environment(params)
 
-    create_serialization_dir(params, serialization_dir, recover)
+    create_serialization_dir(params, serialization_dir, recover, force)
     prepare_global_logging(serialization_dir, file_friendly_logging)
 
     check_for_gpu(params.get('trainer').get('cuda_device', -1))
