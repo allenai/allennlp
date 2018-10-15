@@ -134,66 +134,6 @@ Commands:
                 Run the unit tests.
 ```
 
-## What is AllenNLP?
-
-Built on PyTorch, AllenNLP makes it easy to design and evaluate new deep
-learning models for nearly any NLP problem, along with the infrastructure to
-easily run them in the cloud or on your laptop.  AllenNLP was designed with the
-following principles:
-
-* *Hyper-modular and lightweight.* Use the parts which you like seamlessly with PyTorch.
-* *Extensively tested and easy to extend.* Test coverage is above 90% and the example
-  models provide a template for contributions.
-* *Take padding and masking seriously*, making it easy to implement correct
-  models without the pain.
-* *Experiment friendly.*  Run reproducible experiments from a json
-  specification with comprehensive logging.
-
-AllenNLP includes reference implementations of high quality models for Semantic
-Role Labelling, Question and Answering (BiDAF), Entailment (decomposable
-attention), and more (see http://www.allennlp.org/models).
-
-AllenNLP is built and maintained by the Allen Institute for Artificial
-Intelligence, in close collaboration with researchers at the University of
-Washington and elsewhere. With a dedicated team of best-in-field researchers
-and software engineers, the AllenNLP project is uniquely positioned to provide
-state of the art models with high quality engineering.
-
-<table>
-<tr>
-    <td><b> allennlp </b></td>
-    <td> an open-source NLP research library, built on PyTorch </td>
-</tr>
-<tr>
-    <td><b> allennlp.commands </b></td>
-    <td> functionality for a CLI and web service </td>
-</tr>
-<tr>
-    <td><b> allennlp.data </b></td>
-    <td> a data processing module for loading datasets and encoding strings as integers for representation in matrices </td>
-</tr>
-<tr>
-    <td><b> allennlp.models </b></td>
-    <td> a collection of state-of-the-art models </td>
-</tr>
-<tr>
-    <td><b> allennlp.modules </b></td>
-    <td> a collection of PyTorch modules for use with text </td>
-</tr>
-<tr>
-    <td><b> allennlp.nn </b></td>
-    <td> tensor utility functions, such as initializers and activation functions </td>
-</tr>
-<tr>
-    <td><b> allennlp.service </b></td>
-    <td> a web server to that can serve demos for your models </td>
-</tr>
-<tr>
-    <td><b> allennlp.training </b></td>
-    <td> functionality for training models </td>
-</tr>
-</table>
-
 ## Docker images
 
 AllenNLP releases Docker images to [Docker Hub](https://hub.docker.com/r/allennlp/) for each release.  For information on how to run these releases, see [Installing using Docker](#installing-using-docker).
