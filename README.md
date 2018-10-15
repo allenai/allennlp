@@ -15,6 +15,43 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
 * [Model List](MODELS.md)
 * [Continuous Build](http://build.allennlp.org/)
 
+## Package Overview
+
+<table>
+<tr>
+    <td><b> allennlp </b></td>
+    <td> an open-source NLP research library, built on PyTorch </td>
+</tr>
+<tr>
+    <td><b> allennlp.commands </b></td>
+    <td> functionality for a CLI and web service </td>
+</tr>
+<tr>
+    <td><b> allennlp.data </b></td>
+    <td> a data processing module for loading datasets and encoding strings as integers for representation in matrices </td>
+</tr>
+<tr>
+    <td><b> allennlp.models </b></td>
+    <td> a collection of state-of-the-art models </td>
+</tr>
+<tr>
+    <td><b> allennlp.modules </b></td>
+    <td> a collection of PyTorch modules for use with text </td>
+</tr>
+<tr>
+    <td><b> allennlp.nn </b></td>
+    <td> tensor utility functions, such as initializers and activation functions </td>
+</tr>
+<tr>
+    <td><b> allennlp.service </b></td>
+    <td> a web server to that can serve demos for your models </td>
+</tr>
+<tr>
+    <td><b> allennlp.training </b></td>
+    <td> functionality for training models </td>
+</tr>
+</table>
+
 ## Installation
 
 AllenNLP requires Python 3.6.1 or later. The preferred way to install AllenNLP is via `pip`.  Just run `pip install allennlp` in your Python environment and you're good to go!
