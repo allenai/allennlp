@@ -1,5 +1,5 @@
 """
-The ``find-lr`` subcommand can be used to find learning rate for a model.
+The ``find-lr`` subcommand can be used to find a good learning rate for a model.
 It requires a configuration file and a directory in
 which to write the results.
 
@@ -138,8 +138,11 @@ def find_learning_rate_model(params: Params,
         multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
     """
 
-    prepare_environment(params)
+    if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
+        raise ConfigurationError(f'Serialization directory {serialization_dir} already exists and is '
+                                 f'not empty.')
 
+    prepare_environment(params)
     os.makedirs(serialization_dir, exist_ok=True)
 
     check_for_gpu(params.get('trainer').get('cuda_device', -1))
@@ -180,9 +183,11 @@ def find_learning_rate_model(params: Params,
                                   validation_data=None,
                                   validation_iterator=None)
 
+    logger.info(f'Starting learning rate search from {start_lr} to {end_lr} in {num_batches} iterations.')
     learning_rates, losses = search_learning_rate(trainer, start_lr,
                                                   end_lr, num_batches,
                                                   linear_steps, stopping_factor)
+    logger.info(f'Finished learning rate search.')
     losses = _smooth(losses, 0.98)
 
     _save_plot(learning_rates, losses, os.path.join(serialization_dir, 'lr-losses.png'))
@@ -219,7 +224,7 @@ def search_learning_rate(trainer: Trainer,
         Note: The losses are recorded before applying the corresponding learning rate
     """
     if num_batches <= 10:
-        raise ConfigurationError("The number of iterations for learning rate finder should be more than 10")
+        raise ConfigurationError('The number of iterations for learning rate finder should be greater than 10.')
 
     trainer.model.train()
 
@@ -252,6 +257,7 @@ def search_learning_rate(trainer: Trainer,
         loss = loss.detach().cpu().item()
 
         if stopping_factor is not None and (math.isnan(loss) or loss > stopping_factor * best):
+            logger.info(f'Loss ({loss}) exceeds stopping_factor * lowest recorded loss.')
             break
 
         trainer.rescale_gradients()
@@ -283,4 +289,5 @@ def _save_plot(learning_rates: List[float], losses: List[float], save_path: str)
     plt.xlabel('learning rate (log10 scale)')
     plt.xscale('log')
     plt.plot(learning_rates, losses)
+    logger.info(f'Saving learning_rate vs loss plot to {save_path}.')
     plt.savefig(save_path)
