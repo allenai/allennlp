@@ -20,13 +20,14 @@ Right at this instant you might care about the `trainer` section, which specifie
 
 ```js
   "trainer": {
+    "optimizer": "adam",
     "num_epochs": 40,
     "patience": 10,
     "cuda_device": -1
   }
 ```
 
-Here the `num_epochs` parameter specifies that we want to make 40 training passes through the training dataset.
+Here the `optimizer` parameter specifies the optimizer that we want to use. The `num_epochs` parameter specifies that we want to make 40 training passes through the training dataset.
 On a recent Macbook each epoch of this model on this dataset takes about a minute,
 so this training should take about 40 minutes, unless it stops early. `patience`
 controls the early stopping -- if our validation metric doesn't improve for
