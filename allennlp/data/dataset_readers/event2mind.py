@@ -85,7 +85,6 @@ class Event2MindDatasetReader(DatasetReader):
             # Skip header
             next(reader) # pylint: disable=stop-iteration-return
 
-            source_sequences = {}
             for (line_num, line_parts) in enumerate(reader):
                 if len(line_parts) != 7:
                     line = ','.join([str(s) for s in line_parts])
@@ -105,8 +104,9 @@ class Event2MindDatasetReader(DatasetReader):
                                 )
                 # Generate instances where each token of input appears once.
                 else:
-                    # Use a dictionary to preserve insertion order for testing.
-                    source_sequences[source_sequence] = None
+                    # To the extent that sources are duplicated in the dataset
+                    # (which appears common), we will duplicate them here.
+                    yield self.text_to_instance(source_sequence, "none", "none", "none")
                     for xintent in xintents:
                         # Since "none" is a special token we don't mind it
                         # appearing a disproportionate number of times.
@@ -115,11 +115,6 @@ class Event2MindDatasetReader(DatasetReader):
                         yield self.text_to_instance("none", "none", xreact, "none")
                     for oreact in oreacts:
                         yield self.text_to_instance("none", "none", "none", oreact)
-            if self._dummy_instances_for_vocab_generation:
-                # Deduplicate the source sequences. They are artificially
-                # duplicated in the training data.
-                for source_sequence in source_sequences.keys():
-                    yield self.text_to_instance(source_sequence, "none", "none", "none")
 
     @staticmethod
     def _preprocess_string(tokenizer, string: str) -> str:
