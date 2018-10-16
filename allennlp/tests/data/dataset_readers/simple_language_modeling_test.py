@@ -8,7 +8,7 @@ from allennlp.data.dataset_readers import SimpleLanguageModelingDatasetReader
 
 
 class TestSimpleLanguageModelingDatasetReader(AllenNlpTestCase):
-    FIXTURES = AllenNlpTestCase.FIXTURES_ROOT / "elmo_port"
+    FIXTURES = AllenNlpTestCase.FIXTURES_ROOT / "language_modeling"
 
     def test_text_to_instance(self):
         dataset = SimpleLanguageModelingDatasetReader()
