@@ -5,30 +5,32 @@ which to write the results.
 
 .. code-block:: bash
 
-   $ usage: allennlp train [-h] -s SERIALIZATION_DIR -f FORCE [-r] [-o OVERRIDES]
-                          [--file-friendly-logging]
-                          [--include-package INCLUDE_PACKAGE]
-                          param_path
+   $ allennlp train --help
 
-    Train the specified model on the specified dataset.
+   usage: allennlp train [-h] -s SERIALIZATION_DIR -f FORCE [-r] [-o OVERRIDES]
+                         [--file-friendly-logging]
+                         [--include-package INCLUDE_PACKAGE]
+                         param_path
 
-    positional arguments:
-      param_path            path to parameter file describing the model to be
-                            trained
+   Train the specified model on the specified dataset.
 
-    optional arguments:
-      -h, --help            show this help message and exit
-      -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
-                            directory in which to save the model and its logs
-      -r, --recover         recover training from the state in serialization_dir
-      -f, --force           overwrite the output directory if it exists
-      -o OVERRIDES, --overrides OVERRIDES
-                            a JSON structure used to override the experiment
-                            configuration
-      --file-friendly-logging
-                            outputs tqdm status on separate lines and slows tqdm
-                            refresh rate
-      --include-package INCLUDE_PACKAGE
+   positional arguments:
+     param_path            path to parameter file describing the model to be
+                           trained
+
+   optional arguments:
+     -h, --help            show this help message and exit
+     -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
+                           directory in which to save the model and its logs
+     -r, --recover         recover training from the state in serialization_dir
+     -f, --force           overwrite the output directory if it exists
+     -o OVERRIDES, --overrides OVERRIDES
+                           a JSON structure used to override the experiment
+                           configuration
+     --file-friendly-logging
+                           outputs tqdm status on separate lines and slows tqdm
+                           refresh rate
+     --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
 
