@@ -146,7 +146,6 @@ class Text2SqlParser(Model):
 
         # (batch_size, num_tokens, encoder_output_dim)
         encoder_outputs = self._dropout(self._encoder(embedded_utterance, mask))
-
         initial_state = self._get_initial_state(encoder_outputs, mask, valid_actions)
 
         if action_sequence is not None:
@@ -163,10 +162,14 @@ class Text2SqlParser(Model):
                                                 self._transition_function,
                                                 (action_sequence.unsqueeze(1), target_mask.unsqueeze(1)))
         else:
-            action_mapping = {}
-            for batch_index, batch_actions in enumerate(valid_actions):
+
+            action_mapping = []
+            for batch_actions in valid_actions:
+                batch_action_mapping = {}
                 for action_index, action in enumerate(batch_actions):
-                    action_mapping[(batch_index, action_index)] = action[0]
+                    batch_action_mapping[action_index] = action[0]
+                action_mapping.append(batch_action_mapping)
+
             outputs: Dict[str, Any] = {'action_mapping': action_mapping}
             if action_sequence is not None:
                 outputs['loss'] = self._decoder_trainer.decode(initial_state,
@@ -185,7 +188,6 @@ class Text2SqlParser(Model):
             outputs['debug_info'] = []
             outputs['predicted_sql_query'] = []
             outputs['sql_queries'] = []
-
             for i in range(batch_size):
                 # Decoding may not have terminated with any completed valid SQL queries, if `num_steps`
                 # isn't long enough (or if the model is not trained enough and gets into an
@@ -200,7 +202,7 @@ class Text2SqlParser(Model):
 
                 best_action_indices = best_final_states[i][0].action_history[0]
 
-                action_strings = [action_mapping[(i, action_index)]
+                action_strings = [action_mapping[i][action_index]
                                   for action_index in best_action_indices]
                 predicted_sql_query = action_sequence_to_sql(action_strings)
 
@@ -335,9 +337,6 @@ class Text2SqlParser(Model):
 
         translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
 
-        # TODO(Mark): Something is wrong here: I think I only have rhs -> lhs rules, and not all non-terminals.
-        # I think this is just meant to be a normal grammar traversal, recording all nonterminals....?
-
         actions_grouped_by_nonterminal: Dict[str, List[Tuple[ProductionRule, int]]] = defaultdict(list)
         for i, action in enumerate(possible_actions):
             if action.is_global_rule:
@@ -345,10 +344,8 @@ class Text2SqlParser(Model):
             else:
                 raise ValueError("The sql parser doesn't support non-global actions yet.")
 
-        print(actions_grouped_by_nonterminal["number"])
         for key, production_rule_arrays in actions_grouped_by_nonterminal.items():
 
-            #print("KEY: ", key)
             translated_valid_actions[key] = {}
             # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid
             # productions of that non-terminal.  We'll first split those productions by global vs.
@@ -356,7 +353,6 @@ class Text2SqlParser(Model):
 
             global_actions = []
             for production_rule_array, action_index in production_rule_arrays:
-                #print(production_rule_array)
                 global_actions.append((production_rule_array.rule_id, action_index))
 
             if global_actions:
@@ -401,7 +397,7 @@ class Text2SqlParser(Model):
                 actions = []
                 for action, probability in zip(considered_actions, probabilities):
                     if action != -1:
-                        actions.append((action_mapping[(batch_index, action)], probability))
+                        actions.append((action_mapping[batch_index][action], probability))
                 actions.sort()
                 considered_actions, probabilities = zip(*actions)
                 action_info['considered_actions'] = considered_actions

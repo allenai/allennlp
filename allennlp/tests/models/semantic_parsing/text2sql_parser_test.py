@@ -3,9 +3,6 @@ from allennlp.state_machines.states import GrammarStatelet
 from allennlp.models.semantic_parsing.text2sql_parser import Text2SqlParser
 from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld
 
-
-
-
 class Text2SqlParserTest(ModelTestCase):
 
     def setUp(self):
@@ -25,11 +22,10 @@ class Text2SqlParserTest(ModelTestCase):
         sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',', 'RESTAURANT', ';']
         action_sequence, valid_actions = world.get_action_sequence_and_all_actions(sql)
 
-        print(action_sequence)
         grammar_state = GrammarStatelet(['statement'],
                                         valid_actions,
                                         Text2SqlParser.is_nonterminal,
                                         reverse_productions=True)
         for action in action_sequence:
             grammar_state = grammar_state.take_action(action)
-        assert grammar_state._nonterminal_stack == []
+        assert grammar_state._nonterminal_stack == [] # pylint: disable=protected-access
