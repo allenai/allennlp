@@ -20,9 +20,8 @@ which to write the results.
       -h, --help            show this help message and exit
       -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
                             directory in which to save the model and its logs
-      -f FORCE, --force FORCE
-                            overwrite the output directory if it exists
       -r, --recover         recover training from the state in serialization_dir
+      -f, --force           overwrite the output directory if it exists
       -o OVERRIDES, --overrides OVERRIDES
                             a JSON structure used to override the experiment
                             configuration
