@@ -30,6 +30,7 @@
     "decoder_beam_search": {
     "beam_size": 5
     },
+    "decoder_num_layers": 2,
     "max_decoding_steps": 10,
     "input_attention": {"type": "dot_product"},
     "dropout": 0.5,
