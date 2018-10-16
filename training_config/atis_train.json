@@ -1,7 +1,12 @@
 {
   "dataset_reader": {
     "type": "atis",
-    "database_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
+    "database_file": "/atis/atis.db"
+  },
+  "validation_dataset_reader": {
+      "type": "atis",
+      "database_file": "/atis/atis.db",
+      "keep_if_unparseable": true
   },
   "train_data_path": "/atis/train.json",
   "validation_data_path": "/atis/dev.json",
@@ -25,19 +30,21 @@
     "decoder_beam_search": {
     "beam_size": 10
     },
+    "training_beam_size": 1,
     "max_decoding_steps": 200,
     "input_attention": {"type": "dot_product"},
     "dropout": 0.5,
-    "database_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
+    "database_file": "/atis/atis.db"
   },
   "iterator": {
     "type": "basic",
     "batch_size" : 32
   },
   "trainer": {
-    "num_epochs": 20,
+    "num_epochs": 30,
     "patience": 10,
     "cuda_device": 0,
+    "validation_metric": "+denotation_acc",
     "optimizer": {
       "type": "adam",
       "lr": 0.001

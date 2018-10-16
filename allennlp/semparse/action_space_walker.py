@@ -1,9 +1,13 @@
 from collections import defaultdict
 from typing import List, Dict, Set
+import logging
 
 from allennlp.common.util import START_SYMBOL
 from allennlp.semparse.worlds.world import World
 from allennlp.semparse.type_declarations import type_declaration as types
+
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class ActionSpaceWalker:
@@ -38,6 +42,8 @@ class ActionSpaceWalker:
 
         self._completed_paths = []
         actions = self._world.get_valid_actions()
+        # Keeps track of `MultiMatchNamedBasicTypes` to substitute them with appropriate types.
+        multi_match_substitutions = self._world.get_multi_match_mapping()
         # Overview: We keep track of the buffer of non-terminals to expand, and the action history
         # for each incomplete path. At every iteration in the while loop below, we iterate over all
         # incomplete paths, expand one non-terminal from the buffer in a depth-first fashion, get
@@ -53,8 +59,23 @@ class ActionSpaceWalker:
             for nonterminal_buffer, history in incomplete_paths:
                 # Taking the last non-terminal added to the buffer. We're going depth-first.
                 nonterminal = nonterminal_buffer.pop()
+                next_actions = []
+                if nonterminal in multi_match_substitutions:
+                    for current_nonterminal in [nonterminal] + multi_match_substitutions[nonterminal]:
+                        if current_nonterminal in actions:
+                            next_actions.extend(actions[current_nonterminal])
+                elif nonterminal not in actions:
+                    # This happens when the nonterminal corresponds to a type that does not exist in
+                    # the context. For example, in the variable free variant of the WikiTables
+                    # world, there are nonterminals for specific column types (like date). Say we
+                    # produced a path containing "filter_date_greater" already, and we do not have
+                    # an columns of type "date", then this condition would be triggered. We should
+                    # just discard those paths.
+                    continue
+                else:
+                    next_actions.extend(actions[nonterminal])
                 # Iterating over all possible next actions.
-                for action in actions[nonterminal]:
+                for action in next_actions:
                     new_history = history + [action]
                     new_nonterminal_buffer = nonterminal_buffer[:]
                     # Since we expand the last action added to the buffer, the left child should be
@@ -91,13 +112,28 @@ class ActionSpaceWalker:
     def get_logical_forms_with_agenda(self,
                                       agenda: List[str],
                                       max_num_logical_forms: int = None) -> List[str]:
+        if not agenda:
+            logger.warning("Agenda is empty! Returning all paths instead.")
+            return self.get_all_logical_forms(max_num_logical_forms)
         if self._completed_paths is None:
             self._walk()
         agenda_path_indices = [self._terminal_path_index[action] for action in agenda]
+        if all([not path_indices for path_indices in agenda_path_indices]):
+            logger.warning("""None of the agenda items is in any of the paths found. Returning all
+                            paths.""")
+            return self.get_all_logical_forms(max_num_logical_forms)
+        # We omit any agenda items that are not in any of the paths, since they would cause the
+        # final intersection to be null.
         # TODO (pradeep): Sort the indices and do intersections in order, so that we can return the
         # set with maximal coverage if the full intersection is null.
-        return_set = agenda_path_indices[0]
-        for next_set in agenda_path_indices[1:]:
+        filtered_path_indices = []
+        for agenda_item, path_indices in zip(agenda, agenda_path_indices):
+            if not path_indices:
+                logger.warning(f"{agenda_item} is not in any of the paths found! Ignoring it.")
+                continue
+            filtered_path_indices.append(path_indices)
+        return_set = filtered_path_indices[0]
+        for next_set in filtered_path_indices[1:]:
             return_set = return_set.intersection(next_set)
         paths = [self._completed_paths[index] for index in return_set]
         if max_num_logical_forms is not None:

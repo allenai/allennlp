@@ -144,11 +144,11 @@ class MultiMatchNamedBasicType(NamedBasicType):
                  string_rep,
                  types_to_match: List[BasicType]) -> None:
         super().__init__(string_rep)
-        self._types_to_match = set(types_to_match)
+        self.types_to_match = set(types_to_match)
 
     @overrides
     def matches(self, other):
-        return super().matches(other) or other in self._types_to_match
+        return super().matches(other) or other in self.types_to_match
 
 
 class PlaceholderType(ComplexType):

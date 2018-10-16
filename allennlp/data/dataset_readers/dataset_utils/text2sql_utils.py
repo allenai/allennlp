@@ -28,20 +28,39 @@ class SqlData(NamedTuple):
         The tokens in the SQL query which corresponds to the text.
     text_variables : ``Dict[str, str]``
         A dictionary of variables associated with the text, e.g. {"city_name0": "san fransisco"}
-    sql_variables : ``Dict[str, str]``
-        A dictionary of variables associated with the sql query.
+    sql_variables : ``Dict[str, Dict[str, str]]``
+        A dictionary of variables and column references associated with the sql query.
     """
     text: List[str]
     text_with_variables: List[str]
     variable_tags: List[str]
     sql: List[str]
     text_variables: Dict[str, str]
-    sql_variables: Dict[str, str]
+    sql_variables: Dict[str, Dict[str, str]]
 
 class TableColumn(NamedTuple):
     name: str
     column_type: str
     is_primary_key: bool
+
+def column_has_string_type(column: TableColumn) -> bool:
+    if "varchar" in column.column_type:
+        return True
+    elif column.column_type == "text":
+        return True
+    elif column.column_type == "longtext":
+        return True
+
+    return False
+
+def column_has_numeric_type(column: TableColumn) -> bool:
+    if "int" in column.column_type:
+        return True
+    elif "float" in column.column_type:
+        return True
+    elif "double" in column.column_type:
+        return True
+    return False
 
 def replace_variables(sentence: List[str],
                       sentence_variables: Dict[str, str]) -> Tuple[List[str], List[str]]:
@@ -136,7 +155,8 @@ def read_dataset_schema(schema_path: str) -> Dict[str, List[TableColumn]]:
     mapping table names to their columns and respective types.
     This handles columns in an arbitrary order and also allows
     either ``{Table, Field}`` or ``{Table, Field} Name`` as headers,
-    because both appear in the data.
+    because both appear in the data. It also uppercases table and
+    column names if they are not already uppercase.
 
     Parameters
     ----------
@@ -159,7 +179,7 @@ def read_dataset_schema(schema_path: str) -> Dict[str, List[TableColumn]]:
             table = data.get("Table Name", None) or data.get("Table")
             column = data.get("Field Name", None) or data.get("Field")
             is_primary_key = data.get("Primary Key") == "y"
-            schema[table].append(TableColumn(column, data["Type"], is_primary_key))
+            schema[table.upper()].append(TableColumn(column.upper(), data["Type"], is_primary_key))
 
     return {**schema}
 
@@ -222,7 +242,7 @@ def process_sql_data(data: List[JsonDict],
 
                 sql_variables = {}
                 for variable in example['variables']:
-                    sql_variables[variable['name']] = variable['example']
+                    sql_variables[variable['name']] = {'text': variable['example'], 'type': variable['type']}
 
                 sql_data = SqlData(text=query_tokens,
                                    text_with_variables=text_with_variables,
