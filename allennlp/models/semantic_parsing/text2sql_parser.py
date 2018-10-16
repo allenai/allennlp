@@ -46,12 +46,12 @@ class Text2SqlParser(Model):
     input_attention: ``Attention``
         We compute an attention over the input utterance at each step of the decoder, using the
         decoder hidden state as the query.  Passed to the transition function.
+    database_file: ``str``, required.
+        The path of the SQLite database when evaluating SQL queries. SQLite is disk based, so we need
+        the file location to connect to it.
     add_action_bias : ``bool``, optional (default=True)
         If ``True``, we will learn a bias weight for each action that gets used when predicting
         that action, in addition to its embedding.
-    database_file: ``str``, optional (default=/atis/atis.db)
-        The path of the SQLite database when evaluating SQL queries. SQLite is disk based, so we need
-        the file location to connect to it.
     dropout : ``float``, optional (default=0)
         If greater than 0, we will apply dropout with this probability after all encoders (pytorch
         LSTMs do not apply dropout to their last layer).
@@ -342,10 +342,13 @@ class Text2SqlParser(Model):
         for i, action in enumerate(possible_actions):
             if action.is_global_rule:
                 actions_grouped_by_nonterminal[action.nonterminal].append((action, i))
+            else:
+                raise ValueError("The sql parser doesn't support non-global actions yet.")
 
+        print(actions_grouped_by_nonterminal["number"])
         for key, production_rule_arrays in actions_grouped_by_nonterminal.items():
 
-            print("KEY: ", key)
+            #print("KEY: ", key)
             translated_valid_actions[key] = {}
             # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid
             # productions of that non-terminal.  We'll first split those productions by global vs.
@@ -353,7 +356,7 @@ class Text2SqlParser(Model):
 
             global_actions = []
             for production_rule_array, action_index in production_rule_arrays:
-                print(production_rule_array)
+                #print(production_rule_array)
                 global_actions.append((production_rule_array.rule_id, action_index))
 
             if global_actions:
