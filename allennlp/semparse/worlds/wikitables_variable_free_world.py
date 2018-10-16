@@ -54,6 +54,7 @@ class WikiTablesVariableFreeWorld(World):
                          global_name_mapping=types.COMMON_NAME_MAPPING)
         # TODO (pradeep): Do we need constant type prefixes?
         self.table_context = table_context
+        self.table_graph = table_context.get_table_knowledge_graph()
 
         self._executor = WikiTablesVariableFreeExecutor(self.table_context.table_data)
 

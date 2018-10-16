@@ -133,13 +133,12 @@ class WikiTablesVariableFreeDatasetReader(DatasetReader):
         target_values_field = MetadataField(target_values)
         world = WikiTablesVariableFreeWorld(table_context)
         world_field = MetadataField(world)
-        # TODO(pradeep): Not using any feature extractors for now. They seem to be hardcoded
-        # to work only with lambda-DCS at this point.
+        # Note: Not passing any featre extractors when instantiating the field below. This will make
+        # it use all the available extractors.
         table_field = KnowledgeGraphField(table_context.get_table_knowledge_graph(),
                                           tokenized_question,
                                           self._table_token_indexers,
                                           tokenizer=self._tokenizer,
-                                          feature_extractors=[],
                                           include_in_vocab=self._use_table_for_vocab,
                                           max_table_tokens=self._max_table_tokens)
         production_rule_fields: List[Field] = []
