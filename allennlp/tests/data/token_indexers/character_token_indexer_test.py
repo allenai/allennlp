@@ -43,3 +43,21 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
         indexer = TokenCharactersIndexer("characters")
         indices = indexer.tokens_to_indices([Token("sentential")], vocab, "char")
         assert indices == {"char": [[3, 4, 5, 6, 4, 5, 6, 1, 1, 1]]}
+
+    def test_start_and_end_tokens(self):
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace("A", namespace='characters')  # 2
+        vocab.add_token_to_namespace("s", namespace='characters')  # 3
+        vocab.add_token_to_namespace("e", namespace='characters')  # 4
+        vocab.add_token_to_namespace("n", namespace='characters')  # 5
+        vocab.add_token_to_namespace("t", namespace='characters')  # 6
+        vocab.add_token_to_namespace("c", namespace='characters')  # 7
+        vocab.add_token_to_namespace("<", namespace='characters')  # 8
+        vocab.add_token_to_namespace(">", namespace='characters')  # 9
+        vocab.add_token_to_namespace("/", namespace='characters')  # 10
+
+        indexer = TokenCharactersIndexer("characters", start_tokens=["<s>"], end_tokens=["</s>"])
+        indices = indexer.tokens_to_indices([Token("sentential")], vocab, "char")
+        assert indices == {"char": [[8, 3, 9],
+                                    [3, 4, 5, 6, 4, 5, 6, 1, 1, 1],
+                                    [8, 10, 3, 9]]}
