@@ -1,88 +1,50 @@
+# pylint: disable=invalid-name,arguments-differ,abstract-method
+from typing import Dict, Iterable
+
 import numpy as np
-import torch
 
 from allennlp.common.testing import ModelTestCase
+from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
-from allennlp.data.iterators import BasicIterator
-from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
+from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
-from allennlp.data.vocabulary import Vocabulary
-from allennlp.models.bidirectional_lm import BidirectionalLanguageModel
-from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
-from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
-from allennlp.modules.token_embedders import TokenCharactersEncoder, Embedding
-from allennlp.modules.seq2vec_encoders.cnn_highway_encoder import CnnHighwayEncoder
-from allennlp.nn.util import get_text_field_mask
-from allennlp.training import Trainer
 
-START_TOKENS = ["<s>"]
-END_TOKENS = ["</s>"]
+@DatasetReader.register("test-sentence")
+class _SentenceDatasetReader(DatasetReader):
+    """
+    Simple dataset reader that just reads sentences from a file and tokenizes them.
+    """
+    def __init__(self,
+                 token_indexers: Dict[str, TokenIndexer],
+                 tokenizer: WordTokenizer = WordTokenizer()) -> None:
+        super().__init__(lazy=False)
+        self.tokenizer = tokenizer
+        self.token_indexers = token_indexers
+
+    def _read(self, filename: str) -> Iterable[Instance]:
+        with open(filename) as f:
+            for line in f:
+                tokens = self.tokenizer.tokenize(line)
+                field = TextField(tokens, self.token_indexers)
+                yield Instance({"tokens": field})
+
 
 class TestBidirectionalLM(ModelTestCase):
     def setUp(self):
         super().setUp()
+        self.set_up_model(self.FIXTURES_ROOT / 'bidirectional_lm' / 'experiment.jsonnet',
+                          self.FIXTURES_ROOT / 'bidirectional_lm' / 'sentences.txt')
 
-        sentences = ["This is the first sentence.", "This is yet another sentence."]
-        token_indexers = {
-                "tokens": SingleIdTokenIndexer(start_tokens=START_TOKENS, end_tokens=END_TOKENS),
-                "token_characters": TokenCharactersIndexer(start_tokens=START_TOKENS, end_tokens=END_TOKENS)
-        }
-        tokenizer = WordTokenizer()
+    def test_bidirectional_lm_can_train_save_and_load(self):
+        self.ensure_model_can_train_save_and_load(self.param_file)
 
-        self.instances = [Instance({"tokens": TextField(tokenizer.tokenize(sentence), token_indexers)})
-                          for sentence in sentences]
+    def test_batch_predictions_are_consistent(self):
+        self.ensure_batch_predictions_are_consistent()
 
-
-        tokens_to_add = {
-                "tokens": START_TOKENS + END_TOKENS,
-                "token_characters": [c for token in START_TOKENS + END_TOKENS for c in token]
-        }
-
-        self.vocab = Vocabulary.from_instances(self.instances, tokens_to_add=tokens_to_add)
-
-    def test_lm_can_run(self):
-        encoder = CnnHighwayEncoder(
-                activation='relu',
-                embedding_dim=4,
-                filters=[[1, 4], [2, 8], [3, 16], [4, 32], [5, 64]],
-                num_highway=2,
-                projection_dim=16,
-                projection_location='after_cnn'
-        )
-
-        embedding = Embedding(num_embeddings=262, embedding_dim=4)
-        tce = TokenCharactersEncoder(embedding=embedding,
-                                     encoder=encoder)
-
-        text_field_embedder = BasicTextFieldEmbedder({"token_characters": tce},
-                                                     allow_unmatched_keys=True)
-
-        lstm = torch.nn.LSTM(bidirectional=True, num_layers=3, input_size=16, hidden_size=7, batch_first=True)
-        contextualizer = PytorchSeq2SeqWrapper(lstm)
-
-        iterator = BasicIterator(batch_size=32)
-        iterator.index_with(self.vocab)
-
-        model = BidirectionalLanguageModel(vocab=self.vocab,
-                                           text_field_embedder=text_field_embedder,
-                                           contextualizer=contextualizer)
-
-        # Try the pieces individually
-        batch = next(iterator(self.instances, num_epochs=1))
-        token_dict = batch['tokens']
-        mask = get_text_field_mask(token_dict)
-        output = text_field_embedder(token_dict)
-
-        # Sequence length is 8 because of BOS / EOS.
-        assert tuple(output.shape) == (2, 8, 16)
-
-        contextualized = contextualizer(output, mask)
-        assert tuple(contextualized.shape) == (2, 8, 14)
-
-        # Try the whole thing
-        batch = next(iterator(self.instances, num_epochs=1))
-        result = model(**batch)
+    def test_forward_pass_runs_correctly(self):
+        training_tensors = self.dataset.as_tensor_dict()
+        result = self.model(**training_tensors)
 
         assert set(result) == {"loss", "forward_loss", "backward_loss", "lm_embeddings", "mask"}
 
@@ -95,21 +57,3 @@ class TestBidirectionalLM(ModelTestCase):
         backward_loss = result["backward_loss"].item()
 
         np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2, decimal=3)
-
-        # Try training it
-        optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
-
-        trainer = Trainer(model=model,
-                          optimizer=optimizer,
-                          iterator=iterator,
-                          train_dataset=self.instances,
-                          num_epochs=10)
-
-        trainer.train()
-
-        # Loss should be lower
-        batch = next(iterator(self.instances, num_epochs=1))
-        result = model(**batch)
-        new_loss = result["loss"].item()
-
-        assert new_loss < loss

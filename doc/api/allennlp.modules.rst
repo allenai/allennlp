@@ -29,7 +29,6 @@ allennlp.modules
    allennlp.modules.time_distributed
    allennlp.modules.token_embedders
    allennlp.modules.scalar_mix
-   allennlp.modules.softmax
    allennlp.modules.layer_norm
    allennlp.modules.pruner
    allennlp.modules.maxout

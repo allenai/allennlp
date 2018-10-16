@@ -1,6 +1,7 @@
 from typing import Dict, List, Tuple, Union, Optional
 
 import torch
+import numpy as np
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.vocabulary import Vocabulary
@@ -8,15 +9,64 @@ from allennlp.models.model import Model
 from allennlp.modules.masked_layer_norm import MaskedLayerNorm
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
-from allennlp.modules.softmax import Softmax
 from allennlp.nn.util import get_text_field_mask, remove_sentence_boundaries
+
+
+class _SoftmaxLoss(torch.nn.Module):
+    """
+    Given some embeddings and some targets, applies a linear layer
+    to create logits over possible words and then returns the
+    negative log likelihood.
+    """
+    def __init__(self,
+                 num_words: int,
+                 embedding_dim: int,
+                 token_encoder: torch.nn.Parameter = None) -> None:
+        super().__init__()
+
+        self.tie_embeddings = token_encoder is not None
+
+        # Glorit init (std=(1.0 / sqrt(fan_in))
+        if self.tie_embeddings:
+            self.softmax_w = token_encoder
+            # +1 for shape to include padding dimension
+            self.softmax_b = torch.nn.Parameter(torch.zeros(num_words + 1))
+        else:
+            self.softmax_w = torch.nn.Parameter(
+                    torch.randn(embedding_dim, num_words) / np.sqrt(embedding_dim)
+            )
+            self.softmax_b = torch.nn.Parameter(torch.zeros(num_words))
+
+    def forward(self, embeddings: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        # pylint: disable=arguments-differ
+        # embeddings is size (n, embedding_dim)
+        # targets is (batch_size, ) with the correct class id
+        # Does not do any count normalization / divide by batch size
+        if self.tie_embeddings:
+            softmax_w = self.softmax_w.weight.t()
+        else:
+            softmax_w = self.softmax_w
+
+        probs = torch.nn.functional.log_softmax(
+                torch.matmul(embeddings, softmax_w) + self.softmax_b,
+                dim=-1
+        )
+
+        if self.tie_embeddings:
+            # need to add back in padding dim!
+            targets_ = targets + 1
+        else:
+            targets_ = targets
+
+        return torch.nn.functional.nll_loss(probs, targets_.long(), reduction="sum")
+
 
 @Model.register('bidirectional-language-model')
 class BidirectionalLanguageModel(Model):
     """
     The ``BidirectionalLanguageModel`` applies a bidirectional "contextualizing"
-    ``Seq2SeqEncoder`` to uncontextualized embeddings, followed by a ``Softmax``
-    layer to generate a probability distribution over words.
+    ``Seq2SeqEncoder`` to uncontextualized embeddings, using a ``SoftmaxLoss``
+    module (defined above) to compute the language modeling loss.
 
     It is IMPORTANT that your bidirectional ``Seq2SeqEncoder`` does not do any
     "peeking ahead". That is, for its forward direction it should only consider
@@ -62,9 +112,13 @@ class BidirectionalLanguageModel(Model):
             raise ConfigurationError("contextualizer must be bidirectional")
 
         self._contextualizer = contextualizer
+        # The dimension for making predictions just in the forward
+        # (or backward) direction.
         self._forward_dim = contextualizer.get_output_dim() // 2
-        self._softmax = Softmax(num_words=vocab.get_vocab_size(),
-                                embedding_dim=self._forward_dim)
+
+        # TODO(joelgrus): Allow SampledSoftmaxLoss here by configuration
+        self._softmax_loss = _SoftmaxLoss(num_words=vocab.get_vocab_size(),
+                                          embedding_dim=self._forward_dim)
 
         self.register_buffer('_last_average_loss', torch.zeros(1))
 
@@ -113,11 +167,13 @@ class BidirectionalLanguageModel(Model):
             # Assuming batches include full sentences, forward and backward
             # directions have the same number of samples, so sum up loss
             # here then divide by 2 just below
-            if not self._softmax.tie_embeddings or not self._use_character_inputs:
-                losses.append(self._softmax(non_masked_embedding, non_masked_targets))
+            if not self._softmax_loss.tie_embeddings or not self._use_character_inputs:
+                losses.append(self._softmax_loss(non_masked_embedding, non_masked_targets))
             else:
                 # we also need the token embeddings corresponding to the
                 # the targets
+                raise NotImplementedError("This requires SampledSoftmaxLoss, which isn't implemented yet.")
+                # pylint: disable=unreachable
                 non_masked_token_embedding = self._get_target_token_embedding(token_embeddings, mask, idx)
                 losses.append(self._softmax(non_masked_embedding,
                                             non_masked_targets,
