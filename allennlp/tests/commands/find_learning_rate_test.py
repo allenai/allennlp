@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name,no-self-use
+# pylint: disable=invalid-name,no-self-use,bad-continuation
 import argparse
 import os
 import pytest
