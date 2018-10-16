@@ -1,34 +1,7 @@
 # pylint: disable=invalid-name,arguments-differ,abstract-method
-from typing import Dict, Iterable
-
 import numpy as np
 
 from allennlp.common.testing import ModelTestCase
-from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data.fields import TextField
-from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import TokenIndexer
-from allennlp.data.tokenizers import WordTokenizer
-
-@DatasetReader.register("test-sentence")
-class _SentenceDatasetReader(DatasetReader):
-    """
-    Simple dataset reader that just reads sentences from a file and tokenizes them.
-    """
-    def __init__(self,
-                 token_indexers: Dict[str, TokenIndexer],
-                 tokenizer: WordTokenizer = WordTokenizer()) -> None:
-        super().__init__(lazy=False)
-        self.tokenizer = tokenizer
-        self.token_indexers = token_indexers
-
-    def _read(self, filename: str) -> Iterable[Instance]:
-        with open(filename) as f:
-            for line in f:
-                tokens = self.tokenizer.tokenize(line)
-                field = TextField(tokens, self.token_indexers)
-                yield Instance({"tokens": field})
-
 
 class TestBidirectionalLM(ModelTestCase):
     def setUp(self):

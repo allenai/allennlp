@@ -1,6 +1,6 @@
 {
   "dataset_reader": {
-    "type": "test-sentence",
+    "type": "simple_language_modeling",
     "token_indexers": {
       "tokens": {
         "type": "single_id",
