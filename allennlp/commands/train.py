@@ -196,10 +196,11 @@ def create_serialization_dir(
     if recover and force:
         raise ConfigurationError("Illegal arguments: both force and recover are true.")
 
+    if os.path.exists(serialization_dir) and force:
+        shutil.rmtree(serialization_dir)
+
     if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
-        if force:
-            shutil.rmtree(serialization_dir)
-        elif not recover:
+        if not recover:
             raise ConfigurationError(f"Serialization directory ({serialization_dir}) already exists and is "
                                      f"not empty. Specify --recover to recover training from existing output.")
         else:
