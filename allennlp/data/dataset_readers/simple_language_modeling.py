@@ -1,4 +1,4 @@
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Union, Optional
 import logging
 import math
 
@@ -40,9 +40,9 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         if max_sequence_length is not None:
-            self._max_sequence_length = max_sequence_length
+            self._max_sequence_length: Union[float, Optional[int]] = max_sequence_length
         else:
-            self._max_sequence_length = math.inf
+            self._max_sequence_length: Union[float, Optional[int]] = math.inf
 
         logger.info("Creating SimpleLanguageModelingDatasetReader")
         logger.info("max_sequence_length=%s", max_sequence_length)
