@@ -45,4 +45,4 @@ class TestSimpleLanguageModelingDatasetReader(AllenNlpTestCase):
         k = -1
         for k, _ in enumerate(dataset.read(prefix)):
             pass
-        self.assertEqual(k, 19)
+        self.assertEqual(k, 11)

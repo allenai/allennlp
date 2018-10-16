@@ -1,5 +1,6 @@
 from typing import Dict, Iterable
 import logging
+import math
 
 from overrides import overrides
 
@@ -29,8 +30,7 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
         Indexers used to define input token representations. Defaults to
         ``{"tokens": SingleIdTokenIndexer()}``.
     max_sequence_length: ``int``, optional
-        If specified, sentences with more than this number minus two of tokens
-        (for the implicit start and end tokens) will be dropped.
+        If specified, sentences with more than this number of tokens will be dropped.
     """
     def __init__(self,
                  tokenizer: Tokenizer = None,
@@ -39,7 +39,10 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
         super().__init__(True)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
-        self._max_sequence_length = max_sequence_length
+        if max_sequence_length is not None:
+            self._max_sequence_length = max_sequence_length
+        else:
+            self._max_sequence_length = math.inf
 
         logger.info("Creating SimpleLanguageModelingDatasetReader")
         logger.info("max_sequence_length=%s", max_sequence_length)
@@ -62,9 +65,5 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
         with open(file_path) as file:
             for sentence in file:
                 instance = self.text_to_instance(sentence)
-                # Remove sentences longer than the maximum.
-                if self._max_sequence_length is not None:
-                    if instance.fields['source'].sequence_length() <= self._max_sequence_length + 2:
-                        yield instance
-                else:
+                if instance.fields['source'].sequence_length() <= self._max_sequence_length:
                     yield instance
