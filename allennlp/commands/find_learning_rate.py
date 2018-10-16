@@ -111,7 +111,7 @@ def find_learning_rate_from_args(args: argparse.Namespace) -> None:
 def find_learning_rate_model(params: Params,
                              serialization_dir: str,
                              start_lr: float,
-                             end_lr: bool,
+                             end_lr: float,
                              num_batches: int,
                              linear_steps: bool,
                              stopping_factor: Optional[float]) -> None:
