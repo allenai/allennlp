@@ -42,7 +42,7 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
         if max_sequence_length is not None:
             self._max_sequence_length: Union[float, Optional[int]] = max_sequence_length
         else:
-            self._max_sequence_length: Union[float, Optional[int]] = math.inf
+            self._max_sequence_length = math.inf
 
         logger.info("Creating SimpleLanguageModelingDatasetReader")
         logger.info("max_sequence_length=%s", max_sequence_length)
