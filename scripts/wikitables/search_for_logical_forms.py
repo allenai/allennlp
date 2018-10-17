@@ -52,11 +52,11 @@ def search(tables_directory: str,
         for logical_form in all_logical_forms:
             if world.evaluate_logical_form(logical_form, target_list):
                 correct_logical_forms.append(logical_form)
-        if output_separate_files:
+        if output_separate_files and correct_logical_forms:
             with gzip.open(f"{output_path}/{question_id}.gz", "wt") as output_file_pointer:
                 for logical_form in correct_logical_forms:
                     print(logical_form, file=output_file_pointer)
-        else:
+        elif not output_separate_files:
             print(f"{question_id} {utterance}", file=output_file_pointer)
             if use_agenda:
                 print(f"Agenda: {agenda}", file=output_file_pointer)
