@@ -221,3 +221,25 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         tokens = [Token(x) for x in ['when', 'did', 'the', 'team', 'not', 'qualify', '?']]
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {'s -> string:qualify'}
+        tokens = [Token(x) for x in ['when', 'was', 'the', 'avg.', 'attendance', 'at', 'least',
+                                     '7000', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'<r,<f,<n,r>>> -> filter_number_greater_equals',
+                                           'f -> number_column:avg_attendance', 'n -> 7000'}
+        tokens = [Token(x) for x in ['when', 'was', 'the', 'avg.', 'attendance', 'more', 'than',
+                                     '7000', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'<r,<f,<n,r>>> -> filter_number_greater',
+                                           'f -> number_column:avg_attendance', 'n -> 7000'}
+        tokens = [Token(x) for x in ['when', 'was', 'the', 'avg.', 'attendance', 'at', 'most',
+                                     '7000', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'<r,<f,<n,r>>> -> filter_number_lesser_equals',
+                                           'f -> number_column:avg_attendance', 'n -> 7000'}
+        tokens = [Token(x) for x in ['what', 'was', 'the', 'top', 'year', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'<r,r> -> first', 'm -> date_column:year'}
+        tokens = [Token(x) for x in ['what', 'was', 'the', 'year', 'in', 'the', 'bottom', 'row',
+                                     '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'<r,r> -> last', 'm -> date_column:year'}
