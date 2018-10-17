@@ -105,7 +105,7 @@ class WikiTablesVariableFreeDatasetReader(DatasetReader):
             logger.info(f"Missing logical forms for {num_missing_logical_forms} out of {num_lines} instances")
             logger.info(f"Kept {num_instances} instances")
 
-    def text_to_instance(self,
+    def text_to_instance(self,  # type: ignore
                          question: str,
                          table_lines: List[List[str]],
                          target_values: List[str],

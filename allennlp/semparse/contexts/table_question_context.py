@@ -97,7 +97,7 @@ class TableQuestionContext:
         # We want the object to raise KeyError when checking if a specific string is a cell in the
         # table.
         self._cell_value_column_mapping = dict(cell_value_column_mapping)
-        self._table_knowledge_graph = None
+        self._table_knowledge_graph: KnowledgeGraph = None
 
     MAX_TOKENS_FOR_NUM_CELL = 2
 

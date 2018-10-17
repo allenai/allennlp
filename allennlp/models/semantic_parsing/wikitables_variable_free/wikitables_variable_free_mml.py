@@ -9,7 +9,7 @@ from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.wikitables_variable_free.wikitables_variable_free_semantic_parser import (
         WikiTablesVariableFreeSemanticParser)
 from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
-from allennlp.semparse.worlds import WikiTablesWorld
+from allennlp.semparse.worlds import WikiTablesVariableFreeWorld
 from allennlp.state_machines import BeamSearch
 from allennlp.state_machines.states import GrammarBasedState
 from allennlp.state_machines.trainers import MaximumMarginalLikelihood
@@ -121,7 +121,7 @@ class WikiTablesVariableFreeMml(WikiTablesVariableFreeSemanticParser):
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
                 table: Dict[str, torch.LongTensor],
-                world: List[WikiTablesWorld],
+                world: List[WikiTablesVariableFreeWorld],
                 actions: List[List[ProductionRuleArray]],
                 target_values: List[List[str]] = None,
                 target_action_sequences: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
