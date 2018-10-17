@@ -139,14 +139,51 @@ class TestTableQuestionContext(AllenNlpTestCase):
         table_question_context = TableQuestionContext.read_from_file(test_file, question_tokens)
         knowledge_graph = table_question_context.get_table_knowledge_graph()
         entities = knowledge_graph.entities
-        assert sorted(entities) == ['1', 'string:m1', 'string_column:notation']
+        # -1 is not in entities because there are no date columns in the table.
+        assert sorted(entities) == ['1', 'number_column:position', 'string:m1',
+                                    'string_column:mnemonic', 'string_column:notation',
+                                    'string_column:short_name', 'string_column:swara']
         neighbors = knowledge_graph.neighbors
         # Each number extracted from the question will have all number and date columns as
         # neighbors. Each string entity extracted from the question will only have the corresponding
         # column as the neighbor.
         assert neighbors == {'1': ['number_column:position'],
+                             'string_column:mnemonic': [],
+                             'string_column:short_name': [],
+                             'string_column:swara': [],
                              'number_column:position': ['1'],
                              'string:m1': ['string_column:notation'],
                              'string_column:notation': ['string:m1']}
         entity_text = knowledge_graph.entity_text
-        assert entity_text == {'1': '1', 'string:m1': 'm1', 'string_column:notation': 'notation'}
+        assert entity_text == {'1': '1',
+                               'string:m1': 'm1',
+                               'string_column:notation': 'notation',
+                               'string_column:mnemonic': 'mnemonic',
+                               'string_column:short_name': 'short name',
+                               'string_column:swara': 'swara',
+                               'number_column:position': 'position'}
+
+
+    def test_knowledge_graph_has_correct_neighbors(self):
+        question = "when was the attendance greater than 5000?"
+        question_tokens = self.tokenizer.tokenize(question)
+        test_file = f'{self.FIXTURES_ROOT}/data/wikitables/sample_table.tagged'
+        table_question_context = TableQuestionContext.read_from_file(test_file, question_tokens)
+        knowledge_graph = table_question_context.get_table_knowledge_graph()
+        neighbors = knowledge_graph.neighbors
+        # '5000' is neighbors with number and date columns. '-1' is in entities because there is a
+        # date column, which is its only neighbor.
+        assert set(neighbors.keys()) == {'date_column:year', 'number_column:division',
+                                         'string_column:league', 'string_column:regular_season',
+                                         'string_column:playoffs', 'string_column:open_cup',
+                                         'number_column:avg_attendance', '5000', '-1'}
+        assert set(neighbors['date_column:year']) == {'5000', '-1'}
+        assert neighbors['number_column:division'] == ['5000']
+        assert neighbors['string_column:league'] == []
+        assert neighbors['string_column:regular_season'] == []
+        assert neighbors['string_column:playoffs'] == []
+        assert neighbors['string_column:open_cup'] == []
+        assert neighbors['number_column:avg_attendance'] == ['5000']
+        assert set(neighbors['5000']) == {'date_column:year', 'number_column:division',
+                                          'number_column:avg_attendance'}
+        assert neighbors['-1'] == ['date_column:year']

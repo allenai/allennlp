@@ -113,14 +113,15 @@ class TableQuestionContext:
             entity_text: Dict[str, str] = {}
             # Add all column names to entities. We'll define their neighbors to be empty lists for
             # now, and later add number and string entities as needed.
-            number_date_columns = []
+            number_columns = []
+            date_columns = []
             for column, column_type in self.column_types.items():
                 if column_type == "number":
                     column_name = f"number_column:{column}"
-                    number_date_columns.append(column_name)
+                    number_columns.append(column_name)
                 elif column_type == "date":
                     column_name = f"date_column:{column}"
-                    number_date_columns.append(column_name)
+                    date_columns.append(column_name)
                 else:
                     column_name = f"string_column:{column}"
                 # Add column names to entities, with no neighbors yet.
@@ -134,23 +135,24 @@ class TableQuestionContext:
                 neighbors[entity].append(column_name)
                 neighbors[column_name].append(entity)
                 entity_text[entity] = entity.replace("string:", "").replace("_", " ")
-            # For all numbers, we add all number and date columns as their neighbors.
+            # For all numbers (except -1), we add all number and date columns as their neighbors.
             for number, _ in numbers:
                 entities.add(number)
-                neighbors[number].extend(number_date_columns)
-                for column_name in number_date_columns:
+                neighbors[number].extend(number_columns + date_columns)
+                for column_name in number_columns + date_columns:
                     neighbors[column_name].append(number)
-                    # We need to add the number and date columns to the list of entities because
-                    # they need to be indexed before we get neighbor indices.
                 entity_text[number] = number
             for entity, entity_neighbors in neighbors.items():
                 neighbors[entity] = list(set(entity_neighbors))
-            # Add "-1" as an entity without neighbors because we will need it as a wild-card in
-            # dates.
-            if "-1" not in neighbors:
+
+            # Add "-1" as an entity only if we have date columns in the table because we will need
+            # it as a wild-card in dates. The neighbors are the date columns.
+            if "-1" not in neighbors and date_columns:
                 entities.add("-1")
-                neighbors["-1"] = []
+                neighbors["-1"] = date_columns
                 entity_text["-1"] = "-1"
+                for date_column in date_columns:
+                    neighbors[date_column].append("-1")
             self._table_knowledge_graph = KnowledgeGraph(entities, dict(neighbors), entity_text)
         return self._table_knowledge_graph
 

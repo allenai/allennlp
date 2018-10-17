@@ -24,7 +24,10 @@ def assert_dataset_correct(dataset):
 
     knowledge_graph = instance.fields["table"].knowledge_graph
     entities = knowledge_graph.entities
-    assert sorted(entities) == ['string:usl_a_league', 'string_column:league']
+    assert sorted(entities) == ['-1', 'date_column:year', 'number_column:avg_attendance',
+                                'number_column:division', 'string:usl_a_league',
+                                'string_column:league', 'string_column:open_cup',
+                                'string_column:playoffs', 'string_column:regular_season']
 
     # The content of this will be tested indirectly by checking the actions; we'll just make
     # sure we get a WikiTablesWorld object in here.
