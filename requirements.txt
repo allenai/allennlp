@@ -64,6 +64,10 @@ sqlparse==0.2.4
 ftfy
 
 #### ESSENTIAL LIBRARIES USED IN SCRIPTS ####
+
+# Plot graphs for learning rate finder
+matplotlib==2.2.3
+
 # Used for downloading datasets over HTTP
 requests>=2.18
 
