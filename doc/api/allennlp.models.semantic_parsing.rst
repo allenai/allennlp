@@ -6,6 +6,11 @@ allennlp.models.semantic_parsing
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.models.semantic_parsing.text2sql_parser
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. toctree::
 
   allennlp.models.semantic_parsing.nlvr
