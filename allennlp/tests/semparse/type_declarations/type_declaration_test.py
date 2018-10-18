@@ -8,8 +8,8 @@ from allennlp.semparse.type_declarations.type_declaration import (
         NamedBasicType,
         UnaryOpType,
         )
-from allennlp.semparse.type_declarations import wikitables_type_declaration as wt_types
-from allennlp.semparse.type_declarations.wikitables_type_declaration import (
+from allennlp.semparse.type_declarations import wikitables_lambda_dcs as wt_types
+from allennlp.semparse.type_declarations.wikitables_lambda_dcs import (
         CELL_TYPE,
         ROW_TYPE,
         )

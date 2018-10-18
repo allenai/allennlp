@@ -8,13 +8,12 @@ import torch
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.wikitables.grammar_based_decoder_state import GrammarBasedDecoderState
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
 from allennlp.nn import util
-from allennlp.nn.decoding import GrammarState, RnnState
 from allennlp.semparse.type_declarations import type_declaration
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds import NlvrWorld
+from allennlp.state_machines.states import GrammarBasedState, GrammarStatelet, RnnStatelet
 from allennlp.training.metrics import Average
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -24,10 +23,10 @@ class NlvrSemanticParser(Model):
     """
     ``NlvrSemanticParser`` is a semantic parsing model built for the NLVR domain. This is an
     abstract class and does not have a ``forward`` method implemented. Classes that inherit from
-    this class are expected to define their own logic depending on the kind of supervision they use.
-    Accordingly, they should use the appropriate ``DecoderTrainer``. This class provides some common
-    functionality for things like defining an initial ``RnnState``, embedding actions, evaluating
-    the denotations of completed logical forms, etc.  There is a lot of overlap with
+    this class are expected to define their own logic depending on the kind of supervision they
+    use.  Accordingly, they should use the appropriate ``DecoderTrainer``. This class provides some
+    common functionality for things like defining an initial ``RnnStatelet``, embedding actions,
+    evaluating the denotations of completed logical forms, etc.  There is a lot of overlap with
     ``WikiTablesSemanticParser`` here. We may want to eventually move the common functionality into
     a more general transition-based parsing class.
 
@@ -99,12 +98,12 @@ class NlvrSemanticParser(Model):
         sentence_mask_list = [sentence_mask[i] for i in range(batch_size)]
         initial_rnn_state = []
         for i in range(batch_size):
-            initial_rnn_state.append(RnnState(final_encoder_output[i],
-                                              memory_cell[i],
-                                              self._first_action_embedding,
-                                              attended_sentence[i],
-                                              encoder_outputs_list,
-                                              sentence_mask_list))
+            initial_rnn_state.append(RnnStatelet(final_encoder_output[i],
+                                                 memory_cell[i],
+                                                 self._first_action_embedding,
+                                                 attended_sentence[i],
+                                                 encoder_outputs_list,
+                                                 sentence_mask_list))
         return initial_rnn_state
 
     def _get_label_strings(self, labels):
@@ -175,7 +174,7 @@ class NlvrSemanticParser(Model):
 
     def _create_grammar_state(self,
                               world: NlvrWorld,
-                              possible_actions: List[ProductionRuleArray]) -> GrammarState:
+                              possible_actions: List[ProductionRuleArray]) -> GrammarStatelet:
         valid_actions = world.get_valid_actions()
         action_mapping = {}
         for i, action in enumerate(possible_actions):
@@ -196,11 +195,9 @@ class NlvrSemanticParser(Model):
             translated_valid_actions[key]['global'] = (global_input_embeddings,
                                                        global_input_embeddings,
                                                        list(global_action_ids))
-        return GrammarState([START_SYMBOL],
-                            {},
-                            translated_valid_actions,
-                            {},
-                            type_declaration.is_nonterminal)
+        return GrammarStatelet([START_SYMBOL],
+                               translated_valid_actions,
+                               type_declaration.is_nonterminal)
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -224,7 +221,7 @@ class NlvrSemanticParser(Model):
         output_dict["logical_form"] = logical_forms
         return output_dict
 
-    def _check_state_denotations(self, state: GrammarBasedDecoderState, worlds: List[NlvrWorld]) -> List[bool]:
+    def _check_state_denotations(self, state: GrammarBasedState, worlds: List[NlvrWorld]) -> List[bool]:
         """
         Returns whether action history in the state evaluates to the correct denotations over all
         worlds. Only defined when the state is finished.

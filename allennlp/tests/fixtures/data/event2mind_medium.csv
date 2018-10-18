@@ -1,0 +1,43 @@
+Source,Event,Xintent,Xemotion,Otheremotion,Xsent,Osent
+rocstory,PersonX calls PersonX's neighbor,"[""to chat with someone""]","[""satisfied""]","[""surprised""]",3.0,4.0
+rocstory,PersonX calls PersonX's neighbor,"[""to ask if she can watch the house""]","[""hopeful""]","[""trusted""]",5.0,5.0
+rocstory,PersonX leaves PersonX's friends,"[""to go home""]","[""tired""]","[""none""]",3.0,3.0
+rocstory,PersonX leaves PersonX's friends,"[""a new start""]","[""bittersweet""]","[""shocked""]",3.0,3.0
+rocstory,PersonX leaves PersonX's friends,"[""to be alone""]","[""introverted""]","[""disconnected""]",3.0,3.0
+rocstory,PersonX wastes PersonX's day,"[""to relax and do nothing""]","[""relaxed"", ""bored""]","[""none""]",3.0,3.0
+rocstory,PersonX wastes PersonX's day,"[""to move on""]","[""neutral""]","[""none""]",3.0,3.0
+rocstory,PersonX wastes PersonX's day,"[""to be unproductive""]","[""guilty""]","[""none""]",1.0,1.0
+rocstory,PersonX calls PersonX's brother,"[""to talk to their sibling""]","[""pleasant""]","[""pleasant""]",4.0,4.0
+rocstory,PersonX calls PersonX's brother,"[""to ask a favor""]","[""relieved""]","[""helpful""]",3.0,4.0
+rocstory,PersonX calls PersonX's brother,"[""a ride home""]","[""hopeful""]","[""content""]",5.0,5.0
+rocstory,PersonX takes PersonX's wife,"[""tries to take wife""]","[""dont know""]","[""none""]",1.0,1.0
+rocstory,PersonX licks PersonX's face,"[""to be annoying""]","[""silly""]","[""aggravated""]",1.0,1.0
+rocstory,PersonX breaks both of PersonY's legs,"[""to be mean""]","[""hateful""]","[""afraid""]",1.0,1.0
+rocstory,PersonX breaks both of PersonY's legs,"[""to cause another harm""]","[""superior""]","[""angry""]",1.0,1.0
+rocstory,PersonX breaks both of PersonY's legs,"[""to hurt them""]","[""in pain"", ""traumatized""]","[""none""]",1.0,1.0
+rocstory,PersonX buys PersonY's daughter,"[""to own someone""]","[""sleazy""]","[""used""]",1.0,1.0
+rocstory,PersonX buys PersonY's daughter,"[""a wife""]","[""satisfied""]","[""horrified""]",1.0,1.0
+rocstory,PersonX buys PersonY's daughter,"[""to do something nice for someone""]","[""happy""]","[""thankful""]",5.0,5.0
+rocstory,PersonX gets PersonY's friends,"[""get the surprise party set up""]","[""happy""]","[""excited""]",5.0,5.0
+rocstory,PersonX gets PersonY's friends,"[""to have a bonfire""]","[""joy""]","[""happy""]",5.0,5.0
+rocstory,PersonX buys PersonY's ticket,"[""his friend to go with him""]","[""generous""]","[""happy""]",4.0,4.0
+rocstory,PersonX buys PersonY's ticket,"[""to attend the event""]","[""satisfied""]","[""satisfied""]",3.0,4.0
+rocstory,PersonX buys PersonY's ticket,"[""to show generosity""]","[""magnanimous"", ""proud""]","[""grateful""]",4.0,4.0
+rocstory,PersonX gives PersonX's daughter,"[""share her food""]","[""loving""]","[""grateful""]",5.0,5.0
+rocstory,PersonX is very proud of PersonX's accomplishment,"[""none""]","[""happy""]","[""none""]",,5.0
+rocstory,PersonX is very proud of PersonX's accomplishment,"[""to enjoy something""]","[""proud""]","[""none""]",5.0,5.0
+rocstory,PersonX is very proud of PersonX's accomplishment,"[""none""]","[""proud"", ""successful"", ""happy""]","[""none""]",,5.0
+rocstory,PersonX wastes all PersonX's money,"[""none""]","[""regretful"", ""sad"", ""worried""]","[""none""]",,1.0
+rocstory,PersonX wastes all PersonX's money,"[""to live above their means""]","[""satisfied""]","[""none""]",1.0,1.0
+rocstory,PersonX wastes all PersonX's money,"[""to buy frivolous things"", ""to get things""]","[""ashamed"", ""bad about themselves""]","[""none""]",3.0,2.0
+rocstory,PersonX gets a call from PersonY's boss,"[""none""]","[""worried""]","[""impatient""]",,3.0
+rocstory,PersonX gets a call from PersonY's boss,"[""none""]","[""anxious""]","[""none""]",,3.0
+rocstory,PersonX gets a call from PersonY's boss,"[""none""]","[""confused"", ""worried"", ""concerned""]","[""none""]",,2.0
+rocstory,PersonX has a great time with PersonY's friends,"[""to enjoy a night out""]","[""glad""]","[""happy""]",5.0,5.0
+rocstory,PersonX has a great time with PersonY's friends,"[""none""]","[""entertained"", ""good"", ""happy""]","[""happy""]",,5.0
+rocstory,PersonX has a great time with PersonY's friends,"[""none""]","[""good""]","[""involved""]",,5.0
+rocstory,PersonX rids PersonY's motorcycle,"[""to have a joy ride""]","[""exhilerated""]","[""none""]",5.0,5.0
+rocstory,PersonX rids PersonY's motorcycle,"[""to harm persony""]","[""vengeful""]","[""angry""]",2.0,2.0
+rocstory,PersonX contains PersonX's excitement,"[""to keep the happy secret""]","[""sneaky""]","[""none""]",4.0,4.0
+rocstory,PersonX contains PersonX's excitement,"[""retain their composure""]","[""ecstatic""]","[""none""]",3.0,5.0
+rocstory,PersonX contains PersonX's excitement,"[""to not cause disruption""]","[""bursting with excitement""]","[""none""]",3.0,3.0

@@ -9,16 +9,15 @@ import torch
 
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
-from allennlp.nn import Activation
-from allennlp.nn.decoding import DecoderTrainer, ChecklistState
-from allennlp.nn.decoding.decoder_trainers import ExpectedRiskMinimization
 from allennlp.models.archival import load_archive, Archive
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.wikitables.coverage_decoder_state import CoverageDecoderState
-from allennlp.models.semantic_parsing.wikitables.coverage_transition_function import CoverageTransitionFunction
 from allennlp.models.semantic_parsing.nlvr.nlvr_semantic_parser import NlvrSemanticParser
+from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.nn import Activation
 from allennlp.semparse.worlds import NlvrWorld
+from allennlp.state_machines.trainers import DecoderTrainer, ExpectedRiskMinimization
+from allennlp.state_machines.states import CoverageState, ChecklistStatelet
+from allennlp.state_machines.transition_functions import CoverageTransitionFunction
 from allennlp.training.metrics import Average
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -46,7 +45,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         Passed to super-class.
     attention : ``Attention``
         We compute an attention over the input question at each step of the decoder, using the
-        decoder hidden state as the query.  Passed to the DecoderStep.
+        decoder hidden state as the query.  Passed to the TransitionFunction.
     beam_size : ``int``
         Beam size for the beam search used during training.
     max_num_finished_states : ``int``, optional (default=None)
@@ -97,7 +96,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                                          encoder=encoder,
                                                          dropout=dropout)
         self._agenda_coverage = Average()
-        self._decoder_trainer: DecoderTrainer[Callable[[CoverageDecoderState], torch.Tensor]] = \
+        self._decoder_trainer: DecoderTrainer[Callable[[CoverageState], torch.Tensor]] = \
                 ExpectedRiskMinimization(beam_size=beam_size,
                                          normalize_by_length=normalize_beam_score_by_length,
                                          max_decoding_steps=max_decoding_steps,
@@ -224,18 +223,18 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             checklist_target, terminal_actions, checklist_mask = checklist_info
 
             initial_checklist = checklist_target.new_zeros(checklist_target.size())
-            initial_checklist_states.append(ChecklistState(terminal_actions=terminal_actions,
-                                                           checklist_target=checklist_target,
-                                                           checklist_mask=checklist_mask,
-                                                           checklist=initial_checklist))
-        initial_state = CoverageDecoderState(batch_indices=list(range(batch_size)),
-                                             action_history=[[] for _ in range(batch_size)],
-                                             score=initial_score_list,
-                                             rnn_state=initial_rnn_state,
-                                             grammar_state=initial_grammar_state,
-                                             possible_actions=actions,
-                                             extras=label_strings,
-                                             checklist_state=initial_checklist_states)
+            initial_checklist_states.append(ChecklistStatelet(terminal_actions=terminal_actions,
+                                                              checklist_target=checklist_target,
+                                                              checklist_mask=checklist_mask,
+                                                              checklist=initial_checklist))
+        initial_state = CoverageState(batch_indices=list(range(batch_size)),
+                                      action_history=[[] for _ in range(batch_size)],
+                                      score=initial_score_list,
+                                      rnn_state=initial_rnn_state,
+                                      grammar_state=initial_grammar_state,
+                                      possible_actions=actions,
+                                      extras=label_strings,
+                                      checklist_state=initial_checklist_states)
 
         agenda_data = [agenda_[:, 0].cpu().data for agenda_ in agenda_list]
         outputs = self._decoder_trainer.decode(initial_state,  # type: ignore
@@ -353,7 +352,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                 'agenda_coverage': self._agenda_coverage.get_metric(reset)
         }
 
-    def _get_state_cost(self, batch_worlds: List[List[NlvrWorld]], state: CoverageDecoderState) -> torch.Tensor:
+    def _get_state_cost(self, batch_worlds: List[List[NlvrWorld]], state: CoverageState) -> torch.Tensor:
         """
         Return the cost of a finished state. Since it is a finished state, the group size will be
         1, and hence we'll return just one cost.
@@ -387,7 +386,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         return cost
 
     def _get_state_info(self,
-                        state: CoverageDecoderState,
+                        state: CoverageState,
                         batch_worlds: List[List[NlvrWorld]]) -> Dict[str, List]:
         """
         This method is here for debugging purposes, in case you want to look at the what the model

@@ -1,0 +1,2 @@
+The###DET dog###NN read###V the###DET apple###NN
+Everybody###NN ate###V that###DET book###NN

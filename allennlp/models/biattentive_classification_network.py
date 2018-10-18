@@ -204,7 +204,11 @@ class BiattentiveClassificationNetwork(Model):
         text_mask = util.get_text_field_mask(tokens).float()
         # Pop elmo tokens, since elmo embedder should not be present.
         elmo_tokens = tokens.pop("elmo", None)
-        embedded_text = self._text_field_embedder(tokens)
+        if tokens:
+            embedded_text = self._text_field_embedder(tokens)
+        else:
+            # only using "elmo" for input
+            embedded_text = None
 
         # Add the "elmo" key back to "tokens" if not None, since the tests and the
         # subsequent training epochs rely not being modified during forward()
@@ -226,7 +230,10 @@ class BiattentiveClassificationNetwork(Model):
                         "Model was built to use Elmo, but input text is not tokenized for Elmo.")
 
         if self._use_input_elmo:
-            embedded_text = torch.cat([embedded_text, input_elmo], dim=-1)
+            if embedded_text is not None:
+                embedded_text = torch.cat([embedded_text, input_elmo], dim=-1)
+            else:
+                embedded_text = input_elmo
 
         dropped_embedded_text = self._embedding_dropout(embedded_text)
         pre_encoded_text = self._pre_encode_feedforward(dropped_embedded_text)

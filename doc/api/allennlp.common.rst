@@ -12,7 +12,6 @@ that's used by datasets, models, trainers, and so on.
    allennlp.common.from_params
    allennlp.common.params
    allennlp.common.registrable
-   allennlp.common.squad_eval
    allennlp.common.tee_logger
    allennlp.common.testing
    allennlp.common.tqdm

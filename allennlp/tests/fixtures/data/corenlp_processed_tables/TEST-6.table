@@ -1,0 +1,156 @@
+row	col	id	content	tokens	lemmaTokens	posTags	nerTags	nerValues	number	date	num2	list	listId
+-1	0	fb:row.row.date	Date	date	date	NN	O						
+-1	1	fb:row.row.opponent	Opponent	opponent	opponent	NN	O						
+-1	2	fb:row.row.venue	Venue	venue	venue	NN	O						
+-1	3	fb:row.row.result	Result	result	result	NN	O						
+-1	4	fb:row.row.scorers	Scorers	scorers	scorer	NNS	O						
+0	0	fb:cell.march_31_1979	March 31, 1979	march|31|,|1979	March|31|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-03-31|1979-03-31|1979-03-31|1979-03-31	311979.0	1979-03-31		March 31|1979	fb:part.march_31|fb:part.1979
+0	1	fb:cell.portland_timbers	Portland Timbers	portland|timbers	Portland|Timbers	NNP|NNP	LOCATION|LOCATION	|					
+0	2	fb:cell.h	H	h	h	NN	O						
+0	3	fb:cell.3_4	3–4	3|--|4	3|--|4	CD|:|CD	NUMBER|O|NUMBER	3.0||4.0	3.0		4.0		
+0	4	fb:cell.gersdorff_child_cohen	Gersdorff, Child, Cohen	gersdorff|,|child|,|cohen	Gersdorff|,|Child|,|Cohen	NNP|,|NNP|,|NNP	O|O|O|O|PERSON	||||				Gersdorff|Child|Cohen	fb:part.gersdorff|fb:part.child|fb:part.cohen
+1	0	fb:cell.april_14_1979	April 14, 1979	april|14|,|1979	April|14|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-04-14|1979-04-14|1979-04-14|1979-04-14	141979.0	1979-04-14		April 14|1979	fb:part.april_14|fb:part.1979
+1	1	fb:cell.edmonton_drillers	Edmonton Drillers	edmonton|drillers	Edmonton|Drillers	NNP|NNPS	ORGANIZATION|ORGANIZATION	|					
+1	2	fb:cell.h	H	h	h	NN	O						
+1	3	fb:cell.0_1	0–1	0|--|1	0|--|1	CD|:|CD	NUMBER|O|NUMBER	0.0||1.0	0.0		1.0		
+1	4	fb:cell.null											fb:part.null
+2	0	fb:cell.april_21_1979	April 21, 1979	april|21|,|1979	April|21|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-04-21|1979-04-21|1979-04-21|1979-04-21	211979.0	1979-04-21		April 21|1979	fb:part.april_21|fb:part.1979
+2	1	fb:cell.san_diego_sockers	San Diego Sockers	san|diego|sockers	San|Diego|Sockers	NNP|NNP|NNPS	LOCATION|LOCATION|LOCATION	||					
+2	2	fb:cell.a	A	a	a	DT	O						
+2	3	fb:cell.3_3	3–3*	3|--|3|\\*	3|--|3|\\*	CD|:|CD|SYM	NUMBER|O|NUMBER|O	3.0||3.0|	3.0		3.0		
+2	4	fb:cell.child_2_ryan	Child (2), Ryan	child|-lrb-|2|-rrb-|,|ryan	child|-lrb-|2|-rrb-|,|Ryan	NN|-LRB-|CD|-RRB-|,|NNP	O|O|NUMBER|O|O|PERSON	||2.0|||	2.0			Child (2)|Ryan	fb:part.child_2|fb:part.ryan
+3	0	fb:cell.april_28_1979	April 28, 1979	april|28|,|1979	April|28|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-04-28|1979-04-28|1979-04-28|1979-04-28	281979.0	1979-04-28		April 28|1979	fb:part.april_28|fb:part.1979
+3	1	fb:cell.los_angeles_aztecs	Los Angeles Aztecs	los|angeles|aztecs	Los|Angeles|Aztecs	NNP|NNP|NNPS	LOCATION|LOCATION|LOCATION	||					
+3	2	fb:cell.h	H	h	h	NN	O						
+3	3	fb:cell.1_2	1–2	1|--|2	1|--|2	CD|:|CD	NUMBER|O|NUMBER	1.0||2.0	1.0		2.0		
+3	4	fb:cell.child	Child	child	child	NN	O					Child	fb:part.child
+4	0	fb:cell.may_5_1979	May 5, 1979	may|5|,|1979	May|5|,|1979	VBD-AUX|CD|,|CD	DATE|DATE|DATE|DATE	1979-05-05|1979-05-05|1979-05-05|1979-05-05	51979.0	1979-05-05		May 5|1979	fb:part.may_5|fb:part.1979
+4	1	fb:cell.vancouver_whitecaps	Vancouver Whitecaps	vancouver|whitecaps	Vancouver|Whitecaps	NNP|NNP	O|O	|					
+4	2	fb:cell.h	H	h	h	NN	O						
+4	3	fb:cell.1_2	1–2	1|--|2	1|--|2	CD|:|CD	NUMBER|O|NUMBER	1.0||2.0	1.0		2.0		
+4	4	fb:cell.gersdorff	Gersdorff	gersdorff	gersdorff	NN	O					Gersdorff	fb:part.gersdorff
+5	0	fb:cell.may_9_1979	May 9, 1979	may|9|,|1979	May|9|,|1979	VBD-AUX|CD|,|CD	DATE|DATE|DATE|DATE	1979-05-09|1979-05-09|1979-05-09|1979-05-09	91979.0	1979-05-09		May 9|1979	fb:part.may_9|fb:part.1979
+5	1	fb:cell.detroit_express	Detroit Express	detroit|express	Detroit|Express	NNP|NNP	ORGANIZATION|ORGANIZATION	|					
+5	2	fb:cell.a	A	a	a	DT	O						
+5	3	fb:cell.0_3	0–3	0|--|3	0|--|3	CD|:|CD	NUMBER|O|NUMBER	0.0||3.0	0.0		3.0		
+5	4	fb:cell.null											fb:part.null
+6	0	fb:cell.may_12_1979	May 12, 1979	may|12|,|1979	May|12|,|1979	VBD-AUX|CD|,|CD	DATE|DATE|DATE|DATE	1979-05-12|1979-05-12|1979-05-12|1979-05-12	121979.0	1979-05-12		May 12|1979	fb:part.may_12|fb:part.1979
+6	1	fb:cell.seattle_sounders	Seattle Sounders	seattle|sounders	Seattle|Sounders	NNP|NNPS	ORGANIZATION|ORGANIZATION	|					
+6	2	fb:cell.a	A	a	a	DT	O						
+6	3	fb:cell.1_2	1–2	1|--|2	1|--|2	CD|:|CD	NUMBER|O|NUMBER	1.0||2.0	1.0		2.0		
+6	4	fb:cell.gersdorff	Gersdorff	gersdorff	gersdorff	NN	O					Gersdorff	fb:part.gersdorff
+7	0	fb:cell.may_19_1979	May 19, 1979	may|19|,|1979	May|19|,|1979	VBD-AUX|CD|,|CD	DATE|DATE|DATE|DATE	1979-05-19|1979-05-19|1979-05-19|1979-05-19	191979.0	1979-05-19		May 19|1979	fb:part.may_19|fb:part.1979
+7	1	fb:cell.seattle_sounders	Seattle Sounders	seattle|sounders	Seattle|Sounders	NNP|NNPS	ORGANIZATION|ORGANIZATION	|					
+7	2	fb:cell.h	H	h	h	NN	O						
+7	3	fb:cell.0_1	0–1	0|--|1	0|--|1	CD|:|CD	NUMBER|O|NUMBER	0.0||1.0	0.0		1.0		
+7	4	fb:cell.null											fb:part.null
+8	0	fb:cell.may_26_1979	May 26, 1979	may|26|,|1979	May|26|,|1979	VBD-AUX|CD|,|CD	DATE|DATE|DATE|DATE	1979-05-26|1979-05-26|1979-05-26|1979-05-26	261979.0	1979-05-26		May 26|1979	fb:part.may_26|fb:part.1979
+8	1	fb:cell.edmonton_drillers	Edmonton Drillers	edmonton|drillers	Edmonton|Drillers	NNP|NNPS	ORGANIZATION|ORGANIZATION	|					
+8	2	fb:cell.a	A	a	a	DT	O						
+8	3	fb:cell.2_1	2–1	2|--|1	2|--|1	CD|:|CD	NUMBER|O|NUMBER	2.0||1.0	2.0		1.0		
+8	4	fb:cell.child_lawson	Child, Lawson	child|,|lawson	child|,|Lawson	NN|,|NNP	O|O|PERSON	||				Child|Lawson	fb:part.child|fb:part.lawson
+9	0	fb:cell.june_2_1979	June 2, 1979	june|2|,|1979	June|2|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-06-02|1979-06-02|1979-06-02|1979-06-02	21979.0	1979-06-02		June 2|1979	fb:part.june_2|fb:part.1979
+9	1	fb:cell.memphis_rogues	Memphis Rogues	memphis|rogues	Memphis|Rogues	NNP|NNPS	LOCATION|LOCATION	|					
+9	2	fb:cell.h	H	h	h	NN	O						
+9	3	fb:cell.2_1	2–1	2|--|1	2|--|1	CD|:|CD	NUMBER|O|NUMBER	2.0||1.0	2.0		1.0		
+9	4	fb:cell.etterich_flindt	Etterich, Flindt	etterich|,|flindt	Etterich|,|Flindt	NNP|,|NNP	O|O|PERSON	||				Etterich|Flindt	fb:part.etterich|fb:part.flindt
+10	0	fb:cell.june_6_1979	June 6, 1979	june|6|,|1979	June|6|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-06-06|1979-06-06|1979-06-06|1979-06-06	61979.0	1979-06-06		June 6|1979	fb:part.june_6|fb:part.1979
+10	1	fb:cell.minnesota_kicks	Minnesota Kicks	minnesota|kicks	Minnesota|kick	NNP|VBZ	LOCATION|LOCATION	|					
+10	2	fb:cell.a	A	a	a	DT	O						
+10	3	fb:cell.1_4	1–4	1|--|4	1|--|4	CD|:|CD	NUMBER|O|NUMBER	1.0||4.0	1.0		4.0		
+10	4	fb:cell.gersdorff	Gersdorff	gersdorff	gersdorff	NN	O					Gersdorff	fb:part.gersdorff
+11	0	fb:cell.june_9_1979	June 9, 1979	june|9|,|1979	June|9|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-06-09|1979-06-09|1979-06-09|1979-06-09	91979.0	1979-06-09		June 9|1979	fb:part.june_9|fb:part.1979
+11	1	fb:cell.toronto_blizzard	Toronto Blizzard	toronto|blizzard	Toronto|Blizzard	NNP|NNP	ORGANIZATION|ORGANIZATION	|					
+11	2	fb:cell.h	H	h	h	NN	O						
+11	3	fb:cell.2_3	2–3	2|--|3	2|--|3	CD|:|CD	NUMBER|O|NUMBER	2.0||3.0	2.0		3.0		
+11	4	fb:cell.child_gersdorff	Child, Gersdorff	child|,|gersdorff	child|,|gersdorff	NN|,|NN	O|O|PERSON	||				Child|Gersdorff	fb:part.child|fb:part.gersdorff
+12	0	fb:cell.june_13_1979	June 13, 1979	june|13|,|1979	June|13|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-06-13|1979-06-13|1979-06-13|1979-06-13	131979.0	1979-06-13		June 13|1979	fb:part.june_13|fb:part.1979
+12	1	fb:cell.tampa_bay_rowdies	Tampa Bay Rowdies	tampa|bay|rowdies	Tampa|Bay|Rowdies	NNP|NNP|NNPS	LOCATION|LOCATION|LOCATION	||					
+12	2	fb:cell.a	A	a	a	DT	O						
+12	3	fb:cell.2_2	2–2*	2|--|2|\\*	2|--|2|\\*	CD|:|CD|SYM	NUMBER|O|NUMBER|O	2.0||2.0|	2.0		2.0		
+12	4	fb:cell.child_versen	Child, Versen	child|,|versen	child|,|Versen	NN|,|NNP	O|O|PERSON	||				Child|Versen	fb:part.child|fb:part.versen
+13	0	fb:cell.june_16_1979	June 16, 1979	june|16|,|1979	June|16|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-06-16|1979-06-16|1979-06-16|1979-06-16	161979.0	1979-06-16		June 16|1979	fb:part.june_16|fb:part.1979
+13	1	fb:cell.fort_lauderdale_strikers	Fort Lauderdale Strikers	fort|lauderdale|strikers	Fort|Lauderdale|Strikers	NNP|NNP|NNPS	O|O|O	||					
+13	2	fb:cell.a	A	a	a	DT	O						
+13	3	fb:cell.1_3	1–3	1|--|3	1|--|3	CD|:|CD	NUMBER|O|NUMBER	1.0||3.0	1.0		3.0		
+13	4	fb:cell.armstrong	Armstrong	armstrong	Armstrong	NNP	O					Armstrong	fb:part.armstrong
+14	0	fb:cell.june_20_1979	June 20, 1979	june|20|,|1979	June|20|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-06-20|1979-06-20|1979-06-20|1979-06-20	201979.0	1979-06-20		June 20|1979	fb:part.june_20|fb:part.1979
+14	1	fb:cell.portland_timbers	Portland Timbers	portland|timbers	Portland|Timbers	NNP|NNP	LOCATION|LOCATION	|					
+14	2	fb:cell.a	A	a	a	DT	O						
+14	3	fb:cell.2_1	2–1	2|--|1	2|--|1	CD|:|CD	NUMBER|O|NUMBER	2.0||1.0	2.0		1.0		
+14	4	fb:cell.etterich_ryan	Etterich, Ryan	etterich|,|ryan	Etterich|,|Ryan	NNP|,|NNP	O|O|PERSON	||				Etterich|Ryan	fb:part.etterich|fb:part.ryan
+15	0	fb:cell.june_23_1979	June 23, 1979	june|23|,|1979	June|23|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-06-23|1979-06-23|1979-06-23|1979-06-23	231979.0	1979-06-23		June 23|1979	fb:part.june_23|fb:part.1979
+15	1	fb:cell.chicago_sting	Chicago Sting	chicago|sting	Chicago|Sting	NNP|NNP	LOCATION|O	|					
+15	2	fb:cell.h	H	h	h	NN	O						
+15	3	fb:cell.4_2	4–2	4|--|2	4|--|2	CD|:|CD	NUMBER|O|NUMBER	4.0||2.0	4.0		2.0		
+15	4	fb:cell.etterich_bick_webers_gersdorff	Etterich, Bick, Webers, Gersdorff	etterich|,|bick|,|webers|,|gersdorff	Etterich|,|Bick|,|Webers|,|Gersdorff	NNP|,|NNP|,|NNP|,|NNP	PERSON|O|PERSON|O|O|O|PERSON	||||||				Etterich|Bick|Webers|Gersdorff	fb:part.etterich|fb:part.bick|fb:part.webers|fb:part.gersdorff
+16	0	fb:cell.june_27_1979	June 27, 1979	june|27|,|1979	June|27|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-06-27|1979-06-27|1979-06-27|1979-06-27	271979.0	1979-06-27		June 27|1979	fb:part.june_27|fb:part.1979
+16	1	fb:cell.new_england_tea_men	New England Tea Men	new|england|tea|men	New|England|Tea|Men	NNP|NNP|NNP|NNP	O|O|O|O	|||					
+16	2	fb:cell.h	H	h	h	NN	O						
+16	3	fb:cell.0_1	0–1	0|--|1	0|--|1	CD|:|CD	NUMBER|O|NUMBER	0.0||1.0	0.0		1.0		
+16	4	fb:cell.null											fb:part.null
+17	0	fb:cell.june_30_1979	June 30, 1979	june|30|,|1979	June|30|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-06-30|1979-06-30|1979-06-30|1979-06-30	301979.0	1979-06-30		June 30|1979	fb:part.june_30|fb:part.1979
+17	1	fb:cell.philadelphia_fury	Philadelphia Fury	philadelphia|fury	Philadelphia|fury	NNP|NN	LOCATION|O	|					
+17	2	fb:cell.a	A	a	a	DT	O						
+17	3	fb:cell.1_2	1–2	1|--|2	1|--|2	CD|:|CD	NUMBER|O|NUMBER	1.0||2.0	1.0		2.0		
+17	4	fb:cell.wood	Wood	wood	Wood	NNP	O					Wood	fb:part.wood
+18	0	fb:cell.july_4_1979	July 4, 1979	july|4|,|1979	July|4|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-07-04|1979-07-04|1979-07-04|1979-07-04	41979.0	1979-07-04		July 4|1979	fb:part.july_4|fb:part.1979
+18	1	fb:cell.houston_hurricane	Houston Hurricane	houston|hurricane	Houston|Hurricane	NNP|NNP	LOCATION|O	|					
+18	2	fb:cell.a	A	a	a	DT	O						
+18	3	fb:cell.0_4	0–4	0|--|4	0|--|4	CD|:|CD	NUMBER|O|NUMBER	0.0||4.0	0.0		4.0		
+18	4	fb:cell.null											fb:part.null
+19	0	fb:cell.july_7_1979	July 7, 1979	july|7|,|1979	July|7|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-07-07|1979-07-07|1979-07-07|1979-07-07	71979.0	1979-07-07		July 7|1979	fb:part.july_7|fb:part.1979
+19	1	fb:cell.fort_lauderdale_strikers	Fort Lauderdale Strikers	fort|lauderdale|strikers	Fort|Lauderdale|Strikers	NNP|NNP|NNPS	O|O|O	||					
+19	2	fb:cell.h	H	h	h	NN	O						
+19	3	fb:cell.1_2	1–2	1|--|2	1|--|2	CD|:|CD	NUMBER|O|NUMBER	1.0||2.0	1.0		2.0		
+19	4	fb:cell.flindt	Flindt	flindt	Flindt	NNP	PERSON					Flindt	fb:part.flindt
+20	0	fb:cell.july_11_1979	July 11, 1979	july|11|,|1979	July|11|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-07-11|1979-07-11|1979-07-11|1979-07-11	111979.0	1979-07-11		July 11|1979	fb:part.july_11|fb:part.1979
+20	1	fb:cell.philadelphia_fury	Philadelphia Fury	philadelphia|fury	Philadelphia|fury	NNP|NN	LOCATION|O	|					
+20	2	fb:cell.h	H	h	h	NN	O						
+20	3	fb:cell.4_4	4–4*	4|--|4|\\*	4|--|4|\\*	CD|:|CD|SYM	NUMBER|O|NUMBER|O	4.0||4.0|	4.0		4.0		
+20	4	fb:cell.armstrong_etterich_gersdorff_wood	Armstrong, Etterich, Gersdorff, Wood	armstrong|,|etterich|,|gersdorff|,|wood	Armstrong|,|Etterich|,|Gersdorff|,|Wood	NNP|,|NNP|,|NNP|,|NNP	PERSON|O|O|O|O|O|PERSON	||||||				Armstrong|Etterich|Gersdorff|Wood	fb:part.armstrong|fb:part.etterich|fb:part.gersdorff|fb:part.wood
+21	0	fb:cell.july_14_1979	July 14, 1979	july|14|,|1979	July|14|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-07-14|1979-07-14|1979-07-14|1979-07-14	141979.0	1979-07-14		July 14|1979	fb:part.july_14|fb:part.1979
+21	1	fb:cell.los_angeles_aztecs	Los Angeles Aztecs	los|angeles|aztecs	Los|Angeles|Aztecs	NNP|NNP|NNPS	LOCATION|LOCATION|LOCATION	||					
+21	2	fb:cell.a	A	a	a	DT	O						
+21	3	fb:cell.0_0	0–0*	0|--|0|\\*	0|--|0|\\*	CD|:|CD|SYM	NUMBER|O|NUMBER|O	0.0||0.0|	0.0		0.0		
+21	4	fb:cell.null											fb:part.null
+22	0	fb:cell.july_18_1979	July 18, 1979	july|18|,|1979	July|18|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-07-18|1979-07-18|1979-07-18|1979-07-18	181979.0	1979-07-18		July 18|1979	fb:part.july_18|fb:part.1979
+22	1	fb:cell.houston_hurricane	Houston Hurricane	houston|hurricane	Houston|Hurricane	NNP|NNP	LOCATION|O	|					
+22	2	fb:cell.h	H	h	h	NN	O						
+22	3	fb:cell.1_2	1–2	1|--|2	1|--|2	CD|:|CD	NUMBER|O|NUMBER	1.0||2.0	1.0		2.0		
+22	4	fb:cell.gersdorff	Gersdorff	gersdorff	gersdorff	NN	O					Gersdorff	fb:part.gersdorff
+23	0	fb:cell.july_21_1979	July 21, 1979	july|21|,|1979	July|21|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-07-21|1979-07-21|1979-07-21|1979-07-21	211979.0	1979-07-21		July 21|1979	fb:part.july_21|fb:part.1979
+23	1	fb:cell.tulsa_roughnecks	Tulsa Roughnecks	tulsa|roughnecks	Tulsa|Roughnecks	NNP|NNPS	LOCATION|LOCATION	|					
+23	2	fb:cell.h	H	h	h	NN	O						
+23	3	fb:cell.3_2	3–2	3|--|2	3|--|2	CD|:|CD	NUMBER|O|NUMBER	3.0||2.0	3.0		2.0		
+23	4	fb:cell.armstrong_2_wood	Armstrong (2), Wood	armstrong|-lrb-|2|-rrb-|,|wood	Armstrong|-lrb-|2|-rrb-|,|Wood	NNP|-LRB-|LS|-RRB-|,|NNP	PERSON|O|NUMBER|O|O|PERSON	||2.0|||	2.0			Armstrong (2)|Wood	fb:part.armstrong_2|fb:part.wood
+24	0	fb:cell.july_25_1979	July 25, 1979	july|25|,|1979	July|25|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-07-25|1979-07-25|1979-07-25|1979-07-25	251979.0	1979-07-25		July 25|1979	fb:part.july_25|fb:part.1979
+24	1	fb:cell.chicago_sting	Chicago Sting	chicago|sting	Chicago|Sting	NNP|NNP	LOCATION|O	|					
+24	2	fb:cell.a	A	a	a	DT	O						
+24	3	fb:cell.3_2	3–2	3|--|2	3|--|2	CD|:|CD	NUMBER|O|NUMBER	3.0||2.0	3.0		2.0		
+24	4	fb:cell.gersdorff_2_child	Gersdorff (2), Child	gersdorff|-lrb-|2|-rrb-|,|child	gersdorff|-lrb-|2|-rrb-|,|child	NN|-LRB-|CD|-RRB-|,|NN	O|O|NUMBER|O|O|O	||2.0|||	2.0			Gersdorff (2)|Child	fb:part.gersdorff_2|fb:part.child
+25	0	fb:cell.july_29_1979	July 29, 1979	july|29|,|1979	July|29|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-07-29|1979-07-29|1979-07-29|1979-07-29	291979.0	1979-07-29		July 29|1979	fb:part.july_29|fb:part.1979
+25	1	fb:cell.new_york_cosmos	New York Cosmos	new|york|cosmos	New|York|Cosmos	NNP|NNP|NNP	ORGANIZATION|ORGANIZATION|ORGANIZATION	||					
+25	2	fb:cell.a	A	a	a	DT	O						
+25	3	fb:cell.0_5	0–5	0|--|5	0|--|5	CD|:|CD	NUMBER|O|NUMBER	0.0||5.0	0.0		5.0		
+25	4	fb:cell.null											fb:part.null
+26	0	fb:cell.august_1_1979	August 1, 1979	august|1|,|1979	August|1|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-08-01|1979-08-01|1979-08-01|1979-08-01	11979.0	1979-08-01		August 1|1979	fb:part.august_1|fb:part.1979
+26	1	fb:cell.california_surf	California Surf	california|surf	California|surf	NNP|NN	LOCATION|O	|					
+26	2	fb:cell.h	H	h	h	NN	O						
+26	3	fb:cell.0_2	0–2	0|--|2	0|--|2	CD|:|CD	NUMBER|O|NUMBER	0.0||2.0	0.0		2.0		
+26	4	fb:cell.null											fb:part.null
+27	0	fb:cell.august_4_1979	August 4, 1979	august|4|,|1979	August|4|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-08-04|1979-08-04|1979-08-04|1979-08-04	41979.0	1979-08-04		August 4|1979	fb:part.august_4|fb:part.1979
+27	1	fb:cell.california_surf	California Surf	california|surf	California|surf	NNP|NN	LOCATION|O	|					
+27	2	fb:cell.a	A	a	a	DT	O						
+27	3	fb:cell.1_4	1–4	1|--|4	1|--|4	CD|:|CD	NUMBER|O|NUMBER	1.0||4.0	1.0		4.0		
+27	4	fb:cell.wood	Wood	wood	Wood	NNP	O					Wood	fb:part.wood
+28	0	fb:cell.august_8_1979	August 8, 1979	august|8|,|1979	August|8|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-08-08|1979-08-08|1979-08-08|1979-08-08	81979.0	1979-08-08		August 8|1979	fb:part.august_8|fb:part.1979
+28	1	fb:cell.vancouver_whitecaps	Vancouver Whitecaps	vancouver|whitecaps	Vancouver|Whitecaps	NNP|NNP	O|O	|					
+28	2	fb:cell.a	A	a	a	DT	O						
+28	3	fb:cell.0_1	0–1	0|--|1	0|--|1	CD|:|CD	NUMBER|O|NUMBER	0.0||1.0	0.0		1.0		
+28	4	fb:cell.null											fb:part.null
+29	0	fb:cell.august_11_1979	August 11, 1979	august|11|,|1979	August|11|,|1979	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1979-08-11|1979-08-11|1979-08-11|1979-08-11	111979.0	1979-08-11		August 11|1979	fb:part.august_11|fb:part.1979
+29	1	fb:cell.san_diego_sockers	San Diego Sockers	san|diego|sockers	San|Diego|Sockers	NNP|NNP|NNPS	LOCATION|LOCATION|LOCATION	||					
+29	2	fb:cell.h	H	h	h	NN	O						
+29	3	fb:cell.0_6	0–6	0|--|6	0|--|6	CD|:|CD	NUMBER|O|NUMBER	0.0||6.0	0.0		6.0		
+29	4	fb:cell.null											fb:part.null
