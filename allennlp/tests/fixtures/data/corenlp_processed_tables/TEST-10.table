@@ -1,0 +1,56 @@
+row	col	id	content	tokens	lemmaTokens	posTags	nerTags	nerValues	number	date	num2	list	listId
+-1	0	fb:row.row.rank	Rank	rank	Rank	NNP	O						
+-1	1	fb:row.row.name	Name	name	name	VB	O						
+-1	2	fb:row.row.notability	Notability	notability	notability	NN	O						
+-1	3	fb:row.row.birthplace	Birthplace	birthplace	birthplace	NN	O						
+-1	4	fb:row.row.advocate	Advocate	advocate	advocate	NN	O						
+0	0	fb:cell.10	10	10	10	CD	NUMBER	10.0	10.0				
+0	1	fb:cell.wayne_gretzky	Wayne Gretzky	wayne|gretzky	Wayne|Gretzky	NNP|NNP	PERSON|PERSON	|					
+0	2	fb:cell.hockey_player_holder_of_numerous_nhl_records	Hockey player, holder of numerous NHL records	hockey|player|,|holder|of|numerous|nhl|records	hockey|player|,|holder|of|numerous|nhl|record	NN|NN|,|NN|IN|JJ|NN|NNS	O|O|O|O|O|O|ORGANIZATION|O	|||||||				Hockey player|holder of numerous NHL records	fb:part.hockey_player|fb:part.holder_of_numerous_nhl_records
+0	3	fb:cell.brantford_ontario	Brantford, Ontario	brantford|,|ontario	Brantford|,|Ontario	NNP|,|NNP	LOCATION|O|LOCATION	||				Brantford|Ontario	fb:part.brantford|fb:part.ontario
+0	4	fb:cell.deborah_grey	Deborah Grey	deborah|grey	Deborah|Grey	NNP|NNP	PERSON|PERSON	|					
+1	0	fb:cell.9	9	9	9	CD	NUMBER	9.0	9.0				
+1	1	fb:cell.alexander_graham_bell	Alexander Graham Bell	alexander|graham|bell	Alexander|Graham|Bell	NNP|NNP|NNP	PERSON|PERSON|PERSON	||					
+1	2	fb:cell.scientist_inventor_founder_of_the_bell_telephone_company	Scientist, inventor,\nfounder of the Bell Telephone Company	scientist|,|inventor|,|founder|of|the|bell|telephone|company	scientist|,|inventor|,|founder|of|the|Bell|Telephone|Company	NN|,|NN|,|NN|IN|DT|NNP|NNP|NNP	O|O|O|O|O|O|O|ORGANIZATION|ORGANIZATION|ORGANIZATION	|||||||||				Scientist|inventor|founder of the Bell Telephone Company	fb:part.scientist|fb:part.inventor|fb:part.founder_of_the_bell_telephone_company
+1	3	fb:cell.edinburgh_scotland	Edinburgh, Scotland	edinburgh|,|scotland	Edinburgh|,|Scotland	NNP|,|NNP	LOCATION|O|LOCATION	||				Edinburgh|Scotland	fb:part.edinburgh|fb:part.scotland
+1	4	fb:cell.evan_solomon	Evan Solomon	evan|solomon	Evan|Solomon	NNP|NNP	PERSON|PERSON	|					
+2	0	fb:cell.8	8	8	8	CD	NUMBER	8.0	8.0				
+2	1	fb:cell.sir_john_a_macdonald	Sir John A. Macdonald	sir|john|a.|macdonald	Sir|John|A.|Macdonald	NNP|NNP|NNP|NNP	O|PERSON|PERSON|PERSON	|||					
+2	2	fb:cell.first_prime_minister_of_canada	First Prime Minister of Canada	first|prime|minister|of|canada	First|Prime|Minister|of|Canada	NNP|NNP|NNP|IN|NNP	ORDINAL|O|O|O|LOCATION	1.0||||				First Prime Minister of Canada	fb:part.first_prime_minister_of_canada
+2	3	fb:cell.glasgow_scotland	Glasgow, Scotland	glasgow|,|scotland	Glasgow|,|Scotland	NNP|,|NNP	LOCATION|O|LOCATION	||				Glasgow|Scotland	fb:part.glasgow|fb:part.scotland
+2	4	fb:cell.charlotte_gray	Charlotte Gray	charlotte|gray	Charlotte|Gray	NNP|NNP	LOCATION|LOCATION	|					
+3	0	fb:cell.7	7	7	7	CD	NUMBER	7.0	7.0				
+3	1	fb:cell.don_cherry	Don Cherry	don|cherry	Don|Cherry	NNP|NNP	PERSON|PERSON	|					
+3	2	fb:cell.hockey_coach_and_commentator	Hockey coach and commentator	hockey|coach|and|commentator	hockey|coach|and|commentator	NN|NN|CC|NN	O|O|O|O	|||				Hockey coach and commentator	fb:part.hockey_coach_and_commentator
+3	3	fb:cell.kingston_ontario	Kingston, Ontario	kingston|,|ontario	Kingston|,|Ontario	NNP|,|NNP	LOCATION|O|LOCATION	||				Kingston|Ontario	fb:part.kingston|fb:part.ontario
+3	4	fb:cell.bret_hart	Bret Hart	bret|hart	Bret|Hart	NNP|NNP	PERSON|PERSON	|					
+4	0	fb:cell.6	6	6	6	CD	NUMBER	6.0	6.0				
+4	1	fb:cell.lester_b_pearson	Lester B. Pearson	lester|b.|pearson	Lester|B.|Pearson	NNP|NNP|NNP	PERSON|PERSON|PERSON	||					
+4	2	fb:cell.fourteenth_prime_minister_of_canada_united_nations_general_assembly_president_nobel_peace_prize_laureate	Fourteenth Prime Minister of Canada,\nUnited Nations General Assembly President,\nNobel Peace Prize Laureate	fourteenth|prime|minister|of|canada|,|united|nations|general|assembly|president|,|nobel|peace|prize|laureate	fourteenth|Prime|Minister|of|Canada|,|United|Nations|General|Assembly|President|,|Nobel|Peace|Prize|Laureate	JJ|NNP|NNP|IN|NNP|,|NNP|NNP|NNP|NNP|NNP|,|NNP|NNP|NNP|NNP	ORDINAL|O|O|O|LOCATION|O|ORGANIZATION|ORGANIZATION|ORGANIZATION|ORGANIZATION|O|O|MISC|MISC|MISC|MISC	14.0|||||||||||||||				Fourteenth Prime Minister of Canada|United Nations General Assembly President|Nobel Peace Prize Laureate	fb:part.fourteenth_prime_minister_of_canada|fb:part.united_nations_general_assembly_president|fb:part.nobel_peace_prize_laureate
+4	3	fb:cell.toronto_ontario	Toronto, Ontario	toronto|,|ontario	Toronto|,|Ontario	NNP|,|NNP	LOCATION|O|LOCATION	||				Toronto|Ontario	fb:part.toronto|fb:part.ontario
+4	4	fb:cell.paul_gross	Paul Gross	paul|gross	Paul|Gross	NNP|NNP	PERSON|PERSON	|					
+5	0	fb:cell.5	5	5	5	CD	NUMBER	5.0	5.0				
+5	1	fb:cell.david_suzuki	David Suzuki	david|suzuki	David|Suzuki	NNP|NNP	PERSON|PERSON	|					
+5	2	fb:cell.environmentalist	Environmentalist	environmentalist	environmentalist	NN	O					Environmentalist	fb:part.environmentalist
+5	3	fb:cell.vancouver_british_columbia	Vancouver, British Columbia	vancouver|,|british|columbia	Vancouver|,|British|Columbia	NNP|,|NNP|NNP	LOCATION|O|LOCATION|LOCATION	|||				Vancouver|British Columbia	fb:part.vancouver|fb:part.british_columbia
+5	4	fb:cell.melissa_auf_der_maur	Melissa Auf der Maur	melissa|auf|der|maur	Melissa|Auf|der|Maur	NNP|NNP|VBD|NNP	PERSON|PERSON|PERSON|PERSON	|||					
+6	0	fb:cell.4	4	4	4	CD	NUMBER	4.0	4.0				
+6	1	fb:cell.sir_frederick_banting	Sir Frederick Banting	sir|frederick|banting	Sir|Frederick|Banting	NNP|NNP|NNP	O|PERSON|PERSON	||					
+6	2	fb:cell.medical_scientist_co_discoverer_of_insulin_winner_of_the_nobel_prize_in_physiology_or_medicine	Medical scientist, co-discoverer of insulin,\nwinner of the Nobel Prize in Physiology or Medicine	medical|scientist|,|co|discoverer|of|insulin|,|winner|of|the|nobel|prize|in|physiology|or|medicine	medical|scientist|,|co|discoverer|of|insulin|,|winner|of|the|Nobel|Prize|in|Physiology|or|Medicine	JJ|NN|,|NN|NN|IN|NN|,|NN|IN|DT|NNP|NNP|IN|NNP|CC|NNP	O|O|O|O|O|O|O|O|O|O|O|MISC|MISC|MISC|MISC|MISC|MISC	||||||||||||||||				Medical scientist|co-discoverer of insulin|winner of the Nobel Prize in Physiology or Medicine	fb:part.medical_scientist|fb:part.co_discoverer_of_insulin|fb:part.winner_of_the_nobel_prize_in_physiology_or_medicine
+6	3	fb:cell.alliston_ontario	Alliston, Ontario	alliston|,|ontario	Alliston|,|Ontario	NNP|,|NNP	LOCATION|O|LOCATION	||				Alliston|Ontario	fb:part.alliston|fb:part.ontario
+6	4	fb:cell.mary_walsh	Mary Walsh	mary|walsh	Mary|Walsh	NNP|NNP	PERSON|PERSON	|					
+7	0	fb:cell.3	3	3	3	CD	NUMBER	3.0	3.0				
+7	1	fb:cell.pierre_trudeau	Pierre Trudeau	pierre|trudeau	Pierre|Trudeau	NNP|NNP	PERSON|PERSON	|					
+7	2	fb:cell.fifteenth_prime_minister_of_canada	Fifteenth Prime Minister of Canada	fifteenth|prime|minister|of|canada	Fifteenth|Prime|Minister|of|Canada	NNP|NNP|NNP|IN|NNP	ORDINAL|O|O|O|LOCATION	15.0||||				Fifteenth Prime Minister of Canada	fb:part.fifteenth_prime_minister_of_canada
+7	3	fb:cell.montreal_quebec	Montreal, Quebec	montreal|,|quebec	Montreal|,|Quebec	NNP|,|NNP	LOCATION|O|LOCATION	||				Montreal|Quebec	fb:part.montreal|fb:part.quebec
+7	4	fb:cell.rex_murphy	Rex Murphy	rex|murphy	rex|Murphy	NN|NNP	PERSON|PERSON	|					
+8	0	fb:cell.2	2	2	2	CD	NUMBER	2.0	2.0				
+8	1	fb:cell.terry_fox	Terry Fox	terry|fox	Terry|Fox	NNP|NNP	PERSON|PERSON	|					
+8	2	fb:cell.athlete_activist_humanitarian	Athlete, activist, humanitarian	athlete|,|activist|,|humanitarian	athlete|,|activist|,|humanitarian	NN|,|NN|,|JJ	O|O|O|O|O	||||				Athlete|activist|humanitarian	fb:part.athlete|fb:part.activist|fb:part.humanitarian
+8	3	fb:cell.winnipeg_manitoba	Winnipeg, Manitoba	winnipeg|,|manitoba	Winnipeg|,|Manitoba	NNP|,|NNP	LOCATION|O|LOCATION	||				Winnipeg|Manitoba	fb:part.winnipeg|fb:part.manitoba
+8	4	fb:cell.sook_yin_lee	Sook-Yin Lee	sook|yin|lee	Sook|Yin|Lee	NNP|NNP|NNP	PERSON|PERSON|PERSON	||					
+9	0	fb:cell.1	1	1	1	CD	NUMBER	1.0	1.0				
+9	1	fb:cell.tommy_douglas	Tommy Douglas	tommy|douglas	Tommy|Douglas	NNP|NNP	PERSON|PERSON	|					
+9	2	fb:cell.father_of_medicare_premier_of_saskatchewan	Father of Medicare, Premier of Saskatchewan	father|of|medicare|,|premier|of|saskatchewan	father|of|Medicare|,|Premier|of|Saskatchewan	NN|IN|NNP|,|NNP|IN|NNP	O|O|MISC|O|O|O|LOCATION	||||||				Father of Medicare|Premier of Saskatchewan	fb:part.father_of_medicare|fb:part.premier_of_saskatchewan
+9	3	fb:cell.falkirk_scotland	Falkirk, Scotland	falkirk|,|scotland	Falkirk|,|Scotland	NNP|,|NNP	LOCATION|O|LOCATION	||				Falkirk|Scotland	fb:part.falkirk|fb:part.scotland
+9	4	fb:cell.george_stroumboulopoulos	George Stroumboulopoulos	george|stroumboulopoulos	George|Stroumboulopoulos	NNP|NNP	PERSON|PERSON	|					

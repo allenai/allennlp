@@ -2,15 +2,15 @@
 An ``AtisSqlTableContext`` represents the SQL context in which an utterance appears
 for the Atis dataset, with the grammar and the valid actions.
 """
-from typing import List, Dict
+from typing import List, Dict, Tuple
 import sqlite3
 from copy import deepcopy
-
 
 from parsimonious.grammar import Grammar
 
 from allennlp.common.file_utils import cached_path
-from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions
+from allennlp.semparse.contexts.sql_context_utils import initialize_valid_actions, format_grammar_string, \
+        format_action
 
 # This is the base definition of the SQL grammar in a simplified sort of
 # EBNF notation, and represented as a dictionary. The keys are the nonterminals and the values
@@ -32,15 +32,18 @@ from allennlp.semparse.contexts.sql_context_utils import initialize_valid_action
 GRAMMAR_DICTIONARY = {}
 GRAMMAR_DICTIONARY['statement'] = ['query ws ";" ws']
 GRAMMAR_DICTIONARY['query'] = ['(ws "(" ws "SELECT" ws distinct ws select_results ws '
+                               '"FROM" ws table_refs ws where_clause ws group_by_clause ws ")" ws)',
+                               '(ws "(" ws "SELECT" ws distinct ws select_results ws '
                                '"FROM" ws table_refs ws where_clause ws ")" ws)',
                                '(ws "SELECT" ws distinct ws select_results ws '
                                '"FROM" ws table_refs ws where_clause ws)']
 GRAMMAR_DICTIONARY['select_results'] = ['col_refs', 'agg']
-GRAMMAR_DICTIONARY['agg'] = ['agg_func ws "(" ws col_ref ws ")"']
+GRAMMAR_DICTIONARY['agg'] = ['( agg_func ws "(" ws col_ref ws ")" )', '(agg_func ws "(" ws col ws ")" )']
 GRAMMAR_DICTIONARY['agg_func'] = ['"MIN"', '"min"', '"MAX"', '"max"', '"COUNT"', '"count"']
 GRAMMAR_DICTIONARY['col_refs'] = ['(col_ref ws "," ws col_refs)', '(col_ref)']
 GRAMMAR_DICTIONARY['table_refs'] = ['(table_name ws "," ws table_refs)', '(table_name)']
 GRAMMAR_DICTIONARY['where_clause'] = ['("WHERE" ws "(" ws conditions ws ")" ws)', '("WHERE" ws conditions ws)']
+GRAMMAR_DICTIONARY['group_by_clause'] = ['("GROUP" ws "BY" ws col_ref)']
 GRAMMAR_DICTIONARY['conditions'] = ['(condition ws conj ws conditions)',
                                     '(condition ws conj ws "(" ws conditions ws ")")',
                                     '("(" ws conditions ws ")" ws conj ws conditions)',
@@ -71,6 +74,10 @@ GRAMMAR_DICTIONARY['number'] = ['""']
 KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"', '"IN"', '"LIKE"',
             '"IS"', '"BETWEEN"', '"AND"', '"ALL"', '"ANY"', '"NULL"', '"OR"', '"DISTINCT"']
 
+NUMERIC_NONTERMINALS = ['number', 'time_range_start', 'time_range_end',
+                        'fare_round_trip_cost', 'fare_one_direction_cost',
+                        'flight_number', 'day_number', 'month_number', 'year_number']
+
 class AtisSqlTableContext:
     """
     An ``AtisSqlTableContext`` represents the SQL context with a grammar of SQL and the valid actions
@@ -92,7 +99,6 @@ class AtisSqlTableContext:
                  all_tables: Dict[str, List[str]] = None,
                  tables_with_strings: Dict[str, List[str]] = None,
                  database_file: str = None) -> None:
-        self.grammar_dictionary = deepcopy(GRAMMAR_DICTIONARY)
         self.all_tables = all_tables
         self.tables_with_strings = tables_with_strings
         if database_file:
@@ -100,22 +106,38 @@ class AtisSqlTableContext:
             self.connection = sqlite3.connect(self.database_file)
             self.cursor = self.connection.cursor()
 
-        self.grammar_str: str = self.initialize_grammar_str()
-        self.grammar: Grammar = Grammar(self.grammar_str)
+        grammar_dictionary, strings_list = self.create_grammar_dict_and_strings()
+        self.grammar_dictionary: Dict[str, List[str]] = grammar_dictionary
+        self.strings_list: List[Tuple[str, str]] = strings_list
+
+        self.grammar_string: str = self.get_grammar_string()
+        self.grammar: Grammar = Grammar(self.grammar_string)
         self.valid_actions: Dict[str, List[str]] = initialize_valid_actions(self.grammar, KEYWORDS)
         if database_file:
             self.connection.close()
 
-    def initialize_grammar_str(self):
+    def get_grammar_dictionary(self) -> Dict[str, List[str]]:
+        return self.grammar_dictionary
+
+    def get_valid_actions(self) -> Dict[str, List[str]]:
+        return self.valid_actions
+
+    def create_grammar_dict_and_strings(self) -> Tuple[Dict[str, List[str]], List[Tuple[str, str]]]:
+        grammar_dictionary = deepcopy(GRAMMAR_DICTIONARY)
+        strings_list = []
+
         if self.all_tables:
-            self.grammar_dictionary['table_name'] = \
+            grammar_dictionary['table_name'] = \
                     sorted([f'"{table}"'
                             for table in list(self.all_tables.keys())], reverse=True)
-            self.grammar_dictionary['col_ref'] = ['"*"']
+            grammar_dictionary['col_ref'] = ['"*"', 'agg']
+            all_columns = []
             for table, columns in self.all_tables.items():
-                self.grammar_dictionary['col_ref'].extend([f'("{table}" ws "." ws "{column}")'
-                                                           for column in columns])
-            self.grammar_dictionary['col_ref'] = sorted(self.grammar_dictionary['col_ref'], reverse=True)
+                grammar_dictionary['col_ref'].extend([f'("{table}" ws "." ws "{column}")'
+                                                      for column in columns])
+                all_columns.extend(columns)
+            grammar_dictionary['col_ref'] = sorted(grammar_dictionary['col_ref'], reverse=True)
+            grammar_dictionary['col'] = sorted([f'"{column}"' for column in all_columns], reverse=True)
 
         biexprs = []
         if self.tables_with_strings:
@@ -124,14 +146,28 @@ class AtisSqlTableContext:
                                 for column in columns])
                 for column in columns:
                     self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
-                    if column.endswith('number'):
-                        self.grammar_dictionary[f'{table}_{column}_string'] = \
-                                sorted([f'"{str(row[0])}"' for row in self.cursor.fetchall()], reverse=True)
-                    else:
-                        self.grammar_dictionary[f'{table}_{column}_string'] = \
-                                sorted([f'"\'{str(row[0])}\'"' for row in self.cursor.fetchall()], reverse=True)
+                    results = self.cursor.fetchall()
 
-        self.grammar_dictionary['biexpr'] = sorted(biexprs, reverse=True) + \
+                    # Almost all the query values are in the database, we hardcode the rare case here.
+                    if table == 'flight' and column == 'airline_code':
+                        results.append(('EA',))
+                    strings_list.extend([(format_action(f"{table}_{column}_string",
+                                                        str(row[0]),
+                                                        is_string=not 'number' in column,
+                                                        is_number='number' in column),
+                                          str(row[0]))
+                                         for row in results])
+
+                    if column.endswith('number'):
+                        grammar_dictionary[f'{table}_{column}_string'] = \
+                                sorted([f'"{str(row[0])}"' for row in results], reverse=True)
+                    else:
+                        grammar_dictionary[f'{table}_{column}_string'] = \
+                                sorted([f'"\'{str(row[0])}\'"' for row in results], reverse=True)
+
+        grammar_dictionary['biexpr'] = sorted(biexprs, reverse=True) + \
                 ['( col_ref ws binaryop ws value)', '(value ws binaryop ws value)']
-        return '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
-                          for nonterminal, right_hand_side in self.grammar_dictionary.items()])
+        return grammar_dictionary, strings_list
+
+    def get_grammar_string(self):
+        return format_grammar_string(self.grammar_dictionary)

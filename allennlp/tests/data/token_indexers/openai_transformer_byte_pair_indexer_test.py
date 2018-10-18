@@ -41,10 +41,18 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
             tf.add(encoder_path, 'model/encoder_bpe_40000.json')
             tf.add(bpe_path, 'model/vocab_40000.bpe')
 
-        self.indexer = OpenaiTransformerBytePairIndexer(encoding, byte_pairs)
+        self.encoding = encoding
+        self.byte_pairs = byte_pairs
+
+    def _create_indexer_vocab(self, tokens_to_add=None):
+        # pylint: disable=attribute-defined-outside-init
+        self.indexer = OpenaiTransformerBytePairIndexer(
+                self.encoding, self.byte_pairs, tokens_to_add=tokens_to_add
+        )
         self.vocab = Vocabulary(non_padded_namespaces=['openai_transformer'])
 
     def test_bpe(self):
+        self._create_indexer_vocab()
 
         # [e, w, o, e</w>] -> best pair (e, w)
         # [ew, o, e</w>] -> best pair (o, e</w>)
@@ -65,6 +73,8 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
         assert self.indexer.byte_pair_encode(token) == ['woe</w>']
 
     def test_tokens_to_indices(self):
+        self._create_indexer_vocab()
+
         tokens = [Token('ewoe'), Token('woe'), Token('ewe'), Token('ee')]
 
         # vocab should be empty initially
@@ -97,10 +107,18 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
         ]
 
     def test_raises_with_too_long_sentence(self):
+        self._create_indexer_vocab()
+
         tokens = [Token('a') for _ in range(513)]
 
         with pytest.raises(RuntimeError):
             self.indexer.tokens_to_indices(tokens, self.vocab, 'should-fail')
+
+    def test_with_extra_tokens(self):
+        self._create_indexer_vocab(tokens_to_add=["<start>", "<predict>"])
+        tokens = [Token('<start>'), Token('ewoe'), Token('woe'), Token('ewe'), Token('ee'), Token('<predict>')]
+        indices = self.indexer.tokens_to_indices(tokens, self.vocab, 'openai')
+        assert indices['openai'][:9] == [50, 4, 21, 31, 4, 0, 1, 51, 0]
 
     @pytest.mark.skip()
     def test_for_correctness_with_fixture(self):

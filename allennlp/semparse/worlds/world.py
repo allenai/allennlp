@@ -106,6 +106,8 @@ class World:
         self._right_side_indexed_actions: Dict[str, List[Tuple[str, str]]] = None
         # Caching this to avoid recompting it every time `get_valid_actions` is called.
         self._valid_actions: Dict[str, List[str]] = None
+        # Caching this to avoid recompting it every time `get_multi_match_mapping` is called.
+        self._multi_match_mapping: Dict[str, List[str]] = None
 
     def get_name_mapping(self) -> Dict[str, str]:
         # Python 3.5 syntax for merging two dictionaries.
@@ -221,6 +223,19 @@ class World:
         """
         raise NotImplementedError
 
+    def get_multi_match_mapping(self) -> Dict[str, List[str]]:
+        """
+        Returns a mapping from each `MultiMatchNamedBasicType` to all the `NamedBasicTypes` that it
+        matches.
+        """
+        if self._multi_match_mapping is None:
+            self._multi_match_mapping = {}
+            for basic_type in self.get_basic_types():
+                if isinstance(basic_type, types.MultiMatchNamedBasicType):
+                    self._multi_match_mapping[str(basic_type)] = [str(matched_type) for matched_type
+                                                                  in basic_type.types_to_match]
+        return self._multi_match_mapping
+
     def parse_logical_form(self,
                            logical_form: str,
                            remove_var_function: bool = True) -> Expression:
@@ -325,10 +340,16 @@ class World:
             raise ParsingError("Incomplete action sequence")
         left_side, right_side = remaining_actions.pop(0)
         if left_side != current_node.label():
-            logger.error("Current node: %s", current_node)
-            logger.error("Next action: %s -> %s", left_side, right_side)
-            logger.error("Remaining actions were: %s", remaining_actions)
-            raise ParsingError("Current node does not match next action")
+            mismatch = True
+            multi_match_mapping = self.get_multi_match_mapping()
+            current_label = current_node.label()
+            if current_label in multi_match_mapping and left_side in multi_match_mapping[current_label]:
+                mismatch = False
+            if mismatch:
+                logger.error("Current node: %s", current_node)
+                logger.error("Next action: %s -> %s", left_side, right_side)
+                logger.error("Remaining actions were: %s", remaining_actions)
+                raise ParsingError("Current node does not match next action")
         if right_side[0] == '[':
             # This is a non-terminal expansion, with more than one child node.
             for child_type in right_side[1:-1].split(', '):

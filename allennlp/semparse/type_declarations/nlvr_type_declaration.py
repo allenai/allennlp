@@ -3,7 +3,8 @@ from overrides import overrides
 
 from nltk.sem.logic import TRUTH_TYPE, BasicType, EntityType, Type
 
-from allennlp.semparse.type_declarations.type_declaration import ComplexType, HigherOrderType, NamedBasicType
+from allennlp.semparse.type_declarations.type_declaration import (ComplexType, HigherOrderType,
+                                                                  NamedBasicType, NameMapper)
 
 
 class NegateFilterType(HigherOrderType):
@@ -49,129 +50,125 @@ ASSERT_OBJECT_COUNT_TYPE = ComplexType(OBJECT_TYPE, ComplexType(NUM_TYPE, TRUTH_
 BOX_EXISTS_TYPE = ComplexType(BOX_TYPE, TRUTH_TYPE)
 OBJECT_EXISTS_TYPE = ComplexType(OBJECT_TYPE, TRUTH_TYPE)
 
-
-COMMON_NAME_MAPPING = {}
-COMMON_TYPE_SIGNATURE = {}
-
 BASIC_TYPES = {NUM_TYPE, BOX_TYPE, OBJECT_TYPE, COLOR_TYPE, SHAPE_TYPE}
 
-
-def add_common_name_with_type(name, mapping, type_signature):
-    COMMON_NAME_MAPPING[name] = mapping
-    COMMON_TYPE_SIGNATURE[mapping] = type_signature
-
+name_mapper = NameMapper()  # pylint: disable=invalid-name
 
 # Entities
-add_common_name_with_type("all_objects", "O", OBJECT_TYPE)
-add_common_name_with_type("all_boxes", "B", BOX_TYPE)
-add_common_name_with_type("color_black", "C0", COLOR_TYPE)
-add_common_name_with_type("color_blue", "C1", COLOR_TYPE)
-add_common_name_with_type("color_yellow", "C2", COLOR_TYPE)
-add_common_name_with_type("shape_triangle", "S0", SHAPE_TYPE)
-add_common_name_with_type("shape_square", "S1", SHAPE_TYPE)
-add_common_name_with_type("shape_circle", "S2", SHAPE_TYPE)
+name_mapper.map_name_with_signature("all_objects", OBJECT_TYPE)
+name_mapper.map_name_with_signature("all_boxes", BOX_TYPE)
+name_mapper.map_name_with_signature("color_black", COLOR_TYPE)
+name_mapper.map_name_with_signature("color_blue", COLOR_TYPE)
+name_mapper.map_name_with_signature("color_yellow", COLOR_TYPE)
+name_mapper.map_name_with_signature("shape_triangle", SHAPE_TYPE)
+name_mapper.map_name_with_signature("shape_square", SHAPE_TYPE)
+name_mapper.map_name_with_signature("shape_circle", SHAPE_TYPE)
 
 
 # Attribute function
-add_common_name_with_type("object_in_box", "I", BOX_MEMBERSHIP_TYPE)
+name_mapper.map_name_with_signature("object_in_box", BOX_MEMBERSHIP_TYPE)
 
 
 # Assert functions
-add_common_name_with_type("object_color_all_equals", "A0", ASSERT_COLOR_TYPE)
-add_common_name_with_type("object_color_any_equals", "A28", ASSERT_COLOR_TYPE)
-add_common_name_with_type("object_color_none_equals", "A1", ASSERT_COLOR_TYPE)
-add_common_name_with_type("object_shape_all_equals", "A2", ASSERT_SHAPE_TYPE)
-add_common_name_with_type("object_shape_any_equals", "A29", ASSERT_SHAPE_TYPE)
-add_common_name_with_type("object_shape_none_equals", "A3", ASSERT_SHAPE_TYPE)
-add_common_name_with_type("box_count_equals", "A4", ASSERT_BOX_COUNT_TYPE)
-add_common_name_with_type("box_count_not_equals", "A5", ASSERT_BOX_COUNT_TYPE)
-add_common_name_with_type("box_count_greater", "A6", ASSERT_BOX_COUNT_TYPE)
-add_common_name_with_type("box_count_greater_equals", "A7", ASSERT_BOX_COUNT_TYPE)
-add_common_name_with_type("box_count_lesser", "A8", ASSERT_BOX_COUNT_TYPE)
-add_common_name_with_type("box_count_lesser_equals", "A9", ASSERT_BOX_COUNT_TYPE)
-add_common_name_with_type("object_count_equals", "A10", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_count_not_equals", "A11", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_count_greater", "A12", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_count_greater_equals", "A13", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_count_lesser", "A14", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_count_lesser_equals", "A15", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_color_count_equals", "A16", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_color_count_not_equals", "A17", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_color_count_greater", "A18", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_color_count_greater_equals", "A19", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_color_count_lesser", "A20", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_color_count_lesser_equals", "A21", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_shape_count_equals", "A22", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_shape_count_not_equals", "A23", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_shape_count_greater", "A24", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_shape_count_greater_equals", "A25", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_shape_count_lesser", "A26", ASSERT_OBJECT_COUNT_TYPE)
-add_common_name_with_type("object_shape_count_lesser_equals", "A27", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_color_all_equals", ASSERT_COLOR_TYPE)
+name_mapper.map_name_with_signature("object_color_any_equals", ASSERT_COLOR_TYPE)
+name_mapper.map_name_with_signature("object_color_none_equals", ASSERT_COLOR_TYPE)
+name_mapper.map_name_with_signature("object_shape_all_equals", ASSERT_SHAPE_TYPE)
+name_mapper.map_name_with_signature("object_shape_any_equals", ASSERT_SHAPE_TYPE)
+name_mapper.map_name_with_signature("object_shape_none_equals", ASSERT_SHAPE_TYPE)
+name_mapper.map_name_with_signature("box_count_equals", ASSERT_BOX_COUNT_TYPE)
+name_mapper.map_name_with_signature("box_count_not_equals", ASSERT_BOX_COUNT_TYPE)
+name_mapper.map_name_with_signature("box_count_greater", ASSERT_BOX_COUNT_TYPE)
+name_mapper.map_name_with_signature("box_count_greater_equals", ASSERT_BOX_COUNT_TYPE)
+name_mapper.map_name_with_signature("box_count_lesser", ASSERT_BOX_COUNT_TYPE)
+name_mapper.map_name_with_signature("box_count_lesser_equals", ASSERT_BOX_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_count_equals", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_count_not_equals", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_count_greater", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_count_greater_equals", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_count_lesser", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_count_lesser_equals", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_color_count_equals", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_color_count_not_equals", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_color_count_greater", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_color_count_greater_equals", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_color_count_lesser", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_color_count_lesser_equals", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_shape_count_equals", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_shape_count_not_equals", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_shape_count_greater", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_shape_count_greater_equals", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_shape_count_lesser", ASSERT_OBJECT_COUNT_TYPE)
+name_mapper.map_name_with_signature("object_shape_count_lesser_equals", ASSERT_OBJECT_COUNT_TYPE)
 
-add_common_name_with_type("box_exists", "E0", BOX_EXISTS_TYPE)
-add_common_name_with_type("object_exists", "E1", OBJECT_EXISTS_TYPE)
+name_mapper.map_name_with_signature("box_exists", BOX_EXISTS_TYPE)
+name_mapper.map_name_with_signature("object_exists", OBJECT_EXISTS_TYPE)
 
 
 # Box filter functions
-add_common_name_with_type("member_count_equals", "F0", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_count_not_equals", "F1", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_shape_all_equals", "F2", BOX_SHAPE_FILTER_TYPE)
-add_common_name_with_type("member_shape_any_equals", "F26", BOX_SHAPE_FILTER_TYPE)
-add_common_name_with_type("member_shape_none_equals", "F3", BOX_SHAPE_FILTER_TYPE)
-add_common_name_with_type("member_color_all_equals", "F4", BOX_COLOR_FILTER_TYPE)
-add_common_name_with_type("member_color_any_equals", "F27", BOX_COLOR_FILTER_TYPE)
-add_common_name_with_type("member_color_none_equals", "F5", BOX_COLOR_FILTER_TYPE)
-add_common_name_with_type("member_count_greater", "F6", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_count_greater_equals", "F7", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_count_lesser", "F8", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_count_lesser_equals", "F9", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_color_count_equals", "F10", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_color_count_not_equals", "F11", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_color_count_greater", "F12", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_color_count_greater_equals", "F13", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_color_count_lesser", "F14", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_color_count_lesser_equals", "F15", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_shape_count_equals", "F16", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_shape_count_not_equals", "F17", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_shape_count_greater", "F18", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_shape_count_greater_equals", "F19", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_shape_count_lesser", "F20", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_shape_count_lesser_equals", "F21", BOX_COUNT_FILTER_TYPE)
-add_common_name_with_type("member_shape_same", "F22", BOX_ATTRIBUTE_SAME_FILTER_TYPE)
-add_common_name_with_type("member_color_same", "F23", BOX_ATTRIBUTE_SAME_FILTER_TYPE)
-add_common_name_with_type("member_shape_different", "F24", BOX_ATTRIBUTE_SAME_FILTER_TYPE)
-add_common_name_with_type("member_color_different", "F25", BOX_ATTRIBUTE_SAME_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_count_equals", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_count_not_equals", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_shape_all_equals", BOX_SHAPE_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_shape_any_equals", BOX_SHAPE_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_shape_none_equals", BOX_SHAPE_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_color_all_equals", BOX_COLOR_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_color_any_equals", BOX_COLOR_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_color_none_equals", BOX_COLOR_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_count_greater", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_count_greater_equals", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_count_lesser", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_count_lesser_equals", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_color_count_equals", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_color_count_not_equals", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_color_count_greater", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_color_count_greater_equals", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_color_count_lesser", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_color_count_lesser_equals", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_shape_count_equals", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_shape_count_not_equals", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_shape_count_greater", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_shape_count_greater_equals", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_shape_count_lesser", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_shape_count_lesser_equals", BOX_COUNT_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_shape_same", BOX_ATTRIBUTE_SAME_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_color_same", BOX_ATTRIBUTE_SAME_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_shape_different", BOX_ATTRIBUTE_SAME_FILTER_TYPE)
+name_mapper.map_name_with_signature("member_color_different", BOX_ATTRIBUTE_SAME_FILTER_TYPE)
 
 
 # Object filter functions
-add_common_name_with_type("black", "C3", OBJECT_FILTER_TYPE)
-add_common_name_with_type("blue", "C4", OBJECT_FILTER_TYPE)
-add_common_name_with_type("yellow", "C5", OBJECT_FILTER_TYPE)
-add_common_name_with_type("same_color", "C6", OBJECT_FILTER_TYPE)
-add_common_name_with_type("triangle", "S3", OBJECT_FILTER_TYPE)
-add_common_name_with_type("square", "S4", OBJECT_FILTER_TYPE)
-add_common_name_with_type("circle", "S5", OBJECT_FILTER_TYPE)
-add_common_name_with_type("same_shape", "S6", OBJECT_FILTER_TYPE)
-add_common_name_with_type("touch_wall", "T0", OBJECT_FILTER_TYPE)
-add_common_name_with_type("touch_corner", "T1", OBJECT_FILTER_TYPE)
-add_common_name_with_type("touch_top", "T2", OBJECT_FILTER_TYPE)
-add_common_name_with_type("touch_bottom", "T3", OBJECT_FILTER_TYPE)
-add_common_name_with_type("touch_left", "T4", OBJECT_FILTER_TYPE)
-add_common_name_with_type("touch_right", "T5", OBJECT_FILTER_TYPE)
-add_common_name_with_type("touch_object", "T6", OBJECT_FILTER_TYPE)
-add_common_name_with_type("above", "L0", OBJECT_FILTER_TYPE)
-add_common_name_with_type("below", "L1", OBJECT_FILTER_TYPE)
-add_common_name_with_type("top", "L2", OBJECT_FILTER_TYPE)
-add_common_name_with_type("bottom", "L3", OBJECT_FILTER_TYPE)
-add_common_name_with_type("small", "Z0", OBJECT_FILTER_TYPE)
-add_common_name_with_type("medium", "Z1", OBJECT_FILTER_TYPE)
-add_common_name_with_type("big", "Z2", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("black", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("blue", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("yellow", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("same_color", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("triangle", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("square", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("circle", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("same_shape", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("touch_wall", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("touch_corner", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("touch_top", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("touch_bottom", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("touch_left", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("touch_right", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("touch_object", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("above", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("below", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("top", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("bottom", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("small", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("medium", OBJECT_FILTER_TYPE)
+name_mapper.map_name_with_signature("big", OBJECT_FILTER_TYPE)
 
-add_common_name_with_type("negate_filter", "N", NEGATE_FILTER_TYPE)
+name_mapper.map_name_with_signature("negate_filter", NEGATE_FILTER_TYPE)
 
 # Adding numbers because they commonly occur in utterances. They're usually between 1 and 9. Since
 # there are not too many of these productions, we're adding them to the global mapping instead of a
 # local mapping in each world.
 for num in range(1, 10):
     num_string = str(num)
-    add_common_name_with_type(num_string, num_string, NUM_TYPE)
+    name_mapper.map_name_with_signature(name=num_string, signature=NUM_TYPE, alias=num_string)
+
+
+COMMON_NAME_MAPPING = name_mapper.common_name_mapping
+COMMON_TYPE_SIGNATURE = name_mapper.common_type_signature

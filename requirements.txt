@@ -37,7 +37,7 @@ scikit-learn
 tensorboardX==1.2
 
 # Required by torch.utils.ffi
-cffi==1.11.2
+cffi==1.11.5
 
 # aws commandline tools for running on Docker remotely.
 # second requirement is to get botocore < 1.11, to avoid the below bug
@@ -60,7 +60,14 @@ parsimonious==0.8.0
 # Used by semantic parsing code to format and postprocess SQL
 sqlparse==0.2.4
 
+# For text normalization
+ftfy
+
 #### ESSENTIAL LIBRARIES USED IN SCRIPTS ####
+
+# Plot graphs for learning rate finder
+matplotlib==2.2.3
+
 # Used for downloading datasets over HTTP
 requests>=2.18
 
@@ -100,6 +107,8 @@ moto==1.3.4
 pylint==1.8.1
 
 # Tutorial notebooks
+# see: https://github.com/jupyter/jupyter/issues/370 for ipykernel
+ipykernel<5.0.0
 jupyter
 
 # Static type checking

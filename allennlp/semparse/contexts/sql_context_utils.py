@@ -1,13 +1,25 @@
 import re
 from typing import List, Dict, Set
 from collections import defaultdict
-
+from sys import exc_info
+from six import reraise
 from overrides import overrides
 
 from parsimonious.expressions import Literal, OneOf, Sequence
 from parsimonious.nodes import Node, NodeVisitor
 from parsimonious.grammar import Grammar
+from parsimonious.exceptions import VisitationError, UndefinedLabel
 
+
+WHITESPACE_REGEX = re.compile(" wsp |wsp | wsp| ws |ws | ws")
+
+def format_grammar_string(grammar_dictionary: Dict[str, List[str]]) -> str:
+    """
+    Formats a dictionary of production rules into the string format expected
+    by the Parsimonious Grammar class.
+    """
+    return '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
+                      for nonterminal, right_hand_side in grammar_dictionary.items()])
 
 
 def initialize_valid_actions(grammar: Grammar,
@@ -53,6 +65,32 @@ def format_action(nonterminal: str,
                   is_string: bool = False,
                   is_number: bool = False,
                   keywords_to_uppercase: List[str] = None) -> str:
+    """
+    This function formats an action as it appears in models. It
+    splits productions based on the special `ws` and `wsp` rules,
+    which are used in grammars to denote whitespace, and then
+    rejoins these tokens a formatted, comma separated list.
+    Importantly, note that it `does not` split on spaces in
+    the grammar string, because these might not correspond
+    to spaces in the language the grammar recognises.
+
+    Parameters
+    ----------
+    nonterminal : ``str``, required.
+        The nonterminal in the action.
+    right_hand_side : ``str``, required.
+        The right hand side of the action
+        (i.e the thing which is produced).
+    is_string : ``bool``, optional (default = False).
+        Whether the production produces a string.
+        If it does, it is formatted as ``nonterminal -> ['string']``
+    is_number : ``bool``, optional, (default = False).
+        Whether the production produces a string.
+        If it does, it is formatted as ``nonterminal -> ['number']``
+    keywords_to_uppecase: ``List[str]``, optional, (default = None)
+        Keywords in the grammar to uppercase. In the case of sql,
+        this might be SELECT, MAX etc.
+    """
     keywords_to_uppercase = keywords_to_uppercase or []
     if right_hand_side.upper() in keywords_to_uppercase:
         right_hand_side = right_hand_side.upper()
@@ -65,7 +103,7 @@ def format_action(nonterminal: str,
 
     else:
         right_hand_side = right_hand_side.lstrip("(").rstrip(")")
-        child_strings = [token for token in re.split(" ws |ws | ws", right_hand_side) if token]
+        child_strings = [token for token in WHITESPACE_REGEX.split(right_hand_side) if token]
         child_strings = [tok.upper() if tok.upper() in keywords_to_uppercase else tok for tok in child_strings]
         return f"{nonterminal} -> [{', '.join(child_strings)}]"
 
@@ -79,7 +117,7 @@ def action_sequence_to_sql(action_sequences: List[str]) -> str:
         if nonterminal == 'statement':
             query.extend(right_hand_side_tokens)
         else:
-            for query_index, token in reversed(list(enumerate(query))):
+            for query_index, token in list(enumerate(query)):
                 if token == nonterminal:
                     query = query[:query_index] + \
                             right_hand_side_tokens + \
@@ -98,10 +136,17 @@ class SqlVisitor(NodeVisitor):
         sql_visitor = SqlVisitor(grammar_string)
         action_sequence = sql_visitor.parse(query)
 
+    Importantly, this ``SqlVisitor`` skips over ``ws`` and ``wsp`` nodes,
+    because they do not hold any meaning, and make an action sequence
+    much longer than it needs to be.
+
     Parameters
     ----------
     grammar : ``Grammar``
         A Grammar object that we use to parse the text.
+    keywords_to_uppecase: ``List[str]``, optional, (default = None)
+        Keywords in the grammar to uppercase. In the case of sql,
+        this might be SELECT, MAX etc.
     """
     def __init__(self, grammar: Grammar, keywords_to_uppercase: List[str] = None) -> None:
         self.action_sequence: List[str] = []
@@ -119,7 +164,7 @@ class SqlVisitor(NodeVisitor):
         """
         For each node, we accumulate the rules that generated its children in a list.
         """
-        if node.expr.name and node.expr.name != 'ws':
+        if node.expr.name and node.expr.name not in ['ws', 'wsp']:
             nonterminal = f'{node.expr.name} -> '
 
             if isinstance(node.expr, Literal):
@@ -128,14 +173,14 @@ class SqlVisitor(NodeVisitor):
             else:
                 child_strings = []
                 for child in node.__iter__():
-                    if child.expr.name == 'ws':
+                    if child.expr.name in ['ws', 'wsp']:
                         continue
                     if child.expr.name != '':
                         child_strings.append(child.expr.name)
                     else:
                         child_right_side_string = child.expr._as_rhs().lstrip("(").rstrip(")") # pylint: disable=protected-access
                         child_right_side_list = [tok for tok in
-                                                 re.split(" ws |ws | ws", child_right_side_string) if tok]
+                                                 WHITESPACE_REGEX.split(child_right_side_string) if tok]
                         child_right_side_list = [tok.upper() if tok.upper() in
                                                  self.keywords_to_uppercase else tok
                                                  for tok in child_right_side_list]
@@ -144,3 +189,27 @@ class SqlVisitor(NodeVisitor):
 
             rule = nonterminal + right_hand_side
             self.action_sequence = [rule] + self.action_sequence
+
+    @overrides
+    def visit(self, node):
+        """
+        See the ``NodeVisitor`` visit method. This just changes the order in which
+        we visit nonterminals from right to left to left to right.
+        """
+        method = getattr(self, 'visit_' + node.expr_name, self.generic_visit)
+
+        # Call that method, and show where in the tree it failed if it blows
+        # up.
+        try:
+            # Changing this to reverse here!
+            return method(node, [self.visit(child) for child in reversed(list(node))])
+        except (VisitationError, UndefinedLabel):
+            # Don't catch and re-wrap already-wrapped exceptions.
+            raise
+        except self.unwrapped_exceptions:
+            raise
+        except Exception: # pylint: disable=broad-except
+            # Catch any exception, and tack on a parse tree so it's easier to
+            # see where it went wrong.
+            exc_class, exc, traceback = exc_info()
+            reraise(VisitationError, VisitationError(exc, exc_class, node), traceback)

@@ -12,6 +12,7 @@ from allennlp.commands.predict import Predict
 from allennlp.commands.dry_run import DryRun
 from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.test_install import TestInstall
+from allennlp.commands.find_learning_rate import FindLearningRate
 from allennlp.commands.train import Train
 from allennlp.common.util import import_submodules
 
@@ -42,6 +43,7 @@ def main(prog: str = None,
             "fine-tune": FineTune(),
             "dry-run": DryRun(),
             "test-install": TestInstall(),
+            "find-lr": FindLearningRate(),
 
             # Superseded by overrides
             **subcommand_overrides

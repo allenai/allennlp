@@ -201,6 +201,8 @@ class Vocabulary(Registrable):
         the tokens to.  This is a way to be sure that certain items appear in your vocabulary,
         regardless of any other vocabulary computation.
     """
+    default_implementation = "default"
+
     def __init__(self,
                  counter: Dict[str, Dict[str, int]] = None,
                  min_count: Dict[str, int] = None,
@@ -270,7 +272,7 @@ class Vocabulary(Registrable):
         with codecs.open(os.path.join(directory, NAMESPACE_PADDING_FILE), 'r', 'utf-8') as namespace_file:
             non_padded_namespaces = [namespace_str.strip() for namespace_str in namespace_file]
 
-        vocab = Vocabulary(non_padded_namespaces=non_padded_namespaces)
+        vocab = cls(non_padded_namespaces=non_padded_namespaces)
 
         # Check every file in the directory.
         for namespace_filename in os.listdir(directory):
@@ -359,14 +361,14 @@ class Vocabulary(Registrable):
         for instance in Tqdm.tqdm(instances):
             instance.count_vocab_items(namespace_token_counts)
 
-        return Vocabulary(counter=namespace_token_counts,
-                          min_count=min_count,
-                          max_vocab_size=max_vocab_size,
-                          non_padded_namespaces=non_padded_namespaces,
-                          pretrained_files=pretrained_files,
-                          only_include_pretrained_words=only_include_pretrained_words,
-                          tokens_to_add=tokens_to_add,
-                          min_pretrained_embeddings=min_pretrained_embeddings)
+        return cls(counter=namespace_token_counts,
+                   min_count=min_count,
+                   max_vocab_size=max_vocab_size,
+                   non_padded_namespaces=non_padded_namespaces,
+                   pretrained_files=pretrained_files,
+                   only_include_pretrained_words=only_include_pretrained_words,
+                   tokens_to_add=tokens_to_add,
+                   min_pretrained_embeddings=min_pretrained_embeddings)
 
     # There's enough logic here to require a custom from_params.
     @classmethod
@@ -639,3 +641,7 @@ class Vocabulary(Registrable):
             # _retained_counter would be set only if instances were used for vocabulary construction.
             logger.info("Vocabulary statistics cannot be printed since " \
                         "dataset instances were not used for its construction.")
+
+
+# the tricky part is that `Vocabulary` is both the base class and the default implementation
+Vocabulary.register("default")(Vocabulary)

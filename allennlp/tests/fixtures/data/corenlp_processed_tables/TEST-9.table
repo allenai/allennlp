@@ -1,0 +1,79 @@
+row	col	id	content	tokens	lemmaTokens	posTags	nerTags	nerValues	number	date	num2	list	listId
+-1	0	fb:row.row.incumbent	Incumbent	incumbent	incumbent	JJ	O						
+-1	1	fb:row.row.reason_for_vacancy	Reason for Vacancy	reason|for|vacancy	reason|for|Vacancy	NN|IN|NNP	O|O|O	||					
+-1	2	fb:row.row.appointed_successor	Appointed Successor	appointed|successor	appoint|successor	VBN|NN	O|O	|					
+-1	3	fb:row.row.date_of_appointment	Date of Appointment	date|of|appointment	date|of|appointment	NN|IN|NN	O|O|O	||					
+-1	4	fb:row.row.elected_successor	Elected Successor	elected|successor	elect|successor	VBN|NN	O|O	|					
+-1	5	fb:row.row.date_of_election	Date of Election	date|of|election	date|of|election	NN|IN|NN	O|O|O	||					
+0	0	fb:cell.l_b_lindsay	L. B. Lindsay	l.|b.|lindsay	L.|B.|Lindsay	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				L. B. Lindsay	fb:part.l_b_lindsay
+0	1	fb:cell.disqualified_never_took_office	Disqualified, never took office	disqualified|,|never|took|office	disqualify|,|never|take|office	VBN|,|RB|VBD|NN	O|O|O|O|O	||||				Disqualified|never took office	fb:part.disqualified|fb:part.never_took_office
+0	2	fb:cell.henry_e_prickett	Henry E. Prickett	henry|e.|prickett	Henry|E.|Prickett	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				Henry E. Prickett	fb:part.henry_e_prickett
+0	3	fb:cell.november_19_1867	November 19, 1867	november|19|,|1867	November|19|,|1867	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1867-11-19|1867-11-19|1867-11-19|1867-11-19	191867.0	1867-11-19		November 19|1867	fb:part.november_19|fb:part.1867
+0	4	fb:cell.thomas_b_hart	Thomas B. Hart	thomas|b.|hart	Thomas|B.|Hart	NNP|NNP|NNP	PERSON|PERSON|PERSON	||					
+0	5	fb:cell.january_1868	January 1868	january|1868	January|1868	NNP|CD	DATE|DATE	1868-01|1868-01	1868.0	1868-01-xx		January 1868	fb:part.january_1868
+1	0	fb:cell.john_hailey	John Hailey	john|hailey	John|Hailey	NNP|NNP	PERSON|PERSON	|				John Hailey	fb:part.john_hailey
+1	1	fb:cell.never_took_office	Never took office	never|took|office	never|take|office	RB|VBD|NN	O|O|O	||				Never took office	fb:part.never_took_office
+1	2	fb:cell.charles_himrod	Charles Himrod	charles|himrod	Charles|Himrod	NNP|NNP	PERSON|PERSON	|				Charles Himrod	fb:part.charles_himrod
+1	3	fb:cell.july_10_1871	July 10, 1871	july|10|,|1871	July|10|,|1871	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1871-07-10|1871-07-10|1871-07-10|1871-07-10	101871.0	1871-07-10		July 10|1871	fb:part.july_10|fb:part.1871
+1	4	fb:cell.george_h_twitchell	George H. Twitchell	george|h.|twitchell	George|H.|Twitchell	NNP|NNP|NNP	PERSON|PERSON|PERSON	||					
+1	5	fb:cell.july_8_1872	July 8, 1872	july|8|,|1872	July|8|,|1872	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1872-07-08|1872-07-08|1872-07-08|1872-07-08	81872.0	1872-07-08		July 8|1872	fb:part.july_8|fb:part.1872
+2	0	fb:cell.sol_hasbrouck	Sol Hasbrouck	sol|hasbrouck	Sol|Hasbrouck	NNP|NNP	O|O	|				Sol Hasbrouck	fb:part.sol_hasbrouck
+2	1	fb:cell.resigned_november_5_1885	Resigned November 5, 1885	resigned|november|5|,|1885	resign|November|5|,|1885	VBN|NNP|CD|,|NNP	O|DATE|DATE|DATE|DATE	|1885-11-05|1885-11-05|1885-11-05|1885-11-05	51885.0			Resigned November 5|1885	fb:part.resigned_november_5|fb:part.1885
+2	2	fb:cell.james_w_huston	James W. Huston	james|w.|huston	James|W.|Huston	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				James W. Huston	fb:part.james_w_huston
+2	3	fb:cell.december_28_1885	December 28, 1885	december|28|,|1885	December|28|,|1885	NNP|CD|,|NNP	DATE|DATE|DATE|DATE	1885-12-28|1885-12-28|1885-12-28|1885-12-28	281885.0	1885-12-28		December 28|1885	fb:part.december_28|fb:part.1885
+2	4	fb:cell.peter_j_pefley	Peter J. Pefley	peter|j.|pefley	Peter|J.|Pefley	NNP|NNP|NNP	PERSON|PERSON|PERSON	||					
+2	5	fb:cell.july_1887	July 1887	july|1887	July|1887	NNP|CD	DATE|DATE	1887-07|1887-07	1887.0	1887-07-xx		July 1887	fb:part.july_1887
+3	0	fb:cell.harry_fritchman	Harry Fritchman	harry|fritchman	Harry|Fritchman	NNP|NNP	PERSON|PERSON	|				Harry Fritchman	fb:part.harry_fritchman
+3	1	fb:cell.resigned_may_25_1912	Resigned May 25, 1912	resigned|may|25|,|1912	resign|May|25|,|1912	VBN|VBD-AUX|CD|,|CD	O|DATE|DATE|DATE|DATE	|1912-05-25|1912-05-25|1912-05-25|1912-05-25	251912.0			Resigned May 25|1912	fb:part.resigned_may_25|fb:part.1912
+3	2	fb:cell.arthur_hodges	Arthur Hodges	arthur|hodges	Arthur|Hodges	NNP|NNP	PERSON|PERSON	|				Arthur Hodges	fb:part.arthur_hodges
+3	3	fb:cell.may_25_1912	May 25, 1912	may|25|,|1912	May|25|,|1912	VBD-AUX|CD|,|CD	DATE|DATE|DATE|DATE	1912-05-25|1912-05-25|1912-05-25|1912-05-25	251912.0	1912-05-25		May 25|1912	fb:part.may_25|fb:part.1912
+3	4	fb:cell.arthur_hodges	Arthur Hodges	arthur|hodges	Arthur|Hodges	NNP|NNP	PERSON|PERSON	|				Arthur Hodges	fb:part.arthur_hodges
+3	5	fb:cell.april_1_1913	April 1, 1913	april|1|,|1913	April|1|,|1913	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1913-04-01|1913-04-01|1913-04-01|1913-04-01	11913.0	1913-04-01		April 1|1913	fb:part.april_1|fb:part.1913
+4	0	fb:cell.j_w_robinson	J. W. Robinson	j.|w.|robinson	J.|W.|Robinson	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				J. W. Robinson	fb:part.j_w_robinson
+4	1	fb:cell.recalled_june_1_1916	Recalled June 1, 1916	recalled|june|1|,|1916	recall|June|1|,|1916	VBN|NNP|CD|,|CD	O|DATE|DATE|DATE|DATE	|1916-06-01|1916-06-01|1916-06-01|1916-06-01	11916.0			Recalled June 1|1916	fb:part.recalled_june_1|fb:part.1916
+4	2	fb:cell.s_h_hays	S. H. Hays	s.|h.|hays	S.|H.|Hays	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				S. H. Hays	fb:part.s_h_hays
+4	3	fb:cell.june_6_1916	June 6, 1916	june|6|,|1916	June|6|,|1916	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1916-06-06|1916-06-06|1916-06-06|1916-06-06	61916.0	1916-06-06		June 6|1916	fb:part.june_6|fb:part.1916
+4	4	fb:cell.s_h_hays	S. H. Hays	s.|h.|hays	S.|H.|Hays	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				S. H. Hays	fb:part.s_h_hays
+4	5	fb:cell.april_1917	April 1917	april|1917	April|1917	NNP|CD	DATE|DATE	1917-04|1917-04	1917.0	1917-04-xx		April 1917	fb:part.april_1917
+5	0	fb:cell.herbert_f_lemp	Herbert F. Lemp	herbert|f.|lemp	Herbert|F.|Lemp	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				Herbert F. Lemp	fb:part.herbert_f_lemp
+5	1	fb:cell.died_may_6_1927	Died May 6, 1927	died|may|6|,|1927	die|May|6|,|1927	VBN|VBD-AUX|CD|,|CD	O|DATE|DATE|DATE|DATE	|1927-05-06|1927-05-06|1927-05-06|1927-05-06	61927.0			Died May 6|1927	fb:part.died_may_6|fb:part.1927
+5	2	fb:cell.walter_f_hansen	Walter F. Hansen	walter|f.|hansen	Walter|F.|Hansen	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				Walter F. Hansen	fb:part.walter_f_hansen
+5	3	fb:cell.may_6_1927	May 6, 1927	may|6|,|1927	May|6|,|1927	VBD-AUX|CD|,|CD	DATE|DATE|DATE|DATE	1927-05-06|1927-05-06|1927-05-06|1927-05-06	61927.0	1927-05-06		May 6|1927	fb:part.may_6|fb:part.1927
+5	4	fb:cell.james_p_pope	James P. Pope	james|p.|pope	James|P.|Pope	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				James P. Pope	fb:part.james_p_pope
+5	5	fb:cell.april_1929	April 1929	april|1929	April|1929	NNP|CD	DATE|DATE	1929-04|1929-04	1929.0	1929-04-xx		April 1929	fb:part.april_1929
+6	0	fb:cell.james_p_pope	James P. Pope	james|p.|pope	James|P.|Pope	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				James P. Pope	fb:part.james_p_pope
+6	1	fb:cell.resigned_february_13_1933	Resigned February 13, 1933	resigned|february|13|,|1933	resign|February|13|,|1933	VBN|NNP|CD|,|CD	O|DATE|DATE|DATE|DATE	|1933-02-13|1933-02-13|1933-02-13|1933-02-13	131933.0			Resigned February 13|1933	fb:part.resigned_february_13|fb:part.1933
+6	2	fb:cell.ross_cady	Ross Cady	ross|cady	Ross|Cady	NNP|NNP	PERSON|PERSON	|				Ross Cady	fb:part.ross_cady
+6	3	fb:cell.february_13_1933	February 13, 1933	february|13|,|1933	February|13|,|1933	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1933-02-13|1933-02-13|1933-02-13|1933-02-13	131933.0	1933-02-13		February 13|1933	fb:part.february_13|fb:part.1933
+6	4	fb:cell.j_j_mccue	J. J. McCue	j.|j.|mccue	J.|J.|McCue	NNP|NNP|NNP	PERSON|PERSON|PERSON	||					
+6	5	fb:cell.april_1933	April 1933	april|1933	April|1933	NNP|CD	DATE|DATE	1933-04|1933-04	1933.0	1933-04-xx		April 1933	fb:part.april_1933
+7	0	fb:cell.byron_e_hyatt	Byron E. Hyatt	byron|e.|hyatt	Byron|E.|Hyatt	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				Byron E. Hyatt	fb:part.byron_e_hyatt
+7	1	fb:cell.died_november_11_1936	Died November 11, 1936	died|november|11|,|1936	die|November|11|,|1936	VBN|NNP|CD|,|CD	O|DATE|DATE|DATE|DATE	|1936-11-11|1936-11-11|1936-11-11|1936-11-11	111936.0			Died November 11|1936	fb:part.died_november_11|fb:part.1936
+7	2	fb:cell.j_l_edlefsen	J. L. Edlefsen	j.|l.|edlefsen	J.|L.|Edlefsen	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				J. L. Edlefsen	fb:part.j_l_edlefsen
+7	3	fb:cell.november_11_1936	November 11, 1936	november|11|,|1936	November|11|,|1936	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1936-11-11|1936-11-11|1936-11-11|1936-11-11	111936.0	1936-11-11		November 11|1936	fb:part.november_11|fb:part.1936
+7	4	fb:cell.j_l_edlefsen	J. L. Edlefsen	j.|l.|edlefsen	J.|L.|Edlefsen	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				J. L. Edlefsen	fb:part.j_l_edlefsen
+7	5	fb:cell.april_1937	April 1937	april|1937	April|1937	NNP|CD	DATE|DATE	1937-04|1937-04	1937.0	1937-04-xx		April 1937	fb:part.april_1937
+8	0	fb:cell.h_w_whillock	H. W. Whillock	h.|w.|whillock	H.|W.|Whillock	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				H. W. Whillock	fb:part.h_w_whillock
+8	1	fb:cell.resigned_may_11_1942	Resigned May 11, 1942	resigned|may|11|,|1942	resign|May|11|,|1942	VBN|VBD-AUX|CD|,|CD	O|DATE|DATE|DATE|DATE	|1942-05-11|1942-05-11|1942-05-11|1942-05-11	111942.0			Resigned May 11|1942	fb:part.resigned_may_11|fb:part.1942
+8	2	fb:cell.austin_walker	Austin Walker	austin|walker	Austin|Walker	NNP|NNP	PERSON|PERSON	|				Austin Walker	fb:part.austin_walker
+8	3	fb:cell.may_11_1942	May 11, 1942	may|11|,|1942	May|11|,|1942	VBD-AUX|CD|,|CD	DATE|DATE|DATE|DATE	1942-05-11|1942-05-11|1942-05-11|1942-05-11	111942.0	1942-05-11		May 11|1942	fb:part.may_11|fb:part.1942
+8	4	fb:cell.austin_walker	Austin Walker	austin|walker	Austin|Walker	NNP|NNP	PERSON|PERSON	|				Austin Walker	fb:part.austin_walker
+8	5	fb:cell.april_1943	April 1943	april|1943	April|1943	NNP|CD	DATE|DATE	1943-04|1943-04	1943.0	1943-04-xx		April 1943	fb:part.april_1943
+9	0	fb:cell.austin_walker_sam_s_griffin	Austin Walker\nSam S. Griffin	austin|walker|sam|s.|griffin	Austin|Walker|Sam|S.|Griffin	NNP|NNP|NNP|NNP|NNP	PERSON|PERSON|PERSON|PERSON|PERSON	||||				Austin Walker|Sam S. Griffin	fb:part.austin_walker|fb:part.sam_s_griffin
+9	1	fb:cell.died_october_31_1945_resigned_february_25_1946	Died October 31, 1945\nResigned February 25, 1946	died|october|31|,|1945|resigned|february|25|,|1946	die|October|31|,|1945|resign|February|25|,|1946	VBN|NNP|CD|,|CD|VBD|NNP|CD|,|CD	O|DATE|DATE|DATE|DATE|O|DATE|DATE|DATE|DATE	|1945-10-31|1945-10-31|1945-10-31|1945-10-31||1946-02-25|1946-02-25|1946-02-25|1946-02-25	311945.0		251946.0	Died October 31|1945|Resigned February 25|1946	fb:part.died_october_31|fb:part.1945|fb:part.resigned_february_25|fb:part.1946
+9	2	fb:cell.sam_s_griffin_h_w_whillock	Sam S. Griffin\nH. W. Whillock	sam|s.|griffin|h.|w.|whillock	Sam|S.|Griffin|H.|W.|Whillock	NNP|NNP|NNP|NNP|NNP|NNP	PERSON|PERSON|PERSON|PERSON|PERSON|PERSON	|||||				Sam S. Griffin|H. W. Whillock	fb:part.sam_s_griffin|fb:part.h_w_whillock
+9	3	fb:cell.october_31_1945_february_25_1946	October 31, 1945\nFebruary 25, 1946	october|31|,|1945|february|25|,|1946	October|31|,|1945|February|25|,|1946	NNP|CD|,|CD|NNP|CD|,|CD	DATE|DATE|DATE|DATE|DATE|DATE|DATE|DATE	1945-10-31|1945-10-31|1945-10-31|1945-10-31|1945-10-31|1945-10-31|1945-10-31|1945-10-31	311945.0	1945-10-31	251946.0	October 31|1945|February 25|1946	fb:part.october_31|fb:part.1945|fb:part.february_25|fb:part.1946
+9	4	fb:cell.potter_p_howard	Potter P. Howard	potter|p.|howard	Potter|P.|Howard	NNP|NNP|NNP	PERSON|PERSON|PERSON	||					
+9	5	fb:cell.april_1947	April 1947	april|1947	April|1947	NNP|CD	DATE|DATE	1947-04|1947-04	1947.0	1947-04-xx		April 1947	fb:part.april_1947
+10	0	fb:cell.dirk_kempthorne	Dirk Kempthorne	dirk|kempthorne	Dirk|Kempthorne	NNP|NNP	PERSON|PERSON	|				Dirk Kempthorne	fb:part.dirk_kempthorne
+10	1	fb:cell.resigned_january_5_1993	Resigned January 5, 1993	resigned|january|5|,|1993	resign|January|5|,|1993	VBN|NNP|CD|,|CD	O|DATE|DATE|DATE|DATE	|1993-01-05|1993-01-05|1993-01-05|1993-01-05	51993.0			Resigned January 5|1993	fb:part.resigned_january_5|fb:part.1993
+10	2	fb:cell.h_brent_coles	H. Brent Coles	h.|brent|coles	H.|Brent|Coles	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				H. Brent Coles	fb:part.h_brent_coles
+10	3	fb:cell.january_5_1993	January 5, 1993	january|5|,|1993	January|5|,|1993	NNP|CD|,|CD	DATE|DATE|DATE|DATE	1993-01-05|1993-01-05|1993-01-05|1993-01-05	51993.0	1993-01-05		January 5|1993	fb:part.january_5|fb:part.1993
+10	4	fb:cell.h_brent_coles	H. Brent Coles	h.|brent|coles	H.|Brent|Coles	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				H. Brent Coles	fb:part.h_brent_coles
+10	5	fb:cell.november_1993	November 1993	november|1993	November|1993	NNP|CD	DATE|DATE	1993-11|1993-11	1993.0	1993-11-xx		November 1993	fb:part.november_1993
+11	0	fb:cell.h_brent_coles	H. Brent Coles	h.|brent|coles	H.|Brent|Coles	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				H. Brent Coles	fb:part.h_brent_coles
+11	1	fb:cell.resigned_february_15_2003	Resigned February 15, 2003	resigned|february|15|,|2003	resign|February|15|,|2003	VBN|NNP|CD|,|CD	O|DATE|DATE|DATE|DATE	|2003-02-15|2003-02-15|2003-02-15|2003-02-15	152003.0			Resigned February 15|2003	fb:part.resigned_february_15|fb:part.2003
+11	2	fb:cell.carolyn_terteling_payne	Carolyn Terteling-Payne	carolyn|terteling|payne	Carolyn|Terteling|Payne	NNP|NNP|NNP	PERSON|PERSON|PERSON	||				Carolyn Terteling-Payne	fb:part.carolyn_terteling_payne
+11	3	fb:cell.february_18_2003	February 18, 2003	february|18|,|2003	February|18|,|2003	NNP|CD|,|CD	DATE|DATE|DATE|DATE	2003-02-18|2003-02-18|2003-02-18|2003-02-18	182003.0	2003-02-18		February 18|2003	fb:part.february_18|fb:part.2003
+11	4	fb:cell.david_h_bieter	David H. Bieter	david|h.|bieter	David|H.|Bieter	NNP|NNP|NNP	PERSON|PERSON|PERSON	||					
+11	5	fb:cell.november_2003	November 2003	november|2003	November|2003	NNP|CD	DATE|DATE	2003-11|2003-11	2003.0	2003-11-xx		November 2003	fb:part.november_2003

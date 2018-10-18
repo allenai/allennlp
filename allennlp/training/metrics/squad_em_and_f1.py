@@ -2,7 +2,7 @@ from typing import Tuple
 
 from overrides import overrides
 
-from allennlp.common import squad_eval
+from allennlp.tools import squad_eval
 from allennlp.training.metrics.metric import Metric
 
 
