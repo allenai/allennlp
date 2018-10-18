@@ -153,15 +153,15 @@ class Text2SqlParser(Model):
         else:
             target_mask = None
 
+        outputs: Dict[str, Any] = {}
         if action_sequence is not None:
             # target_action_sequence is of shape (batch_size, 1, target_sequence_length)
             # here after we unsqueeze it for the MML trainer.
-            outputs = self._decoder_trainer.decode(initial_state,
-                                                   self._transition_function,
-                                                   (action_sequence.unsqueeze(1),
-                                                    target_mask.unsqueeze(1)))
-        else:
-            outputs: Dict[str, Any] = {}
+            loss_output = self._decoder_trainer.decode(initial_state,
+                                                       self._transition_function,
+                                                       (action_sequence.unsqueeze(1),
+                                                        target_mask.unsqueeze(1)))
+            outputs.update(loss_output)
 
         if not self.training:
             action_mapping = []

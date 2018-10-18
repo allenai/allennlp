@@ -264,8 +264,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
     def _get_checklist_info(self,
                             agenda: torch.LongTensor,
                             all_actions: List[ProductionRule]) -> Tuple[torch.Tensor,
-                                                                             torch.Tensor,
-                                                                             torch.Tensor]:
+                                                                        torch.Tensor,
+                                                                        torch.Tensor]:
         """
         Takes an agenda and a list of all actions and returns a target checklist against which the
         checklist at each state will be compared to compute a loss, indices of ``terminal_actions``,
