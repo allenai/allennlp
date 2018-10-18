@@ -87,10 +87,9 @@ class Text2SqlParser(Model):
         # the padding value used by IndexField
         self._action_padding_index = -1
         num_actions = vocab.get_vocab_size("rule_labels")
+        input_action_dim = action_embedding_dim
         if self._add_action_bias:
-            input_action_dim = action_embedding_dim + 1
-        else:
-            input_action_dim = action_embedding_dim
+            input_action_dim += 1
         self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=input_action_dim)
         self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
 
@@ -98,8 +97,6 @@ class Text2SqlParser(Model):
         # previous action, or a previous utterance attention.
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
         self._first_attended_utterance = torch.nn.Parameter(torch.FloatTensor(encoder.get_output_dim()))
-        torch.nn.init.normal_(self._first_action_embedding)
-        torch.nn.init.normal_(self._first_attended_utterance)
 
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
