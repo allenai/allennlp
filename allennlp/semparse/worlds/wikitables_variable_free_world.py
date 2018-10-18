@@ -144,7 +144,7 @@ class WikiTablesVariableFreeWorld(World):
 
     @overrides
     def get_basic_types(self) -> Set[Type]:
-        basic_types = types.BASIC_TYPES
+        basic_types = set(types.BASIC_TYPES)
         if self._table_has_string_columns:
             basic_types.add(types.STRING_COLUMN_TYPE)
         if self._table_has_date_columns:

@@ -107,7 +107,7 @@ class World:
         # Caching this to avoid recompting it every time `get_valid_actions` is called.
         self._valid_actions: Dict[str, List[str]] = None
         # Caching this to avoid recompting it every time `get_multi_match_mapping` is called.
-        self._multi_match_mapping: Dict[str, List[str]] = None
+        self._multi_match_mapping: Dict[Type, List[Type]] = None
 
     def get_name_mapping(self) -> Dict[str, str]:
         # Python 3.5 syntax for merging two dictionaries.
@@ -130,11 +130,13 @@ class World:
 
     def get_valid_actions(self) -> Dict[str, List[str]]:
         if not self._valid_actions:
+            multi_match_mapping = self.get_multi_match_mapping()
             self._valid_actions = types.get_valid_actions(self.get_name_mapping(),
                                                           self.get_type_signatures(),
                                                           self.get_basic_types(),
                                                           valid_starting_types=self.get_valid_starting_types(),
-                                                          num_nested_lambdas=self._num_nested_lambdas)
+                                                          num_nested_lambdas=self._num_nested_lambdas,
+                                                          multi_match_mapping=multi_match_mapping)
         return self._valid_actions
 
     def get_paths_to_root(self,
@@ -223,17 +225,26 @@ class World:
         """
         raise NotImplementedError
 
-    def get_multi_match_mapping(self) -> Dict[str, List[str]]:
+    def get_multi_match_mapping(self) -> Dict[Type, List[Type]]:
         """
         Returns a mapping from each `MultiMatchNamedBasicType` to all the `NamedBasicTypes` that it
         matches.
         """
         if self._multi_match_mapping is None:
             self._multi_match_mapping = {}
-            for basic_type in self.get_basic_types():
+            basic_types = self.get_basic_types()
+            for basic_type in basic_types:
                 if isinstance(basic_type, types.MultiMatchNamedBasicType):
-                    self._multi_match_mapping[str(basic_type)] = [str(matched_type) for matched_type
-                                                                  in basic_type.types_to_match]
+                    matched_types: List[str] = []
+                    # We need to check if each type in the `types_to_match` field for the given
+                    # MultiMatchNamedBasic type is itself in the set of basic types allowed in this
+                    # world, and add it to the mapping only if it is. Some basic types that the
+                    # multi match type can match with may be diallowed in the world due to the
+                    # instance-specific context.
+                    for type_ in basic_type.types_to_match:
+                        if type_ in basic_types:
+                            matched_types.append(type_)
+                    self._multi_match_mapping[basic_type] = matched_types
         return self._multi_match_mapping
 
     def parse_logical_form(self,
@@ -341,7 +352,8 @@ class World:
         left_side, right_side = remaining_actions.pop(0)
         if left_side != current_node.label():
             mismatch = True
-            multi_match_mapping = self.get_multi_match_mapping()
+            multi_match_mapping = {str(key): [str(value) for value in values] for key,
+                                   values in self.get_multi_match_mapping().items()}
             current_label = current_node.label()
             if current_label in multi_match_mapping and left_side in multi_match_mapping[current_label]:
                 mismatch = False

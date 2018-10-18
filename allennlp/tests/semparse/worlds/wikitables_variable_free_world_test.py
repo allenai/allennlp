@@ -34,7 +34,6 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
     def test_get_valid_actions_returns_correct_set(self):
         # This test is long, but worth it.  These are all of the valid actions in the grammar, and
         # we want to be sure they are what we expect.
-
         valid_actions = self.world_with_2013.get_valid_actions()
         assert set(valid_actions.keys()) == {
                 "<r,<g,s>>",
@@ -139,6 +138,95 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
                                  '[<r,<f,<n,r>>>, r, f, n]',
                                  '[<r,<t,<s,r>>>, r, t, s]',
                                  '[<r,r>, r]'])
+
+    def test_get_valid_actions_in_world_without_number_columns(self):
+        question_tokens = [Token(x) for x in ['what', 'was', 'the', 'first', 'title', '?']]
+        table_file = self.FIXTURES_ROOT / 'data' / 'corenlp_processed_tables' / 'TEST-6.table'
+        table_context = TableQuestionContext.read_from_file(table_file, question_tokens)
+        # The table does not have a number column.
+        assert "number" not in table_context.column_types.values()
+        world = WikiTablesVariableFreeWorld(table_context)
+        actions = world.get_valid_actions()
+        assert set(actions.keys()) == {
+                "<r,<g,s>>",
+                "<r,<c,r>>",
+                "<r,<g,r>>",
+                "<r,<t,<s,r>>>",
+                "<n,<n,<n,d>>>",
+                "<r,<m,<d,r>>>",
+                "<r,r>",
+                "<r,n>",
+                "d",
+                "n",
+                "s",
+                "m",
+                "t",
+                "r",
+                "@start@",
+                }
+        assert set([str(type_) for type_ in world.get_basic_types()]) == {'n', 'd', 's', 'r', 't',
+                                                                          'm', 'g', 'c'}
+        check_productions_match(actions['s'],
+                                ['[<r,<g,s>>, r, m]',
+                                 '[<r,<g,s>>, r, t]'])
+
+    def test_get_valid_actions_in_world_without_date_columns(self):
+        question_tokens = [Token(x) for x in ['what', 'was', 'the', 'first', 'title', '?']]
+        table_file = self.FIXTURES_ROOT / 'data' / 'corenlp_processed_tables' / 'TEST-4.table'
+        table_context = TableQuestionContext.read_from_file(table_file, question_tokens)
+        # The table does not have a date column.
+        assert "date" not in table_context.column_types.values()
+        world = WikiTablesVariableFreeWorld(table_context)
+        actions = world.get_valid_actions()
+        assert set(actions.keys()) == {
+                "<r,<g,s>>",
+                "<r,<f,<n,r>>>",
+                "<r,<c,r>>",
+                "<r,<g,r>>",
+                "<r,<r,<f,n>>>",
+                "<r,<t,<s,r>>>",
+                "<n,<n,<n,d>>>",
+                "<r,<f,n>>",
+                "<r,r>",
+                "<r,n>",
+                "d",
+                "n",
+                "s",
+                "t",
+                "f",
+                "r",
+                "@start@",
+                }
+        assert set([str(type_) for type_ in world.get_basic_types()]) == {'n', 'd', 's', 'r', 't',
+                                                                          'f', 'g', 'c'}
+        check_productions_match(actions['s'],
+                                ['[<r,<g,s>>, r, f]',
+                                 '[<r,<g,s>>, r, t]'])
+
+    def test_get_valid_actions_in_world_without_comparable_columns(self):
+        question_tokens = [Token(x) for x in ['what', 'was', 'the', 'first', 'title', '?']]
+        table_file = self.FIXTURES_ROOT / 'data' / 'corenlp_processed_tables' / 'TEST-1.table'
+        table_context = TableQuestionContext.read_from_file(table_file, question_tokens)
+        # The table does not have date or number columns.
+        assert "date" not in table_context.column_types.values()
+        assert "number" not in table_context.column_types.values()
+        world = WikiTablesVariableFreeWorld(table_context)
+        actions = world.get_valid_actions()
+        assert set(actions.keys()) == {
+                "<r,<g,s>>",
+                "<r,<g,r>>",
+                "<r,<t,<s,r>>>",
+                "<n,<n,<n,d>>>",
+                "<r,r>",
+                "<r,n>",
+                "d",
+                "n",
+                "s",
+                "t",
+                "r",
+                "@start@",
+                }
+        assert set([str(type_) for type_ in world.get_basic_types()]) == {'n', 'd', 's', 'r', 't', 'g'}
 
     def test_parsing_logical_form_with_string_not_in_question_fails(self):
         logical_form_with_usl_a_league = """(select (filter_in all_rows string_column:league usl_a_league)
