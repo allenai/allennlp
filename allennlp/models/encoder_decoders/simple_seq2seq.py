@@ -285,28 +285,22 @@ class SimpleSeq2Seq(Model):
         # Either way, we don't have to process it.
         num_decoding_steps = target_sequence_length - 1
 
-        last_predictions = None
+        # Initialize target predictions with the start index.
+        # shape: (batch_size,)
+        last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index)
+
         step_logits: List[torch.Tensor] = []
         step_probabilities: List[torch.Tensor] = []
         step_predictions: List[torch.Tensor] = []
         for timestep in range(num_decoding_steps):
-            use_gold_targets = True
             # Use gold tokens at test time and at a rate of 1 - _scheduled_sampling_ratio
             # during training.
             if self.training and torch.rand(1).item() < self._scheduled_sampling_ratio:
-                use_gold_targets = False
-
-            if use_gold_targets:
+                # shape: (batch_size,)
+                input_choices = last_predictions
+            else:
                 # shape: (batch_size,)
                 input_choices = targets[:, timestep]
-            else:
-                if timestep == 0:
-                    # For the first timestep, when we do not have targets, we input start symbols.
-                    # shape: (batch_size,)
-                    input_choices = source_mask.new_full((batch_size,), fill_value=self._start_index)
-                else:
-                    # shape: (batch_size,)
-                    input_choices = last_predictions
 
             # shape: (batch_size, num_classes)
             output_projections, state = self._prepare_output_projections(input_choices, state)
