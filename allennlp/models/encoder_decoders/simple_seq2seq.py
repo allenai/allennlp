@@ -9,7 +9,9 @@ from torch.nn.modules.rnn import LSTMCell
 
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data.vocabulary import Vocabulary
+from allennlp.modules.attention import LegacyAttention
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.models.model import Model
 from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
@@ -35,8 +37,8 @@ class SimpleSeq2Seq(Model):
         Embedder for source side sequences
     encoder : ``Seq2SeqEncoder``, required
         The encoder of the "encoder/decoder" model
-    attention : ``Attention``, required
-        The attention function to apply over inputs.
+    max_decoding_steps : ``int``
+        Maximum length of decoded sequences.
     target_namespace : ``str``, optional (default = 'target_tokens')
         If the target side vocabulary is different from the source side's, you need to specify the
         target's namespace here. If not, we'll assume it is "tokens", which is also the default
@@ -44,8 +46,13 @@ class SimpleSeq2Seq(Model):
     target_embedding_dim : ``int``, optional (default = source_embedding_dim)
         You can specify an embedding dimensionality for the target side. If not, we'll use the same
         value as the source embedder's.
-    max_decoding_steps : ``int``
-        Maximum length of decoded sequences.
+    attention : ``Attention``, optional (default = None)
+        If you want to use attention to get a dynamic summary of the encoder outputs at each step
+        of decoding, this is the function used to compute similarity between the decoder hidden
+        state and encoder outputs.
+    attention_function: ``SimilarityFunction``, optional (default = None)
+        This is if you want to use the legacy implementation of attention. This will be deprecated
+        since it consumes more memory than the specialized attention modules.
     beam_size : ``int``, optional (default = 5)
         Width of the beam for beam search.
     scheduled_sampling_ratio : ``float``, optional (default = 0.)
@@ -62,8 +69,9 @@ class SimpleSeq2Seq(Model):
                  vocab: Vocabulary,
                  source_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
-                 attention: Attention,
                  max_decoding_steps: int,
+                 attention: Attention = None,
+                 attention_function: SimilarityFunction = None,
                  beam_size: int = 5,
                  target_namespace: str = "tokens",
                  target_embedding_dim: int = None,
@@ -86,7 +94,12 @@ class SimpleSeq2Seq(Model):
         num_classes = self.vocab.get_vocab_size(self._target_namespace)
 
         # Attention mechanism applied to the encoder output for each step.
-        self._attention = attention
+        if attention:
+            self._attention = attention
+        elif attention_function:
+            self._attention = LegacyAttention(attention_function)
+        else:
+            self._attention = None
 
         # Dense embedding of vocab words in the target space.
         target_embedding_dim = target_embedding_dim or source_embedder.get_output_dim()
@@ -94,25 +107,26 @@ class SimpleSeq2Seq(Model):
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with the final hidden state of the encoder.
-        self.encoder_output_dim = self._encoder.get_output_dim()
-        self.decoder_output_dim = self.encoder_output_dim
+        self._encoder_output_dim = self._encoder.get_output_dim()
+        self._decoder_output_dim = self._encoder_output_dim
 
-        # We arbitrarily set the decoder's input dimension to be the same as the output dimension.
-        self.decoder_input_dim = self.decoder_output_dim
-
-        # Our decoder input will be the concatenation of the decoder hidden state and the previous
-        # action embedding, and we'll project that down to the decoder's input dimension.
-        self._input_projection_layer = \
-            Linear(self.decoder_output_dim + target_embedding_dim, self.decoder_input_dim)
+        if self._attention:
+            # If using attention, a weighted average over encoder outputs will be concatenated
+            # to the previous target embedding to form the input to the decoder at each
+            # time step.
+            self._decoder_input_dim = self._decoder_output_dim + target_embedding_dim
+        else:
+            # Otherwise, the input to the decoder is just the previous target embedding.
+            self._decoder_input_dim = target_embedding_dim
 
         # We'll use an LSTM cell as the recurrent cell that produces a hidden state
         # for the decoder at each time step.
         # TODO (pradeep): Do not hardcode decoder cell type.
-        self._decoder_cell = LSTMCell(self.decoder_input_dim, self.decoder_output_dim)
+        self._decoder_cell = LSTMCell(self._decoder_input_dim, self._decoder_output_dim)
 
         # We project the hidden state from the decoder into the output vocabulary space
         # in order to get log probabilities of each target token, at each time step.
-        self._output_projection_layer = Linear(self.decoder_output_dim, num_classes)
+        self._output_projection_layer = Linear(self._decoder_output_dim, num_classes)
 
         # At prediction time, we use a beam search to find the most likely sequence of target tokens.
         self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
@@ -242,7 +256,7 @@ class SimpleSeq2Seq(Model):
         decoder_hidden = final_encoder_output
 
         # shape: (batch_size, decoder_output_dim)
-        decoder_context = encoder_outputs.new_zeros(batch_size, self.decoder_output_dim)
+        decoder_context = encoder_outputs.new_zeros(batch_size, self._decoder_output_dim)
 
         state = {
                 "source_mask": source_mask,
@@ -372,11 +386,15 @@ class SimpleSeq2Seq(Model):
         # shape: (group_size, target_embedding_dim)
         embedded_input = self._target_embedder(last_predictions)
 
-        # shape: (group_size, encoder_output_dim)
-        attended_input = self._prepare_attended_input(decoder_hidden, encoder_outputs, source_mask)
+        if self._attention:
+            # shape: (group_size, encoder_output_dim)
+            attended_input = self._prepare_attended_input(decoder_hidden, encoder_outputs, source_mask)
 
-        # shape: (group_size, decoder_input_dim)
-        decoder_input = self._input_projection_layer(torch.cat((attended_input, embedded_input), -1))
+            # shape: (group_size, decoder_output_dim + target_embedding_dim)
+            decoder_input = torch.cat((attended_input, embedded_input), -1)
+        else:
+            # shape: (group_size, target_embedding_dim)
+            decoder_input = embedded_input
 
         # shape (decoder_hidden): (batch_size, decoder_output_dim)
         # shape (decoder_context): (batch_size, decoder_output_dim)
