@@ -196,9 +196,9 @@ class SimpleSeq2Seq(Model):
         state = self._init_encoded_state(source_tokens)
 
         if target_tokens:
-            return self._forward_train(target_tokens, state)
+            return self._forward_loop(target_tokens, state)
 
-        return self._forward_predict(state)
+        return self._forward_beam_search(state)
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -216,17 +216,18 @@ class SimpleSeq2Seq(Model):
         if not isinstance(predicted_indices, numpy.ndarray):
             predicted_indices = predicted_indices.detach().cpu().numpy()
         all_predicted_tokens = []
-        for top_k in predicted_indices:
-            top_k_tokens = []
-            for indices in top_k:
-                indices = list(indices)
-                # Collect indices till the first end_symbol
-                if self._end_index in indices:
-                    indices = indices[:indices.index(self._end_index)]
-                predicted_tokens = [self.vocab.get_token_from_index(x, namespace=self._target_namespace)
-                                    for x in indices]
-                top_k_tokens.append(predicted_tokens)
-            all_predicted_tokens.append(top_k_tokens)
+        for indices in predicted_indices:
+            # Beam search gives us the top k results for each source sentence in the batch
+            # but we just want the single best.
+            if len(indices.shape) > 1:
+                indices = indices[0]
+            indices = list(indices)
+            # Collect indices till the first end_symbol
+            if self._end_index in indices:
+                indices = indices[:indices.index(self._end_index)]
+            predicted_tokens = [self.vocab.get_token_from_index(x, namespace=self._target_namespace)
+                                for x in indices]
+            all_predicted_tokens.append(predicted_tokens)
         output_dict["predicted_tokens"] = all_predicted_tokens
         return output_dict
 
@@ -268,9 +269,9 @@ class SimpleSeq2Seq(Model):
         return state
 
 
-    def _forward_train(self,
-                       target_tokens: Dict[str, torch.LongTensor],
-                       state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def _forward_loop(self,
+                      target_tokens: Dict[str, torch.LongTensor],
+                      state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Make forward pass during training."""
         # shape: (batch_size, max_input_sequence_length)
         source_mask = state["source_mask"]
@@ -350,7 +351,7 @@ class SimpleSeq2Seq(Model):
 
         return output_dict
 
-    def _forward_predict(self, state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def _forward_beam_search(self, state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Make forward pass during prediction using a beam search."""
         batch_size = state["source_mask"].size()[0]
         start_predictions = state["source_mask"].new_full((batch_size,), fill_value=self._start_index)
