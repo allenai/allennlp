@@ -13,10 +13,10 @@ from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_ha
 
 GRAMMAR_DICTIONARY = {}
 GRAMMAR_DICTIONARY["statement"] = ['(query ws ";")', '(query ws)']
-GRAMMAR_DICTIONARY["query"] = ['(ws select_core ws groupby_clause ws orderby_clause ws limit)',
+GRAMMAR_DICTIONARY["query"] = ['(ws select_core ws groupby_clause ws orderby_clause ws "LIMIT" ws number)',
                                '(ws select_core ws groupby_clause ws orderby_clause)',
-                               '(ws select_core ws groupby_clause ws limit)',
-                               '(ws select_core ws orderby_clause ws limit)',
+                               '(ws select_core ws groupby_clause ws "LIMIT" ws number)',
+                               '(ws select_core ws orderby_clause ws ws "LIMIT" ws number)',
                                '(ws select_core ws groupby_clause)',
                                '(ws select_core ws orderby_clause)',
                                '(ws select_core)']
@@ -27,7 +27,8 @@ GRAMMAR_DICTIONARY["select_core"] = ['(select_with_distinct ws select_results ws
                                      '(select_with_distinct ws select_results)']
 GRAMMAR_DICTIONARY["select_with_distinct"] = ['(ws "SELECT" ws "DISTINCT")', '(ws "SELECT")']
 GRAMMAR_DICTIONARY["select_results"] = ['(ws select_result ws "," ws select_results)', '(ws select_result)']
-GRAMMAR_DICTIONARY["select_result"] = ['"*"', '(table_name ws ".*")', '(expr ws "AS" wsp name)', 'expr', '(col_ref ws "AS" wsp name)']
+GRAMMAR_DICTIONARY["select_result"] = ['"*"', '(table_name ws ".*")',
+                                       '(expr ws "AS" wsp name)', 'expr', '(col_ref ws "AS" wsp name)']
 
 GRAMMAR_DICTIONARY["from_clause"] = ['ws "FROM" ws source']
 GRAMMAR_DICTIONARY["source"] = ['(ws single_source ws "," ws source)', '(ws single_source)']
@@ -46,7 +47,6 @@ GRAMMAR_DICTIONARY["orderby_clause"] = ['ws "ORDER" ws "BY" ws order_clause']
 GRAMMAR_DICTIONARY["order_clause"] = ['(ordering_term ws "," ws order_clause)', 'ordering_term']
 GRAMMAR_DICTIONARY["ordering_term"] = ['(ws expr ws ordering)', '(ws expr)']
 GRAMMAR_DICTIONARY["ordering"] = ['(ws "ASC")', '(ws "DESC")']
-GRAMMAR_DICTIONARY["limit"] = ['ws "LIMIT" ws number']
 
 GRAMMAR_DICTIONARY["col_ref"] = ['(table_name ws "." ws column_name)', 'table_name']
 GRAMMAR_DICTIONARY["table_name"] = ['name']
@@ -55,18 +55,24 @@ GRAMMAR_DICTIONARY["ws"] = ['~"\s*"i']
 GRAMMAR_DICTIONARY['wsp'] = ['~"\s+"i']
 GRAMMAR_DICTIONARY['name'] = ['~"[a-zA-Z]\w*"i']
 
-GRAMMAR_DICTIONARY["expr"] = ['in_expr', 'like_expr', 'between_expr', 'binary_expr',
-                              'unary_expr', 'null_check_expr', 'source_subq', 'value']
-GRAMMAR_DICTIONARY["like_expr"] = ['value wsp "LIKE" wsp string']
+GRAMMAR_DICTIONARY["expr"] = ['in_expr',
+                              # Like expressions.
+                              '(value wsp "LIKE" wsp string)',
+                              # Between expressions.
+                              '(value ws "BETWEEN" wsp value ws "AND" wsp value)',
+                              # Binary expressions.
+                              '(value ws binaryop wsp expr)',
+                              # Unary expressions.
+                              '(unaryop ws expr)',
+                              # Two types of null check expressions.
+                              '(col_ref ws "IS" ws "NOT" ws "NULL")',
+                              '(col_ref ws "IS" ws "NULL")',
+                              'source_subq',
+                              'value']
 GRAMMAR_DICTIONARY["in_expr"] = ['(value wsp "NOT" wsp "IN" wsp string_set)',
                                  '(value wsp "IN" wsp string_set)',
                                  '(value wsp "NOT" wsp "IN" wsp expr)',
                                  '(value wsp "IN" wsp expr)']
-
-GRAMMAR_DICTIONARY["between_expr"] = ['value ws "BETWEEN" wsp value ws "AND" wsp value']
-GRAMMAR_DICTIONARY["binary_expr"] = ['value ws binaryop wsp expr']
-GRAMMAR_DICTIONARY["unary_expr"] = ['unaryop ws expr']
-GRAMMAR_DICTIONARY["null_check_expr"] = ['(col_ref ws "IS" ws "NOT" ws "NULL")', '(col_ref ws "IS" ws "NULL")']
 
 GRAMMAR_DICTIONARY["value"] = ['parenval', '"YEAR(CURDATE())"', 'number', 'boolean',
                                'function', 'col_ref', 'string']
@@ -155,8 +161,17 @@ def update_grammar_to_be_variable_free(grammar_dictionary: Dict[str, List[str]])
     del grammar_dictionary["source_subq"]
     del grammar_dictionary["source_table"]
 
-    grammar_dictionary["expr"] = ['in_expr', 'like_expr', 'between_expr', 'binary_expr',
-                                  'unary_expr', 'null_check_expr', '("(" ws query ws ")")', 'value']
+    grammar_dictionary["expr"] = ['in_expr',
+                                  '(value wsp "LIKE" wsp string)',
+                                  '(value ws "BETWEEN" wsp value ws "AND" wsp value)',
+                                  '(value ws binaryop wsp expr)',
+                                  '(unaryop ws expr)',
+                                  '(col_ref ws "IS" ws "NOT" ws "NULL")',
+                                  '(col_ref ws "IS" ws "NULL")',
+                                  # This used to be source_subq - now
+                                  # we don't need aliases, we can colapse it to queries.
+                                  '("(" ws query ws ")")',
+                                  'value']
 
     # Finally, remove the ability to reference an arbitrary name,
     # because now we don't have aliased tables, we don't need
