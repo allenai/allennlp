@@ -494,12 +494,21 @@ class NameMapper:
         If your language has lambda functions, the word "lambda" needs to be in the common name
         mapping, mapped to the alias "\". NLTK understands this symbol, and it doesn't need a type
         signature for it. Setting this flag to True adds the mapping to `common_name_mapping`.
+    alias_prefix : ``str`` (optional, default="F")
+        The one letter prefix used for all aliases. You do not need to specify it if you have only
+        instance of this class for you language. If not, you can specify a different prefix for each
+        name mapping you use for your language.
     """
-    def __init__(self, language_has_lambda: bool = False) -> None:
+    def __init__(self,
+                 language_has_lambda: bool = False,
+                 alias_prefix: str = "F") -> None:
         self.common_name_mapping: Dict[str, str] = {}
         if language_has_lambda:
             self.common_name_mapping["lambda"] = "\\"
         self.common_type_signature: Dict[str, Type] = {}
+        assert len(alias_prefix) == 1 and alias_prefix.isalpha(), (f"Invalid alias prefix: {alias_prefix}"
+                                                                   "Needs to be a single upper case character.")
+        self._alias_prefix = alias_prefix.upper()
         self._name_counter = 0
 
     def map_name_with_signature(self,
@@ -513,7 +522,7 @@ class NameMapper:
                 raise RuntimeError(f"{name} already added with signature {old_signature}. "
                                    f"Cannot add it again with {signature}!")
         else:
-            alias = alias or f"F{self._name_counter}"
+            alias = alias or f"{self._alias_prefix}{self._name_counter}"
             self._name_counter += 1
             self.common_name_mapping[name] = alias
             self.common_type_signature[alias] = signature

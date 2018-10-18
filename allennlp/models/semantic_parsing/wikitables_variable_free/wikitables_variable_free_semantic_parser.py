@@ -314,7 +314,8 @@ class WikiTablesVariableFreeSemanticParser(Model):
         Returns
         -------
         A ``torch.LongTensor`` with shape ``(batch_size, num_entities, num_neighbors)``. It is padded
-        with -1 instead of 0, since 0 is a valid neighbor index.
+        with -1 instead of 0, since 0 is a valid neighbor index. If all the entities in the batch
+        have no neighbors, None will be returned.
         """
 
         num_neighbors = 0

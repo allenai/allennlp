@@ -29,8 +29,9 @@ NUMBER_TYPE = NamedBasicType("NUMBER")
 DATE_TYPE = NamedBasicType("DATE")
 STRING_TYPE = NamedBasicType("STRING")
 
-BASIC_TYPES = {ROW_TYPE, GENERIC_COLUMN_TYPE, COMPARABLE_COLUMN_TYPE, NUMBER_COLUMN_TYPE,
-               STRING_COLUMN_TYPE, DATE_COLUMN_TYPE, NUMBER_TYPE, DATE_TYPE, STRING_TYPE}
+# We start with just the generic column type, and add the specific column types to the set only if
+# we see the corresponding types in the table.
+BASIC_TYPES = {ROW_TYPE, GENERIC_COLUMN_TYPE, NUMBER_TYPE, DATE_TYPE, STRING_TYPE}
 STARTING_TYPES = {NUMBER_TYPE, DATE_TYPE, STRING_TYPE}
 
 # Complex types
@@ -78,61 +79,76 @@ DATE_FUNCTION_TYPE = ComplexType(NUMBER_TYPE, ComplexType(NUMBER_TYPE, ComplexTy
                                                                                    DATE_TYPE)))
 
 
-name_mapper = NameMapper()  # pylint: disable=invalid-name
+# We have one name mapper for all generic functions, and different ones for each of the column types
+# because we will add those to the final name mapping only if needed, based on the table content.
+generic_name_mapper = NameMapper()  # pylint: disable=invalid-name
+string_column_name_mapper = NameMapper(alias_prefix="S")  # pylint: disable=invalid-name
+number_column_name_mapper = NameMapper(alias_prefix="N")  # pylint: disable=invalid-name
+date_column_name_mapper = NameMapper(alias_prefix="D")  # pylint: disable=invalid-name
+comparable_column_name_mapper = NameMapper(alias_prefix="O")  # pylint: disable=invalid-name
 
-name_mapper.map_name_with_signature("all_rows", ROW_TYPE)
+generic_name_mapper.map_name_with_signature("all_rows", ROW_TYPE)
 
 # <r,<g,s>>
-name_mapper.map_name_with_signature("select", SELECT_TYPE)
-name_mapper.map_name_with_signature("mode", SELECT_TYPE)
+generic_name_mapper.map_name_with_signature("select", SELECT_TYPE)
+generic_name_mapper.map_name_with_signature("mode", SELECT_TYPE)
 
 # <r,<c,r>>
-name_mapper.map_name_with_signature("argmax", ROW_FILTER_WITH_COMPARABLE_COLUMN)
-name_mapper.map_name_with_signature("argmin", ROW_FILTER_WITH_COMPARABLE_COLUMN)
+comparable_column_name_mapper.map_name_with_signature("argmax", ROW_FILTER_WITH_COMPARABLE_COLUMN)
+comparable_column_name_mapper.map_name_with_signature("argmin", ROW_FILTER_WITH_COMPARABLE_COLUMN)
 
 # <r,<g,r>>
-name_mapper.map_name_with_signature("same_as", ROW_FILTER_WITH_GENERIC_COLUMN)
+generic_name_mapper.map_name_with_signature("same_as", ROW_FILTER_WITH_GENERIC_COLUMN)
 
 # <r,<f,<n,r>>>
-name_mapper.map_name_with_signature("filter_number_greater", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
-name_mapper.map_name_with_signature("filter_number_greater_equals", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
-name_mapper.map_name_with_signature("filter_number_lesser", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
-name_mapper.map_name_with_signature("filter_number_lesser_equals", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
-name_mapper.map_name_with_signature("filter_number_equals", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
-name_mapper.map_name_with_signature("filter_number_not_equals", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
+number_column_name_mapper.map_name_with_signature("filter_number_greater", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
+number_column_name_mapper.map_name_with_signature("filter_number_greater_equals",
+                                                  ROW_FILTER_WITH_COLUMN_AND_NUMBER)
+number_column_name_mapper.map_name_with_signature("filter_number_lesser", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
+number_column_name_mapper.map_name_with_signature("filter_number_lesser_equals", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
+number_column_name_mapper.map_name_with_signature("filter_number_equals", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
+number_column_name_mapper.map_name_with_signature("filter_number_not_equals", ROW_FILTER_WITH_COLUMN_AND_NUMBER)
 
 # <r,<y,<d,r>>>
-name_mapper.map_name_with_signature("filter_date_greater", ROW_FILTER_WITH_COLUMN_AND_DATE)
-name_mapper.map_name_with_signature("filter_date_greater_equals", ROW_FILTER_WITH_COLUMN_AND_DATE)
-name_mapper.map_name_with_signature("filter_date_lesser", ROW_FILTER_WITH_COLUMN_AND_DATE)
-name_mapper.map_name_with_signature("filter_date_lesser_equals", ROW_FILTER_WITH_COLUMN_AND_DATE)
-name_mapper.map_name_with_signature("filter_date_equals", ROW_FILTER_WITH_COLUMN_AND_DATE)
-name_mapper.map_name_with_signature("filter_date_not_equals", ROW_FILTER_WITH_COLUMN_AND_DATE)
+date_column_name_mapper.map_name_with_signature("filter_date_greater", ROW_FILTER_WITH_COLUMN_AND_DATE)
+date_column_name_mapper.map_name_with_signature("filter_date_greater_equals", ROW_FILTER_WITH_COLUMN_AND_DATE)
+date_column_name_mapper.map_name_with_signature("filter_date_lesser", ROW_FILTER_WITH_COLUMN_AND_DATE)
+date_column_name_mapper.map_name_with_signature("filter_date_lesser_equals", ROW_FILTER_WITH_COLUMN_AND_DATE)
+date_column_name_mapper.map_name_with_signature("filter_date_equals", ROW_FILTER_WITH_COLUMN_AND_DATE)
+date_column_name_mapper.map_name_with_signature("filter_date_not_equals", ROW_FILTER_WITH_COLUMN_AND_DATE)
 
 # <r,<t,<s,r>>>
-name_mapper.map_name_with_signature("filter_in", ROW_FILTER_WITH_COLUMN_AND_STRING)
-name_mapper.map_name_with_signature("filter_not_in", ROW_FILTER_WITH_COLUMN_AND_STRING)
+string_column_name_mapper.map_name_with_signature("filter_in", ROW_FILTER_WITH_COLUMN_AND_STRING)
+string_column_name_mapper.map_name_with_signature("filter_not_in", ROW_FILTER_WITH_COLUMN_AND_STRING)
 
 # <r,r>
-name_mapper.map_name_with_signature("first", ROW_FILTER)
-name_mapper.map_name_with_signature("last", ROW_FILTER)
-name_mapper.map_name_with_signature("previous", ROW_FILTER)
-name_mapper.map_name_with_signature("next", ROW_FILTER)
+generic_name_mapper.map_name_with_signature("first", ROW_FILTER)
+generic_name_mapper.map_name_with_signature("last", ROW_FILTER)
+generic_name_mapper.map_name_with_signature("previous", ROW_FILTER)
+generic_name_mapper.map_name_with_signature("next", ROW_FILTER)
 
 # <r,n>
-name_mapper.map_name_with_signature("count", COUNT_TYPE)
+generic_name_mapper.map_name_with_signature("count", COUNT_TYPE)
 
 # <r,<f,n>>
-name_mapper.map_name_with_signature("max", ROW_NUM_OP)
-name_mapper.map_name_with_signature("min", ROW_NUM_OP)
-name_mapper.map_name_with_signature("average", ROW_NUM_OP)
-name_mapper.map_name_with_signature("sum", ROW_NUM_OP)
+number_column_name_mapper.map_name_with_signature("max", ROW_NUM_OP)
+number_column_name_mapper.map_name_with_signature("min", ROW_NUM_OP)
+number_column_name_mapper.map_name_with_signature("average", ROW_NUM_OP)
+number_column_name_mapper.map_name_with_signature("sum", ROW_NUM_OP)
 
 # <r,<r,<f,n>>>
-name_mapper.map_name_with_signature("diff", NUM_DIFF_WITH_COLUMN)
+number_column_name_mapper.map_name_with_signature("diff", NUM_DIFF_WITH_COLUMN)
 
 # <n,<n,<n,d>>>
-name_mapper.map_name_with_signature("date", DATE_FUNCTION_TYPE)
+generic_name_mapper.map_name_with_signature("date", DATE_FUNCTION_TYPE)
 
-COMMON_NAME_MAPPING = name_mapper.common_name_mapping
-COMMON_TYPE_SIGNATURE = name_mapper.common_type_signature
+COMMON_NAME_MAPPING = generic_name_mapper.common_name_mapping
+COMMON_TYPE_SIGNATURE = generic_name_mapper.common_type_signature
+STRING_COLUMN_NAME_MAPPING = string_column_name_mapper.common_name_mapping
+STRING_COLUMN_TYPE_SIGNATURE = string_column_name_mapper.common_type_signature
+NUMBER_COLUMN_NAME_MAPPING = number_column_name_mapper.common_name_mapping
+NUMBER_COLUMN_TYPE_SIGNATURE = number_column_name_mapper.common_type_signature
+DATE_COLUMN_NAME_MAPPING = date_column_name_mapper.common_name_mapping
+DATE_COLUMN_TYPE_SIGNATURE = date_column_name_mapper.common_type_signature
+COMPARABLE_COLUMN_NAME_MAPPING = comparable_column_name_mapper.common_name_mapping
+COMPARABLE_COLUMN_TYPE_SIGNATURE = comparable_column_name_mapper.common_type_signature

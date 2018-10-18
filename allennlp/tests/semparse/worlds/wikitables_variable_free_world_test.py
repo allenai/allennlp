@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,invalid-name,too-many-public-methods
 from typing import List
+from functools import partial
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import Token
@@ -148,10 +149,23 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
             self.world_with_2013.parse_logical_form(logical_form_with_usl_a_league)
             self.world_with_usl_a_league.parse_logical_form(logical_form_with_2013)
 
+    @staticmethod
+    def _get_alias(types_, name) -> str:
+        if name in types_.generic_name_mapper.common_name_mapping:
+            return types_.generic_name_mapper.get_alias(name)
+        elif name in types_.string_column_name_mapper.common_name_mapping:
+            return types_.string_column_name_mapper.get_alias(name)
+        elif name in types_.number_column_name_mapper.common_name_mapping:
+            return types_.number_column_name_mapper.get_alias(name)
+        elif name in types_.date_column_name_mapper.common_name_mapping:
+            return types_.date_column_name_mapper.get_alias(name)
+        else:
+            return types_.comparable_column_name_mapper.get_alias(name)
+
     def test_world_processes_logical_forms_correctly(self):
         logical_form = "(select (filter_in all_rows string_column:league string:usl_a_league) date_column:year)"
         expression = self.world_with_usl_a_league.parse_logical_form(logical_form)
-        f = types.name_mapper.get_alias
+        f = partial(self._get_alias, types)
         # Cells (and parts) get mapped to strings.
         # Column names are mapped in local name mapping. For the global names, we can get their
         # aliases from the name mapper.
@@ -180,7 +194,7 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         logical_form = """(select (filter_number_greater all_rows number_column:avg_attendance 3000)
                            date_column:year)"""
         expression = world.parse_logical_form(logical_form)
-        f = types.name_mapper.get_alias
+        f = partial(self._get_alias, types)
         # Cells (and parts) get mapped to strings.
         # Column names are mapped in local name mapping. For the global names, we can get their
         # aliases from the name mapper.
@@ -190,7 +204,7 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
         logical_form = """(select (filter_date_greater all_rows date_column:year (date 2013 -1 -1))
                            date_column:year)"""
         expression = self.world_with_2013.parse_logical_form(logical_form)
-        f = types.name_mapper.get_alias
+        f = partial(self._get_alias, types)
         # Cells (and parts) get mapped to strings.
         # Column names are mapped in local name mapping. For the global names, we can get their
         # aliases from the name mapper.
