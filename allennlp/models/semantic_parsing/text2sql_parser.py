@@ -141,7 +141,6 @@ class Text2SqlParser(Model):
         """
         embedded_utterance = self._utterance_embedder(tokens)
         mask = util.get_text_field_mask(tokens).float()
-
         batch_size = embedded_utterance.size(0)
 
         # (batch_size, num_tokens, encoder_output_dim)
@@ -162,6 +161,9 @@ class Text2SqlParser(Model):
                                                    self._transition_function,
                                                    (action_sequence.unsqueeze(1),
                                                     target_mask.unsqueeze(1)))
+        else:
+            outputs: Dict[str, Any] = {}
+
         if not self.training:
             action_mapping = []
             for batch_actions in valid_actions:
@@ -170,7 +172,7 @@ class Text2SqlParser(Model):
                     batch_action_mapping[action_index] = action[0]
                 action_mapping.append(batch_action_mapping)
 
-            outputs: Dict[str, Any] = {'action_mapping': action_mapping}
+            outputs['action_mapping'] = action_mapping
             # This tells the state to start keeping track of debug info, which we'll pass along in
             # our output dictionary.
             initial_state.debug_info = [[] for _ in range(batch_size)]
@@ -218,7 +220,7 @@ class Text2SqlParser(Model):
                 outputs['best_action_sequence'].append(action_strings)
                 outputs['predicted_sql_query'].append(sqlparse.format(predicted_sql_query, reindent=True))
                 outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
-            return outputs
+        return outputs
 
 
     def _get_initial_state(self,
