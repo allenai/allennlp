@@ -49,11 +49,11 @@ class ProductionRuleField(Field[ProductionRule]):  # type: ignore
     representations after splitting apart the global rules from the ``Instance`` rules.
 
     In a model, this will get represented as a ``ProductionRule``, which is defined above.
-    This is a namedtuple of ``(rule_string, is_global_rule, [rule_id])``, where the ``rule_id``
-    ``Tensor``, if present, will have shape ``(1,)``.  We don't do any batching of the ``Tensors``,
-    so this gets passed to ``Model.forward()`` as a ``List[ProductionRule]``.  We pass along
-    the rule string because there isn't another way to recover it for instance-specific rules that
-    do not make it into the vocabulary.
+    This is a namedtuple of ``(rule_string, is_global_rule, [rule_id], nonterminal)``, where the
+    ``rule_id`` ``Tensor``, if present, will have shape ``(1,)``.  We don't do any batching of the
+    ``Tensors``, so this gets passed to ``Model.forward()`` as a ``List[ProductionRule]``.  We 
+    pass along the rule string because there isn't another way to recover it for instance-specific
+    rules that do not make it into the vocabulary.
 
     Parameters
     ----------
@@ -66,6 +66,9 @@ class ProductionRuleField(Field[ProductionRule]):  # type: ignore
         The vocabulary namespace to use for the global production rules.  We use "rule_labels" by
         default, because we typically do not want padding and OOV tokens for these, and ending the
         namespace with "labels" means we don't get padding and OOV tokens.
+    nonterminal : ``str``, optional, default = None
+        The left hand side of the rule. Sometimes having this as separate part of the ``ProductionRule``
+        can deduplicate work.
     """
     def __init__(self,
                  rule: str,
