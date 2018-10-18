@@ -289,8 +289,13 @@ class SimpleSeq2Seq(Model):
         step_probabilities: List[torch.Tensor] = []
         step_predictions: List[torch.Tensor] = []
         for timestep in range(num_decoding_steps):
-            # Use gold tokens at a rate of `1 - self._scheduled_sampling_ratio`.
-            if torch.rand(1).item() >= self._scheduled_sampling_ratio:
+            use_gold_targets = True
+            # Use gold tokens at test time and at a rate of 1 - _scheduled_sampling_ratio
+            # during training.
+            if self.training and torch.rand(1).item() < self._scheduled_sampling_ratio:
+                use_gold_targets = False
+
+            if use_gold_targets:
                 # shape: (batch_size,)
                 input_choices = targets[:, timestep]
             else:
