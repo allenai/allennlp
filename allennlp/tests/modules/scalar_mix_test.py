@@ -30,6 +30,18 @@ class TestScalarMix(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             _ = mixture(tensors)
 
+    def test_scalar_mix_throws_error_on_incorrect_initial_scalar_parameters_length(self):
+        with pytest.raises(ConfigurationError):
+            ScalarMix(3, initial_scalar_parameters=[0.0, 0.0])
+
+    def test_scalar_mix_trainable_with_initial_scalar_parameters(self):
+        initial_scalar_parameters = [1.0, 2.0, 3.0]
+        mixture = ScalarMix(3, initial_scalar_parameters=initial_scalar_parameters,
+                            trainable=False)
+        for i, scalar_mix_parameter in enumerate(mixture.scalar_parameters):
+            assert scalar_mix_parameter.requires_grad is False
+            assert scalar_mix_parameter.item() == initial_scalar_parameters[i]
+
     def test_scalar_mix_layer_norm(self):
         mixture = ScalarMix(3, do_layer_norm='scalar_norm_reg')
 
