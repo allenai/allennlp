@@ -22,8 +22,8 @@
     # Uncomment this when training using an existing vocabularly.
     #"directory_path": "output_dir/vocabulary/"
   },
-  "train_data_path": "https://raw.githubusercontent.com/uwnlp/event2mind/master/docs/data/train.csv",
-  "validation_data_path": "https://raw.githubusercontent.com/uwnlp/event2mind/master/docs/data/dev.csv",
+  "train_data_path": "/home/brendanr/workbenches/event2mind/train.csv",
+  "validation_data_path": "/home/brendanr/workbenches/event2mind/dev.csv",
   "model": {
     "type": "event2mind",
     "source_embedder": {
@@ -31,7 +31,7 @@
         "tokens": {
           "type": "embedding",
           "vocab_namespace": "source_tokens",
-          "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/word2vec/GoogleNews-vectors-negative300.txt.gz",
+          "pretrained_file": "/home/brendanr/workbenches/event2mind/word2vec/GoogleNews-vectors-negative300.txt.gz",
           "embedding_dim": 300,
           "trainable": false
         }
