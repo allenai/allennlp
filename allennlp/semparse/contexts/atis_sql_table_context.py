@@ -32,15 +32,18 @@ from allennlp.semparse.contexts.sql_context_utils import initialize_valid_action
 GRAMMAR_DICTIONARY = {}
 GRAMMAR_DICTIONARY['statement'] = ['query ws ";" ws']
 GRAMMAR_DICTIONARY['query'] = ['(ws "(" ws "SELECT" ws distinct ws select_results ws '
+                               '"FROM" ws table_refs ws where_clause ws group_by_clause ws ")" ws)',
+                               '(ws "(" ws "SELECT" ws distinct ws select_results ws '
                                '"FROM" ws table_refs ws where_clause ws ")" ws)',
                                '(ws "SELECT" ws distinct ws select_results ws '
                                '"FROM" ws table_refs ws where_clause ws)']
 GRAMMAR_DICTIONARY['select_results'] = ['col_refs', 'agg']
-GRAMMAR_DICTIONARY['agg'] = ['agg_func ws "(" ws col_ref ws ")"']
+GRAMMAR_DICTIONARY['agg'] = ['( agg_func ws "(" ws col_ref ws ")" )', '(agg_func ws "(" ws col ws ")" )']
 GRAMMAR_DICTIONARY['agg_func'] = ['"MIN"', '"min"', '"MAX"', '"max"', '"COUNT"', '"count"']
 GRAMMAR_DICTIONARY['col_refs'] = ['(col_ref ws "," ws col_refs)', '(col_ref)']
 GRAMMAR_DICTIONARY['table_refs'] = ['(table_name ws "," ws table_refs)', '(table_name)']
 GRAMMAR_DICTIONARY['where_clause'] = ['("WHERE" ws "(" ws conditions ws ")" ws)', '("WHERE" ws conditions ws)']
+GRAMMAR_DICTIONARY['group_by_clause'] = ['("GROUP" ws "BY" ws col_ref)']
 GRAMMAR_DICTIONARY['conditions'] = ['(condition ws conj ws conditions)',
                                     '(condition ws conj ws "(" ws conditions ws ")")',
                                     '("(" ws conditions ws ")" ws conj ws conditions)',
@@ -70,6 +73,10 @@ GRAMMAR_DICTIONARY['number'] = ['""']
 
 KEYWORDS = ['"SELECT"', '"FROM"', '"MIN"', '"MAX"', '"COUNT"', '"WHERE"', '"NOT"', '"IN"', '"LIKE"',
             '"IS"', '"BETWEEN"', '"AND"', '"ALL"', '"ANY"', '"NULL"', '"OR"', '"DISTINCT"']
+
+NUMERIC_NONTERMINALS = ['number', 'time_range_start', 'time_range_end',
+                        'fare_round_trip_cost', 'fare_one_direction_cost',
+                        'flight_number', 'day_number', 'month_number', 'year_number']
 
 class AtisSqlTableContext:
     """
@@ -123,11 +130,14 @@ class AtisSqlTableContext:
             grammar_dictionary['table_name'] = \
                     sorted([f'"{table}"'
                             for table in list(self.all_tables.keys())], reverse=True)
-            grammar_dictionary['col_ref'] = ['"*"']
+            grammar_dictionary['col_ref'] = ['"*"', 'agg']
+            all_columns = []
             for table, columns in self.all_tables.items():
                 grammar_dictionary['col_ref'].extend([f'("{table}" ws "." ws "{column}")'
                                                       for column in columns])
+                all_columns.extend(columns)
             grammar_dictionary['col_ref'] = sorted(grammar_dictionary['col_ref'], reverse=True)
+            grammar_dictionary['col'] = sorted([f'"{column}"' for column in all_columns], reverse=True)
 
         biexprs = []
         if self.tables_with_strings:
@@ -138,6 +148,9 @@ class AtisSqlTableContext:
                     self.cursor.execute(f'SELECT DISTINCT {table} . {column} FROM {table}')
                     results = self.cursor.fetchall()
 
+                    # Almost all the query values are in the database, we hardcode the rare case here.
+                    if table == 'flight' and column == 'airline_code':
+                        results.append(('EA',))
                     strings_list.extend([(format_action(f"{table}_{column}_string",
                                                         str(row[0]),
                                                         is_string=not 'number' in column,
