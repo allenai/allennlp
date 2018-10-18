@@ -97,6 +97,8 @@ class Text2SqlParser(Model):
         # previous action, or a previous utterance attention.
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
         self._first_attended_utterance = torch.nn.Parameter(torch.FloatTensor(encoder.get_output_dim()))
+        torch.nn.init.normal_(self._first_action_embedding)
+        torch.nn.init.normal_(self._first_attended_utterance)
 
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
