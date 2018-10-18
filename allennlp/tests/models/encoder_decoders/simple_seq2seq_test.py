@@ -21,6 +21,16 @@ class SimpleSeq2SeqTest(ModelTestCase):
                      "simple_seq2seq" / "experiment_bidirectional.json"
         self.ensure_model_can_train_save_and_load(param_file, tolerance=1e-2)
 
+    def test_no_attention_model_can_train_save_and_load(self):
+        param_file = self.FIXTURES_ROOT / "encoder_decoder" / \
+                     "simple_seq2seq" / "experiment_no_attention.json"
+        self.ensure_model_can_train_save_and_load(param_file, tolerance=1e-2)
+
+    def test_legacy_attention_model_can_train_save_and_load(self):
+        param_file = self.FIXTURES_ROOT / "encoder_decoder" / \
+                     "simple_seq2seq" / "experiment_legacy_attention.json"
+        self.ensure_model_can_train_save_and_load(param_file, tolerance=1e-2)
+
     def test_loss_is_computed_correctly(self):
         batch_size = 5
         num_decoding_steps = 5
