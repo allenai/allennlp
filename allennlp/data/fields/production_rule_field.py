@@ -105,3 +105,7 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
     def batch_tensors(self, tensor_list: List[ProductionRuleArray]) -> ProductionRuleArray:
         # pylint: disable=no-self-use
         return tensor_list  # type: ignore
+
+    def __str__(self) -> str:
+        return f"ProductionRuleField with rule: {self.rule} (is_global_rule: " \
+               f"{self.is_global_rule}) in namespace: '{self._vocab_namespace}'.'"

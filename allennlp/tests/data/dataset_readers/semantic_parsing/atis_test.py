@@ -6,6 +6,17 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds import AtisWorld
 
 class TestAtisReader(AllenNlpTestCase):
+    def test_atis_keep_unparseable(self):
+        database_file = cached_path("https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db")
+        reader = AtisDatasetReader(database_file=database_file, keep_if_unparseable=True)
+        instance = reader.text_to_instance(utterances=['show me the one way flights from detroit me to westchester county'],
+                                           sql_query_labels=['this is not a query that can be parsed'])
+
+        # If we have a query that can't be parsed, we check that it only has one element in the list of index fields and
+        # that index is the padding index, -1.
+        assert len(instance.fields['target_action_sequence'].field_list) == 1
+        assert instance.fields['target_action_sequence'].field_list[0].sequence_index == -1
+
     def test_atis_read_from_file(self):
         data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "atis" / "sample.json"
         database_file = cached_path("https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db")
@@ -34,7 +45,9 @@ class TestAtisReader(AllenNlpTestCase):
         world = instance.fields['world'].metadata
         assert set(world.valid_actions['number']) == \
                 {'number -> ["1"]',
-                 'number -> ["0"]'}
+                 'number -> ["0"]',
+                 'number -> ["41"]',
+                 'number -> ["60"]'}
 
         assert world.linked_entities['string']['airport_airport_code_string -> ["\'DTW\'"]'][2] == \
                 [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] # ``detroit`` -> ``DTW``

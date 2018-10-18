@@ -64,8 +64,8 @@ class SimpleTaggerTest(ModelTestCase):
         training_batch = next(iterator(self.instances, num_epochs=1))
         validation_batch = next(iterator(self.instances, num_epochs=1))
 
-        training_loss = trainer._batch_loss(training_batch, for_training=True).data
-        validation_loss = trainer._batch_loss(validation_batch, for_training=False).data
+        training_loss = trainer.batch_loss(training_batch, for_training=True).data
+        validation_loss = trainer.batch_loss(validation_batch, for_training=False).data
 
         # Training loss should have the regularization penalty, but validation loss should not.
         assert (training_loss == validation_loss).all()
@@ -116,8 +116,8 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
         training_batch = next(self.iterator(self.instances, num_epochs=1))
         validation_batch = next(self.iterator(self.instances, num_epochs=1))
 
-        training_loss = self.trainer._batch_loss(training_batch, for_training=True).data
-        validation_loss = self.trainer._batch_loss(validation_batch, for_training=False).data
+        training_loss = self.trainer.batch_loss(training_batch, for_training=True).data
+        validation_loss = self.trainer.batch_loss(validation_batch, for_training=False).data
 
         # Training loss should have the regularization penalty, but validation loss should not.
         assert (training_loss != validation_loss).all()

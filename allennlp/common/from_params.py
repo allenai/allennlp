@@ -40,7 +40,7 @@ In this case your class just needs to explicitly implement its own `from_params`
 method.
 """
 
-from typing import TypeVar, Type, Dict, Union, Any, cast
+from typing import TypeVar, Type, Dict, Union, Any, cast, List, Tuple, Set
 import inspect
 import logging
 
@@ -170,8 +170,9 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
                             if optional
                             else params.pop_float(name))
 
-        # This is special logic for handling types like Dict[str, TokenIndexer], which it creates by
-        # instantiating each value from_params and returning the resulting dict.
+        # This is special logic for handling types like Dict[str, TokenIndexer],
+        # List[TokenIndexer], Tuple[TokenIndexer, Tokenizer], and Set[TokenIndexer],
+        # which it creates by instantiating each value from_params and returning the resulting structure.
         elif origin in (Dict, dict) and len(args) == 2 and hasattr(args[-1], 'from_params'):
             value_cls = annotation.__args__[-1]
 
@@ -181,6 +182,34 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
                 value_dict[key] = value_cls.from_params(params=value_params, **extras)
 
             kwargs[name] = value_dict
+
+        elif origin in (List, list) and len(args) == 1 and hasattr(args[0], 'from_params'):
+            value_cls = annotation.__args__[0]
+
+            value_list = []
+
+            for value_params in params.pop(name, Params({})):
+                value_list.append(value_cls.from_params(params=value_params, **extras))
+
+            kwargs[name] = value_list
+
+        elif origin in (Tuple, tuple) and all(hasattr(arg, 'from_params') for arg in args):
+            value_list = []
+
+            for value_cls, value_params in zip(annotation.__args__, params.pop(name, Params({}))):
+                value_list.append(value_cls.from_params(params=value_params, **extras))
+
+            kwargs[name] = tuple(value_list)
+
+        elif origin in (Set, set) and len(args) == 1 and hasattr(args[0], 'from_params'):
+            value_cls = annotation.__args__[0]
+
+            value_set = set()
+
+            for value_params in params.pop(name, Params({})):
+                value_set.add(value_cls.from_params(params=value_params, **extras))
+
+            kwargs[name] = value_set
 
         else:
             # Pass it on as is and hope for the best.   ¯\_(ツ)_/¯

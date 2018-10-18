@@ -2,6 +2,7 @@
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import WikiTablesDatasetReader
+from allennlp.data.dataset_readers.semantic_parsing.wikitables import util as wikitables_util
 from allennlp.semparse.worlds import WikiTablesWorld
 
 
@@ -189,8 +190,9 @@ class WikiTablesDatasetReaderTest(AllenNlpTestCase):
         # pylint: disable=no-self-use,protected-access
         with open(self.FIXTURES_ROOT / "data" / "wikitables" / "sample_data.examples") as filename:
             lines = filename.readlines()
-        example_info = WikiTablesDatasetReader._parse_example_line(lines[0])
+        example_info = wikitables_util.parse_example_line(lines[0])
         question = 'what was the last year where this team was a part of the usl a-league?'
         assert example_info == {'id': 'nt-0',
                                 'question': question,
-                                'table_filename': 'tables/590.csv'}
+                                'table_filename': 'tables/590.csv',
+                                'target_values': ['2004']}

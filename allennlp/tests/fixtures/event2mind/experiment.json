@@ -7,18 +7,10 @@
         "type": "spacy"
       }
     },
-    "target_tokenizer": {
-      "type": "word"
-    },
     "source_token_indexers": {
       "tokens": {
         "type": "single_id",
         "namespace": "source_tokens"
-      }
-    },
-    "target_token_indexers": {
-      "tokens": {
-        "namespace": "target_tokens"
       }
     }
   },
@@ -48,7 +40,7 @@
       "bidirectional": true
     },
     "max_decoding_steps": 10,
-    "target_namespace": "target_tokens"
+    "target_namespace": "source_tokens"
   },
   "iterator": {
     "type": "bucket",
