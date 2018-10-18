@@ -24,6 +24,8 @@ transition_probabilities = torch.tensor(  # pylint: disable=not-callable
 def take_step(last_predictions: torch.Tensor,
               state: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
     """
+    Take decoding step.
+
     This is a simple function that defines how probabilities are computed for the
     next time step during the beam search.
 
@@ -59,16 +61,21 @@ class BeamSearchTest(AllenNlpTestCase):
 
     def _check_results(self,
                        batch_size: int = 5,
-                       expected_top_k: torch.Tensor = None,
-                       expected_log_probs: torch.Tensor = None,
-                       beam_search: BeamSearch = None) -> None:
+                       expected_top_k: np.array = None,
+                       expected_log_probs: np.array = None,
+                       beam_search: BeamSearch = None,
+                       state: Dict[str, torch.Tensor] = None,
+                       expected_finished_state: Dict[str, np.array] = None) -> None:
         expected_top_k = expected_top_k if expected_top_k is not None else self.expected_top_k
         expected_log_probs = expected_log_probs if expected_log_probs is not None else self.expected_log_probs
+        state = state or {}
+        expected_finished_state = expected_finished_state or {}
+
         beam_search = beam_search or self.beam_search
         beam_size = beam_search.beam_size
 
         initial_predictions = torch.tensor([0] * batch_size)  # pylint: disable=not-callable
-        top_k, log_probs = beam_search.search(initial_predictions, {}, take_step)  # type: ignore
+        top_k, log_probs = beam_search.search(initial_predictions, state, take_step)  # type: ignore
 
         # top_k should be shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(top_k.size())[:-1] == [batch_size, beam_size]
@@ -78,8 +85,45 @@ class BeamSearchTest(AllenNlpTestCase):
         assert list(log_probs.size()) == [batch_size, beam_size]
         np.testing.assert_allclose(log_probs[0].numpy(), expected_log_probs)
 
+        # check finished state.
+        for key, array in expected_finished_state.items():
+            np.testing.assert_allclose(state[key].numpy(), array)
+
     def test_search(self):
         self._check_results()
+
+    def test_finished_state(self):
+        state = {}
+        state["foo"] = torch.tensor(  # pylint: disable=not-callable
+                [[1, 0, 1],
+                 [2, 0, 1],
+                 [0, 0, 1],
+                 [1, 1, 1],
+                 [0, 0, 0]]
+        )
+        # shape: (batch_size, 3)
+
+        expected_finished_state = {}
+        expected_finished_state["foo"] = np.array(
+                [[1, 0, 1],
+                 [1, 0, 1],
+                 [1, 0, 1],
+                 [2, 0, 1],
+                 [2, 0, 1],
+                 [2, 0, 1],
+                 [0, 0, 1],
+                 [0, 0, 1],
+                 [0, 0, 1],
+                 [1, 1, 1],
+                 [1, 1, 1],
+                 [1, 1, 1],
+                 [0, 0, 0],
+                 [0, 0, 0],
+                 [0, 0, 0]]
+        )
+        # shape: (batch_size x beam_size, 3)
+
+        self._check_results(state=state, expected_finished_state=expected_finished_state)
 
     def test_batch_size_of_one(self):
         self._check_results(batch_size=1)

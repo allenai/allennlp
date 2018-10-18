@@ -72,6 +72,8 @@
       "bidirectional": true
     },
     "max_decoding_steps": 20,
+    "target_embedding_dim": 30,
+    "target_namespace": "target_tokens",
     "attention": {
       "type": "bilinear",
       "vector_dim": 20,

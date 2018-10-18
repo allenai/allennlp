@@ -37,11 +37,14 @@ class SimpleSeq2Seq(Model):
         The encoder of the "encoder/decoder" model
     attention : ``Attention``, required
         The attention function to apply over inputs.
-    source_namespace : ``str``, optional (default = 'source_tokens')
     target_namespace : ``str``, optional (default = 'target_tokens')
-    target_embedding_dim : ``int``, optional (default = 30)
-        You can specify an embedding dimensionality for the target side.
-    max_decoding_steps : ``int``, optional (default = 50)
+        If the target side vocabulary is different from the source side's, you need to specify the
+        target's namespace here. If not, we'll assume it is "tokens", which is also the default
+        choice for the source side, and this might cause them to share vocabularies.
+    target_embedding_dim : ``int``, optional (default = source_embedding_dim)
+        You can specify an embedding dimensionality for the target side. If not, we'll use the same
+        value as the source embedder's.
+    max_decoding_steps : ``int``
         Maximum length of decoded sequences.
     beam_size : ``int``, optional (default = 5)
         Width of the beam for beam search.
@@ -60,14 +63,12 @@ class SimpleSeq2Seq(Model):
                  source_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
                  attention: Attention,
-                 max_decoding_steps: int = 50,
+                 max_decoding_steps: int,
                  beam_size: int = 5,
-                 source_namespace: str = "source_tokens",
-                 target_namespace: str = "target_tokens",
-                 target_embedding_dim: int = 30,
+                 target_namespace: str = "tokens",
+                 target_embedding_dim: int = None,
                  scheduled_sampling_ratio: float = 0.) -> None:
         super(SimpleSeq2Seq, self).__init__(vocab)
-        self._source_namespace = source_namespace
         self._target_namespace = target_namespace
         self._scheduled_sampling_ratio = scheduled_sampling_ratio
 
@@ -88,6 +89,7 @@ class SimpleSeq2Seq(Model):
         self._attention = attention
 
         # Dense embedding of vocab words in the target space.
+        target_embedding_dim = target_embedding_dim or source_embedder.get_output_dim()
         self._target_embedder = Embedding(num_classes, target_embedding_dim)
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
@@ -105,6 +107,7 @@ class SimpleSeq2Seq(Model):
 
         # We'll use an LSTM cell as the recurrent cell that produces a hidden state
         # for the decoder at each time step.
+        # TODO (pradeep): Do not hardcode decoder cell type.
         self._decoder_cell = LSTMCell(self.decoder_input_dim, self.decoder_output_dim)
 
         # We project the hidden state from the decoder into the output vocabulary space
@@ -147,11 +150,11 @@ class SimpleSeq2Seq(Model):
             equal to ``batch_size``, since the group may contain multiple states
             for each source sentence in the batch.
         """
+        # shape: (group_size, num_classes)
         output_projections, state = self._prepare_output_projections(last_predictions, state)
-        # shape: (group_size, num_classes)
 
-        class_log_probabilities = F.log_softmax(output_projections, dim=-1)
         # shape: (group_size, num_classes)
+        class_log_probabilities = F.log_softmax(output_projections, dim=-1)
 
         return class_log_probabilities, state
 
@@ -217,29 +220,29 @@ class SimpleSeq2Seq(Model):
         """
         Initialize the encoded state to be passed to the first decoding time step.
         """
-        embedded_input = self._source_embedder(source_tokens)
         # shape: (batch_size, max_input_sequence_length, encoder_input_dim)
+        embedded_input = self._source_embedder(source_tokens)
 
         batch_size, _, _ = embedded_input.size()
 
-        source_mask = util.get_text_field_mask(source_tokens)
         # shape: (batch_size, max_input_sequence_length)
+        source_mask = util.get_text_field_mask(source_tokens)
 
-        encoder_outputs = self._encoder(embedded_input, source_mask)
         # shape: (batch_size, max_input_sequence_length, encoder_output_dim)
+        encoder_outputs = self._encoder(embedded_input, source_mask)
 
+        # shape: (batch_size, encoder_output_dim)
         final_encoder_output = util.get_final_encoder_states(
                 encoder_outputs,
                 source_mask,
                 self._encoder.is_bidirectional())
-        # shape: (batch_size, encoder_output_dim)
 
         # Initialize the decoder hidden state with the final output of the encoder.
+        # shape: (batch_size, decoder_output_dim)
         decoder_hidden = final_encoder_output
-        # shape: (batch_size, decoder_output_dim)
 
-        decoder_context = encoder_outputs.new_zeros(batch_size, self.decoder_output_dim)
         # shape: (batch_size, decoder_output_dim)
+        decoder_context = encoder_outputs.new_zeros(batch_size, self.decoder_output_dim)
 
         state = {
                 "source_mask": source_mask,
@@ -255,11 +258,11 @@ class SimpleSeq2Seq(Model):
                        target_tokens: Dict[str, torch.LongTensor],
                        state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Make forward pass during training."""
-        source_mask = state["source_mask"]
         # shape: (batch_size, max_input_sequence_length)
+        source_mask = state["source_mask"]
 
-        targets = target_tokens["tokens"]
         # shape: (batch_size, max_target_sequence_length)
+        targets = target_tokens["tokens"]
 
         batch_size, target_sequence_length = targets.size()
 
@@ -274,46 +277,46 @@ class SimpleSeq2Seq(Model):
         for timestep in range(num_decoding_steps):
             # Use gold tokens at a rate of `1 - self._scheduled_sampling_ratio`.
             if torch.rand(1).item() >= self._scheduled_sampling_ratio:
-                input_choices = targets[:, timestep]
                 # shape: (batch_size,)
+                input_choices = targets[:, timestep]
             else:
                 if timestep == 0:
                     # For the first timestep, when we do not have targets, we input start symbols.
+                    # shape: (batch_size,)
                     input_choices = source_mask.new_full((batch_size,), fill_value=self._start_index)
-                    # shape: (batch_size,)
                 else:
-                    input_choices = last_predictions
                     # shape: (batch_size,)
+                    input_choices = last_predictions
 
+            # shape: (batch_size, num_classes)
             output_projections, state = self._prepare_output_projections(input_choices, state)
-            # shape: (batch_size, num_classes)
 
+            # list of tensors, shape: (batch_size, 1, num_classes)
             step_logits.append(output_projections.unsqueeze(1))
-            # list of tensors, shape: (batch_size, 1, num_classes)
 
-            class_probabilities = F.softmax(output_projections, dim=-1)
             # shape: (batch_size, num_classes)
+            class_probabilities = F.softmax(output_projections, dim=-1)
 
-            step_probabilities.append(class_probabilities.unsqueeze(1))
             # list of tensors, shape: (batch_size, 1, num_classes)
+            step_probabilities.append(class_probabilities.unsqueeze(1))
 
+            # shape (predicted_classes): (batch_size,)
             _, predicted_classes = torch.max(class_probabilities, 1)
-            # shape (predicted_classes): (batch_size,)
 
+            # shape (predicted_classes): (batch_size,)
             last_predictions = predicted_classes
-            # shape (predicted_classes): (batch_size,)
 
-            step_predictions.append(last_predictions.unsqueeze(1))
             # list of tensors, shape: (batch_size, 1)
+            step_predictions.append(last_predictions.unsqueeze(1))
 
+        # shape: (batch_size, num_decoding_steps, num_classes)
         logits = torch.cat(step_logits, 1)
-        # shape: (batch_size, num_decoding_steps, num_classes)
 
+        # shape: (batch_size, num_decoding_steps, num_classes)
         class_probabilities = torch.cat(step_probabilities, 1)
-        # shape: (batch_size, num_decoding_steps, num_classes)
 
-        all_predictions = torch.cat(step_predictions, 1)
         # shape: (batch_size, num_decoding_steps)
+        all_predictions = torch.cat(step_predictions, 1)
 
         output_dict = {
                 "logits": logits,
@@ -333,10 +336,10 @@ class SimpleSeq2Seq(Model):
         batch_size = state["source_mask"].size()[0]
         start_predictions = state["source_mask"].new_full((batch_size,), fill_value=self._start_index)
 
-        all_top_k_predictions, log_probabilities = self._beam_search.search(
-                start_predictions, state, self.take_step)
         # shape (all_top_k_predictions): (batch_size, beam_size, num_decoding_steps)
         # shape (log_probabilities): (batch_size, beam_size)
+        all_top_k_predictions, log_probabilities = self._beam_search.search(
+                start_predictions, state, self.take_step)
 
         output_dict = {
                 "logits": log_probabilities,
@@ -354,38 +357,38 @@ class SimpleSeq2Seq(Model):
 
         Inputs are the same as for `take_step()`.
         """
-        encoder_outputs = state["encoder_outputs"]
         # shape: (group_size, max_input_sequence_length, encoder_output_dim)
+        encoder_outputs = state["encoder_outputs"]
 
-        source_mask = state["source_mask"]
         # shape: (group_size, max_input_sequence_length)
+        source_mask = state["source_mask"]
 
+        # shape: (group_size, decoder_output_dim)
         decoder_hidden = state["decoder_hidden"]
-        # shape: (group_size, decoder_output_dim)
 
+        # shape: (group_size, decoder_output_dim)
         decoder_context = state["decoder_context"]
-        # shape: (group_size, decoder_output_dim)
 
-        embedded_input = self._target_embedder(last_predictions)
         # shape: (group_size, target_embedding_dim)
+        embedded_input = self._target_embedder(last_predictions)
 
-        attended_input = self._prepare_attended_input(decoder_hidden, encoder_outputs, source_mask)
         # shape: (group_size, encoder_output_dim)
+        attended_input = self._prepare_attended_input(decoder_hidden, encoder_outputs, source_mask)
 
-        decoder_input = self._input_projection_layer(torch.cat((attended_input, embedded_input), -1))
         # shape: (group_size, decoder_input_dim)
+        decoder_input = self._input_projection_layer(torch.cat((attended_input, embedded_input), -1))
 
+        # shape (decoder_hidden): (batch_size, decoder_output_dim)
+        # shape (decoder_context): (batch_size, decoder_output_dim)
         decoder_hidden, decoder_context = self._decoder_cell(
                 decoder_input,
                 (decoder_hidden, decoder_context))
-        # shape (decoder_hidden): (batch_size, decoder_output_dim)
-        # shape (decoder_context): (batch_size, decoder_output_dim)
 
         state["decoder_hidden"] = decoder_hidden
         state["decoder_context"] = decoder_context
 
-        output_projections = self._output_projection_layer(decoder_hidden)
         # shape: (group_size, num_classes)
+        output_projections = self._output_projection_layer(decoder_hidden)
 
         return output_projections, state
 
@@ -396,15 +399,15 @@ class SimpleSeq2Seq(Model):
         """Apply attention over encoder outputs and decoder state."""
         # Ensure mask is also a FloatTensor. Or else the multiplication within
         # attention will complain.
-        encoder_outputs_mask = encoder_outputs_mask.float()
         # shape: (batch_size, max_input_sequence_length, encoder_output_dim)
+        encoder_outputs_mask = encoder_outputs_mask.float()
 
+        # shape: (batch_size, max_input_sequence_length)
         input_weights = self._attention(
                 decoder_hidden_state, encoder_outputs, encoder_outputs_mask)
-        # shape: (batch_size, max_input_sequence_length)
 
-        attended_input = util.weighted_sum(encoder_outputs, input_weights)
         # shape: (batch_size, encoder_output_dim)
+        attended_input = util.weighted_sum(encoder_outputs, input_weights)
 
         return attended_input
 
@@ -437,10 +440,10 @@ class SimpleSeq2Seq(Model):
            against                l1  l2  l3  l4  l5  l6
            (where the input was)  <S> w1  w2  w3  <E> <P>
         """
+        # shape: (batch_size, num_decoding_steps)
         relevant_targets = targets[:, 1:].contiguous()
-        # shape: (batch_size, num_decoding_steps)
 
-        relevant_mask = target_mask[:, 1:].contiguous()
         # shape: (batch_size, num_decoding_steps)
+        relevant_mask = target_mask[:, 1:].contiguous()
 
         return util.sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask)
