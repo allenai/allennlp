@@ -27,10 +27,7 @@ GRAMMAR_DICTIONARY["select_core"] = ['(select_with_distinct ws select_results ws
                                      '(select_with_distinct ws select_results)']
 GRAMMAR_DICTIONARY["select_with_distinct"] = ['(ws "SELECT" ws "DISTINCT")', '(ws "SELECT")']
 GRAMMAR_DICTIONARY["select_results"] = ['(ws select_result ws "," ws select_results)', '(ws select_result)']
-GRAMMAR_DICTIONARY["select_result"] = ['"*"', 'sel_res_tab_star', 'sel_res_val', 'sel_res_col']
-GRAMMAR_DICTIONARY["sel_res_tab_star"] = ['table_name ws ".*"']
-GRAMMAR_DICTIONARY['sel_res_val'] = ['(expr ws "AS" wsp name)', 'expr']
-GRAMMAR_DICTIONARY['sel_res_col'] = ['col_ref ws "AS" wsp name']
+GRAMMAR_DICTIONARY["select_result"] = ['"*"', '(table_name ws ".*")', '(expr ws "AS" wsp name)', 'expr', '(col_ref ws "AS" wsp name)']
 
 GRAMMAR_DICTIONARY["from_clause"] = ['ws "FROM" ws source']
 GRAMMAR_DICTIONARY["source"] = ['(ws single_source ws "," ws source)', '(ws single_source)']
@@ -150,9 +147,7 @@ def update_grammar_to_be_variable_free(grammar_dictionary: Dict[str, List[str]])
 
     # Tables in variable free grammars cannot be aliased, so we
     # remove this functionality from the grammar.
-    grammar_dictionary["select_result"] = ['"*"', 'sel_res_tab_star', 'expr']
-    del grammar_dictionary['sel_res_val']
-    del grammar_dictionary['sel_res_col']
+    grammar_dictionary["select_result"] = ['"*"', '(table_name ws ".*")', 'expr']
 
     # Similarly, collapse the definition of a source table
     # to not contain aliases and modify references to subqueries.
