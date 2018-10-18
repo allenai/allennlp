@@ -155,14 +155,14 @@ class Text2SqlParser(Model):
         else:
             target_mask = None
 
-        if self.training:
+        if action_sequence is not None:
             # target_action_sequence is of shape (batch_size, 1, target_sequence_length)
             # here after we unsqueeze it for the MML trainer.
-            return self._decoder_trainer.decode(initial_state,
-                                                self._transition_function,
-                                                (action_sequence.unsqueeze(1), target_mask.unsqueeze(1)))
-        else:
-
+            outputs = self._decoder_trainer.decode(initial_state,
+                                                   self._transition_function,
+                                                   (action_sequence.unsqueeze(1),
+                                                    target_mask.unsqueeze(1)))
+        if not self.training:
             action_mapping = []
             for batch_actions in valid_actions:
                 batch_action_mapping = {}
@@ -171,16 +171,10 @@ class Text2SqlParser(Model):
                 action_mapping.append(batch_action_mapping)
 
             outputs: Dict[str, Any] = {'action_mapping': action_mapping}
-            if action_sequence is not None:
-                outputs['loss'] = self._decoder_trainer.decode(initial_state,
-                                                               self._transition_function,
-                                                               (action_sequence.unsqueeze(1),
-                                                                target_mask.unsqueeze(1)))['loss']
-            num_steps = self._max_decoding_steps
             # This tells the state to start keeping track of debug info, which we'll pass along in
             # our output dictionary.
             initial_state.debug_info = [[] for _ in range(batch_size)]
-            best_final_states = self._beam_search.search(num_steps,
+            best_final_states = self._beam_search.search(self._max_decoding_steps,
                                                          initial_state,
                                                          self._transition_function,
                                                          keep_final_unfinished_states=False)
@@ -238,8 +232,6 @@ class Text2SqlParser(Model):
                                                              mask,
                                                              self._encoder.is_bidirectional())
         memory_cell = encoder_outputs.new_zeros(batch_size, self._encoder.get_output_dim())
-
-
         initial_score = encoder_outputs.data.new_zeros(batch_size)
 
         # To make grouping states together in the decoder easier, we convert the batch dimension in
@@ -334,7 +326,7 @@ class Text2SqlParser(Model):
             From the input to ``forward`` for a single batch instance.
         """
         device = util.get_device_of(self._action_embedder.weight)
-
+        # TODO(Mark): This type is pure \(- . ^)/
         translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
 
         actions_grouped_by_nonterminal: Dict[str, List[Tuple[ProductionRule, int]]] = defaultdict(list)
@@ -345,12 +337,10 @@ class Text2SqlParser(Model):
                 raise ValueError("The sql parser doesn't support non-global actions yet.")
 
         for key, production_rule_arrays in actions_grouped_by_nonterminal.items():
-
             translated_valid_actions[key] = {}
             # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid
             # productions of that non-terminal.  We'll first split those productions by global vs.
             # linked action.
-
             global_actions = []
             for production_rule_array, action_index in production_rule_arrays:
                 global_actions.append((production_rule_array.rule_id, action_index))
@@ -367,7 +357,6 @@ class Text2SqlParser(Model):
                 translated_valid_actions[key]['global'] = (global_input_embeddings,
                                                            global_output_embeddings,
                                                            list(global_action_ids))
-
         return GrammarStatelet(['statement'],
                                translated_valid_actions,
                                self.is_nonterminal,
