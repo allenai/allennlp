@@ -72,16 +72,22 @@ class WikiTablesVariableFreeWorld(World):
         for number_in_question in self._question_numbers:
             self._map_name(f"num:{number_in_question}", keep_mapping=True)
 
-        # Adding -1 to mapping because we need it for dates where not all three fields are
-        # specified.
-        self._map_name(f"num:-1", keep_mapping=True)
-
         # Keeps track of column name productions so that we can add them to the agenda.
         self._column_productions_for_agenda: Dict[str, str] = {}
 
+        table_has_date_column = False
         # Adding column names to the local name mapping.
         for column_name, column_type in table_context.column_types.items():
+            if column_type == "date":
+                table_has_date_column = True
             self._map_name(f"{column_type}_column:{column_name}", keep_mapping=True)
+
+        # Adding -1 to mapping because we need it for dates where not all three fields are
+        # specified. We want to do this only when the table has a date column. This is because the
+        # knowledge graph is also constructed in such a way that -1 is an entity with date columns
+        # as the neighbors only if any date columns exist in the table.
+        if table_has_date_column:
+            self._map_name(f"num:-1", keep_mapping=True)
 
         self.global_terminal_productions: Dict[str, str] = {}
         for predicate, mapped_name in self.global_name_mapping.items():

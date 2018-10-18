@@ -160,22 +160,6 @@ class WikiTablesVariableFreeSemanticParser(Model):
 
         # (batch_size, num_entities, embedding_dim)
         encoded_table = self._entity_encoder(embedded_table, table_mask)
-        # (batch_size, num_entities, num_neighbors)
-        neighbor_indices = self._get_neighbor_indices(world, num_entities, encoded_table)
-
-        # Neighbor_indices is padded with -1 since 0 is a potential neighbor index.
-        # Thus, the absolute value needs to be taken in the index_select, and 1 needs to
-        # be added for the mask since that method expects 0 for padding.
-        # (batch_size, num_entities, num_neighbors, embedding_dim)
-        embedded_neighbors = util.batched_index_select(encoded_table, torch.abs(neighbor_indices))
-
-        neighbor_mask = util.get_text_field_mask({'ignored': neighbor_indices + 1},
-                                                 num_wrapping_dims=1).float()
-
-        # Encoder initialized to easily obtain a masked average.
-        neighbor_encoder = TimeDistributed(BagOfEmbeddingsEncoder(self._embedding_dim, averaged=True))
-        # (batch_size, num_entities, embedding_dim)
-        embedded_neighbors = neighbor_encoder(embedded_neighbors, neighbor_mask)
 
         # entity_types: tensor with shape (batch_size, num_entities), where each entry is the
         # entity's type id.
@@ -185,9 +169,31 @@ class WikiTablesVariableFreeSemanticParser(Model):
         entity_types, entity_type_dict = self._get_type_vector(world, num_entities, encoded_table)
 
         entity_type_embeddings = self._entity_type_encoder_embedding(entity_types)
-        projected_neighbor_embeddings = self._neighbor_params(embedded_neighbors.float())
-        # (batch_size, num_entities, embedding_dim)
-        entity_embeddings = torch.tanh(entity_type_embeddings + projected_neighbor_embeddings)
+
+        # (batch_size, num_entities, num_neighbors) or None
+        neighbor_indices = self._get_neighbor_indices(world, num_entities, encoded_table)
+
+        if neighbor_indices is not None:
+            # Neighbor_indices is padded with -1 since 0 is a potential neighbor index.
+            # Thus, the absolute value needs to be taken in the index_select, and 1 needs to
+            # be added for the mask since that method expects 0 for padding.
+            # (batch_size, num_entities, num_neighbors, embedding_dim)
+            embedded_neighbors = util.batched_index_select(encoded_table, torch.abs(neighbor_indices))
+
+            neighbor_mask = util.get_text_field_mask({'ignored': neighbor_indices + 1},
+                                                     num_wrapping_dims=1).float()
+
+            # Encoder initialized to easily obtain a masked average.
+            neighbor_encoder = TimeDistributed(BagOfEmbeddingsEncoder(self._embedding_dim, averaged=True))
+            # (batch_size, num_entities, embedding_dim)
+            embedded_neighbors = neighbor_encoder(embedded_neighbors, neighbor_mask)
+            projected_neighbor_embeddings = self._neighbor_params(embedded_neighbors.float())
+
+            # (batch_size, num_entities, embedding_dim)
+            entity_embeddings = torch.tanh(entity_type_embeddings + projected_neighbor_embeddings)
+        else:
+            # (batch_size, num_entities, embedding_dim)
+            entity_embeddings = torch.tanh(entity_type_embeddings)
 
 
         # Compute entity and question word similarity.  We tried using cosine distance here, but
@@ -318,6 +324,7 @@ class WikiTablesVariableFreeSemanticParser(Model):
                     num_neighbors = len(world.table_graph.neighbors[entity])
 
         batch_neighbors = []
+        no_entities_have_neighbors = True
         for world in worlds:
             # Each batch instance has its own world, which has a corresponding table.
             entities = world.table_graph.entities
@@ -326,6 +333,8 @@ class WikiTablesVariableFreeSemanticParser(Model):
             neighbor_indexes = []
             for entity in entities:
                 entity_neighbors = [entity2index[n] for n in entity2neighbors[entity]]
+                if entity_neighbors:
+                    no_entities_have_neighbors = False
                 # Pad with -1 instead of 0, since 0 represents a neighbor index.
                 padded = pad_sequence_to_length(entity_neighbors, num_neighbors, lambda: -1)
                 neighbor_indexes.append(padded)
@@ -333,6 +342,10 @@ class WikiTablesVariableFreeSemanticParser(Model):
                                                       num_entities,
                                                       lambda: [-1] * num_neighbors)
             batch_neighbors.append(neighbor_indexes)
+        # It is possible that none of the entities has any neighbors, since our definition of the
+        # knowledge graph allows it when no entities or numbers were extracted from the question.
+        if no_entities_have_neighbors:
+            return None
         return tensor.new_tensor(batch_neighbors, dtype=torch.long)
 
     @staticmethod
