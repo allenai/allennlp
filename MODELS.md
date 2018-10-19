@@ -127,7 +127,7 @@ oreact: 0.65
 
 Based on [Bilateral Multi-Perspective Matching for Natural Language Sentences](https://arxiv.org/abs/1702.03814)
 
-* [bimpm-quora-2018.08.17.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/datasets/quora-question-paraphrase/test.tsv) (147 MB)
+* [bimpm-quora-2018.08.17.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/bimpm-quora-2018.08.17.tar.gz) (147 MB)
 
 ```
 ```

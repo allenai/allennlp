@@ -26,6 +26,7 @@ allennlp.data.dataset_readers
   allennlp.data.dataset_readers.semantic_role_labeling
   allennlp.data.dataset_readers.seq2seq
   allennlp.data.dataset_readers.sequence_tagging
+  allennlp.data.dataset_readers.simple_language_modeling
   allennlp.data.dataset_readers.snli
   allennlp.data.dataset_readers.stanford_sentiment_tree_bank
   allennlp.data.dataset_readers.universal_dependencies

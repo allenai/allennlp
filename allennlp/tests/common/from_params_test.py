@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use,invalid-name,too-many-public-methods
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Tuple, Set
 
 from allennlp.common import Params
 from allennlp.common.from_params import FromParams, takes_arg, remove_optional, create_kwargs
@@ -130,3 +130,138 @@ class TestFromParams(AllenNlpTestCase):
         params = Params({"type": "just_spaces"})
 
         WordSplitter.from_params(params)
+
+    def test_dict(self):
+        # pylint: disable=unused-variable
+        from allennlp.common.registrable import Registrable
+
+        class A(Registrable):
+            pass
+
+        @A.register("b")
+        class B(A):
+            def __init__(self, size: int) -> None:
+                self.size = size
+
+        class C(Registrable):
+            pass
+
+        @C.register("d")
+        class D(C):
+            def __init__(self, items: Dict[str, A]) -> None:
+                self.items = items
+
+        params = Params({"type": "d", "items": {"first": {"type": "b", "size": 1},
+                                                "second": {"type": "b", "size": 2}}})
+        d = C.from_params(params)
+
+        assert isinstance(d.items, dict)
+        assert len(d.items) == 2
+        assert all(isinstance(key, str) for key in d.items.keys())
+        assert all(isinstance(value, B) for value in d.items.values())
+        assert d.items["first"].size == 1
+        assert d.items["second"].size == 2
+
+    def test_list(self):
+        # pylint: disable=unused-variable
+        from allennlp.common.registrable import Registrable
+
+        class A(Registrable):
+            pass
+
+        @A.register("b")
+        class B(A):
+            def __init__(self, size: int) -> None:
+                self.size = size
+
+        class C(Registrable):
+            pass
+
+        @C.register("d")
+        class D(C):
+            def __init__(self, items: List[A]) -> None:
+                self.items = items
+
+        params = Params({"type": "d", "items": [{"type": "b", "size": 1}, {"type": "b", "size": 2}]})
+        d = C.from_params(params)
+
+        assert isinstance(d.items, list)
+        assert len(d.items) == 2
+        assert all(isinstance(item, B) for item in d.items)
+        assert d.items[0].size == 1
+        assert d.items[1].size == 2
+
+    def test_tuple(self):
+        # pylint: disable=unused-variable
+        from allennlp.common.registrable import Registrable
+
+        class A(Registrable):
+            pass
+
+        @A.register("b")
+        class B(A):
+            def __init__(self, size: int) -> None:
+                self.size = size
+
+        class C(Registrable):
+            pass
+
+        @C.register("d")
+        class D(C):
+            def __init__(self, name: str) -> None:
+                self.name = name
+
+        class E(Registrable):
+            pass
+
+        @E.register("f")
+        class F(E):
+            def __init__(self, items: Tuple[A, C]) -> None:
+                self.items = items
+
+        params = Params({"type": "f", "items": [{"type": "b", "size": 1}, {"type": "d", "name": "item2"}]})
+        f = E.from_params(params)
+
+        assert isinstance(f.items, tuple)
+        assert len(f.items) == 2
+        assert isinstance(f.items[0], B)
+        assert isinstance(f.items[1], D)
+        assert f.items[0].size == 1
+        assert f.items[1].name == "item2"
+
+    def test_set(self):
+        # pylint: disable=unused-variable
+        from allennlp.common.registrable import Registrable
+
+        class A(Registrable):
+            def __init__(self, name: str) -> None:
+                self.name = name
+
+            def __eq__(self, other):
+                return self.name == other.name
+
+            def __hash__(self):
+                return hash(self.name)
+
+        @A.register("b")
+        class B(A):
+            pass
+
+        class C(Registrable):
+            pass
+
+        @C.register("d")
+        class D(C):
+            def __init__(self, items: Set[A]) -> None:
+                self.items = items
+
+        params = Params({"type": "d", "items": [{"type": "b", "name": "item1"},
+                                                {"type": "b", "name": "item2"},
+                                                {"type": "b", "name": "item2"}]})
+        d = C.from_params(params)
+
+        assert isinstance(d.items, set)
+        assert len(d.items) == 2
+        assert all(isinstance(item, B) for item in d.items)
+        assert any(item.name == "item1" for item in d.items)
+        assert any(item.name == "item2" for item in d.items)

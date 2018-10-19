@@ -37,7 +37,7 @@ scikit-learn
 tensorboardX==1.2
 
 # Required by torch.utils.ffi
-cffi==1.11.2
+cffi==1.11.5
 
 # aws commandline tools for running on Docker remotely.
 # second requirement is to get botocore < 1.11, to avoid the below bug
@@ -64,6 +64,10 @@ sqlparse==0.2.4
 ftfy
 
 #### ESSENTIAL LIBRARIES USED IN SCRIPTS ####
+
+# Plot graphs for learning rate finder
+matplotlib==2.2.3
+
 # Used for downloading datasets over HTTP
 requests>=2.18
 
