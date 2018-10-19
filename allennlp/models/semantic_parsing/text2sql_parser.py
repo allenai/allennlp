@@ -66,7 +66,6 @@ class Text2SqlParser(Model):
                  input_attention: Attention,
                  database_file: str,
                  add_action_bias: bool = True,
-                 training_beam_size: int = None,
                  dropout: float = 0.0,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
@@ -101,7 +100,7 @@ class Text2SqlParser(Model):
         torch.nn.init.normal_(self._first_attended_utterance)
 
         self._beam_search = decoder_beam_search
-        self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
+        self._decoder_trainer = MaximumMarginalLikelihood(beam_size=1)
         self._transition_function = BasicTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
                                                             action_embedding_dim=action_embedding_dim,
                                                             input_attention=input_attention,
