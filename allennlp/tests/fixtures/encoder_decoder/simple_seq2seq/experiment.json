@@ -74,9 +74,7 @@
     "target_embedding_dim": 30,
     "target_namespace": "target_tokens",
     "attention": {
-      "type": "bilinear",
-      "vector_dim": 10,
-      "matrix_dim": 10
+      "type": "dot_product"
     },
     "beam_size": 5
   },
