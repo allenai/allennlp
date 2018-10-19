@@ -13,10 +13,10 @@ from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_ha
 
 GRAMMAR_DICTIONARY = {}
 GRAMMAR_DICTIONARY["statement"] = ['(query ws ";")', '(query ws)']
-GRAMMAR_DICTIONARY["query"] = ['(ws select_core ws groupby_clause ws orderby_clause ws "LIMIT" ws number)',
+GRAMMAR_DICTIONARY["query"] = ['(ws select_core ws groupby_clause ws orderby_clause ws limit)',
                                '(ws select_core ws groupby_clause ws orderby_clause)',
-                               '(ws select_core ws groupby_clause ws "LIMIT" ws number)',
-                               '(ws select_core ws orderby_clause ws ws "LIMIT" ws number)',
+                               '(ws select_core ws groupby_clause ws limit)',
+                               '(ws select_core ws orderby_clause ws limit)',
                                '(ws select_core ws groupby_clause)',
                                '(ws select_core ws orderby_clause)',
                                '(ws select_core)']
@@ -35,6 +35,7 @@ GRAMMAR_DICTIONARY["source"] = ['(ws single_source ws "," ws source)', '(ws sing
 GRAMMAR_DICTIONARY["single_source"] = ['source_table', 'source_subq']
 GRAMMAR_DICTIONARY["source_table"] = ['(table_name ws "AS" wsp name)', 'table_name']
 GRAMMAR_DICTIONARY["source_subq"] = ['("(" ws query ws ")" ws "AS" ws name)', '("(" ws query ws ")")']
+GRAMMAR_DICTIONARY["limit"] = ['("LIMIT" ws "1")', '("LIMIT" ws number)']
 
 GRAMMAR_DICTIONARY["where_clause"] = ['(ws "WHERE" wsp expr ws where_conj)', '(ws "WHERE" wsp expr)']
 GRAMMAR_DICTIONARY["where_conj"] = ['(ws "AND" wsp expr ws where_conj)', '(ws "AND" wsp expr)']
@@ -177,3 +178,18 @@ def update_grammar_to_be_variable_free(grammar_dictionary: Dict[str, List[str]])
     # because now we don't have aliased tables, we don't need
     # to recognise new variables.
     del grammar_dictionary["name"]
+
+def update_grammar_with_untyped_entities(grammar_dictionary: Dict[str, List[str]],
+                                         prelinked_entities: Dict[str, Dict[str, str]]) -> None:
+    # First, we remove all references to string and number in the grammar.
+    grammar_dictionary["string_set_vals"] = ['(value ws "," ws string_set_vals)', 'value']
+    grammar_dictionary["value"].remove('string')
+    grammar_dictionary["value"].remove('number')
+    grammar_dictionary["limit"] = ['("LIMIT" ws "1")', '("LIMIT" ws value)']
+    grammar_dictionary["expr"][1] = '(value wsp "LIKE" wsp value)'
+    del grammar_dictionary["string"]
+    del grammar_dictionary["number"]
+
+
+    for variable, _ in prelinked_entities.items():
+        grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
