@@ -7,7 +7,7 @@ from overrides import overrides
 
 import torch
 
-from allennlp.data.fields.production_rule_field import ProductionRuleArray
+from allennlp.data.fields.production_rule_field import ProductionRule
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.archival import load_archive, Archive
 from allennlp.models.model import Model
@@ -181,7 +181,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
     def forward(self,  # type: ignore
                 sentence: Dict[str, torch.LongTensor],
                 worlds: List[List[NlvrWorld]],
-                actions: List[List[ProductionRuleArray]],
+                actions: List[List[ProductionRule]],
                 agenda: torch.LongTensor,
                 identifier: List[str] = None,
                 labels: torch.LongTensor = None,
@@ -263,9 +263,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
 
     def _get_checklist_info(self,
                             agenda: torch.LongTensor,
-                            all_actions: List[ProductionRuleArray]) -> Tuple[torch.Tensor,
-                                                                             torch.Tensor,
-                                                                             torch.Tensor]:
+                            all_actions: List[ProductionRule]) -> Tuple[torch.Tensor,
+                                                                        torch.Tensor,
+                                                                        torch.Tensor]:
         """
         Takes an agenda and a list of all actions and returns a target checklist against which the
         checklist at each state will be compared to compute a loss, indices of ``terminal_actions``,
@@ -278,14 +278,14 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         ----------
         ``agenda`` : ``torch.LongTensor``
             Agenda of one instance of size ``(agenda_size, 1)``.
-        ``all_actions`` : ``List[ProductionRuleArray]``
+        ``all_actions`` : ``List[ProductionRule]``
             All actions for one instance.
         """
         terminal_indices = []
         target_checklist_list = []
         agenda_indices_set = set([int(x) for x in agenda.squeeze(0).detach().cpu().numpy()])
         for index, action in enumerate(all_actions):
-            # Each action is a ProductionRuleArray, a tuple where the first item is the production
+            # Each action is a ProductionRule, a tuple where the first item is the production
             # rule string.
             if action[0] in self._terminal_productions:
                 terminal_indices.append([index])
@@ -310,7 +310,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                         action_strings: List[List[List[str]]],
                         worlds: List[List[NlvrWorld]],
                         label_strings: List[List[str]],
-                        possible_actions: List[List[ProductionRuleArray]],
+                        possible_actions: List[List[ProductionRule]],
                         agenda_data: List[List[int]]) -> None:
         # TODO(pradeep): Move this to the base class.
         # TODO(pradeep): action_strings contains k-best lists. This method only uses the top decoded
