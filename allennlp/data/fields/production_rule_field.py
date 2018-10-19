@@ -51,7 +51,7 @@ class ProductionRuleField(Field[ProductionRule]):  # type: ignore
     In a model, this will get represented as a ``ProductionRule``, which is defined above.
     This is a namedtuple of ``(rule_string, is_global_rule, [rule_id], nonterminal)``, where the
     ``rule_id`` ``Tensor``, if present, will have shape ``(1,)``.  We don't do any batching of the
-    ``Tensors``, so this gets passed to ``Model.forward()`` as a ``List[ProductionRule]``.  We 
+    ``Tensors``, so this gets passed to ``Model.forward()`` as a ``List[ProductionRule]``.  We
     pass along the rule string because there isn't another way to recover it for instance-specific
     rules that do not make it into the vocabulary.
 
