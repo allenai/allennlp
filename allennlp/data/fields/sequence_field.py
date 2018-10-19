@@ -1,4 +1,3 @@
-from typing import Sequence
 from allennlp.data.fields.field import DataArray, Field
 
 
