@@ -64,12 +64,10 @@ class BeamSearchTest(AllenNlpTestCase):
                        expected_top_k: np.array = None,
                        expected_log_probs: np.array = None,
                        beam_search: BeamSearch = None,
-                       state: Dict[str, torch.Tensor] = None,
-                       expected_finished_state: Dict[str, np.array] = None) -> None:
+                       state: Dict[str, torch.Tensor] = None) -> None:
         expected_top_k = expected_top_k if expected_top_k is not None else self.expected_top_k
         expected_log_probs = expected_log_probs if expected_log_probs is not None else self.expected_log_probs
         state = state or {}
-        expected_finished_state = expected_finished_state or {}
 
         beam_search = beam_search or self.beam_search
         beam_size = beam_search.beam_size
@@ -84,10 +82,6 @@ class BeamSearchTest(AllenNlpTestCase):
         # log_probs should be shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(log_probs.size()) == [batch_size, beam_size]
         np.testing.assert_allclose(log_probs[0].numpy(), expected_log_probs)
-
-        # check finished state.
-        for key, array in expected_finished_state.items():
-            np.testing.assert_allclose(state[key].numpy(), array)
 
     def test_search(self):
         self._check_results()
@@ -123,7 +117,11 @@ class BeamSearchTest(AllenNlpTestCase):
         )
         # shape: (batch_size x beam_size, 3)
 
-        self._check_results(state=state, expected_finished_state=expected_finished_state)
+        self._check_results(state=state)
+
+        # check finished state.
+        for key, array in expected_finished_state.items():
+            np.testing.assert_allclose(state[key].numpy(), array)
 
     def test_batch_size_of_one(self):
         self._check_results(batch_size=1)

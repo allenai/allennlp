@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from torch.nn.modules.linear import Linear
 from torch.nn.modules.rnn import LSTMCell
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.attention import LegacyAttention
@@ -53,8 +54,8 @@ class SimpleSeq2Seq(Model):
     attention_function: ``SimilarityFunction``, optional (default = None)
         This is if you want to use the legacy implementation of attention. This will be deprecated
         since it consumes more memory than the specialized attention modules.
-    beam_size : ``int``, optional (default = 5)
-        Width of the beam for beam search.
+    beam_size : ``int``, optional (default = None)
+        Width of the beam for beam search. If not specified, greedy decoding is used.
     scheduled_sampling_ratio : ``float``, optional (default = 0.)
         At each timestep during training, we sample a random number between 0 and 1, and if it is
         not less than this value, we use the ground truth labels for the whole batch. Else, we use
@@ -72,7 +73,7 @@ class SimpleSeq2Seq(Model):
                  max_decoding_steps: int,
                  attention: Attention = None,
                  attention_function: SimilarityFunction = None,
-                 beam_size: int = 5,
+                 beam_size: int = None,
                  target_namespace: str = "tokens",
                  target_embedding_dim: int = None,
                  scheduled_sampling_ratio: float = 0.) -> None:
@@ -95,6 +96,9 @@ class SimpleSeq2Seq(Model):
 
         # Attention mechanism applied to the encoder output for each step.
         if attention:
+            if attention_function:
+                raise ConfigurationError("You can only specify an attention module or an "
+                                         "attention function, but not both.")
             self._attention = attention
         elif attention_function:
             self._attention = LegacyAttention(attention_function)
@@ -129,7 +133,11 @@ class SimpleSeq2Seq(Model):
         self._output_projection_layer = Linear(self._decoder_output_dim, num_classes)
 
         # At prediction time, we use a beam search to find the most likely sequence of target tokens.
-        self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
+        self._max_decoding_steps = max_decoding_steps
+        if beam_size is not None:
+            self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
+        else:
+            self._beam_search = None
 
     def take_step(self,
                   last_predictions: torch.Tensor,
@@ -195,10 +203,10 @@ class SimpleSeq2Seq(Model):
         """
         state = self._init_encoded_state(source_tokens)
 
-        if target_tokens:
-            return self._forward_loop(target_tokens, state)
-
-        return self._forward_beam_search(state)
+        if self.training or not self._beam_search:
+            return self._forward_loop(state, target_tokens=target_tokens)
+        else:
+            return self._forward_beam_search(state)
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -270,20 +278,25 @@ class SimpleSeq2Seq(Model):
 
 
     def _forward_loop(self,
-                      target_tokens: Dict[str, torch.LongTensor],
-                      state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+                      state: Dict[str, torch.Tensor],
+                      target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
         """Make forward pass during training."""
         # shape: (batch_size, max_input_sequence_length)
         source_mask = state["source_mask"]
 
-        # shape: (batch_size, max_target_sequence_length)
-        targets = target_tokens["tokens"]
+        batch_size = source_mask.size()[0]
 
-        batch_size, target_sequence_length = targets.size()
+        if target_tokens:
+            # shape: (batch_size, max_target_sequence_length)
+            targets = target_tokens["tokens"]
 
-        # The last input from the target is either padding or the end symbol.
-        # Either way, we don't have to process it.
-        num_decoding_steps = target_sequence_length - 1
+            _, target_sequence_length = targets.size()
+
+            # The last input from the target is either padding or the end symbol.
+            # Either way, we don't have to process it.
+            num_decoding_steps = target_sequence_length - 1
+        else:
+            num_decoding_steps = self._max_decoding_steps
 
         # Initialize target predictions with the start index.
         # shape: (batch_size,)
@@ -293,9 +306,12 @@ class SimpleSeq2Seq(Model):
         step_probabilities: List[torch.Tensor] = []
         step_predictions: List[torch.Tensor] = []
         for timestep in range(num_decoding_steps):
-            # Use gold tokens at test time and at a rate of 1 - _scheduled_sampling_ratio
-            # during training.
             if self.training and torch.rand(1).item() < self._scheduled_sampling_ratio:
+                # Use gold tokens at test time and at a rate of 1 - _scheduled_sampling_ratio
+                # during training.
+                # shape: (batch_size,)
+                input_choices = last_predictions
+            elif not target_tokens:
                 # shape: (batch_size,)
                 input_choices = last_predictions
             else:
@@ -339,9 +355,10 @@ class SimpleSeq2Seq(Model):
         }
 
         # Compute loss.
-        target_mask = util.get_text_field_mask(target_tokens)
-        loss = self._get_loss(logits, targets, target_mask)
-        output_dict["loss"] = loss
+        if target_tokens:
+            target_mask = util.get_text_field_mask(target_tokens)
+            loss = self._get_loss(logits, targets, target_mask)
+            output_dict["loss"] = loss
 
         return output_dict
 
@@ -356,7 +373,7 @@ class SimpleSeq2Seq(Model):
                 start_predictions, state, self.take_step)
 
         output_dict = {
-                "logits": log_probabilities,
+                "class_log_probabilities": log_probabilities,
                 "predictions": all_top_k_predictions,
         }
         return output_dict
