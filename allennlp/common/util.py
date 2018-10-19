@@ -220,8 +220,15 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) 
         The directory to stream logs to.
     file_friendly_logging : ``bool``, required.
         Whether logs should clean the output to prevent carridge returns
-        (used to update progress bars on a single terminal line).
+        (used to update progress bars on a single terminal line). This
+        option is only used if you are running in an environment with a terminal.
     """
+
+    # If we don't have a terminal as stdout,
+    # force tqdm to be nicer.
+    if not sys.stdout.isatty():
+        file_friendly_logging = True
+
     Tqdm.set_slower_interval(file_friendly_logging)
     std_out_file = os.path.join(serialization_dir, "stdout.log")
     sys.stdout = TeeLogger(std_out_file, # type: ignore
