@@ -1,12 +1,15 @@
 import re
 from typing import List, Dict, Set
 from collections import defaultdict
-
+from sys import exc_info
+from six import reraise
 from overrides import overrides
 
 from parsimonious.expressions import Literal, OneOf, Sequence
 from parsimonious.nodes import Node, NodeVisitor
 from parsimonious.grammar import Grammar
+from parsimonious.exceptions import VisitationError, UndefinedLabel
+
 
 WHITESPACE_REGEX = re.compile(" wsp |wsp | wsp| ws |ws | ws")
 
@@ -114,7 +117,7 @@ def action_sequence_to_sql(action_sequences: List[str]) -> str:
         if nonterminal == 'statement':
             query.extend(right_hand_side_tokens)
         else:
-            for query_index, token in reversed(list(enumerate(query))):
+            for query_index, token in list(enumerate(query)):
                 if token == nonterminal:
                     query = query[:query_index] + \
                             right_hand_side_tokens + \
@@ -183,6 +186,29 @@ class SqlVisitor(NodeVisitor):
                                                  for tok in child_right_side_list]
                         child_strings.extend(child_right_side_list)
                 right_hand_side = "[" + ", ".join(child_strings) + "]"
-
             rule = nonterminal + right_hand_side
             self.action_sequence = [rule] + self.action_sequence
+
+    @overrides
+    def visit(self, node):
+        """
+        See the ``NodeVisitor`` visit method. This just changes the order in which
+        we visit nonterminals from right to left to left to right.
+        """
+        method = getattr(self, 'visit_' + node.expr_name, self.generic_visit)
+
+        # Call that method, and show where in the tree it failed if it blows
+        # up.
+        try:
+            # Changing this to reverse here!
+            return method(node, [self.visit(child) for child in reversed(list(node))])
+        except (VisitationError, UndefinedLabel):
+            # Don't catch and re-wrap already-wrapped exceptions.
+            raise
+        except self.unwrapped_exceptions:
+            raise
+        except Exception: # pylint: disable=broad-except
+            # Catch any exception, and tack on a parse tree so it's easier to
+            # see where it went wrong.
+            exc_class, exc, traceback = exc_info()
+            reraise(VisitationError, VisitationError(exc, exc_class, node), traceback)

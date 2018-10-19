@@ -8,12 +8,13 @@ import torch
 
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
-from allennlp.data.fields.production_rule_field import ProductionRuleArray
+from allennlp.data.fields.production_rule_field import ProductionRule
 from allennlp.semparse.executors import SqlExecutor
 from allennlp.models.model import Model
 from allennlp.modules import Attention, Seq2SeqEncoder, TextFieldEmbedder, Embedding
 from allennlp.nn import util
 from allennlp.semparse.worlds import AtisWorld
+from allennlp.semparse.contexts.atis_sql_table_context import NUMERIC_NONTERMINALS
 from allennlp.semparse.contexts.sql_context_utils import action_sequence_to_sql
 from allennlp.state_machines.states import GrammarBasedState
 from allennlp.state_machines.transition_functions.linking_transition_function import LinkingTransitionFunction
@@ -68,6 +69,7 @@ class AtisSemanticParser(Model):
                  input_attention: Attention,
                  add_action_bias: bool = True,
                  training_beam_size: int = None,
+                 decoder_num_layers: int = 1,
                  dropout: float = 0.0,
                  rule_namespace: str = 'rule_labels',
                  database_file='/atis/atis.db') -> None:
@@ -107,6 +109,7 @@ class AtisSemanticParser(Model):
 
         self._num_entity_types = 2  # TODO(kevin): get this in a more principled way somehow?
         self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
+        self._decoder_num_layers = decoder_num_layers
 
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
@@ -115,13 +118,14 @@ class AtisSemanticParser(Model):
                                                               input_attention=input_attention,
                                                               predict_start_type_separately=False,
                                                               add_action_bias=self._add_action_bias,
-                                                              dropout=dropout)
+                                                              dropout=dropout,
+                                                              num_layers=self._decoder_num_layers)
 
     @overrides
     def forward(self,  # type: ignore
                 utterance: Dict[str, torch.LongTensor],
                 world: List[AtisWorld],
-                actions: List[List[ProductionRuleArray]],
+                actions: List[List[ProductionRule]],
                 linking_scores: torch.Tensor,
                 target_action_sequence: torch.LongTensor = None,
                 sql_queries: List[List[str]] = None) -> Dict[str, torch.Tensor]:
@@ -138,9 +142,9 @@ class AtisSemanticParser(Model):
         world : ``List[AtisWorld]``
             We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
             how ``MetadataField`` works, this gets passed to us as a ``List[AtisWorld]``,
-        actions : ``List[List[ProductionRuleArray]]``
+        actions : ``List[List[ProductionRule]]``
             A list of all possible actions for each ``World`` in the batch, indexed into a
-            ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
+            ``ProductionRule`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
         linking_scores: ``torch.Tensor``
@@ -243,7 +247,7 @@ class AtisSemanticParser(Model):
     def _get_initial_state(self,
                            utterance: Dict[str, torch.LongTensor],
                            worlds: List[AtisWorld],
-                           actions: List[List[ProductionRuleArray]],
+                           actions: List[List[ProductionRule]],
                            linking_scores: torch.Tensor) -> GrammarBasedState:
         embedded_utterance = self._utterance_embedder(utterance)
         utterance_mask = util.get_text_field_mask(utterance).float()
@@ -277,12 +281,21 @@ class AtisSemanticParser(Model):
         utterance_mask_list = [utterance_mask[i] for i in range(batch_size)]
         initial_rnn_state = []
         for i in range(batch_size):
-            initial_rnn_state.append(RnnStatelet(final_encoder_output[i],
-                                                 memory_cell[i],
-                                                 self._first_action_embedding,
-                                                 self._first_attended_utterance,
-                                                 encoder_output_list,
-                                                 utterance_mask_list))
+            if self._decoder_num_layers > 1:
+                initial_rnn_state.append(RnnStatelet(final_encoder_output[i].repeat(self._decoder_num_layers, 1),
+                                                     memory_cell[i].repeat(self._decoder_num_layers, 1),
+                                                     self._first_action_embedding,
+                                                     self._first_attended_utterance,
+                                                     encoder_output_list,
+                                                     utterance_mask_list))
+            else:
+                initial_rnn_state.append(RnnStatelet(final_encoder_output[i],
+                                                     memory_cell[i],
+                                                     self._first_action_embedding,
+                                                     self._first_attended_utterance,
+                                                     encoder_output_list,
+                                                     utterance_mask_list))
+
 
         initial_grammar_state = [self._create_grammar_state(worlds[i],
                                                             actions[i],
@@ -326,7 +339,8 @@ class AtisSemanticParser(Model):
         for batch_index, world in enumerate(worlds):
             types = []
             entities = [('number', entity)
-                        if 'number' or 'time_range' in entity
+                        if any([entity.startswith(numeric_nonterminal)
+                                for numeric_nonterminal in NUMERIC_NONTERMINALS])
                         else ('string', entity)
                         for entity in world.entities]
 
@@ -398,7 +412,7 @@ class AtisSemanticParser(Model):
 
     def _create_grammar_state(self,
                               world: AtisWorld,
-                              possible_actions: List[ProductionRuleArray],
+                              possible_actions: List[ProductionRule],
                               linking_scores: torch.Tensor,
                               entity_types: torch.Tensor) -> GrammarStatelet:
         """
@@ -408,14 +422,14 @@ class AtisSemanticParser(Model):
 
         The inputs to this method are for a `single instance in the batch`; none of the tensors we
         create here are batched.  We grab the global action ids from the input
-        ``ProductionRuleArrays``, and we use those to embed the valid actions for every
+        ``ProductionRules``, and we use those to embed the valid actions for every
         non-terminal type.  We use the input ``linking_scores`` for non-global actions.
 
         Parameters
         ----------
         world : ``AtisWorld``
             From the input to ``forward`` for a single batch instance.
-        possible_actions : ``List[ProductionRuleArray]``
+        possible_actions : ``List[ProductionRule]``
             From the input to ``forward`` for a single batch instance.
         linking_scores : ``torch.Tensor``
             Assumed to have shape ``(num_entities, num_utterance_tokens)`` (i.e., there is no batch
@@ -475,8 +489,7 @@ class AtisSemanticParser(Model):
 
         return GrammarStatelet(['statement'],
                                translated_valid_actions,
-                               self.is_nonterminal,
-                               reverse_productions=False)
+                               self.is_nonterminal)
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:

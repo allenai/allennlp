@@ -5,7 +5,7 @@ from overrides import overrides
 
 import torch
 
-from allennlp.data.fields.production_rule_field import ProductionRuleArray
+from allennlp.data.fields.production_rule_field import ProductionRule
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
@@ -122,7 +122,7 @@ class NlvrSemanticParser(Model):
 
     @classmethod
     def _get_action_strings(cls,
-                            possible_actions: List[List[ProductionRuleArray]],
+                            possible_actions: List[List[ProductionRule]],
                             action_indices: Dict[int, List[List[int]]]) -> List[List[List[str]]]:
         """
         Takes a list of possible actions and indices of decoded actions into those possible actions
@@ -174,7 +174,7 @@ class NlvrSemanticParser(Model):
 
     def _create_grammar_state(self,
                               world: NlvrWorld,
-                              possible_actions: List[ProductionRuleArray]) -> GrammarStatelet:
+                              possible_actions: List[ProductionRule]) -> GrammarStatelet:
         valid_actions = world.get_valid_actions()
         action_mapping = {}
         for i, action in enumerate(possible_actions):

@@ -1,29 +1,26 @@
 {
   "dataset_reader": {
     "type": "event2mind",
+    # Uncomment this when generating the vocabularly with `dry-run`.
+    #"dummy_instances_for_vocab_generation": true,
     "source_tokenizer": {
       "type": "word",
       "word_splitter": {
         "type": "spacy"
       }
     },
-    "target_tokenizer": {
-      "type": "word"
-    },
     "source_token_indexers": {
       "tokens": {
         "type": "single_id",
         "namespace": "source_tokens"
       }
-    },
-    "target_token_indexers": {
-      "tokens": {
-        "namespace": "target_tokens"
-      }
     }
   },
   "vocabulary": {
-    "min_count": {"tokens": 2}
+    # Uncomment this when generating the vocabularly with `dry-run`.
+    #"min_count": {"source_tokens": 2}
+    # Uncomment this when training using an existing vocabularly.
+    #"directory_path": "output_dir/vocabulary/"
   },
   "train_data_path": "https://raw.githubusercontent.com/uwnlp/event2mind/master/docs/data/train.csv",
   "validation_data_path": "https://raw.githubusercontent.com/uwnlp/event2mind/master/docs/data/dev.csv",
@@ -34,8 +31,7 @@
         "tokens": {
           "type": "embedding",
           "vocab_namespace": "source_tokens",
-          # TODO(brendanr): Upload the w2v embeddings and use those if permissible.
-          "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
+          "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/word2vec/GoogleNews-vectors-negative300.txt.gz",
           "embedding_dim": 300,
           "trainable": false
         }
@@ -52,7 +48,8 @@
       "bidirectional": true
     },
     "max_decoding_steps": 10,
-    "target_namespace": "target_tokens"
+    # Following the original model we use a single namespace.
+    "target_namespace": "source_tokens"
   },
   "iterator": {
     "type": "bucket",
@@ -61,11 +58,12 @@
     "sorting_keys": [["source", "num_tokens"]]
   },
   "trainer": {
-    "num_epochs": 40,
+    "num_epochs": 10,
     "patience": 10,
     "cuda_device": 0,
     "optimizer": {
       "type": "adam"
-    }
+    },
+    "validation_metric": "+xintent"
   }
 }

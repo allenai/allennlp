@@ -20,8 +20,10 @@ from allennlp.models.semantic_parsing.quarel.quarel_semantic_parser import Quare
 from allennlp.models.semantic_parsing.wikitables.wikitables_mml_semantic_parser import WikiTablesMmlSemanticParser
 from allennlp.models.semantic_parsing.wikitables.wikitables_erm_semantic_parser import WikiTablesErmSemanticParser
 from allennlp.models.semantic_parsing.atis.atis_semantic_parser import AtisSemanticParser
+from allennlp.models.semantic_parsing.text2sql_parser import Text2SqlParser
 from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.models.esim import ESIM
 from allennlp.models.bimpm import BiMpm
 from allennlp.models.graph_parser import GraphParser
+from allennlp.models.bidirectional_lm import BidirectionalLanguageModel

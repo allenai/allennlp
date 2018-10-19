@@ -25,6 +25,7 @@ import torch
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.augmented_lstm import AugmentedLstm
+from allennlp.modules.seq2seq_encoders.gated_cnn_encoder import GatedCnnEncoder
 from allennlp.modules.seq2seq_encoders.intra_sentence_attention import IntraSentenceAttentionEncoder
 from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import PytorchSeq2SeqWrapper
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
@@ -76,8 +77,9 @@ class _Seq2SeqWrapper:
             raise ConfigurationError("Our encoder semantics assumes batch is always first!")
         if self._module_class in self.PYTORCH_MODELS:
             params['batch_first'] = True
+        stateful = params.pop_bool('stateful', False)
         module = self._module_class(**params.as_dict())
-        return PytorchSeq2SeqWrapper(module)
+        return PytorchSeq2SeqWrapper(module, stateful=stateful)
 
 # pylint: disable=protected-access
 Seq2SeqEncoder.register("gru")(_Seq2SeqWrapper(torch.nn.GRU))

@@ -6,7 +6,7 @@ import torch
 from allennlp.common.checks import check_dimensions_match
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
-from allennlp.data.fields.production_rule_field import ProductionRuleArray
+from allennlp.data.fields.production_rule_field import ProductionRule
 from allennlp.models.model import Model
 from allennlp.modules import Embedding, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, TimeDistributed
 from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
@@ -141,7 +141,7 @@ class WikiTablesSemanticParser(Model):
                                            question: Dict[str, torch.LongTensor],
                                            table: Dict[str, torch.LongTensor],
                                            world: List[WikiTablesWorld],
-                                           actions: List[List[ProductionRuleArray]],
+                                           actions: List[List[ProductionRule]],
                                            outputs: Dict[str, Any]) -> Tuple[List[RnnStatelet],
                                                                              List[LambdaGrammarStatelet]]:
         """
@@ -512,7 +512,7 @@ class WikiTablesSemanticParser(Model):
 
     def _create_grammar_state(self,
                               world: WikiTablesWorld,
-                              possible_actions: List[ProductionRuleArray],
+                              possible_actions: List[ProductionRule],
                               linking_scores: torch.Tensor,
                               entity_types: torch.Tensor) -> LambdaGrammarStatelet:
         """
@@ -531,14 +531,14 @@ class WikiTablesSemanticParser(Model):
 
         The inputs to this method are for a `single instance in the batch`; none of the tensors we
         create here are batched.  We grab the global action ids from the input
-        ``ProductionRuleArrays``, and we use those to embed the valid actions for every
+        ``ProductionRules``, and we use those to embed the valid actions for every
         non-terminal type.  We use the input ``linking_scores`` for non-global actions.
 
         Parameters
         ----------
         world : ``WikiTablesWorld``
             From the input to ``forward`` for a single batch instance.
-        possible_actions : ``List[ProductionRuleArray]``
+        possible_actions : ``List[ProductionRule]``
             From the input to ``forward`` for a single batch instance.
         linking_scores : ``torch.Tensor``
             Assumed to have shape ``(num_entities, num_question_tokens)`` (i.e., there is no batch
@@ -620,7 +620,7 @@ class WikiTablesSemanticParser(Model):
                                      type_declaration.is_nonterminal)
 
     def _compute_validation_outputs(self,
-                                    actions: List[List[ProductionRuleArray]],
+                                    actions: List[List[ProductionRule]],
                                     best_final_states: Mapping[int, Sequence[GrammarBasedState]],
                                     world: List[WikiTablesWorld],
                                     example_lisp_string: List[str],
