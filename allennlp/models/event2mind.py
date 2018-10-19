@@ -226,9 +226,12 @@ class Event2Mind(Model):
         for timestep in range(num_decoding_steps):
             # See https://github.com/allenai/allennlp/issues/1134.
             input_choices = targets[:, timestep]
-            for name, param in self.named_parameters():
-                print(f"BRR {name}: {param.device}")
-            print("\n\n\n\n\n\n")
+            params = list(self.named_parameters())
+            first_name, first_param = params[0]
+            first_device = first_param.device
+            for name, param in params:
+                if param.device != first_device:
+                    print(f"BRR orig {first_name}: {first_device}\nnext {name}: {param.device}")
             decoder_input = target_embedder(input_choices)
             decoder_hidden = decoder_cell(decoder_input, decoder_hidden)
             # (batch_size, num_classes)
