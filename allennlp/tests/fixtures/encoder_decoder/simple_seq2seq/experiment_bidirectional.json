@@ -78,7 +78,8 @@
       "type": "bilinear",
       "vector_dim": 20,
       "matrix_dim": 20
-    }
+    },
+    "beam_size": 5
   },
   "iterator": {
     "type": "bucket",

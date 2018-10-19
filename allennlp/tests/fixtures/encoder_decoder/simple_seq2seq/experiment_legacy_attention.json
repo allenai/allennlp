@@ -76,7 +76,8 @@
     "target_namespace": "target_tokens",
     "attention_function": {
         "type": "dot_product"
-    }
+    },
+    "beam_size": 5
   },
   "iterator": {
     "type": "bucket",

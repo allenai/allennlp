@@ -43,8 +43,7 @@ class BeamSearch:
     def search(self,
                start_predictions: torch.Tensor,
                start_state: StateType,
-               step: StepFunctionType,
-               first_step: StepFunctionType = None) -> Tuple[torch.Tensor, torch.Tensor]:
+               step: StepFunctionType) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Given a starting state and a step function, apply beam search to find the
         most likely target sequences.
@@ -56,7 +55,7 @@ class BeamSearch:
             Usually the initial predictions are just the index of the "start" token
             in the target vocabulary.
         start_state : ``StateType``
-            The initial state passed to the ``first_step`` function. Each value of the state dict
+            The initial state passed to the ``step`` function. Each value of the state dict
             should be a tensor of shape ``(batch_size, *)``, where ``*`` means any other
             number of dimensions.
         step : ``StepFunctionType``
@@ -72,11 +71,6 @@ class BeamSearch:
             the log probabilities of the tokens for the next step, and the second
             element is the updated state. The tensor in the state should have shape
             ``(group_size, *)``, where ``*`` means any other number of dimensions.
-        first_step : ``StepFunctionType``, optional
-            If the first step of decoding should be handled differently, then you can
-            set this function which will only be used during the first step. If not set,
-            ``step`` will be used for the first step as well. This function should have the
-            same signature as ``step``.
 
         Returns
         -------
@@ -86,8 +80,6 @@ class BeamSearch:
             has shape ``(batch_size, beam_size)``.
         """
         batch_size = start_predictions.size()[0]
-
-        first_step = first_step or step
 
         # List of (batch_size, beam_size) tensors. One for each time step. Does not
         # include the start symbols, which are implicit.
@@ -105,7 +97,7 @@ class BeamSearch:
         # beam to `beam_size`^2 candidates from which we will select the top
         # `beam_size` elements for the next iteration.
         # shape: (batch_size, num_classes)
-        start_class_log_probabilities, state = first_step(start_predictions, start_state)
+        start_class_log_probabilities, state = step(start_predictions, start_state)
 
         num_classes = start_class_log_probabilities.size()[1]
 

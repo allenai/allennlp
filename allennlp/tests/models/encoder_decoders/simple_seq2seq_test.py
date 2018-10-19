@@ -4,6 +4,7 @@ import numpy
 import torch
 
 from allennlp.common.testing import ModelTestCase
+from allennlp.nn.beam_search import BeamSearch
 from allennlp.nn.util import sequence_cross_entropy_with_logits
 
 
@@ -29,6 +30,11 @@ class SimpleSeq2SeqTest(ModelTestCase):
     def test_legacy_attention_model_can_train_save_and_load(self):
         param_file = self.FIXTURES_ROOT / "encoder_decoder" / \
                      "simple_seq2seq" / "experiment_legacy_attention.json"
+        self.ensure_model_can_train_save_and_load(param_file, tolerance=1e-2)
+
+    def test_greedy_model_can_train_save_and_load(self):
+        param_file = self.FIXTURES_ROOT / "encoder_decoder" / \
+                     "simple_seq2seq" / "experiment_no_beam_search.json"
         self.ensure_model_can_train_save_and_load(param_file, tolerance=1e-2)
 
     def test_loss_is_computed_correctly(self):
@@ -61,3 +67,28 @@ class SimpleSeq2SeqTest(ModelTestCase):
         output_dict = self.model(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
         assert "predicted_tokens" in decode_output_dict
+
+    def test_greedy_decode_matches_beam_search(self):
+        # pylint: disable=protected-access
+        beam_search = BeamSearch(self.model._end_index, max_steps=self.model._max_decoding_steps, beam_size=1)
+        training_tensors = self.dataset.as_tensor_dict()
+
+        # Get greedy predictions from _forward_loop method of model.
+        state = self.model._init_encoded_state(training_tensors["source_tokens"])
+        output_dict_greedy = self.model._forward_loop(state)
+        output_dict_greedy = self.model.decode(output_dict_greedy)
+
+        # Get greedy predictions from beam search (beam size = 1).
+        state = self.model._init_encoded_state(training_tensors["source_tokens"])
+        batch_size = state["source_mask"].size()[0]
+        start_predictions = state["source_mask"].new_full((batch_size,), fill_value=self.model._start_index)
+        all_top_k_predictions, log_probabilities = beam_search.search(
+                start_predictions, state, self.model.take_step)
+        output_dict_beam_search = {
+                "class_log_probabilities": log_probabilities,
+                "predictions": all_top_k_predictions,
+        }
+        output_dict_beam_search = self.model.decode(output_dict_beam_search)
+
+        # Predictions from model._forward_loop and beam_search should match.
+        assert output_dict_greedy["predicted_tokens"] == output_dict_beam_search["predicted_tokens"]
