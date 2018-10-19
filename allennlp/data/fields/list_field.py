@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use
-from typing import Dict, List
+from typing import Dict, List, Iterator
 
 from overrides import overrides
 
@@ -30,6 +30,16 @@ class ListField(SequenceField[DataArray]):
                                           str(field_class_set)
         # Not sure why mypy has a hard time with this type...
         self.field_list: List[Field] = field_list
+
+    # Sequence[Field] methods
+    def __iter__(self) -> Iterator[Field]:
+        return iter(self.field_list)
+
+    def __getitem__(self, idx: int) -> Field:
+        return self.field_list[idx]
+
+    def __len__(self) -> int:
+        return len(self.field_list)
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
