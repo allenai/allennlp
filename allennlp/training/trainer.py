@@ -410,7 +410,10 @@ class Trainer(Registrable):
         metadata_batch_size = len(batch['metadata']) if 'metadata' in batch and isinstance(batch['metadata'],list) else None
 
         print(f"BRR2 {batch.keys()}")
+        print(f"batch: {batch}")
         inputs, module_kwargs = scatter_kwargs((), batch, self._cuda_devices, 0)
+        print(f"inputs: {inputs}")
+        print(f"module_kwargs: {module_kwargs}")
 
         if metadata_batch_size is not None:
             # Metadata batches also have to be chunked as PyTorch is unaware of them.
