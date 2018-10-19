@@ -124,8 +124,9 @@ class Embedding(TokenEmbedder):
         original_inputs = inputs
         if original_inputs.dim() > 2:
             inputs = inputs.view(-1, inputs.size(-1))
-        print(f"BRR embedding.py inputs {inputs.device} weight {self.weight.device}")
-        traceback.print_stack()
+        if inputs.device != self.weight.device:
+            print(f"BRR embedding.py inputs {inputs.device} weight {self.weight.device}")
+            traceback.print_stack()
         embedded = embedding(inputs, self.weight,
                              max_norm=self.max_norm,
                              norm_type=self.norm_type,
