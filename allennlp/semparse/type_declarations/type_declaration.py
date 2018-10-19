@@ -564,25 +564,28 @@ def _get_complex_type_production(complex_type: ComplexType,
     Takes a complex type (without any placeholders), gets its return values, and returns productions
     (perhaps each with multiple arguments) that produce the return values.  This method also takes
     care of ``MultiMatchNamedBasicTypes``. If one of the arguments or the return types is a multi
-    match type, it gets all the substitutions of those types as forms a list with all possible
-    combinations of sustitutions. If the complex type passed to this method has no
-    ``MultiMatchNamedBasicTypes``, the returned list will contain a single tuple.  For example, if
-    the complex is type ``<a,<<b,c>,d>>``, and ``a`` is a multi match type that matches ``e`` and
-    ``f``, this gives the following list of tuples:
-    ``[('d', 'd -> [<a,<<b,c>,d>, e, <b,c>]), ('d', 'd -> [<a,<<b,c>,d>, f, <b,c>])]``
-    Note that we assume there will be no productions from the multi match type, and the list above
-    does not contain ``('d', 'd -> [<a,<<b,c>,d>, a, <b,c>>]')``.
+    match type, it gets all the substitutions of those types from ``multi_match_mapping`` and forms
+    a list with all possible combinations of sustitutions. If the complex type passed to this method
+    has no ``MultiMatchNamedBasicTypes``, the returned list will contain a single tuple.  For
+    example, if the complex is type ``<a,<<b,c>,d>>``, and ``a`` is a multi match type that matches
+    ``e`` and ``f``, this gives the following list of tuples: ``[('d', 'd -> [<a,<<b,c>,d>, e,
+    <b,c>]), ('d', 'd -> [<a,<<b,c>,d>, f, <b,c>])]`` Note that we assume there will be no
+    productions from the multi match type, and the list above does not contain ``('d', 'd ->
+    [<a,<<b,c>,d>, a, <b,c>>]')``.
     """
     return_type = complex_type.return_type()
     if isinstance(return_type, MultiMatchNamedBasicType):
-        return_types_matched = list(multi_match_mapping[return_type])
+        return_types_matched = list(multi_match_mapping[return_type] if return_type in
+                                    multi_match_mapping else return_type.types_to_match)
     else:
         return_types_matched = [return_type]
     arguments = complex_type.argument_types()
     argument_types_matched = []
     for argument_type in arguments:
         if isinstance(argument_type, MultiMatchNamedBasicType):
-            argument_types_matched.append(list(multi_match_mapping[argument_type]))
+            matched_types = list(multi_match_mapping[argument_type] if argument_type in
+                                 multi_match_mapping else argument_type.types_to_match)
+            argument_types_matched.append(matched_types)
         else:
             argument_types_matched.append([argument_type])
     complex_type_productions: List[Tuple[Type, str]] = []
@@ -597,7 +600,7 @@ def _get_complex_type_production(complex_type: ComplexType,
 def get_valid_actions(name_mapping: Dict[str, str],
                       type_signatures: Dict[str, Type],
                       basic_types: Set[Type],
-                      multi_match_mapping: Dict[Type, List[Type]],
+                      multi_match_mapping: Dict[Type, List[Type]] = None,
                       valid_starting_types: Set[Type] = None,
                       num_nested_lambdas: int = 0) -> Dict[str, List[str]]:
     """
@@ -626,7 +629,7 @@ def get_valid_actions(name_mapping: Dict[str, str],
         type declaration, this can be the ``COMMON_TYPE_SIGNATURE``.
     basic_types : ``Set[Type]``
         Set of all basic types in the type declaration.
-    multi_match_mapping : ``Dict[Type, List[Type]]``
+    multi_match_mapping : ``Dict[Type, List[Type]]`` (optional)
         A mapping from `MultiMatchNamedBasicTypes` to the types they can match. This may be
         different from the type's ``types_to_match`` field based on the context. While building action
         sequences that lead to complex types with ``MultiMatchNamedBasicTypes``, if a type does not
@@ -669,7 +672,7 @@ def get_valid_actions(name_mapping: Dict[str, str],
     for complex_type in complex_types:
         for substituted_type in substitute_any_type(complex_type, basic_types):
             for head, production in _get_complex_type_production(substituted_type,
-                                                                 multi_match_mapping):
+                                                                 multi_match_mapping or {}):
                 valid_actions[str(head)].add(production)
 
     # We can produce complex types with a lambda expression, though we'll leave out
