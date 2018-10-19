@@ -166,7 +166,9 @@ class Event2Mind(Model):
                         target_tokens=target_tokens[name],
                         target_embedder=state.embedder,
                         decoder_cell=state.decoder_cell,
-                        output_projection_layer=state.output_projection_layer)
+                        output_projection_layer=state.output_projection_layer,
+                        extra=name
+                )
                 total_loss += loss
                 output_dict[f"{name}_loss"] = loss
 
@@ -201,7 +203,8 @@ class Event2Mind(Model):
                       target_tokens: Dict[str, torch.LongTensor],
                       target_embedder: Embedding,
                       decoder_cell: GRUCell,
-                      output_projection_layer: Linear) -> torch.FloatTensor:
+                      output_projection_layer: Linear,
+                      extra: str = "") -> torch.FloatTensor:
         """
         Greedily produces a sequence using the provided ``decoder_cell``.
         Returns the cross entropy between this sequence and ``target_tokens``.
@@ -226,12 +229,8 @@ class Event2Mind(Model):
         for timestep in range(num_decoding_steps):
             # See https://github.com/allenai/allennlp/issues/1134.
             input_choices = targets[:, timestep]
-            params = list(self.named_parameters())
-            first_name, first_param = params[0]
-            first_device = first_param.device
-            for name, param in params:
-                if param.device != first_device:
-                    print(f"BRR orig {first_name}: {first_device}\nnext {name}: {param.device}")
+            if target_embedder.weight.device != input_choices.device:
+                print(f"BRR {extra}")
             decoder_input = target_embedder(input_choices)
             decoder_hidden = decoder_cell(decoder_input, decoder_hidden)
             # (batch_size, num_classes)
