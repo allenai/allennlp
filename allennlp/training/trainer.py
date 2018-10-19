@@ -409,6 +409,7 @@ class Trainer(Registrable):
         """
         metadata_batch_size = len(batch['metadata']) if 'metadata' in batch and isinstance(batch['metadata'],list) else None
 
+        print(f"BRR2 {batch.keys()}")
         inputs, module_kwargs = scatter_kwargs((), batch, self._cuda_devices, 0)
 
         if metadata_batch_size is not None:
