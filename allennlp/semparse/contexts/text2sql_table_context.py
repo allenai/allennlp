@@ -183,7 +183,8 @@ def update_grammar_with_untyped_entities(grammar_dictionary: Dict[str, List[str]
     """
     Variables can be treated as numbers or strings if their type can be inferred -
     however, that can be difficult, so instead, we can just treat them all as values
-    and be a bit looser on the typing we allow in our grammar.
+    and be a bit looser on the typing we allow in our grammar. Here we just remove
+    all references to number and string from the grammar, replacing them with value.
     """
     grammar_dictionary["string_set_vals"] = ['(value ws "," ws string_set_vals)', 'value']
     grammar_dictionary["value"].remove('string')
@@ -192,3 +193,46 @@ def update_grammar_with_untyped_entities(grammar_dictionary: Dict[str, List[str]
     grammar_dictionary["expr"][1] = '(value wsp "LIKE" wsp value)'
     del grammar_dictionary["string"]
     del grammar_dictionary["number"]
+
+
+def update_grammar_values_with_variables(grammar_dictionary: Dict[str, List[str]],
+                                         prelinked_entities: Dict[str, Dict[str, str]]) -> None:
+
+    for variable, _ in prelinked_entities.items():
+        grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
+
+
+
+def update_grammar_numbers_and_strings_with_variables(grammar_dictionary: Dict[str, List[str]],
+                                                      prelinked_entities: Dict[str, Dict[str, str]],
+                                                      columns: Dict[str, TableColumn]) -> None:
+    for variable, info in prelinked_entities.items():
+        variable_column = info["type"].upper()
+        matched_column = columns.get(variable_column, None)
+
+        if matched_column is not None:
+            # Try to infer the variable's type by matching it to a column in
+            # the database. If we can't, we just add it as a value.
+            if column_has_numeric_type(matched_column):
+                grammar_dictionary["number"] = [f'"\'{variable}\'"'] + grammar_dictionary["number"]
+            elif column_has_string_type(matched_column):
+                grammar_dictionary["string"] = [f'"\'{variable}\'"'] + grammar_dictionary["string"]
+            else:
+                grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
+        # Otherwise, try to infer by looking at the actual value:
+        else:
+            try:
+                # This is what happens if you try and do type inference
+                # in a grammar which parses _strings_ in _Python_.
+                # We're just seeing if the python interpreter can convert
+                # to to a float - if it can, we assume it's a number.
+                float(info["text"])
+                is_numeric = True
+            except ValueError:
+                is_numeric = False
+            if is_numeric:
+                grammar_dictionary["number"] = [f'"\'{variable}\'"'] + grammar_dictionary["number"]
+            elif info["text"].replace(" ", "").isalpha():
+                grammar_dictionary["string"] = [f'"\'{variable}\'"'] + grammar_dictionary["string"]
+            else:
+                grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
