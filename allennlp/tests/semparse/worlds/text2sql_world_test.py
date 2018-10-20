@@ -17,6 +17,19 @@ class TestText2SqlWorld(AllenNlpTestCase):
         self.database_path = str(self.FIXTURES_ROOT / "data" / "text2sql" / "restaurants.db")
 
 
+    def test_untyped_grammar_has_no_string_or_number_references(self):
+        world = Text2SqlWorld(self.schema, use_untyped_entities=True)
+        grammar_dictionary = world.base_grammar_dictionary
+
+        for key, value in grammar_dictionary.items():
+            assert key not in {"number", "string"}
+            # We don't check for string directly here because
+            # string_set is a valid non-terminal.
+            assert all(["number" not in production for production in value])
+            assert all(["string)" not in production for production in value])
+            assert all(["string " not in production for production in value])
+            assert all(["(string " not in production for production in value])
+
     def test_world_modifies_unconstrained_grammar_correctly(self):
         world = Text2SqlWorld(self.schema)
         grammar_dictionary = world.base_grammar_dictionary

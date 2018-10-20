@@ -179,9 +179,12 @@ def update_grammar_to_be_variable_free(grammar_dictionary: Dict[str, List[str]])
     # to recognise new variables.
     del grammar_dictionary["name"]
 
-def update_grammar_with_untyped_entities(grammar_dictionary: Dict[str, List[str]],
-                                         prelinked_entities: Dict[str, Dict[str, str]]) -> None:
-    # First, we remove all references to string and number in the grammar.
+def update_grammar_with_untyped_entities(grammar_dictionary: Dict[str, List[str]]) -> None:
+    """
+    Variables can be treated as numbers or strings if their type can be inferred -
+    however, that can be difficult, so instead, we can just treat them all as values
+    and be a bit looser on the typing we allow in our grammar.
+    """
     grammar_dictionary["string_set_vals"] = ['(value ws "," ws string_set_vals)', 'value']
     grammar_dictionary["value"].remove('string')
     grammar_dictionary["value"].remove('number')
@@ -189,7 +192,3 @@ def update_grammar_with_untyped_entities(grammar_dictionary: Dict[str, List[str]
     grammar_dictionary["expr"][1] = '(value wsp "LIKE" wsp value)'
     del grammar_dictionary["string"]
     del grammar_dictionary["number"]
-
-
-    for variable, _ in prelinked_entities.items():
-        grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
