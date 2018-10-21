@@ -1,5 +1,7 @@
 # pylint: disable=invalid-name
 
+import json
+
 import numpy
 import torch
 
@@ -9,6 +11,7 @@ from allennlp.nn.util import sequence_cross_entropy_with_logits
 
 
 class SimpleSeq2SeqTest(ModelTestCase):
+
     def setUp(self):
         super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / "encoder_decoder" / "simple_seq2seq" / "experiment.json",
@@ -18,26 +21,34 @@ class SimpleSeq2SeqTest(ModelTestCase):
         self.ensure_model_can_train_save_and_load(self.param_file, tolerance=1e-2)
 
     def test_bidirectional_model_can_train_save_and_load(self):
-        param_file = self.FIXTURES_ROOT / "encoder_decoder" / \
-                     "simple_seq2seq" / "experiment_bidirectional.json"
-        self.ensure_model_can_train_save_and_load(param_file, tolerance=1e-2)
+        param_overrides = json.dumps({"model": {"encoder": {"bidirectional": True}}})
+        self.ensure_model_can_train_save_and_load(self.param_file,
+                                                  tolerance=1e-2,
+                                                  overrides=param_overrides)
 
     def test_no_attention_model_can_train_save_and_load(self):
-        param_file = self.FIXTURES_ROOT / "encoder_decoder" / \
-                     "simple_seq2seq" / "experiment_no_attention.json"
-        self.ensure_model_can_train_save_and_load(param_file, tolerance=1e-2)
+        param_overrides = json.dumps({"model": {"attention": None}})
+        self.ensure_model_can_train_save_and_load(self.param_file,
+                                                  tolerance=1e-2,
+                                                  overrides=param_overrides)
 
     def test_legacy_attention_model_can_train_save_and_load(self):
-        param_file = self.FIXTURES_ROOT / "encoder_decoder" / \
-                     "simple_seq2seq" / "experiment_legacy_attention.json"
-        self.ensure_model_can_train_save_and_load(param_file, tolerance=1e-2)
+        param_overrides = json.dumps({"model": {
+                "attention": None,
+                "attention_function": {"type": "dot_product"}
+        }})
+        self.ensure_model_can_train_save_and_load(self.param_file,
+                                                  tolerance=1e-2,
+                                                  overrides=param_overrides)
 
     def test_greedy_model_can_train_save_and_load(self):
-        param_file = self.FIXTURES_ROOT / "encoder_decoder" / \
-                     "simple_seq2seq" / "experiment_no_beam_search.json"
-        self.ensure_model_can_train_save_and_load(param_file, tolerance=1e-2)
+        param_overrides = json.dumps({"model": {"beam_size": None}})
+        self.ensure_model_can_train_save_and_load(self.param_file,
+                                                  tolerance=1e-2,
+                                                  overrides=param_overrides)
 
     def test_loss_is_computed_correctly(self):
+        # pylint: disable=protected-access
         batch_size = 5
         num_decoding_steps = 5
         num_classes = 10
@@ -49,7 +60,6 @@ class SimpleSeq2SeqTest(ModelTestCase):
                                                             (batch_size, num_decoding_steps)))
         expected_loss = sequence_cross_entropy_with_logits(sample_logits, sample_targets[:, 1:].contiguous(),
                                                            sample_mask[:, 1:].contiguous())
-        # pylint: disable=protected-access
         actual_loss = self.model._get_loss(sample_logits, sample_targets, sample_mask)
         assert numpy.equal(expected_loss.data.numpy(), actual_loss.data.numpy())
 
