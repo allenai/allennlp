@@ -5,7 +5,7 @@ from overrides import overrides
 
 import torch
 
-from allennlp.data.fields.production_rule_field import ProductionRuleArray
+from allennlp.data.fields.production_rule_field import ProductionRule
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.nlvr.nlvr_semantic_parser import NlvrSemanticParser
@@ -80,7 +80,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
     def forward(self,  # type: ignore
                 sentence: Dict[str, torch.LongTensor],
                 worlds: List[List[NlvrWorld]],
-                actions: List[List[ProductionRuleArray]],
+                actions: List[List[ProductionRule]],
                 identifier: List[str] = None,
                 target_action_sequences: torch.LongTensor = None,
                 labels: torch.LongTensor = None) -> Dict[str, torch.Tensor]:

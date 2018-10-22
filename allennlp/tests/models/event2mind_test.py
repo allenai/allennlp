@@ -1,6 +1,9 @@
 # pylint: disable=invalid-name,protected-access
+import torch
+
 from allennlp.commands.train import train_model_from_file
 from allennlp.common.testing import ModelTestCase
+from allennlp.nn.beam_search import BeamSearch
 from allennlp.nn.util import get_text_field_mask
 
 
@@ -36,14 +39,17 @@ class Event2MindTest(ModelTestCase):
     def test_beam_search_orders_results(self):
         model = self.trained_model
         state = model._states["xintent"]
-        (_, batch_logits) = model.beam_search(
-                self.get_sample_encoded_output(),
-                10,
-                model._max_decoding_steps,
-                state.embedder,
-                state.decoder_cell,
-                state.output_projection_layer
-        )
+
+        final_encoder_output = self.get_sample_encoded_output()
+        batch_size = final_encoder_output.size()[0]
+        start_predictions = final_encoder_output.new_full(
+                (batch_size,), fill_value=model._start_index, dtype=torch.long)
+        start_state = {"decoder_hidden": final_encoder_output}
+
+        # (batch_size, 10, num_decoding_steps)
+        _, batch_logits = model._beam_search.search(
+                start_predictions, start_state, state.take_step)
+
         logits = batch_logits[0]
         # Sanity check beam size.
         assert logits.size()[0] == 10
@@ -55,22 +61,26 @@ class Event2MindTest(ModelTestCase):
     def test_beam_search_matches_greedy(self):
         model = self.trained_model
         state = model._states["xintent"]
+        beam_search = BeamSearch(model._end_index,
+                                 max_steps=model._max_decoding_steps,
+                                 beam_size=1)
+
+        final_encoder_output = self.get_sample_encoded_output()
+        batch_size = final_encoder_output.size()[0]
+        start_predictions = final_encoder_output.new_full(
+                (batch_size,), fill_value=model._start_index, dtype=torch.long)
+        start_state = {"decoder_hidden": final_encoder_output}
+
         greedy_prediction = model.greedy_predict(
-                final_encoder_output=self.get_sample_encoded_output(),
+                final_encoder_output=final_encoder_output,
                 target_embedder=state.embedder,
                 decoder_cell=state.decoder_cell,
                 output_projection_layer=state.output_projection_layer
         )
         greedy_tokens = model.decode_all(greedy_prediction)
 
-        (beam_predictions, _) = model.beam_search(
-                final_encoder_output=self.get_sample_encoded_output(),
-                width=1,
-                num_decoding_steps=model._max_decoding_steps,
-                target_embedder=state.embedder,
-                decoder_cell=state.decoder_cell,
-                output_projection_layer=state.output_projection_layer
-        )
+        (beam_predictions, _) = beam_search.search(
+                start_predictions, start_state, state.take_step)
         beam_prediction = beam_predictions[0]
         beam_tokens = model.decode_all(beam_prediction)
 
