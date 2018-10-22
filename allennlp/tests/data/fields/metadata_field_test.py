@@ -25,10 +25,10 @@ class TestMetadataField(AllenNlpTestCase):
         field = MetadataField(0)
 
         with pytest.raises(TypeError):
-            field[0]
+            _ = field[0]
 
         with pytest.raises(TypeError):
-            len(field)
+            _ = len(field)
 
         with pytest.raises(TypeError):
-            [x for x in field]
+            _ = [x for x in field]
