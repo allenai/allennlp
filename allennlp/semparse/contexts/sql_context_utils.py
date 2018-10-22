@@ -186,7 +186,6 @@ class SqlVisitor(NodeVisitor):
                                                  for tok in child_right_side_list]
                         child_strings.extend(child_right_side_list)
                 right_hand_side = "[" + ", ".join(child_strings) + "]"
-
             rule = nonterminal + right_hand_side
             self.action_sequence = [rule] + self.action_sequence
 

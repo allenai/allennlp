@@ -51,3 +51,11 @@ class IndexField(Field[torch.Tensor]):
 
     def __str__(self) -> str:
         return f"IndexField with index: {self.sequence_index}."
+
+    def __eq__(self, other) -> bool:
+        # Allow equality checks to ints that are the sequence index
+        if isinstance(other, int):
+            return self.sequence_index == other
+        # Otherwise it has to be the same object
+        else:
+            return id(other) == id(self)

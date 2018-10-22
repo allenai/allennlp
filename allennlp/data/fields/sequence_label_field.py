@@ -1,4 +1,4 @@
-from typing import Dict, List, Union, Set
+from typing import Dict, List, Union, Set, Iterator
 import logging
 import textwrap
 
@@ -74,6 +74,16 @@ class SequenceLabelField(Field[torch.Tensor]):
                                "`non_padded_namespaces` parameter in Vocabulary.",
                                self._label_namespace)
                 self._already_warned_namespaces.add(label_namespace)
+
+    # Sequence methods
+    def __iter__(self) -> Iterator[Union[str, int]]:
+        return iter(self.labels)
+
+    def __getitem__(self, idx: int) -> Union[str, int]:
+        return self.labels[idx]
+
+    def __len__(self) -> int:
+        return len(self.labels)
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):

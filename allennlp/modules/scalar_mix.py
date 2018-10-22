@@ -13,15 +13,27 @@ class ScalarMix(torch.nn.Module):
     In addition, if ``do_layer_norm=True`` then apply layer normalization to each tensor
     before weighting.
     """
-    def __init__(self, mixture_size: int, do_layer_norm: bool = False) -> None:
+    def __init__(self,
+                 mixture_size: int,
+                 do_layer_norm: bool = False,
+                 initial_scalar_parameters: List[float] = None,
+                 trainable: bool = True) -> None:
         super(ScalarMix, self).__init__()
-
         self.mixture_size = mixture_size
         self.do_layer_norm = do_layer_norm
 
-        self.scalar_parameters = ParameterList([Parameter(torch.FloatTensor([0.0]))
-                                                for _ in range(mixture_size)])
-        self.gamma = Parameter(torch.FloatTensor([1.0]))
+        if initial_scalar_parameters is None:
+            initial_scalar_parameters = [0.0] * mixture_size
+        elif len(initial_scalar_parameters) != mixture_size:
+            raise ConfigurationError("Length of initial_scalar_parameters {} differs "
+                                     "from mixture_size {}".format(
+                                             initial_scalar_parameters, mixture_size))
+
+        self.scalar_parameters = ParameterList(
+                [Parameter(torch.FloatTensor([initial_scalar_parameters[i]]),
+                           requires_grad=trainable) for i
+                 in range(mixture_size)])
+        self.gamma = Parameter(torch.FloatTensor([1.0]), requires_grad=trainable)
 
     def forward(self, tensors: List[torch.Tensor],  # pylint: disable=arguments-differ
                 mask: torch.Tensor = None) -> torch.Tensor:

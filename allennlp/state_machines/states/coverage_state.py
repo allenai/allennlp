@@ -2,7 +2,7 @@ from typing import Any, List, Sequence
 
 import torch
 
-from allennlp.data.fields.production_rule_field import ProductionRuleArray
+from allennlp.data.fields.production_rule_field import ProductionRule
 from allennlp.nn import util
 from allennlp.state_machines.states.checklist_statelet import ChecklistStatelet
 from allennlp.state_machines.states.grammar_based_state import GrammarBasedState
@@ -30,7 +30,7 @@ class CoverageState(GrammarBasedState):
         This holds the current checklist state for each element of the group.  The
         ``ChecklistStatelet`` keeps track of which actions are preferred by some agenda, and which
         of those have already been selected during decoding.
-    possible_actions : ``List[List[ProductionRuleArray]]``
+    possible_actions : ``List[List[ProductionRule]]``
     extras : ``List[Any]``, optional (default=None)
     debug_info : ``List[Any]``, optional (default=None).
     """
@@ -41,7 +41,7 @@ class CoverageState(GrammarBasedState):
                  rnn_state: List[RnnStatelet],
                  grammar_state: List[GrammarStatelet],
                  checklist_state: List[ChecklistStatelet],
-                 possible_actions: List[List[ProductionRuleArray]],
+                 possible_actions: List[List[ProductionRule]],
                  extras: List[Any] = None,
                  debug_info: List = None) -> None:
         super().__init__(batch_indices=batch_indices,

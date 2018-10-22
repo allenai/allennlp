@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Sequence, Tuple
 
 import torch
 
-from allennlp.data.fields.production_rule_field import ProductionRuleArray
+from allennlp.data.fields.production_rule_field import ProductionRule
 from allennlp.state_machines.states.grammar_statelet import GrammarStatelet
 from allennlp.state_machines.states.rnn_statelet import RnnStatelet
 from allennlp.state_machines.states.state import State
@@ -42,7 +42,7 @@ class GrammarBasedState(State['GrammarBasedState']):
     grammar_state : ``List[GrammarStatelet]``
         This hold the current grammar state for each element of the group.  The ``GrammarStatelet``
         keeps track of which actions are currently valid.
-    possible_actions : ``List[List[ProductionRuleArray]]``
+    possible_actions : ``List[List[ProductionRule]]``
         The list of all possible actions that was passed to ``model.forward()``.  We need this so
         we can recover production strings, which we need to update grammar states.
     extras : ``List[Any]``, optional (default=None)
@@ -58,7 +58,7 @@ class GrammarBasedState(State['GrammarBasedState']):
                  score: List[torch.Tensor],
                  rnn_state: List[RnnStatelet],
                  grammar_state: List[GrammarStatelet],
-                 possible_actions: List[List[ProductionRuleArray]],
+                 possible_actions: List[List[ProductionRule]],
                  extras: List[Any] = None,
                  debug_info: List = None) -> None:
         super().__init__(batch_indices, action_history, score)
