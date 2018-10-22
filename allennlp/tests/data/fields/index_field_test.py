@@ -31,3 +31,11 @@ class TestIndexField(AllenNlpTestCase):
 
     def test_printing_doesnt_crash(self):
         print(self.text)
+
+    def test_equality(self):
+        index_field1 = IndexField(4, self.text)
+        index_field2 = IndexField(4, self.text)
+
+        assert index_field1 == 4
+        assert index_field1 == index_field1
+        assert index_field1 != index_field2
