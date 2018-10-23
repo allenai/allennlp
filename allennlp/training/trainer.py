@@ -425,7 +425,7 @@ class Trainer(Registrable):
                      instance['metadata'] = instance['metadata'][chunk_offset:chunk_size+chunk_offset]
                      chunk_offset += chunk_size
 
-        print(f"self._cuda_devices: {self._cuda_device}")
+        print(f"self._cuda_devices: {self._cuda_devices}")
         used_device_ids = self._cuda_devices[:len(inputs)]
         print(f"used_device_ids: {used_device_ids}")
         replicas = replicate(self.model, used_device_ids)
