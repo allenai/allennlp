@@ -4,6 +4,7 @@ import numpy
 from overrides import overrides
 
 import torch
+from torch.nn import Module, ModuleDict
 from torch.nn.modules.rnn import GRUCell
 from torch.nn.modules.linear import Linear
 from torch import nn
@@ -61,7 +62,7 @@ class Event2Mind(Model):
                  target_names: List[str] = ["xintent", "xreact", "oreact"],
                  target_namespace: str = "tokens",
                  target_embedding_dim: int = None) -> None:
-        super(Event2Mind, self).__init__(vocab)
+        super().__init__(vocab)
         # Note: The original tweaks the embeddings for "personx" to be the mean
         # across the embeddings for "he", "she", "him" and "her". Similarly for
         # "personx's" and so forth. We could consider that here as a well.
@@ -86,11 +87,9 @@ class Event2Mind(Model):
         self._decoder_output_dim = self._encoder.get_output_dim()
         target_embedding_dim = target_embedding_dim or self._source_embedder.get_output_dim()
 
-        self._states: Dict[str, StateDecoder] = {}
+        self._states: ModuleDict[str, StateDecoder] = ModuleDict()
         for name in target_names:
             self._states[name] = StateDecoder(
-                    name,
-                    self,
                     num_classes,
                     target_embedding_dim,
                     self._decoder_output_dim
@@ -515,20 +514,17 @@ class Event2Mind(Model):
                 all_metrics[name] = state.recall.get_metric(reset=reset)
         return all_metrics
 
-class StateDecoder:
+# TODO(brendanr): There isn't a `forward` defined here. Is that okay?
+class StateDecoder(Module):
     """
     Simple struct-like class for internal use.
     """
     def __init__(self,
-                 name: str,
-                 event2mind: Event2Mind,
                  num_classes: int,
                  input_dim: int,
                  output_dim: int) -> None:
+        super().__init__()
         self.embedder = Embedding(num_classes, input_dim)
-        event2mind.add_module(f"{name}_embedder", self.embedder)
         self.decoder_cell = GRUCell(input_dim, output_dim)
-        event2mind.add_module(f"{name}_decoder_cell", self.decoder_cell)
         self.output_projection_layer = Linear(output_dim, num_classes)
-        event2mind.add_module(f"{name}_output_project_layer", self.output_projection_layer)
         self.recall = UnigramRecall()
