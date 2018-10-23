@@ -2,7 +2,7 @@
 
 Now that we know how to train and evaluate models,
 let's take a deeper look at our experiment configuration file,
-[tutorials/getting_started/walk_throug_allennlp/simple_tagger.json](simple_tagger.json).
+[tutorials/getting_started/walk_through_allennlp/simple_tagger.json](simple_tagger.json).
 
 The configuration is a [Jsonnet](https://jsonnet.org/) file
 that defines all the parameters for our experiment and model. Don't worry if you're not familiar
