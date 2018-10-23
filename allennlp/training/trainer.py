@@ -429,6 +429,7 @@ class Trainer(Registrable):
         used_device_ids = self._cuda_devices[:len(inputs)]
         print(f"used_device_ids: {used_device_ids}")
         replicas = replicate(self.model, used_device_ids)
+        print(f"replicas: {replicas}")
         outputs = parallel_apply(replicas, inputs, module_kwargs, used_device_ids)
 
         # Only the 'loss' is needed.
