@@ -426,6 +426,7 @@ class Trainer(Registrable):
                      chunk_offset += chunk_size
 
         used_device_ids = self._cuda_devices[:len(inputs)]
+        print(f"used_device_ids: {used_device_ids}")
         replicas = replicate(self.model, used_device_ids)
         outputs = parallel_apply(replicas, inputs, module_kwargs, used_device_ids)
 
