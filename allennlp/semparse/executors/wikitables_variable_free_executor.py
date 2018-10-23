@@ -5,6 +5,8 @@ import logging
 from allennlp.semparse import util as semparse_util
 from allennlp.semparse.worlds.world import ExecutionError
 from allennlp.semparse.contexts.table_question_knowledge_graph import MONTH_NUMBERS
+from allennlp.semparse.contexts import TableQuestionContext
+from allennlp.tools import wikitables_evaluator as evaluator
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -76,7 +78,12 @@ class WikiTablesVariableFreeExecutor:
         be represented as a dict from column names to corresponding cell values.
     """
     def __init__(self, table_data: List[Dict[str, str]]) -> None:
-        self._table_data = table_data
+        self.table_data = table_data
+
+    def __eq__(self, other):
+        if not isinstance(other, WikiTablesVariableFreeExecutor):
+            return False
+        return self.table_data == other.table_data
 
     def execute(self, logical_form: str) -> Any:
         if not logical_form.startswith("("):
@@ -92,6 +99,26 @@ class WikiTablesVariableFreeExecutor:
         # Removing the top most level of nesting.
         result = self._handle_expression(expression_as_list[0])
         return result
+
+    def evaluate_logical_form(self, logical_form: str, target_list: List[str]) -> bool:
+        """
+        Takes a logical form, and the list of target values as strings from the original lisp
+        string, and returns True iff the logical form executes to the target list.
+        """
+        normalized_target_list = [TableQuestionContext.normalize_string(value) for value in
+                                  target_list]
+        target_value_list = evaluator.to_value_list(normalized_target_list)
+        try:
+            denotation = self.execute(logical_form)
+        except ExecutionError:
+            logger.warning(f'Failed to execute: {logical_form}')
+            return False
+        if isinstance(denotation, list):
+            denotation_list = [str(denotation_item) for denotation_item in denotation]
+        else:
+            denotation_list = [str(denotation)]
+        denotation_value_list = evaluator.to_value_list(denotation_list)
+        return evaluator.check_denotation(target_value_list, denotation_value_list)
 
     ## Helper functions
     def _handle_expression(self, expression_list):
@@ -113,7 +140,7 @@ class WikiTablesVariableFreeExecutor:
 
     def _handle_constant(self, constant: str) -> Union[List[Dict[str, str]], str, float]:
         if constant == "all_rows":
-            return self._table_data
+            return self.table_data
         try:
             return float(constant)
         except ValueError:
@@ -194,7 +221,7 @@ class WikiTablesVariableFreeExecutor:
         is the result of applying one or more functions on the table rows), the method returns -1.
         """
         row_index = -1
-        for index, table_row in enumerate(self._table_data):
+        for index, table_row in enumerate(self.table_data):
             if table_row == row:
                 row_index = index
                 break
@@ -601,7 +628,7 @@ class WikiTablesVariableFreeExecutor:
                            row_expression_list)
         input_row_index = self._get_row_index(row_list[0])  # Take the first row.
         if input_row_index > 0:
-            return [self._table_data[input_row_index - 1]]
+            return [self.table_data[input_row_index - 1]]
         return []
 
     def next(self, row_expression_list: NestedList) -> List[Dict[str, str]]:
@@ -617,8 +644,8 @@ class WikiTablesVariableFreeExecutor:
         if len(row_list) > 1:
             logger.warning("Trying to get the next row from a non-singleton list: %s", row_expression_list)
         input_row_index = self._get_row_index(row_list[-1])  # Take the last row.
-        if input_row_index < len(self._table_data) - 1 and input_row_index != -1:
-            return [self._table_data[input_row_index + 1]]
+        if input_row_index < len(self.table_data) - 1 and input_row_index != -1:
+            return [self.table_data[input_row_index + 1]]
         return []
 
     def count(self, row_expression_list: NestedList) -> float:
@@ -720,7 +747,7 @@ class WikiTablesVariableFreeExecutor:
                            f"{row_expression_list}")
         cell_value = row_list[0][column_name]
         return_list = []
-        for row in self._table_data:
+        for row in self.table_data:
             if row[column_name] == cell_value:
                 return_list.append(row)
         return return_list
