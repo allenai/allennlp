@@ -67,6 +67,14 @@ class TestTrain(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             train_model(params(), serialization_dir=os.path.join(self.TEST_DIR, 'test_train_model'))
 
+        # It's ok serialization dir exists and --force is specified (it will be deleted):
+        train_model(params(), serialization_dir=os.path.join(self.TEST_DIR, 'test_train_model'), force=True)
+
+        # But --force and --recover cannot both be specified
+        with pytest.raises(ConfigurationError):
+            train_model(params(), serialization_dir=os.path.join(self.TEST_DIR, 'test_train_model'),
+                        force=True, recover=True)
+
     def test_error_is_throw_when_cuda_device_is_not_available(self):
         params = Params({
                 "model": {
