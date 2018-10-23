@@ -19,7 +19,6 @@ from allennlp.models.semantic_parsing.nlvr.nlvr_direct_semantic_parser import Nl
 from allennlp.models.semantic_parsing.quarel.quarel_semantic_parser import QuarelSemanticParser
 from allennlp.models.semantic_parsing.wikitables.wikitables_mml_semantic_parser import WikiTablesMmlSemanticParser
 from allennlp.models.semantic_parsing.wikitables.wikitables_erm_semantic_parser import WikiTablesErmSemanticParser
-from allennlp.models.semantic_parsing.wikitables_variable_free import WikiTablesVariableFreeMml
 from allennlp.models.semantic_parsing.atis.atis_semantic_parser import AtisSemanticParser
 from allennlp.models.semantic_parsing.text2sql_parser import Text2SqlParser
 from allennlp.models.semantic_role_labeler import SemanticRoleLabeler

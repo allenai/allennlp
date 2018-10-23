@@ -15,6 +15,5 @@ allennlp.models.semantic_parsing
 
   allennlp.models.semantic_parsing.nlvr
   allennlp.models.semantic_parsing.wikitables
-  allennlp.models.semantic_parsing.wikitables_variable_free
   allennlp.models.semantic_parsing.atis
   allennlp.models.semantic_parsing.quarel
