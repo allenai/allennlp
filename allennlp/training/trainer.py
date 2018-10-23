@@ -409,11 +409,11 @@ class Trainer(Registrable):
         """
         metadata_batch_size = len(batch['metadata']) if 'metadata' in batch and isinstance(batch['metadata'],list) else None
 
-        print(f"BRR2 {batch.keys()}")
-        print(f"batch: {batch}")
+        #print(f"BRR2 {batch.keys()}")
+        #print(f"batch: {batch}")
         inputs, module_kwargs = scatter_kwargs((), batch, self._cuda_devices, 0)
-        print(f"inputs: {inputs}")
-        print(f"module_kwargs: {module_kwargs}")
+        #print(f"inputs: {inputs}")
+        #print(f"module_kwargs: {module_kwargs}")
 
         if metadata_batch_size is not None:
             # Metadata batches also have to be chunked as PyTorch is unaware of them.
@@ -425,11 +425,11 @@ class Trainer(Registrable):
                      instance['metadata'] = instance['metadata'][chunk_offset:chunk_size+chunk_offset]
                      chunk_offset += chunk_size
 
-        print(f"self._cuda_devices: {self._cuda_devices}")
+        #print(f"self._cuda_devices: {self._cuda_devices}")
         used_device_ids = self._cuda_devices[:len(inputs)]
-        print(f"used_device_ids: {used_device_ids}")
+        #print(f"used_device_ids: {used_device_ids}")
         replicas = replicate(self.model, used_device_ids)
-        print(f"replicas: {replicas}")
+        #print(f"replicas: {replicas}")
         #import pdb; pdb.set_trace()
         outputs = parallel_apply(replicas, inputs, module_kwargs, used_device_ids)
 

@@ -228,9 +228,6 @@ class Event2Mind(Model):
         for timestep in range(num_decoding_steps):
             # See https://github.com/allenai/allennlp/issues/1134.
             input_choices = targets[:, timestep]
-            if target_embedder.weight.device != input_choices.device:
-                print(f"BRR {extra}")
-                import pdb; pdb.set_trace()
             decoder_input = target_embedder(input_choices)
             decoder_hidden = decoder_cell(decoder_input, decoder_hidden)
             # (batch_size, num_classes)
