@@ -231,6 +231,7 @@ class Event2Mind(Model):
             input_choices = targets[:, timestep]
             if target_embedder.weight.device != input_choices.device:
                 print(f"BRR {extra}")
+                import pdb; pdb.set_trace()
             decoder_input = target_embedder(input_choices)
             decoder_hidden = decoder_cell(decoder_input, decoder_hidden)
             # (batch_size, num_classes)
