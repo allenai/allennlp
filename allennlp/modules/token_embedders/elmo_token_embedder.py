@@ -114,6 +114,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
         else:
             vocab_to_cache = None
         projection_dim = params.pop_int("projection_dim", None)
+        scalar_mix_parameters = params.pop('scalar_mix_parameters', None)
         params.assert_empty(cls.__name__)
         return cls(options_file=options_file,
                    weight_file=weight_file,
@@ -121,4 +122,5 @@ class ElmoTokenEmbedder(TokenEmbedder):
                    dropout=dropout,
                    requires_grad=requires_grad,
                    projection_dim=projection_dim,
-                   vocab_to_cache=vocab_to_cache)
+                   vocab_to_cache=vocab_to_cache,
+                   scalar_mix_parameters=scalar_mix_parameters)
