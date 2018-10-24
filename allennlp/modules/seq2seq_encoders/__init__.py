@@ -77,8 +77,9 @@ class _Seq2SeqWrapper:
             raise ConfigurationError("Our encoder semantics assumes batch is always first!")
         if self._module_class in self.PYTORCH_MODELS:
             params['batch_first'] = True
+        stateful = params.pop_bool('stateful', False)
         module = self._module_class(**params.as_dict())
-        return PytorchSeq2SeqWrapper(module)
+        return PytorchSeq2SeqWrapper(module, stateful=stateful)
 
 # pylint: disable=protected-access
 Seq2SeqEncoder.register("gru")(_Seq2SeqWrapper(torch.nn.GRU))

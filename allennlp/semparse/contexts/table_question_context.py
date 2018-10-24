@@ -1,10 +1,11 @@
 import re
 import csv
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union, Set
 from collections import defaultdict
 
 from unidecode import unidecode
 from allennlp.data.tokenizers import Token
+from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
 
 # == stop words that will be omitted by ContextGenerator
 STOP_WORDS = {"", "", "all", "being", "-", "over", "through", "yourselves", "its", "before",
@@ -88,18 +89,72 @@ class TableQuestionContext:
         self.table_data = table_data
         self.column_types = column_types
         self.question_tokens = question_tokens
-        # Mapping from cell values to the types of the columns they are under.
-        cell_values_with_types: Dict[str, List[str]] = defaultdict(list)
+        # Mapping from cell values to the the columns they are under.
+        cell_value_column_mapping: Dict[str, List[str]] = defaultdict(list)
         for table_row in table_data:
             for column_name, cell_value in table_row.items():
-                # "string_column:name" -> "string"
-                column_type = column_name.split(":")[0].replace("_column", "")
-                cell_values_with_types[cell_value].append(column_type)
+                cell_value_column_mapping[cell_value].append(column_name)
         # We want the object to raise KeyError when checking if a specific string is a cell in the
         # table.
-        self._cell_values_with_types = dict(cell_values_with_types)
+        self._cell_value_column_mapping = dict(cell_value_column_mapping)
+        self._table_knowledge_graph: KnowledgeGraph = None
 
     MAX_TOKENS_FOR_NUM_CELL = 2
+
+    def __eq__(self, other):
+        if not isinstance(other, TableQuestionContext):
+            return False
+        return self.table_data == other.table_data
+
+    def get_table_knowledge_graph(self) -> KnowledgeGraph:
+        if self._table_knowledge_graph is None:
+            entities: Set[str] = set()
+            neighbors: Dict[str, List[str]] = defaultdict(list)
+            entity_text: Dict[str, str] = {}
+            # Add all column names to entities. We'll define their neighbors to be empty lists for
+            # now, and later add number and string entities as needed.
+            number_columns = []
+            date_columns = []
+            for column, column_type in self.column_types.items():
+                if column_type == "number":
+                    column_name = f"number_column:{column}"
+                    number_columns.append(column_name)
+                elif column_type == "date":
+                    column_name = f"date_column:{column}"
+                    date_columns.append(column_name)
+                else:
+                    column_name = f"string_column:{column}"
+                # Add column names to entities, with no neighbors yet.
+                entities.add(column_name)
+                neighbors[column_name] = []
+                entity_text[column_name] = column.replace("_", " ")
+
+            string_entities, numbers = self.get_entities_from_question()
+            for entity, column_name in string_entities:
+                entities.add(entity)
+                neighbors[entity].append(column_name)
+                neighbors[column_name].append(entity)
+                entity_text[entity] = entity.replace("string:", "").replace("_", " ")
+            # For all numbers (except -1), we add all number and date columns as their neighbors.
+            for number, _ in numbers:
+                entities.add(number)
+                neighbors[number].extend(number_columns + date_columns)
+                for column_name in number_columns + date_columns:
+                    neighbors[column_name].append(number)
+                entity_text[number] = number
+            for entity, entity_neighbors in neighbors.items():
+                neighbors[entity] = list(set(entity_neighbors))
+
+            # Add "-1" as an entity only if we have date columns in the table because we will need
+            # it as a wild-card in dates. The neighbors are the date columns.
+            if "-1" not in neighbors and date_columns:
+                entities.add("-1")
+                neighbors["-1"] = date_columns
+                entity_text["-1"] = "-1"
+                for date_column in date_columns:
+                    neighbors[date_column].append("-1")
+            self._table_knowledge_graph = KnowledgeGraph(entities, dict(neighbors), entity_text)
+        return self._table_knowledge_graph
 
     @classmethod
     def read_from_lines(cls,
@@ -129,7 +184,7 @@ class TableQuestionContext:
             if row_index != last_row_index:
                 table_data.append({})
             node_info = dict(zip(header, current_line))
-            cell_value = cls._normalize_string(node_info['content'])
+            cell_value = cls.normalize_string(node_info['content'])
             column_name = column_index_to_name[column_index]
             table_data[-1][column_name] = cell_value
             num_tokens = len(node_info['tokens'].split('|'))
@@ -168,30 +223,31 @@ class TableQuestionContext:
             lines = [line for line in reader]
             return cls.read_from_lines(lines, question_tokens)
 
-    def get_entities_from_question(self):
+    def get_entities_from_question(self) -> Tuple[List[Tuple[str, str]], List[Tuple[str, int]]]:
         entity_data = []
         for i, token in enumerate(self.question_tokens):
             token_text = token.text
             if token_text in STOP_WORDS:
                 continue
-            normalized_token_text = self._normalize_string(token_text)
+            normalized_token_text = self.normalize_string(token_text)
             if not normalized_token_text:
                 continue
-            token_type_in_table = self._string_type_in_table(normalized_token_text)
-            if token_type_in_table:
+            token_column = self._string_in_table(normalized_token_text)
+            if token_column:
+                token_type = token_column.split(":")[0].replace("_column", "")
                 entity_data.append({'value': normalized_token_text,
                                     'token_start': i,
                                     'token_end': i+1,
-                                    'token_type': token_type_in_table})
+                                    'token_type': token_type,
+                                    'token_in_column': token_column})
 
         extracted_numbers = self._get_numbers_from_tokens(self.question_tokens)
         # filter out number entities to avoid repetition
         expanded_entities = []
         for entity in self._expand_entities(self.question_tokens, entity_data):
             if entity["token_type"] == "string":
-                expanded_entities.append(entity["value"])
+                expanded_entities.append((f"string:{entity['value']}", entity['token_in_column']))
         return expanded_entities, extracted_numbers  #TODO(shikhar) Handle conjunctions
-
 
     @staticmethod
     def _get_numbers_from_tokens(tokens: List[Token]) -> List[Tuple[str, int]]:
@@ -256,28 +312,28 @@ class TableQuestionContext:
                     numbers.append((str(int(number + 10 ** num_zeros)), i))
         return numbers
 
-    def _string_type_in_table(self, candidate: str) -> Optional[str]:
+    def _string_in_table(self, candidate: str) -> Optional[str]:
         """
-        Checks if the string occurs in the table, and if it does, returns the type of the column
+        Checks if the string occurs in the table, and if it does, returns the name of the column
         under which it occurs. If it does not, returns None.
         """
-        candidate_column_types: List[str] = []
+        candidate_column_names: List[str] = []
         # First check if the entire candidate occurs as a cell.
-        if candidate in self._cell_values_with_types:
-            candidate_column_types = self._cell_values_with_types[candidate]
+        if candidate in self._cell_value_column_mapping:
+            candidate_column_names = self._cell_value_column_mapping[candidate]
         # If not, check if it is a substring pf any cell value.
-        if not candidate_column_types:
-            for cell_value, column_types in self._cell_values_with_types.items():
+        if not candidate_column_names:
+            for cell_value, column_names in self._cell_value_column_mapping.items():
                 if candidate in cell_value:
-                    candidate_column_types = column_types
+                    candidate_column_names = column_names
                     break
-        if not candidate_column_types:
+        if not candidate_column_names:
             return None
-        candidate_column_types = list(set(candidate_column_types))
-        # Note: if candidate_column_types is now a list with more than one element, it means that
-        # the candidate matched a cell value that occurs under columns with multiple types. This is
-        # unusual, and we are ignoring such cases, and simply returning the first type.
-        return candidate_column_types[0]
+        candidate_column_names = list(set(candidate_column_names))
+        # Note: if candidate_column_names is now a list with more than one element, it means that
+        # the candidate matched a cell value that occurs under multiple columns. This is
+        # unusual, and we are ignoring such cases, and simply returning the first name.
+        return candidate_column_names[0]
 
     def _process_conjunction(self, entity_data):
         raise NotImplementedError
@@ -292,15 +348,20 @@ class TableQuestionContext:
             current_end = entity['token_end']
             current_token = entity['value']
             current_token_type = entity['token_type']
+            current_token_column = entity['token_in_column']
 
             while current_end < len(question):
                 next_token = question[current_end].text
-                next_token_normalized = self._normalize_string(next_token)
+                next_token_normalized = self.normalize_string(next_token)
                 if next_token_normalized == "":
                     current_end += 1
                     continue
                 candidate = "%s_%s" %(current_token, next_token_normalized)
-                candidate_type = self._string_type_in_table(candidate)
+                candidate_column = self._string_in_table(candidate)
+                if candidate_column is None:
+                    candidate_type = None
+                else:
+                    candidate_type = candidate_column.split(":")[0].replace("_column", "")
                 if candidate_type is not None and candidate_type == current_token_type:
                     current_end += 1
                     current_token = candidate
@@ -310,11 +371,12 @@ class TableQuestionContext:
             new_entities.append({'token_start' : current_start,
                                  'token_end' : current_end,
                                  'value' : current_token,
-                                 'token_type': current_token_type})
+                                 'token_type': current_token_type,
+                                 'token_in_column': current_token_column})
         return new_entities
 
     @staticmethod
-    def _normalize_string(string: str) -> str:
+    def normalize_string(string: str) -> str:
         """
         These are the transformation rules used to normalize cell in column names in Sempre.  See
         ``edu.stanford.nlp.sempre.tables.StringNormalizationUtils.characterNormalize`` and
@@ -347,12 +409,8 @@ class TableQuestionContext:
         string = re.sub("[\\u0220-\\uFFFF]", "", string).strip()
         string = string.replace("\\n", "_")
         string = re.sub("\\s+", " ", string)
-        # Canonicalization rules from Sempre. We changed it to let dots be if there are numbers in
-        # the string, because the dots could be decimal points.
-        if re.match("[0-9]+", string):
-            string = re.sub("[^\\w.]", "_", string)
-        else:
-            string = re.sub("[^\\w]", "_", string)
+        # Canonicalization rules from Sempre.
+        string = re.sub("[^\\w]", "_", string)
         string = re.sub("_+", "_", string)
         string = re.sub("_$", "", string)
         return unidecode(string.lower())

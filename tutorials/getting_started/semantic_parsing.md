@@ -257,7 +257,7 @@ class GrammarBasedState():
                  score: List[torch.Tensor],
                  rnn_state: List[RnnStatelet],
                  grammar_state: List[GrammarStatelet],
-                 possible_actions: List[List[ProductionRuleArray]],
+                 possible_actions: List[List[ProductionRule]],
                  extras: List[Any] = None,
                  debug_info: List = None) -> None:
 ```
