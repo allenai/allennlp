@@ -6,7 +6,7 @@ import torch
 
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
-from allennlp.data.fields.production_rule_field import ProductionRuleArray
+from allennlp.data.fields.production_rule_field import ProductionRule
 from allennlp.models.model import Model
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder, FeedForward, Embedding
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
@@ -182,7 +182,7 @@ class QuarelSemanticParser(Model):
                 question: Dict[str, torch.LongTensor],
                 table: Dict[str, torch.LongTensor],
                 world: List[QuarelWorld],
-                actions: List[List[ProductionRuleArray]],
+                actions: List[List[ProductionRule]],
                 entity_bits: torch.Tensor = None,
                 denotation_target: torch.Tensor = None,
                 target_action_sequences: torch.LongTensor = None,
@@ -208,9 +208,9 @@ class QuarelSemanticParser(Model):
         world : ``List[QuarelWorld]``
             We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
             how ``MetadataField`` works, this gets passed to us as a ``List[QuarelWorld]``,
-        actions : ``List[List[ProductionRuleArray]]``
+        actions : ``List[List[ProductionRule]]``
             A list of all possible actions for each ``World`` in the batch, indexed into a
-            ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
+            ``ProductionRule`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
         target_action_sequences : torch.Tensor, optional (default=None)
@@ -632,7 +632,7 @@ class QuarelSemanticParser(Model):
 
     def _create_grammar_state(self,
                               world: QuarelWorld,
-                              possible_actions: List[ProductionRuleArray],
+                              possible_actions: List[ProductionRule],
                               linking_scores: torch.Tensor,
                               entity_types: torch.Tensor) -> GrammarStatelet:
         """
@@ -642,14 +642,14 @@ class QuarelSemanticParser(Model):
 
         The inputs to this method are for a `single instance in the batch`; none of the tensors we
         create here are batched.  We grab the global action ids from the input
-        ``ProductionRuleArrays``, and we use those to embed the valid actions for every
+        ``ProductionRules``, and we use those to embed the valid actions for every
         non-terminal type.  We use the input ``linking_scores`` for non-global actions.
 
         Parameters
         ----------
         world : ``QuarelWorld``
             From the input to ``forward`` for a single batch instance.
-        possible_actions : ``List[ProductionRuleArray]``
+        possible_actions : ``List[ProductionRule]``
             From the input to ``forward`` for a single batch instance.
         linking_scores : ``torch.Tensor``
             Assumed to have shape ``(num_entities, num_question_tokens)`` (i.e., there is no batch

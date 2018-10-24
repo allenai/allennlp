@@ -46,7 +46,7 @@
             "type": "gru",
             "bidirectional": true,
             "hidden_size": 100,
-            "input_size": 1124,
+            "input_size": 1144,  // elmo (1024) + cnn (100) + num_context_answers (2) * marker_embedding_dim (10)
             "num_layers": 1
         },
         "residual_encoder": {

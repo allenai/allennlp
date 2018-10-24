@@ -40,3 +40,11 @@ class TestSpanField(AllenNlpTestCase):
     def test_printing_doesnt_crash(self):
         span_field = SpanField(2, 3, self.text)
         print(span_field)
+
+    def test_equality(self):
+        span_field1 = SpanField(2, 3, self.text)
+        span_field2 = SpanField(2, 3, self.text)
+
+        assert span_field1 == (2, 3)
+        assert span_field1 == span_field1
+        assert span_field1 != span_field2
