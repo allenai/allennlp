@@ -107,7 +107,6 @@ class TestTrainer(AllenNlpTestCase):
                 assert len(kwargs['metadata']) == batch_size, \
                     f'metadata must be split appropriately. Expected {batch_size} elements, ' \
                     f"got {len(kwargs['metadata'])} elements."
-                print(kwargs['metadata'])
                 return self.model.forward(**kwargs)
 
         multigpu_iterator = BasicIterator(batch_size=4)
