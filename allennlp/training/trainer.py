@@ -407,7 +407,7 @@ class Trainer(Registrable):
         of torch.nn.parallel.data_parallel to support the allennlp model
         interface.
         """
-        metadata_batch_size = len(batch['metadata']) if 'metadata' in batch and isinstance(batch['metadata'],list) else None
+        #metadata_batch_size = len(batch['metadata']) if 'metadata' in batch and isinstance(batch['metadata'],list) else None
 
         #print(f"BRR2 {batch.keys()}")
         #print(f"batch: {batch}")
@@ -416,15 +416,15 @@ class Trainer(Registrable):
         #print(f"inputs: {inputs}")
         #print(f"module_kwargs: {module_kwargs}")
 
-        if metadata_batch_size is not None:
-            # Metadata batches also have to be chunked as PyTorch is unaware of them.
-            # Follows chunking implementation by ATen.native.TensorShape functions.
-            chunk_size = 1 + (metadata_batch_size - 1)//len(self._cuda_devices)
-            chunk_offset = 0
-            for instance in module_kwargs:
-                if 'metadata' in instance:
-                     instance['metadata'] = instance['metadata'][chunk_offset:chunk_size+chunk_offset]
-                     chunk_offset += chunk_size
+        #if metadata_batch_size is not None:
+        #    # Metadata batches also have to be chunked as PyTorch is unaware of them.
+        #    # Follows chunking implementation by ATen.native.TensorShape functions.
+        #    chunk_size = 1 + (metadata_batch_size - 1)//len(self._cuda_devices)
+        #    chunk_offset = 0
+        #    for instance in module_kwargs:
+        #        if 'metadata' in instance:
+        #             instance['metadata'] = instance['metadata'][chunk_offset:chunk_size+chunk_offset]
+        #             chunk_offset += chunk_size
 
         #print(f"self._cuda_devices: {self._cuda_devices}")
         used_device_ids = self._cuda_devices[:len(inputs)]
