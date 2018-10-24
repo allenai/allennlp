@@ -61,8 +61,8 @@ class MetadataField(Field[DataArray], Mapping[str, Any]):
 
     @classmethod
     @overrides
-    def batch_tensors(cls, tensor_list: List[DataArray]) -> DataArray:  # type: ignore
-        return ScatterableList(tensor_list)  # type: ignore
+    def batch_tensors(cls, tensor_list: List[DataArray]) -> ScatterableList:  # type: ignore
+        return ScatterableList(tensor_list)
 
 
     def __str__(self) -> str:

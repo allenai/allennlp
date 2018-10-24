@@ -1,7 +1,7 @@
 """
 Various utilities that don't fit anwhere else.
 """
-import ctypes
+from ctypes import sizeof, c_void_p, c_int64, cast, py_object, c_uint64
 from itertools import zip_longest, islice
 from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator, Union
 import importlib
@@ -378,11 +378,26 @@ def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> Union[int, Lis
     else:
         return int(cuda_device)
 
+# Ensure pointers will fit in a torch.LongTensor. "64 bits ought to be enough for anybody."
+assert sizeof(c_void_p) <= sizeof(c_int64)
+
 class ScatterableList(list):
     """
     A normal list, but one that signifies that it should be scattered like a tensor.
     """
-    pass
+
+    def to_pointer_tensor(self) -> torch.LongTensor:
+        # Converts the elements to pointers and casts them to int64. This is important as `id` gives back unsigned
+        # integers while torch.LongTensor is signed.
+        # See:
+        # https://github.com/python/cpython/blob/6ec5cf24b7f38ea72bb42d5cd60dca0d3ee332f9/Python/bltinmodule.c#L1118
+        # https://github.com/python/cpython/blob/6ec5cf24b7f38ea72bb42d5cd60dca0d3ee332f9/Objects/longobject.c#L990
+        pointers = [c_int64(id(element)).value for element in self]
+        return torch.LongTensor(pointers)
+
+    @classmethod
+    def from_pointer_tensor(cls, pointers) -> list:
+        return [cast(c_uint64(pointer.item()), py_object).value for pointer in pointers]
 
 # TODO(brendanr): Add licensing stuff for borrowing this from torch before distributing, i.e. pushing to master.
 def scatter(inputs, target_gpus, dim=0):
@@ -399,16 +414,8 @@ def scatter(inputs, target_gpus, dim=0):
         if isinstance(obj, ScatterableList):
             # In order to have precisely the same method of scattering as PyTorch we scatter
             # pointers to the elements in the list.
-            pointers = torch.LongTensor([id(element) for element in obj])
-            scattered_pointers = Scatter.apply(target_gpus, None, dim, pointers)
-            scattered_objects = []
-            for pointer_slice in scattered_pointers:
-                object_slice = []
-                for pointer in pointer_slice:
-                    # Retrieve the underlying Python value.
-                    object_slice.append(ctypes.cast(pointer.item(), ctypes.py_object).value)
-                scattered_objects.append(object_slice)
-            return scattered_objects
+            pointers = scatter_map(obj.to_pointer_tensor())
+            return [obj.from_pointer_tensor(chunk) for chunk in pointers]
         if isinstance(obj, tuple) and len(obj) > 0:
             return list(zip(*map(scatter_map, obj)))
         if isinstance(obj, list) and len(obj) > 0:
