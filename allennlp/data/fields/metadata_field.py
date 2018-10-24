@@ -3,8 +3,8 @@ from typing import Any, Dict, List
 
 from overrides import overrides
 
+from allennlp.common.util import ScatterableList
 from allennlp.data.fields.field import DataArray, Field
-
 
 class MetadataField(Field[DataArray]):
     """
@@ -43,7 +43,7 @@ class MetadataField(Field[DataArray]):
     @classmethod
     @overrides
     def batch_tensors(cls, tensor_list: List[DataArray]) -> DataArray:  # type: ignore
-        return tensor_list  # type: ignore
+        return ScatterableList(tensor_list)  # type: ignore
 
 
     def __str__(self) -> str:
