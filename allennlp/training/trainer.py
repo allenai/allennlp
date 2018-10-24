@@ -19,13 +19,13 @@ from typing import Dict, Optional, List, Tuple, Union, Iterable, Any, Set
 
 import torch
 import torch.optim.lr_scheduler
-from torch.nn.parallel import replicate, parallel_apply
-from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
+from torch.nn.parallel import replicate, parallel_apply, scatter_gather
+from torch.nn.parallel.scatter_gather import gather
 from tensorboardX import SummaryWriter
 
 from allennlp.common import Params, Registrable
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import dump_metrics, gpu_memory_mb, parse_cuda_device, peak_memory_mb
+from allennlp.common.util import dump_metrics, gpu_memory_mb, parse_cuda_device, peak_memory_mb, scatter_kwargs
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -411,7 +411,8 @@ class Trainer(Registrable):
 
         #print(f"BRR2 {batch.keys()}")
         #print(f"batch: {batch}")
-        inputs, module_kwargs = scatter_kwargs((), batch, self._cuda_devices, 0)
+        #inputs, module_kwargs = scatter_kwargs((), batch, self._cuda_devices, 0)
+        inputs, module_kwargs = scatter_gather.scatter_kwargs((), batch, self._cuda_devices, 0)
         #print(f"inputs: {inputs}")
         #print(f"module_kwargs: {module_kwargs}")
 

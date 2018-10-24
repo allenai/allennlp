@@ -1,7 +1,7 @@
 """
 Various utilities that don't fit anwhere else.
 """
-
+import ctypes
 from itertools import zip_longest, islice
 from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator, Union
 import importlib
@@ -13,6 +13,8 @@ import subprocess
 import sys
 import os
 import re
+
+from torch.nn.parallel._functions import Scatter
 
 try:
     import resource
@@ -375,6 +377,66 @@ def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> Union[int, Lis
         return from_list(cuda_device)
     else:
         return int(cuda_device)
+
+class ScatterableList(list):
+    """
+    A normal list, but one that signifies that it should be scattered like a tensor.
+    """
+    pass
+
+# TODO(brendanr): Add licensing stuff for borrowing this from torch.
+def scatter(inputs, target_gpus, dim=0):
+    r"""
+    Slices tensors and ScatterableLists into approximately equal chunks and distributes them across given GPUs.
+    Duplicates references to objects that are not tensors or ScatterableLists.
+    """
+    def scatter_map(obj):
+        if isinstance(obj, torch.Tensor):
+            return Scatter.apply(target_gpus, None, dim, obj)
+        if isinstance(obj, ScatterableList):
+            # In order to have precisely the same method of scattering as torch we scatter pointers to the elements
+            # in the list.
+            # Note: This will fail miserably in a distributed setting.
+            pointers = torch.LongTensor([id(element) for element in obj])
+            scattered_pointers = Scatter.apply(target_gpus, None, dim, pointers)
+            scattered_objects = []
+            for pointer_slice in scattered_pointers:
+                object_slice = []
+                for pointer in pointer_slice:
+                    # Retrieve the underlying Python value.
+                    object_slice.append(ctypes.cast(pointer, ctypes.py_object).value)
+                scattered_objects.append(object_slice)
+            return scattered_objects
+        if isinstance(obj, tuple) and len(obj) > 0:
+            return list(zip(*map(scatter_map, obj)))
+        if isinstance(obj, list) and len(obj) > 0:
+            return list(map(list, zip(*map(scatter_map, obj))))
+        if isinstance(obj, dict) and len(obj) > 0:
+            return list(map(type(obj), zip(*map(scatter_map, obj.items()))))
+        return [obj for targets in target_gpus]
+
+    # After scatter_map is called, a scatter_map cell will exist. This cell
+    # has a reference to the actual function scatter_map, which has references
+    # to a closure that has a reference to the scatter_map cell (because the
+    # fn is recursive). To avoid this reference cycle, we set the function to
+    # None, clearing the cell
+    try:
+        return scatter_map(inputs)
+    finally:
+        scatter_map = None
+
+
+def scatter_kwargs(inputs, kwargs, target_gpus, dim=0):
+    r"""Scatter with support for kwargs dictionary"""
+    inputs = scatter(inputs, target_gpus, dim) if inputs else []
+    kwargs = scatter(kwargs, target_gpus, dim) if kwargs else []
+    if len(inputs) < len(kwargs):
+        inputs.extend([() for _ in range(len(kwargs) - len(inputs))])
+    elif len(kwargs) < len(inputs):
+        kwargs.extend([{} for _ in range(len(inputs) - len(kwargs))])
+    inputs = tuple(inputs)
+    kwargs = tuple(kwargs)
+    return inputs, kwargs
 
 def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
     frozen_parameter_names = []
