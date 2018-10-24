@@ -6,6 +6,7 @@ from overrides import overrides
 from allennlp.common.util import ScatterableList
 from allennlp.data.fields.field import DataArray, Field
 
+
 class MetadataField(Field[DataArray], Mapping[str, Any]):
     """
     A ``MetadataField`` is a ``Field`` that does not get converted into tensors.  It just carries

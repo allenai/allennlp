@@ -177,8 +177,7 @@ class Event2Mind(Model):
                         target_tokens=target_tokens[name],
                         target_embedder=state.embedder,
                         decoder_cell=state.decoder_cell,
-                        output_projection_layer=state.output_projection_layer,
-                        extra=name
+                        output_projection_layer=state.output_projection_layer
                 )
                 total_loss += loss
                 output_dict[f"{name}_loss"] = loss
@@ -210,8 +209,7 @@ class Event2Mind(Model):
                       target_tokens: Dict[str, torch.LongTensor],
                       target_embedder: Embedding,
                       decoder_cell: GRUCell,
-                      output_projection_layer: Linear,
-                      extra: str = "") -> torch.FloatTensor:
+                      output_projection_layer: Linear) -> torch.FloatTensor:
         """
         Greedily produces a sequence using the provided ``decoder_cell``.
         Returns the cross entropy between this sequence and ``target_tokens``.
