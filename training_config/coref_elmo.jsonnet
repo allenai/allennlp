@@ -58,7 +58,7 @@
     "context_layer": {
         "type": "lstm",
         "bidirectional": true,
-        "input_size": 400,
+        "input_size": 1424,
         "hidden_size": 200,
         "num_layers": 1,
         "dropout": 0.2
