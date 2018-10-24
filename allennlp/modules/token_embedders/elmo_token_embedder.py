@@ -52,7 +52,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
                  requires_grad: bool = False,
                  projection_dim: int = None,
                  vocab_to_cache: List[str] = None,
-                 scalar_mix_parameters: List[float] = None,) -> None:
+                 scalar_mix_parameters: List[float] = None) -> None:
         super(ElmoTokenEmbedder, self).__init__()
 
         self._elmo = Elmo(options_file,
