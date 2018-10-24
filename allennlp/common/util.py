@@ -404,7 +404,7 @@ def scatter(inputs, target_gpus, dim=0):
                 object_slice = []
                 for pointer in pointer_slice:
                     # Retrieve the underlying Python value.
-                    object_slice.append(ctypes.cast(pointer, ctypes.py_object).value)
+                    object_slice.append(ctypes.cast(pointer.item(), ctypes.py_object).value)
                 scattered_objects.append(object_slice)
             return scattered_objects
         if isinstance(obj, tuple) and len(obj) > 0:

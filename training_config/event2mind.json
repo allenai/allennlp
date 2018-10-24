@@ -54,13 +54,14 @@
   "iterator": {
     "type": "bucket",
     "padding_noise": 0.0,
-    "batch_size" : 64,
+    "batch_size" : 128,
     "sorting_keys": [["source", "num_tokens"]]
   },
   "trainer": {
-    "num_epochs": 10,
+    "num_epochs": 2,
     "patience": 10,
     "cuda_device": [0, 1],
+    #"cuda_device": 0,
     "optimizer": {
       "type": "adam"
     },
