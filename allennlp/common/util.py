@@ -384,19 +384,21 @@ class ScatterableList(list):
     """
     pass
 
-# TODO(brendanr): Add licensing stuff for borrowing this from torch.
+# TODO(brendanr): Add licensing stuff for borrowing this from torch before distributing, i.e. pushing to master.
 def scatter(inputs, target_gpus, dim=0):
     r"""
     Slices tensors and ScatterableLists into approximately equal chunks and distributes them across given GPUs.
     Duplicates references to objects that are not tensors or ScatterableLists.
+
+    Adapted from `scatter` at:
+    https://github.com/pytorch/pytorch/blob/1d406c04ae56255e58dcec85e3479bb2b3dbd75e/torch/nn/parallel/scatter_gather.py#L5-L30.
     """
     def scatter_map(obj):
         if isinstance(obj, torch.Tensor):
             return Scatter.apply(target_gpus, None, dim, obj)
         if isinstance(obj, ScatterableList):
-            # In order to have precisely the same method of scattering as torch we scatter pointers to the elements
-            # in the list.
-            # Note: This will fail miserably in a distributed setting.
+            # In order to have precisely the same method of scattering as PyTorch we scatter
+            # pointers to the elements in the list.
             pointers = torch.LongTensor([id(element) for element in obj])
             scattered_pointers = Scatter.apply(target_gpus, None, dim, pointers)
             scattered_objects = []
@@ -425,9 +427,12 @@ def scatter(inputs, target_gpus, dim=0):
     finally:
         scatter_map = None
 
-
 def scatter_kwargs(inputs, kwargs, target_gpus, dim=0):
-    r"""Scatter with support for kwargs dictionary"""
+    r"""Scatter with support for kwargs dictionary.
+
+    Adapted from `scatter_kwargs` at:
+    https://github.com/pytorch/pytorch/blob/1d406c04ae56255e58dcec85e3479bb2b3dbd75e/torch/nn/parallel/scatter_gather.py#L33-L43
+    """
     inputs = scatter(inputs, target_gpus, dim) if inputs else []
     kwargs = scatter(kwargs, target_gpus, dim) if kwargs else []
     if len(inputs) < len(kwargs):

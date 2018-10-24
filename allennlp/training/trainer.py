@@ -407,19 +407,10 @@ class Trainer(Registrable):
         of torch.nn.parallel.data_parallel to support the allennlp model
         interface.
         """
-        #print(f"BRR2 {batch.keys()}")
-        #print(f"batch: {batch}")
         inputs, module_kwargs = scatter_kwargs((), batch, self._cuda_devices, 0)
-        #inputs, module_kwargs = scatter_gather.scatter_kwargs((), batch, self._cuda_devices, 0)
-        #print(f"inputs: {inputs}")
-        #print(f"module_kwargs: {module_kwargs}")
 
-        #print(f"self._cuda_devices: {self._cuda_devices}")
         used_device_ids = self._cuda_devices[:len(inputs)]
-        #print(f"used_device_ids: {used_device_ids}")
         replicas = replicate(self.model, used_device_ids)
-        #print(f"replicas: {replicas}")
-        #import pdb; pdb.set_trace()
         outputs = parallel_apply(replicas, inputs, module_kwargs, used_device_ids)
 
         # Only the 'loss' is needed.
