@@ -397,7 +397,7 @@ class ScatterableList(list):
 
     @classmethod
     def from_pointer_tensor(cls, pointers) -> list:
-        return [cast(c_uint64(pointer.item()), py_object).value for pointer in pointers]
+        return [cast(c_uint64(pointer.item()).value, py_object).value for pointer in pointers]
 
 # TODO(brendanr): Add licensing stuff for borrowing this from torch before distributing, i.e. pushing to master.
 def scatter(inputs, target_gpus, dim=0):
