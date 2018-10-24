@@ -253,7 +253,12 @@ class WikiTablesVariableFreeWorld(World):
         agenda = []
         # Adding productions from the global set.
         for agenda_item in set(agenda_items):
-            agenda.append(self.terminal_productions[agenda_item])
+            # Some agenda items may not be present in the terminal productions because some of these
+            # terminals are table-content specific. For example, if the question triggered "sum",
+            # and the table does not have number columns, we should not add "<r,<f,n>> -> sum" to
+            # the agenda.
+            if agenda_item in self.terminal_productions:
+                agenda.append(self.terminal_productions[agenda_item])
 
         # Adding column names that occur in question.
         question_with_underscores = "_".join(question_tokens)
