@@ -400,13 +400,18 @@ class ScatterableList(list):
         return torch.LongTensor(pointers)
 
     @classmethod
-    def from_pointer_tensor(cls, pointers) -> list:
+    def from_pointer_tensor(cls, pointers: torch.LongTensor) -> list:
         """
-        The inverse of ``to_pointer_tensor`` except that a plain ``list`` is returned.
+        The inverse of ``to_pointer_tensor`` except that a plain ``list`` is returned. Typically this will be
+        called on a single chunk of the scattered tensor.
+
+        Parameters
+        ----------
+        pointers : ``torch.LongTensor``, required.
+            A tensor of shape (list_length,).
         """
         return [cast(c_uint64(pointer.item()).value, py_object).value for pointer in pointers]
 
-# TODO(brendanr): Add licensing stuff for borrowing this from torch before distributing, i.e. pushing to master.
 def scatter(inputs, target_gpus, dim=0):
     """
     Slices tensors and ScatterableLists into approximately equal chunks and distributes them across given GPUs.
@@ -414,6 +419,10 @@ def scatter(inputs, target_gpus, dim=0):
 
     Adapted from `scatter` at:
     https://github.com/pytorch/pytorch/blob/1d406c04ae56255e58dcec85e3479bb2b3dbd75e/torch/nn/parallel/scatter_gather.py#L5-L30.
+
+    Please see the LICENSE and NOTICE files as well:
+    https://github.com/pytorch/pytorch/blob/1d406c04ae56255e58dcec85e3479bb2b3dbd75e/LICENSE
+    https://github.com/pytorch/pytorch/blob/1d406c04ae56255e58dcec85e3479bb2b3dbd75e/NOTICE
     """
     def scatter_map(obj):
         if isinstance(obj, torch.Tensor):
@@ -447,6 +456,10 @@ def scatter_kwargs(inputs, kwargs, target_gpus, dim=0):
 
     Adapted from `scatter_kwargs` at:
     https://github.com/pytorch/pytorch/blob/1d406c04ae56255e58dcec85e3479bb2b3dbd75e/torch/nn/parallel/scatter_gather.py#L33-L43
+
+    Please see the LICENSE and NOTICE files as well:
+    https://github.com/pytorch/pytorch/blob/1d406c04ae56255e58dcec85e3479bb2b3dbd75e/LICENSE
+    https://github.com/pytorch/pytorch/blob/1d406c04ae56255e58dcec85e3479bb2b3dbd75e/NOTICE
     """
     inputs = scatter(inputs, target_gpus, dim) if inputs else []
     kwargs = scatter(kwargs, target_gpus, dim) if kwargs else []

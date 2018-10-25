@@ -88,8 +88,6 @@ class TestTrainer(AllenNlpTestCase):
                           cuda_device=0)
         trainer.train()
 
-  # pylint: disable=arguments-differ
-
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")
     def test_trainer_can_run_multiple_gpu(self):
@@ -103,7 +101,7 @@ class TestTrainer(AllenNlpTestCase):
                 super().__init__(model.vocab)
                 self.model = model
 
-            def forward(self, **kwargs) -> Dict[str, torch.Tensor]:
+            def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore # pylint: disable=arguments-differ
                 assert 'metadata' in kwargs and 'tags' in kwargs, \
                     f'tokens and metadata must be provided. Got {kwargs.keys()} instead.'
                 batch_size = kwargs['tokens']['tokens'].size()[0]
