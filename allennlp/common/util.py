@@ -359,7 +359,7 @@ def is_lazy(iterable: Iterable[A]) -> bool:
 
 def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> Union[int, List[int]]:
     """
-    Disambiguates single GPU and multiple GPU settings for cuda_device param
+    Disambiguates single GPU and multiple GPU settings for cuda_device param.
     """
     def from_list(l):
         if len(l) > 1:
@@ -376,7 +376,8 @@ def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> Union[int, Lis
     elif isinstance(cuda_device, list):
         return from_list(cuda_device)
     else:
-        return int(cuda_device)
+        # TODO(brendanr): Determine why mypy can't tell that this matches the Union.
+        return int(cuda_device)  # type: ignore
 
 class ScatterableList(list):
     """
