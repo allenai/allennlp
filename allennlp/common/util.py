@@ -221,7 +221,8 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) 
     file_friendly_logging : ``bool``, required.
         Whether logs should clean the output to prevent carridge returns
         (used to update progress bars on a single terminal line). This
-        option is only used if you are running in an environment with a terminal.
+        option is typically only used if you are running in an environment
+        without a terminal.
     """
 
     # If we don't have a terminal as stdout,
