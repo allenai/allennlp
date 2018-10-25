@@ -93,7 +93,7 @@ class Event2Mind(Model):
         self._decoder_output_dim = self._encoder.get_output_dim()
         target_embedding_dim = target_embedding_dim or self._source_embedder.get_output_dim()
 
-        self._states: ModuleDict[str, StateDecoder] = ModuleDict()
+        self._states = ModuleDict()
         for name in target_names:
             self._states[name] = StateDecoder(
                     num_classes,
@@ -355,7 +355,9 @@ class Event2Mind(Model):
                 all_metrics[name] = state.recall.get_metric(reset=reset)
         return all_metrics
 
+
 class StateDecoder(Module):
+    # pylint: disable=abstract-method
     """
     Simple struct-like class for internal use.
     """

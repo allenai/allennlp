@@ -361,16 +361,16 @@ def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> Union[int, Lis
     """
     Disambiguates single GPU and multiple GPU settings for cuda_device param.
     """
-    def from_list(l):
-        if len(l) > 1:
-            return [int(d) for d in l]
-        elif len(l) == 1:
-            return int(l[0])
+    def from_list(strings):
+        if len(strings) > 1:
+            return [int(d) for d in strings]
+        elif len(strings) == 1:
+            return int(strings[0])
         else:
             return -1
 
     if isinstance(cuda_device, str):
-        return from_list( re.split(r',\s*', cuda_device) )
+        return from_list(re.split(r',\s*', cuda_device))
     elif isinstance(cuda_device, int):
         return cuda_device
     elif isinstance(cuda_device, list):
@@ -424,13 +424,13 @@ def scatter(inputs, target_gpus, dim=0):
             pointers = scatter_map(obj.to_pointer_tensor())
             # Then we reconstruct the lists from the pointer tensors.
             return [obj.from_pointer_tensor(chunk) for chunk in pointers]
-        if isinstance(obj, tuple) and len(obj) > 0:
+        if isinstance(obj, tuple) and obj:
             return list(zip(*map(scatter_map, obj)))
-        if isinstance(obj, list) and len(obj) > 0:
+        if isinstance(obj, list) and obj:
             return list(map(list, zip(*map(scatter_map, obj))))
-        if isinstance(obj, dict) and len(obj) > 0:
+        if isinstance(obj, dict) and obj:
             return list(map(type(obj), zip(*map(scatter_map, obj.items()))))
-        return [obj for targets in target_gpus]
+        return [obj for _ in target_gpus]
 
     # After scatter_map is called, a scatter_map cell will exist. This cell
     # has a reference to the actual function scatter_map, which has references
