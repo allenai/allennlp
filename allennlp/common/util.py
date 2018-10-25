@@ -378,30 +378,36 @@ def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> Union[int, Lis
     else:
         return int(cuda_device)
 
-# Ensure pointers will fit in a torch.LongTensor. "64 bits ought to be enough for anybody."
-assert sizeof(c_void_p) <= sizeof(c_int64)
-
 class ScatterableList(list):
     """
-    A normal list, but one that signifies that it should be scattered like a tensor.
+    A normal list, but one that should be scattered like a tensor.
     """
 
+    # Ensure pointers will fit in a torch.LongTensor. "64 bits ought to be enough for anybody."
+    assert sizeof(c_void_p) <= sizeof(c_int64)
+
     def to_pointer_tensor(self) -> torch.LongTensor:
-        # Converts the elements to pointers and casts them to int64. This is important as `id` gives back unsigned
-        # integers while torch.LongTensor is signed.
-        # See:
-        # https://github.com/python/cpython/blob/6ec5cf24b7f38ea72bb42d5cd60dca0d3ee332f9/Python/bltinmodule.c#L1118
-        # https://github.com/python/cpython/blob/6ec5cf24b7f38ea72bb42d5cd60dca0d3ee332f9/Objects/longobject.c#L990
+        """
+        Converts the elements to pointers, casts them to ``int64`` and then returns them in a tensor. This cast is
+        important as ``id`` gives back unsigned integers while ``torch.LongTensor`` is signed.
+
+        See:
+        https://github.com/python/cpython/blob/6ec5cf24b7f38ea72bb42d5cd60dca0d3ee332f9/Python/bltinmodule.c#L1118
+        https://github.com/python/cpython/blob/6ec5cf24b7f38ea72bb42d5cd60dca0d3ee332f9/Objects/longobject.c#L990
+        """
         pointers = [c_int64(id(element)).value for element in self]
         return torch.LongTensor(pointers)
 
     @classmethod
     def from_pointer_tensor(cls, pointers) -> list:
+        """
+        The inverse of ``to_pointer_tensor`` except that a plain ``list`` is returned.
+        """
         return [cast(c_uint64(pointer.item()).value, py_object).value for pointer in pointers]
 
 # TODO(brendanr): Add licensing stuff for borrowing this from torch before distributing, i.e. pushing to master.
 def scatter(inputs, target_gpus, dim=0):
-    r"""
+    """
     Slices tensors and ScatterableLists into approximately equal chunks and distributes them across given GPUs.
     Duplicates references to objects that are not tensors or ScatterableLists.
 
@@ -413,8 +419,9 @@ def scatter(inputs, target_gpus, dim=0):
             return Scatter.apply(target_gpus, None, dim, obj)
         if isinstance(obj, ScatterableList):
             # In order to have precisely the same method of scattering as PyTorch we scatter
-            # pointers to the elements in the list.
+            # a tensor of pointers.
             pointers = scatter_map(obj.to_pointer_tensor())
+            # Then we reconstruct the lists from the pointer tensors.
             return [obj.from_pointer_tensor(chunk) for chunk in pointers]
         if isinstance(obj, tuple) and len(obj) > 0:
             return list(zip(*map(scatter_map, obj)))
@@ -435,7 +442,7 @@ def scatter(inputs, target_gpus, dim=0):
         scatter_map = None
 
 def scatter_kwargs(inputs, kwargs, target_gpus, dim=0):
-    r"""Scatter with support for kwargs dictionary.
+    """Scatter with support for kwargs dictionary.
 
     Adapted from `scatter_kwargs` at:
     https://github.com/pytorch/pytorch/blob/1d406c04ae56255e58dcec85e3479bb2b3dbd75e/torch/nn/parallel/scatter_gather.py#L33-L43
