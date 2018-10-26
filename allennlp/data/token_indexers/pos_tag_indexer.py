@@ -56,7 +56,7 @@ class PosTagIndexer(TokenIndexer[int]):
                 tag = token.pos_
             else:
                 tag = token.tag_
-            if tag is None:
+            if not tag:
                 tag = 'NONE'
 
             tags.append(tag)
