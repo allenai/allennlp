@@ -87,7 +87,7 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
         value_padding_lengths = 0
         for token in indices["char"]:
             item = indexer.get_padding_lengths(token)
-            key, value = item.keys(), item.values()
+            value = item.values()
             value_padding_lengths = max(value_padding_lengths, max(value))
         padded = indexer.pad_token_sequence(indices,
                                             {"char": len(indices["char"])},
