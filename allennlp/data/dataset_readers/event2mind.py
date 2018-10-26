@@ -104,14 +104,15 @@ class Event2MindDatasetReader(DatasetReader):
                                 )
                 # Generate instances where each token of input appears once.
                 else:
-                    # To the extent that sources are duplicated in the dataset
-                    # (which appears common), we will duplicate them here.
-                    yield self.text_to_instance(source_sequence, "none", "none", "none")
                     for xintent in xintents:
+                        # NOTE: source_sequence should really be broken out and deduplicated. We're
+                        # adding it here to ensure we generate the same vocabulary as the model at
+                        # https://s3-us-west-2.amazonaws.com/allennlp/models/event2mind-2018.10.05.tar.gz
+                        # was trained against.
+                        yield self.text_to_instance(source_sequence, xintent, "none", "none")
+                    for xreact in xreacts:
                         # Since "none" is a special token we don't mind it
                         # appearing a disproportionate number of times.
-                        yield self.text_to_instance("none", xintent, "none", "none")
-                    for xreact in xreacts:
                         yield self.text_to_instance("none", "none", xreact, "none")
                     for oreact in oreacts:
                         yield self.text_to_instance("none", "none", "none", oreact)
