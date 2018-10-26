@@ -96,4 +96,3 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
                                    [9, 10, 0, 0, 0, 0, 0, 0, 0, 0],
                                    [11, 12, 4, 10, 13, 14, 4, 0, 0, 0],
                                    [15, 0, 0, 0, 0, 0, 0, 0, 0, 0]]}
-
