@@ -18,9 +18,6 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
 
     Parameters
     ----------
-    min_padding_length: ``int``, optional (default=``0``)
-        We use this value as the minimum length of padding. Usually used with :class:``CnnEncoder``, its
-        value should be set to the maximum value of ``ngram_filter_sizes`` correspondingly.
     namespace : ``str``, optional (default=``token_characters``)
         We will use this namespace in the :class:`Vocabulary` to map the characters in each token
         to indices.
@@ -33,20 +30,24 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         These are prepended to the tokens provided to ``tokens_to_indices``.
     end_tokens : ``List[str]``, optional (default=``None``)
         These are appended to the tokens provided to ``tokens_to_indices``.
+    min_padding_length: ``int``, optional (default=``0``)
+        We use this value as the minimum length of padding. Usually used with :class:``CnnEncoder``, its
+        value should be set to the maximum value of ``ngram_filter_sizes`` correspondingly.
     """
     # pylint: disable=no-self-use
     def __init__(self,
-                 min_padding_length: int = 0,
                  namespace: str = 'token_characters',
                  character_tokenizer: CharacterTokenizer = CharacterTokenizer(),
                  start_tokens: List[str] = None,
-                 end_tokens: List[str] = None) -> None:
-        self._min_padding_length = min_padding_length
+                 end_tokens: List[str] = None,
+                 min_padding_length: int = 0) -> None:
         self._namespace = namespace
         self._character_tokenizer = character_tokenizer
 
         self._start_tokens = [Token(st) for st in (start_tokens or [])]
         self._end_tokens = [Token(et) for et in (end_tokens or [])]
+
+        self._min_padding_length = min_padding_length
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
