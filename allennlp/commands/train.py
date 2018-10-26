@@ -275,7 +275,12 @@ def train_model(params: Params,
     create_serialization_dir(params, serialization_dir, recover, force)
     prepare_global_logging(serialization_dir, file_friendly_logging)
 
-    check_for_gpu(params.get('trainer').get('cuda_device', -1))
+    cuda_device = params.params.get('trainer').get('cuda_device', -1)
+    if isinstance(cuda_device, list):
+        for device in cuda_device:
+            check_for_gpu(device)
+    else:
+        check_for_gpu(cuda_device)
 
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
