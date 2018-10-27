@@ -41,3 +41,13 @@ class TestNerTagIndexer(AllenNlpTestCase):
         indexer = NerTagIndexer()
         padded_tokens = indexer.pad_token_sequence({'key': [1, 2, 3, 4, 5]}, {'key': 10}, {})
         assert padded_tokens == {'key': [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]}
+
+    def test_blank_ner_tag(self):
+        tokens = self.tokenizer.split_words("allennlp is awesome.")
+        indexer = NerTagIndexer()
+        counter = defaultdict(lambda: defaultdict(int))
+        for token in tokens:
+            indexer.count_vocab_items(token, counter)
+        vocab = Vocabulary(counter)
+        # should raise no exception
+        indexer.tokens_to_indices(tokens, vocab, index_name="ner")
