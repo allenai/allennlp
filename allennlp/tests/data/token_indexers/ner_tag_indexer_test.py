@@ -12,14 +12,14 @@ class TestNerTagIndexer(AllenNlpTestCase):
         super(TestNerTagIndexer, self).setUp()
         self.tokenizer = SpacyWordSplitter(ner=True)
 
-    def test_count_vocab_items_uses_ner_tags(self):
+    def test_count_vocab_items_uses_ner_tag(self):
         tokens = self.tokenizer.split_words("Larry Page is CEO of Google.")
         tokens = [Token("<S>")] + [t for t in tokens] + [Token("</S>")]
         indexer = NerTagIndexer()
         counter = defaultdict(lambda: defaultdict(int))
         for token in tokens:
             indexer.count_vocab_items(token, counter)
-        assert counter["ner_tags"] == {'PERSON': 2, 'ORG': 1, 'NONE': 6}
+        assert counter["ner_tag"] == {'PERSON': 2, 'ORG': 1, 'NONE': 6}
 
     def test_tokens_to_indices_uses_ner_tags(self):
         tokens = self.tokenizer.split_words("Larry Page is CEO of Google.")
@@ -28,7 +28,7 @@ class TestNerTagIndexer(AllenNlpTestCase):
         person_index = vocab.add_token_to_namespace('PERSON', namespace='ner_tags')
         none_index = vocab.add_token_to_namespace('NONE', namespace='ner_tags')
         vocab.add_token_to_namespace('ORG', namespace='ner_tags')
-        indexer = NerTagIndexer()
+        indexer = NerTagIndexer(namespace='ner_tags')
         assert indexer.tokens_to_indices([tokens[1]], vocab, "tokens1") == {"tokens1": [person_index]}
         assert indexer.tokens_to_indices([tokens[-1]], vocab, "tokens-1") == {"tokens-1": [none_index]}
 

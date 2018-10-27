@@ -12,20 +12,20 @@ class TestPosTagIndexer(AllenNlpTestCase):
         super(TestPosTagIndexer, self).setUp()
         self.tokenizer = SpacyWordSplitter(pos_tags=True)
 
-    def test_count_vocab_items_uses_pos_tags(self):
+    def test_count_vocab_items_uses_pos_tag(self):
         tokens = self.tokenizer.split_words("This is a sentence.")
         tokens = [Token("<S>")] + [t for t in tokens] + [Token("</S>")]
         indexer = PosTagIndexer()
         counter = defaultdict(lambda: defaultdict(int))
         for token in tokens:
             indexer.count_vocab_items(token, counter)
-        assert counter["pos_tags"] == {'DT': 2, 'VBZ': 1, '.': 1, 'NN': 1, 'NONE': 2}
+        assert counter["pos_tag"] == {'DT': 2, 'VBZ': 1, '.': 1, 'NN': 1, 'NONE': 2}
 
         indexer._coarse_tags = True  # pylint: disable=protected-access
         counter = defaultdict(lambda: defaultdict(int))
         for token in tokens:
             indexer.count_vocab_items(token, counter)
-        assert counter["pos_tags"] == {'VERB': 1, 'PUNCT': 1, 'DET': 2, 'NOUN': 1, 'NONE': 2}
+        assert counter["pos_tag"] == {'VERB': 1, 'PUNCT': 1, 'DET': 2, 'NOUN': 1, 'NONE': 2}
 
     def test_tokens_to_indices_uses_pos_tags(self):
         tokens = self.tokenizer.split_words("This is a sentence.")
@@ -39,7 +39,7 @@ class TestPosTagIndexer(AllenNlpTestCase):
         vocab.add_token_to_namespace('NOUN', namespace='pos_tags')
         vocab.add_token_to_namespace('PUNCT', namespace='pos_tags')
 
-        indexer = PosTagIndexer(coarse_tags=True)
+        indexer = PosTagIndexer(namespace='pos_tags', coarse_tags=True)
 
         indices = indexer.tokens_to_indices(tokens, vocab, "tokens")
         assert len(indices) == 1
