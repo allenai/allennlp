@@ -26,7 +26,7 @@ class PosTagIndexer(TokenIndexer[int]):
         If ``True``, we will use coarse POS tags instead of the default fine-grained POS tags.
     """
     # pylint: disable=no-self-use
-    def __init__(self, namespace: str = 'pos_tags', coarse_tags: bool = False) -> None:
+    def __init__(self, namespace: str = 'pos_tag', coarse_tags: bool = False) -> None:
         self._namespace = namespace
         self._coarse_tags = coarse_tags
         self._logged_errors: Set[str] = set()

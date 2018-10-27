@@ -23,7 +23,7 @@ class NerTagIndexer(TokenIndexer[int]):
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
     """
     # pylint: disable=no-self-use
-    def __init__(self, namespace: str = 'ner_tags') -> None:
+    def __init__(self, namespace: str = 'ner_tag') -> None:
         self._namespace = namespace
 
     @overrides
