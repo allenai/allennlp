@@ -202,8 +202,7 @@ def update_grammar_values_with_variables(grammar_dictionary: Dict[str, List[str]
         grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
 
 
-
-def update_grammar_numbers_and_strings_with_variables(grammar_dictionary: Dict[str, List[str]],
+def update_grammar_numbers_and_strings_with_variables(grammar_dictionary: Dict[str, List[str]], # pylint: disable=invalid-name
                                                       prelinked_entities: Dict[str, Dict[str, str]],
                                                       columns: Dict[str, TableColumn]) -> None:
     for variable, info in prelinked_entities.items():
