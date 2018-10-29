@@ -12,20 +12,20 @@ class TestPosTagIndexer(AllenNlpTestCase):
         super(TestPosTagIndexer, self).setUp()
         self.tokenizer = SpacyWordSplitter(pos_tags=True)
 
-    def test_count_vocab_items_uses_pos_tag(self):
+    def test_count_vocab_items_uses_pos_tags(self):
         tokens = self.tokenizer.split_words("This is a sentence.")
         tokens = [Token("<S>")] + [t for t in tokens] + [Token("</S>")]
         indexer = PosTagIndexer()
         counter = defaultdict(lambda: defaultdict(int))
         for token in tokens:
             indexer.count_vocab_items(token, counter)
-        assert counter["pos_tag"] == {'DT': 2, 'VBZ': 1, '.': 1, 'NN': 1, 'NONE': 2}
+        assert counter["pos_tokens"] == {'DT': 2, 'VBZ': 1, '.': 1, 'NN': 1, 'NONE': 2}
 
         indexer._coarse_tags = True  # pylint: disable=protected-access
         counter = defaultdict(lambda: defaultdict(int))
         for token in tokens:
             indexer.count_vocab_items(token, counter)
-        assert counter["pos_tag"] == {'VERB': 1, 'PUNCT': 1, 'DET': 2, 'NOUN': 1, 'NONE': 2}
+        assert counter["pos_tokens"] == {'VERB': 1, 'PUNCT': 1, 'DET': 2, 'NOUN': 1, 'NONE': 2}
 
     def test_tokens_to_indices_uses_pos_tags(self):
         tokens = self.tokenizer.split_words("This is a sentence.")
@@ -61,11 +61,18 @@ class TestPosTagIndexer(AllenNlpTestCase):
         assert padded_tokens == {'key': [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]}
 
     def test_blank_pos_tag(self):
-        tokens = self.tokenizer.split_words("allennlp is awesome.")
+        tokens = [Token(token) for token in "allennlp is awesome .".split(" ")]
+        for token in tokens:
+            token.pos_ = ""
         indexer = PosTagIndexer()
         counter = defaultdict(lambda: defaultdict(int))
         for token in tokens:
             indexer.count_vocab_items(token, counter)
+        # spacy uses a empty string to indicate "no POS tag"
+        # we convert it to "NONE"
+        assert counter["pos_tokens"]["NONE"] == 4
         vocab = Vocabulary(counter)
+        none_index = vocab.get_token_index('NONE', 'pos_tokens')
         # should raise no exception
-        indexer.tokens_to_indices(tokens, vocab, index_name="pos")
+        indices = indexer.tokens_to_indices(tokens, vocab, index_name="pos")
+        assert {"pos": [none_index, none_index, none_index, none_index]} == indices

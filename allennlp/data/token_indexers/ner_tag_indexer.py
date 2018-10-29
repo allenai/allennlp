@@ -19,11 +19,11 @@ class NerTagIndexer(TokenIndexer[int]):
 
     Parameters
     ----------
-    namespace : ``str``, optional (default=``ner_tags``)
+    namespace : ``str``, optional (default=``ner_tokens``)
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
     """
     # pylint: disable=no-self-use
-    def __init__(self, namespace: str = 'ner_tag') -> None:
+    def __init__(self, namespace: str = 'ner_tokens') -> None:
         self._namespace = namespace
 
     @overrides

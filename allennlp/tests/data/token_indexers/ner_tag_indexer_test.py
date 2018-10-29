@@ -12,14 +12,14 @@ class TestNerTagIndexer(AllenNlpTestCase):
         super(TestNerTagIndexer, self).setUp()
         self.tokenizer = SpacyWordSplitter(ner=True)
 
-    def test_count_vocab_items_uses_ner_tag(self):
+    def test_count_vocab_items_uses_ner_tags(self):
         tokens = self.tokenizer.split_words("Larry Page is CEO of Google.")
         tokens = [Token("<S>")] + [t for t in tokens] + [Token("</S>")]
         indexer = NerTagIndexer()
         counter = defaultdict(lambda: defaultdict(int))
         for token in tokens:
             indexer.count_vocab_items(token, counter)
-        assert counter["ner_tag"] == {'PERSON': 2, 'ORG': 1, 'NONE': 6}
+        assert counter["ner_tokens"] == {'PERSON': 2, 'ORG': 1, 'NONE': 6}
 
     def test_tokens_to_indices_uses_ner_tags(self):
         tokens = self.tokenizer.split_words("Larry Page is CEO of Google.")
@@ -43,11 +43,18 @@ class TestNerTagIndexer(AllenNlpTestCase):
         assert padded_tokens == {'key': [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]}
 
     def test_blank_ner_tag(self):
-        tokens = self.tokenizer.split_words("allennlp is awesome.")
+        tokens = [Token(token) for token in "allennlp is awesome .".split(" ")]
+        for token in tokens:
+            token.ent_type_ = ""
         indexer = NerTagIndexer()
         counter = defaultdict(lambda: defaultdict(int))
         for token in tokens:
             indexer.count_vocab_items(token, counter)
+        # spacy uses a empty string to indicate "no NER tag"
+        # we convert it to "NONE"
+        assert counter["ner_tokens"]["NONE"] == 4
         vocab = Vocabulary(counter)
+        none_index = vocab.get_token_index('NONE', 'ner_tokens')
         # should raise no exception
-        indexer.tokens_to_indices(tokens, vocab, index_name="ner")
+        indices = indexer.tokens_to_indices(tokens, vocab, index_name="ner")
+        assert {"ner": [none_index, none_index, none_index, none_index]} == indices
