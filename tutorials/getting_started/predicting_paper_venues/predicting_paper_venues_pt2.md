@@ -59,7 +59,7 @@ class PaperClassifierPredictor(Predictor):
         # Convert it to list ["ACL", "AI", ...]
         all_labels = [label_dict[i] for i in range(len(label_dict))]
 
-        return instance, {"all_labels": all_labels}
+        return instance
 ```
 
 To create each `Instance` it just pulls the `"title"` and `"paperAbstract"` fields
