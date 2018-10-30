@@ -43,7 +43,7 @@ which to write the results.
                            additional packages to include
 """
 
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 import argparse
 import re
 import os
@@ -121,17 +121,20 @@ def find_learning_rate_from_args(args: argparse.Namespace) -> None:
     """
     params = Params.from_file(args.param_path, args.overrides)
     find_learning_rate_model(params, args.serialization_dir,
-                             args.start_lr, args.end_lr,
-                             args.num_batches, args.linear, args.stopping_factor, args.force)
+                             start_lr=args.start_lr,
+                             end_lr=args.end_lr,
+                             num_batches=args.num_batches,
+                             linear_steps=args.linear,
+                             stopping_factor=args.stopping_factor,
+                             force=args.force)
 
-def find_learning_rate_model(params: Params,
-                             serialization_dir: str,
-                             start_lr: float,
-                             end_lr: float,
-                             num_batches: int,
-                             linear_steps: bool,
-                             stopping_factor: Optional[float],
-                             force: bool) -> None:
+def find_learning_rate_model(params: Params, serialization_dir: str,
+                             start_lr: float = 1e-5,
+                             end_lr: float = 10,
+                             num_batches: int = 100,
+                             linear_steps: bool = False,
+                             stopping_factor: float = None,
+                             force: bool = False) -> None:
     """
     Runs learning rate search for given `num_batches` and saves the results in ``serialization_dir``
 
@@ -207,9 +210,12 @@ def find_learning_rate_model(params: Params,
                                   validation_iterator=None)
 
     logger.info(f'Starting learning rate search from {start_lr} to {end_lr} in {num_batches} iterations.')
-    learning_rates, losses = search_learning_rate(trainer, start_lr,
-                                                  end_lr, num_batches,
-                                                  linear_steps, stopping_factor)
+    learning_rates, losses = search_learning_rate(trainer,
+                                                  start_lr=start_lr,
+                                                  end_lr=end_lr,
+                                                  num_batches=num_batches,
+                                                  linear_steps=linear_steps,
+                                                  stopping_factor=stopping_factor)
     logger.info(f'Finished learning rate search.')
     losses = _smooth(losses, 0.98)
 
@@ -220,7 +226,7 @@ def search_learning_rate(trainer: Trainer,
                          end_lr: float = 10,
                          num_batches: int = 100,
                          linear_steps: bool = False,
-                         stopping_factor: Optional[float] = 4.0) -> Tuple[List[float], List[float]]:
+                         stopping_factor: float = None) -> Tuple[List[float], List[float]]:
     """
     Runs training loop on the model using :class:`~allennlp.training.trainer.Trainer`
     increasing learning rate from ``start_lr`` to ``end_lr`` recording the losses.
