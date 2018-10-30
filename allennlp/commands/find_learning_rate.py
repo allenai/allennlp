@@ -6,12 +6,15 @@ which to write the results.
 .. code-block:: bash
 
    $ allennlp find-lr --help
-   usage: allennlp train [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
-                         [--start-lr START_LR] [--end-lr END_LR]
-                         [--num-batches NUM_BATCHES] [--linear]
-                         param_path
+   usage: allennlp find-lr [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
+                           [--start-lr START_LR] [--end-lr END_LR]
+                           [--num-batches NUM_BATCHES] [--linear]
+                           [--stopping-factor STOPPING_FACTOR] [--linear]
+                           [--include-package INCLUDE_PACKAGE]
+                           param_path
 
-   Train the specified model on the specified dataset.
+   Find a learning rate range where the loss decreases quickly for the specified
+   model and dataset.
 
    positional arguments:
    param_path            path to parameter file describing the model to be
@@ -21,24 +24,33 @@ which to write the results.
    -h, --help              show this help message and exit
    -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
                            directory in which to save Learning rate vs loss
+   -f, --force             overwrite the output directory if it exists
    -o OVERRIDES, --overrides OVERRIDES
                            a JSON structure used to override the experiment
-                           configuration
+                           configuration.
    --start-lr START_LR
-                           Learning rate to start the search.
+                           learning rate to start the search.
    --end-lr END_LR
-                           Learning rate up to which search is done.
+                           learning rate up to which search is done.
    --num-batches NUM_BATCHES
-                           Number of mini-batches to run Learning rate finder
-   --linear                Increase learning rate linearly instead of exponential increase
-
+                           number of mini-batches to run Learning rate finder.
+   --stopping-factor STOPPING_FACTOR
+                           stop the search when the current loss exceeds the best
+                           loss recorded by multiple of stopping factor
+   --linear                increase learning rate linearly instead of exponential
+                           increase
+   --include-package INCLUDE_PACKAGE
+                           additional packages to include
 """
+
 from typing import List, Optional, Tuple
 import argparse
 import re
 import os
 import math
 import logging
+import shutil
+
 import matplotlib; matplotlib.use('Agg') # pylint: disable=multiple-statements,wrong-import-position
 import matplotlib.pyplot as plt # pylint: disablewrong-import-position
 
@@ -77,23 +89,27 @@ class FindLearningRate(Subcommand):
         subparser.add_argument('--start-lr',
                                type=float,
                                default=1e-5,
-                               help='Learning rate to start the search.')
+                               help='learning rate to start the search')
         subparser.add_argument('--end-lr',
                                type=float,
                                default=10,
-                               help='Learning rate up to which search is done.')
+                               help='learning rate up to which search is done')
         subparser.add_argument('--num-batches',
                                type=int,
                                default=100,
-                               help='Number of mini-batches to run Learning rate finder')
+                               help='number of mini-batches to run Learning rate finder')
         subparser.add_argument('--stopping-factor',
                                type=float,
                                default=4.0,
-                               help='Stop the search when the current loss exceeds the best loss recorded by '
+                               help='stop the search when the current loss exceeds the best loss recorded by '
                                     'multiple of stopping factor')
         subparser.add_argument('--linear',
                                action='store_true',
-                               help='Increase learning rate linearly instead of exponential increase')
+                               help='increase learning rate linearly instead of exponential increase')
+        subparser.add_argument('-f', '--force',
+                               action='store_true',
+                               required=False,
+                               help='overwrite the output directory if it exists')
 
         subparser.set_defaults(func=find_learning_rate_from_args)
 
@@ -106,7 +122,7 @@ def find_learning_rate_from_args(args: argparse.Namespace) -> None:
     params = Params.from_file(args.param_path, args.overrides)
     find_learning_rate_model(params, args.serialization_dir,
                              args.start_lr, args.end_lr,
-                             args.num_batches, args.linear, args.stopping_factor)
+                             args.num_batches, args.linear, args.stopping_factor, args.force)
 
 def find_learning_rate_model(params: Params,
                              serialization_dir: str,
@@ -114,7 +130,8 @@ def find_learning_rate_model(params: Params,
                              end_lr: float,
                              num_batches: int,
                              linear_steps: bool,
-                             stopping_factor: Optional[float]) -> None:
+                             stopping_factor: Optional[float],
+                             force: bool) -> None:
     """
     Runs learning rate search for given `num_batches` and saves the results in ``serialization_dir``
 
@@ -136,14 +153,20 @@ def find_learning_rate_model(params: Params,
     stopping_factor: ``float``
         Stop the search when the current loss exceeds the best loss recorded by
         multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
+    force: ``bool``
+        If True and the serialization directory already exists, everything in it will
+        be removed prior to finding the learning rate.
     """
+    if os.path.exists(serialization_dir) and force:
+        shutil.rmtree(serialization_dir)
 
     if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
         raise ConfigurationError(f'Serialization directory {serialization_dir} already exists and is '
                                  f'not empty.')
+    else:
+        os.makedirs(serialization_dir, exist_ok=True)
 
     prepare_environment(params)
-    os.makedirs(serialization_dir, exist_ok=True)
 
     check_for_gpu(params.get('trainer').get('cuda_device', -1))
 
@@ -283,6 +306,7 @@ def _smooth(values: List[float], beta: float) -> List[float]:
         avg_value = beta * avg_value + (1 - beta) * value
         smoothed.append(avg_value / (1 - beta ** (i + 1)))
     return smoothed
+
 
 def _save_plot(learning_rates: List[float], losses: List[float], save_path: str):
     plt.ylabel('loss')
