@@ -44,25 +44,25 @@ class TestFindLearningRate(AllenNlpTestCase):
                     })
 
     def test_find_learning_rate(self):
-        find_learning_rate_model(self.params(),
-                                 serialization_dir=os.path.join(self.TEST_DIR, 'test_find_learning_rate'),
+        find_learning_rate_model(self.params(), os.path.join(self.TEST_DIR, 'test_find_learning_rate'),
                                  start_lr=1e-5,
                                  end_lr=1,
                                  num_batches=100,
                                  linear_steps=True,
-                                 stopping_factor=None)
+                                 stopping_factor=None,
+                                 force=False)
 
         # It's OK if serialization dir exists but is empty:
         serialization_dir2 = os.path.join(self.TEST_DIR, 'empty_directory')
         assert not os.path.exists(serialization_dir2)
         os.makedirs(serialization_dir2)
-        find_learning_rate_model(self.params(),
-                                 serialization_dir=serialization_dir2,
+        find_learning_rate_model(self.params(), serialization_dir2,
                                  start_lr=1e-5,
                                  end_lr=1,
                                  num_batches=100,
                                  linear_steps=True,
-                                 stopping_factor=None)
+                                 stopping_factor=None,
+                                 force=False)
 
         # It's not OK if serialization dir exists and has junk in it non-empty:
         serialization_dir3 = os.path.join(self.TEST_DIR, 'non_empty_directory')
@@ -72,13 +72,22 @@ class TestFindLearningRate(AllenNlpTestCase):
             f.write("TEST")
 
         with pytest.raises(ConfigurationError):
-            find_learning_rate_model(self.params(),
-                                     serialization_dir=serialization_dir3,
+            find_learning_rate_model(self.params(), serialization_dir3,
                                      start_lr=1e-5,
                                      end_lr=1,
                                      num_batches=100,
                                      linear_steps=True,
-                                     stopping_factor=None)
+                                     stopping_factor=None,
+                                     force=False)
+
+        # ... unless you use the --force flag.
+        find_learning_rate_model(self.params(), serialization_dir3,
+                                 start_lr=1e-5,
+                                 end_lr=1,
+                                 num_batches=100,
+                                 linear_steps=True,
+                                 stopping_factor=None,
+                                 force=True)
 
 
     def test_find_learning_rate_args(self):
