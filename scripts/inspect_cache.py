@@ -18,8 +18,9 @@ if not cached_files:
     print('No cached datasets found.')
 
 for filename in cached_files:
-    url, etag = filename_to_url(filename)
-    print('Filename: %s' % filename)
-    print('Url: %s' % url)
-    print('ETag: %s' % etag)
-    print()
+    if not filename.endswith("json"):
+        url, etag = filename_to_url(filename)
+        print('Filename: %s' % filename)
+        print('Url: %s' % url)
+        print('ETag: %s' % etag)
+        print()
