@@ -9,7 +9,8 @@
         "lowercase_tokens": false
       },
       "token_characters": {
-        "type": "characters"
+        "type": "characters",
+        "min_padding_length": 5
       }
     },
     "max_span_width": 10
