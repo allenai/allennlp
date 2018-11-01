@@ -39,6 +39,10 @@ class ElmoTokenEmbedder(TokenEmbedder):
         indices of shape (batch_size, timesteps) to forward, instead
         of character indices. If you use this option and pass a word which
         wasn't pre-cached, this will break.
+    scalar_mix_parameters : ``List[int]``, optional, (default=None)
+        If not ``None``, use these scalar mix parameters to weight the representations
+        produced by different layers. These mixing weights are not updated during
+        training.
     """
     def __init__(self,
                  options_file: str,
@@ -47,7 +51,8 @@ class ElmoTokenEmbedder(TokenEmbedder):
                  dropout: float = 0.5,
                  requires_grad: bool = False,
                  projection_dim: int = None,
-                 vocab_to_cache: List[str] = None) -> None:
+                 vocab_to_cache: List[str] = None,
+                 scalar_mix_parameters: List[float] = None) -> None:
         super(ElmoTokenEmbedder, self).__init__()
 
         self._elmo = Elmo(options_file,
@@ -56,7 +61,8 @@ class ElmoTokenEmbedder(TokenEmbedder):
                           do_layer_norm=do_layer_norm,
                           dropout=dropout,
                           requires_grad=requires_grad,
-                          vocab_to_cache=vocab_to_cache)
+                          vocab_to_cache=vocab_to_cache,
+                          scalar_mix_parameters=scalar_mix_parameters)
         if projection_dim:
             self._projection = torch.nn.Linear(self._elmo.get_output_dim(), projection_dim)
         else:
@@ -108,6 +114,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
         else:
             vocab_to_cache = None
         projection_dim = params.pop_int("projection_dim", None)
+        scalar_mix_parameters = params.pop('scalar_mix_parameters', None)
         params.assert_empty(cls.__name__)
         return cls(options_file=options_file,
                    weight_file=weight_file,
@@ -115,4 +122,5 @@ class ElmoTokenEmbedder(TokenEmbedder):
                    dropout=dropout,
                    requires_grad=requires_grad,
                    projection_dim=projection_dim,
-                   vocab_to_cache=vocab_to_cache)
+                   vocab_to_cache=vocab_to_cache,
+                   scalar_mix_parameters=scalar_mix_parameters)

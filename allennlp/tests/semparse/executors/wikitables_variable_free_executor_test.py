@@ -378,3 +378,17 @@ class TestWikiTablesVariableFreeExecutor(AllenNlpTestCase):
         executor = WikiTablesVariableFreeExecutor(context.table_data)
         result = executor.execute("(select (argmax all_rows number_column:attendance) date_column:date)")
         assert result == ["november_10"]
+
+    def test_evaluate_logical_form(self):
+        logical_form = """(select (same_as (filter_in all_rows string_column:league string:a_league)
+                                   string_column:playoffs)
+                           string_column:league)"""
+        assert self.executor.evaluate_logical_form(logical_form, ["USL A-League",
+                                                                  "USL First Division"])
+
+    def test_evaluate_logical_form_with_invalid_logical_form(self):
+        logical_form = """(select (same_as (filter_in all_rows string_column:league INVALID_CONSTANT)
+                                   string_column:playoffs)
+                           string_column:league)"""
+        assert not self.executor.evaluate_logical_form(logical_form, ["USL A-League",
+                                                                      "USL First Division"])
