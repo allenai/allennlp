@@ -47,3 +47,8 @@ class TeeLogger:
     def flush(self):
         self.terminal.flush()
         self.log.flush()
+
+    def isatty(self):
+        # Mirror the API of sys.stdout so that we can
+        # check for the presence of a terminal easily.
+        return not self.file_friendly_terminal_output

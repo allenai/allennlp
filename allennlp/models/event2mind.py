@@ -4,6 +4,7 @@ import numpy
 from overrides import overrides
 
 import torch
+from torch.nn import Module, ModuleDict
 from torch.nn.modules.rnn import GRUCell
 from torch.nn.modules.linear import Linear
 from torch import nn
@@ -14,8 +15,10 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Seq2VecEncoder, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
+from allennlp.nn.beam_search import BeamSearch
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.training.metrics import UnigramRecall
+
 
 @Model.register("event2mind")
 class Event2Mind(Model):
@@ -41,7 +44,9 @@ class Event2Mind(Model):
         The encoder of the "encoder/decoder" model.
     max_decoding_steps : int, required
         Length of decoded sequences.
-    target_names: ``List[str]``, optional
+    beam_size : int, optional (default = 10)
+        The width of the beam search.
+    target_names: ``List[str]``, optional, (default = ['xintent', 'xreact', 'oreact'])
         Names of the target fields matching those in the ``Instance`` objects.
     target_namespace : str, optional (default = 'tokens')
         If the target side vocabulary is different from the source side's, you need to specify the
@@ -51,17 +56,19 @@ class Event2Mind(Model):
         You can specify an embedding dimensionality for the target side. If not, we'll use the same
         value as the source embedder's.
     """
-    # pylint: disable=dangerous-default-value
     def __init__(self,
                  vocab: Vocabulary,
                  source_embedder: TextFieldEmbedder,
                  embedding_dropout: float,
                  encoder: Seq2VecEncoder,
                  max_decoding_steps: int,
-                 target_names: List[str] = ["xintent", "xreact", "oreact"],
+                 beam_size: int = 10,
+                 target_names: List[str] = None,
                  target_namespace: str = "tokens",
                  target_embedding_dim: int = None) -> None:
-        super(Event2Mind, self).__init__(vocab)
+        super().__init__(vocab)
+        target_names = target_names or ["xintent", "xreact", "oreact"]
+
         # Note: The original tweaks the embeddings for "personx" to be the mean
         # across the embeddings for "he", "she", "him" and "her". Similarly for
         # "personx's" and so forth. We could consider that here as a well.
@@ -86,15 +93,19 @@ class Event2Mind(Model):
         self._decoder_output_dim = self._encoder.get_output_dim()
         target_embedding_dim = target_embedding_dim or self._source_embedder.get_output_dim()
 
-        self._states: Dict[str, StateDecoder] = {}
+        self._states = ModuleDict()
         for name in target_names:
             self._states[name] = StateDecoder(
-                    name,
-                    self,
                     num_classes,
                     target_embedding_dim,
                     self._decoder_output_dim
             )
+
+        self._beam_search = BeamSearch(
+                self._end_index,
+                beam_size=beam_size,
+                max_steps=max_decoding_steps
+        )
 
     def _update_recall(self,
                        all_top_k_predictions: torch.Tensor,
@@ -166,7 +177,8 @@ class Event2Mind(Model):
                         target_tokens=target_tokens[name],
                         target_embedder=state.embedder,
                         decoder_cell=state.decoder_cell,
-                        output_projection_layer=state.output_projection_layer)
+                        output_projection_layer=state.output_projection_layer
+                )
                 total_loss += loss
                 output_dict[f"{name}_loss"] = loss
 
@@ -175,20 +187,16 @@ class Event2Mind(Model):
 
         # Perform beam search to obtain the predictions.
         if not self.training:
+            batch_size = final_encoder_output.size()[0]
             for name, state in self._states.items():
+                start_predictions = final_encoder_output.new_full(
+                        (batch_size,), fill_value=self._start_index, dtype=torch.long)
+                start_state = {"decoder_hidden": final_encoder_output}
+
                 # (batch_size, 10, num_decoding_steps)
-                (all_top_k_predictions, log_probabilities) = self.beam_search(
-                        final_encoder_output=final_encoder_output,
-                        width=10,
-                        # We always use the max here instead of passing in the
-                        # length of the longest target to avoid biasing the
-                        # search. Whether this problem would manifest otherwise
-                        # would depend on the metric being used.
-                        num_decoding_steps=self._max_decoding_steps,
-                        target_embedder=state.embedder,
-                        decoder_cell=state.decoder_cell,
-                        output_projection_layer=state.output_projection_layer
-                )
+                all_top_k_predictions, log_probabilities = self._beam_search.search(
+                        start_predictions, start_state, state.take_step)
+
                 if target_tokens:
                     self._update_recall(all_top_k_predictions, target_tokens[name], state.recall)
                 output_dict[f"{name}_top_k_predictions"] = all_top_k_predictions
@@ -276,168 +284,6 @@ class Event2Mind(Model):
         # Drop start symbol and return.
         return all_predictions[:, 1:]
 
-    def beam_search(self,
-                    final_encoder_output: torch.LongTensor,
-                    width: int,
-                    num_decoding_steps: int,
-                    target_embedder: Embedding,
-                    decoder_cell: GRUCell,
-                    output_projection_layer: Linear) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Uses beam search to compute the highest probability sequences for the
-        ``decoder_cell`` that fit within the given``width``.  Returns the tuple
-        consisting of the sequences themselves and their log probabilities.
-
-        Parameters
-        ----------
-        final_encoder_output : ``torch.LongTensor``, required
-            Vector produced by ``self._encoder``.
-        width : ``int``, required
-            Size of the beam.
-        num_decoding_steps : ``int``, required
-            Maximum sequence length.
-        target_embedder : ``Embedding``, required
-            Used to embed the token predicted at the previous time step.
-        decoder_cell: ``GRUCell``, required
-            The recurrent cell used at each time step.
-        output_projection_layer: ``Linear``, required
-            Linear layer mapping to the desired number of classes.
-
-        Returns
-        -------
-        predictions : ``torch.LongTensor``
-            Tensor of shape (batch_size, width, num_decoding_steps) with the predicted indices.
-        log_probabilities : ``torch.FloatTensor``
-            Tensor of shape (batch_size, width) with the log probability of the
-            corresponding prediction.
-        """
-        batch_size = final_encoder_output.size()[0]
-        # List of (batch_size, width) tensors. One for each time step. Does not
-        # include the start symbols, which are implicit.
-        predictions = []
-        # List of (batch_size, width) tensors. One for each time step. None for
-        # the first.  Stores the index n for the parent prediction, i.e.
-        # predictions[t-1][i][n], that it came from.
-        backpointers = []
-
-        # Calculate the first timestep. This is done outside the main loop
-        # because we are going from a single decoder input (the output from the
-        # encoder) to the top ``width`` decoder outputs. On the other hand,
-        # within the main loop we are going from the ``width`` elements of the
-        # beam to ``width``^2 candidates from which we will select the top
-        # ``width`` elements for the next iteration.
-        start_predictions = final_encoder_output.new_full(
-                (batch_size,), fill_value=self._start_index, dtype=torch.long
-        )
-        start_decoder_input = target_embedder(start_predictions)
-        start_decoder_hidden = decoder_cell(start_decoder_input, final_encoder_output)
-        start_output_projections = output_projection_layer(start_decoder_hidden)
-        start_class_log_probabilities = F.log_softmax(start_output_projections, dim=-1)
-        start_top_log_probabilities, start_predicted_classes = start_class_log_probabilities.topk(width)
-
-        # Set starting values
-        # The log probabilities for the last time step. (batch_size, width)
-        last_log_probabilities = start_top_log_probabilities
-        # [(batch_size, width)]
-        predictions.append(start_predicted_classes)
-        # Set the same hidden state for each element in beam.
-        # (batch_size * width, _decoder_output_dim)
-        decoder_hidden = start_decoder_hidden.\
-            unsqueeze(1).expand(batch_size, width, self._decoder_output_dim).\
-            reshape(batch_size * width, self._decoder_output_dim)
-
-        # Log probability tensor that mandates that the end token is selected.
-        num_classes = self.vocab.get_vocab_size(self._target_namespace)
-        log_probs_after_end = start_class_log_probabilities.new_full(
-                (batch_size * width, num_classes),
-                float("-inf")
-        )
-        log_probs_after_end[:, self._end_index] = 0.0
-
-        for timestep in range(num_decoding_steps - 1):
-            # (batch_size * width,)
-            last_predictions = predictions[-1].reshape(batch_size * width)
-            decoder_input = target_embedder(last_predictions)
-            decoder_hidden = decoder_cell(decoder_input, decoder_hidden)
-            # (batch_size * width, num_classes)
-            output_projections = output_projection_layer(decoder_hidden)
-
-            # (batch_size * width, num_classes)
-            class_log_probabilities = F.log_softmax(output_projections, dim=-1)
-
-            # (batch_size * width, num_classes)
-            last_predictions_expanded = last_predictions.unsqueeze(-1).expand(
-                    batch_size * width,
-                    num_classes
-            )
-            # Here we are finding any beams where we predicted the end token in
-            # the previous timestep and replacing the distribution with a
-            # one-hot distribution, forcing the beam to predict the end token
-            # this timestep as well.
-            cleaned_log_probabilities = torch.where(
-                    last_predictions_expanded == self._end_index,
-                    log_probs_after_end,
-                    class_log_probabilities
-            )
-
-            # Note: We could consider normalizing for length here, but the
-            # original implementation does not do so.
-
-            # (batch_size * width, width), (batch_size * width, width)
-            top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(width)
-            # Here we expand the last log probabilities to (batch_size * width,
-            # width) so that we can add them to the current log probs for this
-            # timestep. This lets us maintain the log probability of each
-            # element on the beam.
-            expanded_last_log_probabilities = last_log_probabilities.\
-                unsqueeze(2).\
-                expand(batch_size, width, width).\
-                reshape(batch_size * width, width)
-            summed_top_log_probabilities = top_log_probabilities + expanded_last_log_probabilities
-
-            reshaped_summed = summed_top_log_probabilities.reshape(batch_size, width * width)
-            reshaped_predicted_classes = predicted_classes.reshape(batch_size, width * width)
-            # Keep only the top ``width`` beam indices.
-            restricted_beam_log_probs, restricted_beam_indices = reshaped_summed.topk(width)
-            # Use the beam indices to extract the corresponding classes.
-            restricted_predicted_classes = reshaped_predicted_classes.gather(1, restricted_beam_indices)
-
-            last_log_probabilities = restricted_beam_log_probs
-            predictions.append(restricted_predicted_classes)
-            # The beam indices come from a width * width dimension where the
-            # indices with a common ancestor are grouped together. Hence
-            # dividing by width gives the ancestor. (Note that this is integer
-            # division as the tensor is a LongTensor.)
-            backpointer = restricted_beam_indices / width
-            backpointers.append(backpointer)
-            # For the gather below.
-            expanded_backpointer = backpointer.unsqueeze(2).expand(batch_size, width, self._decoder_output_dim)
-            # Keep only the pieces of the hidden state corresponding to the
-            # ancestors created this iteration.
-            decoder_hidden = decoder_hidden.\
-                    reshape(batch_size, width, self._decoder_output_dim).\
-                    gather(1, expanded_backpointer).\
-                    reshape(batch_size * width, self._decoder_output_dim)
-
-        assert len(predictions) == num_decoding_steps,\
-               "len(predictions) not equal to num_decoding_steps"
-        assert len(backpointers) == num_decoding_steps - 1,\
-               "len(backpointers) not equal to num_decoding_steps"
-
-        # Reconstruct the sequences.
-        reconstructed_predictions = [predictions[num_decoding_steps - 1].unsqueeze(2)]
-        cur_backpointers = backpointers[num_decoding_steps - 2]
-        for timestep in range(num_decoding_steps - 2, 0, -1):
-            cur_preds = predictions[timestep].gather(1, cur_backpointers).unsqueeze(2)
-            reconstructed_predictions.append(cur_preds)
-            cur_backpointers = backpointers[timestep - 1].gather(1, cur_backpointers)
-        final_preds = predictions[0].gather(1, cur_backpointers).unsqueeze(2)
-        reconstructed_predictions.append(final_preds)
-        # We don't add the start tokens here. They are implicit.
-
-        all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
-        return (all_predictions, last_log_probabilities)
-
     @staticmethod
     def _get_loss(logits: torch.LongTensor,
                   targets: torch.LongTensor,
@@ -509,20 +355,29 @@ class Event2Mind(Model):
                 all_metrics[name] = state.recall.get_metric(reset=reset)
         return all_metrics
 
-class StateDecoder:
+
+class StateDecoder(Module):
+    # pylint: disable=abstract-method
     """
     Simple struct-like class for internal use.
     """
     def __init__(self,
-                 name: str,
-                 event2mind: Event2Mind,
                  num_classes: int,
                  input_dim: int,
                  output_dim: int) -> None:
+        super().__init__()
         self.embedder = Embedding(num_classes, input_dim)
-        event2mind.add_module(f"{name}_embedder", self.embedder)
         self.decoder_cell = GRUCell(input_dim, output_dim)
-        event2mind.add_module(f"{name}_decoder_cell", self.decoder_cell)
         self.output_projection_layer = Linear(output_dim, num_classes)
-        event2mind.add_module(f"{name}_output_project_layer", self.output_projection_layer)
         self.recall = UnigramRecall()
+
+    def take_step(self,
+                  last_predictions: torch.Tensor,
+                  state: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+        decoder_hidden = state["decoder_hidden"]
+        decoder_input = self.embedder(last_predictions)
+        decoder_hidden = self.decoder_cell(decoder_input, decoder_hidden)
+        state["decoder_hidden"] = decoder_hidden
+        output_projections = self.output_projection_layer(decoder_hidden)
+        class_log_probabilities = F.log_softmax(output_projections, dim=-1)
+        return class_log_probabilities, state

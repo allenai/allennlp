@@ -37,7 +37,7 @@ Change any of those if you want to (for example, you can reduce the epochs to 5
 if you want the training to take less time), and then run
 
 ```
-$ allennlp train tutorials/getting_started/simple_tagger.json --serialization-dir /tmp/tutorials/getting_started
+$ allennlp train tutorials/getting_started/walk_through_allennlp/simple_tagger.json --serialization-dir /tmp/tutorials/getting_started
 ```
 
 The `serialization-dir` argument specifies the directory where the model's vocabulary and checkpointed weights will be saved.

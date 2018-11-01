@@ -155,8 +155,8 @@ class TestBasicIterator(IteratorTest):
             assert in_order_batches != shuffled_batches
 
             # But not the counts of the instances.
-            in_order_counts = Counter(instance for batch in in_order_batches for instance in batch)
-            shuffled_counts = Counter(instance for batch in shuffled_batches for instance in batch)
+            in_order_counts = Counter(id(instance) for batch in in_order_batches for instance in batch)
+            shuffled_counts = Counter(id(instance) for batch in shuffled_batches for instance in batch)
             assert in_order_counts == shuffled_counts
 
 

@@ -71,7 +71,12 @@
       "num_layers": 1
     },
     "max_decoding_steps": 20,
-    "target_namespace": "target_tokens"
+    "target_embedding_dim": 30,
+    "target_namespace": "target_tokens",
+    "attention": {
+      "type": "dot_product"
+    },
+    "beam_size": 5
   },
   "iterator": {
     "type": "bucket",

@@ -20,12 +20,12 @@ from typing import Dict, Optional, List, Tuple, Union, Iterable, Any, Set
 import torch
 import torch.optim.lr_scheduler
 from torch.nn.parallel import replicate, parallel_apply
-from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
+from torch.nn.parallel.scatter_gather import gather
 from tensorboardX import SummaryWriter
 
 from allennlp.common import Params, Registrable
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import peak_memory_mb, gpu_memory_mb, dump_metrics
+from allennlp.common.util import dump_metrics, gpu_memory_mb, parse_cuda_device, peak_memory_mb, scatter_kwargs
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -408,6 +408,7 @@ class Trainer(Registrable):
         interface.
         """
         inputs, module_kwargs = scatter_kwargs((), batch, self._cuda_devices, 0)
+
         used_device_ids = self._cuda_devices[:len(inputs)]
         replicas = replicate(self.model, used_device_ids)
         outputs = parallel_apply(replicas, inputs, module_kwargs, used_device_ids)
@@ -1013,13 +1014,11 @@ class Trainer(Registrable):
         validation_metric = params.pop("validation_metric", "-loss")
         shuffle = params.pop_bool("shuffle", True)
         num_epochs = params.pop_int("num_epochs", 20)
-        cuda_device = params.pop_int("cuda_device", -1)
+        cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
 
-        if cuda_device >= 0:
-            model = model.cuda(cuda_device)
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
