@@ -9,7 +9,6 @@ import torch
 
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRule
-from allennlp.semparse.executors import SqlExecutor
 from allennlp.models.model import Model
 from allennlp.modules import Attention, Seq2SeqEncoder, TextFieldEmbedder, Embedding
 from allennlp.nn import util
@@ -82,7 +81,6 @@ class Text2SqlParser(Model):
         self._action_similarity = Average()
         self._denotation_accuracy = Average()
 
-        self._executor = SqlExecutor(database_file)
         # the padding value used by IndexField
         self._action_padding_index = -1
         num_actions = vocab.get_vocab_size("rule_labels")
@@ -209,11 +207,6 @@ class Text2SqlParser(Model):
 
                     similarity = difflib.SequenceMatcher(None, best_action_indices, targets)
                     self._action_similarity(similarity.ratio())
-
-                if sql_queries and sql_queries[i]:
-                    denotation_correct = self._executor.evaluate_sql_query(predicted_sql_query, sql_queries[i])
-                    self._denotation_accuracy(denotation_correct)
-                    outputs['sql_queries'].append(sql_queries[i])
 
                 outputs['best_action_sequence'].append(action_strings)
                 outputs['predicted_sql_query'].append(sqlparse.format(predicted_sql_query, reindent=True))
