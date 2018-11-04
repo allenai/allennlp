@@ -820,7 +820,7 @@ class _ElmoSoftmax(torch.nn.Module):
         activations = bilm_inputs['activations']
         mask = bilm_inputs['mask']
 
-        activations = activations[-1]  # (batch, BOS + L + EOS, [fwd, bwd])
+        final_activations = activations[-1]  # (batch, BOS + L + EOS, [fwd, bwd])
 
         # get rid of predicting, or conditioning on EOS for the forward
         # activation, and BOS for the reverse activation.
@@ -828,9 +828,9 @@ class _ElmoSoftmax(torch.nn.Module):
 
         # NOTE: can this be replaced by allennlp.util.masked_softmax ?
         fwd_log_probs = self._chunked_log_probs(
-            activations[:, :-2, :self.hidden_size], word_inputs)
+            final_activations[:, :-2, :self.hidden_size], word_inputs)
         bwd_log_probs = self._chunked_log_probs(
-            activations[:, 2:, self.hidden_size:], word_inputs)
+            final_activations[:, 2:, self.hidden_size:], word_inputs)
 
         # [B, (fwd, bwd), L]
         log_probs = torch.stack((fwd_log_probs, bwd_log_probs), 1)
