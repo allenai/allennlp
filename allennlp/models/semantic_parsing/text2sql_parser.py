@@ -45,9 +45,6 @@ class Text2SqlParser(Model):
     input_attention: ``Attention``
         We compute an attention over the input utterance at each step of the decoder, using the
         decoder hidden state as the query.  Passed to the transition function.
-    database_file: ``str``, required.
-        The path of the SQLite database when evaluating SQL queries. SQLite is disk based, so we need
-        the file location to connect to it.
     add_action_bias : ``bool``, optional (default=True)
         If ``True``, we will learn a bias weight for each action that gets used when predicting
         that action, in addition to its embedding.
@@ -63,7 +60,6 @@ class Text2SqlParser(Model):
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  input_attention: Attention,
-                 database_file: str,
                  add_action_bias: bool = True,
                  dropout: float = 0.0,
                  initializer: InitializerApplicator = InitializerApplicator(),
