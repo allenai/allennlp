@@ -702,7 +702,7 @@ class _ElmoSoftmax(torch.nn.Module):
     ----------
     softmax_weight_file : ``str``, required
         The .hdf5 file for the softmax weights.
-    softmax_vocab_file : ``str``, required
+    softmax_vocab_file : ``str``, optional, (default None)
         The .txt file for the vocabulary used for training ELMo.
     chunk_size : ``int``, optional, (default 256)
         The chunk size of the softmax layer. The default (256) takes about
@@ -711,7 +711,7 @@ class _ElmoSoftmax(torch.nn.Module):
 
     def __init__(self,
                  softmax_weight_file: str,
-                 softmax_vocab_file: str,
+                 softmax_vocab_file: str = None,
                  chunk_size: int = 256):
 
         super(_ElmoSoftmax, self).__init__()
@@ -720,9 +720,12 @@ class _ElmoSoftmax(torch.nn.Module):
         self.softmax_vocab_file = softmax_vocab_file
         self.chunk_size = chunk_size
 
-        self.vocab = self._load_vocab(self.softmax_vocab_file)
-        self.fc_layer = self._load_softmax_weights(
-            self.softmax_weight_file, self.vocab.get_vocab_size())
+        if self.softmax_vocab_file:
+            self.vocab = self._load_vocab(self.softmax_vocab_file)
+        else:
+            self.vocab = None
+        self.fc_layer = self._load_softmax_weights(self.softmax_weight_file)
+        self.vocab_size = self.fc_layer.out_features
         self.hidden_size = self.fc_layer.in_features
 
         # TODO: do we add CUDA code here?
@@ -736,13 +739,13 @@ class _ElmoSoftmax(torch.nn.Module):
 
     @staticmethod
     def _load_softmax_weights(
-            softmax_weight_file: str,
-            vocab_size: int) -> torch.nn.Linear:
+            softmax_weight_file: str) -> torch.nn.Linear:
 
         with h5py.File(cached_path(softmax_weight_file), 'r') as fin:
             W = numpy.array(fin['softmax']['W'])
             b = numpy.array(fin['softmax']['b'])
 
+        vocab_size = W.shape[0]
         hidden_size = W.shape[1]
         fc_layer = torch.nn.Linear(hidden_size, vocab_size)
 
