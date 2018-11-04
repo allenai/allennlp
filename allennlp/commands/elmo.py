@@ -230,7 +230,7 @@ class ElmoEmbedder():
         if self.elmo_softmax:
             # bow and eos already shaved off
             softmax_log_probs, softmax_mask = self.elmo_softmax(
-                bilm_output, word_ids, aggregation_fun='mean')
+                bilm_output, word_ids, aggregation_function='mean')
             # return the probabilities instead of the activations
             # if we load the softmax layer
 

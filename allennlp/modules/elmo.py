@@ -728,8 +728,6 @@ class _ElmoSoftmax(torch.nn.Module):
         self.vocab_size = self.fc_layer.out_features
         self.hidden_size = self.fc_layer.in_features
 
-        # TODO: do we add CUDA code here?
-
     @staticmethod
     def _load_vocab(softmax_vocab_file: str) -> Vocabulary:
         vocab = Vocabulary()
@@ -799,7 +797,7 @@ class _ElmoSoftmax(torch.nn.Module):
     def forward(self,
                 bilm_inputs: Dict[str, Union[torch.Tensor, List[torch.Tensor]]],
                 word_inputs: torch.Tensor,
-                aggregation_fun: str = None) -> Tuple[torch.Tensor, torch.Tensor]:
+                aggregation_function: str = None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Passes the ELMo embeddings to a softmax layer and calculates
         the log probabilities.
@@ -810,7 +808,7 @@ class _ElmoSoftmax(torch.nn.Module):
             The output from `_ElmoBiLm`.
         word_inputs : ``torch.Tensor``, required
             The output from `batch_to_ids` when `
-        aggregation_fun : ``str``, optional
+        aggregation_function : ``str``, optional
             An aggregation function that aggregates the forward and backward
             tensors. Default is `None` where no aggregation is done.
 
@@ -839,9 +837,9 @@ class _ElmoSoftmax(torch.nn.Module):
         log_probs *= mask_without_bos_eos[:, None].float()
 
         # aggregate, otherwise return both the backward and forward embeddings
-        if aggregation_fun == 'mean':
+        if aggregation_function == 'mean':
             log_probs = torch.mean(log_probs, 1)
-        elif aggregation_fun == 'max':
+        elif aggregation_function == 'max':
             log_probs, _ = torch.max(log_probs, 1)
 
         return log_probs, mask_without_bos_eos

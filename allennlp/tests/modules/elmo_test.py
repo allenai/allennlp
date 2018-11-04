@@ -393,11 +393,11 @@ class TestElmoSoftmax(ElmoTestCase):
         bilm_outputs = self.elmo_bilm(char_ids)
 
         softmax_log_probs, softmax_mask = self.elmo_softmax(
-            bilm_outputs, word_ids, aggregation_fun='mean')
+            bilm_outputs, word_ids, aggregation_function='mean')
         assert list(softmax_log_probs.shape) == [4, 4], list(softmax_log_probs.shape)
         assert list(softmax_mask.shape) == [4, 4], list(softmax_mask.shape)
         softmax_log_probs, softmax_mask = self.elmo_softmax(
-            bilm_outputs, word_ids, aggregation_fun='max')
+            bilm_outputs, word_ids, aggregation_function='max')
         assert list(softmax_log_probs.shape) == [4, 4], list(softmax_log_probs.shape)
         assert list(softmax_mask.shape) == [4, 4], list(softmax_mask.shape)
         softmax_log_probs, softmax_mask = self.elmo_softmax(
