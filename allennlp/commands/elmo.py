@@ -168,7 +168,7 @@ class ElmoEmbedder():
                  softmax_weight_file: str = None,
                  softmax_vocab_file: str = None,
                  cuda_device: int = -1,
-                 chunk_size: int = 16) -> None:
+                 chunk_size: int = 256) -> None:
         """
         Parameters
         ----------
@@ -182,7 +182,7 @@ class ElmoEmbedder():
             A path or URL to an ELMo vocab file.
         cuda_device : ``int``, optional, (default=-1)
             The GPU device to run on.
-        chunk_size : ``int``, optional, (default=16)
+        chunk_size : ``int``, optional, (default=256)
             The chunk size of the softmax layer.
         """
         self.indexer = ELMoTokenCharactersIndexer()
