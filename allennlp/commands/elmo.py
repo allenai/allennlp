@@ -128,7 +128,7 @@ class Elmo(Subcommand):
                 type=str,
                 default=None,  # DEFAULT_VOCAB_FILE,
                 help='The path to the ELMo vocab file.')
-        subparser.add_argument('--chunk-size', type=int, default=16, help='The chunk size for the softmax layer.')
+        subparser.add_argument('--chunk-size', type=int, default=256, help='The chunk size for the softmax layer.')
         subparser.add_argument('--batch-size', type=int, default=DEFAULT_BATCH_SIZE, help='The batch size to use.')
         subparser.add_argument('--file-friendly-logging', default=False, action='store_true',
                                help='outputs tqdm status on separate lines and slows tqdm refresh rate.')
