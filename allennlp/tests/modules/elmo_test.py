@@ -373,6 +373,8 @@ class TestElmoSoftmax(ElmoTestCase):
 
         self.elmo_softmax = _ElmoSoftmax(
             self.elmo_softmax_weight_path, self.elmo_softmax_vocab_path)
+        self.elmo_softmax_without_vocab = _ElmoSoftmax(
+            self.elmo_softmax_weight_path)
 
         self.sentences = [
             'How are you ?',
@@ -386,6 +388,26 @@ class TestElmoSoftmax(ElmoTestCase):
         return text.split()
 
     def test_elmo_softmax(self):
+        sentences = [self._tokenize(i) for i in self.sentences]
+
+        char_ids, word_ids = batch_to_ids(sentences, self.elmo_softmax.vocab)
+
+        bilm_outputs = self.elmo_bilm(char_ids)
+
+        softmax_log_probs, softmax_mask = self.elmo_softmax(
+            bilm_outputs, word_ids, aggregation_function='mean')
+        assert list(softmax_log_probs.shape) == [4, 4], list(softmax_log_probs.shape)
+        assert list(softmax_mask.shape) == [4, 4], list(softmax_mask.shape)
+        softmax_log_probs, softmax_mask = self.elmo_softmax(
+            bilm_outputs, word_ids, aggregation_function='max')
+        assert list(softmax_log_probs.shape) == [4, 4], list(softmax_log_probs.shape)
+        assert list(softmax_mask.shape) == [4, 4], list(softmax_mask.shape)
+        softmax_log_probs, softmax_mask = self.elmo_softmax(
+            bilm_outputs, word_ids)
+        assert list(softmax_log_probs.shape) == [4, 2, 4], list(softmax_log_probs.shape)
+        assert list(softmax_mask.shape) == [4, 4], list(softmax_mask.shape)
+
+    def test_elmo_softmax_without_vocab(self):
         sentences = [self._tokenize(i) for i in self.sentences]
 
         char_ids, word_ids = batch_to_ids(sentences, self.elmo_softmax.vocab)
