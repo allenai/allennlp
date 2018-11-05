@@ -33,7 +33,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
     ----------
     schema_path : ``str``, required.
         The path to the database schema.
-    database_path : ``str``, required.
+    database_path : ``str``, optional (default = None)
         The path to a database.
     use_all_sql : ``bool``, optional (default = False)
         Whether to use all of the sql queries which have identical semantics,
@@ -43,6 +43,8 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         are not required.
     use_prelinked_entities : ``bool``, (default = True)
         Whether or not to use the pre-linked entities in the text2sql data.
+    use_untyped_entities : ``bool``, (default = True)
+        Whether or not to attempt to infer the pre-linked entity types.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
@@ -54,10 +56,11 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
     """
     def __init__(self,
                  schema_path: str,
-                 database_file: str,
+                 database_file: str = None,
                  use_all_sql: bool = False,
                  remove_unneeded_aliases: bool = True,
                  use_prelinked_entities: bool = True,
+                 use_untyped_entities: bool = True,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  cross_validation_split_to_exclude: int = None,
                  lazy: bool = False) -> None:
@@ -73,12 +76,18 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
 
         self._cross_validation_split_to_exclude = str(cross_validation_split_to_exclude)
 
-        self._database_file = cached_path(database_file)
-        self._connection = sqlite3.connect(self._database_file)
-        self._cursor = self._connection.cursor()
+        if database_file is not None:
+            database_file = cached_path(database_file)
+            connection = sqlite3.connect(database_file)
+            self._cursor = connection.cursor()
+        else:
+            self._cursor = None
 
         self._schema_path = schema_path
-        self._world = Text2SqlWorld(schema_path, self._cursor, use_prelinked_entities=use_prelinked_entities)
+        self._world = Text2SqlWorld(schema_path,
+                                    self._cursor,
+                                    use_prelinked_entities=use_prelinked_entities,
+                                    use_untyped_entities=use_untyped_entities)
 
     @overrides
     def _read(self, file_path: str):
