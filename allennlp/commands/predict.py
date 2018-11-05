@@ -151,17 +151,15 @@ class _PredictManager:
             self._output_file.write(prediction)
 
     def _get_json_data(self) -> Iterator[JsonDict]:
-        try:
-            if self._input_file == "-":
-                source = sys.stdin
-            else:
-                source = open(self._input_file)
-
-            for line in source:
+        if self._input_file == "-":
+            for line in sys.stdin:
                 if not line.isspace():
                     yield self._predictor.load_line(line)
-        finally:
-            source.close()
+        else:
+            with open(self._input_file, "r") as file_input:
+                for line in file_input:
+                    if not line.isspace():
+                        yield self._predictor.load_line(line)
 
     def _get_instance_data(self) -> Iterator[Instance]:
         if self._input_file == "-":
