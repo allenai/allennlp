@@ -68,14 +68,15 @@ class EvalbBracketingScorer(Metric):
             A list of gold NLTK Trees to use as a reference.
         """
         if not os.path.exists(self._evalb_program_path):
-            # Try compiling EVALB
+            logger.info(f"EVALB not found at {self.evalb_program_path}.  Attempting to compile it.")
             EvalbBracketingScorer.compile_evalb()
 
             # If EVALB executable still doesn't exist, raise an error.
             if not os.path.exists(self._evalb_program_path):
                 compile_command = ("python -c 'from allennlp.training.metrics import EvalbBracketingScorer; "
                                    "EvalbBracketingScorer.compile_evalb()'")
-                raise ConfigurationError("You must compile the EVALB scorer before using it."
+                raise ConfigurationError(f"EVALB still not found at {self.evalb_program_path}. "
+                                         "You must compile the EVALB scorer before using it."
                                          " Run 'make' in the '{}' directory or run: {}".format(
                                                  self._evalb_program_path, compile_command))
         tempdir = tempfile.mkdtemp()
