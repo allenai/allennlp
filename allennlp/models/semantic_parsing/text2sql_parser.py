@@ -107,8 +107,7 @@ class Text2SqlParser(Model):
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 valid_actions: List[List[ProductionRule]],
-                action_sequence: torch.LongTensor = None,
-                sql_queries: List[List[str]] = None) -> Dict[str, torch.Tensor]:
+                action_sequence: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         We set up the initial state for the decoder, and pass that state off to either a DecoderTrainer,
