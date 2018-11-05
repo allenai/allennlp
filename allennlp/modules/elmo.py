@@ -212,6 +212,7 @@ class Elmo(torch.nn.Module):
         do_layer_norm = params.pop_bool('do_layer_norm', False)
         keep_sentence_boundaries = params.pop_bool('keep_sentence_boundaries', False)
         dropout = params.pop_float('dropout', 0.5)
+        scalar_mix_parameters = params.pop('scalar_mix_parameters', None)
         params.assert_empty(cls.__name__)
 
         return cls(options_file=options_file,
@@ -220,7 +221,8 @@ class Elmo(torch.nn.Module):
                    requires_grad=requires_grad,
                    do_layer_norm=do_layer_norm,
                    keep_sentence_boundaries=keep_sentence_boundaries,
-                   dropout=dropout)
+                   dropout=dropout,
+                   scalar_mix_parameters=scalar_mix_parameters)
 
 
 def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:

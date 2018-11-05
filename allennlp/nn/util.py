@@ -844,6 +844,7 @@ def _get_combination_and_multiply(combination: str,
         if operation == '*':
             if first_tensor.dim() > 4 or second_tensor.dim() > 4:
                 raise ValueError("Tensors with dim > 4 not currently supported")
+            desired_dim = max(first_tensor.dim(), second_tensor.dim()) - 1
             if first_tensor.dim() == 4:
                 expanded_dim = _rindex(first_tensor.size(), 1)
                 first_tensor = first_tensor.squeeze(expanded_dim)
@@ -851,10 +852,14 @@ def _get_combination_and_multiply(combination: str,
                 expanded_dim = _rindex(second_tensor.size(), 1)
                 second_tensor = second_tensor.squeeze(expanded_dim)
             intermediate = first_tensor * weight
-            return torch.matmul(intermediate, second_tensor.transpose(-1, -2)).squeeze(-1)
+            result = torch.matmul(intermediate, second_tensor.transpose(-1, -2))
+            if result.dim() == desired_dim + 1:
+                result = result.squeeze(-1)
+            return result
         elif operation == '/':
             if first_tensor.dim() > 4 or second_tensor.dim() > 4:
                 raise ValueError("Tensors with dim > 4 not currently supported")
+            desired_dim = max(first_tensor.dim(), second_tensor.dim()) - 1
             if first_tensor.dim() == 4:
                 expanded_dim = _rindex(first_tensor.size(), 1)
                 first_tensor = first_tensor.squeeze(expanded_dim)
@@ -862,7 +867,10 @@ def _get_combination_and_multiply(combination: str,
                 expanded_dim = _rindex(second_tensor.size(), 1)
                 second_tensor = second_tensor.squeeze(expanded_dim)
             intermediate = first_tensor * weight
-            return torch.matmul(intermediate, second_tensor.pow(-1).transpose(-1, -2)).squeeze(-1)
+            result = torch.matmul(intermediate, second_tensor.pow(-1).transpose(-1, -2))
+            if result.dim() == desired_dim + 1:
+                result = result.squeeze(-1)
+            return result
         elif operation == '+':
             return torch.matmul(first_tensor, weight) + torch.matmul(second_tensor, weight)
         elif operation == '-':
