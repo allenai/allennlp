@@ -23,10 +23,17 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 CACHE_ROOT = Path(os.getenv('ALLENNLP_CACHE_ROOT', Path.home() / '.allennlp'))
 CACHE_DIRECTORY = str(CACHE_ROOT / "cache")
+DEPRECATED_CACHE_DIRECTORY = str(CACHE_ROOT / "datasets")
 
 # This variable was deprecated in 0.7.2 since we use a single folder for caching
 # all types of files (datasets, models, etc.)
 DATASET_CACHE = CACHE_DIRECTORY
+
+# Warn if the user is still using the deprecated cache directory.
+if os.path.exists(DEPRECATED_CACHE_DIRECTORY):
+    logger = logging.getLogger(__name__) # pylint: disable=invalid-name
+    logger.warn(f"Deprecated cache directory found ({DEPRECATED_CACHE_DIRECTORY}).  "
+                f"Please remove this directory from your system to free up space.")
 
 
 def url_to_filename(url: str, etag: str = None) -> str:
