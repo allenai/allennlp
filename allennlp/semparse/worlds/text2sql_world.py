@@ -9,13 +9,14 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.semparse.contexts.sql_context_utils import SqlVisitor
 from allennlp.semparse.contexts.sql_context_utils import format_grammar_string, initialize_valid_actions
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
-from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_numeric_type
-from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_string_type
 from allennlp.semparse.contexts.text2sql_table_context import GRAMMAR_DICTIONARY
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_table_values
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_tables
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_global_values
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_to_be_variable_free
+from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_untyped_entities
+from allennlp.semparse.contexts.text2sql_table_context import update_grammar_values_with_variables
+from allennlp.semparse.contexts.text2sql_table_context import update_grammar_numbers_and_strings_with_variables
 
 class Text2SqlWorld:
     """
@@ -38,18 +39,23 @@ class Text2SqlWorld:
         Denotes whether the data being parsed by the grammar is variable free.
         If it is, the grammar is modified to be less expressive by removing
         elements which are not necessary if the data is variable free.
+    use_untyped_entities : ``bool``, optional (default = False)
+        Whether or not to try to infer the types of prelinked variables.
+        If not, they are added as untyped values to the grammar instead.
     """
     def __init__(self,
                  schema_path: str,
                  cursor: Cursor = None,
                  use_prelinked_entities: bool = True,
-                 variable_free: bool = True) -> None:
+                 variable_free: bool = True,
+                 use_untyped_entities: bool = False) -> None:
         self.cursor = cursor
         self.schema = read_dataset_schema(schema_path)
         self.columns = {column.name: column for table in self.schema.values() for column in table}
         self.dataset_name = os.path.basename(schema_path).split("-")[0]
         self.use_prelinked_entities = use_prelinked_entities
         self.variable_free = variable_free
+        self.use_untyped_entities = use_untyped_entities
 
         # NOTE: This base dictionary should not be modified.
         self.base_grammar_dictionary = self._initialize_grammar_dictionary(deepcopy(GRAMMAR_DICTIONARY))
@@ -64,37 +70,13 @@ class Text2SqlWorld:
                                      "entities, but prelinked entities were passed.")
         prelinked_entities = prelinked_entities or {}
 
+        if self.use_untyped_entities:
+            update_grammar_values_with_variables(grammar_with_context, prelinked_entities)
+        else:
+            update_grammar_numbers_and_strings_with_variables(grammar_with_context,
+                                                              prelinked_entities,
+                                                              self.columns)
 
-        for variable, info in prelinked_entities.items():
-            variable_column = info["type"].upper()
-            matched_column = self.columns.get(variable_column, None)
-
-            if matched_column is not None:
-                # Try to infer the variable's type by matching it to a column in
-                # the database. If we can't, we just add it as a value.
-                if column_has_numeric_type(matched_column):
-                    grammar_with_context["number"] = [f'"\'{variable}\'"'] + grammar_with_context["number"]
-                elif column_has_string_type(matched_column):
-                    grammar_with_context["string"] = [f'"\'{variable}\'"'] + grammar_with_context["string"]
-                else:
-                    grammar_with_context["value"] = [f'"\'{variable}\'"'] + grammar_with_context["value"]
-            # Otherwise, try to infer by looking at the actual value:
-            else:
-                try:
-                    # This is what happens if you try and do type inference
-                    # in a grammar which parses _strings_ in _Python_.
-                    # We're just seeing if the python interpreter can convert
-                    # to to a float - if it can, we assume it's a number.
-                    float(info["text"])
-                    is_numeric = True
-                except ValueError:
-                    is_numeric = False
-                if is_numeric:
-                    grammar_with_context["number"] = [f'"\'{variable}\'"'] + grammar_with_context["number"]
-                elif info["text"].replace(" ", "").isalpha():
-                    grammar_with_context["string"] = [f'"\'{variable}\'"'] + grammar_with_context["string"]
-                else:
-                    grammar_with_context["value"] = [f'"\'{variable}\'"'] + grammar_with_context["value"]
 
         grammar = Grammar(format_grammar_string(grammar_with_context))
 
@@ -129,6 +111,9 @@ class Text2SqlWorld:
 
         if self.variable_free:
             update_grammar_to_be_variable_free(grammar_dictionary)
+
+        if self.use_untyped_entities:
+            update_grammar_with_untyped_entities(grammar_dictionary)
 
         return grammar_dictionary
 

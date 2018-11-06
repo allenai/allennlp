@@ -151,12 +151,20 @@ class _PredictManager:
             self._output_file.write(prediction)
 
     def _get_json_data(self) -> Iterator[JsonDict]:
-        for line in open(self._input_file):
-            if not line.isspace():
-                yield self._predictor.load_line(line)
+        if self._input_file == "-":
+            for line in sys.stdin:
+                if not line.isspace():
+                    yield self._predictor.load_line(line)
+        else:
+            with open(self._input_file, "r") as file_input:
+                for line in file_input:
+                    if not line.isspace():
+                        yield self._predictor.load_line(line)
 
     def _get_instance_data(self) -> Iterator[Instance]:
-        if self._dataset_reader is None:
+        if self._input_file == "-":
+            raise ConfigurationError("stdin is not an option when using a DatasetReader.")
+        elif self._dataset_reader is None:
             raise ConfigurationError("To generate instances directly, pass a DatasetReader.")
         else:
             yield from self._dataset_reader.read(self._input_file)
