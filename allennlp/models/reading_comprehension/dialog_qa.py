@@ -321,7 +321,11 @@ class DialogQA(Model):
                                 mask=qa_mask.unsqueeze(1).expand(-1, 2).long())
             # add a select for the right span to compute loss
             gold_span_end_loc = []
-            span_end = span_end.view(total_qa_count).squeeze().data.cpu().numpy()
+            if len(span_end)>1:
+                span_end = span_end.view(total_qa_count).squeeze().data.cpu().numpy()
+            else:
+                span_end = span_end.view(total_qa_count).data.cpu().numpy()
+
             for i in range(0, total_qa_count):
                 gold_span_end_loc.append(max(span_end[i] * 3 + i * passage_length * 3, 0))
                 gold_span_end_loc.append(max(span_end[i] * 3 + i * passage_length * 3 + 1, 0))

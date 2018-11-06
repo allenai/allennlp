@@ -862,9 +862,9 @@ class Trainer:
                               'val_metric_per_epoch': val_metric_per_epoch,
                               'optimizer': self._optimizer.state_dict(),
                               'batch_num_total': self._batch_num_total}
-            if self._learning_rate_scheduler is not None:
-                training_state["learning_rate_scheduler"] = \
-                    self._learning_rate_scheduler.lr_scheduler.state_dict()
+            #if self._learning_rate_scheduler is not None:
+            #    training_state["learning_rate_scheduler"] = \
+            #        self._learning_rate_scheduler.lr_scheduler.state_dict()
             training_path = os.path.join(self._serialization_dir,
                                          "training_state_epoch_{}.th".format(epoch))
             torch.save(training_state, training_path)
