@@ -14,6 +14,7 @@ DEFAULT_PREDICTORS = {
         'biaffine_parser': 'biaffine-dependency-parser',
         'bidaf': 'machine-comprehension',
         'bidaf-ensemble': 'machine-comprehension',
+        'bimpm': 'textual-entailment',
         'constituency_parser': 'constituency-parser',
         'coref': 'coreference-resolution',
         'crf_tagger': 'sentence-tagger',

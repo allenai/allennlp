@@ -278,6 +278,8 @@ class Vocabulary(Registrable):
         for namespace_filename in os.listdir(directory):
             if namespace_filename == NAMESPACE_PADDING_FILE:
                 continue
+            if namespace_filename.startswith("."):
+                continue
             namespace = namespace_filename.replace('.txt', '')
             if any(namespace_match(pattern, namespace) for pattern in non_padded_namespaces):
                 is_padded = False
