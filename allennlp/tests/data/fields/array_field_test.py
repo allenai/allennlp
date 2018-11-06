@@ -60,4 +60,6 @@ class TestArrayField(AllenNlpTestCase):
 
     def test_as_tensor_works_with_scalar(self):
         array = ArrayField(numpy.asarray(42))
-        array.as_tensor(array.get_padding_lengths())
+        returned_tensor = array.as_tensor(array.get_padding_lengths())
+        current_tensor = numpy.asarray(42)
+        numpy.testing.assert_array_equal(returned_tensor, current_tensor)
