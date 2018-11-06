@@ -130,6 +130,7 @@ class EvalbBracketingScorer(Metric):
 
     @staticmethod
     def compile_evalb(evalb_directory_path: str = DEFAULT_EVALB_DIR):
+        logger.info(f"Compiling EVALB by running make in {evalb_directory_path}.")
         os.system("cd {} && make && cd ../../../".format(evalb_directory_path))
 
     @staticmethod
