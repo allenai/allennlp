@@ -70,7 +70,7 @@ class EvalbBracketingScorer(Metric):
             A list of gold NLTK Trees to use as a reference.
         """
         if not os.path.exists(self._evalb_program_path):
-            logger.warn(f"EVALB not found at {self._evalb_program_path}.  Attempting to compile it.")
+            logger.warning(f"EVALB not found at {self._evalb_program_path}.  Attempting to compile it.")
             EvalbBracketingScorer.compile_evalb()
 
             # If EVALB executable still doesn't exist, raise an error.
