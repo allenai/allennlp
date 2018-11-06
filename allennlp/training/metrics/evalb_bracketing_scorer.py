@@ -1,5 +1,5 @@
-
 from typing import List
+import logging
 import os
 import tempfile
 import subprocess
@@ -10,6 +10,8 @@ from nltk import Tree
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_EVALB_DIR = os.path.abspath(os.path.join(
         os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "tools", "EVALB"))
@@ -68,14 +70,14 @@ class EvalbBracketingScorer(Metric):
             A list of gold NLTK Trees to use as a reference.
         """
         if not os.path.exists(self._evalb_program_path):
-            logger.info(f"EVALB not found at {self.evalb_program_path}.  Attempting to compile it.")
+            logger.warn(f"EVALB not found at {self._evalb_program_path}.  Attempting to compile it.")
             EvalbBracketingScorer.compile_evalb()
 
             # If EVALB executable still doesn't exist, raise an error.
             if not os.path.exists(self._evalb_program_path):
                 compile_command = ("python -c 'from allennlp.training.metrics import EvalbBracketingScorer; "
                                    "EvalbBracketingScorer.compile_evalb()'")
-                raise ConfigurationError(f"EVALB still not found at {self.evalb_program_path}. "
+                raise ConfigurationError(f"EVALB still not found at {self._evalb_program_path}. "
                                          "You must compile the EVALB scorer before using it."
                                          " Run 'make' in the '{}' directory or run: {}".format(
                                                  self._evalb_program_path, compile_command))
