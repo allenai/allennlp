@@ -11,8 +11,9 @@
         "lowercase_tokens": true
       },
       "token_characters": {
-        "type": "characters"
-      },
+        "type": "characters",
+        "min_padding_length": 3
+      }
     }
   },
   "train_data_path": std.extVar("NER_TRAIN_DATA_PATH"),
