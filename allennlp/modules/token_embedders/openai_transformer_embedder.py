@@ -84,17 +84,6 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
         if self._top_layer_only:
             mix = layer_activations[-1]
         else:
-            mix = self._scalar_mix(layer_activations, byte_pairs_mask)
+            mix = self._scalar_mix(layer_activations)
 
-        # These embeddings are one per byte-pair, but we want one per original _word_.
-        # So we choose the embedding corresponding to the last byte pair for each word,
-        # which is captured by the ``offsets`` input.
-        if offsets is not None:
-            range_vector = get_range_vector(batch_size, device=get_device_of(mix)).unsqueeze(1)
-            last_byte_pair_embeddings = mix[range_vector, offsets]
-        else:
-            # allow to return all byte pairs by passing no offsets
-            seq_len = (byte_pairs_mask > 0).long().sum(dim=1).max()
-            last_byte_pair_embeddings = mix[:, :seq_len]
-
-        return last_byte_pair_embeddings
+        return mix
