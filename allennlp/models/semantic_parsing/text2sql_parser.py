@@ -170,7 +170,7 @@ class Text2SqlParser(Model):
             best_final_states = self._beam_search.search(self._max_decoding_steps,
                                                          initial_state,
                                                          self._transition_function,
-                                                         keep_final_unfinished_states=False)
+                                                         keep_final_unfinished_states=True)
             outputs['best_action_sequence'] = []
             outputs['debug_info'] = []
             outputs['predicted_sql_query'] = []
@@ -191,8 +191,8 @@ class Text2SqlParser(Model):
 
                 action_strings = [action_mapping[i][action_index]
                                   for action_index in best_action_indices]
-                predicted_sql_query = action_sequence_to_sql(action_strings)
 
+                predicted_sql_query = action_sequence_to_sql(action_strings)
                 if action_sequence is not None:
                     # Use a Tensor, not a Variable, to avoid a memory leak.
                     targets = action_sequence[i].data
@@ -319,6 +319,8 @@ class Text2SqlParser(Model):
 
         actions_grouped_by_nonterminal: Dict[str, List[Tuple[ProductionRule, int]]] = defaultdict(list)
         for i, action in enumerate(possible_actions):
+            if action.rule == "":
+                continue
             if action.is_global_rule:
                 actions_grouped_by_nonterminal[action.nonterminal].append((action, i))
             else:
