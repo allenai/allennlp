@@ -81,7 +81,6 @@ class FindLearningRate(Subcommand):
                                required=True,
                                type=str,
                                help='The directory in which to save results.')
-
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
@@ -100,7 +99,7 @@ class FindLearningRate(Subcommand):
                                help='number of mini-batches to run Learning rate finder')
         subparser.add_argument('--stopping-factor',
                                type=float,
-                               default=4.0,
+                               default=None,
                                help='stop the search when the current loss exceeds the best loss recorded by '
                                     'multiple of stopping factor')
         subparser.add_argument('--linear',
