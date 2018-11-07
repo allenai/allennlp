@@ -77,7 +77,6 @@ class Text2SqlWorld:
                                                               prelinked_entities,
                                                               self.columns)
 
-
         grammar = Grammar(format_grammar_string(grammar_with_context))
 
         valid_actions = initialize_valid_actions(grammar)
