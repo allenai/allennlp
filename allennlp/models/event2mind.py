@@ -4,7 +4,7 @@ import numpy
 from overrides import overrides
 
 import torch
-from torch.nn import Module, ModuleDict
+from torch.nn import Module#, ModuleDict
 from torch.nn.modules.rnn import GRUCell
 from torch.nn.modules.linear import Linear
 from torch import nn
