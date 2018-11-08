@@ -39,15 +39,15 @@ def check_dimensions_match(dimension_1: int,
 
 
 def check_for_gpu(device_id: int):
-    if device_id is not None:
-        devices_available = cuda.device_count()
-        if not devices_available:
+    if device_id is not None and device_id >= 0:
+        num_devices_available = cuda.device_count()
+        if num_devices_available == 0:
             raise ConfigurationError("Experiment specified a GPU but none are available;"
                                      " if you want to run on CPU use the override"
                                      " 'trainer.cuda_device=-1' in the json config file.")
-        elif device_id >= devices_available:
+        elif device_id >= num_devices_available:
             raise ConfigurationError(f"Experiment specified GPU device {device_id}"
-                                     f" but there are only {devices_available} devices "
+                                     f" but there are only {num_devices_available} devices "
                                      f" available.")
 
 def check_for_java() -> bool:
