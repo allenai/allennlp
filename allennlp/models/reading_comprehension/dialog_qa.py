@@ -1,10 +1,12 @@
 import logging
+from allennlp.common.elastic_logger import ElasticLogger
 from typing import Any, Dict, List
 import numpy as np
 from overrides import overrides
 import torch
 import torch.nn.functional as F
 from torch.nn.functional import nll_loss
+import inspect
 
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
@@ -420,6 +422,16 @@ class DialogQA(Model):
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        print(self._official_f1._count)
+        ElasticLogger().write_log('INFO', inspect.stack()[1][3], \
+                                  context_dict={'start_acc': self._span_start_accuracy.get_metric(reset),
+                'end_acc': self._span_end_accuracy.get_metric(reset),
+                'span_acc': self._span_accuracy.get_metric(reset),
+                'yesno': self._span_yesno_accuracy.get_metric(reset),
+                'followup': self._span_followup_accuracy.get_metric(reset),
+                'step':self._official_f1._count,
+                'f1': self._official_f1.get_metric(reset), })
+
         return {'start_acc': self._span_start_accuracy.get_metric(reset),
                 'end_acc': self._span_end_accuracy.get_metric(reset),
                 'span_acc': self._span_accuracy.get_metric(reset),

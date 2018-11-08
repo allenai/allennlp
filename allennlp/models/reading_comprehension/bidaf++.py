@@ -1,25 +1,28 @@
 import logging
+from allennlp.common.elastic_logger import ElasticLogger
 from typing import Any, Dict, List
 import numpy as np
 from overrides import overrides
 import torch
 import torch.nn.functional as F
 from torch.nn.functional import nll_loss
+import inspect
 
-from allennlp.common import squad_eval
+from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
-from allennlp.modules.matrix_attention.linear_matrix_attention import LinearMatrixAttention
 from allennlp.modules.input_variational_dropout import InputVariationalDropout
+from allennlp.modules.matrix_attention.linear_matrix_attention import LinearMatrixAttention
 from allennlp.nn import InitializerApplicator, util
+from allennlp.tools import squad_eval
 from allennlp.training.metrics import Average, BooleanAccuracy, CategoricalAccuracy
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@Model.register("dialog_qa")
-class DialogQA(Model):
+@Model.register("bidaf++")
+class BidafPlusPlus(Model):
     """
     This class implements modified version of BiDAF
     (with self attention and residual layer, from Clark and Gardner ACL 17 paper) model as used in
@@ -92,6 +95,12 @@ class DialogQA(Model):
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(self._encoding_dim, 1))
         self._span_yesno_predictor = TimeDistributed(torch.nn.Linear(self._encoding_dim, 3))
         self._span_followup_predictor = TimeDistributed(self._followup_lin)
+
+        check_dimensions_match(phrase_layer.get_input_dim(),
+                               text_field_embedder.get_output_dim() +
+                               marker_embedding_dim * num_context_answers,
+                               "phrase layer input dim",
+                               "embedding dim + marker dim * num context answers")
 
         initializer(self)
 
@@ -270,10 +279,10 @@ class DialogQA(Model):
                                                                           repeated_passage_mask))
         self_attention_matrix = self._self_attention(residual_layer, residual_layer)
 
-        mask = repeated_passage_mask.resize(total_qa_count, passage_length, 1) \
-               * repeated_passage_mask.resize(total_qa_count, 1, passage_length)
+        mask = repeated_passage_mask.reshape(total_qa_count, passage_length, 1) \
+               * repeated_passage_mask.reshape(total_qa_count, 1, passage_length)
         self_mask = torch.eye(passage_length, passage_length, device=self_attention_matrix.device)
-        self_mask = self_mask.resize(1, passage_length, passage_length)
+        self_mask = self_mask.reshape(1, passage_length, passage_length)
         mask = mask * (1 - self_mask)
 
         self_attention_probs = util.masked_softmax(self_attention_matrix, mask)
@@ -390,7 +399,7 @@ class DialogQA(Model):
                             t_f1.append(squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
                                                                                  best_span_string,
                                                                                  refs))
-                        f1_score = 1.0 *  sum(t_f1) / len(t_f1)
+                        f1_score = 1.0 * sum(t_f1) / len(t_f1)
                     else:
                         f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
                                                                             best_span_string,
@@ -413,8 +422,16 @@ class DialogQA(Model):
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        import inspect
-        print(inspect.stack()[1][3])
+        print(self._official_f1._count)
+        ElasticLogger().write_log('INFO', inspect.stack()[1][3], \
+                                  context_dict={'start_acc': self._span_start_accuracy.get_metric(reset),
+                                                'end_acc': self._span_end_accuracy.get_metric(reset),
+                                                'span_acc': self._span_accuracy.get_metric(reset),
+                                                'yesno': self._span_yesno_accuracy.get_metric(reset),
+                                                'followup': self._span_followup_accuracy.get_metric(reset),
+                                                'step': self._official_f1._count,
+                                                'f1': self._official_f1.get_metric(reset), })
+
         return {'start_acc': self._span_start_accuracy.get_metric(reset),
                 'end_acc': self._span_end_accuracy.get_metric(reset),
                 'span_acc': self._span_accuracy.get_metric(reset),
