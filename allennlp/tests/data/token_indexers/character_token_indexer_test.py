@@ -43,3 +43,56 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
         indexer = TokenCharactersIndexer("characters")
         indices = indexer.tokens_to_indices([Token("sentential")], vocab, "char")
         assert indices == {"char": [[3, 4, 5, 6, 4, 5, 6, 1, 1, 1]]}
+
+    def test_start_and_end_tokens(self):
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace("A", namespace='characters')  # 2
+        vocab.add_token_to_namespace("s", namespace='characters')  # 3
+        vocab.add_token_to_namespace("e", namespace='characters')  # 4
+        vocab.add_token_to_namespace("n", namespace='characters')  # 5
+        vocab.add_token_to_namespace("t", namespace='characters')  # 6
+        vocab.add_token_to_namespace("c", namespace='characters')  # 7
+        vocab.add_token_to_namespace("<", namespace='characters')  # 8
+        vocab.add_token_to_namespace(">", namespace='characters')  # 9
+        vocab.add_token_to_namespace("/", namespace='characters')  # 10
+
+        indexer = TokenCharactersIndexer("characters", start_tokens=["<s>"], end_tokens=["</s>"])
+        indices = indexer.tokens_to_indices([Token("sentential")], vocab, "char")
+        assert indices == {"char": [[8, 3, 9],
+                                    [3, 4, 5, 6, 4, 5, 6, 1, 1, 1],
+                                    [8, 10, 3, 9]]}
+
+    def test_min_padding_length(self):
+        sentence = "AllenNLP is awesome ."
+        tokens = [Token(token) for token in sentence.split(" ")]
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace("A", namespace="characters")  # 2
+        vocab.add_token_to_namespace("l", namespace="characters")  # 3
+        vocab.add_token_to_namespace("e", namespace="characters")  # 4
+        vocab.add_token_to_namespace("n", namespace="characters")  # 5
+        vocab.add_token_to_namespace("N", namespace="characters")  # 6
+        vocab.add_token_to_namespace("L", namespace="characters")  # 7
+        vocab.add_token_to_namespace("P", namespace="characters")  # 8
+        vocab.add_token_to_namespace("i", namespace="characters")  # 9
+        vocab.add_token_to_namespace("s", namespace="characters")  # 10
+        vocab.add_token_to_namespace("a", namespace="characters")  # 11
+        vocab.add_token_to_namespace("w", namespace="characters")  # 12
+        vocab.add_token_to_namespace("o", namespace="characters")  # 13
+        vocab.add_token_to_namespace("m", namespace="characters")  # 14
+        vocab.add_token_to_namespace(".", namespace="characters")  # 15
+
+        indexer = TokenCharactersIndexer("characters", min_padding_length=10)
+        indices = indexer.tokens_to_indices(tokens, vocab, "char")
+        key_padding_lengths = "num_token_characters"
+        value_padding_lengths = 0
+        for token in indices["char"]:
+            item = indexer.get_padding_lengths(token)
+            value = item.values()
+            value_padding_lengths = max(value_padding_lengths, max(value))
+        padded = indexer.pad_token_sequence(indices,
+                                            {"char": len(indices["char"])},
+                                            {key_padding_lengths: value_padding_lengths})
+        assert padded == {"char": [[2, 3, 3, 4, 5, 6, 7, 8, 0, 0],
+                                   [9, 10, 0, 0, 0, 0, 0, 0, 0, 0],
+                                   [11, 12, 4, 10, 13, 14, 4, 0, 0, 0],
+                                   [15, 0, 0, 0, 0, 0, 0, 0, 0, 0]]}

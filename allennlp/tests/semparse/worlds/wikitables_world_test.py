@@ -8,6 +8,7 @@ from allennlp.data.tokenizers import Token
 from allennlp.semparse import ParsingError
 from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
 from allennlp.semparse.worlds import WikiTablesWorld
+from allennlp.semparse.type_declarations import wikitables_lambda_dcs as types
 
 
 def check_productions_match(actual_rules: List[str], expected_right_sides: List[str]):
@@ -250,12 +251,15 @@ class TestWikiTablesWorld(AllenNlpTestCase):
         expression = self.world.parse_logical_form(sempre_form)
         # We add columns to the name mapping in sorted order, so "league" and "year" end up as C2
         # and C6.
-        assert str(expression) == "R(C6,C2(cell:usl_a_league))"
+        f = types.name_mapper.get_alias
+        assert str(expression) == f"{f('reverse')}(C6,C2(cell:usl_a_league))"
 
     def test_world_parses_logical_forms_with_dates(self):
         sempre_form = "((reverse fb:row.row.league) (fb:row.row.year (fb:cell.cell.date (date 2000 -1 -1))))"
         expression = self.world.parse_logical_form(sempre_form)
-        assert str(expression) == "R(C2,C6(D1(D0(num:2000,num:~1,num:~1))))"
+        f = types.name_mapper.get_alias
+        assert str(expression) == \
+                f"{f('reverse')}(C2,C6({f('fb:cell.cell.date')}({f('date')}(num:2000,num:~1,num:~1))))"
 
     def test_world_parses_logical_forms_with_decimals(self):
         question_tokens = [Token(x) for x in ['0.2']]
@@ -264,7 +268,8 @@ class TestWikiTablesWorld(AllenNlpTestCase):
         world = WikiTablesWorld(table_kg)
         sempre_form = "(fb:cell.cell.number (number 0.200))"
         expression = world.parse_logical_form(sempre_form)
-        assert str(expression) == "I1(I(num:0_200))"
+        f = types.name_mapper.get_alias
+        assert str(expression) == f"{f('fb:cell.cell.number')}({f('number')}(num:0_200))"
 
     def test_get_action_sequence_removes_currying_for_all_wikitables_functions(self):
         # minus

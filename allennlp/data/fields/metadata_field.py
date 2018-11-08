@@ -1,12 +1,13 @@
 # pylint: disable=no-self-use
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Mapping
 
 from overrides import overrides
 
+from allennlp.common.util import ScatterableList
 from allennlp.data.fields.field import DataArray, Field
 
 
-class MetadataField(Field[DataArray]):
+class MetadataField(Field[DataArray], Mapping[str, Any]):
     """
     A ``MetadataField`` is a ``Field`` that does not get converted into tensors.  It just carries
     side information that might be needed later on, for computing some third-party metric, or
@@ -27,6 +28,24 @@ class MetadataField(Field[DataArray]):
     def __init__(self, metadata: Any) -> None:
         self.metadata = metadata
 
+    def __getitem__(self, key: str) -> Any:
+        try:
+            return self.metadata[key]  # type: ignore
+        except TypeError:
+            raise TypeError("your metadata is not a dict")
+
+    def __iter__(self):
+        try:
+            return iter(self.metadata)
+        except TypeError:
+            raise TypeError("your metadata is not iterable")
+
+    def __len__(self):
+        try:
+            return len(self.metadata)
+        except TypeError:
+            raise TypeError("your metadata has no length")
+
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         return {}
@@ -42,8 +61,8 @@ class MetadataField(Field[DataArray]):
 
     @classmethod
     @overrides
-    def batch_tensors(cls, tensor_list: List[DataArray]) -> DataArray:  # type: ignore
-        return tensor_list  # type: ignore
+    def batch_tensors(cls, tensor_list: List[DataArray]) -> ScatterableList:  # type: ignore
+        return ScatterableList(tensor_list)
 
 
     def __str__(self) -> str:

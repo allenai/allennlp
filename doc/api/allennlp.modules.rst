@@ -34,4 +34,4 @@ allennlp.modules
    allennlp.modules.maxout
    allennlp.modules.input_variational_dropout
    allennlp.modules.bimpm_matching
-
+   allennlp.modules.masked_layer_norm

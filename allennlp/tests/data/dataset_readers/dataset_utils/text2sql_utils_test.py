@@ -8,7 +8,7 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
 
     def setUp(self):
         super().setUp()
-        self.data = AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants_tiny.json'
+        self.data = self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants_tiny.json'
 
     def test_process_sql_data_blob(self):
 
@@ -22,11 +22,13 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
         assert sql_data.text == ['how', 'many', 'buttercup', 'kitchen', 'are', 'there', 'in', 'san', 'francisco', '?']
         assert sql_data.text_with_variables == ['how', 'many', 'name0', 'are', 'there', 'in', 'city_name0', '?']
         assert sql_data.sql == ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', 'AS', 'LOCATIONalias0', ',',
-                                'RESTAURANT', 'AS', 'RESTAURANTalias0', 'WHERE', 'LOCATIONalias0.CITY_NAME', '=',
-                                'city_name0', 'AND', 'RESTAURANTalias0.ID', '=', 'LOCATIONalias0.RESTAURANT_ID',
-                                'AND', 'RESTAURANTalias0.NAME', '=', 'name0', ';']
+                                'RESTAURANT', 'AS', 'RESTAURANTalias0', 'WHERE', 'LOCATIONalias0', '.', 'CITY_NAME', '=',
+                                '\'city_name0\'', 'AND', 'RESTAURANTalias0', '.', 'ID', '=', 'LOCATIONalias0', '.', 'RESTAURANT_ID',
+                                'AND', 'RESTAURANTalias0', '.', 'NAME', '=', '\'name0\'', ';']
+
         assert sql_data.text_variables == {'city_name0': 'san francisco', 'name0': 'buttercup kitchen'}
-        assert sql_data.sql_variables == {'city_name0': 'san francisco', 'name0': 'buttercup kitchen'}
+        assert sql_data.sql_variables == {'city_name0': {'text': 'san francisco', 'type': 'city_name'},
+                                          'name0': {'text': 'buttercup kitchen', 'type': 'name'}}
 
 
         dataset = text2sql_utils.process_sql_data([data[1]])
@@ -43,11 +45,12 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
 
         for i, sql_data in enumerate(dataset):
             assert sql_data.sql == ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'GEOGRAPHIC', 'AS', 'GEOGRAPHICalias0',
-                                    ',', 'RESTAURANT', 'AS', 'RESTAURANTalias0', 'WHERE', 'GEOGRAPHICalias0.REGION',
-                                    '=', 'region0', 'AND', 'RESTAURANTalias0.CITY_NAME', '=', 'GEOGRAPHICalias0.CITY_NAME',
-                                    'AND', 'RESTAURANTalias0.FOOD_TYPE', '=', 'food_type0', ';']
+                                    ',', 'RESTAURANT', 'AS', 'RESTAURANTalias0', 'WHERE', 'GEOGRAPHICalias0', '.', 'REGION',
+                                    '=', '\'region0\'', 'AND', 'RESTAURANTalias0', '.', 'CITY_NAME', '=', 'GEOGRAPHICalias0',
+                                    '.', 'CITY_NAME', 'AND', 'RESTAURANTalias0', '.', 'FOOD_TYPE', '=', '\'food_type0\'', ';']
             assert sql_data.text_variables == {'region0': 'bay area', 'food_type0': 'chinese'}
-            assert sql_data.sql_variables == {'region0': 'bay area', 'food_type0': 'chinese'}
+            assert sql_data.sql_variables == {'region0': {'text': 'bay area', 'type': 'region'},
+                                              'food_type0': {'text': 'chinese', 'type': 'food_type'}}
             assert sql_data.text == correct_text[i][0]
             assert sql_data.text_with_variables == correct_text[i][1]
 
@@ -70,6 +73,57 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
 
         cleaned = text2sql_utils.clean_and_split_sql(sql)
         assert cleaned == ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', 'AS', 'LOCATIONalias0', ',',
-                           'RESTAURANT', 'AS', 'RESTAURANTalias0', 'WHERE', 'LOCATIONalias0.CITY_NAME', '=',
-                           'city_name0', 'AND', 'RESTAURANTalias0.ID', '=', 'LOCATIONalias0.RESTAURANT_ID',
-                           'AND', 'RESTAURANTalias0.NAME', '=', 'name0', ';']
+                           'RESTAURANT', 'AS', 'RESTAURANTalias0', 'WHERE', 'LOCATIONalias0', '.', 'CITY_NAME', '=',
+                           '\'city_name0\'', 'AND', 'RESTAURANTalias0', '.', 'ID', '=', 'LOCATIONalias0', '.', 'RESTAURANT_ID',
+                           'AND', 'RESTAURANTalias0', '.', 'NAME', '=', '\'name0\'', ';']
+
+
+    def test_clean_unneeded_aliases(self):
+        sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', 'AS', 'LOCATIONalias0', ',',
+               'RESTAURANT', 'AS', 'RESTAURANTalias0', 'WHERE', 'LOCATIONalias0', '.', 'CITY_NAME', '=',
+               '\'city_name0\'', 'AND', 'RESTAURANTalias0', '.', 'ID', '=', 'LOCATIONalias0', '.', 'RESTAURANT_ID',
+               'AND', 'RESTAURANTalias0', '.', 'NAME', '=', '\'name0\'', ';']
+
+        cleaned = text2sql_utils.clean_unneeded_aliases(sql)
+        assert cleaned == ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',', 'RESTAURANT', 'WHERE',
+                           'LOCATION', '.', 'CITY_NAME', '=', "'city_name0'", 'AND', 'RESTAURANT', '.', 'ID',
+                           '=', 'LOCATION', '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
+
+        # Check we don't mangle decimal numbers:
+        assert text2sql_utils.clean_unneeded_aliases(["2.5"]) == ["2.5"]
+
+        # Check we don't remove non-trivial aliases:
+        sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'MAX', '(', 'LOCATION', '.', 'ID', ')', 'AS', 'LOCATIONalias0', ";"]
+        assert text2sql_utils.clean_unneeded_aliases(sql) == sql
+
+    def test_read_database_schema(self):
+        schema = text2sql_utils.read_dataset_schema(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
+        # Make it easier to compare:
+        schema = {k: [(x.name, x.column_type, x.is_primary_key) for x in v]
+                  for k, v in schema.items()}
+        assert schema == {
+                'RESTAURANT': [
+                        ('RESTAURANT_ID', 'int(11)', True),
+                        ('NAME', 'varchar(255)', False),
+                        ('FOOD_TYPE', 'varchar(255)', False),
+                        ('CITY_NAME', 'varchar(255)', False),
+                        ('RATING', '"decimal(1', False)
+                ],
+                'LOCATION': [
+                        ('RESTAURANT_ID', 'int(11)', True),
+                        ('HOUSE_NUMBER', 'int(11)', False),
+                        ('STREET_NAME', 'varchar(255)', False),
+                        ('CITY_NAME', 'varchar(255)', False)
+                ],
+                'GEOGRAPHIC': [
+                        ('CITY_NAME', 'varchar(255)', True),
+                        ('COUNTY', 'varchar(255)', False),
+                        ('REGION', 'varchar(255)', False)]
+                }
+
+    def test_resolve_primary_keys_in_schema(self):
+        schema = text2sql_utils.read_dataset_schema(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
+        sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'MAX', '(', 'LOCATION', '.', 'ID', ')', 'AS', 'LOCATIONalias0', ";"]
+
+        resolved = text2sql_utils.resolve_primary_keys_in_schema(sql, schema)
+        assert resolved == ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'MAX', '(', 'LOCATION', '.', 'RESTAURANT_ID', ')', 'AS', 'LOCATIONalias0', ";"]

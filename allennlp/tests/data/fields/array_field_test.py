@@ -57,3 +57,9 @@ class TestArrayField(AllenNlpTestCase):
     def test_printing_doesnt_crash(self):
         array = ArrayField(numpy.ones([2, 3]), padding_value=-1)
         print(array)
+
+    def test_as_tensor_works_with_scalar(self):
+        array = ArrayField(numpy.asarray(42))
+        returned_tensor = array.as_tensor(array.get_padding_lengths())
+        current_tensor = numpy.asarray(42)
+        numpy.testing.assert_array_equal(returned_tensor, current_tensor)

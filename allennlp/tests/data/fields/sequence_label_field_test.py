@@ -88,3 +88,11 @@ class TestSequenceLabelField(AllenNlpTestCase):
         tags = ["B", "I", "O", "O", "O"]
         sequence_label_field = SequenceLabelField(tags, self.text, label_namespace="labels")
         print(sequence_label_field)
+
+    def test_sequence_methods(self):
+        tags = ["B", "I", "O", "O", "O"]
+        sequence_label_field = SequenceLabelField(tags, self.text, label_namespace="labels")
+
+        assert len(sequence_label_field) == 5
+        assert sequence_label_field[1] == "I"
+        assert [label for label in sequence_label_field] == tags

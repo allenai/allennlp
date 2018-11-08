@@ -75,6 +75,6 @@ class ChuLiuEdmondsTest(AllenNlpTestCase):
             decode_mst(energy, 5, has_labels=False)
 
     def test_mst_finds_maximum_spanning_tree(self):
-        energy = torch.range(1, 9).view(1, 3, 3)
+        energy = torch.arange(1, 10).view(1, 3, 3)
         heads, _ = decode_mst(energy.numpy(), 3) # pylint: disable=protected-access
         assert list(heads) == [-1, 2, 0]

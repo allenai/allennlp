@@ -70,6 +70,7 @@ if __name__ == "__main__":
                 'semantic_parsing/nlvr_coverage_semantic_parser',
                 'semantic_parsing/nlvr_direct_semantic_parser',
                 'semantic_parsing/wikitables',
+                'semantic_parsing/atis',
                 'srl',
         ]
         for model in models:

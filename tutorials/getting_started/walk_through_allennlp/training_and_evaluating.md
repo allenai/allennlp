@@ -20,13 +20,14 @@ Right at this instant you might care about the `trainer` section, which specifie
 
 ```js
   "trainer": {
+    "optimizer": "adam",
     "num_epochs": 40,
     "patience": 10,
     "cuda_device": -1
   }
 ```
 
-Here the `num_epochs` parameter specifies that we want to make 40 training passes through the training dataset.
+Here the `optimizer` parameter specifies the optimizer that we want to use. The `num_epochs` parameter specifies that we want to make 40 training passes through the training dataset.
 On a recent Macbook each epoch of this model on this dataset takes about a minute,
 so this training should take about 40 minutes, unless it stops early. `patience`
 controls the early stopping -- if our validation metric doesn't improve for
@@ -36,7 +37,7 @@ Change any of those if you want to (for example, you can reduce the epochs to 5
 if you want the training to take less time), and then run
 
 ```
-$ allennlp train tutorials/getting_started/simple_tagger.json --serialization-dir /tmp/tutorials/getting_started
+$ allennlp train tutorials/getting_started/walk_through_allennlp/simple_tagger.json --serialization-dir /tmp/tutorials/getting_started
 ```
 
 The `serialization-dir` argument specifies the directory where the model's vocabulary and checkpointed weights will be saved.

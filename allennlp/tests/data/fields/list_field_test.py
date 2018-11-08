@@ -181,3 +181,10 @@ class TestListField(AllenNlpTestCase):
     def test_printing_doesnt_crash(self):
         list_field = ListField([self.field1, self.field2])
         print(list_field)
+
+    def test_sequence_methods(self):
+        list_field = ListField([self.field1, self.field2, self.field3])
+
+        assert len(list_field) == 3
+        assert list_field[1] == self.field2
+        assert [f for f in list_field] == [self.field1, self.field2, self.field3]

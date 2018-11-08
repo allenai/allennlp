@@ -8,7 +8,7 @@ from numpy.testing import assert_almost_equal
 import torch
 
 from allennlp.common.testing import ModelTestCase
-from allennlp.training.metrics.wikitables_accuracy import SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH
+from allennlp.semparse.executors.wikitables_sempre_executor import SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH
 
 @pytest.mark.java
 class WikiTablesMmlSemanticParserTest(ModelTestCase):
@@ -39,6 +39,7 @@ class WikiTablesMmlSemanticParserTest(ModelTestCase):
         if self.should_remove_root_sempre_grammar and os.path.exists(self.module_root_grammar_path):
             os.remove(self.module_root_grammar_path)
 
+    @flaky
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 

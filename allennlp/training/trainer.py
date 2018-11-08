@@ -20,12 +20,12 @@ from typing import Dict, Optional, List, Tuple, Union, Iterable, Any, Set
 import torch
 import torch.optim.lr_scheduler
 from torch.nn.parallel import replicate, parallel_apply
-from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
+from torch.nn.parallel.scatter_gather import gather
 from tensorboardX import SummaryWriter
 
-from allennlp.common import Params
+from allennlp.common import Params, Registrable
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import peak_memory_mb, gpu_memory_mb, dump_metrics
+from allennlp.common.util import dump_metrics, gpu_memory_mb, parse_cuda_device, peak_memory_mb, scatter_kwargs
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -156,7 +156,9 @@ def str_to_time(time_str: str) -> datetime.datetime:
     return datetime.datetime(*pieces)
 
 
-class Trainer:
+class Trainer(Registrable):
+    default_implementation = "default"
+
     def __init__(self,
                  model: Model,
                  optimizer: torch.optim.Optimizer,
@@ -265,12 +267,12 @@ class Trainer:
         should_log_learning_rate : ``bool``, optional, (default = False)
             Whether to send parameter specific learning rate to tensorboard.
         """
-        self._model = model
-        self._iterator = iterator
+        self.model = model
+        self.iterator = iterator
         self._validation_iterator = validation_iterator
-        self._shuffle = shuffle
-        self._optimizer = optimizer
-        self._train_data = train_dataset
+        self.shuffle = shuffle
+        self.optimizer = optimizer
+        self.train_data = train_dataset
         self._validation_data = validation_dataset
 
         if patience is None:  # no early stopping
@@ -314,7 +316,7 @@ class Trainer:
             self._cuda_devices = [cuda_device]
 
         if self._cuda_devices[0] != -1:
-            self._model = self._model.cuda(self._cuda_devices[0])
+            self.model = self.model.cuda(self._cuda_devices[0])
 
         self._log_interval = 10  # seconds
         self._summary_interval = summary_interval
@@ -343,7 +345,7 @@ class Trainer:
             # Pylint is unable to tell that we're in the case that _grad_clipping is not None...
             # pylint: disable=invalid-unary-operand-type
             clip_function = lambda grad: grad.clamp(-self._grad_clipping, self._grad_clipping)
-            for parameter in self._model.parameters():
+            for parameter in self.model.parameters():
                 if parameter.requires_grad:
                     parameter.register_hook(clip_function)
 
@@ -357,7 +359,7 @@ class Trainer:
             # This uses a closure on self._log_histograms_this_batch to
             # determine whether to send the activations to tensorboard,
             # since we don't want them on every call.
-            for _, module in self._model.named_modules():
+            for _, module in self.model.named_modules():
                 if not getattr(module, 'should_log_activations', False):
                     # skip it
                     continue
@@ -389,12 +391,12 @@ class Trainer:
 
                 module.register_forward_hook(hook)
 
-    def _rescale_gradients(self) -> Optional[float]:
+    def rescale_gradients(self) -> Optional[float]:
         """
         Performs gradient rescaling. Is a no-op if gradient rescaling is not enabled.
         """
         if self._grad_norm:
-            parameters_to_clip = [p for p in self._model.parameters()
+            parameters_to_clip = [p for p in self.model.parameters()
                                   if p.grad is not None]
             return sparse_clip_norm(parameters_to_clip, self._grad_norm)
         return None
@@ -406,8 +408,9 @@ class Trainer:
         interface.
         """
         inputs, module_kwargs = scatter_kwargs((), batch, self._cuda_devices, 0)
+
         used_device_ids = self._cuda_devices[:len(inputs)]
-        replicas = replicate(self._model, used_device_ids)
+        replicas = replicate(self.model, used_device_ids)
         outputs = parallel_apply(replicas, inputs, module_kwargs, used_device_ids)
 
         # Only the 'loss' is needed.
@@ -415,7 +418,7 @@ class Trainer:
         losses = gather([output['loss'].unsqueeze(0) for output in outputs], used_device_ids[0], 0)
         return {'loss': losses.mean()}
 
-    def _batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
+    def batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
         """
         Does a forward pass on the given batch and returns the ``loss`` value in the result.
         If ``for_training`` is `True` also applies regularization penalty.
@@ -424,12 +427,12 @@ class Trainer:
             output_dict = self._data_parallel(batch)
         else:
             batch = util.move_to_device(batch, self._cuda_devices[0])
-            output_dict = self._model(**batch)
+            output_dict = self.model(**batch)
 
         try:
             loss = output_dict["loss"]
             if for_training:
-                loss += self._model.get_regularization_penalty()
+                loss += self.model.get_regularization_penalty()
         except KeyError:
             if for_training:
                 raise RuntimeError("The model you are trying to optimize does not contain a"
@@ -444,7 +447,7 @@ class Trainer:
         the total loss divided by the ``num_batches`` so that
         the ``"loss"`` metric is "average loss per batch".
         """
-        metrics = self._model.get_metrics(reset=reset)
+        metrics = self.model.get_metrics(reset=reset)
         metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
         return metrics
 
@@ -459,13 +462,13 @@ class Trainer:
 
         train_loss = 0.0
         # Set the model to "train" mode.
-        self._model.train()
+        self.model.train()
 
         # Get tqdm for the training batches
-        train_generator = self._iterator(self._train_data,
-                                         num_epochs=1,
-                                         shuffle=self._shuffle)
-        num_training_batches = self._iterator.get_num_batches(self._train_data)
+        train_generator = self.iterator(self.train_data,
+                                        num_epochs=1,
+                                        shuffle=self.shuffle)
+        num_training_batches = self.iterator.get_num_batches(self.train_data)
         self._last_log = time.time()
         last_save_time = time.time()
 
@@ -474,7 +477,7 @@ class Trainer:
             self._batch_num_total = 0
 
         if self._histogram_interval is not None:
-            histogram_parameters = set(self._model.get_parameters_for_histogram_tensorboard_logging())
+            histogram_parameters = set(self.model.get_parameters_for_histogram_tensorboard_logging())
 
         logger.info("Training")
         train_generator_tqdm = Tqdm.tqdm(train_generator,
@@ -487,14 +490,14 @@ class Trainer:
             self._log_histograms_this_batch = self._histogram_interval is not None and (
                     batch_num_total % self._histogram_interval == 0)
 
-            self._optimizer.zero_grad()
+            self.optimizer.zero_grad()
 
-            loss = self._batch_loss(batch, for_training=True)
+            loss = self.batch_loss(batch, for_training=True)
             loss.backward()
 
             train_loss += loss.item()
 
-            batch_grad_norm = self._rescale_gradients()
+            batch_grad_norm = self.rescale_gradients()
 
             # This does nothing if batch_num_total is None or you are using an
             # LRScheduler which doesn't update per batch.
@@ -506,9 +509,9 @@ class Trainer:
                 # We need a copy of current parameters to compute magnitude of updates,
                 # and copy them to CPU so large models won't go OOM on the GPU.
                 param_updates = {name: param.detach().cpu().clone()
-                                 for name, param in self._model.named_parameters()}
-                self._optimizer.step()
-                for name, param in self._model.named_parameters():
+                                 for name, param in self.model.named_parameters()}
+                self.optimizer.step()
+                for name, param in self.model.named_parameters():
                     param_updates[name].sub_(param.detach().cpu())
                     update_norm = torch.norm(param_updates[name].view(-1, ))
                     param_norm = torch.norm(param.view(-1, )).cpu()
@@ -516,7 +519,7 @@ class Trainer:
                                                        update_norm / (param_norm + 1e-7),
                                                        batch_num_total)
             else:
-                self._optimizer.step()
+                self.optimizer.step()
 
             # Update the description with the latest metrics
             metrics = self._get_metrics(train_loss, batches_this_epoch)
@@ -572,7 +575,7 @@ class Trainer:
         as logging the average gradient norm.
         """
         # Log parameter values to Tensorboard
-        for name, param in self._model.named_parameters():
+        for name, param in self.model.named_parameters():
             self._tensorboard.add_train_scalar("parameter_mean/" + name,
                                                param.data.mean(),
                                                epoch)
@@ -607,8 +610,8 @@ class Trainer:
         """
         # optimizer stores lr info keyed by parameter tensor
         # we want to log with parameter name
-        names = {param: name for name, param in self._model.named_parameters()}
-        for group in self._optimizer.param_groups:
+        names = {param: name for name, param in self.model.named_parameters()}
+        for group in self.optimizer.param_groups:
             if 'lr' not in group:
                 continue
             rate = group['lr']
@@ -625,7 +628,7 @@ class Trainer:
         """
         Send histograms of parameters to tensorboard.
         """
-        for name, param in self._model.named_parameters():
+        for name, param in self.model.named_parameters():
             if name in histogram_parameters:
                 self._tensorboard.add_train_histogram("parameter_histogram/" + name,
                                                       param,
@@ -687,12 +690,12 @@ class Trainer:
         """
         logger.info("Validating")
 
-        self._model.eval()
+        self.model.eval()
 
         if self._validation_iterator is not None:
             val_iterator = self._validation_iterator
         else:
-            val_iterator = self._iterator
+            val_iterator = self.iterator
 
         val_generator = val_iterator(self._validation_data,
                                      num_epochs=1,
@@ -704,7 +707,7 @@ class Trainer:
         val_loss = 0
         for batch in val_generator_tqdm:
 
-            loss = self._batch_loss(batch, for_training=False)
+            loss = self.batch_loss(batch, for_training=False)
             if loss is not None:
                 # You shouldn't necessarily have to compute a loss for validation, so we allow for
                 # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
@@ -855,12 +858,12 @@ class Trainer:
         """
         if self._serialization_dir is not None:
             model_path = os.path.join(self._serialization_dir, "model_state_epoch_{}.th".format(epoch))
-            model_state = self._model.state_dict()
+            model_state = self.model.state_dict()
             torch.save(model_state, model_path)
 
             training_state = {'epoch': epoch,
                               'val_metric_per_epoch': val_metric_per_epoch,
-                              'optimizer': self._optimizer.state_dict(),
+                              'optimizer': self.optimizer.state_dict(),
                               'batch_num_total': self._batch_num_total}
             #if self._learning_rate_scheduler is not None:
             #    training_state["learning_rate_scheduler"] = \
@@ -967,12 +970,12 @@ class Trainer:
         # buffer. The GPU transfer happens implicitly in load_state_dict.
         model_state = torch.load(model_path, map_location=util.device_mapping(-1))
         training_state = torch.load(training_state_path, map_location=util.device_mapping(-1))
-        self._model.load_state_dict(model_state)
-        self._optimizer.load_state_dict(training_state["optimizer"])
+        self.model.load_state_dict(model_state)
+        self.optimizer.load_state_dict(training_state["optimizer"])
         if self._learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
             self._learning_rate_scheduler.lr_scheduler.load_state_dict(
                     training_state["learning_rate_scheduler"])
-        move_optimizer_to_cuda(self._optimizer)
+        move_optimizer_to_cuda(self.optimizer)
 
         # We didn't used to save `validation_metric_per_epoch`, so we can't assume
         # that it's part of the trainer state. If it's not there, an empty list is all
@@ -998,7 +1001,7 @@ class Trainer:
 
     # Requires custom from_params.
     @classmethod
-    def from_params(cls,
+    def from_params(cls,  # type: ignore
                     model: Model,
                     serialization_dir: str,
                     iterator: DataIterator,
@@ -1006,18 +1009,16 @@ class Trainer:
                     validation_data: Optional[Iterable[Instance]],
                     params: Params,
                     validation_iterator: DataIterator = None) -> 'Trainer':
-
+        # pylint: disable=arguments-differ
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
         shuffle = params.pop_bool("shuffle", True)
         num_epochs = params.pop_int("num_epochs", 20)
-        cuda_device = params.pop_int("cuda_device", -1)
+        cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
 
-        if cuda_device >= 0:
-            model = model.cuda(cuda_device)
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
@@ -1032,22 +1033,29 @@ class Trainer:
         model_save_interval = params.pop_float("model_save_interval", None)
         summary_interval = params.pop_int("summary_interval", 100)
         histogram_interval = params.pop_int("histogram_interval", None)
+        should_log_parameter_statistics = params.pop_bool("should_log_parameter_statistics", True)
+        should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
 
         params.assert_empty(cls.__name__)
-        return Trainer(model, optimizer, iterator,
-                       train_data, validation_data,
-                       patience=patience,
-                       validation_metric=validation_metric,
-                       validation_iterator=validation_iterator,
-                       shuffle=shuffle,
-                       num_epochs=num_epochs,
-                       serialization_dir=serialization_dir,
-                       cuda_device=cuda_device,
-                       grad_norm=grad_norm,
-                       grad_clipping=grad_clipping,
-                       learning_rate_scheduler=scheduler,
-                       num_serialized_models_to_keep=num_serialized_models_to_keep,
-                       keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
-                       model_save_interval=model_save_interval,
-                       summary_interval=summary_interval,
-                       histogram_interval=histogram_interval)
+        return cls(model, optimizer, iterator,
+                   train_data, validation_data,
+                   patience=patience,
+                   validation_metric=validation_metric,
+                   validation_iterator=validation_iterator,
+                   shuffle=shuffle,
+                   num_epochs=num_epochs,
+                   serialization_dir=serialization_dir,
+                   cuda_device=cuda_device,
+                   grad_norm=grad_norm,
+                   grad_clipping=grad_clipping,
+                   learning_rate_scheduler=scheduler,
+                   num_serialized_models_to_keep=num_serialized_models_to_keep,
+                   keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
+                   model_save_interval=model_save_interval,
+                   summary_interval=summary_interval,
+                   histogram_interval=histogram_interval,
+                   should_log_parameter_statistics=should_log_parameter_statistics,
+                   should_log_learning_rate=should_log_learning_rate)
+
+
+Trainer.register("default")(Trainer)
