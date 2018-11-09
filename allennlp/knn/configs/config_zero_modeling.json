@@ -69,7 +69,7 @@
             "tensor_2_dim": 200
         },
         "modeling_layer": {
-            "type": "pass_through_encoder",
+            "type": "pass_through",
             "input_dim": 800
         },
         "span_end_encoder": {
