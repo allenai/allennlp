@@ -4,6 +4,7 @@ from sqlite3 import Cursor
 import os
 
 from parsimonious import Grammar
+from parsimonious.exceptions import ParseError
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.semparse.contexts.sql_context_utils import SqlVisitor
@@ -86,7 +87,11 @@ class Text2SqlWorld:
         sorted_actions = sorted(all_actions)
 
         sql_visitor = SqlVisitor(grammar)
-        action_sequence = sql_visitor.parse(" ".join(query)) if query else []
+        try:
+            action_sequence = sql_visitor.parse(" ".join(query)) if query else []
+        except ParseError:
+            action_sequence = None
+
         return action_sequence, sorted_actions
 
     def _initialize_grammar_dictionary(self, grammar_dictionary: Dict[str, List[str]]) -> Dict[str, List[str]]:

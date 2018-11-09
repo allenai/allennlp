@@ -290,7 +290,12 @@ class Text2SqlParser(Model):
             4. action_similarity, which is how similar the action sequence predicted is to the actual
             action sequence. This is basically a soft measure of exact_match.
         """
+
+        validation_correct = self._exact_match._total_value # pylint: disable=protected-access
+        validation_total = self._exact_match._count # pylint: disable=protected-access
         return {
+                '_exact_match_count': validation_correct,
+                '_example_count': validation_total,
                 'exact_match': self._exact_match.get_metric(reset),
                 'denotation_acc': self._denotation_accuracy.get_metric(reset),
                 'valid_sql_query': self._valid_sql_query.get_metric(reset),
