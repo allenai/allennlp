@@ -73,7 +73,7 @@
             "bidirectional": true,
             "input_size": 800,
             "hidden_size": 100,
-            "num_layers": 2,
+            "num_layers": 0,
             "dropout": 0.2
         },
         "span_end_encoder": {
