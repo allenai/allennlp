@@ -55,8 +55,12 @@
         },
         "num_highway_layers": 2,
         "phrase_layer": {
-            "type": "pass_through",
-            "input_dim": 200
+            "type": "lstm",
+            "bidirectional": true,
+            "input_size": 200,
+            "hidden_size": 100,
+            "num_layers": 1,
+            "dropout": 0.2
         },
         "similarity_function": {
             "type": "linear",
