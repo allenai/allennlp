@@ -112,7 +112,6 @@
             "mode": "max",
             "patience": 2
         },
-        "no_tqdm": true,
         "optimizer": {
             "type": "adam",
             "betas": [
