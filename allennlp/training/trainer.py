@@ -9,6 +9,8 @@ rather than instantiating a ``Trainer`` yourself.
 # pylint: disable=too-many-lines
 
 import logging
+from allennlp.common.elastic_logger import ElasticLogger
+import inspect
 import os
 import shutil
 import time
@@ -449,6 +451,7 @@ class Trainer(Registrable):
         """
         metrics = self.model.get_metrics(reset=reset)
         metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
+
         return metrics
 
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
@@ -528,7 +531,7 @@ class Trainer(Registrable):
             train_generator_tqdm.set_description(description, refresh=False)
 
             # Log parameter values to Tensorboard
-            if batch_num_total % self._summary_interval == 0:
+            if batch_num_total % self._summary_interval == 0 or True:
                 if self._should_log_parameter_statistics:
                     self._parameter_and_gradient_statistics_to_tensorboard(batch_num_total, batch_grad_norm)
                 if self._should_log_learning_rate:
@@ -653,6 +656,21 @@ class Trainer(Registrable):
             val_metric = val_metrics.get(name)
             if val_metric is not None:
                 self._tensorboard.add_validation_scalar(name, val_metric, epoch)
+
+        # Alon addition - elastic logs
+        elastic_train_metrics = train_metrics.copy()
+        if val_metrics != {}:
+            elastic_train_metrics = {'training/' + k: v for k, v in elastic_train_metrics.items()}
+            elastic_train_metrics.update({'epoch':epoch})
+        else:
+            elastic_train_metrics.update({'batch_num_total': epoch})
+
+        ElasticLogger().write_log('INFO', 'train_metric', context_dict=elastic_train_metrics)
+        if val_metrics != {}:
+            elastic_val_metrics = val_metrics.copy()
+            elastic_val_metrics = {'validation/' + k: v for k, v in elastic_val_metrics.items()}
+            elastic_val_metrics.update({'epoch': epoch})
+            ElasticLogger().write_log('INFO', 'val_metric', context_dict=elastic_val_metrics)
 
     def _metrics_to_console(self,  # pylint: disable=no-self-use
                             train_metrics: dict,

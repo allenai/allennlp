@@ -41,9 +41,9 @@ class ElasticLogger:
 
                 additional_text = " ".join([key + ': ' + str(context_dict[key]) + ',' for key in fields_to_print])
 
-                print(level + '|' + context_dict['log_timestamp'] + ': ' + message )
-                if len(additional_text) > 0:
-                    print(additional_text)
+                #print(level + '|' + context_dict['log_timestamp'] + ': ' + message )
+                #if len(additional_text) > 0:
+                #    print(additional_text)
 
                 if level=='ERROR':
                     print(context_dict['stacktrace'])
