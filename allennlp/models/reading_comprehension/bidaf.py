@@ -230,7 +230,7 @@ class BidirectionalAttentionFlow(Model):
                                                                                    passage_length,
                                                                                    modeling_dim)
 
-        # Shape: (batch_size, passage_length, encoding_dim * 4 + modeling_dim * 3)
+        # Shape: (batch_size, passag_length, encoding_dim * 4 + modeling_dim * 3)
         span_end_representation = torch.cat([final_merged_passage,
                                              modeled_passage,
                                              tiled_start_representation,
