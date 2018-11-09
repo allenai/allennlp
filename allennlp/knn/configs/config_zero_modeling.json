@@ -69,12 +69,8 @@
             "tensor_2_dim": 200
         },
         "modeling_layer": {
-            "type": "lstm",
-            "bidirectional": true,
-            "input_size": 800,
-            "hidden_size": 100,
-            "num_layers": 0,
-            "dropout": 0.2
+            "type": "pass_through_encoder",
+            "input_dim": 800
         },
         "span_end_encoder": {
             "type": "lstm",
