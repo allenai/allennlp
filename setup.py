@@ -53,6 +53,9 @@ run chmod 600 ./pypirc so only you can read/write.
 from setuptools import setup, find_packages
 import sys
 
+from Cython.Build import cythonize
+import numpy
+
 # PEP0440 compatible formatted version, see:
 # https://www.python.org/dev/peps/pep-0440/
 #
@@ -131,7 +134,8 @@ setup(name='allennlp',
           'conllu==0.11',
           'parsimonious==0.8.0',
           'ftfy',
-          'sqlparse==0.2.4'
+          'sqlparse==0.2.4',
+          'Cython'
       ],
       scripts=["bin/allennlp"],
       setup_requires=setup_requirements,
@@ -145,4 +149,6 @@ setup(name='allennlp',
       ],
       include_package_data=True,
       python_requires='>=3.6.1',
+      ext_modules=cythonize('allennlp/modules/_fast_sampler.pyx'),
+      include_dirs=[numpy.get_include()],
       zip_safe=False)

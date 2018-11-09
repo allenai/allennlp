@@ -8,7 +8,6 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.masked_layer_norm import MaskedLayerNorm
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
-from allennlp.modules.token_embedders import Embedding
 from allennlp.modules.sampled_softmax_loss import SampledSoftmaxLoss
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
 from allennlp.nn.util import get_text_field_mask, remove_sentence_boundaries
@@ -22,45 +21,28 @@ class _SoftmaxLoss(torch.nn.Module):
     """
     def __init__(self,
                  num_words: int,
-                 embedding_dim: int,
-                 embedding: Embedding = None) -> None:
+                 embedding_dim: int) -> None:
         super().__init__()
 
-        self.tie_embeddings = token_encoder is not None
+        # TODO(joelgrus): implement tie_embeddings (maybe)
+        self.tie_embeddings = False
 
-        # Glorit init (std=(1.0 / sqrt(fan_in))
-        if self.tie_embeddings:
-            self.softmax_w = token_encoder
-            # +1 for shape to include padding dimension
-            self.softmax_b = torch.nn.Parameter(torch.zeros(num_words + 1))
-        else:
-            self.softmax_w = torch.nn.Parameter(
-                    torch.randn(embedding_dim, num_words) / np.sqrt(embedding_dim)
-            )
-            self.softmax_b = torch.nn.Parameter(torch.zeros(num_words))
+        self.softmax_w = torch.nn.Parameter(
+                torch.randn(embedding_dim, num_words) / np.sqrt(embedding_dim)
+        )
+        self.softmax_b = torch.nn.Parameter(torch.zeros(num_words))
 
     def forward(self, embeddings: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         # pylint: disable=arguments-differ
         # embeddings is size (n, embedding_dim)
         # targets is (batch_size, ) with the correct class id
         # Does not do any count normalization / divide by batch size
-        if self.tie_embeddings:
-            softmax_w = self.softmax_w.weight.t()
-        else:
-            softmax_w = self.softmax_w
-
         probs = torch.nn.functional.log_softmax(
-                torch.matmul(embeddings, softmax_w) + self.softmax_b,
+                torch.matmul(embeddings, self.softmax_w) + self.softmax_b,
                 dim=-1
         )
 
-        if self.tie_embeddings:
-            # need to add back in padding dim!
-            targets_ = targets + 1
-        else:
-            targets_ = targets
-
-        return torch.nn.functional.nll_loss(probs, targets_.long(), reduction="sum")
+        return torch.nn.functional.nll_loss(probs, targets.long(), reduction="sum")
 
 
 @Model.register('bidirectional-language-model')
@@ -79,7 +61,8 @@ class BidirectionalLanguageModel(Model):
     Parameters
     ----------
     vocab: ``Vocabulary``
-    embedding: ``Embedding``
+    text_field_embedder: ``TextFieldEmbedder``
+        Used to embed the indexed tokens we get in ``forward``.
     contextualizer: ``Seq2SeqEncoder``
         Used to "contextualize" the embeddings. As described above,
         this encoder must not cheat by peeking ahead.
@@ -103,13 +86,12 @@ class BidirectionalLanguageModel(Model):
     """
     def __init__(self,
                  vocab: Vocabulary,
-                 embedding: Embedding,
+                 text_field_embedder: TextFieldEmbedder,
                  contextualizer: Seq2SeqEncoder,
                  layer_norm: Optional[MaskedLayerNorm] = None,
                  dropout: float = None,
                  loss_scale: Union[float, str] = 1.0,
                  remove_bos_eos: bool = True,
-                 embedder_key: str = None,
                  num_samples: int = None) -> None:
         super().__init__(vocab)
         self._text_field_embedder = text_field_embedder
@@ -122,8 +104,6 @@ class BidirectionalLanguageModel(Model):
         # The dimension for making predictions just in the forward
         # (or backward) direction.
         self._forward_dim = contextualizer.get_output_dim() // 2
-
-        self._tie_embeddings = tie_embeddings
 
         # TODO(joelgrus): more sampled softmax configuration options
         if num_samples is not None:

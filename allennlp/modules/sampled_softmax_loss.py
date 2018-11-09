@@ -46,16 +46,6 @@ class SampledSoftmaxLoss(torch.nn.Module):
     """
     Based on the default log_uniform_candidate_sampler in tensorflow
 
-    To tie input/output embeddings with character inputs, you must provide:
-        tie_embeddings = True
-        token_embedder = a torch.nn.Module that takes character ids and returns token embeddings
-        vocab_char_ids = a size (n_words, 50) matrix of character ids for the vocab
-    To tie input/output embeddings with token ids, you must provide:
-        tie_embeddings=False
-        token_embedder=the token Embedding module
-        use_character_inputs=False
-        sparse=True
-
     NOTE num_words DOES NOT include padding id.
     NOTE: In all cases except (tie_embeddings=True and use_character_inputs=False)
         the weights are dimensioned as num_words and do not include an entry for the padding (0) id.
@@ -72,11 +62,6 @@ class SampledSoftmaxLoss(torch.nn.Module):
         During training take this many samples. Must be less than num_words.
     sparse, ``bool``, optional (default = False)
         If this is true, we use a sparse embedding matrix.
-    tie_embeddings, ``bool``, optional (default = False)
-        To tie input/output embeddings with character inputs, you must also
-        provide
-    token_encoder, ``torch.nn.Module``, optional (default = None)
-        The module that takes token / character ids and returns embeddings
     unk_id, ``int``, optional (default = None)
         If provided, the id that represents unknown characters.
     use_character_inputs, ``bool``, optional (default = True)
@@ -89,28 +74,14 @@ class SampledSoftmaxLoss(torch.nn.Module):
                  embedding_dim: int,
                  num_samples: int,
                  sparse: bool = False,
-                 tie_embeddings: bool = False,
-                 token_encoder: torch.nn.Module = None,
-                 vocab_char_ids: torch.Tensor = None,
                  unk_id: int = None,
                  use_character_inputs: bool = True,
                  use_fast_sampler: bool = False) -> None:
         super().__init__()
 
-        # Allowed cases
-        # 1. use_character_inputs = True, tie_embeddings = True, sparse = False
-        # 2. use_character_inputs = True, tie_embeddings = False, sparse = True
-        # 3. use_character_inputs = True, tie_embeddings = False, sparse = False
-        if use_character_inputs:
-            assert not (tie_embeddings and sparse)
-        # 4. use_character_inputs = False, tie_embeddings = *, sparse = True
-        else:
-            # only support sparse embeddings with token inputs
-            assert sparse
+        # TODO(joelgrus): implement tie_embeddings (maybe)
+        self.tie_embeddings = False
 
-        # Disallowed cases
-        # 1. use_character_inputs = True, tie_embeddings = True, sparse = True
-        # 2. use_character_inputs = False, tie_embeddings = *, sparse = False
         assert num_samples < num_words
 
         if use_fast_sampler:
@@ -119,22 +90,13 @@ class SampledSoftmaxLoss(torch.nn.Module):
             self.choice_func = _choice
 
         # Glorit init (std=(1.0 / sqrt(fan_in))
-        if sparse and not tie_embeddings:
-            # (sparse = True, tie_embeddings = False, use_character_inputs = *)
-            # so create our own sparse embedding
+        if sparse:
+            # create our own sparse embedding
             self.softmax_w = torch.nn.Embedding(num_words, embedding_dim, sparse=True)
             self.softmax_w.weight.data.normal_(mean=0.0, std=1.0 / np.sqrt(embedding_dim))
             self.softmax_b = torch.nn.Embedding(num_words, 1, sparse=True)
             self.softmax_b.weight.data.fill_(0.0)
-        elif tie_embeddings and not use_character_inputs:
-            # (sparse = *, tie_embeddings = True, use_character_inputs = False)
-            # so use token_encoder as the embedding
-            # W weights are tied
-            self.softmax_w = token_encoder
-            self.softmax_b = torch.nn.Embedding(num_words + 1, 1, sparse=True)
-            self.softmax_b.weight.data.fill_(0.0)
-        elif not tie_embeddings:
-            # (sparse = False (necessarily), tie_embeddings = False, use_character_inputs = *)
+        else:
             # just create tensors to use as the embeddings
             # Glorit init (std=(1.0 / sqrt(fan_in))
             self.softmax_w = torch.nn.Parameter(torch.randn(num_words, embedding_dim) / np.sqrt(embedding_dim))
@@ -143,11 +105,7 @@ class SampledSoftmaxLoss(torch.nn.Module):
         self.sparse = sparse
         self.use_character_inputs = use_character_inputs
 
-        self.tie_embeddings = tie_embeddings
         if use_character_inputs:
-            if vocab_char_ids is not None:
-                self.register_buffer('_vocab_char_ids', vocab_char_ids)
-            self._token_encoder = token_encoder
             self._unk_id = unk_id
 
         self._num_samples = num_samples
@@ -156,18 +114,10 @@ class SampledSoftmaxLoss(torch.nn.Module):
         self.initialize_num_words()
 
     def initialize_num_words(self):
-        if self.sparse and not self.tie_embeddings:
-            # (sparse = True, tie_embeddings = False, use_character_inputs = *)
+        if self.sparse:
             num_words = self.softmax_w.weight.size(0)
-        elif self.tie_embeddings and not self.use_character_inputs:
-            # (sparse = *, tie_embeddings = True, use_character_inputs = False)
-            num_words = self.softmax_b.weight.size(0) - 1
-        elif not self.tie_embeddings:
-            # (sparse = False (necessarily), tie_embeddings = False, use_character_inputs = *)
-            num_words = self.softmax_w.size(0)
         else:
-            # (sparse = *, tie_embeddings = True, use_character_inputs = True)
-            num_words = self._num_words
+            num_words = self.softmax_w.size(0)
 
         self._num_words = num_words
         self._log_num_words_p1 = np.log(num_words + 1)
@@ -215,57 +165,23 @@ class SampledSoftmaxLoss(torch.nn.Module):
         long_targets.requires_grad_(False)
 
         # Get the softmax weights (so we can compute logits)
-        if not self.use_character_inputs or (self.use_character_inputs and not self.tie_embeddings):
-            # do it via lookup
-            if self.tie_embeddings:
-                # with token ids, need to add 1 to compensate for padding
-                all_ids = torch.cat([long_targets, sampled_ids], dim=0) + 1
-            else:
-                all_ids = torch.cat([long_targets, sampled_ids], dim=0)
+        all_ids = torch.cat([long_targets, sampled_ids], dim=0)
 
-            if self.sparse:
-                all_ids_1 = all_ids.unsqueeze(1)
-                all_w = self.softmax_w(all_ids_1).squeeze(1)
-                all_b = self.softmax_b(all_ids_1).squeeze(2).squeeze(1)
-            else:
-                all_w = torch.nn.functional.embedding(all_ids, self.softmax_w)
-                # the unsqueeze / squeeze works around an issue with 1 dim
-                # embeddings
-                all_b = torch.nn.functional.embedding(all_ids, self.softmax_b.unsqueeze(1)).squeeze(1)
-
-            batch_size = long_targets.size(0)
-            true_w = all_w[:batch_size, :]
-            sampled_w = all_w[batch_size:, :]
-            true_b = all_b[:batch_size]
-            sampled_b = all_b[batch_size:]
-
+        if self.sparse:
+            all_ids_1 = all_ids.unsqueeze(1)
+            all_w = self.softmax_w(all_ids_1).squeeze(1)
+            all_b = self.softmax_b(all_ids_1).squeeze(2).squeeze(1)
         else:
-            # The weights are tied with character inputs.
-            # The true_w is the target_token_embedding
-            # except for UNK
-            batch_size = targets.size(0)
-            unk_locations = long_targets == self._unk_id
-            num_unk = unk_locations.long().sum().item()
-            if num_unk > 0:
-                unk_char_ids = self._vocab_char_ids[self._unk_id, :].view(1, 1, -1)
-                # need to expand unk embedding for the masked_scatter
-                unk_embedding = self._token_encoder(unk_char_ids)['token_embedding'].squeeze(1).expand(num_unk, -1)
-                true_w = target_token_embedding.masked_scatter(unk_locations.unsqueeze(1), unk_embedding)
-            else:
-                # don't need to worry about unk
-                true_w = target_token_embedding
+            all_w = torch.nn.functional.embedding(all_ids, self.softmax_w)
+            # the unsqueeze / squeeze works around an issue with 1 dim
+            # embeddings
+            all_b = torch.nn.functional.embedding(all_ids, self.softmax_b.unsqueeze(1)).squeeze(1)
 
-            # compute the sampled token embedding
-            # need to do a .data on sampled_ids since self._vocab_char_ids
-            # is a tensor and not Variable
-            sample_char_ids = self._vocab_char_ids[sampled_ids.data, :]
-            # sample_char_ids = (n_samples, 50)
-            # the token encoder takes (batch_size, sequence, 50)
-            encoder_output = self._token_encoder(sample_char_ids.unsqueeze(1))
-            sampled_w = encoder_output['token_embedding'].squeeze(1)
-
-            true_b = 0.0
-            sampled_b = 0.0
+        batch_size = long_targets.size(0)
+        true_w = all_w[:batch_size, :]
+        sampled_w = all_w[batch_size:, :]
+        true_b = all_b[:batch_size]
+        sampled_b = all_b[batch_size:]
 
         # compute the logits and remove log expected counts
         # [batch_size, ]
@@ -293,34 +209,10 @@ class SampledSoftmaxLoss(torch.nn.Module):
         nll_loss = -1.0 * log_softmax[:, 0].sum()
         return nll_loss
 
-    def compute_embeddings_from_ids(self):
-        """
-        Compute the embeddings for the vocab -- must call this before
-        evaluating with tied embeddings with character inputs
-        """
-        if not (self.tie_embeddings and self.use_character_inputs):
-            return
-
-        embeddings = self._vocab_char_ids.new_zeros(self._num_words, self._embedding_dim).float()
-        batch_size = 1024
-        start = 0
-        while start < self._n_words:
-            end = start + batch_size
-            char_ids = self._vocab_char_ids[start:end, :].unsqueeze(1)
-            embeds = self._token_encoder(char_ids)['token_embedding'].squeeze(1)
-            embeddings.data[start:end, :].copy_(embeds.data)
-            start = end
-
-        embeddings.detach_()
-        self.softmax_w_embeddings = embeddings
-
     def _forward_eval(self, embeddings: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         # pylint: disable=invalid-name
         # evaluation mode, use full softmax
-        if self.tie_embeddings and self.use_character_inputs:
-            w = self.softmax_w_embeddings
-            b = 0.0
-        elif self.sparse:
+        if self.sparse:
             w = self.softmax_w.weight
             b = self.softmax_b.weight.squeeze(1)
         else:
@@ -359,7 +251,8 @@ class SampledSoftmaxLoss(torch.nn.Module):
         # P(class) = (log(class + 2) - log(class + 1)) / log(range_max + 1)
         target_probs = torch.log((targets.float() + 2.0) / (targets.float() + 1.0)) / self._log_num_words_p1
         target_expected_count = -1.0 * (torch.exp(num_tries * torch.log1p(-target_probs)) - 1.0)
-        sampled_probs = torch.log((sampled_ids.float() + 2.0) / (sampled_ids.float() + 1.0)) / self._log_num_words_p1
+        sampled_probs = torch.log((sampled_ids.float() + 2.0) /
+                                  (sampled_ids.float() + 1.0)) / self._log_num_words_p1
         sampled_expected_count = -1.0 * (torch.exp(num_tries * torch.log1p(-sampled_probs)) - 1.0)
 
         sampled_ids.requires_grad_(False)

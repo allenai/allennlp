@@ -63,6 +63,9 @@ sqlparse==0.2.4
 # For text normalization
 ftfy
 
+# For the fast sampler
+Cython
+
 #### ESSENTIAL LIBRARIES USED IN SCRIPTS ####
 
 # Plot graphs for learning rate finder
