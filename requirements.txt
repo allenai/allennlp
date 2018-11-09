@@ -140,3 +140,5 @@ pypandoc
 
 # Pypi uploads
 twine==1.11.0
+
+Elasticsearch

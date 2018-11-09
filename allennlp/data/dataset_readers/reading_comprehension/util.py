@@ -141,7 +141,8 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
                                         passage_text: str,
                                         token_spans: List[Tuple[int, int]] = None,
                                         answer_texts: List[str] = None,
-                                        additional_metadata: Dict[str, Any] = None) -> Instance:
+                                        additional_metadata: Dict[str, Any] = None,
+                                        passage_title: str = "") -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
     in a reading comprehension model.
@@ -188,6 +189,9 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     # This is separate so we can reference it later with a known type.
     passage_field = TextField(passage_tokens, token_indexers)
     fields['passage'] = passage_field
+
+    # commented out the title field
+    # fields['passage_title'] = MetadataField(passage_title)
     fields['question'] = TextField(question_tokens, token_indexers)
     metadata = {'original_passage': passage_text, 'token_offsets': passage_offsets,
                 'question_tokens': [token.text for token in question_tokens],

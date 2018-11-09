@@ -54,6 +54,7 @@ class SquadReader(DatasetReader):
             dataset = dataset_json['data']
         logger.info("Reading the dataset")
         for article in dataset:
+            paragraph_title = article["title"]
             for paragraph_json in article['paragraphs']:
                 paragraph = paragraph_json["context"]
                 tokenized_paragraph = self._tokenizer.tokenize(paragraph)
@@ -67,7 +68,7 @@ class SquadReader(DatasetReader):
                                                      paragraph,
                                                      zip(span_starts, span_ends),
                                                      answer_texts,
-                                                     tokenized_paragraph)
+                                                     tokenized_paragraph, paragraph_title)
                     yield instance
 
     @overrides
@@ -76,7 +77,8 @@ class SquadReader(DatasetReader):
                          passage_text: str,
                          char_spans: List[Tuple[int, int]] = None,
                          answer_texts: List[str] = None,
-                         passage_tokens: List[Token] = None) -> Instance:
+                         passage_tokens: List[Token] = None,
+                         paragraph_title: str = "") -> Instance:
         # pylint: disable=arguments-differ
         if not passage_tokens:
             passage_tokens = self._tokenizer.tokenize(passage_text)
@@ -104,4 +106,4 @@ class SquadReader(DatasetReader):
                                                         self._token_indexers,
                                                         passage_text,
                                                         token_spans,
-                                                        answer_texts)
+                                                        answer_texts, passage_title=paragraph_title)
