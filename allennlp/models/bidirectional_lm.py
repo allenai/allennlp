@@ -8,6 +8,8 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.masked_layer_norm import MaskedLayerNorm
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
+from allennlp.modules.token_embedders import Embedding
+from allennlp.modules.sampled_softmax_loss import SampledSoftmaxLoss
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
 from allennlp.nn.util import get_text_field_mask, remove_sentence_boundaries
 
@@ -21,7 +23,7 @@ class _SoftmaxLoss(torch.nn.Module):
     def __init__(self,
                  num_words: int,
                  embedding_dim: int,
-                 token_encoder: torch.nn.Parameter = None) -> None:
+                 embedding: Embedding = None) -> None:
         super().__init__()
 
         self.tie_embeddings = token_encoder is not None
@@ -77,8 +79,7 @@ class BidirectionalLanguageModel(Model):
     Parameters
     ----------
     vocab: ``Vocabulary``
-    text_field_embedder: ``TextFieldEmbedder``
-        Used to embed the indexed tokens we get in ``forward``.
+    embedding: ``Embedding``
     contextualizer: ``Seq2SeqEncoder``
         Used to "contextualize" the embeddings. As described above,
         this encoder must not cheat by peeking ahead.
@@ -95,15 +96,21 @@ class BidirectionalLanguageModel(Model):
         Typically the provided token indexes will be augmented with
         begin-sentence and end-sentence tokens. If this flag is True
         the corresponding embeddings will be removed from the return values.
+    num_samples: ``int``, optional (default: None)
+        If provided, the model will use ``SampledSoftmaxLoss``
+        with the specified number of samples. Otherwise, it will use
+        the full ``_SoftmaxLoss`` defined above.
     """
     def __init__(self,
                  vocab: Vocabulary,
-                 text_field_embedder: TextFieldEmbedder,
+                 embedding: Embedding,
                  contextualizer: Seq2SeqEncoder,
                  layer_norm: Optional[MaskedLayerNorm] = None,
                  dropout: float = None,
                  loss_scale: Union[float, str] = 1.0,
-                 remove_bos_eos: bool = True) -> None:
+                 remove_bos_eos: bool = True,
+                 embedder_key: str = None,
+                 num_samples: int = None) -> None:
         super().__init__(vocab)
         self._text_field_embedder = text_field_embedder
         self._layer_norm = layer_norm or (lambda x: x)
@@ -116,9 +123,16 @@ class BidirectionalLanguageModel(Model):
         # (or backward) direction.
         self._forward_dim = contextualizer.get_output_dim() // 2
 
-        # TODO(joelgrus): Allow SampledSoftmaxLoss here by configuration
-        self._softmax_loss = _SoftmaxLoss(num_words=vocab.get_vocab_size(),
-                                          embedding_dim=self._forward_dim)
+        self._tie_embeddings = tie_embeddings
+
+        # TODO(joelgrus): more sampled softmax configuration options
+        if num_samples is not None:
+            self._softmax_loss = SampledSoftmaxLoss(num_words=vocab.get_vocab_size(),
+                                                    embedding_dim=self._forward_dim,
+                                                    num_samples=num_samples)
+        else:
+            self._softmax_loss = _SoftmaxLoss(num_words=vocab.get_vocab_size(),
+                                              embedding_dim=self._forward_dim)
 
         self.register_buffer('_last_average_loss', torch.zeros(1))
 
