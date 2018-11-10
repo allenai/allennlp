@@ -5,20 +5,15 @@ from allennlp.data.tokenizers import WordTokenizer
 
 # the class for loaded the instances from lucene and use them for QA
 class NearestNeighborQuestionExtractor():
-    # uses lucene to extract nearest neghbor instances
-    lucene_path = ""
-
     qTerms = {"which", "what", "where", "who", "whom", "how", "when", "why", "whose"}
 
+    # uses lucene to extract nearest neghbor instances
     from elasticsearch import Elasticsearch
     es = Elasticsearch(['http://bronte.cs.illinois.edu'], port=8080)
 
     tokenizer = WordTokenizer()
 
-    def retrieve_best_questions(self):
-        pass
-
-    def get_elasticsearch_output(self, question, title: str = ""):
+    def retrieve_best_questions(self, question, title: str = "", topK: int = 5):
         tokens = [t.text.lower() for t in self.tokenizer.tokenize(question)]
 
         # filter the wh-terms in the question
@@ -26,14 +21,25 @@ class NearestNeighborQuestionExtractor():
 
         question_terms_bigrams = []
         for i, t in enumerate(tokens):
-            if tokens[i] in self.qTerms or tokens[i + 1] in self.qTerms:
+            if i + 1 < len(tokens) and (tokens[i] in self.qTerms or tokens[i + 1] in self.qTerms):
                 question_terms_bigrams.append(tokens[i] + " " + tokens[i + 1])
 
-        print(question_terms)
-        print(question_terms_bigrams)
+        # print(question_terms)
+        # print(question_terms_bigrams)
+
+        def rank(question_text, score):
+            # if it contains bigram, should be ranked one,
+            # if it contains unigram, should be ranked two,
+            # otherwise the rank should be three
+            if any(x in question_text for x in question_terms_bigrams):
+                return 200
+            elif any(x in question_text for x in question_terms):
+                return 100
+            else:
+                return score # lucene score
 
         res = self.es.search(index="squad_questions", doc_type="text", body={"query": {"match": {"question": question}}}, size=50)
-        print("%d documents found:" % res['hits']['total'])
+        # print("%d documents found:" % res['hits']['total'])
         output = []
         for doc in res['hits']['hits']:
             question_text = doc['_source']["question"].lower()
@@ -42,21 +48,22 @@ class NearestNeighborQuestionExtractor():
             span_start = doc['_source']["span_start"]
             span_end = doc['_source']["span_end"]
             question_title = doc['_source']["title"]
-            print(doc['_source']["question"])
+            score = doc['_score']
+            r = rank(question_text, score)
+            # print(doc['_source']["question"], r)
             if question_title != title:
-                output.append((question_text, question_tokens, passage_tokens, span_start, span_end))
-
-
-        # def rank(item):
-            # if it contains bigram, should be ranked one,
-            # if it contains unigram, should be ranked two,
-            # otherwise the rank should be three
-        # if item[0]:
+                output.append((question_text, r, question_tokens, passage_tokens, span_start, span_end))
 
         if len(question_terms) > 0:
-            sorted([('abc', 121), ('abc', 231), ('abc', 148), ('abc', 221)], key=lambda x: x[1])
-        else:
-            output = output[0:20]
+            # print("rerank the items")
+            # sorted(output, key=lambda x: x[1])
+            output.sort(key=lambda x: -x[1])
+
+        output = output[0:topK]
+
+        if False:
+            for x in output:
+                print(x[0], x[1])
 
         return output
 
@@ -84,6 +91,6 @@ def createQuestionJson():
 
 if __name__ == '__main__':
     extractor = NearestNeighborQuestionExtractor()
-    extractor.get_elasticsearch_output("When did the Scholastic Magazine of Notre dame begin publishing?")
+    extractor.retrieve_best_questions("When did the Scholastic Magazine of Notre dame begin publishing?")
     # createQuestionJson()
 
