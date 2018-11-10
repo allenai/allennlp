@@ -55,12 +55,8 @@
         },
         "num_highway_layers": 2,
         "phrase_layer": {
-            "type": "lstm",
-            "bidirectional": true,
-            "input_size": 200,
-            "hidden_size": 100,
-            "num_layers": 1,
-            "dropout": 0.2
+            "type": "pass_through",
+            "input_dim": 200
         },
         "similarity_function": {
             "type": "linear",
@@ -69,12 +65,16 @@
             "tensor_2_dim": 200
         },
         "modeling_layer": {
-            "type": "pass_through",
-            "input_dim": 800
+            "type": "lstm",
+            "bidirectional": true,
+            "input_size": 800,
+            "hidden_size": 100,
+            "num_layers": 2,
+            "dropout": 0.2
         },
         "span_end_encoder": {
             "type": "pass_through",
-            "input_dim": 3200
+            "input_dim": 1400
         },
         "dropout": 0.2
     },
