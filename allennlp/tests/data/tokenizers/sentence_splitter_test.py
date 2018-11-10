@@ -10,18 +10,18 @@ class TestSentenceSplitter(AllenNlpTestCase):
     def test_sentence_passes_through_correctly(self):
         splitter = SpacyRuleBasedSentenceSplitter()
         text = ("This is the first sentence. This is the second sentence! "
-                "Here's the '3rd' sentence - cool. And this is a fourth sentence.")
+                "Here's the '3rd' sentence - yes, it is. And yes; this is a fourth sentence?")
         tokens = splitter.split_sentences(text)
         expected_tokens = ["This is the first sentence.", "This is the second sentence!",
-                           "Here's the '3rd' sentence - cool.", "And this is a fourth sentence."]
+                           "Here's the '3rd' sentence - yes, it is.", "And yes; this is a fourth sentence?"]
         assert tokens == expected_tokens
 
     def test_batch_rule_based_sentence_splitting(self):
         splitter = SpacyRuleBasedSentenceSplitter()
-        text = ["This is a sentence. This is a second subsentence.",
-                "This isn't a sentence. This is a second subsentence! This is a third subsentence.",
+        text = ["This is a sentence. This is a second sentence.",
+                "This isn't a sentence. This is a second sentence! This is a third sentence.",
                 "This is the 3rd sentence?"
-                "Here's the 'fourth' sentence - cool. And this is a second subsentence."]
+                "Here's the 'fourth' sentence - yes, it is. And this is a second sentence."]
         batch_split = splitter.batch_split_sentences(text)
         separately_split = [splitter.split_sentences(doc) for doc in text]
         assert len(batch_split) == len(separately_split)
@@ -32,10 +32,10 @@ class TestSentenceSplitter(AllenNlpTestCase):
 
     def test_batch_statistical_sentence_splitting(self):
         splitter = SpacyStatisticalSentenceSplitter()
-        text = ["This is a sentence. This is a second subsentence.",
-                "This isn't a sentence. This is a second subsentence! This is a third subsentence.",
+        text = ["This is a sentence. This is a second sentence.",
+                "This isn't a sentence. This is a second sentence! This is a third sentence.",
                 "This is the 3rd sentence?"
-                "Here's the 'fourth' sentence - cool. And this is a second subsentence."]
+                "Here's the 'fourth' sentence - yes, it is. And this is a second sentence."]
         batch_split = splitter.batch_split_sentences(text)
         separately_split = [splitter.split_sentences(doc) for doc in text]
         assert len(batch_split) == len(separately_split)
