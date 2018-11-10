@@ -45,9 +45,9 @@ class RegexFilter(WordFilter):
 
     @overrides
     def filter_words(self, words: List[Token]) -> List[Token]:
-        bad_tokens = [word for word in words
+        stopwords = [word for word in words
                       if re.match(pattern=self._joined_pattern, string=word.text)]
-        return [word for word in words if word not in bad_tokens]
+        return [word for word in words if word not in stopwords]
 
 @WordFilter.register('stopwords')
 class StopwordFilter(WordFilter):
