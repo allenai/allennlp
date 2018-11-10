@@ -86,10 +86,11 @@ def split_table_and_column_names(table: str) -> Iterable[str]:
         return [table]
     return partitioned
 
-def clean_and_split_sql(sql: str) -> List[str]:
+def clean_and_split_sql(sql: str, sentence_variables: Dict[str, str]) -> List[str]:
     """
-    Cleans up and unifies a SQL query. This involves unifying quoted strings
-    and splitting brackets which aren't formatted consistently in the data.
+    Cleans up and unifies a SQL query. This involves unifying quoted strings (including
+    variables in the query which should have quotes, but don't) and splitting brackets
+    which aren't formatted consistently in the data.
     """
     sql_tokens: List[str] = []
     for token in sql.strip().split():
@@ -99,7 +100,21 @@ def clean_and_split_sql(sql: str) -> List[str]:
             sql_tokens.extend(split_table_and_column_names(token[-1]))
         else:
             sql_tokens.extend(split_table_and_column_names(token))
-    return sql_tokens
+
+    # It's important that this is sorted in decending order by length,
+    # so that we don't accidentally substitute names which are sub strings of other
+    # variable names.
+    variable_names = sorted(list(sentence_variables.keys()), key=lambda x: -len(x))
+    final_sql_tokens: List[str] = []
+    for token in sql_tokens:
+        new_token = token
+        for variable in variable_names:
+            if variable in token:
+                new_token = f'\'{variable}\''
+                break
+        final_sql_tokens.append(new_token)
+
+    return final_sql_tokens
 
 def resolve_primary_keys_in_schema(sql_tokens: List[str],
                                    schema: Dict[str, List[TableColumn]]) -> List[str]:
@@ -234,7 +249,7 @@ def process_sql_data(data: List[JsonDict],
                     else:
                         seen_sentences.add(key)
 
-                sql_tokens = clean_and_split_sql(sql)
+                sql_tokens = clean_and_split_sql(sql, text_vars)
                 if remove_unneeded_aliases:
                     sql_tokens = clean_unneeded_aliases(sql_tokens)
                 if schema is not None:
