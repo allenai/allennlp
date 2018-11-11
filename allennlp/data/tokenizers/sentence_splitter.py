@@ -44,8 +44,8 @@ class SpacySentenceSplitter(SentenceSplitter):
                  pos_tags: bool = False,
                  ner: bool = False) -> None:
         # we need spacy's dependency parser if we're not using rule-based sentence boundary detection.
-        use_parse = not rule_based
-        self.spacy = get_spacy_model(language, pos_tags=pos_tags, parse=use_parse, ner=ner)
+        parse = not rule_based
+        self.spacy = get_spacy_model(language, pos_tags=pos_tags, parse=parse, ner=ner)
         if rule_based:
             # we use `sbd`, a built-in spacy module for rule-based sentence boundary detection. 
             if not self.spacy.has_pipe('sbd'):
