@@ -4,7 +4,6 @@ from allennlp.data.tokenizers.word_filter import RegexFilter
 from allennlp.data.tokenizers.word_filter import StopwordFilter
 from allennlp.data.tokenizers.token import Token
 
-
 class TestWordFilter(AllenNlpTestCase):
     def setUp(self):
         super(TestWordFilter, self).setUp()
@@ -36,12 +35,12 @@ class TestWordFilter(AllenNlpTestCase):
         assert tokens == expected_tokens
 
     def test_filters_stopwords_from_file_correctly(self):
-        with open('/tmp/tmp_stopwords.txt', 'w+') as f:
+        stopword_file = os.path.join(self.TEST_DIR, 'stopwords.txt')
+        with open(stopword_file, 'w+') as f:
             for word in ["has", "this"]:
                 f.write(word + "\n")
-        filter_ = StopwordFilter(stopword_file="/tmp/tmp_stopwords.txt",
+        filter_ = StopwordFilter(stopword_file=stopword_file,
                                  tokens_to_add=["punctuations"])
         expected_tokens = ['45', '(', 'sentence', ')', '9943434', '"', '"', '.']
         tokens = [t.text for t in filter_.filter_words(self.sentence)]
-        os.remove('/tmp/tmp_stopwords.txt')
         assert tokens == expected_tokens

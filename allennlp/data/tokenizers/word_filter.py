@@ -4,6 +4,7 @@ from overrides import overrides
 
 from allennlp.common import Registrable
 from allennlp.data.tokenizers.token import Token
+from allennlp.common.file_utils import read_set_from_file
 
 
 class WordFilter(Registrable):
@@ -41,8 +42,7 @@ class RegexFilter(WordFilter):
     Parameters
     ----------
     patterns : ``List[str]``
-        List of regex patterns to filter by.
-
+        Words matching these regex patterns will be removed as stopwords.
     """
     def __init__(self,
                  patterns: List[str]) -> None:
@@ -65,16 +65,16 @@ class StopwordFilter(WordFilter):
     Parameters
     ----------
     stopword_file : ``str``, optional
-        A filename containing stopwords to filter by (file format is one stopword per line).
+        A filename containing stopwords to filter out (file format is one stopword per line).
     tokens_to_add : ``List[str]``, optional
-        A list of tokens to additionally filter by.
+        A list of tokens to additionally filter out.
     """
     def __init__(self,
                  stopword_file: str=None,
                  tokens_to_add: List[str]=None) -> None:
         self._tokens_to_add = tokens_to_add or []
         if stopword_file is not None:
-            self.stopwords = self._set_from_file(stopword_file)
+            self.stopwords = read_set_from_file(stopword_file)
         else:
             self.stopwords = set(['I', 'a', 'aboard', 'about', 'above', 'accordance', 'according',
                                   'across', 'after', 'against', 'along', 'alongside', 'also', 'am',
@@ -101,22 +101,6 @@ class StopwordFilter(WordFilter):
                                   "'", '"', '&', '$', '#', '@', '(', ')', '?'])
         for token in self._tokens_to_add:
             self.stopwords.add(token)
-
-    def _set_from_file(self, stopword_file: str) -> Set[str]:
-        '''
-        Extract stopwords from a file.
-        Expected file format is one stopword per line.
-
-        Returns
-        _______
-        stopwords: ``Set[str]``
-            A de-duped collection of stopwords.
-        '''
-        stopwords = set()
-        with open(stopword_file, 'r') as f:
-            for line in f:
-                stopwords.add(line.rstrip())
-        return stopwords
 
     @overrides
     def filter_words(self, words: List[Token]) -> List[Token]:
