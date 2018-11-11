@@ -7,19 +7,16 @@ from allennlp.data.tokenizers.token import Token
 
 class SentenceSplitter(Registrable):
     """
-    A ``SentenceSplitter`` splits strings into sentences.  This is typically called a "tokenizer" in NLP,
-    because splitting strings into characters is trivial, but we use ``Tokenizer`` to refer to the
-    higher-level object that splits strings into tokens (which could just be sentence tokens).
-    So, we're using "sentence splitter" here for this.
+    A ``SentenceSplitter`` splits strings into sentences. There are two variants of sentence splitting,
+    one that uses rules (ie punctuation), and another that uses a dependency parse of the text to infer
+    sentence boundaries.
     """
     default_implementation = 'spacy_rulebased'
 
     def batch_split_sentences(self, texts: List[str]) -> List[List[Token]]:
         """
-        Spacy needs to do batch processing, or it can be really slow.  This method lets you take
-        advantage of that if you want.  Default implementation is to just iterate of the sentences
-        and call ``split_sentences``, but the ``SpacySentenceSplitter`` will actually do batched
-        processing.
+        This method lets you take advantage of spacy's batch processing.  
+        Default implementation is to just iterate of the sentences and call ``split_sentences``.
         """
         return [self.split_sentences(text) for text in texts]
 
@@ -33,7 +30,7 @@ class SentenceSplitter(Registrable):
 class SpacyStatisticalSentenceSplitter(SentenceSplitter):
     """
     A ``SentenceSplitter`` that uses spaCy's statistical sentence boundary detection.
-    More accurate but slower, since it uses a dependency parses to detect sentence boundaries.
+    More accurate but slower, since it uses a dependency parse to detect sentence boundaries.
     """
     def __init__(self,
                  language: str = 'en_core_web_sm',
@@ -59,7 +56,7 @@ class SpacyStatisticalSentenceSplitter(SentenceSplitter):
 class SpacyRuleBasedSentenceSplitter(SentenceSplitter):
     """
     A ``SentenceSplitter`` that uses spaCy's rule-based sentence boundary detection.
-    Faster and less memory footprint, since it uses punctuation to detect sentence boundaries.
+    Faster and smaller memory footprint, since it uses punctuation to detect sentence boundaries.
     """
     def __init__(self,
                  language: str = 'en_core_web_sm',
