@@ -31,7 +31,7 @@ class TestSentenceSplitter(AllenNlpTestCase):
         splitter = SpacySentenceSplitter(rule_based=True)
         text = ["This is a sentence. This is a second sentence.",
                 "This isn't a sentence. This is a second sentence! This is a third sentence.",
-                "This is the 3rd sentence?"
+                "This is the 3rd sentence?",
                 "Here's the 'fourth' sentence - yes, it is. And this is a second sentence."]
         batch_split = splitter.batch_split_sentences(text)
         separately_split = [splitter.split_sentences(doc) for doc in text]
@@ -45,7 +45,7 @@ class TestSentenceSplitter(AllenNlpTestCase):
         splitter = SpacySentenceSplitter(rule_based=False)
         text = ["This is a sentence. This is a second sentence.",
                 "This isn't a sentence. This is a second sentence! This is a third sentence.",
-                "This is the 3rd sentence?"
+                "This is the 3rd sentence?",
                 "Here's the 'fourth' sentence - yes, it is. And this is a second sentence."]
         batch_split = splitter.batch_split_sentences(text)
         separately_split = [splitter.split_sentences(doc) for doc in text]

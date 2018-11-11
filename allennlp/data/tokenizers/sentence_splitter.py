@@ -55,4 +55,4 @@ class SpacySentenceSplitter(SentenceSplitter):
 
     @overrides
     def batch_split_sentences(self, texts: List[str]) -> List[List[str]]:
-        return [sentence.string.strip() for sentence in doc.sents for doc in self.spacy.pipe(texts)]
+        return [[sentence.string.strip() for sentence in doc.sents] for doc in self.spacy.pipe(texts)]
