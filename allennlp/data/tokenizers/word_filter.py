@@ -1,4 +1,4 @@
-from typing import List, Set
+from typing import List
 import re
 from overrides import overrides
 
@@ -70,8 +70,8 @@ class StopwordFilter(WordFilter):
         A list of tokens to additionally filter out.
     """
     def __init__(self,
-                 stopword_file: str=None,
-                 tokens_to_add: List[str]=None) -> None:
+                 stopword_file: str = None,
+                 tokens_to_add: List[str] = None) -> None:
         self._tokens_to_add = tokens_to_add or []
         if stopword_file is not None:
             self.stopwords = read_set_from_file(stopword_file)

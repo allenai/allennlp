@@ -18,27 +18,27 @@ class TestWordFilter(AllenNlpTestCase):
 
     def test_filters_punctuation_correctly(self):
         filter_ = RegexFilter(patterns=['\(|\)|\"|\.'])
-        expected_tokens = ["this", "45", "sentence",  "has", "9943434", "punctuations"]
+        expected_tokens = ["this", "45", "sentence", "has", "9943434", "punctuations"]
         tokens = [t.text for t in filter_.filter_words(self.sentence)]
         assert tokens == expected_tokens
 
     def test_filters_multiple_patterns_correctly(self):
         filter_ = RegexFilter(patterns=['\(|\)|\"|\.', "[\d+]"])
-        expected_tokens = ["this", "sentence",  "has", "punctuations"]
+        expected_tokens = ["this", "sentence", "has", "punctuations"]
         tokens = [t.text for t in filter_.filter_words(self.sentence)]
         assert tokens == expected_tokens
 
     def test_filters_no_match_correctly(self):
         filter_ = RegexFilter(patterns=['&'])
-        expected_tokens = ["this", "45", "(", "sentence", ")", "has",  "9943434", '"', "punctuations", '"', '.']
+        expected_tokens = ["this", "45", "(", "sentence", ")", "has", "9943434", '"', "punctuations", '"', '.']
         tokens = [t.text for t in filter_.filter_words(self.sentence)]
         assert tokens == expected_tokens
 
-    def test_filters_stopwords_from_file_correctly(self):
+    def test_filters_from_file_correctly(self):
         stopword_file = os.path.join(self.TEST_DIR, 'stopwords.txt')
-        with open(stopword_file, 'w+') as f:
+        with open(stopword_file, 'w+') as file_:
             for word in ["has", "this"]:
-                f.write(word + "\n")
+                file_.write(word + "\n")
         filter_ = StopwordFilter(stopword_file=stopword_file,
                                  tokens_to_add=["punctuations"])
         expected_tokens = ['45', '(', 'sentence', ')', '9943434', '"', '"', '.']

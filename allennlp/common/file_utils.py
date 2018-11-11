@@ -220,8 +220,8 @@ def read_set_from_file(filename: str) -> Set[str]:
     Expected file format is one item per line.
     '''
     collection = set()
-    with open(filename, 'r') as f:
-        for line in f:
+    with open(filename, 'r') as file_:
+        for line in file_:
             collection.add(line.rstrip())
     return collection
 
