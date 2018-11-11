@@ -40,12 +40,9 @@ class SpacySentenceSplitter(SentenceSplitter):
     """
     def __init__(self,
                  language: str = 'en_core_web_sm',
-                 rule_based: bool = False,
-                 pos_tags: bool = False,
-                 ner: bool = False) -> None:
+                 rule_based: bool = False) -> None:
         # we need spacy's dependency parser if we're not using rule-based sentence boundary detection.
-        parse = not rule_based
-        self.spacy = get_spacy_model(language, pos_tags=pos_tags, parse=parse, ner=ner)
+        self.spacy = get_spacy_model(language, parse=not rule_based, ner=False, pos_tags=False)
         if rule_based:
             # we use `sbd`, a built-in spacy module for rule-based sentence boundary detection. 
             if not self.spacy.has_pipe('sbd'):
@@ -58,8 +55,4 @@ class SpacySentenceSplitter(SentenceSplitter):
 
     @overrides
     def batch_split_sentences(self, texts: List[str]) -> List[List[str]]:
-        def extract_sentences(doc):
-            return [sent.string.strip() for sent in doc.sents]
-
-        return [extract_sentences(doc)
-                for doc in self.spacy.pipe(texts)]
+        return [sentence.string.strip() for sentence in doc.sents for doc in self.spacy.pipe(texts)]
