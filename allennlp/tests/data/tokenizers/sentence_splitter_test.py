@@ -5,14 +5,26 @@ from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
 
 
 class TestSentenceSplitter(AllenNlpTestCase):
+    def setUp(self):
+        super(TestSentenceSplitter, self).setUp()
+        self.dep_parse_splitter = SpacySentenceSplitter(rule_based=False)
+        self.rule_based_splitter = SpacySentenceSplitter(rule_based=True)
 
-    def test_sentence_passes_through_correctly(self):
-        splitter = SpacyRuleBasedSentenceSplitter()
+    def test_rule_based_splitter_passes_through_correctly(self):
         text = ("This is the first sentence. This is the second sentence! "
                 "Here's the '3rd' sentence - yes, it is. And yes; this is a fourth sentence?")
-        tokens = splitter.split_sentences(text)
+        tokens = self.rule_based_splitter.split_sentences(text)
         expected_tokens = ["This is the first sentence.", "This is the second sentence!",
                            "Here's the '3rd' sentence - yes, it is.", "And yes; this is a fourth sentence?"]
+        assert tokens == expected_tokens
+
+    def test_dep_parse_splitter_passes_through_correctly(self):
+        splitter = SpacySentenceSplitter(rule_based=False)
+        text = ("This is the first sentence. This is the second sentence! "
+                "Here's the '3rd' sentence - yes, it is. And yes; this is a fourth sentence?")
+        tokens = self.dep_parse_splitter.split_sentences(text)
+        expected_tokens = ["This is the first sentence.", "This is the second sentence!",
+                           "Here's the '3rd' sentence -", "yes, it is.", "And yes; this is a fourth sentence?"]
         assert tokens == expected_tokens
 
     def test_batch_rule_based_sentence_splitting(self):
@@ -29,7 +41,7 @@ class TestSentenceSplitter(AllenNlpTestCase):
             for batch_sentence, separate_sentence in zip(batch_doc, separate_doc):
                 assert batch_sentence == separate_sentence
 
-    def test_batch_statistical_sentence_splitting(self):
+    def test_batch_dep_parse_sentence_splitting(self):
         splitter = SpacySentenceSplitter(rule_based=False)
         text = ["This is a sentence. This is a second sentence.",
                 "This isn't a sentence. This is a second sentence! This is a third sentence.",
