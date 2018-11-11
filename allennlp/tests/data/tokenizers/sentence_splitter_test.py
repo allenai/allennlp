@@ -1,8 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.tokenizers.sentence_splitter import (SpacyRuleBasedSentenceSplitter,
-                                                        SpacyStatisticalSentenceSplitter)
+from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
 
 
 class TestSentenceSplitter(AllenNlpTestCase):
@@ -17,7 +16,7 @@ class TestSentenceSplitter(AllenNlpTestCase):
         assert tokens == expected_tokens
 
     def test_batch_rule_based_sentence_splitting(self):
-        splitter = SpacyRuleBasedSentenceSplitter()
+        splitter = SpacySentenceSplitter(rule_based=True)
         text = ["This is a sentence. This is a second sentence.",
                 "This isn't a sentence. This is a second sentence! This is a third sentence.",
                 "This is the 3rd sentence?"
@@ -31,7 +30,7 @@ class TestSentenceSplitter(AllenNlpTestCase):
                 assert batch_sentence == separate_sentence
 
     def test_batch_statistical_sentence_splitting(self):
-        splitter = SpacyStatisticalSentenceSplitter()
+        splitter = SpacySentenceSplitter(rule_based=False)
         text = ["This is a sentence. This is a second sentence.",
                 "This isn't a sentence. This is a second sentence! This is a third sentence.",
                 "This is the 3rd sentence?"
