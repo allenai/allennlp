@@ -11,25 +11,25 @@ class TestWordFilter(AllenNlpTestCase):
         self.sentence = list(map(Token, self.sentence))
 
     def test_filters_digits_correctly(self):
-        filter_ = RegexFilter(patterns=["\d+"])
+        filter_ = RegexFilter(patterns=[r'\d+'])
         expected_tokens = ["this", "(", "sentence", ")", "has", '"', "punctuations", '"', '.']
         tokens = [t.text for t in filter_.filter_words(self.sentence)]
         assert tokens == expected_tokens
 
     def test_filters_punctuation_correctly(self):
-        filter_ = RegexFilter(patterns=['\(|\)|\"|\.'])
+        filter_ = RegexFilter(patterns=[r'\(|\)|\"|\.'])
         expected_tokens = ["this", "45", "sentence", "has", "9943434", "punctuations"]
         tokens = [t.text for t in filter_.filter_words(self.sentence)]
         assert tokens == expected_tokens
 
     def test_filters_multiple_patterns_correctly(self):
-        filter_ = RegexFilter(patterns=['\(|\)|\"|\.', "[\d+]"])
+        filter_ = RegexFilter(patterns=[r'\(|\)|\"|\.', r'[\d+]'])
         expected_tokens = ["this", "sentence", "has", "punctuations"]
         tokens = [t.text for t in filter_.filter_words(self.sentence)]
         assert tokens == expected_tokens
 
     def test_filters_no_match_correctly(self):
-        filter_ = RegexFilter(patterns=['&'])
+        filter_ = RegexFilter(patterns=[r'&'])
         expected_tokens = ["this", "45", "(", "sentence", ")", "has", "9943434", '"', "punctuations", '"', '.']
         tokens = [t.text for t in filter_.filter_words(self.sentence)]
         assert tokens == expected_tokens
