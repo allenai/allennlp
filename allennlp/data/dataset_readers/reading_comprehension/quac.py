@@ -102,6 +102,7 @@ class QuACReader(DatasetReader):
                 if 'multichoice_incorrect_answers' in qas[0]:
                     span_starts_list = [[answer['answer_start'] for answer in qa['multichoice_incorrect_answers']] for qa in qas]
                     span_ends_list = []
+                    answer_texts_list = [[answer['text'] for answer in qa['multichoice_incorrect_answers']] for qa in qas]
                     for answer_starts, an_list in zip(span_starts_list, answer_texts_list):
                         span_ends = [start + len(answer) for start, answer in zip(answer_starts, an_list)]
                         span_ends_list.append(span_ends)
