@@ -3,19 +3,18 @@ import logging
 import json
 import glob
 import os
-import sqlite3
 
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import TextField, Field, ProductionRuleField, ListField, IndexField
+from allennlp.data.fields import TextField, Field, ProductionRuleField, ListField, IndexField, ArrayField
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.dataset_readers.dataset_utils import text2sql_utils
-from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld
+from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld, PrelinkedText2SqlWorld
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -32,18 +31,9 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
     ----------
     schema_path : ``str``, required.
         The path to the database schema.
-    database_path : ``str``, optional (default = None)
-        The path to a database.
     use_all_sql : ``bool``, optional (default = False)
         Whether to use all of the sql queries which have identical semantics,
         or whether to just use the first one.
-    remove_unneeded_aliases : ``bool``, (default = True)
-        Whether or not to remove table aliases in the SQL which
-        are not required.
-    use_prelinked_entities : ``bool``, (default = True)
-        Whether or not to use the pre-linked entities in the text2sql data.
-    use_untyped_entities : ``bool``, (default = True)
-        Whether or not to attempt to infer the pre-linked entity types.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
@@ -56,12 +46,9 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         Whether or not to keep examples that we can't parse using the grammar.
     """
     def __init__(self,
+                 world: Text2SqlWorld,
                  schema_path: str,
-                 database_file: str = None,
                  use_all_sql: bool = False,
-                 remove_unneeded_aliases: bool = True,
-                 use_prelinked_entities: bool = True,
-                 use_untyped_entities: bool = True,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  cross_validation_split_to_exclude: int = None,
                  keep_if_unparseable: bool = True,
@@ -69,28 +56,12 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._use_all_sql = use_all_sql
-        self._remove_unneeded_aliases = remove_unneeded_aliases
-        self._use_prelinked_entities = use_prelinked_entities
+        self._use_prelinked_entities = isinstance(world, PrelinkedText2SqlWorld)
         self._keep_if_unparsable = keep_if_unparseable
-
-        if not self._use_prelinked_entities:
-            raise ConfigurationError("The grammar based text2sql dataset reader "
-                                     "currently requires the use of entity pre-linking.")
-
         self._cross_validation_split_to_exclude = str(cross_validation_split_to_exclude)
 
-        if database_file is not None:
-            database_file = cached_path(database_file)
-            connection = sqlite3.connect(database_file)
-            self._cursor = connection.cursor()
-        else:
-            self._cursor = None
-
         self._schema_path = schema_path
-        self._world = Text2SqlWorld(schema_path,
-                                    self._cursor,
-                                    use_prelinked_entities=use_prelinked_entities,
-                                    use_untyped_entities=use_untyped_entities)
+        self._world = world
 
     @overrides
     def _read(self, file_path: str):
@@ -117,7 +88,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
 
             for sql_data in text2sql_utils.process_sql_data(data,
                                                             use_all_sql=self._use_all_sql,
-                                                            remove_unneeded_aliases=self._remove_unneeded_aliases,
+                                                            remove_unneeded_aliases=True,
                                                             schema=schema):
                 linked_entities = sql_data.sql_variables if self._use_prelinked_entities else None
                 instance = self.text_to_instance(sql_data.text_with_variables, linked_entities, sql_data.sql)
@@ -135,13 +106,20 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         fields["tokens"] = tokens
 
         if sql is not None:
-            action_sequence, all_actions = self._world.get_action_sequence_and_all_actions(sql,
-                                                                                           prelinked_entities)
+            action_sequence, all_actions, linking_scores = self._world.get_action_sequence_and_all_actions(sql,
+                                                                                                           prelinked_entities)
+
+            if linking_scores is None and not self._use_prelinked_entities:
+                raise ConfigurationError("Prelinked entities were not used, but no linking scores were produced.")
+
             if action_sequence is None and self._keep_if_unparsable:
                 print("Parse error")
                 action_sequence = []
             elif action_sequence is None:
                 return None
+
+        if not self._use_prelinked_entities:
+            fields["linking_scores"] = ArrayField(linking_scores)
 
         index_fields: List[Field] = []
         production_rule_fields: List[Field] = []

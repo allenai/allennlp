@@ -5,7 +5,7 @@ import sqlite3
 from parsimonious import Grammar, ParseError
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld
+from allennlp.semparse.worlds.text2sql_world import PrelinkedText2SqlWorld, LinkingText2SqlWorld
 from allennlp.semparse.contexts.sql_context_utils import format_grammar_string
 from allennlp.semparse.contexts.sql_context_utils import SqlVisitor
 
@@ -18,7 +18,7 @@ class TestText2SqlWorld(AllenNlpTestCase):
 
 
     def test_untyped_grammar_has_no_string_or_number_references(self):
-        world = Text2SqlWorld(self.schema, use_untyped_entities=True)
+        world = PrelinkedText2SqlWorld(self.schema, use_untyped_entities=True)
         grammar_dictionary = world.base_grammar_dictionary
 
         for key, value in grammar_dictionary.items():
@@ -31,7 +31,7 @@ class TestText2SqlWorld(AllenNlpTestCase):
             assert all(["(string " not in production for production in value])
 
     def test_world_modifies_unconstrained_grammar_correctly(self):
-        world = Text2SqlWorld(self.schema)
+        world = PrelinkedText2SqlWorld(self.schema)
         grammar_dictionary = world.base_grammar_dictionary
         assert grammar_dictionary["table_name"] == ['"RESTAURANT"', '"LOCATION"', '"GEOGRAPHIC"']
         assert grammar_dictionary["column_name"] == ['"STREET_NAME"', '"RESTAURANT_ID"', '"REGION"',
@@ -39,7 +39,7 @@ class TestText2SqlWorld(AllenNlpTestCase):
                                                      '"FOOD_TYPE"', '"COUNTY"', '"CITY_NAME"']
 
     def test_world_modifies_grammar_with_global_values_for_dataset(self):
-        world = Text2SqlWorld(self.schema)
+        world = PrelinkedText2SqlWorld(self.schema)
         grammar_dictionary = world.base_grammar_dictionary
         # Should have added 2.5 because it is a global value
         # for the restaurants dataset.
@@ -47,7 +47,7 @@ class TestText2SqlWorld(AllenNlpTestCase):
                                                'number', 'boolean', 'function', 'col_ref', 'string']
 
     def test_variable_free_world_cannot_parse_as_statements(self):
-        world = Text2SqlWorld(self.schema)
+        world = PrelinkedText2SqlWorld(self.schema)
         grammar_dictionary = world.base_grammar_dictionary
         for productions in grammar_dictionary.items():
             assert "AS" not in productions
@@ -73,7 +73,7 @@ class TestText2SqlWorld(AllenNlpTestCase):
         sql_visitor.parse(" ".join(sql))
 
     def test_grammar_from_world_can_parse_statements(self):
-        world = Text2SqlWorld(self.schema)
+        world = PrelinkedText2SqlWorld(self.schema)
         sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',',
                'RESTAURANT', 'WHERE', 'LOCATION', '.', 'CITY_NAME', '=',
                "'city_name0'", 'AND', 'RESTAURANT', '.', 'NAME', '=', 'LOCATION',
@@ -84,11 +84,11 @@ class TestText2SqlWorld(AllenNlpTestCase):
         sql_visitor.parse(" ".join(sql))
 
     def test_world_identifies_non_global_rules(self):
-        world = Text2SqlWorld(self.schema)
+        world = PrelinkedText2SqlWorld(self.schema)
         assert not world.is_global_rule('value -> ["\'food_type0\'"]')
 
     def test_grammar_from_world_can_produce_entities_as_values(self):
-        world = Text2SqlWorld(self.schema)
+        world = PrelinkedText2SqlWorld(self.schema)
         sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',',
                'RESTAURANT', 'WHERE', 'LOCATION', '.', 'CITY_NAME', '=',
                "'city_name0'", 'AND', 'RESTAURANT', '.', 'NAME', '=', 'LOCATION',
@@ -96,16 +96,16 @@ class TestText2SqlWorld(AllenNlpTestCase):
 
         entities = {"city_name0": {"text": "San fran", "type": "location"},
                     "name0": {"text": "Matt Gardinios Pizza", "type": "restaurant"}}
-        action_sequence, actions = world.get_action_sequence_and_all_actions(sql, entities)
+        action_sequence, actions, _ = world.get_action_sequence_and_all_actions(sql, entities)
         assert 'string -> ["\'city_name0\'"]' in action_sequence
         assert 'string -> ["\'name0\'"]' in action_sequence
         assert 'string -> ["\'city_name0\'"]' in actions
         assert 'string -> ["\'name0\'"]' in actions
 
-    def test_world_adds_values_from_tables(self):
+    def test_linking_world_adds_values_from_tables(self):
         connection = sqlite3.connect(self.database_path)
         cursor = connection.cursor()
-        world = Text2SqlWorld(self.schema, cursor=cursor, use_prelinked_entities=False)
+        world = LinkingText2SqlWorld(self.schema, cursor=cursor)
         assert world.base_grammar_dictionary["number"] == ['"229"', '"228"', '"227"', '"226"',
                                                            '"225"', '"5"', '"4"', '"3"', '"2"',
                                                            '"1"', '"833"', '"430"', '"242"',
