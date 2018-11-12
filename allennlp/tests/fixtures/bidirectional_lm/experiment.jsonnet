@@ -25,6 +25,7 @@
   "model": {
     "type": "bidirectional-language-model",
     "num_samples": 10,
+    "sparse_embeddings": true,
     "text_field_embedder": {
       "allow_unmatched_keys": true,
       "token_embedders": {

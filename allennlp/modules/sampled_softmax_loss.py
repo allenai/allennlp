@@ -44,7 +44,7 @@ def _choice(num_words: int, num_samples: int) -> Tuple[np.ndarray, int]:
 
 class SampledSoftmaxLoss(torch.nn.Module):
     """
-    Based on the default log_uniform_candidate_sampler in tensorflow
+    Based on the default log_uniform_candidate_sampler in tensorflow.
 
     NOTE num_words DOES NOT include padding id.
     NOTE: In all cases except (tie_embeddings=True and use_character_inputs=False)

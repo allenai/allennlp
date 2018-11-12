@@ -83,6 +83,8 @@ class BidirectionalLanguageModel(Model):
         If provided, the model will use ``SampledSoftmaxLoss``
         with the specified number of samples. Otherwise, it will use
         the full ``_SoftmaxLoss`` defined above.
+    sparse_embeddings: ``bool``, optional (default: False)
+        Passed on to ``SampledSoftmaxLoss`` if True.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -92,7 +94,8 @@ class BidirectionalLanguageModel(Model):
                  dropout: float = None,
                  loss_scale: Union[float, str] = 1.0,
                  remove_bos_eos: bool = True,
-                 num_samples: int = None) -> None:
+                 num_samples: int = None,
+                 sparse_embeddings: bool = False) -> None:
         super().__init__(vocab)
         self._text_field_embedder = text_field_embedder
         self._layer_norm = layer_norm or (lambda x: x)
@@ -109,7 +112,8 @@ class BidirectionalLanguageModel(Model):
         if num_samples is not None:
             self._softmax_loss = SampledSoftmaxLoss(num_words=vocab.get_vocab_size(),
                                                     embedding_dim=self._forward_dim,
-                                                    num_samples=num_samples)
+                                                    num_samples=num_samples,
+                                                    sparse=sparse_embeddings)
         else:
             self._softmax_loss = _SoftmaxLoss(num_words=vocab.get_vocab_size(),
                                               embedding_dim=self._forward_dim)
