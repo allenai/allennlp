@@ -168,7 +168,7 @@ def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer
         def __init__(self, **kwargs):
             self._init_function = init_function
             self._kwargs = kwargs
-        def __call__(self, tensor: torch.Tensor) -> None:
+        def __call__(self, tensor: torch.Tensor, **kwargs) -> None:
             self._init_function(tensor, **self._kwargs)
         def __repr__(self):
             return 'Init: %s, with params: %s' % (self._init_function, self._kwargs)
@@ -241,7 +241,7 @@ class InitializerApplicator:
                 allow = self._prevent_regex is None or not bool(re.search(self._prevent_regex, name))
                 if allow and re.search(initializer_regex, name):
                     logger.info("Initializing %s using %s intitializer", name, initializer_regex)
-                    initializer(parameter)
+                    initializer(parameter, name=name)
                     unused_regexes.discard(initializer_regex)
                     break
             else:  # no break
