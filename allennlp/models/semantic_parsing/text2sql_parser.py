@@ -9,7 +9,6 @@ import torch
 
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRule
-from allennlp.semparse.executors import SqlExecutor
 from allennlp.models.model import Model
 from allennlp.modules import Attention, Seq2SeqEncoder, TextFieldEmbedder, Embedding
 from allennlp.nn import util
@@ -46,9 +45,6 @@ class Text2SqlParser(Model):
     input_attention: ``Attention``
         We compute an attention over the input utterance at each step of the decoder, using the
         decoder hidden state as the query.  Passed to the transition function.
-    database_file: ``str``, required.
-        The path of the SQLite database when evaluating SQL queries. SQLite is disk based, so we need
-        the file location to connect to it.
     add_action_bias : ``bool``, optional (default=True)
         If ``True``, we will learn a bias weight for each action that gets used when predicting
         that action, in addition to its embedding.
@@ -64,7 +60,6 @@ class Text2SqlParser(Model):
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  input_attention: Attention,
-                 database_file: str,
                  add_action_bias: bool = True,
                  dropout: float = 0.0,
                  initializer: InitializerApplicator = InitializerApplicator(),
@@ -82,7 +77,6 @@ class Text2SqlParser(Model):
         self._action_similarity = Average()
         self._denotation_accuracy = Average()
 
-        self._executor = SqlExecutor(database_file)
         # the padding value used by IndexField
         self._action_padding_index = -1
         num_actions = vocab.get_vocab_size("rule_labels")
@@ -113,8 +107,7 @@ class Text2SqlParser(Model):
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 valid_actions: List[List[ProductionRule]],
-                action_sequence: torch.LongTensor = None,
-                sql_queries: List[List[str]] = None) -> Dict[str, torch.Tensor]:
+                action_sequence: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         We set up the initial state for the decoder, and pass that state off to either a DecoderTrainer,
@@ -177,7 +170,7 @@ class Text2SqlParser(Model):
             best_final_states = self._beam_search.search(self._max_decoding_steps,
                                                          initial_state,
                                                          self._transition_function,
-                                                         keep_final_unfinished_states=False)
+                                                         keep_final_unfinished_states=True)
             outputs['best_action_sequence'] = []
             outputs['debug_info'] = []
             outputs['predicted_sql_query'] = []
@@ -198,8 +191,8 @@ class Text2SqlParser(Model):
 
                 action_strings = [action_mapping[i][action_index]
                                   for action_index in best_action_indices]
-                predicted_sql_query = action_sequence_to_sql(action_strings)
 
+                predicted_sql_query = action_sequence_to_sql(action_strings)
                 if action_sequence is not None:
                     # Use a Tensor, not a Variable, to avoid a memory leak.
                     targets = action_sequence[i].data
@@ -209,11 +202,6 @@ class Text2SqlParser(Model):
 
                     similarity = difflib.SequenceMatcher(None, best_action_indices, targets)
                     self._action_similarity(similarity.ratio())
-
-                if sql_queries and sql_queries[i]:
-                    denotation_correct = self._executor.evaluate_sql_query(predicted_sql_query, sql_queries[i])
-                    self._denotation_accuracy(denotation_correct)
-                    outputs['sql_queries'].append(sql_queries[i])
 
                 outputs['best_action_sequence'].append(action_strings)
                 outputs['predicted_sql_query'].append(sqlparse.format(predicted_sql_query, reindent=True))
@@ -302,7 +290,12 @@ class Text2SqlParser(Model):
             4. action_similarity, which is how similar the action sequence predicted is to the actual
             action sequence. This is basically a soft measure of exact_match.
         """
+
+        validation_correct = self._exact_match._total_value # pylint: disable=protected-access
+        validation_total = self._exact_match._count # pylint: disable=protected-access
         return {
+                '_exact_match_count': validation_correct,
+                '_example_count': validation_total,
                 'exact_match': self._exact_match.get_metric(reset),
                 'denotation_acc': self._denotation_accuracy.get_metric(reset),
                 'valid_sql_query': self._valid_sql_query.get_metric(reset),
@@ -331,6 +324,8 @@ class Text2SqlParser(Model):
 
         actions_grouped_by_nonterminal: Dict[str, List[Tuple[ProductionRule, int]]] = defaultdict(list)
         for i, action in enumerate(possible_actions):
+            if action.rule == "":
+                continue
             if action.is_global_rule:
                 actions_grouped_by_nonterminal[action.nonterminal].append((action, i))
             else:
