@@ -1,7 +1,11 @@
 {
   "dataset_reader": {
     "type": "grammar_based_text2sql",
-    "database_file": "allennlp/tests/fixtures/data/text2sql/restaurants.db",
+    "world": {
+      "type": "prelinked",
+      "schema_path": "allennlp/tests/fixtures/data/text2sql/restaurants-schema.csv",
+      "use_untyped_entities": true
+    },
     "schema_path": "allennlp/tests/fixtures/data/text2sql/restaurants-schema.csv"
   },
   "train_data_path": "allennlp/tests/fixtures/data/text2sql/restaurants_tiny.json",

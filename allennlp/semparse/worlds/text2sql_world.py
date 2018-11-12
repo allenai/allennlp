@@ -78,7 +78,7 @@ def database_to_dict(schema: Dict[str, List[TableColumn]],
 #     return string_linking_scores
 
 
-Text2SqlWorld.register("prelinked")
+@Text2SqlWorld.register("prelinked")
 class PrelinkedText2SqlWorld(Text2SqlWorld):
     """
     A World representation for any of the Text2Sql datasets which assumes
@@ -107,9 +107,8 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
                                             prelinked_entities: Dict[str, Dict[str, str]] = None) -> Tuple[List[str], List[str]]: # pylint: disable=line-too-long
         grammar_with_context = deepcopy(self.base_grammar_dictionary)
 
-        if prelinked_entities is None:
-            raise ConfigurationError("The PrelinkedText2SqlWorld must be passed prelinked entities.")
 
+        prelinked_entities = prelinked_entities or {}
         if self.use_untyped_entities:
             update_grammar_values_with_variables(grammar_with_context, prelinked_entities)
         else:
@@ -157,8 +156,8 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
         return True
 
 
-Text2SqlWorld.register("linking")
-class LinkingText2SqlWorld:
+@Text2SqlWorld.register("linking")
+class LinkingText2SqlWorld(Text2SqlWorld):
     """
     A World representation for any of the Text2Sql datasets which does entity linking
     by comparing words in the question to words in the database.
@@ -260,3 +259,5 @@ class LinkingText2SqlWorld:
         return cls(schema_path=schema_path,
                    cursor=cursor,
                    use_untyped_entities=use_untyped_entities)
+
+
