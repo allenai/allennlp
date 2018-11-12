@@ -46,6 +46,9 @@ class BidafPlusPlus(Model):
     dropout : ``float``, optional (default=0.2)
         If greater than 0, we will apply dropout with this probability after all encoders (pytorch
         LSTMs do not apply dropout to their last layer).
+    multi_choice_answers: ``bool``,optional (default=False)
+        If True, dataset is multi-choice answer, and accuracy will be computed accurdigly.
+        Note that "multichoice_incorrect_answers" must be provided in the dataset.
     num_context_answers : ``int``, optional (default=0)
         If greater than 0, the model will consider previous question answering context.
     max_span_length: ``int``, optional (default=0)
@@ -60,11 +63,13 @@ class BidafPlusPlus(Model):
                  span_end_encoder: Seq2SeqEncoder,
                  initializer: InitializerApplicator,
                  dropout: float = 0.2,
+                 multi_choice_answers: bool = False,
                  num_context_answers: int = 0,
                  marker_embedding_dim: int = 10,
                  max_span_length: int = 30) -> None:
         super().__init__(vocab)
         self._num_context_answers = num_context_answers
+        self._multi_choice_answers = multi_choice_answers
         self._max_span_length = max_span_length
         self._text_field_embedder = text_field_embedder
         self._phrase_layer = phrase_layer
@@ -113,6 +118,8 @@ class BidafPlusPlus(Model):
         self._span_gt_followup_accuracy = CategoricalAccuracy()
 
         self._span_accuracy = BooleanAccuracy()
+        if self._multi_choice_answers:
+            self._multichoice_accuracy = BooleanAccuracy()
         self._official_f1 = Average()
         self._variational_dropout = InputVariationalDropout(dropout)
 
@@ -328,6 +335,36 @@ class BidafPlusPlus(Model):
             self._span_accuracy(best_span[:, 0:2],
                                 torch.stack([span_start, span_end], -1).view(total_qa_count, 2),
                                 mask=qa_mask.unsqueeze(1).expand(-1, 2).long())
+
+            # support for multi choice answers:
+            if self._multi_choice_answers:
+                for inst_metadata,inst_span_start_logits,inst_span_end_logits in \
+                        zip(metadata,span_start_logits,span_end_logits):
+                    max_correct_answer = -50
+                    max_incorrect_answer = -50
+                    inst_span_start_logits = inst_span_start_logits.data.cpu().numpy()
+                    inst_span_end_logits = inst_span_end_logits.data.cpu().numpy()
+
+                    # computing the max score of the correct answer
+                    for correct_ans_start,correct_ans_end in \
+                            zip(inst_metadata['gold_answer_start_list'], \
+                                inst_metadata['gold_answer_end_list']):
+                        score = inst_span_start_logits[correct_ans_start] + inst_span_end_logits[correct_ans_end]
+                        if score>max_correct_answer:
+                            max_correct_answer = score
+
+                    # computing the max score of the incorrect answers
+                    for incorrect_ans_start, incorrect_ans_end in \
+                            zip(inst_metadata['multichoice_incorrect_answers_start_list'], \
+                                inst_metadata['multichoice_incorrect_answers_end_list']):
+                        score = inst_span_start_logits[incorrect_ans_start] + inst_span_end_logits[incorrect_ans_end]
+                        if score > max_incorrect_answer:
+                            max_incorrect_answer = score
+
+                    # If max currect answer score is higher, then multi_choice accuracy bool accuracy is True.
+                    self._multichoice_accuracy(torch.Tensor([(max_correct_answer > max_incorrect_answer) * 1]),torch.Tensor([1]))
+
+            # AT This part is only for yes/no and followup loss
             # add a select for the right span to compute loss
             gold_span_end_loc = []
             if len(span_end)>1:
@@ -364,6 +401,7 @@ class BidafPlusPlus(Model):
         output_dict['qid'] = []
         output_dict['followup'] = []
         output_dict['yesno'] = []
+        # best_span is a vector of more than one span
         best_span_cpu = best_span.detach().cpu().numpy()
         for i in range(batch_size):
             passage_str = metadata[i]['original_passage']
@@ -373,7 +411,7 @@ class BidafPlusPlus(Model):
             per_dialog_yesno_list = []
             per_dialog_followup_list = []
             per_dialog_query_id_list = []
-            for per_dialog_query_index, (iid, answer_texts) in enumerate(
+            for per_dialog_query_index, (iid, gold_answer_texts) in enumerate(
                     zip(metadata[i]["instance_id"], metadata[i]["answer_texts_list"])):
                 predicted_span = tuple(best_span_cpu[i * max_qa_count + per_dialog_query_index])
 
@@ -388,14 +426,18 @@ class BidafPlusPlus(Model):
 
                 best_span_string = passage_str[start_offset:end_offset]
                 per_dialog_best_span_list.append(best_span_string)
-                if answer_texts:
-                    if len(answer_texts) > 1:
+                if gold_answer_texts:
+                    if len(gold_answer_texts) > 1:
                         t_f1 = []
                         # Compute F1 over N-1 human references and averages the scores.
-                        for answer_index in range(len(answer_texts)):
-                            idxes = list(range(len(answer_texts)))
-                            idxes.pop(answer_index)
-                            refs = [answer_texts[z] for z in idxes]
+                        # AT why N-1 and not N?
+                        for answer_index in range(len(gold_answer_texts)):
+                            idxes = list(range(len(gold_answer_texts)))
+
+                            # AT: Why are we poping one answer here??
+                            #idxes.pop(answer_index)
+
+                            refs = [gold_answer_texts[z] for z in idxes]
                             t_f1.append(squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
                                                                                  best_span_string,
                                                                                  refs))
@@ -403,7 +445,7 @@ class BidafPlusPlus(Model):
                     else:
                         f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
                                                                             best_span_string,
-                                                                            answer_texts)
+                                                                            gold_answer_texts)
                 self._official_f1(100 * f1_score)
             output_dict['qid'].append(per_dialog_query_id_list)
             output_dict['best_span_str'].append(per_dialog_best_span_list)
@@ -422,14 +464,22 @@ class BidafPlusPlus(Model):
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        if self._multi_choice_answers:
+            return {'start_acc': self._span_start_accuracy.get_metric(reset),
+                    'end_acc': self._span_end_accuracy.get_metric(reset),
+                    'span_acc': self._span_accuracy.get_metric(reset),
+                    'yesno': self._span_yesno_accuracy.get_metric(reset),
+                    'followup': self._span_followup_accuracy.get_metric(reset),
+                    'f1': self._official_f1.get_metric(reset),
+                    'multichoice_acc': self._multichoice_accuracy.get_metric(reset)}
+        else:
+            return {'start_acc': self._span_start_accuracy.get_metric(reset),
+                    'end_acc': self._span_end_accuracy.get_metric(reset),
+                    'span_acc': self._span_accuracy.get_metric(reset),
+                    'yesno': self._span_yesno_accuracy.get_metric(reset),
+                    'followup': self._span_followup_accuracy.get_metric(reset),
+                    'f1': self._official_f1.get_metric(reset), }
 
-
-        return {'start_acc': self._span_start_accuracy.get_metric(reset),
-                'end_acc': self._span_end_accuracy.get_metric(reset),
-                'span_acc': self._span_accuracy.get_metric(reset),
-                'yesno': self._span_yesno_accuracy.get_metric(reset),
-                'followup': self._span_followup_accuracy.get_metric(reset),
-                'f1': self._official_f1.get_metric(reset), }
 
     @staticmethod
     def _get_best_span_yesno_followup(span_start_logits: torch.Tensor,

@@ -84,6 +84,37 @@ class QuACReader(DatasetReader):
                                                  yesno_list,
                                                  followup_list,
                                                  metadata)
+
+                # passing the tokens of all gold answer instances (not just the "original answer"
+                # as in the original quac dataset reader)
+                passage_offsets = [(token.idx, token.idx + len(token.text)) for token in tokenized_paragraph]
+                instance.fields['metadata'].metadata['gold_answer_start_list'] = []
+                instance.fields['metadata'].metadata['gold_answer_end_list'] = []
+                for span_char_start,span_char_end in zip(span_starts_list[0],span_ends_list[0]):
+                    (span_start, span_end), error = util.char_span_to_token_span(passage_offsets, \
+                                                                                 (span_char_start, span_char_end))
+
+                    instance.fields['metadata'].metadata['gold_answer_start_list'].append(span_start)
+                    instance.fields['metadata'].metadata['gold_answer_end_list'].append(span_end)
+
+                # Multiple choice answer support. (all instance of other answers should be
+                # contained in "multichoice_incorrect_answers", same format as "answers" field)
+                if 'multichoice_incorrect_answers' in qas[0]:
+                    span_starts_list = [[answer['answer_start'] for answer in qa['multichoice_incorrect_answers']] for qa in qas]
+                    span_ends_list = []
+                    for answer_starts, an_list in zip(span_starts_list, answer_texts_list):
+                        span_ends = [start + len(answer) for start, answer in zip(answer_starts, an_list)]
+                        span_ends_list.append(span_ends)
+
+                    instance.fields['metadata'].metadata['multichoice_incorrect_answers_start_list'] = []
+                    instance.fields['metadata'].metadata['multichoice_incorrect_answers_end_list'] = []
+                    for span_char_start, span_char_end in zip(span_starts_list[0], span_ends_list[0]):
+                        (span_start, span_end), error = util.char_span_to_token_span(passage_offsets, \
+                                                                                     (span_char_start, span_char_end))
+
+                        instance.fields['metadata'].metadata['multichoice_incorrect_answers_start_list'].append(span_start)
+                        instance.fields['metadata'].metadata['multichoice_incorrect_answers_end_list'].append(span_end)
+
                 yield instance
 
     @overrides
