@@ -105,7 +105,7 @@ class BidirectionalLanguageModel(Model):
         # (or backward) direction.
         self._forward_dim = contextualizer.get_output_dim() // 2
 
-        # TODO(joelgrus): more sampled softmax configuration options
+        # TODO(joelgrus): more sampled softmax configuration options, as needed.
         if num_samples is not None:
             self._softmax_loss = SampledSoftmaxLoss(num_words=vocab.get_vocab_size(),
                                                     embedding_dim=self._forward_dim,

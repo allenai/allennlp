@@ -1,5 +1,5 @@
 # https://github.com/tensorflow/tensorflow/blob/r1.4/tensorflow/python/ops/nn_impl.py#L885
-from typing import Set, Tuple, Callable, Any
+from typing import Set, Tuple
 
 import numpy as np
 
@@ -131,6 +131,8 @@ class SampledSoftmaxLoss(torch.nn.Module):
                 embeddings: torch.Tensor,
                 targets: torch.Tensor,
                 target_token_embedding: torch.Tensor = None) -> torch.Tensor:
+        # pylint: disable=arguments-differ
+
         # embeddings is size (n, embedding_dim)
         # targets is (n_words, ) with the index of the actual target
         # when tieing weights, target_token_embedding is required.
@@ -140,7 +142,7 @@ class SampledSoftmaxLoss(torch.nn.Module):
 
         if embeddings.shape[0] == 0:
             # empty batch
-            return torch.tensor(0.0).to(embeddings.device)
+            return torch.tensor(0.0).to(embeddings.device)  # pylint: disable=not-callable
 
         if not self.training:
             return self._forward_eval(embeddings, targets)
@@ -151,6 +153,10 @@ class SampledSoftmaxLoss(torch.nn.Module):
                        embeddings: torch.Tensor,
                        targets: torch.Tensor,
                        target_token_embedding: torch.Tensor) -> torch.Tensor:
+        # pylint: disable=unused-argument
+        # (target_token_embedding is only used in the tie_embeddings case,
+        #  which is not implemented)
+
         # want to compute (n, n_samples + 1) array with the log
         # probabilities where the first index is the true target
         # and the remaining ones are the the negative samples.
@@ -187,7 +193,8 @@ class SampledSoftmaxLoss(torch.nn.Module):
         # [batch_size, ]
         true_logits = (true_w * embeddings).sum(dim=1) + true_b - torch.log(target_expected_count + 1e-7)
         # [batch_size, n_samples]
-        sampled_logits = torch.matmul(embeddings, sampled_w.t()) + sampled_b - torch.log(sampled_expected_count + 1e-7)
+        sampled_logits = (torch.matmul(embeddings, sampled_w.t()) +
+                          sampled_b - torch.log(sampled_expected_count + 1e-7))
 
         # remove true labels -- we will take
         # softmax, so set the sampled logits of true values to a large

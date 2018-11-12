@@ -134,8 +134,7 @@ setup(name='allennlp',
           'conllu==0.11',
           'parsimonious==0.8.0',
           'ftfy',
-          'sqlparse==0.2.4',
-          'Cython'
+          'sqlparse==0.2.4'
       ],
       scripts=["bin/allennlp"],
       setup_requires=setup_requirements,
@@ -149,6 +148,4 @@ setup(name='allennlp',
       ],
       include_package_data=True,
       python_requires='>=3.6.1',
-      ext_modules=cythonize('allennlp/modules/_fast_sampler.pyx'),
-      include_dirs=[numpy.get_include()],
       zip_safe=False)
