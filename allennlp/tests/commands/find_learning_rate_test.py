@@ -3,6 +3,8 @@ import argparse
 import os
 import pytest
 
+import torch
+
 from allennlp.common import Params
 from allennlp.data import Vocabulary, DataIterator
 from allennlp.models import Model
@@ -204,7 +206,7 @@ class TestFindLearningRateForMultiGPU(AllenNlpTestCase):
                         "validation_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
                         "iterator": {"type": "basic", "batch_size": 2},
                         "trainer": {
-                            "cuda_device": [0,1],
+                            "cuda_device": [0, 1],
                             "num_epochs": 2,
                             "optimizer": "adam"
                         }
