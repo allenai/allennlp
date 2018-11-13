@@ -2,10 +2,14 @@ import json
 
 from allennlp.data.dataset_readers import SquadReader
 from allennlp.data.tokenizers import WordTokenizer
+from diskcache import Cache
+import json
 
 # the class for loaded the instances from lucene and use them for QA
 class NearestNeighborQuestionExtractor():
     qTerms = {"which", "what", "where", "who", "whom", "how", "when", "why", "whose"}
+
+    cache = Cache('nearest_questions.cache')
 
     # uses lucene to extract nearest neghbor instances
     from elasticsearch import Elasticsearch
@@ -14,6 +18,18 @@ class NearestNeighborQuestionExtractor():
     tokenizer = WordTokenizer()
 
     def retrieve_best_questions(self, question, title: str = "", topK: int = 5):
+        key = str.encode(question + title + str(topK))
+        if key in self.cache:
+            print("from cache . . ")
+            output_bytes = self.cache[key]
+            return json.loads(output_bytes.decode())
+        else:
+            print("from remote . . ")
+            output = self.retrieve_best_questions_from_elastic_search(question, title, topK)
+            self.cache.add(key, str.encode(json.dumps(output)))
+            return output
+
+    def retrieve_best_questions_from_elastic_search(self, question, title, topK: int = 5):
         tokens = [t.text.lower() for t in self.tokenizer.tokenize(question)]
 
         # filter the wh-terms in the question
@@ -67,6 +83,9 @@ class NearestNeighborQuestionExtractor():
 
         return output
 
+    def close(self):
+        self.cache.close()
+
 # function used to create a json dump, to be indexed in lucene
 def createQuestionJson():
     reader = SquadReader(lazy=True)
@@ -91,6 +110,6 @@ def createQuestionJson():
 
 if __name__ == '__main__':
     extractor = NearestNeighborQuestionExtractor()
-    extractor.retrieve_best_questions("When did the Scholastic Magazine of Notre dame begin publishing?")
+    extractor.retrieve_best_questions("When did the Scholastic Magazine of Notre dame begin publishing?", "", 5)
     # createQuestionJson()
 
