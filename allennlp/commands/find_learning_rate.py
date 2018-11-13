@@ -173,7 +173,7 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
     cuda_device = params.params.get('trainer').get('cuda_device', -1)
     if isinstance(cuda_device, list):
         for device in cuda_device:
-             check_for_gpu(device)
+            check_for_gpu(device)
     else:
         check_for_gpu(cuda_device)
 
