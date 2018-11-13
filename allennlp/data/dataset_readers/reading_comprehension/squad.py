@@ -10,6 +10,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.reading_comprehension import util
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
+from allennlp.knn.nearest_questions import NearestNeighborQuestionExtractor
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -42,6 +43,7 @@ class SquadReader(DatasetReader):
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._nearest_neighbor_reader = NearestNeighborQuestionExtractor()
 
     @overrides
     def _read(self, file_path: str):
@@ -91,6 +93,7 @@ class SquadReader(DatasetReader):
         for char_span_start, char_span_end in char_spans:
             (span_start, span_end), error = util.char_span_to_token_span(passage_offsets,
                                                                          (char_span_start, char_span_end))
+
             if error:
                 logger.debug("Passage: %s", passage_text)
                 logger.debug("Passage tokens: %s", passage_tokens)
@@ -101,9 +104,23 @@ class SquadReader(DatasetReader):
                 logger.debug("Answer: %s", passage_text[char_span_start:char_span_end])
             token_spans.append((span_start, span_end))
 
+        relevant_questions = self._nearest_neighbor_reader.retrieve_best_questions(question_text, paragraph_title, 5)
+
+        relevant_question_tokens = [Token(text = x, idx=i) for i, x in enumerate(relevant_questions[0][2])]
+        relevant_passage_tokens = [Token(text = x, idx=i) for i, x in enumerate(relevant_questions[0][3])]
+        relevant_span_start = relevant_questions[0][4]
+        relevant_span_end = relevant_questions[0][5]
+
+        assert len(relevant_questions) > 0, f"the number of relevant questions is zero {question_text}"
+
         return util.make_reading_comprehension_instance(self._tokenizer.tokenize(question_text),
                                                         passage_tokens,
                                                         self._token_indexers,
                                                         passage_text,
                                                         token_spans,
-                                                        answer_texts, passage_title=paragraph_title)
+                                                        answer_texts,
+                                                        relevant_question_tokens=relevant_question_tokens,
+                                                        relevant_passage_tokens=relevant_passage_tokens,
+                                                        relevant_span_start=relevant_span_start,
+                                                        relevant_span_end=relevant_span_end,
+                                                        passage_title=paragraph_title)

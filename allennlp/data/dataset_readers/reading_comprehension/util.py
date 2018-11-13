@@ -142,6 +142,10 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
                                         token_spans: List[Tuple[int, int]] = None,
                                         answer_texts: List[str] = None,
                                         additional_metadata: Dict[str, Any] = None,
+                                        relevant_question_tokens: List[Token] = None,
+                                        relevant_passage_tokens: List[Token] = None,
+                                        relevant_span_start: int = None,
+                                        relevant_span_end: int = None,
                                         passage_title: str = "") -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
@@ -182,6 +186,7 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
         you want any other metadata to be associated with each instance, you can pass that in here.
         This dictionary will get added to the ``metadata`` dictionary we already construct.
     """
+
     additional_metadata = additional_metadata or {}
     fields: Dict[str, Field] = {}
     passage_offsets = [(token.idx, token.idx + len(token.text)) for token in passage_tokens]
@@ -190,9 +195,14 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     passage_field = TextField(passage_tokens, token_indexers)
     fields['passage'] = passage_field
 
+    relevant_passage_field = TextField(relevant_passage_tokens, token_indexers)
+    fields['relevant_passage'] = relevant_passage_field
+
     # commented out the title field
     # fields['passage_title'] = MetadataField(passage_title)
     fields['question'] = TextField(question_tokens, token_indexers)
+    fields['relevant_question'] = TextField(relevant_question_tokens, token_indexers)
+
     metadata = {'original_passage': passage_text, 'token_offsets': passage_offsets,
                 'question_tokens': [token.text for token in question_tokens],
                 'passage_tokens': [token.text for token in passage_tokens], }
@@ -212,6 +222,9 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
 
         fields['span_start'] = IndexField(span_start, passage_field)
         fields['span_end'] = IndexField(span_end, passage_field)
+
+    fields['relevant_span_start'] = IndexField(relevant_span_start, relevant_passage_field)
+    fields['relevant_span_end'] = IndexField(relevant_span_end, relevant_passage_field)
 
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)

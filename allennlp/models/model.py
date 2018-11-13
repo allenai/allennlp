@@ -232,7 +232,7 @@ class Model(torch.nn.Module, Registrable):
         by a class attribute ``_warn_for_unseperable_batches`` because it would be extremely verbose
         otherwise.
         """
-        if  output_key not in self._warn_for_unseparable_batches:
+        if output_key not in self._warn_for_unseparable_batches:
             logger.warning(f"Encountered the {output_key} key in the model's return dictionary which "
                            "couldn't be split by the batch size. Key will be ignored.")
             # We only want to warn once for this key,

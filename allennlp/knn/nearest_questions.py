@@ -1,6 +1,5 @@
 import json
 
-from allennlp.data.dataset_readers import SquadReader
 from allennlp.data.tokenizers import WordTokenizer
 from diskcache import Cache
 import json
@@ -20,11 +19,9 @@ class NearestNeighborQuestionExtractor():
     def retrieve_best_questions(self, question, title: str = "", topK: int = 5):
         key = str.encode(question + title + str(topK))
         if key in self.cache:
-            print("from cache . . ")
             output_bytes = self.cache[key]
             return json.loads(output_bytes.decode())
         else:
-            print("from remote . . ")
             output = self.retrieve_best_questions_from_elastic_search(question, title, topK)
             self.cache.add(key, str.encode(json.dumps(output)))
             return output
@@ -88,6 +85,7 @@ class NearestNeighborQuestionExtractor():
 
 # function used to create a json dump, to be indexed in lucene
 def createQuestionJson():
+    from allennlp.data.dataset_readers import SquadReader
     reader = SquadReader(lazy=True)
     outputs = []
     instances = reader.read("/Users/daniel/ideaProjects/allennlp/allennlp/knn/data/squad-train-v1.1.json")

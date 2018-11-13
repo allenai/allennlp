@@ -34,29 +34,27 @@ def load_model():
 
     return model, dataset_reader
 
+def create_instance(reader, question, paragraph, answer_start, answer_end):
+    return reader.text_to_instance(question, paragraph, zip([answer_start], [answer_end]))
 
 def solve_sample_question():
     model, dataset_reader = load_model()
 
-    question = "What kind of test succeeded on its first attempt?"
-    paragraph = "One time I was writing a unit test, and it succeeded on the first attempt."
+    instance1 = create_instance(reader=dataset_reader, question = "What kind of test succeeded on its first attempt?",
+                    paragraph="One time I was writing a unit test, and it succeeded on the first attempt.",
+                                answer_start=1, answer_end=5)
 
-    a = solve(question, paragraph, model, dataset_reader, ["unit test"])
-    print("")
+    instance2 = create_instance(reader=dataset_reader, question="What happens when you go cheap?",
+                                paragraph="Dion Lewis on Blowout Win vs. Patriots: 'That's What Happens When You Go Cheap'.",
+                                answer_start=5, answer_end=6)
 
-def solve(question, paragraph, model, dataset_reader, answers):
-    print(question)
-    print(paragraph)
-    print(answers)
-    instance = dataset_reader.text_to_instance(question, paragraph)
-    instances = [instance]
+    instances = [instance1] # instance2
     dataset = Batch(instances)
     dataset.index_instances(model.vocab)
     cuda_device = model._get_prediction_device()
-    model_input = dataset.as_tensor_dict()
+    model_input = dataset.as_tensor_dict(verbose=True)
     outputs = model(**model_input)
-    # with open('ipython/squad_dev_with_prereq/out22-ner-test.txt', 'a') as ff:
-    #     ff.write(question.replace('\n', ' ') + "\n" + paragraph.replace('\n', ' ') + "\n" + str(json.dumps(answers)) + "\n")
+    print(outputs["best_span_str"])
 
 if __name__ == "__main__":
     solve_sample_question()

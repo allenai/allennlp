@@ -81,6 +81,7 @@ class BidirectionalAttentionFlow(Model):
                                                       num_highway_layers))
         self._phrase_layer = phrase_layer
         self._matrix_attention = LegacyMatrixAttention(similarity_function)
+        # self._matrix_attention_relevant = LegacyMatrixAttention(similarity_function)
         self._modeling_layer = modeling_layer
         self._span_end_encoder = span_end_encoder
 
@@ -119,6 +120,10 @@ class BidirectionalAttentionFlow(Model):
                 passage: Dict[str, torch.LongTensor],
                 span_start: torch.IntTensor = None,
                 span_end: torch.IntTensor = None,
+                relevant_question: Dict[str, torch.LongTensor] = None,
+                relevant_passage: Dict[str, torch.LongTensor] = None,
+                relevant_span_start: torch.IntTensor = None,
+                relevant_span_end: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
@@ -170,41 +175,89 @@ class BidirectionalAttentionFlow(Model):
             string from the original passage that the model thinks is the best answer to the
             question.
         """
+
         embedded_question = self._highway_layer(self._text_field_embedder(question))
         embedded_passage = self._highway_layer(self._text_field_embedder(passage))
+        embedded_relevant_question = self._highway_layer(self._text_field_embedder(relevant_question))
+        embedded_relevant_passage = self._highway_layer(self._text_field_embedder(relevant_passage))
+
         batch_size = embedded_question.size(0)
         passage_length = embedded_passage.size(1)
+        relevant_passage_length = embedded_relevant_passage.size(1)
+
         question_mask = util.get_text_field_mask(question).float()
         passage_mask = util.get_text_field_mask(passage).float()
+        relevant_question_mask = util.get_text_field_mask(relevant_question).float()
+        relevant_passage_mask = util.get_text_field_mask(relevant_passage).float()
+
         question_lstm_mask = question_mask if self._mask_lstms else None
         passage_lstm_mask = passage_mask if self._mask_lstms else None
+        relevant_passage_mask = relevant_passage_mask if self._mask_lstms else None
 
         encoded_question = self._dropout(self._phrase_layer(embedded_question, question_lstm_mask))
         encoded_passage = self._dropout(self._phrase_layer(embedded_passage, passage_lstm_mask))
+        encoded_relevant_question = self._dropout(self._phrase_layer(embedded_relevant_question, relevant_question_mask))
+        encoded_relevant_passage = self._dropout(self._phrase_layer(embedded_relevant_passage, relevant_passage_mask))
         encoding_dim = encoded_question.size(-1)
+        relevant_encoding_dim = encoded_relevant_question.size(-1)
 
         # Shape: (batch_size, passage_length, question_length)
         passage_question_similarity = self._matrix_attention(encoded_passage, encoded_question)
+        relevant_passage_question_similarity = self._matrix_attention(encoded_relevant_passage, encoded_relevant_question)
+
         # Shape: (batch_size, passage_length, question_length)
         passage_question_attention = util.masked_softmax(passage_question_similarity, question_mask)
+        relevant_passage_question_attention = util.masked_softmax(relevant_passage_question_similarity, relevant_question_mask)
         # Shape: (batch_size, passage_length, encoding_dim)
         passage_question_vectors = util.weighted_sum(encoded_question, passage_question_attention)
+        relevant_passage_question_vectors = util.weighted_sum(encoded_relevant_question, relevant_passage_question_attention)
 
         # We replace masked values with something really negative here, so they don't affect the
         # max below.
         masked_similarity = util.replace_masked_values(passage_question_similarity,
                                                        question_mask.unsqueeze(1),
                                                        -1e7)
+
+        relevant_masked_similarity = util.replace_masked_values(relevant_passage_question_similarity,
+                                                       relevant_question_mask.unsqueeze(1),
+                                                       -1e7)
+
         # Shape: (batch_size, passage_length)
         question_passage_similarity = masked_similarity.max(dim=-1)[0].squeeze(-1)
+        relevant_question_passage_similarity = relevant_masked_similarity.max(dim=-1)[0].squeeze(-1)
         # Shape: (batch_size, passage_length)
         question_passage_attention = util.masked_softmax(question_passage_similarity, passage_mask)
+        relevant_question_passage_attention = util.masked_softmax(relevant_question_passage_similarity, relevant_passage_mask)
         # Shape: (batch_size, encoding_dim)
         question_passage_vector = util.weighted_sum(encoded_passage, question_passage_attention)
+        relevant_question_passage_vector = util.weighted_sum(encoded_relevant_passage, relevant_question_passage_attention)
         # Shape: (batch_size, passage_length, encoding_dim)
         tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(batch_size,
                                                                                     passage_length,
                                                                                     encoding_dim)
+
+        tiled_relevant_question_passage_vector = relevant_question_passage_vector.unsqueeze(1).expand(batch_size,
+                                                                                    relevant_passage_length,
+                                                                                    relevant_encoding_dim)
+
+        # the ideas is to select the span representations that correspond to the correct spans.
+        # TOOD is it bad that we bring the data into CPU here?
+        print(relevant_span_start)
+        print(relevant_span_end)
+        relevant_start_indices_array = [x[0] for x in relevant_span_start.data.cpu().numpy()]
+        relevant_end_indices_array = [x[0] for x in relevant_span_end.data.cpu().numpy()]
+
+        relevant_question_start_representations = torch.cat([
+            encoded_relevant_passage,
+            relevant_passage_question_vectors,
+            (encoded_relevant_passage * relevant_passage_question_vectors),
+            (encoded_relevant_passage * tiled_relevant_question_passage_vector)
+            ], dim=-1)
+
+        start_repr = relevant_question_start_representations[:, relevant_start_indices_array, :]
+        end_repr = relevant_question_start_representations[:, relevant_end_indices_array, :]
+
+        span_repr = torch.cat([start_repr, end_repr], dim=-1)
 
         # Shape: (batch_size, passage_length, encoding_dim * 4)
         final_merged_passage = torch.cat([encoded_passage,
@@ -212,6 +265,17 @@ class BidirectionalAttentionFlow(Model):
                                           encoded_passage * passage_question_vectors,
                                           encoded_passage * tiled_question_passage_vector],
                                          dim=-1)
+
+
+        # passage_question_similarity_with_relevants = self._matrix_attention(final_merged_passage, span_repr)
+        # passage_question_attention_with_relevants = util.masked_softmax(passage_question_similarity_with_relevants, rel)
+        # passage_question_vectors_with_relevants = util.weighted_sum(span_repr, passage_question_attention_with_relevants)
+        # masked_similarity_with_relevants = util.replace_masked_values(passage_question_similarity_with_relevants, question_mask.unsqueeze(1), -1e7)
+        # question_passage_similarity = masked_similarity_with_relevants.max(dim=-1)[0].squeeze(-1)
+        # question_passage_attention = util.masked_softmax(question_passage_similarity, passage_mask)
+        # question_passage_vector = util.weighted_sum(encoded_passage, question_passage_attention)
+        # tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(batch_size, passage_length, encoding_dim)
+
 
         modeled_passage = self._dropout(self._modeling_layer(final_merged_passage, passage_lstm_mask))
         modeling_dim = modeled_passage.size(-1)

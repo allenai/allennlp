@@ -142,3 +142,5 @@ pypandoc
 twine==1.11.0
 
 Elasticsearch
+
+diskcache
