@@ -107,6 +107,8 @@ GLOBAL_DATASET_VALUES: Dict[str, List[str]] = {
         "restaurants": ["2.5"]
 }
 
+GLOBAL_DATASET_VARIABLE_TYPES: Dict[str, Dict[str, str]] = {}
+
 
 def update_grammar_with_tables(grammar_dictionary: Dict[str, List[str]],
                                schema: Dict[str, List[TableColumn]]) -> None:
@@ -179,7 +181,7 @@ def update_grammar_to_be_variable_free(grammar_dictionary: Dict[str, List[str]])
     # to recognise new variables.
     del grammar_dictionary["name"]
 
-def update_grammar_with_untyped_entities(grammar_dictionary: Dict[str, List[str]]) -> None:
+def remove_number_and_string_types(grammar_dictionary: Dict[str, List[str]]) -> None:
     """
     Variables can be treated as numbers or strings if their type can be inferred -
     however, that can be difficult, so instead, we can just treat them all as values
@@ -194,44 +196,22 @@ def update_grammar_with_untyped_entities(grammar_dictionary: Dict[str, List[str]
     del grammar_dictionary["string"]
     del grammar_dictionary["number"]
 
+def update_grammar_with_typed_variables(grammar_dictionary: Dict[str, List[str]],
+                                        prelinked_entities: Dict[str, Dict[str, str]],
+                                        dataset_name: str) -> None:
+
+    dataset_type_mapping = GLOBAL_DATASET_VARIABLE_TYPES[dataset_name]
+    for variable, _ in prelinked_entities.items():
+        
+        variable_type = dataset_type_mapping[variable]
+        
+
+        # TODO update the signatures for binary, tertiary and in_exprs here.
+        grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
+
 
 def update_grammar_values_with_variables(grammar_dictionary: Dict[str, List[str]],
                                          prelinked_entities: Dict[str, Dict[str, str]]) -> None:
 
     for variable, _ in prelinked_entities.items():
         grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
-
-
-def update_grammar_numbers_and_strings_with_variables(grammar_dictionary: Dict[str, List[str]], # pylint: disable=invalid-name
-                                                      prelinked_entities: Dict[str, Dict[str, str]],
-                                                      columns: Dict[str, TableColumn]) -> None:
-    for variable, info in prelinked_entities.items():
-        variable_column = info["type"].upper()
-        matched_column = columns.get(variable_column, None)
-
-        if matched_column is not None:
-            # Try to infer the variable's type by matching it to a column in
-            # the database. If we can't, we just add it as a value.
-            if column_has_numeric_type(matched_column):
-                grammar_dictionary["number"] = [f'"\'{variable}\'"'] + grammar_dictionary["number"]
-            elif column_has_string_type(matched_column):
-                grammar_dictionary["string"] = [f'"\'{variable}\'"'] + grammar_dictionary["string"]
-            else:
-                grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
-        # Otherwise, try to infer by looking at the actual value:
-        else:
-            try:
-                # This is what happens if you try and do type inference
-                # in a grammar which parses _strings_ in _Python_.
-                # We're just seeing if the python interpreter can convert
-                # to to a float - if it can, we assume it's a number.
-                float(info["text"])
-                is_numeric = True
-            except ValueError:
-                is_numeric = False
-            if is_numeric:
-                grammar_dictionary["number"] = [f'"\'{variable}\'"'] + grammar_dictionary["number"]
-            elif info["text"].replace(" ", "").isalpha():
-                grammar_dictionary["string"] = [f'"\'{variable}\'"'] + grammar_dictionary["string"]
-            else:
-                grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]

@@ -21,9 +21,8 @@ from allennlp.semparse.contexts.text2sql_table_context import update_grammar_wit
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_tables
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_global_values
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_to_be_variable_free
-from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_untyped_entities
+from allennlp.semparse.contexts.text2sql_table_context import remove_number_and_string_types
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_values_with_variables
-from allennlp.semparse.contexts.text2sql_table_context import update_grammar_numbers_and_strings_with_variables
 from allennlp.data.tokenizers import Token
 
 class Text2SqlWorld(Registrable):
@@ -112,9 +111,8 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
         if self.use_untyped_entities:
             update_grammar_values_with_variables(grammar_with_context, prelinked_entities)
         else:
-            update_grammar_numbers_and_strings_with_variables(grammar_with_context,
-                                                              prelinked_entities,
-                                                              self.columns)
+            pass
+            # TODO here we should update based on _column productions_.
 
         grammar = Grammar(format_grammar_string(grammar_with_context))
 
@@ -143,7 +141,10 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
         update_grammar_to_be_variable_free(grammar_dictionary)
 
         if self.use_untyped_entities:
-            update_grammar_with_untyped_entities(grammar_dictionary)
+
+
+            # This should happen regardless!!!!
+            remove_number_and_string_types(grammar_dictionary)
 
         return grammar_dictionary
 
@@ -240,7 +241,8 @@ class LinkingText2SqlWorld(Text2SqlWorld):
         update_grammar_to_be_variable_free(grammar_dictionary)
 
         if self.use_untyped_entities:
-            update_grammar_with_untyped_entities(grammar_dictionary)
+            # This should happen regardless!!!!
+            remove_number_and_string_types(grammar_dictionary)
 
         return grammar_dictionary
 
@@ -259,5 +261,3 @@ class LinkingText2SqlWorld(Text2SqlWorld):
         return cls(schema_path=schema_path,
                    cursor=cursor,
                    use_untyped_entities=use_untyped_entities)
-
-
