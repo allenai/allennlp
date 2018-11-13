@@ -44,7 +44,7 @@ class TestText2SqlWorld(AllenNlpTestCase):
         # Should have added 2.5 because it is a global value
         # for the restaurants dataset.
         assert grammar_dictionary["value"] == ['"2.5"', 'parenval', '"YEAR(CURDATE())"',
-                                               'number', 'boolean', 'function', 'col_ref', 'string']
+                                               'boolean', 'function', 'col_ref']
 
     def test_variable_free_world_cannot_parse_as_statements(self):
         world = PrelinkedText2SqlWorld(self.schema)
@@ -57,11 +57,10 @@ class TestText2SqlWorld(AllenNlpTestCase):
                        "'city_name0'", 'AND', 'RESTAURANT', '.', 'NAME', '=', 'LOCATION',
                        '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
 
-        grammar = Grammar(format_grammar_string(world.base_grammar_dictionary))
-        sql_visitor = SqlVisitor(grammar)
-
-        with self.assertRaises(ParseError):
-            sql_visitor.parse(" ".join(sql_with_as))
+        entities = {"city_name0": {"text": "San fran", "type": "location"},
+                    "name0": {"text": "Matt Gardinios Pizza", "type": "restaurant"}}
+        action_sequence, _, _ = world.get_action_sequence_and_all_actions(sql_with_as, entities)
+        assert action_sequence is None
 
         sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',',
                'RESTAURANT', 'WHERE', 'LOCATION', '.', 'CITY_NAME', '=',
@@ -69,26 +68,15 @@ class TestText2SqlWorld(AllenNlpTestCase):
                '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
 
         # Without the AS we should still be able to parse it.
-        sql_visitor = SqlVisitor(grammar)
-        sql_visitor.parse(" ".join(sql))
-
-    def test_grammar_from_world_can_parse_statements(self):
-        world = PrelinkedText2SqlWorld(self.schema)
-        sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',',
-               'RESTAURANT', 'WHERE', 'LOCATION', '.', 'CITY_NAME', '=',
-               "'city_name0'", 'AND', 'RESTAURANT', '.', 'NAME', '=', 'LOCATION',
-               '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
-
-        grammar = Grammar(format_grammar_string(world.base_grammar_dictionary))
-        sql_visitor = SqlVisitor(grammar)
-        sql_visitor.parse(" ".join(sql))
+        action_sequence, _, _ = world.get_action_sequence_and_all_actions(sql, entities)
+        assert action_sequence is not None
 
     def test_world_identifies_non_global_rules(self):
         world = PrelinkedText2SqlWorld(self.schema)
         assert not world.is_global_rule('value -> ["\'food_type0\'"]')
 
-    def test_grammar_from_world_can_produce_entities_as_values(self):
-        world = PrelinkedText2SqlWorld(self.schema)
+    def test_untyped_grammar_from_world_can_produce_entities_as_values(self):
+        world = PrelinkedText2SqlWorld(self.schema, use_untyped_entities=True)
         sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',',
                'RESTAURANT', 'WHERE', 'LOCATION', '.', 'CITY_NAME', '=',
                "'city_name0'", 'AND', 'RESTAURANT', '.', 'NAME', '=', 'LOCATION',
@@ -97,10 +85,28 @@ class TestText2SqlWorld(AllenNlpTestCase):
         entities = {"city_name0": {"text": "San fran", "type": "location"},
                     "name0": {"text": "Matt Gardinios Pizza", "type": "restaurant"}}
         action_sequence, actions, _ = world.get_action_sequence_and_all_actions(sql, entities)
-        assert 'string -> ["\'city_name0\'"]' in action_sequence
-        assert 'string -> ["\'name0\'"]' in action_sequence
-        assert 'string -> ["\'city_name0\'"]' in actions
-        assert 'string -> ["\'name0\'"]' in actions
+
+        assert 'value -> ["\'city_name0\'"]' in action_sequence
+        assert 'value -> ["\'name0\'"]' in action_sequence
+        assert 'value -> ["\'city_name0\'"]' in actions
+        assert 'value -> ["\'name0\'"]' in actions
+
+    def test_typed_grammar_can_produce_column_constrained_values(self):
+        world = PrelinkedText2SqlWorld(self.schema, use_untyped_entities=False)
+        sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',',
+               'RESTAURANT', 'WHERE', 'LOCATION', '.', 'CITY_NAME', '=',
+               "'city_name0'", 'AND', 'RESTAURANT', '.', 'NAME', '=', 'LOCATION',
+               '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
+
+        entities = {"city_name0": {"text": "San fran", "type": "location"},
+                    "name0": {"text": "Matt Gardinios Pizza", "type": "restaurant"}}
+        action_sequence, actions, _ = world.get_action_sequence_and_all_actions(sql, entities)
+
+        assert 'expr -> ["LOCATION", ".", "CITY_NAME", binaryop, "\'city_name0\'"]' in action_sequence
+        assert 'expr -> ["RESTAURANT", ".", "NAME", binaryop, "\'name0\'"]' in action_sequence
+        assert 'expr -> ["LOCATION", ".", "CITY_NAME", binaryop, "\'city_name0\'"]' in actions
+        assert 'expr -> ["RESTAURANT", ".", "NAME", binaryop, "\'name0\'"]' in actions
+
 
     def test_linking_world_adds_values_from_tables(self):
         connection = sqlite3.connect(self.database_path)

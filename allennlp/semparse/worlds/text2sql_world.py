@@ -23,6 +23,7 @@ from allennlp.semparse.contexts.text2sql_table_context import update_grammar_wit
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_to_be_variable_free
 from allennlp.semparse.contexts.text2sql_table_context import remove_number_and_string_types
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_values_with_variables
+from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_typed_variables
 from allennlp.data.tokenizers import Token
 
 class Text2SqlWorld(Registrable):
@@ -111,8 +112,7 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
         if self.use_untyped_entities:
             update_grammar_values_with_variables(grammar_with_context, prelinked_entities)
         else:
-            pass
-            # TODO here we should update based on _column productions_.
+            update_grammar_with_typed_variables(grammar_with_context, prelinked_entities, self.dataset_name)
 
         grammar = Grammar(format_grammar_string(grammar_with_context))
 
@@ -140,11 +140,7 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
 
         update_grammar_to_be_variable_free(grammar_dictionary)
 
-        if self.use_untyped_entities:
-
-
-            # This should happen regardless!!!!
-            remove_number_and_string_types(grammar_dictionary)
+        remove_number_and_string_types(grammar_dictionary)
 
         return grammar_dictionary
 

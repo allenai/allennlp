@@ -107,7 +107,180 @@ GLOBAL_DATASET_VALUES: Dict[str, List[str]] = {
         "restaurants": ["2.5"]
 }
 
-GLOBAL_DATASET_VARIABLE_TYPES: Dict[str, Dict[str, str]] = {}
+GLOBAL_DATASET_VARIABLE_TYPES: Dict[str, Dict[str, str]] = {
+        "geography": {'var0': {('RIVER', '.', 'RIVER_NAME'),
+                                ('CITY', '.', 'CITY_NAME'),
+                                ('MOUNTAIN', '.', 'MOUNTAIN_NAME'),
+                                ('HIGHLOW', '.', 'HIGHEST_POINT'),
+                                ('CITY', '.', 'STATE_NAME'),
+                                ('HIGHLOW', '.', 'STATE_NAME'),
+                                ('HIGHLOW', '.', 'LOWEST_POINT'),
+                                ('STATE', '.', 'CAPITAL'),
+                                ('BORDER_INFO', '.', 'STATE_NAME'),
+                                ('RIVER', '.', 'COUNTRY_NAME'),
+                                ('LAKE', '.', 'STATE_NAME'),
+                                ('STATE', '.', 'STATE_NAME'),
+                                ('RIVER', '.', 'TRAVERSE'),
+                                ('BORDER_INFO', '.', 'BORDER'),
+                                ('MOUNTAIN', '.', 'STATE_NAME')},
+                      'var1': {('CITY', '.', 'STATE_NAME'),
+                                 ('STATE', '.', 'STATE_NAME'),
+                                 ('RIVER', '.', 'TRAVERSE'),
+                                 ('BORDER_INFO', '.', 'STATE_NAME')},
+                      '750': {('LAKE', '.', 'AREA'),
+                              ('RIVER', '.', 'LENGTH')},
+                      '150000':{('CITY', '.', 'POPULATION')}
+                     },
+        "restaurants": {'city_name0': {('LOCATION', '.', 'CITY_NAME')},
+                        'name0': {('RESTAURANT', '.', 'NAME')},
+                        'region0': {('GEOGRAPHIC', '.', 'REGION')},
+                        'food_type0': {('RESTAURANT', '.', 'FOOD_TYPE')},
+                        'street_name0': {('LOCATION', '.', 'STREET_NAME')},
+                        '2.5': {('RESTAURANT', '.', 'RATING')},
+                        'county0': {('GEOGRAPHIC', '.', 'COUNTY')}
+                       },
+
+        "imdb": {'actor_birth_city0': {('ACTOR', '.', 'BIRTH_CITY')},
+                 'writer_name0': {('WRITER', '.', 'NAME')},
+                 'cast_role0': {('CAST', '.', 'ROLE')},
+                 'movie_title0': {('MOVIE', '.', 'TITLE')},
+                 'actor_birth_year0': {('ACTOR', '.', 'BIRTH_YEAR')},
+                 'director_birth_city0': {('DIRECTOR', '.', 'BIRTH_CITY')},
+                 'director_name0': {('DIRECTOR', '.', 'NAME')},
+                 'actor_name0': {('ACTOR', '.', 'NAME')},
+                 'movie_release_year0': {('MOVIE', '.', 'RELEASE_YEAR')},
+                 'movie_release_year1': {('MOVIE', '.', 'RELEASE_YEAR')},
+                 'actor_name1': {('ACTOR', '.', 'NAME')},
+                 'genre_genre0': {('GENRE', '.', 'GENRE')},
+                 'tv_series_title0': {('TV_SERIES', '.', 'TITLE')},
+                 'actor_gender0': {('ACTOR', '.', 'GENDER')},
+                 'company_name0': {('COMPANY', '.', 'NAME')},
+                 'actor_nationality0': {('ACTOR', '.', 'NATIONALITY')},
+                 'keyword_keyword0': {('KEYWORD', '.', 'KEYWORD')},
+                 'producer_name0': {('PRODUCER', '.', 'NAME'), ('WRITER', '.', 'NAME')},
+                 'director_nationality0': {('DIRECTOR', '.', 'NATIONALITY')},
+                 'tv_series_release_year0': {('TV_SERIES', '.', 'RELEASE_YEAR')},
+                 'director_gender0': {('DIRECTOR', '.', 'GENDER')}
+                },
+        "academic": {'author_name0': {('AUTHOR', '.', 'NAME')},
+                     'publication_title0': {('PUBLICATION', '.', 'TITLE')},
+                     'conference_name0': {('CONFERENCE', '.', 'NAME')},
+                     'publication_year0': {('PUBLICATION', '.', 'YEAR')},
+                     'publication_year1': {('PUBLICATION', '.', 'YEAR')},
+                     'domain_name0': {('DOMAIN', '.', 'NAME')},
+                     'organization_name0': {('ORGANIZATION', '.', 'NAME')},
+                     'keyword_keyword0': {('KEYWORD', '.', 'KEYWORD')},
+                     'journal_name0': {('JOURNAL', '.', 'NAME')},
+                     'author_name1': {('AUTHOR', '.', 'NAME')},
+                     'publication_citation_num0': {('PUBLICATION', '.', 'CITATION_NUM')},
+                     'organization_continent0': {('ORGANIZATION', '.', 'CONTINENT')},
+                     'conference_name1': {('CONFERENCE', '.', 'NAME')},
+                     'author_name2': {('AUTHOR', '.', 'NAME')}
+                    },
+
+        "yelp": {'business_name0': {('BUSINESS', '.', 'NAME')},
+                 'business_city0': {('BUSINESS', '.', 'CITY')},
+                 'business_review_count0': {('BUSINESS', '.', 'REVIEW_COUNT')},
+                 'category_name0': {('CATEGORY', '.', 'CATEGORY_NAME')},
+                 'user_name0': {('USER', '.', 'NAME')},
+                 'business_rating0': {('BUSINESS', '.', 'RATING')},
+                 'business_state0': {('BUSINESS', '.', 'STATE')},
+                 'tip_year0': {('TIP', '.', 'YEAR')},
+                 'checkin_day0': {('CHECKIN', '.', 'DAY')},
+                 'category_name1': {('CATEGORY', '.', 'CATEGORY_NAME')},
+                 'review_year0': {('REVIEW', '.', 'YEAR')},
+                 'review_rating0': {('.', 'RATING', ')'), ('REVIEW', '.', 'RATING')},
+                 'tip_likes0': {('TIP', '.', 'LIKES')},
+                 'neighbourhood_name0': {('NEIGHBOURHOOD', '.', 'NEIGHBOURHOOD_NAME')},
+                 'review_month0': {('REVIEW', '.', 'MONTH')},
+                 'business_rating0': {('BUSINESS', '.', 'RATING')},
+                 'tip_month0': {('TIP', '.', 'MONTH')}
+                },
+        "scholar": {'authorname0': {('AUTHOR', '.', 'AUTHORNAME')},
+                    'authorname1': {('AUTHOR', '.', 'AUTHORNAME')},
+                    'keyphrasename0': {('KEYPHRASE', '.', 'KEYPHRASENAME')},
+                    'year0': {('PAPER', '.', 'YEAR')},
+                    'venuename0': {('VENUE', '.', 'VENUENAME')},
+                    '1': {('.', 'KEYPHRASEID', ')'), ('.', 'KEYPHRASENAME', ')')},
+                    '2': {('.', 'AUTHORID', ')'), ('.', 'VENUEID', ')')},
+                    'datasetname0': {('DATASET', '.', 'DATASETNAME')},
+                    'title0': {('PAPER', '.', 'TITLE')},
+                    'YEAR(CURDATE())': {('PAPER', '.', 'YEAR')},
+                    'misc0': {('YEAR', '>=', 'YEAR(CURDATE())'), ('.', 'PAPERID', ')'), ('YEAR', '==', 'YEAR(CURDATE())'), ('.', 'CITEDPAPERID', ')'), ('.', 'CITINGPAPERID', ')')},
+                    'journalname0': {('JOURNAL', '.', 'JOURNALNAME')},
+                    '0': {('PAPER', '.', 'JOURNALID')},
+                    'year0': {('PAPER', '.', 'YEAR')},
+                    'venueid0': {('PAPER', '.', 'VENUEID')},
+                   },
+
+        "atis": {'airport_code0': {('AIRPORT', '.', 'AIRPORT_CODE'), ('AIRPORT_SERVICE', '.', 'AIRPORT_CODE')},
+                 'city_name0': {('CITY', '.', 'CITY_NAME')},
+                 'day_number0': {('DATE_DAY', '.', 'DAY_NUMBER')},
+                 'month_number0': {('DATE_DAY', '.', 'MONTH_NUMBER')},
+                 'year0': {('DATE_DAY', '.', 'YEAR')},
+                 'city_name1': {('CITY', '.', 'CITY_NAME')},
+                 'day_name0': {('DAYS', '.', 'DAY_NAME')},
+                 'city_name2': {('CITY', '.', 'CITY_NAME')},
+                 'airline_code0': {('AIRLINE', '.', 'AIRLINE_CODE'), ('FLIGHT', '.', 'AIRLINE_CODE')},
+                 'class_type0': {('FARE_BASIS', '.', 'CLASS_TYPE')},
+                 'city_name3': {('CITY', '.', 'CITY_NAME')},
+                 'transport_type0': {('GROUND_SERVICE', '.', 'TRANSPORT_TYPE')},
+                 'departure_time1': {('DEPARTURE_TIME', 'BETWEEN', "'departure_time0'"), ('NOT', 'BETWEEN', "'departure_time0'"), ('FLIGHT', '.', 'DEPARTURE_TIME')},
+                 'flight_number0': {('FLIGHT', '.', 'FLIGHT_NUMBER')},
+                 'round_trip_required0': {('FARE', '.', 'ROUND_TRIP_REQUIRED')},
+                 'round_trip_cost0': {('FARE', '.', 'ROUND_TRIP_COST')},
+                 'departure_time0': {('FLIGHT', '.', 'DEPARTURE_TIME'), ('DEPARTURE_TIME', 'BETWEEN', "'departure_time1'")},
+                 'arrival_time0': {('FLIGHT', '.', 'ARRIVAL_TIME'), ('FLIGHT_STOP', '.', 'ARRIVAL_TIME')},
+                 'stops0': {('FLIGHT', '.', 'STOPS')},
+                 'days_code0': {('DAYS', '.', 'DAYS_CODE')},
+                 'arrival_time1': {('FLIGHT', '.', 'ARRIVAL_TIME')},
+                 'restriction_code0': {('RESTRICTION', '.', 'RESTRICTION_CODE')},
+                 'flight_days0': {('FLIGHT', '.', 'FLIGHT_DAYS')},
+                 'airline_name0': {('AIRLINE', '.', 'AIRLINE_NAME')},
+                 'fare_basis_code0': {('FARE', '.', 'FARE_BASIS_CODE'), ('FARE_BASIS', '.', 'FARE_BASIS_CODE')},
+                 'meal_description0': {('FOOD_SERVICE', '.', 'MEAL_DESCRIPTION')},
+                 'economy0': {('FARE_BASIS', '.', 'ECONOMY')},
+                 'state_code0': {('CITY', '.', 'STATE_CODE'), ('STATE', '.', 'STATE_CODE')},
+                 'airport_code1': {('AIRPORT', '.', 'AIRPORT_CODE')},
+                 'aircraft_code0': {('AIRCRAFT', '.', 'AIRCRAFT_CODE')},
+                 'basic_type0': {('AIRCRAFT', '.', 'BASIC_TYPE')},
+                 'manufacturer0': {('AIRCRAFT', '.', 'MANUFACTURER')},
+                 'state_name0': {('STATE', '.', 'STATE_NAME')},
+                 'state_name1': {('STATE', '.', 'STATE_NAME')},
+                 'day_name1': {('DAYS', '.', 'DAY_NAME')},
+                 'flight_number1': {('FLIGHT', '.', 'FLIGHT_NUMBER')},
+                 'time_elapsed0': {('FLIGHT', '.', 'TIME_ELAPSED')},
+                 'airline_code1': {('AIRLINE', '.', 'AIRLINE_CODE'), ('FLIGHT', '.', 'AIRLINE_CODE')},
+                 'connections0': {('FLIGHT', '.', 'CONNECTIONS')},
+                 'booking_class0': {('CLASS_OF_SERVICE', '.', 'BOOKING_CLASS'), ('FARE_BASIS', '.', 'BOOKING_CLASS')},
+                 'departure_time2': {('FLIGHT', '.', 'DEPARTURE_TIME'), ('DEPARTURE_TIME', 'BETWEEN', "'departure_time1'"), ('NOT', 'BETWEEN', "'departure_time1'")},
+                 'arrival_time2': {('FLIGHT', '.', 'ARRIVAL_TIME')},
+                 'departure_time2': {('FLIGHT', '.', 'DEPARTURE_TIME')},
+                 'departure_time3': {('FLIGHT', '.', 'DEPARTURE_TIME')},
+                 'state_name2': {('STATE', '.', 'STATE_NAME')},
+                 'departure_time3': {('FLIGHT', '.', 'DEPARTURE_TIME'), ('DEPARTURE_TIME', 'BETWEEN', "'departure_time2'"), ('NOT', 'BETWEEN', "'departure_time2'")},
+                 'day_name2': {('DAYS', '.', 'DAY_NAME')},
+                 'day_name3': {('DAYS', '.', 'DAY_NAME')},
+                 'day_name4': {('DAYS', '.', 'DAY_NAME')},
+                 'one_direction_cost0': {('FARE', '.', 'ONE_DIRECTION_COST')},
+                 'class_type1': {('FARE_BASIS', '.', 'CLASS_TYPE')},
+                 'year1': {('DATE_DAY', '.', 'YEAR')},
+                 'day_number1': {('DATE_DAY', '.', 'DAY_NUMBER')},
+                 'meal_code0': {('FOOD_SERVICE', '.', 'MEAL_CODE'), ('FLIGHT', '.', 'MEAL_CODE')},
+                 'arrival_time2': {('FLIGHT', '.', 'ARRIVAL_TIME')},
+                 'connections0': {('FLIGHT', '.', 'CONNECTIONS')},
+                 'airline_code2': {('FLIGHT', '.', 'AIRLINE_CODE')},
+                 'country_name0': {('CITY', '.', 'COUNTRY_NAME')},
+                 'fare_basis_code1': {('FARE', '.', 'FARE_BASIS_CODE')},
+                 'propulsion0': {('AIRCRAFT', '.', 'PROPULSION')},
+                 'airport_name0': {('AIRPORT', '.', 'AIRPORT_NAME')},
+                 'discounted0': {('FARE_BASIS', '.', 'DISCOUNTED')},
+                 'meal_code1': {('FLIGHT', '.', 'MEAL_CODE')},
+                 'state_code1': {('CITY', '.', 'STATE_CODE')},
+                 'booking_class1': {('CLASS_OF_SERVICE', '.', 'BOOKING_CLASS')},
+                 'transport_type1': {('GROUND_SERVICE', '.', 'TRANSPORT_TYPE')}}
+
+}
 
 
 def update_grammar_with_tables(grammar_dictionary: Dict[str, List[str]],
@@ -201,13 +374,24 @@ def update_grammar_with_typed_variables(grammar_dictionary: Dict[str, List[str]]
                                         dataset_name: str) -> None:
 
     dataset_type_mapping = GLOBAL_DATASET_VARIABLE_TYPES[dataset_name]
+
+    binary_ops = []
+
     for variable, _ in prelinked_entities.items():
-        
-        variable_type = dataset_type_mapping[variable]
-        
+        column_producers = dataset_type_mapping[variable]
+
+        for producer in column_producers:
+            table, _, column = producer
+
+            if not variable in GLOBAL_DATASET_VALUES.get(dataset_name, []):
+                binary_ops.append(f'("{table}" ws "." ws "{column}" wsp binaryop wsp  "\'{variable}\'")')
+            else:
+                binary_ops.append(f'("{table}" ws "." ws "{column}" wsp binaryop wsp  "{variable}")')
 
         # TODO update the signatures for binary, tertiary and in_exprs here.
         grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
+
+    grammar_dictionary["expr"] = sorted(binary_ops, reverse=True) + grammar_dictionary["expr"]
 
 
 def update_grammar_values_with_variables(grammar_dictionary: Dict[str, List[str]],
