@@ -2,21 +2,17 @@
 The BidirectionalTransformerEncoder from calypso
 """
 # pylint: disable=arguments-differ,invalid-name
-
-from typing import Tuple,Callable
-import copy
+from typing import Tuple, Callable
 import math
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 
+from allennlp.modules.layer_norm import LayerNorm
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
+from allennlp.nn import util
 
-
-def clones(module: torch.nn.Module, num_copies: int) -> torch.nn.ModuleList:
-    "Produce N identical layers."
-    return torch.nn.ModuleList([copy.deepcopy(module) for _ in range(num_copies)])
 
 def attention(query: torch.Tensor,
               key: torch.Tensor,
@@ -77,7 +73,7 @@ class TransformerEncoder(torch.nn.Module):
     "Core encoder is a stack of N layers"
     def __init__(self, layer: torch.nn.Module, num_layers: int, return_all_layers: bool = False) -> None:
         super().__init__()
-        self.layers = clones(layer, num_layers)
+        self.layers = util.clone(layer, num_layers)
         self.norm = LayerNorm(layer.size)
         self.return_all_layers = return_all_layers
 
@@ -93,20 +89,6 @@ class TransformerEncoder(torch.nn.Module):
             all_layers[-1] = self.norm(all_layers[-1])
             return all_layers
         return self.norm(x)
-
-
-class LayerNorm(torch.nn.Module):
-    "Construct a layernorm module (See citation for details)."
-    def __init__(self, features: int, eps: float = 1e-6) -> None:
-        super().__init__()
-        self.a_2 = torch.nn.Parameter(torch.ones(features))
-        self.b_2 = torch.nn.Parameter(torch.zeros(features))
-        self.eps = eps
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        mean = x.mean(-1, keepdim=True)
-        std = x.std(-1, keepdim=True)
-        return self.a_2 * (x - mean) / (std + self.eps) + self.b_2
 
 
 class SublayerConnection(torch.nn.Module):
@@ -134,7 +116,7 @@ class EncoderLayer(torch.nn.Module):
         super().__init__()
         self.self_attn = self_attn
         self.feed_forward = feed_forward
-        self.sublayer = clones(SublayerConnection(size, dropout), 2)
+        self.sublayer = util.clone(SublayerConnection(size, dropout), 2)
         self.size = size
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
@@ -150,7 +132,7 @@ class MultiHeadedAttention(torch.nn.Module):
         # We assume d_v always equals d_k
         self.d_k = input_dim // num_heads
         self.num_heads = num_heads
-        self.linears = clones(torch.nn.Linear(input_dim, input_dim), 4)
+        self.linears = util.clone(torch.nn.Linear(input_dim, input_dim), 4)
         self.attn = None
         self.dropout = torch.nn.Dropout(p=dropout)
 
@@ -236,10 +218,9 @@ class BidirectionalTransformerEncoder(Seq2SeqEncoder):
 
     def get_attention_masks(self, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Returns 2 masks of shape (batch_size, timesteps, timesteps)
-        representing 1) non-padded elements and 2) elements of the
-        sequence which are permitted to be involved in attention at
-        a given timestep.
+        Returns 2 masks of shape (batch_size, timesteps, timesteps) representing
+        1) non-padded elements, and
+        2) elements of the sequence which are permitted to be involved in attention at a given timestep.
         """
         device = mask.device
         # Forward case:
