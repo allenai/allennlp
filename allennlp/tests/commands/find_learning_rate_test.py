@@ -20,31 +20,31 @@ class TestFindLearningRate(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.params = lambda: Params({
-            "model": {
-                "type": "simple_tagger",
-                "text_field_embedder": {
-                    "tokens": {
-                        "type": "embedding",
-                        "embedding_dim": 5
-                    }
-                },
-                "encoder": {
-                    "type": "lstm",
-                    "input_size": 5,
-                    "hidden_size": 7,
-                    "num_layers": 2
-                }
-            },
-            "dataset_reader": {"type": "sequence_tagging"},
-            "train_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
-            "validation_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
-            "iterator": {"type": "basic", "batch_size": 2},
-            "trainer": {
-                "cuda_device": -1,
-                "num_epochs": 2,
-                "optimizer": "adam"
-            }
-        })
+                        "model": {
+                            "type": "simple_tagger",
+                            "text_field_embedder": {
+                                "tokens": {
+                                    "type": "embedding",
+                                    "embedding_dim": 5
+                                }
+                            },
+                            "encoder": {
+                                "type": "lstm",
+                                "input_size": 5,
+                                "hidden_size": 7,
+                                "num_layers": 2
+                            }
+                        },
+                        "dataset_reader": {"type": "sequence_tagging"},
+                        "train_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
+                        "validation_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
+                        "iterator": {"type": "basic", "batch_size": 2},
+                        "trainer": {
+                            "cuda_device": -1,
+                            "num_epochs": 2,
+                            "optimizer": "adam"
+                        }
+                    })
 
     def test_find_learning_rate(self):
         find_learning_rate_model(self.params(),
@@ -162,31 +162,31 @@ class TestSearchLearningRate(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         params = Params({
-            "model": {
-                "type": "simple_tagger",
-                "text_field_embedder": {
-                    "tokens": {
-                        "type": "embedding",
-                        "embedding_dim": 5
+                "model": {
+                    "type": "simple_tagger",
+                    "text_field_embedder": {
+                        "tokens": {
+                            "type": "embedding",
+                            "embedding_dim": 5
+                        }
+                    },
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2
                     }
                 },
-                "encoder": {
-                    "type": "lstm",
-                    "input_size": 5,
-                    "hidden_size": 7,
-                    "num_layers": 2
+                "dataset_reader": {"type": "sequence_tagging"},
+                "train_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
+                "validation_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
+                "iterator": {"type": "basic", "batch_size": 2},
+                "trainer": {
+                    "cuda_device": -1,
+                    "num_epochs": 2,
+                    "optimizer": "adam"
                 }
-            },
-            "dataset_reader": {"type": "sequence_tagging"},
-            "train_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
-            "validation_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
-            "iterator": {"type": "basic", "batch_size": 2},
-            "trainer": {
-                "cuda_device": -1,
-                "num_epochs": 2,
-                "optimizer": "adam"
-            }
-        })
+            })
         all_datasets = datasets_from_params(params)
         vocab = Vocabulary.from_params(
             params.pop("vocabulary", {}),
