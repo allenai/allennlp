@@ -64,12 +64,16 @@ class BidafPlusPlus(Model):
                  initializer: InitializerApplicator,
                  dropout: float = 0.2,
                  multi_choice_answers: bool = False,
+                 support_yesno: bool = False,
+                 support_followup: bool = False,
                  num_context_answers: int = 0,
                  marker_embedding_dim: int = 10,
                  max_span_length: int = 30) -> None:
         super().__init__(vocab)
         self._num_context_answers = num_context_answers
         self._multi_choice_answers = multi_choice_answers
+        self._support_yesno = support_yesno
+        self._support_followup = support_followup
         self._max_span_length = max_span_length
         self._text_field_embedder = text_field_embedder
         self._phrase_layer = phrase_layer
@@ -98,7 +102,8 @@ class BidafPlusPlus(Model):
 
         self._span_start_predictor = TimeDistributed(torch.nn.Linear(self._encoding_dim, 1))
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(self._encoding_dim, 1))
-        self._span_yesno_predictor = TimeDistributed(torch.nn.Linear(self._encoding_dim, 3))
+        if self._support_yesno:
+            self._span_yesno_predictor = TimeDistributed(torch.nn.Linear(self._encoding_dim, 3))
         self._span_followup_predictor = TimeDistributed(self._followup_lin)
 
         check_dimensions_match(phrase_layer.get_input_dim(),
@@ -111,11 +116,14 @@ class BidafPlusPlus(Model):
 
         self._span_start_accuracy = CategoricalAccuracy()
         self._span_end_accuracy = CategoricalAccuracy()
-        self._span_yesno_accuracy = CategoricalAccuracy()
-        self._span_followup_accuracy = CategoricalAccuracy()
-
-        self._span_gt_yesno_accuracy = CategoricalAccuracy()
-        self._span_gt_followup_accuracy = CategoricalAccuracy()
+        if self._support_yesno:
+            self._span_yesno_accuracy = CategoricalAccuracy()
+        if self._support_followup:
+            self._span_followup_accuracy = CategoricalAccuracy()
+        if self._support_yesno:
+            self._span_gt_yesno_accuracy = CategoricalAccuracy()
+        if self._support_followup:
+            self._span_gt_followup_accuracy = CategoricalAccuracy()
 
         self._span_accuracy = BooleanAccuracy()
         if self._multi_choice_answers:
@@ -311,14 +319,22 @@ class BidafPlusPlus(Model):
                                          repeated_passage_mask)
         span_end_logits = self._span_end_predictor(end_rep).squeeze(-1)
 
-        span_yesno_logits = self._span_yesno_predictor(end_rep).squeeze(-1)
-        span_followup_logits = self._span_followup_predictor(end_rep).squeeze(-1)
+
+        if self._support_yesno:
+            span_yesno_logits = self._span_yesno_predictor(end_rep).squeeze(-1)
+        else:
+            span_yesno_logits = None
+
+        if self._support_followup:
+            span_followup_logits = self._span_followup_predictor(end_rep).squeeze(-1)
+        else:
+            span_followup_logits = None
 
         span_start_logits = util.replace_masked_values(span_start_logits, repeated_passage_mask, -1e7)
         # batch_size * maxqa_len_pair, max_document_len
         span_end_logits = util.replace_masked_values(span_end_logits, repeated_passage_mask, -1e7)
 
-        best_span = self._get_best_span_yesno_followup(span_start_logits, span_end_logits,
+        best_span = self._get_example_predications(span_start_logits, span_end_logits,
                                                        span_yesno_logits, span_followup_logits,
                                                        self._max_span_length)
 
@@ -385,22 +401,28 @@ class BidafPlusPlus(Model):
                 pred_span_end_loc.append(max(best_span[i][1] * 3 + i * passage_length * 3 + 2, 0))
             predicted_end = span_start.new(pred_span_end_loc)
 
-            _yesno = span_yesno_logits.view(-1).index_select(0, gold_span_end_loc).view(-1, 3)
-            _followup = span_followup_logits.view(-1).index_select(0, gold_span_end_loc).view(-1, 3)
-            loss += nll_loss(F.log_softmax(_yesno, dim=-1), yesno_list.view(-1), ignore_index=-1)
-            loss += nll_loss(F.log_softmax(_followup, dim=-1), followup_list.view(-1), ignore_index=-1)
+            if self._support_yesno:
+                _yesno = span_yesno_logits.view(-1).index_select(0, gold_span_end_loc).view(-1, 3)
+                loss += nll_loss(F.log_softmax(_yesno, dim=-1), yesno_list.view(-1), ignore_index=-1)
+            if self._support_followup:
+                _followup = span_followup_logits.view(-1).index_select(0, gold_span_end_loc).view(-1, 3)
+                loss += nll_loss(F.log_softmax(_followup, dim=-1), followup_list.view(-1), ignore_index=-1)
 
-            _yesno = span_yesno_logits.view(-1).index_select(0, predicted_end).view(-1, 3)
-            _followup = span_followup_logits.view(-1).index_select(0, predicted_end).view(-1, 3)
-            self._span_yesno_accuracy(_yesno, yesno_list.view(-1), mask=qa_mask)
-            self._span_followup_accuracy(_followup, followup_list.view(-1), mask=qa_mask)
+            if self._support_yesno:
+                _yesno = span_yesno_logits.view(-1).index_select(0, predicted_end).view(-1, 3)
+                self._span_yesno_accuracy(_yesno, yesno_list.view(-1), mask=qa_mask)
+            if self._support_followup:
+                _followup = span_followup_logits.view(-1).index_select(0, predicted_end).view(-1, 3)
+                self._span_followup_accuracy(_followup, followup_list.view(-1), mask=qa_mask)
             output_dict["loss"] = loss
 
         # Compute F1 and preparing the output dictionary.
         output_dict['best_span_str'] = []
         output_dict['qid'] = []
-        output_dict['followup'] = []
-        output_dict['yesno'] = []
+        if self._support_followup:
+            output_dict['followup'] = []
+        if self._support_yesno:
+            output_dict['yesno'] = []
         # best_span is a vector of more than one span
         best_span_cpu = best_span.detach().cpu().numpy()
         for i in range(batch_size):
@@ -408,8 +430,10 @@ class BidafPlusPlus(Model):
             offsets = metadata[i]['token_offsets']
             f1_score = 0.0
             per_dialog_best_span_list = []
-            per_dialog_yesno_list = []
-            per_dialog_followup_list = []
+            if self._support_yesno:
+                per_dialog_yesno_list = []
+            if self._support_followup:
+                per_dialog_followup_list = []
             per_dialog_query_id_list = []
             for per_dialog_query_index, (iid, gold_answer_texts) in enumerate(
                     zip(metadata[i]["instance_id"], metadata[i]["answer_texts_list"])):
@@ -418,10 +442,14 @@ class BidafPlusPlus(Model):
                 start_offset = offsets[predicted_span[0]][0]
                 end_offset = offsets[predicted_span[1]][1]
 
-                yesno_pred = predicted_span[2]
-                followup_pred = predicted_span[3]
-                per_dialog_yesno_list.append(yesno_pred)
-                per_dialog_followup_list.append(followup_pred)
+                if self._support_yesno:
+                    yesno_pred = predicted_span[2]
+                    per_dialog_yesno_list.append(yesno_pred)
+
+                if self._support_followup:
+                    followup_pred = predicted_span[3]
+                    per_dialog_followup_list.append(followup_pred)
+
                 per_dialog_query_id_list.append(iid)
 
                 best_span_string = passage_str[start_offset:end_offset]
@@ -449,8 +477,10 @@ class BidafPlusPlus(Model):
                 self._official_f1(100 * f1_score)
             output_dict['qid'].append(per_dialog_query_id_list)
             output_dict['best_span_str'].append(per_dialog_best_span_list)
-            output_dict['yesno'].append(per_dialog_yesno_list)
-            output_dict['followup'].append(per_dialog_followup_list)
+            if self._support_yesno:
+                output_dict['yesno'].append(per_dialog_yesno_list)
+            if self._support_followup:
+                output_dict['followup'].append(per_dialog_followup_list)
         return output_dict
 
     @overrides
@@ -468,21 +498,21 @@ class BidafPlusPlus(Model):
             return {'start_acc': self._span_start_accuracy.get_metric(reset),
                     'end_acc': self._span_end_accuracy.get_metric(reset),
                     'span_acc': self._span_accuracy.get_metric(reset),
-                    'yesno': self._span_yesno_accuracy.get_metric(reset),
-                    'followup': self._span_followup_accuracy.get_metric(reset),
+                    #'yesno': self._span_yesno_accuracy.get_metric(reset),
+                    #'followup': self._span_followup_accuracy.get_metric(reset),
                     'f1': self._official_f1.get_metric(reset),
                     'multichoice_acc': self._multichoice_accuracy.get_metric(reset)}
         else:
             return {'start_acc': self._span_start_accuracy.get_metric(reset),
                     'end_acc': self._span_end_accuracy.get_metric(reset),
                     'span_acc': self._span_accuracy.get_metric(reset),
-                    'yesno': self._span_yesno_accuracy.get_metric(reset),
-                    'followup': self._span_followup_accuracy.get_metric(reset),
+                    #'yesno': self._span_yesno_accuracy.get_metric(reset),
+                    #'followup': self._span_followup_accuracy.get_metric(reset),
                     'f1': self._official_f1.get_metric(reset), }
 
 
     @staticmethod
-    def _get_best_span_yesno_followup(span_start_logits: torch.Tensor,
+    def _get_example_predications(span_start_logits: torch.Tensor,
                                       span_end_logits: torch.Tensor,
                                       span_yesno_logits: torch.Tensor,
                                       span_followup_logits: torch.Tensor,
@@ -499,8 +529,10 @@ class BidafPlusPlus(Model):
 
         span_start_logits = span_start_logits.data.cpu().numpy()
         span_end_logits = span_end_logits.data.cpu().numpy()
-        span_yesno_logits = span_yesno_logits.data.cpu().numpy()
-        span_followup_logits = span_followup_logits.data.cpu().numpy()
+        if span_yesno_logits is not None:
+            span_yesno_logits = span_yesno_logits.data.cpu().numpy()
+        if span_followup_logits is not None:
+            span_followup_logits = span_followup_logits.data.cpu().numpy()
         for b_i in range(batch_size):  # pylint: disable=invalid-name
             for j in range(passage_length):
                 val1 = span_start_logits[b_i, span_start_argmax[b_i]]
@@ -516,8 +548,10 @@ class BidafPlusPlus(Model):
                     max_span_log_prob[b_i] = val1 + val2
         for b_i in range(batch_size):
             j = best_word_span[b_i, 1]
-            yesno_pred = np.argmax(span_yesno_logits[b_i, j])
-            followup_pred = np.argmax(span_followup_logits[b_i, j])
-            best_word_span[b_i, 2] = int(yesno_pred)
-            best_word_span[b_i, 3] = int(followup_pred)
+            if span_yesno_logits is not None:
+                yesno_pred = np.argmax(span_yesno_logits[b_i, j])
+                best_word_span[b_i, 2] = int(yesno_pred)
+            if span_followup_logits is not None:
+                followup_pred = np.argmax(span_followup_logits[b_i, j])
+                best_word_span[b_i, 3] = int(followup_pred)
         return best_word_span
