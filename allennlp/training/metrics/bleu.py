@@ -112,7 +112,7 @@ class BLEU(Metric):
         return valid_tokens_mask
 
     @overrides
-    def __call__(self,
+    def __call__(self,  # type: ignore
                  predictions: torch.LongTensor,
                  gold_targets: torch.LongTensor) -> None:
         """
