@@ -14,12 +14,12 @@ class BleuTest(AllenNlpTestCase):
 
     def setUp(self):
         super().setUp()
-        self.metric = BLEU(ngram_weights=(0.5, 0.5))
+        self.metric = BLEU(ngram_weights=(0.5, 0.5), exclude_indices={0})
 
     def test_get_valid_tokens_mask(self):
         tensor = torch.tensor([[1, 2, 3, 0],
                                [0, 1, 1, 0]])
-        result = self.metric._get_valid_tokens_mask(tensor, set((0,)))
+        result = self.metric._get_valid_tokens_mask(tensor)
         result = result.long().numpy()
         check = np.array([[1, 1, 1, 0],
                           [0, 1, 1, 0]])
@@ -29,22 +29,22 @@ class BleuTest(AllenNlpTestCase):
         tensor = torch.tensor([1, 2, 3, 1, 2, 0])
 
         # Unigrams.
-        counts = Counter(self.metric._ngrams(tensor, 1, set((0,))))
+        counts = Counter(self.metric._ngrams(tensor, 1))
         unigram_check = {(1,): 2, (2,): 2, (3,): 1}
         assert counts == unigram_check
 
         # Bigrams.
-        counts = Counter(self.metric._ngrams(tensor, 2, set((0,))))
+        counts = Counter(self.metric._ngrams(tensor, 2))
         bigram_check = {(1, 2): 2, (2, 3): 1, (3, 1): 1}
         assert counts == bigram_check
 
         # Trigrams.
-        counts = Counter(self.metric._ngrams(tensor, 3, set((0,))))
+        counts = Counter(self.metric._ngrams(tensor, 3))
         trigram_check = {(1, 2, 3): 1, (2, 3, 1): 1, (3, 1, 2): 1}
         assert counts == trigram_check
 
         # ngram size too big, no ngrams produced.
-        counts = Counter(self.metric._ngrams(tensor, 7, set((0,))))
+        counts = Counter(self.metric._ngrams(tensor, 7))
         assert counts == {}
 
     def test_bleu_computed_correctly(self):
@@ -60,9 +60,7 @@ class BleuTest(AllenNlpTestCase):
                                      [1, 0, 0],
                                      [1, 1, 2]])
 
-        exclude_indices = set((0,))
-
-        self.metric(predictions, gold_targets, exclude_indices)
+        self.metric(predictions, gold_targets)
 
         assert self.metric._prediction_lengths == 6
         assert self.metric._reference_lengths == 5
