@@ -116,6 +116,19 @@ class TestFindLearningRate(AllenNlpTestCase):
             args = parser.parse_args(["find_lr", "path/to/params"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
+            
+    @pytest.mark.skipif(torch.cuda.device_count() < 2,
+                        reason="Need multiple GPUs.")
+    def test_find_learning_rate_multi_gpu(self):
+        self.params["trainer"]["cuda_device"] = [0, 1]
+        find_learning_rate_model(self.params(), 
+                                 os.path.join(self.TEST_DIR, 'test_find_learning_rate_multi_gpu'),
+                                 start_lr=1e-5,
+                                 end_lr=1,
+                                 num_batches=100,
+                                 linear_steps=True,
+                                 stopping_factor=None,
+                                 force=False)
 
 class TestSearchLearningRate(AllenNlpTestCase):
 
@@ -180,82 +193,3 @@ class TestSearchLearningRate(AllenNlpTestCase):
         learning_rates, losses = search_learning_rate(self.trainer, num_batches=100, stopping_factor=None)
         assert len(learning_rates) == 101
         assert len(losses) == 101
-
-class TestFindLearningRateForMultiGPU(AllenNlpTestCase):
-
-    def setUp(self):
-        super().setUp()
-        self.params = lambda: Params({
-                        "model": {
-                            "type": "simple_tagger",
-                            "text_field_embedder": {
-                                "tokens": {
-                                    "type": "embedding",
-                                    "embedding_dim": 5
-                                }
-                            },
-                            "encoder": {
-                                "type": "lstm",
-                                "input_size": 5,
-                                "hidden_size": 7,
-                                "num_layers": 2
-                            }
-                        },
-                        "dataset_reader": {"type": "sequence_tagging"},
-                        "train_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
-                        "validation_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
-                        "iterator": {"type": "basic", "batch_size": 2},
-                        "trainer": {
-                            "cuda_device": [0, 1],
-                            "num_epochs": 2,
-                            "optimizer": "adam"
-                        }
-                    })
-
-    @pytest.mark.skipif(torch.cuda.device_count() < 2,
-                        reason="Need multiple GPUs.")
-    def test_find_learning_rate(self):
-        find_learning_rate_model(self.params(), os.path.join(self.TEST_DIR, 'test_find_learning_rate'),
-                                 start_lr=1e-5,
-                                 end_lr=1,
-                                 num_batches=100,
-                                 linear_steps=True,
-                                 stopping_factor=None,
-                                 force=False)
-
-        # It's OK if serialization dir exists but is empty:
-        serialization_dir2 = os.path.join(self.TEST_DIR, 'empty_directory')
-        assert not os.path.exists(serialization_dir2)
-        os.makedirs(serialization_dir2)
-        find_learning_rate_model(self.params(), serialization_dir2,
-                                 start_lr=1e-5,
-                                 end_lr=1,
-                                 num_batches=100,
-                                 linear_steps=True,
-                                 stopping_factor=None,
-                                 force=False)
-
-        # It's not OK if serialization dir exists and has junk in it non-empty:
-        serialization_dir3 = os.path.join(self.TEST_DIR, 'non_empty_directory')
-        assert not os.path.exists(serialization_dir3)
-        os.makedirs(serialization_dir3)
-        with open(os.path.join(serialization_dir3, 'README.md'), 'w') as f:
-            f.write("TEST")
-
-        with pytest.raises(ConfigurationError):
-            find_learning_rate_model(self.params(), serialization_dir3,
-                                     start_lr=1e-5,
-                                     end_lr=1,
-                                     num_batches=100,
-                                     linear_steps=True,
-                                     stopping_factor=None,
-                                     force=False)
-
-        # ... unless you use the --force flag.
-        find_learning_rate_model(self.params(), serialization_dir3,
-                                 start_lr=1e-5,
-                                 end_lr=1,
-                                 num_batches=100,
-                                 linear_steps=True,
-                                 stopping_factor=None,
-                                 force=True)
