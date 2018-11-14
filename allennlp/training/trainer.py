@@ -666,8 +666,11 @@ class Trainer(Registrable):
             elastic_train_metrics.update({'batch_num_total': epoch})
         elastic_train_metrics.update({'experiment_name': '/'.join(self._serialization_dir.split('/')[-2:])})
 
-        ElasticLogger().write_log('INFO', 'train_metric', context_dict=elastic_train_metrics)
-        if val_metrics != {}:
+        if val_metrics == {}:
+            if elastic_train_metrics['batch_num_total'] % 20 == 1:
+                ElasticLogger().write_log('INFO', 'train_metric', context_dict=elastic_train_metrics)
+        else:
+            ElasticLogger().write_log('INFO', 'train_metric', context_dict=elastic_train_metrics)
             elastic_val_metrics = val_metrics.copy()
             elastic_val_metrics = {'validation/' + k: v for k, v in elastic_val_metrics.items()}
             elastic_val_metrics.update({'epoch': epoch})
