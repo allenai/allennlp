@@ -54,3 +54,8 @@ allennlp.data.tokenizers
    :undoc-members:
    :show-inheritance:
 
+.. _sentence-splitter:
+.. automodule:: allennlp.data.tokenizers.sentence_splitter
+   :members:
+   :undoc-members:
+   :show-inheritance:
