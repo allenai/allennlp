@@ -1,8 +1,6 @@
 from typing import List, Tuple, Dict
 from copy import deepcopy
-from collections import defaultdict
-import sqlite3
-from sqlite3 import Cursor
+import json
 import os
 
 from parsimonious import Grammar
@@ -10,10 +8,8 @@ from parsimonious.exceptions import ParseError
 from nltk import ngrams, bigrams
 
 from allennlp.common.registrable import Registrable
-from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.semparse.contexts.sql_context_utils import SqlVisitor
-from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import TableColumn
 from allennlp.semparse.contexts.sql_context_utils import format_grammar_string, initialize_valid_actions
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
 from allennlp.semparse.contexts.text2sql_table_context import GRAMMAR_DICTIONARY
@@ -37,16 +33,6 @@ class Text2SqlWorld(Registrable):
 
         raise NotImplementedError
 
-
-def database_to_dict(schema: Dict[str, List[TableColumn]],
-                     cursor: Cursor) -> Dict[Tuple[str, str], List[str]]:
-    database_dict = defaultdict(list)
-    for table_name, columns in schema.items():
-        for column in columns:
-            cursor.execute(f'SELECT DISTINCT {table_name}.{column.name} FROM {table_name}')
-            results = [str(x[0]) for x in cursor.fetchall()]
-            database_dict[(table_name, column)] = results
-    return {**database_dict}
 
 # def get_strings_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
 #     """
@@ -132,7 +118,7 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
 
     def _initialize_grammar_dictionary(self, grammar_dictionary: Dict[str, List[str]]) -> Dict[str, List[str]]:
         # Add all the table and column names to the grammar.
-        update_grammar_with_tables(grammar_dictionary, self.schema)
+        update_grammar_with_tables(grammar_dictionary, self.schema, constrained=not self.use_untyped_entities)
 
         # Finally, update the grammar with global, non-variable values
         # found in the dataset, if present.
@@ -165,24 +151,22 @@ class LinkingText2SqlWorld(Text2SqlWorld):
         A path to a schema file which we read into a dictionary
         representing the SQL tables in the dataset, the keys are the
         names of the tables that map to lists of the table's column names.
-    cursor : ``Cursor``, required.
-        An optional cursor for a database, which is used to add
-        database values to the grammar.
+    database_dict_path : ``str``, required.
+        An optional path to a json file containing the values to be linked to.
     use_untyped_entities : ``bool``, optional (default = False)
         Whether or not to try to infer the types of prelinked variables.
         If not, they are added as untyped values to the grammar instead.
     """
     def __init__(self,
                  schema_path: str,
-                 cursor: Cursor,
+                 database_dict_path: str,
                  use_untyped_entities: bool = False) -> None:
-        self.cursor = cursor
         self.schema = read_dataset_schema(schema_path)
         self.columns = {column.name: column for table in self.schema.values() for column in table}
         self.dataset_name = os.path.basename(schema_path).split("-")[0]
         self.use_untyped_entities = use_untyped_entities
 
-        self.database_contents = database_to_dict(self.schema, self.cursor)
+        self.database_contents = json.load(open(database_dict_path))
 
         # NOTE: This base dictionary should not be modified.
         self.base_grammar_dictionary = self._initialize_grammar_dictionary(deepcopy(GRAMMAR_DICTIONARY))
@@ -214,21 +198,11 @@ class LinkingText2SqlWorld(Text2SqlWorld):
 
     def _initialize_grammar_dictionary(self, grammar_dictionary: Dict[str, List[str]]) -> Dict[str, List[str]]:
         # Add all the table and column names to the grammar.
-        update_grammar_with_tables(grammar_dictionary, self.schema)
+        update_grammar_with_tables(grammar_dictionary, self.schema, constrained=not self.use_untyped_entities)
 
         # TODO Mark: Pretty sure we don't want to include all table values as actions.
         # Do something else instead. generate variables representing a pre-linked
         # value per column instead?
-        if self.cursor is not None:
-            # Now if we have strings in the table, we need to be able to
-            # produce them, so we find all of the strings in the tables here
-            # and create production rules from them. We only do this if
-            # we haven't pre-linked entities, because if we have, we don't
-            # need to be able to generate the values - just the placeholder
-            # symbols which link to them.
-            grammar_dictionary["number"] = []
-            grammar_dictionary["string"] = []
-            update_grammar_with_table_values(grammar_dictionary, self.schema, self.cursor)
 
         # Finally, update the grammar with global, non-variable values
         # found in the dataset, if present.
@@ -236,24 +210,9 @@ class LinkingText2SqlWorld(Text2SqlWorld):
 
         update_grammar_to_be_variable_free(grammar_dictionary)
 
-        if self.use_untyped_entities:
-            # This should happen regardless!!!!
-            remove_number_and_string_types(grammar_dictionary)
+        remove_number_and_string_types(grammar_dictionary)
 
         return grammar_dictionary
 
     def is_global_rule(self, production_rule: str) -> bool:
         return True
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'LinkingText2SqlWorld':  # type: ignore
-
-        schema_path = params.pop("schema_path")
-        database_path = params.pop("database_path")
-        connection = sqlite3.connect(database_path)
-        cursor = connection.cursor()
-        use_untyped_entities = params.pop_bool("use_untyped_entities", True)
-
-        return cls(schema_path=schema_path,
-                   cursor=cursor,
-                   use_untyped_entities=use_untyped_entities)

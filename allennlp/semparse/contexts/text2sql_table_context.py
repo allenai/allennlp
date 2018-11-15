@@ -286,16 +286,25 @@ GLOBAL_DATASET_VARIABLE_TYPES: Dict[str, Dict[str, str]] = {
 
 
 def update_grammar_with_tables(grammar_dictionary: Dict[str, List[str]],
-                               schema: Dict[str, List[TableColumn]]) -> None:
+                               schema: Dict[str, List[TableColumn]],
+                               constrained: bool = False) -> None:
     table_names = sorted([f'"{table}"' for table in
                           list(schema.keys())], reverse=True)
     grammar_dictionary['table_name'] = table_names
 
     all_columns = set()
     for table in schema.values():
-        all_columns.update([column.name for column in table])
-    sorted_columns = sorted([f'"{column}"' for column in all_columns], reverse=True)
-    grammar_dictionary['column_name'] = sorted_columns
+        if constrained:
+            all_columns.update([f'("{table}" ws "." ws "{column.name}")' for column in table])
+        else:
+            all_columns.update([f'"{column.name}"' for column in table])
+
+    sorted_columns = sorted(all_columns, reverse=True)
+    if constrained:
+        del grammar_dictionary['column_name']
+        grammar_dictionary['col_ref'] = sorted_columns + ['table_name']
+    else:
+        grammar_dictionary['column_name'] = sorted_columns
 
 def update_grammar_with_table_values(grammar_dictionary: Dict[str, List[str]],
                                      schema: Dict[str, List[TableColumn]],
