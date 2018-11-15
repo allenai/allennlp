@@ -86,9 +86,11 @@ class TestText2SqlWorld(AllenNlpTestCase):
         action_sequence, _, _ = world.get_action_sequence_and_all_actions(sql, entities)
         assert action_sequence is not None
 
-    def test_world_identifies_non_global_rules(self):
-        world = PrelinkedText2SqlWorld(self.schema)
-        assert not world.is_global_rule('value -> ["\'food_type0\'"]')
+    def test_world_with_linking_identifies_non_global_rules(self):
+        world = PrelinkedText2SqlWorld(self.schema, link_entities_to_actions=True)
+        assert not world.is_global_rule('RESTAURANT_FOOD_TYPE_value')
+        world = LinkingText2SqlWorld(self.schema)
+        assert not world.is_global_rule('RESTAURANT_FOOD_TYPE_value')
 
     def test_untyped_grammar_from_world_can_produce_entities_as_values(self):
         world = PrelinkedText2SqlWorld(self.schema, use_untyped_entities=True)
