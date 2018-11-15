@@ -29,6 +29,10 @@ class BertIndexer(TokenIndexer[int]):
         else:
             self.vocab = bert.load_vocab(cached_path(vocab_path))
 
+        # The BERT code itself does a two-step tokenization:
+        #    sentence -> [words], and then word -> [wordpieces]
+        # In AllenNLP, the first step is implemented as the ``BertSimpleWordSplitter``,
+        # and this token indexer handles the second.
         self.tokenizer = bert.WordpieceTokenizer(self.vocab, unk_token, max_input_chars_per_word)
 
     @overrides
