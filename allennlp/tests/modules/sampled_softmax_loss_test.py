@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
 import torch
 
-from flaky import flaky
+import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.sampled_softmax_loss import _choice, SampledSoftmaxLoss
@@ -24,7 +24,7 @@ class TestSampledSoftmaxLoss(AllenNlpTestCase):
 
         _ = softmax(embedding, targets)
 
-    @flaky
+    @pytest.mark.skip("this test is broken, joelg is working on fixing it")
     def test_sampled_almost_equals_unsampled_when_num_samples_is_almost_all(self):
         sampled_softmax = SampledSoftmaxLoss(num_words=10000, embedding_dim=12, num_samples=9999)
         unsampled_softmax = _SoftmaxLoss(num_words=10000, embedding_dim=12)
