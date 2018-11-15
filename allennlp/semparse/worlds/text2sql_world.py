@@ -159,14 +159,14 @@ class LinkingText2SqlWorld(Text2SqlWorld):
     """
     def __init__(self,
                  schema_path: str,
-                 database_dict_path: str,
+                 database_dict_path: str = None,
                  use_untyped_entities: bool = False) -> None:
         self.schema = read_dataset_schema(schema_path)
         self.columns = {column.name: column for table in self.schema.values() for column in table}
         self.dataset_name = os.path.basename(schema_path).split("-")[0]
         self.use_untyped_entities = use_untyped_entities
 
-        self.database_contents = json.load(open(database_dict_path))
+        self.database_contents = json.load(open(database_dict_path)) if database_dict_path is not None else None
 
         # NOTE: This base dictionary should not be modified.
         self.base_grammar_dictionary = self._initialize_grammar_dictionary(deepcopy(GRAMMAR_DICTIONARY))

@@ -2,12 +2,9 @@
 
 import sqlite3
 
-from parsimonious import Grammar, ParseError
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.text2sql_world import PrelinkedText2SqlWorld, LinkingText2SqlWorld
-from allennlp.semparse.contexts.sql_context_utils import format_grammar_string
-from allennlp.semparse.contexts.sql_context_utils import SqlVisitor
 
 
 class TestText2SqlWorld(AllenNlpTestCase):
@@ -30,13 +27,31 @@ class TestText2SqlWorld(AllenNlpTestCase):
             assert all(["string " not in production for production in value])
             assert all(["(string " not in production for production in value])
 
-    def test_world_modifies_unconstrained_grammar_correctly(self):
-        world = PrelinkedText2SqlWorld(self.schema)
+    def test_world_modifies_unconstrained_grammar_tables_correctly(self):
+        world = PrelinkedText2SqlWorld(self.schema, use_untyped_entities=True)
         grammar_dictionary = world.base_grammar_dictionary
         assert grammar_dictionary["table_name"] == ['"RESTAURANT"', '"LOCATION"', '"GEOGRAPHIC"']
         assert grammar_dictionary["column_name"] == ['"STREET_NAME"', '"RESTAURANT_ID"', '"REGION"',
                                                      '"RATING"', '"NAME"', '"HOUSE_NUMBER"',
                                                      '"FOOD_TYPE"', '"COUNTY"', '"CITY_NAME"']
+    def test_world_modifies_constrained_grammar_tables_correctly(self):
+        world = PrelinkedText2SqlWorld(self.schema, use_untyped_entities=False)
+        grammar_dictionary = world.base_grammar_dictionary
+        assert grammar_dictionary["table_name"] == ['"RESTAURANT"', '"LOCATION"', '"GEOGRAPHIC"']
+        assert grammar_dictionary.get("column_name", None) is None
+        assert grammar_dictionary["col_ref"] == ['("RESTAURANT" ws "." ws "RESTAURANT_ID")',
+                                                 '("RESTAURANT" ws "." ws "RATING")',
+                                                 '("RESTAURANT" ws "." ws "NAME")',
+                                                 '("RESTAURANT" ws "." ws "FOOD_TYPE")',
+                                                 '("RESTAURANT" ws "." ws "CITY_NAME")',
+                                                 '("LOCATION" ws "." ws "STREET_NAME")',
+                                                 '("LOCATION" ws "." ws "RESTAURANT_ID")',
+                                                 '("LOCATION" ws "." ws "HOUSE_NUMBER")',
+                                                 '("LOCATION" ws "." ws "CITY_NAME")',
+                                                 '("GEOGRAPHIC" ws "." ws "REGION")',
+                                                 '("GEOGRAPHIC" ws "." ws "COUNTY")',
+                                                 '("GEOGRAPHIC" ws "." ws "CITY_NAME")',
+                                                 'table_name']
 
     def test_world_modifies_grammar_with_global_values_for_dataset(self):
         world = PrelinkedText2SqlWorld(self.schema)
@@ -107,23 +122,3 @@ class TestText2SqlWorld(AllenNlpTestCase):
         assert 'expr -> ["LOCATION", ".", "CITY_NAME", binaryop, "\'city_name0\'"]' in actions
         assert 'expr -> ["RESTAURANT", ".", "NAME", binaryop, "\'name0\'"]' in actions
 
-
-    def test_linking_world_adds_values_from_tables(self):
-        connection = sqlite3.connect(self.database_path)
-        cursor = connection.cursor()
-        world = LinkingText2SqlWorld(self.schema, cursor=cursor)
-        assert world.base_grammar_dictionary["number"] == ['"229"', '"228"', '"227"', '"226"',
-                                                           '"225"', '"5"', '"4"', '"3"', '"2"',
-                                                           '"1"', '"833"', '"430"', '"242"',
-                                                           '"135"', '"1103"']
-
-        assert world.base_grammar_dictionary["string"] == ['"tommy\'s"', '"rod\'s hickory pit restaurant"',
-                                                           '"lyons restaurant"', '"jamerican cuisine"',
-                                                           '"denny\'s restaurant"', '"american"', '"vallejo"',
-                                                           '"w. el camino real"', '"el camino real"',
-                                                           '"e. el camino real"', '"church st"',
-                                                           '"broadway"', '"sunnyvale"', '"san francisco"',
-                                                           '"san carlos"', '"american canyon"', '"alviso"',
-                                                           '"albany"', '"alamo"', '"alameda"', '"unknown"',
-                                                           '"santa clara county"', '"contra costa county"',
-                                                           '"alameda county"', '"bay area"']

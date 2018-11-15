@@ -293,9 +293,9 @@ def update_grammar_with_tables(grammar_dictionary: Dict[str, List[str]],
     grammar_dictionary['table_name'] = table_names
 
     all_columns = set()
-    for table in schema.values():
+    for table_name, table in schema.items():
         if constrained:
-            all_columns.update([f'("{table}" ws "." ws "{column.name}")' for column in table])
+            all_columns.update([f'("{table_name}" ws "." ws "{column.name}")' for column in table])
         else:
             all_columns.update([f'"{column.name}"' for column in table])
 
