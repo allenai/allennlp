@@ -8,10 +8,10 @@ from allennlp.models.bidirectional_lm import _SoftmaxLoss
 
 class TestSampledSoftmaxLoss(AllenNlpTestCase):
     def test_choice(self):
-        sample, num_samples = _choice(num_words=1000, num_samples=50)
+        sample, num_tries = _choice(num_words=1000, num_samples=50)
         assert len(set(sample)) == 50
         assert all(0 <= x < 1000 for x in sample)
-        assert num_samples >= 50
+        assert num_tries >= 50
 
     def test_sampled_softmax_can_run(self):
         softmax = SampledSoftmaxLoss(num_words=1000, embedding_dim=12, num_samples=50)

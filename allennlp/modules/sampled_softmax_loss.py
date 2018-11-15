@@ -10,8 +10,8 @@ from allennlp.common.checks import ConfigurationError
 
 def _choice(num_words: int, num_samples: int) -> Tuple[np.ndarray, int]:
     """
-    Calls np.random.choice(n_words, n_samples, replace=False),
-    computing the probability on the fly. Returns (samples, num_tries)
+    Chooses ``num_samples`` samples without replacement from [0, ..., num_words).
+    Returns a tuple (samples, num_tries).
     """
     num_tries = 0
     num_chosen = 0
@@ -46,11 +46,12 @@ class SampledSoftmaxLoss(torch.nn.Module):
     """
     Based on the default log_uniform_candidate_sampler in tensorflow.
 
-    NOTE num_words DOES NOT include padding id.
+    NOTE: num_words DOES NOT include padding id.
+
     NOTE: In all cases except (tie_embeddings=True and use_character_inputs=False)
-        the weights are dimensioned as num_words and do not include an entry for the padding (0) id.
-        For the (tie_embeddings=True and use_character_inputs=False) case,
-        then the embeddings DO include the extra 0 padding, to be consistent with the word embedding layer.
+    the weights are dimensioned as num_words and do not include an entry for the padding (0) id.
+    For the (tie_embeddings=True and use_character_inputs=False) case,
+    then the embeddings DO include the extra 0 padding, to be consistent with the word embedding layer.
 
     Parameters
     ----------
