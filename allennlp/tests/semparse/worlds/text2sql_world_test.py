@@ -121,4 +121,3 @@ class TestText2SqlWorld(AllenNlpTestCase):
         assert 'expr -> ["RESTAURANT", ".", "NAME", binaryop, "\'name0\'"]' in action_sequence
         assert 'expr -> ["LOCATION", ".", "CITY_NAME", binaryop, "\'city_name0\'"]' in actions
         assert 'expr -> ["RESTAURANT", ".", "NAME", binaryop, "\'name0\'"]' in actions
-

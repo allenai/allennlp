@@ -407,6 +407,33 @@ def update_grammar_with_typed_variables(grammar_dictionary: Dict[str, List[str]]
     grammar_dictionary["expr"] = sorted(binary_ops, reverse=True) + grammar_dictionary["expr"]
 
 
+def update_grammar_with_linked_typed_variables(grammar_dictionary: Dict[str, List[str]],
+                                               prelinked_entities: Dict[str, Dict[str, str]],
+                                               dataset_name: str) -> None:
+
+    dataset_type_mapping = GLOBAL_DATASET_VARIABLE_TYPES[dataset_name]
+
+    binary_ops = []
+
+    for variable, _ in prelinked_entities.items():
+        column_producers = dataset_type_mapping.get(variable, [])
+
+        if not column_producers:
+            print(f"Warning -{variable} not found in mapping.")
+        for producer in column_producers:
+            table, _, column = producer
+
+            if not variable in GLOBAL_DATASET_VALUES.get(dataset_name, []):
+                binary_ops.append(f'("{table}" ws "." ws "{column}" wsp binaryop wsp  "\'{variable}\'")')
+            else:
+                binary_ops.append(f'("{table}" ws "." ws "{column}" wsp binaryop wsp  "{variable}")')
+
+        # TODO update the signatures for binary, tertiary and in_exprs here.
+        grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
+
+    grammar_dictionary["expr"] = sorted(binary_ops, reverse=True) + grammar_dictionary["expr"]
+
+
 def update_grammar_values_with_variables(grammar_dictionary: Dict[str, List[str]],
                                          prelinked_entities: Dict[str, Dict[str, str]]) -> None:
 

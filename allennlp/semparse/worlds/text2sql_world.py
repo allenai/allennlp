@@ -13,13 +13,13 @@ from allennlp.semparse.contexts.sql_context_utils import SqlVisitor
 from allennlp.semparse.contexts.sql_context_utils import format_grammar_string, initialize_valid_actions
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
 from allennlp.semparse.contexts.text2sql_table_context import GRAMMAR_DICTIONARY
-from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_table_values
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_tables
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_global_values
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_to_be_variable_free
 from allennlp.semparse.contexts.text2sql_table_context import remove_number_and_string_types
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_values_with_variables
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_typed_variables
+from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_linked_typed_variables
 from allennlp.data.tokenizers import Token
 
 class Text2SqlWorld(Registrable):
@@ -29,7 +29,7 @@ class Text2SqlWorld(Registrable):
                                             prelinked_entities: Dict[str, Dict[str, str]] = None) -> Tuple[List[str], List[str]]: # pylint: disable=line-too-long
         raise NotImplementedError
 
-    def is_global_rule(self, production_rule: str) -> bool:
+    def is_global_rule(self, nonterminal: str) -> bool:
 
         raise NotImplementedError
 
@@ -79,11 +79,18 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
     """
     def __init__(self,
                  schema_path: str,
-                 use_untyped_entities: bool = False) -> None:
+                 use_untyped_entities: bool = False,
+                 link_entities_to_actions: bool = False) -> None:
         self.schema = read_dataset_schema(schema_path)
-        self.columns = {column.name: column for table in self.schema.values() for column in table}
+        self.typed_variable_nonterminals = {f"{table_name}_{column.name}_value"
+                                            for table_name, table in self.schema.items()
+                                            for column in table}
         self.dataset_name = os.path.basename(schema_path).split("-")[0]
         self.use_untyped_entities = use_untyped_entities
+        self.link_entities_to_actions = link_entities_to_actions
+
+        if link_entities_to_actions and use_untyped_entities:
+            raise ConfigurationError("To link entities to actions, you cannot use untyped entities.")
 
         # NOTE: This base dictionary should not be modified.
         self.base_grammar_dictionary = self._initialize_grammar_dictionary(deepcopy(GRAMMAR_DICTIONARY))
@@ -97,6 +104,8 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
         prelinked_entities = prelinked_entities or {}
         if self.use_untyped_entities:
             update_grammar_values_with_variables(grammar_with_context, prelinked_entities)
+        elif self.link_entities_to_actions:
+            update_grammar_with_linked_typed_variables(grammar_with_context, prelinked_entities, self.dataset_name)
         else:
             update_grammar_with_typed_variables(grammar_with_context, prelinked_entities, self.dataset_name)
 
@@ -130,12 +139,10 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
 
         return grammar_dictionary
 
-    @staticmethod
-    def is_global_rule(production_rule: str) -> bool:
-        # we are checking -4 as is not a global rule if we
-        # see the 0 in the a rule like 'value -> ["\'city_name0\'"]'
-        if "value" in production_rule and production_rule[-4].isnumeric():
-            return False
+    def is_global_rule(self, nonterminal: str) -> bool:
+        if self.link_entities_to_actions:
+            if nonterminal in self.typed_variable_nonterminals:
+                return False
         return True
 
 
@@ -162,7 +169,9 @@ class LinkingText2SqlWorld(Text2SqlWorld):
                  database_dict_path: str = None,
                  use_untyped_entities: bool = False) -> None:
         self.schema = read_dataset_schema(schema_path)
-        self.columns = {column.name: column for table in self.schema.values() for column in table}
+        self.typed_variable_nonterminals = {f"{table_name}_{column.name}_value"
+                                            for table_name, table in self.schema.items()
+                                            for column in table}
         self.dataset_name = os.path.basename(schema_path).split("-")[0]
         self.use_untyped_entities = use_untyped_entities
 
@@ -214,5 +223,7 @@ class LinkingText2SqlWorld(Text2SqlWorld):
 
         return grammar_dictionary
 
-    def is_global_rule(self, production_rule: str) -> bool:
+    def is_global_rule(self, nonterminal: str) -> bool:
+        if nonterminal in self.typed_variable_nonterminals:
+            return False
         return True
