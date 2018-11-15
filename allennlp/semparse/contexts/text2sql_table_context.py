@@ -199,11 +199,13 @@ GLOBAL_DATASET_VARIABLE_TYPES: Dict[str, Dict[str, str]] = {
         "scholar": {'authorname0': {('AUTHOR', '.', 'AUTHORNAME')},
                     'authorname1': {('AUTHOR', '.', 'AUTHORNAME')},
                     'keyphrasename0': {('KEYPHRASE', '.', 'KEYPHRASENAME')},
+                    'keyphrasename1': {('KEYPHRASE', '.', 'KEYPHRASENAME')},
                     'year0': {('PAPER', '.', 'YEAR')},
                     'venuename0': {('VENUE', '.', 'VENUENAME')},
                     '1': {('.', 'KEYPHRASEID', ')'), ('.', 'KEYPHRASENAME', ')')},
                     '2': {('.', 'AUTHORID', ')'), ('.', 'VENUEID', ')')},
                     'datasetname0': {('DATASET', '.', 'DATASETNAME')},
+                    'datasetname1': {('DATASET', '.', 'DATASETNAME')},
                     'title0': {('PAPER', '.', 'TITLE')},
                     'YEAR(CURDATE())': {('PAPER', '.', 'YEAR')},
                     'misc0': {('YEAR', '>=', 'YEAR(CURDATE())'), ('.', 'PAPERID', ')'), ('YEAR', '==', 'YEAR(CURDATE())'), ('.', 'CITEDPAPERID', ')'), ('.', 'CITINGPAPERID', ')')},
@@ -378,8 +380,10 @@ def update_grammar_with_typed_variables(grammar_dictionary: Dict[str, List[str]]
     binary_ops = []
 
     for variable, _ in prelinked_entities.items():
-        column_producers = dataset_type_mapping[variable]
+        column_producers = dataset_type_mapping.get(variable, [])
 
+        if not column_producers:
+            print(f"Warning -{variable} not found in mapping.")
         for producer in column_producers:
             table, _, column = producer
 
