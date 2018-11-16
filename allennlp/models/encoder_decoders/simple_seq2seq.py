@@ -98,7 +98,6 @@ class SimpleSeq2Seq(Model):
 
         # At prediction time, we can use a beam search to find the most likely sequence of target tokens.
         # If the beam_size parameter is not given, we'll just use a greedy search (equivalent to beam_size = 1).
-        self._max_decoding_steps = max_decoding_steps
         beam_size = beam_size or 1
         self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
 
@@ -216,7 +215,7 @@ class SimpleSeq2Seq(Model):
             state = self._init_decoder_state(state)
             # The `_forward_loop` decodes the input sequence and computes the loss during training
             # and validation.
-            output_dict = self._forward_loop(state, target_tokens=target_tokens)
+            output_dict = self._forward_loop(state, target_tokens)
         else:
             output_dict = {}
 
@@ -292,24 +291,21 @@ class SimpleSeq2Seq(Model):
 
     def _forward_loop(self,
                       state: Dict[str, torch.Tensor],
-                      target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
+                      target_tokens: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
         """Make forward pass during training or do greedy search during prediction."""
         # shape: (batch_size, max_input_sequence_length)
         source_mask = state["source_mask"]
 
         batch_size = source_mask.size()[0]
 
-        if target_tokens:
-            # shape: (batch_size, max_target_sequence_length)
-            targets = target_tokens["tokens"]
+        # shape: (batch_size, max_target_sequence_length)
+        targets = target_tokens["tokens"]
 
-            _, target_sequence_length = targets.size()
+        _, target_sequence_length = targets.size()
 
-            # The last input from the target is either padding or the end symbol.
-            # Either way, we don't have to process it.
-            num_decoding_steps = target_sequence_length - 1
-        else:
-            num_decoding_steps = self._max_decoding_steps
+        # The last input from the target is either padding or the end symbol.
+        # Either way, we don't have to process it.
+        num_decoding_steps = target_sequence_length - 1
 
         # Initialize target predictions with the start index.
         # shape: (batch_size,)
@@ -320,9 +316,6 @@ class SimpleSeq2Seq(Model):
             if self.training and torch.rand(1).item() < self._scheduled_sampling_ratio:
                 # Use gold tokens at test time and at a rate of 1 - _scheduled_sampling_ratio
                 # during training.
-                # shape: (batch_size,)
-                input_choices = last_predictions
-            elif not target_tokens:
                 # shape: (batch_size,)
                 input_choices = last_predictions
             else:
