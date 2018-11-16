@@ -6,7 +6,6 @@ from allennlp.data.dataset_readers.semantic_parsing.grammar_based_text2sql impor
 from allennlp.semparse.worlds.text2sql_world import PrelinkedText2SqlWorld
 from allennlp.common.testing import AllenNlpTestCase
 
-@pytest.mark.skip(reason="Mark will fix in a nearby PR.")
 class TestGrammarBasedText2SqlDatasetReader(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
@@ -15,6 +14,15 @@ class TestGrammarBasedText2SqlDatasetReader(AllenNlpTestCase):
         self.database = str(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants.db')
         self.reader = GrammarBasedText2SqlDatasetReader(PrelinkedText2SqlWorld(self.schema), self.schema)
 
+
+    def test_text_to_instances_can_produce_instances_without_sql(self):
+        entities = {"city_name0": {"text": "San fran", "type": "location"},
+                    "name0": {"text": "Matt Gardinios Pizza", "type": "restaurant"}}
+        sentence = ["This", "is", "a", "question", "about", "city_name0" "?"]
+        instance = self.reader.text_to_instance(sentence, prelinked_entities=entities)
+        assert instance is not None
+
+    @pytest.mark.skip(reason="Mark will fix in a nearby PR.")
     def test_reader_can_read_data_with_entity_pre_linking(self):
         instances = self.reader.read(self.data_path)
         instances = list(instances)

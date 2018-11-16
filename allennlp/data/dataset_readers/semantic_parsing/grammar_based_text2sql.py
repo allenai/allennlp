@@ -105,18 +105,17 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         tokens = TextField([Token(t) for t in query], self._token_indexers)
         fields["tokens"] = tokens
 
-        if sql is not None:
-            action_sequence, all_actions, linking_scores = self._world.get_action_sequence_and_all_actions(sql,
-                                                                                                           prelinked_entities)
+        prelinked_entities = self._world.link_entities(prelinked_entities)
+        action_sequence, all_actions, linking_scores = self._world.get_action_sequence_and_all_actions(sql,
+                                                                                                       prelinked_entities)
+        if linking_scores is None and not self._use_prelinked_entities:
+            raise ConfigurationError("Prelinked entities were not used, but no linking scores were produced.")
 
-            if linking_scores is None and not self._use_prelinked_entities:
-                raise ConfigurationError("Prelinked entities were not used, but no linking scores were produced.")
-
-            if action_sequence is None and self._keep_if_unparsable:
-                print("Parse error")
-                action_sequence = []
-            elif action_sequence is None:
-                return None
+        if action_sequence is None and self._keep_if_unparsable:
+            print("Parse error")
+            action_sequence = []
+        elif action_sequence is None:
+            return None
 
         if not self._use_prelinked_entities:
             fields["linking_scores"] = ArrayField(linking_scores)
@@ -135,14 +134,16 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         valid_actions_field = ListField(production_rule_fields)
         fields["valid_actions"] = valid_actions_field
 
-        action_map = {action.rule: i # type: ignore
-                      for i, action in enumerate(valid_actions_field.field_list)}
 
-        for production_rule in action_sequence:
-            index_fields.append(IndexField(action_map[production_rule], valid_actions_field))
-        if not action_sequence:
-            index_fields = [IndexField(-1, valid_actions_field)]
+        if sql is not None:
+            action_map = {action.rule: i # type: ignore
+                          for i, action in enumerate(valid_actions_field.field_list)}
 
-        action_sequence_field = ListField(index_fields)
-        fields["action_sequence"] = action_sequence_field
+            for production_rule in action_sequence:
+                index_fields.append(IndexField(action_map[production_rule], valid_actions_field))
+            if not action_sequence:
+                index_fields = [IndexField(-1, valid_actions_field)]
+
+            action_sequence_field = ListField(index_fields)
+            fields["action_sequence"] = action_sequence_field
         return Instance(fields)
