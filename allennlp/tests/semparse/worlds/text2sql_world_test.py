@@ -1,8 +1,5 @@
 # pylint: disable=too-many-lines,invalid-name
 
-import sqlite3
-
-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.text2sql_world import PrelinkedText2SqlWorld, LinkingText2SqlWorld
 

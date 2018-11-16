@@ -113,7 +113,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
 
         if action_sequence is None and self._keep_if_unparsable:
             print("Parse error")
-            action_sequence = []
+            action_sequence: List[str] = []
         elif action_sequence is None:
             return None
 

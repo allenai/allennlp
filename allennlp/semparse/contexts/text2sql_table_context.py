@@ -3,7 +3,7 @@
 A ``Text2SqlTableContext`` represents the SQL context in which an utterance appears
 for the any of the text2sql datasets, with the grammar and the valid actions.
 """
-from typing import List, Dict
+from typing import List, Dict, Tuple, Set
 from sqlite3 import Cursor
 from collections import defaultdict
 
@@ -107,26 +107,26 @@ GLOBAL_DATASET_VALUES: Dict[str, List[str]] = {
         "restaurants": ["2.5"]
 }
 
-GLOBAL_DATASET_VARIABLE_TYPES: Dict[str, Dict[str, str]] = {
+GLOBAL_DATASET_VARIABLE_TYPES: Dict[str, Dict[str, Set[Tuple[str, str, str]]]] = {
         "geography": {'var0': {('RIVER', '.', 'RIVER_NAME'),
-                                ('CITY', '.', 'CITY_NAME'),
-                                ('MOUNTAIN', '.', 'MOUNTAIN_NAME'),
-                                ('HIGHLOW', '.', 'HIGHEST_POINT'),
-                                ('CITY', '.', 'STATE_NAME'),
-                                ('HIGHLOW', '.', 'STATE_NAME'),
-                                ('HIGHLOW', '.', 'LOWEST_POINT'),
-                                ('STATE', '.', 'CAPITAL'),
-                                ('BORDER_INFO', '.', 'STATE_NAME'),
-                                ('RIVER', '.', 'COUNTRY_NAME'),
-                                ('LAKE', '.', 'STATE_NAME'),
-                                ('STATE', '.', 'STATE_NAME'),
-                                ('RIVER', '.', 'TRAVERSE'),
-                                ('BORDER_INFO', '.', 'BORDER'),
-                                ('MOUNTAIN', '.', 'STATE_NAME')},
+                               ('CITY', '.', 'CITY_NAME'),
+                               ('MOUNTAIN', '.', 'MOUNTAIN_NAME'),
+                               ('HIGHLOW', '.', 'HIGHEST_POINT'),
+                               ('CITY', '.', 'STATE_NAME'),
+                               ('HIGHLOW', '.', 'STATE_NAME'),
+                               ('HIGHLOW', '.', 'LOWEST_POINT'),
+                               ('STATE', '.', 'CAPITAL'),
+                               ('BORDER_INFO', '.', 'STATE_NAME'),
+                               ('RIVER', '.', 'COUNTRY_NAME'),
+                               ('LAKE', '.', 'STATE_NAME'),
+                               ('STATE', '.', 'STATE_NAME'),
+                               ('RIVER', '.', 'TRAVERSE'),
+                               ('BORDER_INFO', '.', 'BORDER'),
+                               ('MOUNTAIN', '.', 'STATE_NAME')},
                       'var1': {('CITY', '.', 'STATE_NAME'),
-                                 ('STATE', '.', 'STATE_NAME'),
-                                 ('RIVER', '.', 'TRAVERSE'),
-                                 ('BORDER_INFO', '.', 'STATE_NAME')},
+                               ('STATE', '.', 'STATE_NAME'),
+                               ('RIVER', '.', 'TRAVERSE'),
+                               ('BORDER_INFO', '.', 'STATE_NAME')},
                       '750': {('LAKE', '.', 'AREA'),
                               ('RIVER', '.', 'LENGTH')},
                       '150000':{('CITY', '.', 'POPULATION')}
@@ -189,18 +189,16 @@ GLOBAL_DATASET_VARIABLE_TYPES: Dict[str, Dict[str, str]] = {
                  'checkin_day0': {('CHECKIN', '.', 'DAY')},
                  'category_name1': {('CATEGORY', '.', 'CATEGORY_NAME')},
                  'review_year0': {('REVIEW', '.', 'YEAR')},
-                 'review_rating0': {('.', 'RATING', ')'), ('REVIEW', '.', 'RATING')},
+                 'review_rating0': {('REVIEW', '.', 'RATING')},
                  'tip_likes0': {('TIP', '.', 'LIKES')},
                  'neighbourhood_name0': {('NEIGHBOURHOOD', '.', 'NEIGHBOURHOOD_NAME')},
                  'review_month0': {('REVIEW', '.', 'MONTH')},
-                 'business_rating0': {('BUSINESS', '.', 'RATING')},
                  'tip_month0': {('TIP', '.', 'MONTH')}
                 },
         "scholar": {'authorname0': {('AUTHOR', '.', 'AUTHORNAME')},
                     'authorname1': {('AUTHOR', '.', 'AUTHORNAME')},
                     'keyphrasename0': {('KEYPHRASE', '.', 'KEYPHRASENAME')},
                     'keyphrasename1': {('KEYPHRASE', '.', 'KEYPHRASENAME')},
-                    'year0': {('PAPER', '.', 'YEAR')},
                     'venuename0': {('VENUE', '.', 'VENUENAME')},
                     '1': {('.', 'KEYPHRASEID', ')'), ('.', 'KEYPHRASENAME', ')')},
                     '2': {('.', 'AUTHORID', ')'), ('.', 'VENUEID', ')')},
@@ -227,11 +225,11 @@ GLOBAL_DATASET_VARIABLE_TYPES: Dict[str, Dict[str, str]] = {
                  'class_type0': {('FARE_BASIS', '.', 'CLASS_TYPE')},
                  'city_name3': {('CITY', '.', 'CITY_NAME')},
                  'transport_type0': {('GROUND_SERVICE', '.', 'TRANSPORT_TYPE')},
-                 'departure_time1': {('DEPARTURE_TIME', 'BETWEEN', "'departure_time0'"), ('NOT', 'BETWEEN', "'departure_time0'"), ('FLIGHT', '.', 'DEPARTURE_TIME')},
+                 'departure_time1': {('FLIGHT', '.', 'DEPARTURE_TIME')},
                  'flight_number0': {('FLIGHT', '.', 'FLIGHT_NUMBER')},
                  'round_trip_required0': {('FARE', '.', 'ROUND_TRIP_REQUIRED')},
                  'round_trip_cost0': {('FARE', '.', 'ROUND_TRIP_COST')},
-                 'departure_time0': {('FLIGHT', '.', 'DEPARTURE_TIME'), ('DEPARTURE_TIME', 'BETWEEN', "'departure_time1'")},
+                 'departure_time0': {('FLIGHT', '.', 'DEPARTURE_TIME')},
                  'arrival_time0': {('FLIGHT', '.', 'ARRIVAL_TIME'), ('FLIGHT_STOP', '.', 'ARRIVAL_TIME')},
                  'stops0': {('FLIGHT', '.', 'STOPS')},
                  'days_code0': {('DAYS', '.', 'DAYS_CODE')},
@@ -254,13 +252,12 @@ GLOBAL_DATASET_VARIABLE_TYPES: Dict[str, Dict[str, str]] = {
                  'time_elapsed0': {('FLIGHT', '.', 'TIME_ELAPSED')},
                  'airline_code1': {('AIRLINE', '.', 'AIRLINE_CODE'), ('FLIGHT', '.', 'AIRLINE_CODE')},
                  'connections0': {('FLIGHT', '.', 'CONNECTIONS')},
-                 'booking_class0': {('CLASS_OF_SERVICE', '.', 'BOOKING_CLASS'), ('FARE_BASIS', '.', 'BOOKING_CLASS')},
-                 'departure_time2': {('FLIGHT', '.', 'DEPARTURE_TIME'), ('DEPARTURE_TIME', 'BETWEEN', "'departure_time1'"), ('NOT', 'BETWEEN', "'departure_time1'")},
+                 'booking_class0': {('CLASS_OF_SERVICE', '.', 'BOOKING_CLASS'),
+                                    ('FARE_BASIS', '.', 'BOOKING_CLASS')},
                  'arrival_time2': {('FLIGHT', '.', 'ARRIVAL_TIME')},
                  'departure_time2': {('FLIGHT', '.', 'DEPARTURE_TIME')},
                  'departure_time3': {('FLIGHT', '.', 'DEPARTURE_TIME')},
                  'state_name2': {('STATE', '.', 'STATE_NAME')},
-                 'departure_time3': {('FLIGHT', '.', 'DEPARTURE_TIME'), ('DEPARTURE_TIME', 'BETWEEN', "'departure_time2'"), ('NOT', 'BETWEEN', "'departure_time2'")},
                  'day_name2': {('DAYS', '.', 'DAY_NAME')},
                  'day_name3': {('DAYS', '.', 'DAY_NAME')},
                  'day_name4': {('DAYS', '.', 'DAY_NAME')},
@@ -269,8 +266,6 @@ GLOBAL_DATASET_VARIABLE_TYPES: Dict[str, Dict[str, str]] = {
                  'year1': {('DATE_DAY', '.', 'YEAR')},
                  'day_number1': {('DATE_DAY', '.', 'DAY_NUMBER')},
                  'meal_code0': {('FOOD_SERVICE', '.', 'MEAL_CODE'), ('FLIGHT', '.', 'MEAL_CODE')},
-                 'arrival_time2': {('FLIGHT', '.', 'ARRIVAL_TIME')},
-                 'connections0': {('FLIGHT', '.', 'CONNECTIONS')},
                  'airline_code2': {('FLIGHT', '.', 'AIRLINE_CODE')},
                  'country_name0': {('CITY', '.', 'COUNTRY_NAME')},
                  'fare_basis_code1': {('FARE', '.', 'FARE_BASIS_CODE')},
@@ -389,7 +384,7 @@ def update_grammar_with_typed_variables(grammar_dictionary: Dict[str, List[str]]
     binary_ops = []
 
     for variable, _ in prelinked_entities.items():
-        column_producers = dataset_type_mapping.get(variable, [])
+        column_producers: Set[Tuple[str, str, str]] = dataset_type_mapping.get(variable, set())
 
         if not column_producers:
             print(f"Warning -{variable} not found in mapping.")
@@ -414,9 +409,9 @@ def update_grammar_with_linked_typed_variables(grammar_dictionary: Dict[str, Lis
     dataset_type_mapping = GLOBAL_DATASET_VARIABLE_TYPES[dataset_name]
 
     binary_ops = []
-    terminal_values = defaultdict(list)
+    terminal_values: Dict[str, List[str]] = defaultdict(list)
     for variable, _ in prelinked_entities.items():
-        column_producers = dataset_type_mapping.get(variable, [])
+        column_producers: Set[Tuple[str, str, str]] = dataset_type_mapping.get(variable, set())
 
         if not column_producers:
             print(f"Warning -{variable} not found in mapping.")
