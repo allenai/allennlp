@@ -33,7 +33,7 @@ class BertIndexer(TokenIndexer[int]):
         #    sentence -> [words], and then word -> [wordpieces]
         # In AllenNLP, the first step is implemented as the ``BertSimpleWordSplitter``,
         # and this token indexer handles the second.
-        self.tokenizer = bert.WordpieceTokenizer(self.vocab, unk_token, max_input_chars_per_word)
+        self.wordpiece_tokenizer = bert.WordpieceTokenizer(self.vocab, unk_token, max_input_chars_per_word)
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -60,7 +60,7 @@ class BertIndexer(TokenIndexer[int]):
         offset = -1
 
         for token in tokens:
-            wordpieces = bert.convert_tokens_to_ids(self.tokenizer.tokenize(token.text), self.vocab)
+            wordpieces = bert.convert_tokens_to_ids(self.vocab, self.wordpiece_tokenizer.tokenize(token.text))
             offset += len(wordpieces)
             offsets.append(offset)
             text_tokens.append(wordpieces)
@@ -87,5 +87,6 @@ class BertIndexer(TokenIndexer[int]):
                            tokens: Dict[str, List[int]],
                            desired_num_tokens: Dict[str, int],
                            padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
+        print(tokens)
         return {key: pad_sequence_to_length(val, desired_num_tokens[key])
                 for key, val in tokens.items()}

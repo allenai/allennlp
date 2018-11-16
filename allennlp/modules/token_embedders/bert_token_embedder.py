@@ -10,20 +10,23 @@ from allennlp.nn import util
 logger = logging.getLogger(__name__)
 
 
-@TokenEmbedder.register("bert")
 class BertEmbedder(TokenEmbedder):
+    """
+    This class is not registered, because you probably want to use
+    a specific subclass corresponding to a trained model.
+    """
     def __init__(self,
                  vocab_size: int,
-                 hidden_size: int = 768,
-                 num_hidden_layers: int = 12,
-                 num_attention_heads: int = 12,
-                 intermediate_size: int = 3072,
-                 hidden_act: str = "gelu",
-                 hidden_dropout_prob: float = 0.1,
-                 attention_probs_dropout_prob: float = 0.1,
-                 max_position_embeddings: int = 512,
-                 type_vocab_size: int = 16,
-                 initializer_range: float = 0.02,
+                 hidden_size: int,
+                 num_hidden_layers: int,
+                 num_attention_heads: int,
+                 intermediate_size: int,
+                 hidden_act: str,
+                 hidden_dropout_prob: float,
+                 attention_probs_dropout_prob: float,
+                 max_position_embeddings: int,
+                 type_vocab_size: int,
+                 initializer_range: float,
                  init_checkpoint: str = None) -> None:
         super().__init__()
 
@@ -62,3 +65,20 @@ class BertEmbedder(TokenEmbedder):
             range_vector = util.get_range_vector(batch_size,
                                                  device=util.get_device_of(sequence_output)).unsqueeze(1)
             return sequence_output[range_vector, offsets]
+
+
+@TokenEmbedder.register("bert-base-uncased")
+class BertBaseUncased(BertEmbedder):
+    def __init__(self, init_checkpoint: str = None) -> None:
+        super().__init__(vocab_size=30522,
+                         hidden_size=768,
+                         num_hidden_layers=12,
+                         num_attention_heads=12,
+                         intermediate_size=3072,
+                         hidden_act="gelu",
+                         hidden_dropout_prob=0.1,
+                         attention_probs_dropout_prob=0.1,
+                         max_position_embeddings=512,
+                         type_vocab_size=2,
+                         initializer_range=0.02,
+                         init_checkpoint=init_checkpoint)

@@ -70,6 +70,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
             indexer_name_to_indexed_token[indexer_name] = list(token_indices.keys())
         self._indexed_tokens = token_arrays
         self._indexer_name_to_indexed_token = indexer_name_to_indexed_token
+        print(self._indexer_name_to_indexed_token)
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
@@ -95,6 +96,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
                 # This is a list of dicts, one for each token in the field.
                 token_lengths = [indexer.get_padding_lengths(token)
                                  for token in self._indexed_tokens[indexed_tokens_key]]
+                print(indexer_name, indexed_tokens_key, token_lengths)
             if not token_lengths:
                 # This is a padding edge case and occurs when we want to pad a ListField of
                 # TextFields. In order to pad the list field, we need to be able to have an
