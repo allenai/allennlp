@@ -88,7 +88,7 @@ class TestSimpleServer(AllenNlpTestCase):
         for data in data_list:
             assert 'best_span_str' in data
             assert 'span_start_logits' not in data
-            
+
     def test_static_dir(self):
         html = """<html><body>THIS IS A STATIC SITE</body></html>"""
         jpg = """something about a jpg"""
