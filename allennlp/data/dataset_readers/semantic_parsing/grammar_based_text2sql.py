@@ -105,8 +105,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         tokens = TextField([Token(t) for t in query], self._token_indexers)
         fields["tokens"] = tokens
 
-        prelinked_entities = self._world.link_entities(prelinked_entities)
-        action_sequence, all_actions, linking_scores = self._world.get_action_sequence_and_all_actions(sql,
+        action_sequence, all_actions, linking_scores = self._world.get_action_sequence_and_all_actions(query, sql,
                                                                                                        prelinked_entities)
         if linking_scores is None and not self._use_prelinked_entities:
             raise ConfigurationError("Prelinked entities were not used, but no linking scores were produced.")

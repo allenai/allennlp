@@ -29,9 +29,6 @@ class Text2SqlWorld(Registrable):
                                             prelinked_entities: Dict[str, Dict[str, str]] = None) -> Tuple[List[str], List[str]]: # pylint: disable=line-too-long
         raise NotImplementedError
 
-    def link_entities(self, prelinked_entities: Dict[str, Dict[str, str]] = None) -> Dict[str, Dict[str, str]]:
-        raise NotImplementedError
-
     def is_global_rule(self, nonterminal: str) -> bool:
 
         raise NotImplementedError
@@ -100,6 +97,7 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
         self.base_grammar_dictionary = self._initialize_grammar_dictionary(deepcopy(GRAMMAR_DICTIONARY))
 
     def get_action_sequence_and_all_actions(self,
+                                            question: List[str], # pylint: disable=unused-argument
                                             query: List[str] = None,
                                             prelinked_entities: Dict[str, Dict[str, str]] = None) -> Tuple[List[str], List[str]]: # pylint: disable=line-too-long
         grammar_with_context = deepcopy(self.base_grammar_dictionary)
@@ -128,9 +126,6 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
             action_sequence = None
 
         return action_sequence, sorted_actions, None
-
-    def link_entities(self, prelinked_entities: Dict[str, Dict[str, str]] = None) -> Dict[str, Dict[str, str]]:
-        return prelinked_entities
 
     def _initialize_grammar_dictionary(self, grammar_dictionary: Dict[str, List[str]]) -> Dict[str, List[str]]:
         # Add all the table and column names to the grammar.
@@ -188,6 +183,7 @@ class LinkingText2SqlWorld(Text2SqlWorld):
         self.base_grammar_dictionary = self._initialize_grammar_dictionary(deepcopy(GRAMMAR_DICTIONARY))
 
     def get_action_sequence_and_all_actions(self,
+                                            question: List[str],
                                             query: List[str] = None,
                                             prelinked_entities: Dict[str, Dict[str, str]] = None) -> Tuple[List[str], List[str]]: # pylint: disable=line-too-long
         grammar_with_context = deepcopy(self.base_grammar_dictionary)
@@ -211,9 +207,6 @@ class LinkingText2SqlWorld(Text2SqlWorld):
             action_sequence = None
 
         return action_sequence, sorted_actions, None
-
-    def link_entities(self, prelinked_entities: Dict[str, Dict[str, str]] = None) -> Dict[str, Dict[str, str]]:
-        return prelinked_entities
 
     def _initialize_grammar_dictionary(self, grammar_dictionary: Dict[str, List[str]]) -> Dict[str, List[str]]:
         # Add all the table and column names to the grammar.

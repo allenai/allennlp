@@ -10,6 +10,9 @@ class TestText2SqlWorld(AllenNlpTestCase):
         self.schema = str(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
         self.database_path = str(self.FIXTURES_ROOT / "data" / "text2sql" / "restaurants.db")
 
+        # Testing of the world is mostly independent of the question,
+        # so we just use a dud one for everything.
+        self.question = ["this", "is", "a", "question"]
 
     def test_untyped_grammar_has_no_string_or_number_references(self):
         world = PrelinkedText2SqlWorld(self.schema, use_untyped_entities=True)
@@ -71,7 +74,7 @@ class TestText2SqlWorld(AllenNlpTestCase):
 
         entities = {"city_name0": {"text": "San fran", "type": "location"},
                     "name0": {"text": "Matt Gardinios Pizza", "type": "restaurant"}}
-        action_sequence, _, _ = world.get_action_sequence_and_all_actions(sql_with_as, entities)
+        action_sequence, _, _ = world.get_action_sequence_and_all_actions(self.question, sql_with_as, entities)
         assert action_sequence is None
 
         sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',',
@@ -80,7 +83,7 @@ class TestText2SqlWorld(AllenNlpTestCase):
                '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
 
         # Without the AS we should still be able to parse it.
-        action_sequence, _, _ = world.get_action_sequence_and_all_actions(sql, entities)
+        action_sequence, _, _ = world.get_action_sequence_and_all_actions(self.question, sql, entities)
         assert action_sequence is not None
 
     def test_world_with_linking_identifies_non_global_rules(self):
@@ -98,7 +101,7 @@ class TestText2SqlWorld(AllenNlpTestCase):
 
         entities = {"city_name0": {"text": "San fran", "type": "location"},
                     "name0": {"text": "Matt Gardinios Pizza", "type": "restaurant"}}
-        action_sequence, actions, _ = world.get_action_sequence_and_all_actions(sql, entities)
+        action_sequence, actions, _ = world.get_action_sequence_and_all_actions(self.question, sql, entities)
 
         assert 'value -> ["\'city_name0\'"]' in action_sequence
         assert 'value -> ["\'name0\'"]' in action_sequence
@@ -114,7 +117,7 @@ class TestText2SqlWorld(AllenNlpTestCase):
 
         entities = {"city_name0": {"text": "San fran", "type": "location"},
                     "name0": {"text": "Matt Gardinios Pizza", "type": "restaurant"}}
-        action_sequence, actions, _ = world.get_action_sequence_and_all_actions(sql, entities)
+        action_sequence, actions, _ = world.get_action_sequence_and_all_actions(self.question, sql, entities)
 
         assert 'expr -> ["LOCATION", ".", "CITY_NAME", binaryop, "\'city_name0\'"]' in action_sequence
         assert 'expr -> ["RESTAURANT", ".", "NAME", binaryop, "\'name0\'"]' in action_sequence
@@ -132,7 +135,7 @@ class TestText2SqlWorld(AllenNlpTestCase):
 
         entities = {"city_name0": {"text": "San fran", "type": "location"},
                     "name0": {"text": "Matt Gardinios Pizza", "type": "restaurant"}}
-        action_sequence, actions, _ = world.get_action_sequence_and_all_actions(sql, entities)
+        action_sequence, actions, _ = world.get_action_sequence_and_all_actions(self.question, sql, entities)
         assert 'LOCATION_CITY_NAME_value -> ["\'city_name0\'"]' in actions
         assert 'LOCATION_CITY_NAME_value -> ["\'city_name0\'"]' in action_sequence
         assert 'RESTAURANT_NAME_value -> ["\'name0\'"]' in actions
