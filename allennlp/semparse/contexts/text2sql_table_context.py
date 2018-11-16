@@ -5,7 +5,7 @@ for the any of the text2sql datasets, with the grammar and the valid actions.
 """
 from typing import List, Dict
 from sqlite3 import Cursor
-
+from collections import defaultdict
 
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import TableColumn
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_numeric_type
@@ -414,7 +414,7 @@ def update_grammar_with_linked_typed_variables(grammar_dictionary: Dict[str, Lis
     dataset_type_mapping = GLOBAL_DATASET_VARIABLE_TYPES[dataset_name]
 
     binary_ops = []
-
+    terminal_values = defaultdict(list)
     for variable, _ in prelinked_entities.items():
         column_producers = dataset_type_mapping.get(variable, [])
 
@@ -423,13 +423,17 @@ def update_grammar_with_linked_typed_variables(grammar_dictionary: Dict[str, Lis
         for producer in column_producers:
             table, _, column = producer
 
+            binary_ops.append(f'("{table}" ws "." ws "{column}" wsp binaryop wsp {table}_{column}_value)')
             if not variable in GLOBAL_DATASET_VALUES.get(dataset_name, []):
-                binary_ops.append(f'("{table}" ws "." ws "{column}" wsp binaryop wsp  "\'{variable}\'")')
+                terminal_values[f"{table}_{column}_value"].append(f'"\'{variable}\'"')
             else:
-                binary_ops.append(f'("{table}" ws "." ws "{column}" wsp binaryop wsp  "{variable}")')
+                terminal_values[f"{table}_{column}_value"].append(f"{variable}")
 
         # TODO update the signatures for binary, tertiary and in_exprs here.
-        grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
+        grammar_dictionary["value"] = [f'{table}_{column}_value'] + grammar_dictionary["value"]
+
+    for nonterminal, values in terminal_values.items():
+        grammar_dictionary[nonterminal] = values
 
     grammar_dictionary["expr"] = sorted(binary_ops, reverse=True) + grammar_dictionary["expr"]
 

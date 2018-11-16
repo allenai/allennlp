@@ -86,7 +86,6 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
                                             for table_name, table in self.schema.items()
                                             for column in table}
 
-        print(self.typed_variable_nonterminals)
         self.dataset_name = os.path.basename(schema_path).split("-")[0]
         self.use_untyped_entities = use_untyped_entities
         self.link_entities_to_actions = link_entities_to_actions

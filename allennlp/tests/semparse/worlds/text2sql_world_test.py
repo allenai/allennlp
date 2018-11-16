@@ -123,3 +123,24 @@ class TestText2SqlWorld(AllenNlpTestCase):
         assert 'expr -> ["RESTAURANT", ".", "NAME", binaryop, "\'name0\'"]' in action_sequence
         assert 'expr -> ["LOCATION", ".", "CITY_NAME", binaryop, "\'city_name0\'"]' in actions
         assert 'expr -> ["RESTAURANT", ".", "NAME", binaryop, "\'name0\'"]' in actions
+
+
+    def test_prelinked_world_with_linked_entities_grammar_has_value_based_nonterminals(self):
+        world = PrelinkedText2SqlWorld(self.schema, link_entities_to_actions=True)
+
+        sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',',
+               'RESTAURANT', 'WHERE', 'LOCATION', '.', 'CITY_NAME', '=',
+               "'city_name0'", 'AND', 'RESTAURANT', '.', 'NAME', '=', 'LOCATION',
+               '.', 'RESTAURANT_ID', 'AND', 'RESTAURANT', '.', 'NAME', '=', "'name0'", ';']
+
+        entities = {"city_name0": {"text": "San fran", "type": "location"},
+                    "name0": {"text": "Matt Gardinios Pizza", "type": "restaurant"}}
+        action_sequence, actions, _ = world.get_action_sequence_and_all_actions(sql, entities)
+        assert 'LOCATION_CITY_NAME_value -> ["\'city_name0\'"]' in actions
+        assert 'LOCATION_CITY_NAME_value -> ["\'city_name0\'"]' in action_sequence
+        assert 'RESTAURANT_NAME_value -> ["\'name0\'"]' in actions
+        assert 'RESTAURANT_NAME_value -> ["\'name0\'"]' in action_sequence
+        assert 'expr -> ["LOCATION", ".", "CITY_NAME", binaryop, LOCATION_CITY_NAME_value]' in actions
+        assert 'expr -> ["LOCATION", ".", "CITY_NAME", binaryop, LOCATION_CITY_NAME_value]' in action_sequence
+        assert 'expr -> ["RESTAURANT", ".", "NAME", binaryop, RESTAURANT_NAME_value]' in actions
+        assert 'expr -> ["RESTAURANT", ".", "NAME", binaryop, RESTAURANT_NAME_value]' in action_sequence
