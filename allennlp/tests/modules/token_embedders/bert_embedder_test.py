@@ -46,7 +46,6 @@ class TestBertEmbedder(ModelTestCase):
         vocab = Vocabulary()
 
         instance1 = Instance({"tokens": TextField(tokens1, {"bert": token_indexer})})
-        instance1.index_fields(vocab)
         instance2 = Instance({"tokens": TextField(tokens2, {"bert": token_indexer})})
 
         batch = Batch([instance1, instance2])
@@ -54,5 +53,3 @@ class TestBertEmbedder(ModelTestCase):
 
         padding_lengths = batch.get_padding_lengths()
         tensor_dict = batch.as_tensor_dict(padding_lengths)
-
-        assert tensor_dict is None

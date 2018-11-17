@@ -63,7 +63,7 @@ class BertIndexer(TokenIndexer[int]):
             wordpieces = bert.convert_tokens_to_ids(self.vocab, self.wordpiece_tokenizer.tokenize(token.text))
             offset += len(wordpieces)
             offsets.append(offset)
-            text_tokens.append(wordpieces)
+            text_tokens.extend(wordpieces)
 
         return {
                 index_name: text_tokens,
@@ -87,6 +87,6 @@ class BertIndexer(TokenIndexer[int]):
                            tokens: Dict[str, List[int]],
                            desired_num_tokens: Dict[str, int],
                            padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
-        print(tokens)
+        print(tokens, desired_num_tokens, padding_lengths)
         return {key: pad_sequence_to_length(val, desired_num_tokens[key])
                 for key, val in tokens.items()}

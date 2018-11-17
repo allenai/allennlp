@@ -90,8 +90,9 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         # Each indexer can return a different sequence length, and for indexers that return
         # multiple arrays each can have a different length.  We'll keep track of them here.
         for indexer_name, indexer in self._token_indexers.items():
+            print(indexer_name, indexer)
             indexer_lengths = {}
-
+            print(self._indexer_name_to_indexed_token)
             for indexed_tokens_key in self._indexer_name_to_indexed_token[indexer_name]:
                 # This is a list of dicts, one for each token in the field.
                 token_lengths = [indexer.get_padding_lengths(token)
