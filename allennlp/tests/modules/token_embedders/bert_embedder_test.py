@@ -10,7 +10,7 @@ from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.token_embedders.bert_token_embedder import BertBaseUncased
-
+from allennlp.nn.util import get_text_field_mask
 
 class TestBertEmbedder(ModelTestCase):
     def test_with_random_weights(self):
@@ -53,3 +53,18 @@ class TestBertEmbedder(ModelTestCase):
 
         padding_lengths = batch.get_padding_lengths()
         tensor_dict = batch.as_tensor_dict(padding_lengths)
+        tokens = tensor_dict["tokens"]
+
+
+        mask = get_text_field_mask(tokens)
+        token_type_ids = torch.zeros_like(mask)
+
+        embedder = BertBaseUncased(init_checkpoint="/Users/joelg/data/uncased_L-12_H-768_A-12/bert.th")
+
+        # No offsets, should get 11 vectors back.
+        bert_vectors = embedder(tokens["bert"], mask, token_type_ids)
+        assert list(bert_vectors.shape) == [2, 11, 768]
+
+        # Offsets, should get 10 vectors back.
+        bert_vectors = embedder(tokens["bert"], mask, token_type_ids, offsets=tokens["bert-offsets"])
+        assert list(bert_vectors.shape) == [2, 10, 768]

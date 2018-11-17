@@ -71,7 +71,7 @@ class BertIndexer(TokenIndexer[int]):
                 # add mask here according to the original tokens,
                 # because calling util.get_text_field_mask on the
                 # "byte pair" tokens will produce the wrong shape
-                "mask": [1 for _ in offsets]
+                "original-token-mask": [1 for _ in offsets]
         }
 
     @overrides
