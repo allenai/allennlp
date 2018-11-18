@@ -9,7 +9,7 @@ import tempfile
 import json
 from urllib.parse import urlparse
 from pathlib import Path
-from typing import Optional, Tuple, Union, IO, Callable
+from typing import Optional, Tuple, Union, IO, Callable, Set
 from hashlib import sha256
 from functools import wraps
 
@@ -212,6 +212,18 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
             logger.info("removing temp file %s", temp_file.name)
 
     return cache_path
+
+
+def read_set_from_file(filename: str) -> Set[str]:
+    '''
+    Extract a de-duped collection (set) of text from a file.
+    Expected file format is one item per line.
+    '''
+    collection = set()
+    with open(filename, 'r') as file_:
+        for line in file_:
+            collection.add(line.rstrip())
+    return collection
 
 
 def get_file_extension(path: str, dot=True, lower: bool = True):

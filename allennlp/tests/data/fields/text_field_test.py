@@ -253,3 +253,10 @@ class TestTextField(AllenNlpTestCase):
         assert list(tensors['additional_key'].shape) == [3]
         assert list(tensors['words'].shape) == [4]
         assert list(tensors['characters'].shape) == [4, 8]
+
+    def test_sequence_methods(self):
+        field = TextField([Token(t) for t in ["This", "is", "a", "sentence", "."]], {})
+
+        assert len(field) == 5
+        assert field[1].text == "is"
+        assert [token.text for token in field] == ["This", "is", "a", "sentence", "."]

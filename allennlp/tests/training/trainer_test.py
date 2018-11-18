@@ -1,8 +1,10 @@
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name,too-many-public-methods
 import glob
+import json
 import os
 import re
 import time
+from typing import Dict
 
 import torch
 import pytest
@@ -16,6 +18,7 @@ from allennlp.common.params import Params
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
+from allennlp.models.model import Model
 
 
 class TestTrainer(AllenNlpTestCase):
@@ -88,9 +91,28 @@ class TestTrainer(AllenNlpTestCase):
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")
     def test_trainer_can_run_multiple_gpu(self):
+
+        class MetaDataCheckWrapper(Model):
+            """
+            Checks that the metadata field has been correctly split across the batch dimension
+            when running on multiple gpus.
+            """
+            def __init__(self, model):
+                super().__init__(model.vocab)
+                self.model = model
+
+            def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore # pylint: disable=arguments-differ
+                assert 'metadata' in kwargs and 'tags' in kwargs, \
+                    f'tokens and metadata must be provided. Got {kwargs.keys()} instead.'
+                batch_size = kwargs['tokens']['tokens'].size()[0]
+                assert len(kwargs['metadata']) == batch_size, \
+                    f'metadata must be split appropriately. Expected {batch_size} elements, ' \
+                    f"got {len(kwargs['metadata'])} elements."
+                return self.model.forward(**kwargs)
+
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(self.vocab)
-        trainer = Trainer(self.model, self.optimizer,
+        trainer = Trainer(MetaDataCheckWrapper(self.model), self.optimizer,
                           multigpu_iterator, self.instances, num_epochs=2,
                           cuda_device=[0, 1])
         trainer.train()
@@ -278,6 +300,25 @@ class TestTrainer(AllenNlpTestCase):
                       for fname in file_names]
             assert sorted(epochs) == [2, 3, 4]
 
+    def test_trainer_saves_metrics_every_epoch(self):
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=5,
+                          serialization_dir=self.TEST_DIR,
+                          num_serialized_models_to_keep=3)
+        trainer.train()
+
+        for epoch in range(5):
+            epoch_file = self.TEST_DIR / f'metrics_epoch_{epoch}.json'
+            assert epoch_file.exists()
+            metrics = json.load(open(epoch_file))
+            assert "validation_loss" in metrics
+            assert "best_validation_loss" in metrics
+            assert metrics.get("epoch") == epoch
+
     def test_trainer_respects_keep_serialized_model_every_num_seconds(self):
         # To test:
         #   Create an iterator that sleeps for 2.5 second per epoch, so the total training
@@ -308,6 +349,18 @@ class TestTrainer(AllenNlpTestCase):
                       for fname in file_names]
             # epoch N has N-1 in file name
             assert sorted(epochs) == [1, 3, 4, 5]
+
+    def test_trainer_can_log_learning_rates_tensorboard(self):
+        iterator = BasicIterator(batch_size=4)
+        iterator.index_with(self.vocab)
+
+        trainer = Trainer(self.model, self.optimizer,
+                          iterator, self.instances, num_epochs=2,
+                          serialization_dir=self.TEST_DIR,
+                          should_log_learning_rate=True,
+                          summary_interval=2)
+
+        trainer.train()
 
     def test_trainer_saves_models_at_specified_interval(self):
         iterator = BasicIterator(batch_size=4)

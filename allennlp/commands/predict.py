@@ -151,12 +151,20 @@ class _PredictManager:
             self._output_file.write(prediction)
 
     def _get_json_data(self) -> Iterator[JsonDict]:
-        for line in open(self._input_file):
-            if not line.isspace():
-                yield self._predictor.load_line(line)
+        if self._input_file == "-":
+            for line in sys.stdin:
+                if not line.isspace():
+                    yield self._predictor.load_line(line)
+        else:
+            with open(self._input_file, "r") as file_input:
+                for line in file_input:
+                    if not line.isspace():
+                        yield self._predictor.load_line(line)
 
     def _get_instance_data(self) -> Iterator[Instance]:
-        if self._dataset_reader is None:
+        if self._input_file == "-":
+            raise ConfigurationError("stdin is not an option when using a DatasetReader.")
+        elif self._dataset_reader is None:
             raise ConfigurationError("To generate instances directly, pass a DatasetReader.")
         else:
             yield from self._dataset_reader.read(self._input_file)
@@ -165,12 +173,12 @@ class _PredictManager:
         has_reader = self._dataset_reader is not None
         if has_reader:
             for batch in lazy_groups_of(self._get_instance_data(), self._batch_size):
-                for result in self._predict_instances(batch):
-                    self._maybe_print_to_console_and_file(result)
+                for model_input_instance, result in zip(batch, self._predict_instances(batch)):
+                    self._maybe_print_to_console_and_file(result, str(model_input_instance))
         else:
             for batch_json in lazy_groups_of(self._get_json_data(), self._batch_size):
-                for model_input, result in zip(batch_json, self._predict_json(batch_json)):
-                    self._maybe_print_to_console_and_file(result, json.dumps(model_input))
+                for model_input_json, result in zip(batch_json, self._predict_json(batch_json)):
+                    self._maybe_print_to_console_and_file(result, json.dumps(model_input_json))
 
         if self._output_file is not None:
             self._output_file.close()

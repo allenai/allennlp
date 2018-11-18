@@ -3,7 +3,7 @@ Assorted utilities for working with neural networks in AllenNLP.
 """
 # pylint: disable=too-many-lines
 from collections import defaultdict
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar
 import logging
 import math
 import warnings
@@ -13,6 +13,42 @@ import torch
 from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+T = TypeVar('T')
+
+
+def has_tensor(obj) -> bool:
+    """
+    Given a possibly complex data structure,
+    check if it has any torch.Tensors in it.
+    """
+    if isinstance(obj, torch.Tensor):
+        return True
+    elif isinstance(obj, dict):
+        return any(has_tensor(value) for value in obj.values())
+    elif isinstance(obj, (list, tuple)):
+        return any(has_tensor(item) for item in obj)
+    else:
+        return False
+
+
+def move_to_device(obj, cuda_device: int):
+    """
+    Given a structure (possibly) containing Tensors on the CPU,
+    move all the Tensors to the specified GPU (or do nothing, if they should be on the CPU).
+    """
+    if cuda_device < 0 or not has_tensor(obj):
+        return obj
+    elif isinstance(obj, torch.Tensor):
+        return obj.cuda(cuda_device)
+    elif isinstance(obj, dict):
+        return {key: move_to_device(value, cuda_device) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [move_to_device(item, cuda_device) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple([move_to_device(item, cuda_device) for item in obj])
+    else:
+        return obj
 
 
 def batch_tensor_dicts(tensor_dicts: List[Dict[str, torch.Tensor]],
@@ -663,18 +699,19 @@ def tensors_equal(tensor1: torch.Tensor, tensor2: torch.Tensor, tolerance: float
             raise
 
 
-
 def device_mapping(cuda_device: int):
     """
     In order to `torch.load()` a GPU-trained model onto a CPU (or specific GPU),
     you have to supply a `map_location` function. Call this with
     the desired `cuda_device` to get the function that `torch.load()` needs.
     """
+
     def inner_device_mapping(storage: torch.Storage, location) -> torch.Storage:  # pylint: disable=unused-argument
         if cuda_device >= 0:
             return storage.cuda(cuda_device)
         else:
             return storage
+
     return inner_device_mapping
 
 
@@ -707,6 +744,27 @@ def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tens
     combination = combination.replace('x', '1').replace('y', '2')
     to_concatenate = [_get_combination(piece, tensors) for piece in combination.split(',')]
     return torch.cat(to_concatenate, dim=-1)
+
+
+def _rindex(sequence: Sequence[T], obj: T) -> int:
+    """
+    Return zero-based index in the sequence of the last item whose value is equal to obj.  Raises a
+    ValueError if there is no such item.
+
+    Parameters
+    ----------
+    sequence : ``Sequence[T]``
+    obj : ``T``
+
+    Returns
+    -------
+    zero-based index associated to the position of the last item equal to obj
+    """
+    for i in range(len(sequence) - 1, -1, -1):
+        if sequence[i] == obj:
+            return i
+
+    raise ValueError(f"Unable to find {obj} in sequence {sequence}.")
 
 
 def _get_combination(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
@@ -786,25 +844,33 @@ def _get_combination_and_multiply(combination: str,
         if operation == '*':
             if first_tensor.dim() > 4 or second_tensor.dim() > 4:
                 raise ValueError("Tensors with dim > 4 not currently supported")
+            desired_dim = max(first_tensor.dim(), second_tensor.dim()) - 1
             if first_tensor.dim() == 4:
-                expanded_dim = first_tensor.size().index(1)
+                expanded_dim = _rindex(first_tensor.size(), 1)
                 first_tensor = first_tensor.squeeze(expanded_dim)
             if second_tensor.dim() == 4:
-                expanded_dim = second_tensor.size().index(1)
+                expanded_dim = _rindex(second_tensor.size(), 1)
                 second_tensor = second_tensor.squeeze(expanded_dim)
             intermediate = first_tensor * weight
-            return torch.matmul(intermediate, second_tensor.transpose(-1, -2)).squeeze(-1)
+            result = torch.matmul(intermediate, second_tensor.transpose(-1, -2))
+            if result.dim() == desired_dim + 1:
+                result = result.squeeze(-1)
+            return result
         elif operation == '/':
             if first_tensor.dim() > 4 or second_tensor.dim() > 4:
                 raise ValueError("Tensors with dim > 4 not currently supported")
+            desired_dim = max(first_tensor.dim(), second_tensor.dim()) - 1
             if first_tensor.dim() == 4:
-                expanded_dim = first_tensor.size().index(1)
+                expanded_dim = _rindex(first_tensor.size(), 1)
                 first_tensor = first_tensor.squeeze(expanded_dim)
             if second_tensor.dim() == 4:
-                expanded_dim = second_tensor.size().index(1)
+                expanded_dim = _rindex(second_tensor.size(), 1)
                 second_tensor = second_tensor.squeeze(expanded_dim)
             intermediate = first_tensor * weight
-            return torch.matmul(intermediate, second_tensor.pow(-1).transpose(-1, -2)).squeeze(-1)
+            result = torch.matmul(intermediate, second_tensor.pow(-1).transpose(-1, -2))
+            if result.dim() == desired_dim + 1:
+                result = result.squeeze(-1)
+            return result
         elif operation == '+':
             return torch.matmul(first_tensor, weight) + torch.matmul(second_tensor, weight)
         elif operation == '-':
@@ -874,6 +940,7 @@ def logsumexp(tensor: torch.Tensor,
         stable_vec = tensor - max_score.unsqueeze(dim)
     return max_score + (stable_vec.exp().sum(dim, keepdim=keepdim)).log()
 
+
 def get_device_of(tensor: torch.Tensor) -> int:
     """
     Returns the device of the tensor.
@@ -882,6 +949,7 @@ def get_device_of(tensor: torch.Tensor) -> int:
         return -1
     else:
         return tensor.get_device()
+
 
 def flatten_and_batch_shift_indices(indices: torch.Tensor,
                                     sequence_length: int) -> torch.Tensor:
@@ -1053,7 +1121,7 @@ def bucket_values(distances: torch.Tensor,
     # We do this to make the buckets more granular in the initial range, where we expect
     # most values to fall. We then add (num_identity_buckets - 1) because we want these indices
     # to start _after_ the fixed number of buckets which we specified would only hold single values.
-    logspace_index = (distances.float().log()/math.log(2)).floor().long() + (num_identity_buckets - 1)
+    logspace_index = (distances.float().log() / math.log(2)).floor().long() + (num_identity_buckets - 1)
     # create a mask for values which will go into single number buckets (i.e not a range).
     use_identity_mask = (distances <= num_identity_buckets).long()
     use_buckets_mask = 1 + (-1 * use_identity_mask)
@@ -1062,6 +1130,7 @@ def bucket_values(distances: torch.Tensor,
     combined_index = use_identity_mask * distances + use_buckets_mask * logspace_index
     # Clamp to put anything > num_total_buckets into the final bucket.
     return combined_index.clamp(0, num_total_buckets - 1)
+
 
 def add_sentence_boundary_token_ids(tensor: torch.Tensor,
                                     mask: torch.Tensor,
@@ -1118,6 +1187,7 @@ def add_sentence_boundary_token_ids(tensor: torch.Tensor,
         raise ValueError("add_sentence_boundary_token_ids only accepts 2D and 3D input")
 
     return tensor_with_boundary_tokens, new_mask
+
 
 def remove_sentence_boundaries(tensor: torch.Tensor,
                                mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:

@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use
-from typing import Dict, List
+from typing import Dict, List, Iterator
 
 from overrides import overrides
 
@@ -30,6 +30,16 @@ class ListField(SequenceField[DataArray]):
                                           str(field_class_set)
         # Not sure why mypy has a hard time with this type...
         self.field_list: List[Field] = field_list
+
+    # Sequence[Field] methods
+    def __iter__(self) -> Iterator[Field]:
+        return iter(self.field_list)
+
+    def __getitem__(self, idx: int) -> Field:
+        return self.field_list[idx]
+
+    def __len__(self) -> int:
+        return len(self.field_list)
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
@@ -65,9 +75,7 @@ class ListField(SequenceField[DataArray]):
         return len(self.field_list)
 
     @overrides
-    def as_tensor(self,
-                  padding_lengths: Dict[str, int],
-                  cuda_device: int = -1) -> DataArray:
+    def as_tensor(self, padding_lengths: Dict[str, int]) -> DataArray:
         padded_field_list = pad_sequence_to_length(self.field_list,
                                                    padding_lengths['num_fields'],
                                                    self.field_list[0].empty_field)
@@ -76,7 +84,7 @@ class ListField(SequenceField[DataArray]):
         child_padding_lengths = {key.replace('list_', '', 1): value
                                  for key, value in padding_lengths.items()
                                  if key.startswith('list_')}
-        padded_fields = [field.as_tensor(child_padding_lengths, cuda_device)
+        padded_fields = [field.as_tensor(child_padding_lengths)
                          for field in padded_field_list]
         return self.field_list[0].batch_tensors(padded_fields)
 

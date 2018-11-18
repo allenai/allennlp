@@ -1,10 +1,10 @@
-from typing import Dict, MutableMapping
+from typing import Dict, MutableMapping, Mapping
 
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.vocabulary import Vocabulary
 
 
-class Instance:
+class Instance(Mapping[str, Field]):
     """
     An ``Instance`` is a collection of :class:`~allennlp.data.fields.field.Field` objects,
     specifying the inputs and outputs to
@@ -25,6 +25,18 @@ class Instance:
     def __init__(self, fields: MutableMapping[str, Field]) -> None:
         self.fields = fields
         self.indexed = False
+
+    # Add methods for ``Mapping``.  Note, even though the fields are
+    # mutable, we don't implement ``MutableMapping`` because we want
+    # you to use ``add_field`` and supply a vocabulary.
+    def __getitem__(self, key: str) -> Field:
+        return self.fields[key]
+
+    def __iter__(self):
+        return iter(self.fields)
+
+    def __len__(self) -> int:
+        return len(self.fields)
 
     def add_field(self, field_name: str, field: Field, vocab: Vocabulary = None) -> None:
         """
@@ -70,8 +82,7 @@ class Instance:
         return lengths
 
     def as_tensor_dict(self,
-                       padding_lengths: Dict[str, Dict[str, int]] = None,
-                       cuda_device: int = -1) -> Dict[str, DataArray]:
+                       padding_lengths: Dict[str, Dict[str, int]] = None) -> Dict[str, DataArray]:
         """
         Pads each ``Field`` in this instance to the lengths given in ``padding_lengths`` (which is
         keyed by field name, then by padding key, the same as the return value in
@@ -83,8 +94,7 @@ class Instance:
         padding_lengths = padding_lengths or self.get_padding_lengths()
         tensors = {}
         for field_name, field in self.fields.items():
-            tensors[field_name] = field.as_tensor(padding_lengths[field_name],
-                                                  cuda_device=cuda_device)
+            tensors[field_name] = field.as_tensor(padding_lengths[field_name])
         return tensors
 
 

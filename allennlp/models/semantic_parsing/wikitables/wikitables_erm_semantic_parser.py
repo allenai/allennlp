@@ -7,18 +7,16 @@ from overrides import overrides
 import torch
 
 from allennlp.data import Vocabulary
-from allennlp.data.fields.production_rule_field import ProductionRuleArray
-from allennlp.models.model import Model
+from allennlp.data.fields.production_rule_field import ProductionRule
 from allennlp.models.archival import load_archive, Archive
-from allennlp.models.semantic_parsing.wikitables.coverage_decoder_state import CoverageDecoderState
-from allennlp.models.semantic_parsing.wikitables.linking_coverage_transition_function import \
-        LinkingCoverageTransitionFunction
+from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
 from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
-from allennlp.nn.decoding import ChecklistState
-from allennlp.nn.decoding.decoder_trainers import ExpectedRiskMinimization
-from allennlp.semparse.type_declarations import wikitables_type_declaration as types
+from allennlp.semparse.type_declarations import wikitables_lambda_dcs as types
 from allennlp.semparse.worlds import WikiTablesWorld
+from allennlp.state_machines.states import CoverageState, ChecklistStatelet
+from allennlp.state_machines.trainers import ExpectedRiskMinimization
+from allennlp.state_machines.transition_functions import LinkingCoverageTransitionFunction
 from allennlp.training.metrics import Average
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -207,7 +205,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 question: Dict[str, torch.LongTensor],
                 table: Dict[str, torch.LongTensor],
                 world: List[WikiTablesWorld],
-                actions: List[List[ProductionRuleArray]],
+                actions: List[List[ProductionRule]],
                 agenda: torch.LongTensor,
                 example_lisp_string: List[str],
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
@@ -226,9 +224,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         world : ``List[WikiTablesWorld]``
             We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
             how ``MetadataField`` works, this gets passed to us as a ``List[WikiTablesWorld]``,
-        actions : ``List[List[ProductionRuleArray]]``
+        actions : ``List[List[ProductionRule]]``
             A list of all possible actions for each ``World`` in the batch, indexed into a
-            ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
+            ``ProductionRule`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
         example_lisp_string : ``List[str]``
@@ -254,10 +252,10 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                                                       max_num_terminals)
             checklist_target, terminal_actions, checklist_mask = checklist_info
             initial_checklist = checklist_target.new_zeros(checklist_target.size())
-            checklist_states.append(ChecklistState(terminal_actions=terminal_actions,
-                                                   checklist_target=checklist_target,
-                                                   checklist_mask=checklist_mask,
-                                                   checklist=initial_checklist))
+            checklist_states.append(ChecklistStatelet(terminal_actions=terminal_actions,
+                                                      checklist_target=checklist_target,
+                                                      checklist_mask=checklist_mask,
+                                                      checklist=initial_checklist))
         outputs: Dict[str, Any] = {}
         rnn_state, grammar_state = self._get_initial_rnn_and_grammar_state(question,
                                                                            table,
@@ -268,15 +266,15 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         batch_size = len(rnn_state)
         initial_score = rnn_state[0].hidden_state.new_zeros(batch_size)
         initial_score_list = [initial_score[i] for i in range(batch_size)]
-        initial_state = CoverageDecoderState(batch_indices=list(range(batch_size)),
-                                             action_history=[[] for _ in range(batch_size)],
-                                             score=initial_score_list,
-                                             rnn_state=rnn_state,
-                                             grammar_state=grammar_state,
-                                             checklist_state=checklist_states,
-                                             possible_actions=actions,
-                                             extras=example_lisp_string,
-                                             debug_info=None)
+        initial_state = CoverageState(batch_indices=list(range(batch_size)),  # type: ignore
+                                      action_history=[[] for _ in range(batch_size)],
+                                      score=initial_score_list,
+                                      rnn_state=rnn_state,
+                                      grammar_state=grammar_state,
+                                      checklist_state=checklist_states,
+                                      possible_actions=actions,
+                                      extras=example_lisp_string,
+                                      debug_info=None)
 
         if not self.training:
             initial_state.debug_info = [[] for _ in range(batch_size)]
@@ -326,7 +324,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
 
     @staticmethod
     def _get_checklist_info(agenda: torch.LongTensor,
-                            all_actions: List[ProductionRuleArray],
+                            all_actions: List[ProductionRule],
                             terminal_productions: Set[str],
                             max_num_terminals: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
@@ -340,7 +338,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         ----------
         ``agenda`` : ``torch.LongTensor``
             Agenda of one instance of size ``(agenda_size, 1)``.
-        ``all_actions`` : ``List[ProductionRuleArray]``
+        ``all_actions`` : ``List[ProductionRule]``
             All actions for one instance.
         ``terminal_productions`` : ``Set[str]``
             String representations of terminal productions in the corresponding world.
@@ -354,7 +352,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         # We want to return checklist target and terminal actions that are column vectors to make
         # computing softmax over the difference between checklist and target easier.
         for index, action in enumerate(all_actions):
-            # Each action is a ProductionRuleArray, a tuple where the first item is the production
+            # Each action is a ProductionRule, a tuple where the first item is the production
             # rule string.
             if action[0] in terminal_productions:
                 terminal_indices.append([index])
@@ -372,7 +370,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         checklist_mask = (target_checklist != 0).float()
         return target_checklist, terminal_actions, checklist_mask
 
-    def _get_state_cost(self, worlds: List[WikiTablesWorld], state: CoverageDecoderState) -> torch.Tensor:
+    def _get_state_cost(self, worlds: List[WikiTablesWorld], state: CoverageState) -> torch.Tensor:
         if not state.is_finished():
             raise RuntimeError("_get_state_cost() is not defined for unfinished states!")
         world = worlds[state.batch_indices[0]]
@@ -392,7 +390,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         action_strings = [state.possible_actions[batch_index][i][0] for i in action_history]
         logical_form = world.get_logical_form(action_strings)
         lisp_string = state.extras[batch_index]
-        if self._denotation_accuracy.evaluate_logical_form(logical_form, lisp_string):
+        if self._executor.evaluate_logical_form(logical_form, lisp_string):
             cost = checklist_cost
         else:
             cost = checklist_cost + (1 - self._checklist_cost_weight) * denotation_cost

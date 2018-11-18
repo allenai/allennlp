@@ -41,7 +41,6 @@ class IteratorTest(AllenNlpTestCase):
     def create_instance(self, str_tokens: List[str]):
         tokens = [Token(t) for t in str_tokens]
         instance = Instance({'text': TextField(tokens, self.token_indexers)})
-        instance.index_fields(self.vocab)
         return instance
 
     def assert_instances_are_correct(self, candidate_instances):
@@ -69,6 +68,7 @@ class TestBasicIterator(IteratorTest):
     def test_yield_one_epoch_iterates_over_the_data_once(self):
         for test_instances in (self.instances, self.lazy_instances):
             iterator = BasicIterator(batch_size=2)
+            iterator.index_with(self.vocab)
             batches = list(iterator(test_instances, num_epochs=1))
             # We just want to get the single-token array for the text field in the instance.
             instances = [tuple(instance.detach().cpu().numpy())
@@ -79,7 +79,9 @@ class TestBasicIterator(IteratorTest):
 
     def test_call_iterates_over_data_forever(self):
         for test_instances in (self.instances, self.lazy_instances):
-            generator = BasicIterator(batch_size=2)(test_instances)
+            iterator = BasicIterator(batch_size=2)
+            iterator.index_with(self.vocab)
+            generator = iterator(test_instances)
             batches = [next(generator) for _ in range(18)]  # going over the data 6 times
             # We just want to get the single-token array for the text field in the instance.
             instances = [tuple(instance.detach().cpu().numpy())
@@ -153,8 +155,8 @@ class TestBasicIterator(IteratorTest):
             assert in_order_batches != shuffled_batches
 
             # But not the counts of the instances.
-            in_order_counts = Counter(instance for batch in in_order_batches for instance in batch)
-            shuffled_counts = Counter(instance for batch in shuffled_batches for instance in batch)
+            in_order_counts = Counter(id(instance) for batch in in_order_batches for instance in batch)
+            shuffled_counts = Counter(id(instance) for batch in shuffled_batches for instance in batch)
             assert in_order_counts == shuffled_counts
 
 
@@ -218,6 +220,7 @@ class TestBasicIterator(IteratorTest):
             iterator = BasicIterator(
                     batch_size=3, maximum_samples_per_batch=['num_tokens', 9]
             )
+            iterator.index_with(self.vocab)
             batches = list(iterator._create_batches(test_instances, shuffle=False))
 
             # ensure all instances are in a batch
