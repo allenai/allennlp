@@ -784,8 +784,6 @@ class _ElmoSoftmax(torch.nn.Module):
 
     def forward(self,
                 bilm_inputs: Dict[str, Union[torch.Tensor, List[torch.Tensor]]],
-                # word_inputs: torch.Tensor,
-                # TODO: remove?
                 aggregation_function: str = None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Passes the ELMo embeddings to a softmax layer and calculates

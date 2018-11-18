@@ -16,7 +16,8 @@ https://arxiv.org/abs/1802.05365
    $ allennlp elmo --help
    usage: allennlp elmo [-h] (--all | --top | --average)
                         [--vocab-path VOCAB_PATH] [--options-file OPTIONS_FILE]
-                        [--weight-file WEIGHT_FILE] [--batch-size BATCH_SIZE]
+                        [--weight-file WEIGHT_FILE] [--softmax-weight-file SOFTMAX_FILE]
+                        [--batch-size BATCH_SIZE]
                         [--cuda-device CUDA_DEVICE] [--forget-sentences]
                         [--use-sentence-keys] [--include-package INCLUDE_PACKAGE]
                         input_file output_file
@@ -38,6 +39,8 @@ https://arxiv.org/abs/1802.05365
                            The path to the ELMo options file.
      --weight-file WEIGHT_FILE
                            The path to the ELMo weight file.
+     --softmax-weight-file SOFTMAX_FILE
+                           The path to the ELMo Softmax weight file.
      --batch-size BATCH_SIZE
                            The batch size to use.
      --cuda-device CUDA_DEVICE
@@ -123,11 +126,6 @@ class Elmo(Subcommand):
                 type=str,
                 default=None,  # DEFAULT_SOFTMAX_FILE,
                 help='The path to the ELMo Softmax weight file.')
-        subparser.add_argument(
-                '--softmax-vocab-file',
-                type=str,
-                default=None,  # DEFAULT_VOCAB_FILE,
-                help='The path to the ELMo vocab file.')
         subparser.add_argument('--chunk-size', type=int, default=256, help='The chunk size for the softmax layer.')
         subparser.add_argument('--batch-size', type=int, default=DEFAULT_BATCH_SIZE, help='The batch size to use.')
         subparser.add_argument('--file-friendly-logging', default=False, action='store_true',
@@ -166,7 +164,6 @@ class ElmoEmbedder():
                  options_file: str = DEFAULT_OPTIONS_FILE,
                  weight_file: str = DEFAULT_WEIGHT_FILE,
                  softmax_weight_file: str = None,
-                 softmax_vocab_file: str = None,
                  cuda_device: int = -1,
                  chunk_size: int = 256) -> None:
         """
@@ -178,10 +175,10 @@ class ElmoEmbedder():
             A path or URL to an ELMo weights file.
         softmax_weight_file : ``str``, optional
             A path or URL to an ELMo softmax weights file.
-        softmax_vocab_file : ``str``, optional
-            A path or URL to an ELMo vocab file.
         cuda_device : ``int``, optional, (default=-1)
             The GPU device to run on.
+            If softmax_weight_file is set, the softmax layer is also
+            placed on the GPU.
         chunk_size : ``int``, optional, (default=256)
             The chunk size of the softmax layer.
         """
@@ -189,10 +186,9 @@ class ElmoEmbedder():
 
         logger.info("Initializing ELMo.")
         self.elmo_bilm = _ElmoBiLm(options_file, weight_file)
-        if softmax_weight_file and softmax_vocab_file:
+        if softmax_weight_file:
             logger.info("Initializing ELMo Softmax.")
             self.elmo_softmax = _ElmoSoftmax(softmax_weight_file,
-                                             softmax_vocab_file,
                                              chunk_size=chunk_size)
         else:
             self.elmo_softmax = None
@@ -420,7 +416,6 @@ def elmo_command(args):
     elmo_embedder = ElmoEmbedder(
         options_file=args.options_file, weight_file=args.weight_file,
         softmax_weight_file=args.softmax_weight_file,
-        softmax_vocab_file=args.softmax_vocab_file,
         cuda_device=args.cuda_device, chunk_size=args.chunk_size,
     )
     output_format = ""
