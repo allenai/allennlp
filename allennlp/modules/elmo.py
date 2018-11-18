@@ -756,21 +756,11 @@ class _ElmoSoftmax(torch.nn.Module):
         all_logprobs = []
         num_chunks = (activation.size(0) - 1) // self.chunk_size + 1
         for activation_chunk in torch.chunk(activation, num_chunks, dim=0):
-            # assert activation_chunk.size()[:2] == target_chunk.size()[:2]
             chunk_size, sequence_length = activation_chunk.size()[:2]
 
-            # targets_flat = target_chunk.view(-1)
-            # time_indexer = torch.arange(
-            #     0, targets_flat.size(0),
-            #     out=target_chunk.data.new(
-            #         targets_flat.size(0))) % target_chunk.size(1)
             time_indexer = (torch.arange(0, chunk_size * sequence_length)
                             % sequence_length)
 
-            # batch_indexer = torch.arange(
-            #     0, targets_flat.size(0),
-            #     out=target_chunk.data.new(
-            #         targets_flat.size(0))) / target_chunk.size(1)
             batch_indexer = (torch.arange(0, chunk_size * sequence_length)
                              / sequence_length)
 
