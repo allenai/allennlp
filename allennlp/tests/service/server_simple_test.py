@@ -58,6 +58,15 @@ class TestSimpleServer(AllenNlpTestCase):
         assert 'best_span_str' in data
         assert 'span_start_logits' in data
 
+        # Test the batch predictor
+        batch_size = 8
+        response = post_json(client, '/predict_batch', [PAYLOAD] * batch_size)
+        data_list = json.loads(response.get_data())
+        assert len(data_list) == batch_size
+        for data in data_list:
+            assert 'best_span_str' in data
+            assert 'span_start_logits' in data
+
     def test_sanitizer(self):
         def sanitize(result: JsonDict) -> JsonDict:
             return {key: value for key, value in result.items()
@@ -71,6 +80,14 @@ class TestSimpleServer(AllenNlpTestCase):
         data = json.loads(response.get_data())
         assert 'best_span_str' in data
         assert 'span_start_logits' not in data
+
+        batch_size = 8
+        response = post_json(client, '/predict_batch', [PAYLOAD] * batch_size)
+        data_list = json.loads(response.get_data())
+        assert len(data_list) == batch_size
+        for data in data_list:
+            assert 'best_span_str' in data
+            assert 'span_start_logits' not in data
 
     def test_static_dir(self):
         html = """<html><body>THIS IS A STATIC SITE</body></html>"""
