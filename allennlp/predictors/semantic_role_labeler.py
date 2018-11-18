@@ -43,7 +43,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         """
         return self.predict_json({"sentence": sentence})
 
-    def predict_from_list(self, tokenized_sentence: List[str]) -> JsonDict:
+    def predict_tokenized(self, tokenized_sentence: List[str]) -> JsonDict:
         """
         Predicts the semantic roles of the supplied sentence tokens and returns a dictionary
         with the results.
@@ -57,7 +57,17 @@ class SemanticRoleLabelerPredictor(Predictor):
         -------
         A dictionary representation of the semantic roles in the sentence.
         """
-        return self.predict_words_list(tokenized_sentence)
+        spacy_doc = self._tokenizer.spacy.tokenizer.tokens_from_list(tokenized_sentence)
+        for pipe in filter(None, self._tokenizer.spacy.pipeline):
+            pipe[1](spacy_doc)
+
+        tokens = [token for token in spacy_doc]
+        instances = self.tokens_to_instances(tokens)
+
+        if not instances:
+            return sanitize({"verbs": [], "words": tokens})
+
+        return self.predict_instances(instances)
 
     @staticmethod
     def make_srl_string(words: List[str], tags: List[str]) -> str:
@@ -230,18 +240,5 @@ class SemanticRoleLabelerPredictor(Predictor):
 
         if not instances:
             return sanitize({"verbs": [], "words": self._tokenizer.split_words(inputs["sentence"])})
-
-        return self.predict_instances(instances)
-
-    def predict_words_list(self, words_list: List[str]) -> JsonDict:
-        """
-        Create an instance list of works document, for skipping tokenization when that
-        information already exist for the user
-        """
-        tokens = self._tokenizer.tokens_from_list(words_list)
-        instances = self.tokens_to_instances(tokens)
-
-        if not instances:
-            return sanitize({"verbs": [], "words": tokens})
 
         return self.predict_instances(instances)

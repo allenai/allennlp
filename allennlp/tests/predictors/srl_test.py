@@ -19,7 +19,7 @@ class TestSrlPredictor(AllenNlpTestCase):
         words = ["The", "squirrel", "wrote", "a", "unit", "test",
                  "to", "make", "sure", "its", "nuts", "worked", "as", "designed", "."]
 
-        result_words = predictor.predict_words_list(words)
+        result_words = predictor.predict_tokenized(words)
         self.assert_predict_result(result_words)
 
     @staticmethod
@@ -27,6 +27,7 @@ class TestSrlPredictor(AllenNlpTestCase):
         words = result.get("words")
         assert words == ["The", "squirrel", "wrote", "a", "unit", "test",
                          "to", "make", "sure", "its", "nuts", "worked", "as", "designed", "."]
+
         num_words = len(words)
         verbs = result.get("verbs")
         assert verbs is not None

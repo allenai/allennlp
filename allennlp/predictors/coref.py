@@ -55,31 +55,28 @@ class CorefPredictor(Predictor):
         """
         return self.predict_json({"document" : document})
 
-    def predict_from_list(self, tokenized_document: List[str]) -> JsonDict:
+    def predict_tokenized(self, tokenized_document: List[str]) -> JsonDict:
         """
         Predict the coreference clusters in the given document.
 
         Parameters
         ----------
-        tokenized_document : ``List[str``
+        tokenized_document : ``List[str]``
             A list of words representation of a tokenized document.
 
         Returns
         -------
         A dictionary representation of the predicted coreference clusters.
         """
-        return self.predict_words_list(tokenized_document)
-
-    def predict_words_list(self, words_list: List[str]) -> JsonDict:
-        instance = self._words_list_to_instance(words_list)
+        instance = self._words_list_to_instance(tokenized_document)
         return self.predict_instance(instance)
 
-    def _words_list_to_instance(self, document_list: List[str]) -> Instance:
+    def _words_list_to_instance(self, words: List[str]) -> Instance:
         """
         Create an instance from words list represent an already tokenized document,
         for skipping tokenization when that information already exist for the user
         """
-        spacy_document = self._spacy.tokenizer.tokens_from_list(document_list)
+        spacy_document = self._spacy.tokenizer.tokens_from_list(words)
         for pipe in filter(None, self._spacy.pipeline):
             pipe[1](spacy_document)
 

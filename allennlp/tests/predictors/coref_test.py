@@ -18,7 +18,8 @@ class TestCorefPredictor(AllenNlpTestCase):
         document = ['This', 'is', 'a', 'single', 'string',
                     'document', 'about', 'a', 'test', '.', 'Sometimes',
                     'it', 'contains', 'coreferent', 'parts', '.']
-        result_doc_words = predictor.predict_words_list(document)
+
+        result_doc_words = predictor.predict_tokenized(document)
         self.assert_predict_result(result_doc_words)
 
     @staticmethod

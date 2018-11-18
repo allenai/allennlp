@@ -155,13 +155,6 @@ class SpacyWordSplitter(WordSplitter):
         # This works because our Token class matches spacy's.
         return _remove_spaces(self.spacy(sentence))
 
-    def tokens_from_list(self, words: List[str]) -> List[Token]:
-        spacy_doc = self.spacy.tokenizer.tokens_from_list(words)
-        for pipe in filter(None, self.spacy.pipeline):
-            pipe[1](spacy_doc)
-
-        return [token for token in spacy_doc]
-
 
 @WordSplitter.register('openai')
 class OpenAISplitter(WordSplitter):
