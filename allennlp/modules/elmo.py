@@ -217,7 +217,7 @@ class Elmo(torch.nn.Module):
                    dropout=dropout)
 
 
-def batch_to_ids(batch: List[List[str]], vocab: Vocabulary = None) -> Tuple[torch.Tensor, torch.Tensor]:
+def batch_to_ids(batch: List[List[str]]) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Converts a batch of tokenized sentences to a tensor representing the sentences with encoded characters
     (len(batch), max sentence length, max word length).
@@ -226,8 +226,6 @@ def batch_to_ids(batch: List[List[str]], vocab: Vocabulary = None) -> Tuple[torc
     ----------
     batch : ``List[List[str]]``, required
         A list of tokenized sentences.
-    vocab : ``Vocabulary``, optional
-        Include a vocab of words if you need to return word ids.
 
     Returns
     -------
@@ -235,31 +233,18 @@ def batch_to_ids(batch: List[List[str]], vocab: Vocabulary = None) -> Tuple[torc
         a tensor. If not, it returns a tensor of char ids.
     """
     instances = []
-    char_indexer = ELMoTokenCharactersIndexer()
-    if vocab:
-        token_indexer = SingleIdTokenIndexer(
-                    namespace='tokens', lowercase_tokens=False)
-    else:
-        token_indexer = None
+    indexer = ELMoTokenCharactersIndexer()
+
     for sentence in batch:
         tokens = [Token(token) for token in sentence]
-        if vocab:
-            field = TextField(tokens, {
-                'character_ids': char_indexer,
-                'word_ids': token_indexer,
-            })
-        else:
-            field = TextField(tokens, {'character_ids': char_indexer})
+        field = TextField(tokens, {'character_ids': indexer})
         instance = Instance({'elmo': field})
         instances.append(instance)
 
     dataset = Batch(instances)
+    vocab = Vocabulary()
     dataset.index_instances(vocab)
-    elmo_tensor_dict = dataset.as_tensor_dict()['elmo']
-    if vocab:
-        return elmo_tensor_dict['character_ids'], elmo_tensor_dict['word_ids']
-    else:
-        return elmo_tensor_dict['character_ids']
+    return dataset.as_tensor_dict()['elmo']['character_ids']
 
 
 class _ElmoCharacterEncoder(torch.nn.Module):
@@ -755,8 +740,7 @@ class _ElmoSoftmax(torch.nn.Module):
         return fc_layer
 
     def _chunked_log_probs(self,
-                           activation: torch.Tensor,
-                           word_targets: torch.Tensor) -> torch.Tensor:
+                           activation: torch.Tensor) -> torch.Tensor:
         """
         Do the softmax in chunks so the gpu ram doesn't explode.
 
@@ -764,8 +748,6 @@ class _ElmoSoftmax(torch.nn.Module):
         ----------
         activation : ``torch.Tensor``, required
             Results of the ELMo embedder.
-        word_targets : ``torch.Tensor``, required
-            The word_ids returned from `batch_to_ids`.
 
         Returns
         -------
@@ -773,30 +755,36 @@ class _ElmoSoftmax(torch.nn.Module):
         """
         all_logprobs = []
         num_chunks = (activation.size(0) - 1) // self.chunk_size + 1
-        for activation_chunk, target_chunk in zip(
-                torch.chunk(activation, num_chunks, dim=0),
-                torch.chunk(word_targets, num_chunks, dim=0)):
+        for activation_chunk in torch.chunk(activation, num_chunks, dim=0):
+            # assert activation_chunk.size()[:2] == target_chunk.size()[:2]
+            chunk_size, sequence_length = activation_chunk.size()[:2]
 
-            assert activation_chunk.size()[:2] == target_chunk.size()[:2]
-            targets_flat = target_chunk.view(-1)
-            time_indexer = torch.arange(
-                0, targets_flat.size(0),
-                out=target_chunk.data.new(
-                    targets_flat.size(0))) % target_chunk.size(1)
-            batch_indexer = torch.arange(
-                0, targets_flat.size(0),
-                out=target_chunk.data.new(
-                    targets_flat.size(0))) / target_chunk.size(1)
+            # targets_flat = target_chunk.view(-1)
+            # time_indexer = torch.arange(
+            #     0, targets_flat.size(0),
+            #     out=target_chunk.data.new(
+            #         targets_flat.size(0))) % target_chunk.size(1)
+            time_indexer = (torch.arange(0, chunk_size * sequence_length)
+                            % sequence_length)
+
+            # batch_indexer = torch.arange(
+            #     0, targets_flat.size(0),
+            #     out=target_chunk.data.new(
+            #         targets_flat.size(0))) / target_chunk.size(1)
+            batch_indexer = (torch.arange(0, chunk_size * sequence_length)
+                             / sequence_length)
+
             all_logprobs.append(
                 F.log_softmax(self.fc_layer(activation_chunk), 2)[
-                batch_indexer, time_indexer, targets_flat].view(
-                    *target_chunk.size()))
+                batch_indexer, time_indexer, :].view(
+                    *[chunk_size, sequence_length, -1]))
 
         return torch.cat(all_logprobs, 0)
 
     def forward(self,
                 bilm_inputs: Dict[str, Union[torch.Tensor, List[torch.Tensor]]],
-                word_inputs: torch.Tensor,
+                # word_inputs: torch.Tensor,
+                # TODO: remove?
                 aggregation_function: str = None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Passes the ELMo embeddings to a softmax layer and calculates
@@ -828,13 +816,13 @@ class _ElmoSoftmax(torch.nn.Module):
 
         # NOTE: can this be replaced by allennlp.util.masked_softmax ?
         fwd_log_probs = self._chunked_log_probs(
-            final_activations[:, :-2, :self.hidden_size], word_inputs)
+            final_activations[:, :-2, :self.hidden_size])
         bwd_log_probs = self._chunked_log_probs(
-            final_activations[:, 2:, self.hidden_size:], word_inputs)
+            final_activations[:, 2:, self.hidden_size:])
 
         # [B, (fwd, bwd), L]
         log_probs = torch.stack((fwd_log_probs, bwd_log_probs), 1)
-        log_probs *= mask_without_bos_eos[:, None].float()
+        log_probs *= mask_without_bos_eos[:, None, :, None].float()
 
         # aggregate, otherwise return both the backward and forward embeddings
         if aggregation_function == 'mean':
