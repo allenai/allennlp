@@ -55,20 +55,20 @@ class CorefPredictor(Predictor):
         """
         return self.predict_json({"document" : document})
 
-    def predict_from_list(self, document_as_list: List[str]) -> JsonDict:
+    def predict_from_list(self, tokenized_document: List[str]) -> JsonDict:
         """
         Predict the coreference clusters in the given document.
 
         Parameters
         ----------
-        document_as_list : ``List[str``
+        tokenized_document : ``List[str``
             A list of words representation of a tokenized document.
 
         Returns
         -------
         A dictionary representation of the predicted coreference clusters.
         """
-        return self.predict_words_list(document_as_list)
+        return self.predict_words_list(tokenized_document)
 
     def predict_words_list(self, words_list: List[str]) -> JsonDict:
         instance = self._words_list_to_instance(words_list)
