@@ -43,7 +43,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
         :func:`~allennlp.nn.util.combine_tensors`; see that function for more detail on exactly how
         this works, but some simple examples are ``"1,2"`` for concatenation (the default),
         ``"1+2"`` for adding the two, or ``"2"`` for only keeping the attention representation.
-    output_dim : ``bool``, optional (default = None)
+    output_dim : ``int``, optional (default = None)
         The dimension of an optional output projection.
     """
     def __init__(self,
