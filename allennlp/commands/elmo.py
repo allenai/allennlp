@@ -157,8 +157,8 @@ def empty_embedding() -> numpy.ndarray:
     return numpy.zeros((3, 0, 1024))
 
 
-def empty_probabilities() -> numpy.ndarray:
-    return numpy.zeros((1, 0, ))
+def empty_probabilities(vocab_size: int) -> numpy.ndarray:
+    return numpy.zeros((1, 0, vocab_size))
 
 
 class ElmoEmbedder():
@@ -191,7 +191,8 @@ class ElmoEmbedder():
         self.elmo_bilm = _ElmoBiLm(options_file, weight_file)
         if softmax_weight_file and softmax_vocab_file:
             logger.info("Initializing ELMo Softmax.")
-            self.elmo_softmax = _ElmoSoftmax(softmax_weight_file, softmax_vocab_file,
+            self.elmo_softmax = _ElmoSoftmax(softmax_weight_file,
+                                             softmax_vocab_file,
                                              chunk_size=chunk_size)
         else:
             self.elmo_softmax = None
@@ -214,15 +215,9 @@ class ElmoEmbedder():
             A tuple of tensors, the first representing activations (batch_size, 3, num_timesteps, 1024) and
         the second a mask (batch_size, num_timesteps).
         """
-        if self.elmo_softmax:
-            character_ids, word_ids = batch_to_ids(
-                batch, self.elmo_softmax.vocab)
-        else:
-            character_ids = batch_to_ids(batch)
+        character_ids = batch_to_ids(batch)
         if self.cuda_device >= 0:
             character_ids = character_ids.cuda(device=self.cuda_device)
-            if self.elmo_softmax:
-                word_ids = word_ids.cuda(device=self.cuda_device)
 
         bilm_output = self.elmo_bilm(character_ids)
         layer_activations = bilm_output['activations']
@@ -230,7 +225,7 @@ class ElmoEmbedder():
         if self.elmo_softmax:
             # bow and eos already shaved off
             softmax_log_probs, softmax_mask = self.elmo_softmax(
-                bilm_output, word_ids, aggregation_function='mean')
+                bilm_output, aggregation_function='mean')
             # return the probabilities instead of the activations
             # if we load the softmax layer
 
@@ -296,17 +291,16 @@ class ElmoEmbedder():
             embeddings, mask = self.batch_to_embeddings(batch)
             for i in range(len(batch)):
                 length = int(mask[i, :].sum())
+
                 # Slicing the embedding :0 throws an exception so we need to special case for empty sentences.
                 if length == 0:
                     if self.elmo_softmax:
-                        elmo_embeddings.append(empty_probabilities())
+                        elmo_embeddings.append(empty_probabilities(
+                            self.elmo_softmax.vocab_size))
                     else:
                         elmo_embeddings.append(empty_embedding())
                 else:
-                    if self.elmo_softmax:
-                        embeddings_slice = embeddings[i, :, :length]
-                    else:
-                        embeddings_slice = embeddings[i, :, :length, :]
+                    embeddings_slice = embeddings[i, :, :length, :]
                     elmo_embeddings.append(embeddings_slice.detach().cpu().numpy())
 
         return elmo_embeddings
@@ -425,7 +419,8 @@ class ElmoEmbedder():
 def elmo_command(args):
     elmo_embedder = ElmoEmbedder(
         options_file=args.options_file, weight_file=args.weight_file,
-        softmax_weight_file=args.softmax_weight_file, softmax_vocab_file=args.softmax_vocab_file,
+        softmax_weight_file=args.softmax_weight_file,
+        softmax_vocab_file=args.softmax_vocab_file,
         cuda_device=args.cuda_device, chunk_size=args.chunk_size,
     )
     output_format = ""
