@@ -3,12 +3,13 @@ import logging
 
 from overrides import overrides
 
+from pytorch_pretrained_bert.tokenization import load_vocab, WordpieceTokenizer
+
 from allennlp.common.file_utils import cached_path
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
-import allennlp.data.token_indexers._bert_huggingface as bert
 
 logger = logging.getLogger(__name__)
 
@@ -27,13 +28,13 @@ class BertIndexer(TokenIndexer[int]):
             logger.warning("you provided no vocabulary!")
             self.vocab: Dict[str, int] = {}
         else:
-            self.vocab = bert.load_vocab(cached_path(vocab_path))
+            self.vocab = load_vocab(cached_path(vocab_path))
 
         # The BERT code itself does a two-step tokenization:
         #    sentence -> [words], and then word -> [wordpieces]
         # In AllenNLP, the first step is implemented as the ``BertSimpleWordSplitter``,
         # and this token indexer handles the second.
-        self.wordpiece_tokenizer = bert.WordpieceTokenizer(self.vocab, unk_token, max_input_chars_per_word)
+        self.wordpiece_tokenizer = WordpieceTokenizer(self.vocab, unk_token, max_input_chars_per_word)
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -60,10 +61,11 @@ class BertIndexer(TokenIndexer[int]):
         offset = -1
 
         for token in tokens:
-            wordpieces = bert.convert_tokens_to_ids(self.vocab, self.wordpiece_tokenizer.tokenize(token.text))
-            offset += len(wordpieces)
+            wordpieces = self.wordpiece_tokenizer.tokenize(token.text)
+            wordpiece_ids = [self.vocab[token] for token in wordpieces]
+            offset += len(wordpiece_ids)
             offsets.append(offset)
-            text_tokens.extend(wordpieces)
+            text_tokens.extend(wordpiece_ids)
 
         return {
                 index_name: text_tokens,

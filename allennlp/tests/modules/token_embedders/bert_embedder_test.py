@@ -68,3 +68,4 @@ class TestBertEmbedder(ModelTestCase):
         # Offsets, should get 10 vectors back.
         bert_vectors = embedder(tokens["bert"], mask, token_type_ids, offsets=tokens["bert-offsets"])
         assert list(bert_vectors.shape) == [2, 10, 768]
+

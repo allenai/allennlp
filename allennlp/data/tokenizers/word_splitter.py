@@ -5,11 +5,13 @@ from overrides import overrides
 import spacy
 import ftfy
 
+from pytorch_pretrained_bert.tokenization import BasicTokenizer as BertTokenizer
+
 from allennlp.common import Registrable
 from allennlp.common.util import get_spacy_model
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.openai_transformer_byte_pair_indexer import text_standardize
-from allennlp.data.token_indexers._bert_huggingface import BasicTokenizer as BertTokenizer
+
 
 class WordSplitter(Registrable):
     """

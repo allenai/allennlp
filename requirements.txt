@@ -63,6 +63,9 @@ sqlparse==0.2.4
 # For text normalization
 ftfy
 
+# To use the BERT model
+pytorch-pretrained-bert==0.1.2
+
 #### ESSENTIAL LIBRARIES USED IN SCRIPTS ####
 
 # Plot graphs for learning rate finder

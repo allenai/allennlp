@@ -2,9 +2,10 @@ import logging
 
 import torch
 
+from pytorch_pretrained_bert.modeling import BertConfig, BertModel
+
 from allennlp.common.file_utils import cached_path
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
-import allennlp.modules.token_embedders._bert_huggingface as bert
 from allennlp.nn import util
 
 logger = logging.getLogger(__name__)
@@ -32,12 +33,12 @@ class BertEmbedder(TokenEmbedder):
 
         self.output_dim = hidden_size
 
-        config = bert.BertConfig(vocab_size, hidden_size, num_hidden_layers, num_attention_heads,
-                                 intermediate_size, hidden_act, hidden_dropout_prob,
-                                 attention_probs_dropout_prob, max_position_embeddings, type_vocab_size,
-                                 initializer_range)
+        config = BertConfig(vocab_size, hidden_size, num_hidden_layers, num_attention_heads,
+                            intermediate_size, hidden_act, hidden_dropout_prob,
+                            attention_probs_dropout_prob, max_position_embeddings, type_vocab_size,
+                            initializer_range)
 
-        self.bert_model = bert.BertModel(config)
+        self.bert_model = BertModel(config)
 
         if init_checkpoint is not None:
             logger.info(f"loading pretrained BERT model from {init_checkpoint}")
