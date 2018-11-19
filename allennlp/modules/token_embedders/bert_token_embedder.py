@@ -13,39 +13,14 @@ logger = logging.getLogger(__name__)
 
 class BertEmbedder(TokenEmbedder):
     """
-    This class is not registered, because you probably want to use
-    a specific subclass corresponding to a trained model.
+    Don't use this class, use ``PretrainedBertEmbedder`` for one of the
+    named pretrained models or ``CustomBertEmbedder`` for a custom model.
     """
     def __init__(self,
-                 vocab_size: int,
-                 hidden_size: int,
-                 num_hidden_layers: int,
-                 num_attention_heads: int,
-                 intermediate_size: int,
-                 hidden_act: str,
-                 hidden_dropout_prob: float,
-                 attention_probs_dropout_prob: float,
-                 max_position_embeddings: int,
-                 type_vocab_size: int,
-                 initializer_range: float,
-                 init_checkpoint: str = None) -> None:
+                 bert_model: BertModel) -> None:
         super().__init__()
-
-        self.output_dim = hidden_size
-
-        config = BertConfig(vocab_size, hidden_size, num_hidden_layers, num_attention_heads,
-                            intermediate_size, hidden_act, hidden_dropout_prob,
-                            attention_probs_dropout_prob, max_position_embeddings, type_vocab_size,
-                            initializer_range)
-
-        self.bert_model = BertModel(config)
-
-        if init_checkpoint is not None:
-            logger.info(f"loading pretrained BERT model from {init_checkpoint}")
-            state_dict = torch.load(cached_path(init_checkpoint))
-            self.bert_model.load_state_dict(state_dict)
-        else:
-            logger.warning("no checkpoint provided for BERT model, you're using garbage weights!")
+        self.bert_model = bert_model
+        self.output_dim = bert_model.config.hidden_size
 
     def get_output_dim(self) -> int:
         return self.output_dim
@@ -68,18 +43,40 @@ class BertEmbedder(TokenEmbedder):
             return sequence_output[range_vector, offsets]
 
 
-@TokenEmbedder.register("bert-base-uncased")
-class BertBaseUncased(BertEmbedder):
-    def __init__(self, init_checkpoint: str = None) -> None:
-        super().__init__(vocab_size=30522,
-                         hidden_size=768,
-                         num_hidden_layers=12,
-                         num_attention_heads=12,
-                         intermediate_size=3072,
-                         hidden_act="gelu",
-                         hidden_dropout_prob=0.1,
-                         attention_probs_dropout_prob=0.1,
-                         max_position_embeddings=512,
-                         type_vocab_size=2,
-                         initializer_range=0.02,
-                         init_checkpoint=init_checkpoint)
+@TokenEmbedder.register("bert-pretrained")
+class PretrainedBertEmbedder(BertEmbedder):
+    def __init__(self, pretrained_model_name: str) -> None:
+        super().__init__(BertModel.from_pretrained(pretrained_model_name))
+
+@TokenEmbedder.register("bert-custom")
+class CustomBertEmbedder(BertEmbedder):
+    def __init__(self,
+                 vocab_size: int,
+                 hidden_size: int,
+                 num_hidden_layers: int,
+                 num_attention_heads: int,
+                 intermediate_size: int,
+                 hidden_act: str,
+                 hidden_dropout_prob: float,
+                 attention_probs_dropout_prob: float,
+                 max_position_embeddings: int,
+                 type_vocab_size: int,
+                 initializer_range: float,
+                 init_checkpoint: str = None) -> None:
+        self.output_dim = hidden_size
+
+        config = BertConfig(vocab_size, hidden_size, num_hidden_layers, num_attention_heads,
+                            intermediate_size, hidden_act, hidden_dropout_prob,
+                            attention_probs_dropout_prob, max_position_embeddings, type_vocab_size,
+                            initializer_range)
+
+        bert_model = BertModel(config)
+
+        if init_checkpoint is not None:
+            logger.info(f"loading pretrained BERT model from {init_checkpoint}")
+            state_dict = torch.load(cached_path(init_checkpoint))
+            bert_model.load_state_dict(state_dict)
+        else:
+            logger.warning("no checkpoint provided for BERT model, you're using garbage weights!")
+
+        super().__init__(bert_model)

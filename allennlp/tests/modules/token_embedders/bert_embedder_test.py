@@ -5,16 +5,16 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.data.dataset import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers.bert_indexer import BertIndexer
+from allennlp.data.token_indexers.bert_indexer import PretrainedBertIndexer
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.modules.token_embedders.bert_token_embedder import BertBaseUncased
+from allennlp.modules.token_embedders.bert_token_embedder import PretrainedBertEmbedder
 from allennlp.nn.util import get_text_field_mask
 
 class TestBertEmbedder(ModelTestCase):
-    def test_with_random_weights(self):
-        embedder = BertBaseUncased()
+    def test_without_offsets(self):
+        embedder = PretrainedBertEmbedder('bert-base-uncased')
         input_ids = torch.LongTensor([[31, 51, 99, 17, 29], [15, 5, 0, 0, 0]])
         input_mask = torch.LongTensor([[1, 1, 1, 1, 1], [1, 1, 0, 0, 0]])
         token_type_ids = torch.LongTensor([[0, 0, 1, 1, 1], [0, 2, 0, 0, 0]])
@@ -24,7 +24,7 @@ class TestBertEmbedder(ModelTestCase):
         assert list(result.shape) == [2, 5, 768]
 
     def test_with_offsets(self):
-        embedder = BertBaseUncased()
+        embedder = PretrainedBertEmbedder('bert-base-uncased')
         input_ids = torch.LongTensor([[31, 51, 99, 17, 29], [15, 5, 0, 0, 0]])
         input_mask = torch.LongTensor([[1, 1, 1, 1, 1], [1, 1, 0, 0, 0]])
         token_type_ids = torch.LongTensor([[0, 0, 1, 1, 1], [0, 2, 0, 0, 0]])
@@ -36,7 +36,7 @@ class TestBertEmbedder(ModelTestCase):
 
     def test_end_to_end(self):
         tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
-        token_indexer = BertIndexer(vocab_path="/Users/joelg/data/uncased_L-12_H-768_A-12/vocab.txt")
+        token_indexer = PretrainedBertIndexer('bert-base-uncased')
 
         sentence1 = "The quick brown Bert jumped over the lazy ELMo."
         tokens1 = tokenizer.tokenize(sentence1)
@@ -59,7 +59,7 @@ class TestBertEmbedder(ModelTestCase):
         mask = get_text_field_mask(tokens)
         token_type_ids = torch.zeros_like(mask)
 
-        embedder = BertBaseUncased(init_checkpoint="/Users/joelg/data/uncased_L-12_H-768_A-12/bert.th")
+        embedder = PretrainedBertEmbedder('bert-base-uncased')
 
         # No offsets, should get 11 vectors back.
         bert_vectors = embedder(tokens["bert"], mask, token_type_ids)

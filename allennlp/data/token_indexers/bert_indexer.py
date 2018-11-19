@@ -3,7 +3,7 @@ import logging
 
 from overrides import overrides
 
-from pytorch_pretrained_bert.tokenization import load_vocab, WordpieceTokenizer
+from pytorch_pretrained_bert.tokenization import load_vocab, WordpieceTokenizer, BertTokenizer
 
 from allennlp.common.file_utils import cached_path
 from allennlp.common.util import pad_sequence_to_length
@@ -14,27 +14,24 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer
 logger = logging.getLogger(__name__)
 
 
-@TokenIndexer.register("bert")
 class BertIndexer(TokenIndexer[int]):
+    """
+    Don't use this, use a specific subclass.
+    """
     def __init__(self,
-                 vocab_path: str = None,
-                 namespace: str = 'bert',
-                 unk_token: str = "[UNK]",
-                 max_input_chars_per_word: int = 100) -> None:
-        self._namespace = namespace
-        self._added_to_vocabulary = False
-
-        if vocab_path is None:
-            logger.warning("you provided no vocabulary!")
-            self.vocab: Dict[str, int] = {}
-        else:
-            self.vocab = load_vocab(cached_path(vocab_path))
+                 vocab: Dict[str, int],
+                 wordpiece_tokenizer: WordpieceTokenizer,
+                 namespace: str = "bert") -> None:
+        self.vocab = vocab
 
         # The BERT code itself does a two-step tokenization:
         #    sentence -> [words], and then word -> [wordpieces]
         # In AllenNLP, the first step is implemented as the ``BertSimpleWordSplitter``,
         # and this token indexer handles the second.
-        self.wordpiece_tokenizer = WordpieceTokenizer(self.vocab, unk_token, max_input_chars_per_word)
+        self.wordpiece_tokenizer = wordpiece_tokenizer
+
+        self._namespace = namespace
+        self._added_to_vocabulary = False
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -92,3 +89,32 @@ class BertIndexer(TokenIndexer[int]):
         print(tokens, desired_num_tokens, padding_lengths)
         return {key: pad_sequence_to_length(val, desired_num_tokens[key])
                 for key, val in tokens.items()}
+
+@TokenIndexer.register("bert-pretrained")
+class PretrainedBertIndexer(BertIndexer):
+    def __init__(self,
+                 pretrained_model_name: str,
+                 do_lowercase: bool = True) -> None:
+        bert_tokenizer = BertTokenizer.from_pretrained(pretrained_model_name, do_lowercase)
+        super().__init__(bert_tokenizer.vocab, bert_tokenizer.wordpiece_tokenizer)
+
+
+@TokenIndexer.register("bert-custom")
+class CustomBertIndexer(BertIndexer):
+    def __init__(self,
+                 vocab_path: str = None,
+                 namespace: str = 'bert',
+                 unk_token: str = "[UNK]",
+                 max_input_chars_per_word: int = 100) -> None:
+        self._namespace = namespace
+        self._added_to_vocabulary = False
+
+        if vocab_path is None:
+            logger.warning("you provided no vocabulary!")
+            vocab: Dict[str, int] = {}
+        else:
+            vocab = load_vocab(cached_path(vocab_path))
+
+        wordpiece_tokenizer = WordpieceTokenizer(vocab, unk_token, max_input_chars_per_word)
+
+        super().__init__(vocab, wordpiece_tokenizer)
