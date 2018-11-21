@@ -1,6 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
 import torch
 
+from pytorch_pretrained_bert.modeling import BertConfig, BertModel
+
 from allennlp.common.testing import ModelTestCase
 from allennlp.data.dataset import Batch
 from allennlp.data.fields import TextField
@@ -9,44 +11,52 @@ from allennlp.data.token_indexers.bert_indexer import PretrainedBertIndexer
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.modules.token_embedders.bert_token_embedder import PretrainedBertEmbedder
-from allennlp.nn.util import get_text_field_mask
+from allennlp.modules.token_embedders.bert_token_embedder import BertEmbedder
 
 class TestBertEmbedder(ModelTestCase):
+    def setUp(self):
+        super().setUp()
+
+        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
+        self.token_indexer = PretrainedBertIndexer(str(vocab_path))
+
+        config_path = self.FIXTURES_ROOT / 'bert' / 'config.json'
+        config = BertConfig(str(config_path))
+        bert_model = BertModel(config)
+        self.token_embedder = BertEmbedder(bert_model)
+
     def test_without_offsets(self):
-        embedder = PretrainedBertEmbedder('bert-base-uncased')
-        input_ids = torch.LongTensor([[31, 51, 99, 17, 29], [15, 5, 0, 0, 0]])
+        input_ids = torch.LongTensor([[3, 5, 9, 1, 2], [1, 5, 0, 0, 0]])
         input_mask = torch.LongTensor([[1, 1, 1, 1, 1], [1, 1, 0, 0, 0]])
         token_type_ids = torch.LongTensor([[0, 0, 1, 1, 1], [0, 2, 0, 0, 0]])
 
-        result = embedder(input_ids, input_mask, token_type_ids)
+        result = self.token_embedder(input_ids, input_mask, token_type_ids)
 
-        assert list(result.shape) == [2, 5, 768]
+        assert list(result.shape) == [2, 5, 12]
 
     def test_with_offsets(self):
-        embedder = PretrainedBertEmbedder('bert-base-uncased')
-        input_ids = torch.LongTensor([[31, 51, 99, 17, 29], [15, 5, 0, 0, 0]])
-        input_mask = torch.LongTensor([[1, 1, 1, 1, 1], [1, 1, 0, 0, 0]])
-        token_type_ids = torch.LongTensor([[0, 0, 1, 1, 1], [0, 2, 0, 0, 0]])
+        input_ids = torch.LongTensor([[3, 5, 9, 1, 2], [1, 5, 0, 0, 0]])
         offsets = torch.LongTensor([[0, 2, 4], [1, 0, 0]])
 
-        result = embedder(input_ids, input_mask, token_type_ids, offsets)
+        result = self.token_embedder(input_ids, offsets=offsets)
 
-        assert list(result.shape) == [2, 3, 768]
+        assert list(result.shape) == [2, 3, 12]
 
     def test_end_to_end(self):
         tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
-        token_indexer = PretrainedBertIndexer('bert-base-uncased')
 
-        sentence1 = "The quick brown Bert jumped over the lazy ELMo."
+        #            2   3    4   3     5     6   8      9    2   14   12
+        sentence1 = "the quickest quick brown fox jumped over the lazy dog"
         tokens1 = tokenizer.tokenize(sentence1)
-        sentence2 = "Thanks to huggingface for implementing this."
+
+        #            2   3     5     6   8      9    2  15 10 11 14   1
+        sentence2 = "the quick brown fox jumped over the laziest lazy elmo"
         tokens2 = tokenizer.tokenize(sentence2)
 
         vocab = Vocabulary()
 
-        instance1 = Instance({"tokens": TextField(tokens1, {"bert": token_indexer})})
-        instance2 = Instance({"tokens": TextField(tokens2, {"bert": token_indexer})})
+        instance1 = Instance({"tokens": TextField(tokens1, {"bert": self.token_indexer})})
+        instance2 = Instance({"tokens": TextField(tokens2, {"bert": self.token_indexer})})
 
         batch = Batch([instance1, instance2])
         batch.index_instances(vocab)
@@ -55,17 +65,113 @@ class TestBertEmbedder(ModelTestCase):
         tensor_dict = batch.as_tensor_dict(padding_lengths)
         tokens = tensor_dict["tokens"]
 
+        assert tokens["bert"].tolist() == [
+                [2, 3, 4, 3, 5, 6, 8, 9, 2, 14, 12, 0],
+                [2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1]
+        ]
 
-        mask = get_text_field_mask(tokens)
-        token_type_ids = torch.zeros_like(mask)
+        assert tokens["bert-offsets"].tolist() == [
+                [0, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                [0, 1, 2, 3, 4, 5, 6, 9, 10, 11]
+        ]
 
-        embedder = PretrainedBertEmbedder('bert-base-uncased')
-
-        # No offsets, should get 11 vectors back.
-        bert_vectors = embedder(tokens["bert"], mask, token_type_ids)
-        assert list(bert_vectors.shape) == [2, 11, 768]
+        # No offsets, should get 12 vectors back.
+        bert_vectors = self.token_embedder(tokens["bert"])
+        assert list(bert_vectors.shape) == [2, 12, 12]
 
         # Offsets, should get 10 vectors back.
-        bert_vectors = embedder(tokens["bert"], mask, token_type_ids, offsets=tokens["bert-offsets"])
-        assert list(bert_vectors.shape) == [2, 10, 768]
+        bert_vectors = self.token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
+        assert list(bert_vectors.shape) == [2, 10, 12]
 
+    def test_padding_workaround(self):
+        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+
+        #            2   3     5     6   8      9    2   14   12
+        sentence = "the quick brown fox jumped over the lazy dog"
+        tokens = tokenizer.tokenize(sentence)
+
+        vocab = Vocabulary()
+
+        instance = Instance({"tokens": TextField(tokens, {"bert": self.token_indexer})})
+
+        batch = Batch([instance])
+        batch.index_instances(vocab)
+
+        padding_lengths = batch.get_padding_lengths()
+        tensor_dict = batch.as_tensor_dict(padding_lengths)
+        tokens = tensor_dict["tokens"]
+
+        assert tokens["bert"].tolist() == [
+                [2, 3, 5, 6, 8, 9, 2, 14, 12]
+        ]
+
+        assert tokens["bert-offsets"].tolist() == [
+                [0, 1, 2, 3, 4, 5, 6, 7, 8]
+        ]
+
+
+    def test_bad_bidaf(self):
+        # pylint: disable=line-too-long
+        tokenizer = WordTokenizer()
+
+        token_indexer = PretrainedBertIndexer("/Users/joelg/bert-base-uncased-vocab.txt")
+
+        passage1 = "There were four major HDTV systems tested by SMPTE in the late 1970s, and in 1979 an SMPTE study group released A Study of High Definition Television Systems:"
+        question1 = "Who released A Study of High Definition Television Systems?"
+
+        passage2 = """Broca, being what today would be called a neurosurgeon, had taken an interest in the pathology of speech. He wanted to localize the difference between man and the other animals, which appeared to reside in speech. He discovered the speech center of the human brain, today called Broca's area after him. His interest was mainly in Biological anthropology, but a German philosopher specializing in psychology, Theodor Waitz, took up the theme of general and social anthropology in his six-volume work, entitled Die Anthropologie der Naturvölker, 1859–1864. The title was soon translated as "The Anthropology of Primitive Peoples". The last two volumes were published posthumously."""
+        question2 = "What did Broca discover in the human brain?"
+
+        from allennlp.data.dataset_readers.reading_comprehension.util import make_reading_comprehension_instance
+
+        instance1 = make_reading_comprehension_instance(tokenizer.tokenize(question1),
+                                                        tokenizer.tokenize(passage1),
+                                                        {"bert": token_indexer},
+                                                        passage1)
+
+        instance2 = make_reading_comprehension_instance(tokenizer.tokenize(question2),
+                                                        tokenizer.tokenize(passage2),
+                                                        {"bert": token_indexer},
+                                                        passage2)
+
+        vocab = Vocabulary()
+
+        batch = Batch([instance1, instance2])
+        batch.index_instances(vocab)
+
+        padding_lengths = batch.get_padding_lengths()
+        tensor_dict = batch.as_tensor_dict(padding_lengths)
+        qtokens = tensor_dict["question"]
+        ptokens = tensor_dict["passage"]
+
+        config = BertConfig(len(token_indexer.vocab))
+        model = BertModel(config)
+        embedder = BertEmbedder(model)
+
+        _ = embedder(ptokens["bert"], offsets=ptokens["bert-offsets"])
+        _ = embedder(qtokens["bert"], offsets=qtokens["bert-offsets"])
+
+
+    def test_max_length(self):
+
+        token_indexer = PretrainedBertIndexer("/Users/joelg/bert-base-uncased-vocab.txt")
+
+        config = BertConfig(len(token_indexer.vocab))
+        model = BertModel(config)
+        embedder = BertEmbedder(model)
+
+        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+        sentence = "the " * 1000
+        tokens = tokenizer.tokenize(sentence)
+
+        vocab = Vocabulary()
+
+        instance = Instance({"tokens": TextField(tokens, {"bert": token_indexer})})
+
+        batch = Batch([instance])
+        batch.index_instances(vocab)
+
+        padding_lengths = batch.get_padding_lengths()
+        tensor_dict = batch.as_tensor_dict(padding_lengths)
+        tokens = tensor_dict["tokens"]
+        embedder(tokens["bert"], tokens["bert-offsets"])

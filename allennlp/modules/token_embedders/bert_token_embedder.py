@@ -2,9 +2,8 @@ import logging
 
 import torch
 
-from pytorch_pretrained_bert.modeling import BertConfig, BertModel
+from pytorch_pretrained_bert.modeling import BertModel
 
-from allennlp.common.file_utils import cached_path
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn import util
 
@@ -13,8 +12,16 @@ logger = logging.getLogger(__name__)
 
 class BertEmbedder(TokenEmbedder):
     """
-    Don't use this class, use ``PretrainedBertEmbedder`` for one of the
-    named pretrained models or ``CustomBertEmbedder`` for a custom model.
+    A ``TokenEmbedder`` that produces BERT embeddings for your tokens.
+    Should be paired with a ``BertIndexer``, which produces wordpiece ids.
+
+    Most likely you probably want to use ``PretrainedBertEmbedder``
+    for one of the named pretrained models, not this base class.
+
+    Parameters
+    ----------
+    bert_model: ``BertModel``
+        The BERT model being wrapped.
     """
     def __init__(self,
                  bert_model: BertModel) -> None:
@@ -26,11 +33,38 @@ class BertEmbedder(TokenEmbedder):
         return self.output_dim
 
     def forward(self,
-                input_ids: torch.LongTensor,        # ([[31, 51, 99], [15, 5, 0]])
-                input_mask: torch.LongTensor,       # ([[1, 1, 1], [1, 1, 0]])
-                token_type_ids: torch.LongTensor,   # ([[0, 0, 1], [0, 2, 0]])
-                offsets: torch.LongTensor = None):
+                input_ids: torch.LongTensor,
+                offsets: torch.LongTensor = None,
+                token_type_ids: torch.LongTensor = None) -> torch.Tensor:
+        """
+        Parameters
+        ----------
+        input_ids: ``torch.LongTensor``
+            The wordpiece ids for each input sentence.
+        offsets: ``torch.LongTensor``, optional (default = None)
+            The BERT embeddings are one per wordpiece. However it's possible/likely
+            you might want one per original token. In that case, ``offsets``
+            should represent the indices of the last wordpiece for each original token.
+
+            That is, if you had the sentence "Definitely not", and if the corresponding
+            wordpieces were ["Def", "##in", "##ite", "##ly", "not"], then the input_ids
+            would be 5 wordpiece ids, and the offsets would be [3, 4]. If offsets are
+            provided, the returned tensor will contain the _last_ wordpiece embedding
+            for each token, and (in particular) will contain one embedding per token.
+            If offsets are not provided, the entire tensor of wordpiece embeddings
+            will be returned.
+        token_type_ids: ``torch.LongTensor``, optional (default = None)
+            If an input consists of two sentences (as in the BERT paper),
+            tokens from the first sentence should have type 0 and tokens from
+            the second sentence should have type 1.  If you don't provide this
+            (the default BertIndexer doesn't) then it's assumed to be all 0s.
+        """
         # pylint: disable=arguments-differ
+        if token_type_ids is None:
+            token_type_ids = torch.zeros_like(input_ids)
+
+        input_mask = (input_ids != 0).long()
+
         all_encoder_layers, _ = self.bert_model(input_ids, input_mask, token_type_ids)
         sequence_output = all_encoder_layers[-1]
 
@@ -45,38 +79,24 @@ class BertEmbedder(TokenEmbedder):
 
 @TokenEmbedder.register("bert-pretrained")
 class PretrainedBertEmbedder(BertEmbedder):
-    def __init__(self, pretrained_model_name: str) -> None:
-        super().__init__(BertModel.from_pretrained(pretrained_model_name))
+    # pylint: disable=line-too-long
+    """
+    Parameters
+    ----------
+    pretrained_model_name: ``str``
+        Either the name of the pretrained model to use (e.g. 'bert-base-uncased'),
+        or the path to the .tar.gz file with the model weights.
 
-@TokenEmbedder.register("bert-custom")
-class CustomBertEmbedder(BertEmbedder):
-    def __init__(self,
-                 vocab_size: int,
-                 hidden_size: int,
-                 num_hidden_layers: int,
-                 num_attention_heads: int,
-                 intermediate_size: int,
-                 hidden_act: str,
-                 hidden_dropout_prob: float,
-                 attention_probs_dropout_prob: float,
-                 max_position_embeddings: int,
-                 type_vocab_size: int,
-                 initializer_range: float,
-                 init_checkpoint: str = None) -> None:
-        self.output_dim = hidden_size
+        If the name is a key in the list of pretrained models at
+        https://github.com/huggingface/pytorch-pretrained-BERT/blob/master/pytorch_pretrained_bert/modeling.py#L41
+        the corresponding path will be used; otherwise it will be interpreted as a path or URL.
+    requires_grad : ``bool``, optional (default = False)
+        If True, compute gradient of BERT parameters for fine tuning.
+    """
+    def __init__(self, pretrained_model: str, requires_grad: bool = False) -> None:
+        model = BertModel.from_pretrained(pretrained_model)
 
-        config = BertConfig(vocab_size, hidden_size, num_hidden_layers, num_attention_heads,
-                            intermediate_size, hidden_act, hidden_dropout_prob,
-                            attention_probs_dropout_prob, max_position_embeddings, type_vocab_size,
-                            initializer_range)
+        for param in model.parameters():
+            param.requires_grad = requires_grad
 
-        bert_model = BertModel(config)
-
-        if init_checkpoint is not None:
-            logger.info(f"loading pretrained BERT model from {init_checkpoint}")
-            state_dict = torch.load(cached_path(init_checkpoint))
-            bert_model.load_state_dict(state_dict)
-        else:
-            logger.warning("no checkpoint provided for BERT model, you're using garbage weights!")
-
-        super().__init__(bert_model)
+        super().__init__(model)

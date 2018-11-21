@@ -3,9 +3,8 @@ import logging
 
 from overrides import overrides
 
-from pytorch_pretrained_bert.tokenization import load_vocab, WordpieceTokenizer, BertTokenizer
+from pytorch_pretrained_bert.tokenization import WordpieceTokenizer, BertTokenizer
 
-from allennlp.common.file_utils import cached_path
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
@@ -16,12 +15,30 @@ logger = logging.getLogger(__name__)
 
 class BertIndexer(TokenIndexer[int]):
     """
-    Don't use this, use a specific subclass.
+    A token indexer that does the wordpiece-tokenization required for BERT embeddings.
+    Most likely you are using one of the pretrained BERT models, in which case
+    you'll want to use the ``PretrainedBertIndexer`` subclass rather than this base class.
+
+    Parameters
+    ----------
+    vocab: ``Dict[str, int]``
+        The mapping {wordpiece -> id}.  Note this is not an AllenNLP ``Vocabulary``.
+    wordpiece_tokenizer: ``WordpieceTokenizer``
+        The class that does the actual tokenization.
+    namespace: str, optional (default: "bert")
+        The namespace in the AllenNLP ``Vocabulary`` into which the wordpieces
+        will be loaded.
+    max_pieces: int, optional (default: 512)
+        The BERT embedder uses positional embeddings and so has a corresponding
+        maximum length for its input ids. Currently any inputs longer than this
+        will be truncated. If this behavior is undesirable to you, you should
+        consider filtering them out in your dataset reader.
     """
     def __init__(self,
                  vocab: Dict[str, int],
                  wordpiece_tokenizer: WordpieceTokenizer,
-                 namespace: str = "bert") -> None:
+                 namespace: str = "bert",
+                 max_pieces: int = 512) -> None:
         self.vocab = vocab
 
         # The BERT code itself does a two-step tokenization:
@@ -32,6 +49,7 @@ class BertIndexer(TokenIndexer[int]):
 
         self._namespace = namespace
         self._added_to_vocabulary = False
+        self.max_pieces = max_pieces
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -60,17 +78,31 @@ class BertIndexer(TokenIndexer[int]):
         for token in tokens:
             wordpieces = self.wordpiece_tokenizer.tokenize(token.text)
             wordpiece_ids = [self.vocab[token] for token in wordpieces]
+
+            # truncate and pray
+            if len(text_tokens) + len(wordpiece_ids) > self.max_pieces:
+                # TODO(joelgrus): figure out a better way to handle this
+                logger.warning(f"Too many wordpieces, truncating: {[token.text for token in tokens]}")
+                break
+
             offset += len(wordpiece_ids)
             offsets.append(offset)
             text_tokens.extend(wordpiece_ids)
 
+        # add mask according to the original tokens,
+        # because calling util.get_text_field_mask on the
+        # "byte pair" tokens will produce the wrong shape
+        mask = [1 for _ in offsets]
+
         return {
                 index_name: text_tokens,
                 f"{index_name}-offsets": offsets,
-                # add mask here according to the original tokens,
-                # because calling util.get_text_field_mask on the
-                # "byte pair" tokens will produce the wrong shape
-                "original-token-mask": [1 for _ in offsets]
+                "mask": mask,
+
+                # This is a really bad hack to avoid triggering the
+                # "all indices have the same length" logic in TextField.get_padding_lengths
+                # TODO(joelgrus): fix the logic in TextField.get_padding_lengths and remove this
+                #"_ignoreme": [0, 0] if len(mask) == 1 else [0]
         }
 
     @overrides
@@ -86,35 +118,30 @@ class BertIndexer(TokenIndexer[int]):
                            tokens: Dict[str, List[int]],
                            desired_num_tokens: Dict[str, int],
                            padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
-        print(tokens, desired_num_tokens, padding_lengths)
         return {key: pad_sequence_to_length(val, desired_num_tokens[key])
                 for key, val in tokens.items()}
 
+
 @TokenIndexer.register("bert-pretrained")
 class PretrainedBertIndexer(BertIndexer):
+    # pylint: disable=line-too-long
+    """
+    A ``TokenIndexer`` corresponding to a pretrained BERT models.
+
+    Parameters
+    ----------
+    pretrained_model: ``str``, optional (default = None)
+        Either the name of the pretrained model to use (e.g. 'bert-base-uncased'),
+        or the path to the .txt file with its vocabulary.
+
+        If the name is a key in the list of pretrained models at
+        https://github.com/huggingface/pytorch-pretrained-BERT/blob/master/pytorch_pretrained_bert/tokenization.py#L33
+        the corresponding path will be used; otherwise it will be interpreted as a path or URL.
+    do_lowercase: ``bool``, optional (default = True)
+        Whether to lowercase the tokens before converting to wordpiece ids.
+    """
     def __init__(self,
-                 pretrained_model_name: str,
+                 pretrained_model: str,
                  do_lowercase: bool = True) -> None:
-        bert_tokenizer = BertTokenizer.from_pretrained(pretrained_model_name, do_lowercase)
+        bert_tokenizer = BertTokenizer.from_pretrained(pretrained_model, do_lowercase)
         super().__init__(bert_tokenizer.vocab, bert_tokenizer.wordpiece_tokenizer)
-
-
-@TokenIndexer.register("bert-custom")
-class CustomBertIndexer(BertIndexer):
-    def __init__(self,
-                 vocab_path: str = None,
-                 namespace: str = 'bert',
-                 unk_token: str = "[UNK]",
-                 max_input_chars_per_word: int = 100) -> None:
-        self._namespace = namespace
-        self._added_to_vocabulary = False
-
-        if vocab_path is None:
-            logger.warning("you provided no vocabulary!")
-            vocab: Dict[str, int] = {}
-        else:
-            vocab = load_vocab(cached_path(vocab_path))
-
-        wordpiece_tokenizer = WordpieceTokenizer(vocab, unk_token, max_input_chars_per_word)
-
-        super().__init__(vocab, wordpiece_tokenizer)

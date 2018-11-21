@@ -179,6 +179,7 @@ class OpenAISplitter(WordSplitter):
         # This works because our Token class matches spacy's.
         return _remove_spaces(self.spacy(self._standardize(sentence)))
 
+
 @WordSplitter.register("bert-basic")
 class BertBasicWordSplitter(WordSplitter):
     """

@@ -351,13 +351,14 @@ class Params(MutableMapping):
         return value
 
     @staticmethod
-    def from_file(params_file: str, params_overrides: str = "") -> 'Params':
+    def from_file(params_file: str, params_overrides: str = "", ext_vars: dict = {}) -> 'Params':
+        # pylint: disable=dangerous-default-value
         """
         Load a `Params` object from a configuration file.
         """
         # redirect to cache, if necessary
         params_file = cached_path(params_file)
-        ext_vars = dict(os.environ)
+        ext_vars = {**dict(os.environ), **ext_vars}
 
         file_dict = json.loads(evaluate_file(params_file, ext_vars=ext_vars))
 
