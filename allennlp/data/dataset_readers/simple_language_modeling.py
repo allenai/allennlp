@@ -4,10 +4,12 @@ import math
 
 from overrides import overrides
 
+from allennlp.data.tokenizers import Token
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.tokenizer import Tokenizer
@@ -52,8 +54,11 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
                          sentence: str) -> Instance:
         # pylint: disable=arguments-differ
         tokenized = self._tokenizer.tokenize(sentence)
+        tokenized_with_ends = [Token(ELMoCharacterMapper.bos_token)]
+        tokenized_with_ends.extend(tokenized)
+        tokenized_with_ends.append(Token(ELMoCharacterMapper.eos_token))
         return_instance = Instance({
-                'source': TextField(tokenized, self._token_indexers),
+                'source': TextField(tokenized_with_ends, self._token_indexers),
         })
         return return_instance
 

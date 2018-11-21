@@ -3,14 +3,10 @@
     "type": "simple_language_modeling",
     "token_indexers": {
       "tokens": {
-        "type": "single_id",
-        "start_tokens": ["<s>"],
-        "end_tokens": ["</s>"]
+        "type": "single_id"
       },
       "token_characters": {
-        "type": "characters",
-        "start_tokens": ["<s>"],
-        "end_tokens": ["</s>"]
+        "type": "characters"
       }
     }
   },
@@ -64,6 +60,7 @@
     "optimizer": {
       "type": "sgd",
       "lr": 0.01
-    }
+    },
+    "log_batch_size_period": 1
   }
 }
