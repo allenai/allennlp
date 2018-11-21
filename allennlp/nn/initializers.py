@@ -54,18 +54,6 @@ class Initializer(Registrable):
         """
         raise NotImplementedError
 
-    # Requires custom from_params because of possibility of Params being a str.
-    @classmethod
-    def from_params(cls, params: Params) -> 'Initializer':   # type: ignore
-        # pylint: disable=arguments-differ
-
-        # Just a string - corresponds to the name of an initializer.
-        if isinstance(params, str):
-            return cls.by_name(params)()
-        else:
-            choice = params.pop_choice("type", cls.list_available())
-            return cls.by_name(choice).from_params(params)
-
 
 def uniform_unit_scaling(tensor: torch.Tensor, nonlinearity: str = "linear"):
     """
@@ -266,16 +254,6 @@ class PretrainedModelInitializer(Initializer):
 
         # Copy the parameters from the source to the destination
         tensor.data[:] = source_weights[:]
-
-    @classmethod
-    def from_params(cls, params: Params) -> 'PretrainedModelInitializer':  # type: ignore
-        # The ``from_params`` method has to be defined, otherwise the
-        # ``Initializer.from_params`` method recursively calls itself
-        # and hits an error
-        weights_file_path = params.pop('weights_file_path')
-        parameter_name_overrides = params.pop('parameter_name_overrides', {})
-        return cls(weights_file_path=weights_file_path,
-                   parameter_name_overrides=parameter_name_overrides)
 
 
 class InitializerApplicator:
