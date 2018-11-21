@@ -37,11 +37,6 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
         self.temp_file = tempfile.NamedTemporaryFile(dir=self.TEST_DIR, delete=False).name
         torch.save(self.net2.state_dict(), self.temp_file)
 
-        # Verify that the randomly initialized parameters of the two
-        # networks are different
-        assert not self._are_equal(self.net1.linear_1, self.net2.linear_1)
-        assert not self._are_equal(self.net1.linear_2, self.net2.linear_3)
-
     def _are_equal(self, linear1: torch.nn.Linear, linear2: torch.nn.Linear) -> bool:
         return torch.equal(linear1.weight, linear2.weight) and \
                 torch.equal(linear1.bias, linear2.bias)
@@ -60,6 +55,13 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
                 "initializer": [(regex, initializer_params)]
         })
         return InitializerApplicator.from_params(params["initializer"])
+
+    def test_random_initialization(self):
+        # The tests in the class rely on the fact that the parameters for
+        # ``self.net1`` and ``self.net2`` are randomly initialized and not
+        # equal at the beginning. This test makes sure that's true
+        assert not self._are_equal(self.net1.linear_1, self.net2.linear_1)
+        assert not self._are_equal(self.net1.linear_2, self.net2.linear_3)
 
     def test_from_params(self):
         params = Params({"type": "pretrained", "weights_file_path": self.temp_file})
