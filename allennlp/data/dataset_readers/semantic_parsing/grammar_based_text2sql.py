@@ -34,6 +34,9 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
     use_all_sql : ``bool``, optional (default = False)
         Whether to use all of the sql queries which have identical semantics,
         or whether to just use the first one.
+    use_all_queries : ``bool``, optional (default = False)
+        Whether to use all of the query questions, even if they are identical!!
+        We need to do this to match previous evaluations.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
@@ -49,6 +52,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
                  world: Text2SqlWorld,
                  schema_path: str,
                  use_all_sql: bool = False,
+                 use_all_queries: bool = True,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  test_validation_splits_to_exclude: Tuple[int, int] = None,
                  keep_if_unparseable: bool = True,
@@ -56,6 +60,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._use_all_sql = use_all_sql
+        self._use_all_queries = use_all_queries
         self._use_prelinked_entities = isinstance(world, PrelinkedText2SqlWorld)
         self._keep_if_unparsable = keep_if_unparseable
         if test_validation_splits_to_exclude is not None:
@@ -92,6 +97,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
                 data = json.load(data_file)
 
             for sql_data in text2sql_utils.process_sql_data(data,
+                                                            use_all_queries=self._use_all_queries,
                                                             use_all_sql=self._use_all_sql,
                                                             remove_unneeded_aliases=True,
                                                             schema=schema):
