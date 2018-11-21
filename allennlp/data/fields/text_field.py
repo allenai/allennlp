@@ -108,15 +108,15 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
             lengths.append(indexer_lengths)
 
         padding_lengths = {}
-        token_lengths = set()
+        num_tokens = set()
         for indexer_name, token_list in self._indexed_tokens.items():
             padding_lengths[f"{indexer_name}_length"] = len(token_list)
-            token_lengths.add(len(token_list))
+            num_tokens.add(len(token_list))
 
         # We don't actually use this for padding anywhere, but we used to.  We add this key back in
         # so that older configs still work if they sorted by this key in a BucketIterator.  Taking
         # the max of all of these should be fine for that purpose.
-        padding_lengths['num_tokens'] = max(token_lengths)
+        padding_lengths['num_tokens'] = max(num_tokens)
 
         # Get all keys which have been used for padding for each indexer and take the max if there are duplicates.
         padding_keys = {key for d in lengths for key in d.keys()}
