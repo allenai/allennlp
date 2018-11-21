@@ -1,6 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
 import torch
-from torch.nn.init import constant_
 from allennlp.common.params import Params
 from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.nn.regularizers import L1Regularizer, L2Regularizer, RegularizerApplicator
