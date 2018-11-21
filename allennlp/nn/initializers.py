@@ -164,6 +164,7 @@ def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer
             return 'Init: %s, with params: %s' % (self._init_function, self._kwargs)
         @classmethod
         def from_params(cls, params: Params):  # type: ignore
+            # pylint: disable=arguments-differ
             return cls(**params.as_dict())
     return Init
 
