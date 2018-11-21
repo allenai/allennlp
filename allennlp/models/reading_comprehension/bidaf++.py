@@ -208,7 +208,10 @@ class BidafPlusPlus(Model):
         """
         batch_size, max_qa_count, max_q_len, _ = question['token_characters'].size()
         total_qa_count = batch_size * max_qa_count
-        qa_mask = torch.ge(followup_list, 0).view(total_qa_count)
+        if self._support_followup:
+            qa_mask = torch.ge(followup_list, 0).view(total_qa_count)
+        else:
+            qa_mask = None
         embedded_question = self._text_field_embedder(question, num_wrapping_dims=1)
         embedded_question = embedded_question.reshape(total_qa_count, max_q_len,
                                                       self._text_field_embedder.get_output_dim())
@@ -344,13 +347,12 @@ class BidafPlusPlus(Model):
         if span_start is not None:
             loss = nll_loss(util.masked_log_softmax(span_start_logits, repeated_passage_mask), span_start.view(-1),
                             ignore_index=-1)
-            self._span_start_accuracy(span_start_logits, span_start.view(-1), mask=qa_mask)
+            ## TODO mask removed here - not supporting followup
+            self._span_start_accuracy(span_start_logits, span_start.view(-1))
             loss += nll_loss(util.masked_log_softmax(span_end_logits,
                                                      repeated_passage_mask), span_end.view(-1), ignore_index=-1)
-            self._span_end_accuracy(span_end_logits, span_end.view(-1), mask=qa_mask)
-            self._span_accuracy(best_span[:, 0:2],
-                                torch.stack([span_start, span_end], -1).view(total_qa_count, 2),
-                                mask=qa_mask.unsqueeze(1).expand(-1, 2).long())
+            self._span_end_accuracy(span_end_logits, span_end.view(-1))
+            self._span_accuracy(best_span[:, 0:2],torch.stack([span_start, span_end], -1).view(total_qa_count, 2))
 
             # support for multi choice answers:
             if self._multi_choice_answers:
