@@ -1,3 +1,4 @@
+# pylint: disable=no-self-use
 from typing import Dict, List
 import logging
 
@@ -71,7 +72,7 @@ class BertIndexer(TokenIndexer[int]):
             self._add_encoding_to_vocabulary(vocabulary)
             self._added_to_vocabulary = True
 
-        text_tokens = []
+        text_tokens: List[int] = []
         offsets = []
         offset = -1
 
