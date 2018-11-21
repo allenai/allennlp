@@ -5,7 +5,7 @@ import torch
 
 from allennlp.common import Params
 from allennlp.modules.seq2vec_encoders import CnnEncoder
-from allennlp.nn import InitializerApplicator
+from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -37,7 +37,7 @@ class TestCnnEncoder(AllenNlpTestCase):
 
     def test_forward_does_correct_computation(self):
         encoder = CnnEncoder(embedding_dim=2, num_filters=1, ngram_filter_sizes=(1, 2))
-        constant_init = lambda tensor: torch.nn.init.constant_(tensor, 1.)
+        constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.}))
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(encoder)
         input_tensor = torch.FloatTensor([[[.7, .8], [.1, 1.5]]])

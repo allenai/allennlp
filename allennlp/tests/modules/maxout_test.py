@@ -6,7 +6,7 @@ import torch
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules import Maxout
-from allennlp.nn import InitializerApplicator
+from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -45,7 +45,7 @@ class TestMaxout(AllenNlpTestCase):
                 })
         maxout = Maxout.from_params(params)
 
-        constant_init = lambda tensor: torch.nn.init.constant_(tensor, 1.)
+        constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.}))
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(maxout)
 

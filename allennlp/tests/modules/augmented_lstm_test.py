@@ -7,9 +7,10 @@ from torch.nn.modules.rnn import LSTM
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.augmented_lstm import AugmentedLstm
-from allennlp.nn import InitializerApplicator
+from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.nn.util import sort_batch_by_length
 
 
@@ -53,7 +54,8 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         augmented_lstm = AugmentedLstm(10, 11)
         pytorch_lstm = LSTM(10, 11, num_layers=1, batch_first=True)
         # Initialize all weights to be == 1.
-        initializer = InitializerApplicator([(".*", lambda tensor: torch.nn.init.constant_(tensor, 1.))])
+        constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.}))
+        initializer = InitializerApplicator([(".*", constant_init)])
         initializer(augmented_lstm)
         initializer(pytorch_lstm)
 
