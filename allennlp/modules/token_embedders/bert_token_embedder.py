@@ -1,3 +1,12 @@
+"""
+A ``TokenEmbedder`` which uses one of the BERT models
+(https://github.com/google-research/bert)
+to produce embeddings.
+
+At its core it uses Hugging Face's PyTorch implementation
+(https://github.com/huggingface/pytorch-pretrained-BERT),
+so thanks to them!
+"""
 import logging
 
 import torch

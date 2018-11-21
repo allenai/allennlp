@@ -122,7 +122,7 @@ class BertIndexer(TokenIndexer[int]):
 class PretrainedBertIndexer(BertIndexer):
     # pylint: disable=line-too-long
     """
-    A ``TokenIndexer`` corresponding to a pretrained BERT models.
+    A ``TokenIndexer`` corresponding to a pretrained BERT model.
 
     Parameters
     ----------
