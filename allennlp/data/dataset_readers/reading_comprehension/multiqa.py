@@ -59,7 +59,7 @@ class MultiQAReader(DatasetReader):
         logger.info("Reading file at %s", file_path)
 
         with zipfile.ZipFile(file_path, 'r') as myzip:
-            with myzip.open(file_path.split('/')[-1].replace('.zip', '')) as myfile:
+            with myzip.open(myzip.namelist()[0]) as myfile:
                 dataset_json = json.load(myfile)
                 dataset = dataset_json['data']
 
