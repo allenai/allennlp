@@ -25,6 +25,7 @@ from allennlp.data.tokenizers import Token
 class Text2SqlWorld(Registrable):
 
     def get_action_sequence_and_all_actions(self,
+                                            question: List[str],
                                             query: List[str] = None,
                                             prelinked_entities: Dict[str, Dict[str, str]] = None) -> Tuple[List[str], List[str]]: # pylint: disable=line-too-long
         raise NotImplementedError
@@ -33,6 +34,8 @@ class Text2SqlWorld(Registrable):
 
         raise NotImplementedError
 
+    def links_entities_to_actions(self) -> bool:
+        raise NotImplementedError
 
 # def get_strings_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
 #     """
@@ -147,6 +150,9 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
                 return False
         return True
 
+    def links_entities_to_actions(self) -> bool:
+        return self.link_entities_to_actions
+
 
 @Text2SqlWorld.register("linking")
 class LinkingText2SqlWorld(Text2SqlWorld):
@@ -229,4 +235,7 @@ class LinkingText2SqlWorld(Text2SqlWorld):
     def is_global_rule(self, nonterminal: str) -> bool:
         if nonterminal in self.typed_variable_nonterminals:
             return False
+        return True
+
+    def links_entities_to_actions(self) -> bool:
         return True

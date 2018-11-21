@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import logging
 import json
 import glob
@@ -38,7 +38,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
         are pre-tokenised in the data file.
-    cross_validation_split_to_exclude : ``int``, optional (default = None)
+    test_validation_splits_to_exclude : ``int``, optional (default = None)
         Some of the text2sql datasets are very small, so you may need to do cross validation.
         Here, you can specify a integer corresponding to a split_{int}.json file not to include
         in the training set.
@@ -50,7 +50,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
                  schema_path: str,
                  use_all_sql: bool = False,
                  token_indexers: Dict[str, TokenIndexer] = None,
-                 cross_validation_split_to_exclude: int = None,
+                 test_validation_splits_to_exclude: Tuple[int, int] = None,
                  keep_if_unparseable: bool = True,
                  lazy: bool = False) -> None:
         super().__init__(lazy)
@@ -58,8 +58,12 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         self._use_all_sql = use_all_sql
         self._use_prelinked_entities = isinstance(world, PrelinkedText2SqlWorld)
         self._keep_if_unparsable = keep_if_unparseable
-        self._cross_validation_split_to_exclude = str(cross_validation_split_to_exclude)
-
+        if test_validation_splits_to_exclude is not None:
+            self._cross_validation_split_to_exclude = str(test_validation_splits_to_exclude[0])
+            self._test_split_to_exclude = str(test_validation_splits_to_exclude[1])
+        else:
+            self._cross_validation_split_to_exclude = None
+            self._test_split_to_exclude = None
         self._schema_path = schema_path
         self._world = world
 
@@ -79,7 +83,8 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
             up into many small files, for which you only want to exclude one.
         """
         files = [p for p in glob.glob(file_path)
-                 if self._cross_validation_split_to_exclude not in os.path.basename(p)]
+                 if self._cross_validation_split_to_exclude not in os.path.basename(p)
+                    or self._test_split_to_exclude not in os.path.basename(p)]
         schema = read_dataset_schema(self._schema_path)
 
         for path in files:
