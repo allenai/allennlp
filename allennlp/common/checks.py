@@ -23,6 +23,12 @@ class ConfigurationError(Exception):
     def __str__(self):
         return repr(self.message)
 
+class ExperimentalFeatureWarning(RuntimeWarning):
+    """
+    A warning that you are using an experimental feature
+    that may change or be deleted.
+    """
+    pass
 
 def log_pytorch_version_info():
     import torch
