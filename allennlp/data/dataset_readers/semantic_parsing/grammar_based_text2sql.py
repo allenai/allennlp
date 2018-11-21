@@ -14,7 +14,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.dataset_readers.dataset_utils import text2sql_utils
-from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld, PrelinkedText2SqlWorld
+from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -61,7 +61,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._use_all_sql = use_all_sql
         self._use_all_queries = use_all_queries
-        self._use_prelinked_entities = isinstance(world, PrelinkedText2SqlWorld)
+        self._use_prelinked_entities = world.links_entities_to_actions()
         self._keep_if_unparsable = keep_if_unparseable
         if test_validation_splits_to_exclude is not None:
             self._cross_validation_split_to_exclude = str(test_validation_splits_to_exclude[0])
