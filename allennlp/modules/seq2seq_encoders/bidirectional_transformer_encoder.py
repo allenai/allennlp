@@ -1,14 +1,22 @@
 """
-The BidirectionalTransformerEncoder from calypso
+The BidirectionalTransformerEncoder from calypso.
+This is basically the transformer from http://nlp.seas.harvard.edu/2018/04/03/attention.html
+so credit to them.
+
+This code should be considered "private" in that we have several
+transformer implementations and may end up deleting this one.
+If you use it, consider yourself warned.
 """
-# pylint: disable=arguments-differ,invalid-name
+# pylint: disable=arguments-differ,invalid-name,no-self-use
 from typing import Tuple, Callable
 import math
+import warnings
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 
+from allennlp.common.checks import ExperimentalFeatureWarning
 from allennlp.modules.layer_norm import LayerNorm
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.nn import util
@@ -132,8 +140,9 @@ class MultiHeadedAttention(torch.nn.Module):
         # We assume d_v always equals d_k
         self.d_k = input_dim // num_heads
         self.num_heads = num_heads
+        # These linear layers are
+        #  [query_projection, key_projection, value_projection, concatenated_heads_projection]
         self.linears = util.clone(torch.nn.Linear(input_dim, input_dim), 4)
-        self.attn = None
         self.dropout = torch.nn.Dropout(p=dropout)
 
     def forward(self,
@@ -188,6 +197,12 @@ class BidirectionalTransformerEncoder(Seq2SeqEncoder):
                  dropout: float = 0.1,
                  input_dropout: float = None,
                  return_all_layers: bool = False) -> None:
+
+        warnings.warn("This particular transformer implementation is a provisional feature "
+                      "that's intended for AI2 internal use and might be deleted at any time. "
+                      "If you use it, consider yourself warned!",
+                      ExperimentalFeatureWarning)
+
         super().__init__()
 
         self._return_all_layers = return_all_layers
