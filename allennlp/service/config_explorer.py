@@ -17,13 +17,9 @@ python -m allennlp.service.config_explorer \
 """
 # pylint: disable=too-many-return-statements
 from typing import Sequence
-import argparse
 import logging
-import sys
 
 from flask import Flask, request, Response, jsonify, send_file
-from flask_cors import CORS
-from gevent.pywsgi import WSGIServer
 
 from allennlp.common.configuration import configure, Config
 from allennlp.common.util import import_submodules
@@ -78,26 +74,6 @@ def make_app(include_packages: Sequence[str] = ()) -> Flask:
 
     return app
 
-
-def main(args):
-    parser = argparse.ArgumentParser(description='Serve up a simple configuration wizard')
-
-    parser.add_argument('--port', type=int, default=8123, help='port to serve the wizard on')
-
-    parser.add_argument('--include-package',
-                        type=str,
-                        action='append',
-                        default=[],
-                        help='additional packages to include')
-
-    args = parser.parse_args(args)
-
-    app = make_app(args.include_package)
-    CORS(app)
-
-    http_server = WSGIServer(('0.0.0.0', args.port), app)
-    print(f"serving Config Explorer on port {args.port}")
-    http_server.serve_forever()
 
 _HTML = """
 <!DOCTYPE html>
@@ -866,7 +842,3 @@ _HTML = """
 
 </html>
 """
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])
