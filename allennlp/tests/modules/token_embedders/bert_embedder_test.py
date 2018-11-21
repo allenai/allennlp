@@ -83,7 +83,7 @@ class TestBertEmbedder(ModelTestCase):
         bert_vectors = self.token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
         assert list(bert_vectors.shape) == [2, 10, 12]
 
-    def test_padding_workaround(self):
+    def test_padding_for_equal_length_indices(self):
         tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
 
         #            2   3     5     6   8      9    2   14   12
@@ -110,11 +110,11 @@ class TestBertEmbedder(ModelTestCase):
         ]
 
 
-    def test_bad_bidaf(self):
+    def test_squad_with_unwordpieceable_passage(self):
         # pylint: disable=line-too-long
         tokenizer = WordTokenizer()
 
-        token_indexer = PretrainedBertIndexer("/Users/joelg/bert-base-uncased-vocab.txt")
+        token_indexer = PretrainedBertIndexer("bert-base-uncased")
 
         passage1 = "There were four major HDTV systems tested by SMPTE in the late 1970s, and in 1979 an SMPTE study group released A Study of High Definition Television Systems:"
         question1 = "Who released A Study of High Definition Television Systems?"
@@ -153,10 +153,7 @@ class TestBertEmbedder(ModelTestCase):
 
 
     def test_max_length(self):
-
-        token_indexer = PretrainedBertIndexer("/Users/joelg/bert-base-uncased-vocab.txt")
-
-        config = BertConfig(len(token_indexer.vocab))
+        config = BertConfig(len(self.token_indexer.vocab))
         model = BertModel(config)
         embedder = BertEmbedder(model)
 
@@ -166,7 +163,7 @@ class TestBertEmbedder(ModelTestCase):
 
         vocab = Vocabulary()
 
-        instance = Instance({"tokens": TextField(tokens, {"bert": token_indexer})})
+        instance = Instance({"tokens": TextField(tokens, {"bert": self.token_indexer})})
 
         batch = Batch([instance])
         batch.index_instances(vocab)

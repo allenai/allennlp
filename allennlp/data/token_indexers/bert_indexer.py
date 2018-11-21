@@ -97,12 +97,7 @@ class BertIndexer(TokenIndexer[int]):
         return {
                 index_name: text_tokens,
                 f"{index_name}-offsets": offsets,
-                "mask": mask,
-
-                # This is a really bad hack to avoid triggering the
-                # "all indices have the same length" logic in TextField.get_padding_lengths
-                # TODO(joelgrus): fix the logic in TextField.get_padding_lengths and remove this
-                #"_ignoreme": [0, 0] if len(mask) == 1 else [0]
+                "mask": mask
         }
 
     @overrides
