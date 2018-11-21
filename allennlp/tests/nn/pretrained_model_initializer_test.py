@@ -1,5 +1,4 @@
 # pylint: disable=no-self-use, invalid-name
-import tempfile
 from typing import Dict, Optional
 
 import pytest
@@ -34,7 +33,7 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
         super().setUp()
         self.net1 = _Net1()
         self.net2 = _Net2()
-        self.temp_file = tempfile.NamedTemporaryFile(dir=self.TEST_DIR, delete=False).name
+        self.temp_file = self.TEST_DIR / "weights.th"
         torch.save(self.net2.state_dict(), self.temp_file)
 
     def _are_equal(self, linear1: torch.nn.Linear, linear2: torch.nn.Linear) -> bool:
@@ -120,20 +119,20 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
 
         # We need to manually save the parameters to a file because setUp()
         # only does it for the CPU
-        with tempfile.NamedTemporaryFile(dir=self.TEST_DIR) as temp:
-            torch.save(self.net2.state_dict(), temp.name)
+        temp_file = self.TEST_DIR / "gpu_weights.th"
+        torch.save(self.net2.state_dict(), temp_file)
 
-            applicator = self._get_applicator("linear_1.*", temp.name)
-            applicator(self.net1)
+        applicator = self._get_applicator("linear_1.*", temp_file)
+        applicator(self.net1)
 
-            # Verify the parameters are still on the GPU
-            assert self.net1.linear_1.weight.is_cuda is True
-            assert self.net1.linear_1.bias.is_cuda is True
-            assert self.net2.linear_1.weight.is_cuda is True
-            assert self.net2.linear_1.bias.is_cuda is True
+        # Verify the parameters are still on the GPU
+        assert self.net1.linear_1.weight.is_cuda is True
+        assert self.net1.linear_1.bias.is_cuda is True
+        assert self.net2.linear_1.weight.is_cuda is True
+        assert self.net2.linear_1.bias.is_cuda is True
 
-            # Make sure the weights are identical
-            assert self._are_equal(self.net1.linear_1, self.net2.linear_1)
+        # Make sure the weights are identical
+        assert self._are_equal(self.net1.linear_1, self.net2.linear_1)
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_load_to_cpu_from_gpu(self):
@@ -145,18 +144,18 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
         assert self.net2.linear_1.weight.is_cuda is True
         assert self.net2.linear_1.bias.is_cuda is True
 
-        with tempfile.NamedTemporaryFile(dir=self.TEST_DIR) as temp:
-            torch.save(self.net2.state_dict(), temp.name)
+        temp_file = self.TEST_DIR / "gpu_weights.th"
+        torch.save(self.net2.state_dict(), temp_file)
 
-            applicator = self._get_applicator("linear_1.*", temp.name)
-            applicator(self.net1)
+        applicator = self._get_applicator("linear_1.*", temp_file)
+        applicator(self.net1)
 
-            # Verify the parameters are on the CPU
-            assert self.net1.linear_1.weight.is_cuda is False
-            assert self.net1.linear_1.bias.is_cuda is False
+        # Verify the parameters are on the CPU
+        assert self.net1.linear_1.weight.is_cuda is False
+        assert self.net1.linear_1.bias.is_cuda is False
 
-            # Make sure the weights are identical
-            assert self._are_equal(self.net1.linear_1, self.net2.linear_1.cpu())
+        # Make sure the weights are identical
+        assert self._are_equal(self.net1.linear_1, self.net2.linear_1.cpu())
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_load_to_gpu_from_cpu(self):
