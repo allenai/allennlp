@@ -102,10 +102,11 @@ def main(data_directory: int, dataset: str = None, filter_by: str = None, verbos
     verbose : bool, optional.
         Whether to print information about incorrectly parsed SQL.
     """
-    directory_dict = {path: files for path, names, files in os.walk(data_directory) if files}
+    directory_dict = {path: [x for x in files if ".csv" not in x] for path, names, files in os.walk(data_directory) if files}
 
     for directory, data_files in directory_dict.items():
-        if "query_split" in directory or  (dataset is not None and dataset not in directory):
+        #if "query_split" in directory or  (dataset is not None and dataset not in directory):
+        if (dataset is not None and dataset not in directory):
             continue
 
         print(f"Parsing dataset at {directory}")

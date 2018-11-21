@@ -38,10 +38,10 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
         are pre-tokenised in the data file.
-    test_validation_splits_to_exclude : ``int``, optional (default = None)
+    test_validation_splits_to_exclude : ``Tuple[int, int]``, optional (default = None)
         Some of the text2sql datasets are very small, so you may need to do cross validation.
-        Here, you can specify a integer corresponding to a split_{int}.json file not to include
-        in the training set.
+        Here, you can specify a pair of splits corresponding to split_{int}.json file not to
+        include in the training set. The first is the validation set, the second is the test set.
     keep_if_unparsable : ``bool``, optional (default = True)
         Whether or not to keep examples that we can't parse using the grammar.
     """
