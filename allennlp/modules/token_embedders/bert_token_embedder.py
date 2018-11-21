@@ -13,6 +13,7 @@ import torch
 
 from pytorch_pretrained_bert.modeling import BertModel
 
+from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn import util
 
@@ -31,12 +32,20 @@ class BertEmbedder(TokenEmbedder):
     ----------
     bert_model: ``BertModel``
         The BERT model being wrapped.
+    top_layer_only: ``bool``, optional (default = ``False``)
+        If ``True``, then only return the top layer instead of apply the scalar mix.
     """
     def __init__(self,
-                 bert_model: BertModel) -> None:
+                 bert_model: BertModel,
+                 top_layer_only: bool = False) -> None:
         super().__init__()
         self.bert_model = bert_model
         self.output_dim = bert_model.config.hidden_size
+        if not top_layer_only:
+            self._scalar_mix = ScalarMix(bert_model.config.num_hidden_layers,
+                                         do_layer_norm=False)
+        else:
+            self._scalar_mix = None
 
     def get_output_dim(self) -> int:
         return self.output_dim
@@ -75,15 +84,19 @@ class BertEmbedder(TokenEmbedder):
         input_mask = (input_ids != 0).long()
 
         all_encoder_layers, _ = self.bert_model(input_ids, input_mask, token_type_ids)
-        sequence_output = all_encoder_layers[-1]
+        if self._scalar_mix is not None:
+            mix = self._scalar_mix(all_encoder_layers, input_mask)
+        else:
+            mix = all_encoder_layers[-1]
+
 
         if offsets is None:
-            return sequence_output
+            return mix
         else:
             batch_size = input_ids.size(0)
             range_vector = util.get_range_vector(batch_size,
-                                                 device=util.get_device_of(sequence_output)).unsqueeze(1)
-            return sequence_output[range_vector, offsets]
+                                                 device=util.get_device_of(mix)).unsqueeze(1)
+            return mix[range_vector, offsets]
 
 
 @TokenEmbedder.register("bert-pretrained")
@@ -101,11 +114,13 @@ class PretrainedBertEmbedder(BertEmbedder):
         the corresponding path will be used; otherwise it will be interpreted as a path or URL.
     requires_grad : ``bool``, optional (default = False)
         If True, compute gradient of BERT parameters for fine tuning.
+    top_layer_only: ``bool``, optional (default = ``False``)
+        If ``True``, then only return the top layer instead of apply the scalar mix.
     """
-    def __init__(self, pretrained_model: str, requires_grad: bool = False) -> None:
+    def __init__(self, pretrained_model: str, requires_grad: bool = False, top_layer_only: bool = False) -> None:
         model = BertModel.from_pretrained(pretrained_model)
 
         for param in model.parameters():
             param.requires_grad = requires_grad
 
-        super().__init__(model)
+        super().__init__(bert_model=model, top_layer_only=top_layer_only)

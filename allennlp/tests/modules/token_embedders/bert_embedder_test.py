@@ -22,8 +22,8 @@ class TestBertEmbedder(ModelTestCase):
 
         config_path = self.FIXTURES_ROOT / 'bert' / 'config.json'
         config = BertConfig(str(config_path))
-        bert_model = BertModel(config)
-        self.token_embedder = BertEmbedder(bert_model)
+        self.bert_model = BertModel(config)
+        self.token_embedder = BertEmbedder(self.bert_model)
 
     def test_without_offsets(self):
         input_ids = torch.LongTensor([[3, 5, 9, 1, 2], [1, 5, 0, 0, 0]])
@@ -81,6 +81,14 @@ class TestBertEmbedder(ModelTestCase):
 
         # Offsets, should get 10 vectors back.
         bert_vectors = self.token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
+        assert list(bert_vectors.shape) == [2, 10, 12]
+
+        ## Now try top_layer_only = True
+        tlo_embedder = BertEmbedder(self.bert_model, top_layer_only=True)
+        bert_vectors = tlo_embedder(tokens["bert"])
+        assert list(bert_vectors.shape) == [2, 12, 12]
+
+        bert_vectors = tlo_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
         assert list(bert_vectors.shape) == [2, 10, 12]
 
     def test_padding_for_equal_length_indices(self):

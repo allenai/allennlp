@@ -29,6 +29,10 @@ class BertIndexer(TokenIndexer[int]):
     namespace: str, optional (default: "bert")
         The namespace in the AllenNLP ``Vocabulary`` into which the wordpieces
         will be loaded.
+    use_starting_offsets: bool, optional (default: False)
+        By default, the "offsets" created by the token indexer correspond to the
+        last wordpiece in each word. If ``use_starting_offsets`` is specified,
+        they will instead correspond to the first wordpiece in each word.
     max_pieces: int, optional (default: 512)
         The BERT embedder uses positional embeddings and so has a corresponding
         maximum length for its input ids. Currently any inputs longer than this
@@ -39,6 +43,7 @@ class BertIndexer(TokenIndexer[int]):
                  vocab: Dict[str, int],
                  wordpiece_tokenizer: WordpieceTokenizer,
                  namespace: str = "bert",
+                 use_starting_offsets: bool = False,
                  max_pieces: int = 512) -> None:
         self.vocab = vocab
 
@@ -51,6 +56,7 @@ class BertIndexer(TokenIndexer[int]):
         self._namespace = namespace
         self._added_to_vocabulary = False
         self.max_pieces = max_pieces
+        self.use_starting_offsets = use_starting_offsets
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -74,7 +80,8 @@ class BertIndexer(TokenIndexer[int]):
 
         text_tokens: List[int] = []
         offsets = []
-        offset = -1
+        # For initial offsets, start at 0; otherwise, start at -1
+        offset = 0 if self.use_starting_offsets else -1
 
         for token in tokens:
             wordpieces = self.wordpiece_tokenizer.tokenize(token.text)
@@ -86,8 +93,16 @@ class BertIndexer(TokenIndexer[int]):
                 logger.warning(f"Too many wordpieces, truncating: {[token.text for token in tokens]}")
                 break
 
-            offset += len(wordpiece_ids)
-            offsets.append(offset)
+            # For initial offsets, the current value of ``offset`` is the start of
+            # the current wordpiece, so add it to ``offsets`` and then increment it.
+            if self.use_starting_offsets:
+                offsets.append(offset)
+                offset += len(wordpiece_ids)
+            # For final offsets, the current value of ``offset`` is the end of
+            # the previous wordpiece, so increment it and then add it to ``offsets``.
+            else:
+                offset += len(wordpiece_ids)
+                offsets.append(offset)
             text_tokens.extend(wordpiece_ids)
 
         # add mask according to the original tokens,
@@ -133,11 +148,25 @@ class PretrainedBertIndexer(BertIndexer):
         If the name is a key in the list of pretrained models at
         https://github.com/huggingface/pytorch-pretrained-BERT/blob/master/pytorch_pretrained_bert/tokenization.py#L33
         the corresponding path will be used; otherwise it will be interpreted as a path or URL.
+    use_starting_offsets: bool, optional (default: False)
+        By default, the "offsets" created by the token indexer correspond to the
+        last wordpiece in each word. If ``use_starting_offsets`` is specified,
+        they will instead correspond to the first wordpiece in each word.
     do_lowercase: ``bool``, optional (default = True)
         Whether to lowercase the tokens before converting to wordpiece ids.
+    max_pieces: int, optional (default: 512)
+        The BERT embedder uses positional embeddings and so has a corresponding
+        maximum length for its input ids. Currently any inputs longer than this
+        will be truncated. If this behavior is undesirable to you, you should
+        consider filtering them out in your dataset reader.
     """
     def __init__(self,
                  pretrained_model: str,
-                 do_lowercase: bool = True) -> None:
+                 use_starting_offsets: bool = False,
+                 do_lowercase: bool = True,
+                 max_pieces: int = 512) -> None:
         bert_tokenizer = BertTokenizer.from_pretrained(pretrained_model, do_lowercase)
-        super().__init__(bert_tokenizer.vocab, bert_tokenizer.wordpiece_tokenizer)
+        super().__init__(vocab=bert_tokenizer.vocab,
+                         wordpiece_tokenizer=bert_tokenizer.wordpiece_tokenizer,
+                         use_starting_offsets=use_starting_offsets,
+                         max_pieces=max_pieces)
