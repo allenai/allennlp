@@ -12,7 +12,7 @@ from allennlp.common.params import Params
 
 class _Net1(torch.nn.Module):
     def __init__(self):
-        super(_Net1, self).__init__()
+        super().__init__()
         self.linear_1 = torch.nn.Linear(5, 10)
         self.linear_2 = torch.nn.Linear(10, 5)
 
@@ -21,7 +21,7 @@ class _Net1(torch.nn.Module):
 
 class _Net2(torch.nn.Module):
     def __init__(self):
-        super(_Net2, self).__init__()
+        super().__init__()
         self.linear_1 = torch.nn.Linear(5, 10)
         self.linear_3 = torch.nn.Linear(10, 5)
 
@@ -31,7 +31,7 @@ class _Net2(torch.nn.Module):
 
 class TestPretrainedModelInitializer(AllenNlpTestCase):
     def setUp(self):
-        super(TestPretrainedModelInitializer, self).setUp()
+        super().setUp()
         self.net1 = _Net1()
         self.net2 = _Net2()
         self.temp_file = tempfile.NamedTemporaryFile(dir=self.TEST_DIR, delete=False).name
