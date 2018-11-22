@@ -96,9 +96,9 @@ class SimpleSeq2Seq(Model):
         else:
             self._bleu = None
 
-        # At prediction time, we can use a beam search to find the most likely sequence of target tokens.
-        # If the beam_size parameter is not given, we'll just use a greedy search (equivalent to beam_size = 1).
+        # At prediction time, we use a beam search to find the most likely sequence of target tokens.
         beam_size = beam_size or 1
+        self._max_decoding_steps = max_decoding_steps
         self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
 
         # Dense embedding of source vocab tokens.
@@ -291,31 +291,45 @@ class SimpleSeq2Seq(Model):
 
     def _forward_loop(self,
                       state: Dict[str, torch.Tensor],
-                      target_tokens: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
-        """Make forward pass during training or do greedy search during prediction."""
+                      target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
+        """
+        Make forward pass during training or do greedy search during prediction.
+
+        Notes
+        -----
+        We really only use the predictions from the method to test that beam search
+        with a beam size of 1 gives the same results.
+        """
         # shape: (batch_size, max_input_sequence_length)
         source_mask = state["source_mask"]
 
         batch_size = source_mask.size()[0]
 
-        # shape: (batch_size, max_target_sequence_length)
-        targets = target_tokens["tokens"]
+        if target_tokens:
+            # shape: (batch_size, max_target_sequence_length)
+            targets = target_tokens["tokens"]
 
-        _, target_sequence_length = targets.size()
+            _, target_sequence_length = targets.size()
 
-        # The last input from the target is either padding or the end symbol.
-        # Either way, we don't have to process it.
-        num_decoding_steps = target_sequence_length - 1
+            # The last input from the target is either padding or the end symbol.
+            # Either way, we don't have to process it.
+            num_decoding_steps = target_sequence_length - 1
+        else:
+            num_decoding_steps = self._max_decoding_steps
 
         # Initialize target predictions with the start index.
         # shape: (batch_size,)
         last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index)
 
         step_logits: List[torch.Tensor] = []
+        step_predictions: List[torch.Tensor] = []
         for timestep in range(num_decoding_steps):
             if self.training and torch.rand(1).item() < self._scheduled_sampling_ratio:
                 # Use gold tokens at test time and at a rate of 1 - _scheduled_sampling_ratio
                 # during training.
+                # shape: (batch_size,)
+                input_choices = last_predictions
+            elif not target_tokens:
                 # shape: (batch_size,)
                 input_choices = last_predictions
             else:
@@ -337,14 +351,23 @@ class SimpleSeq2Seq(Model):
             # shape (predicted_classes): (batch_size,)
             last_predictions = predicted_classes
 
-        # shape: (batch_size, num_decoding_steps, num_classes)
-        logits = torch.cat(step_logits, 1)
+            step_predictions.append(last_predictions.unsqueeze(1))
 
-        # Compute loss.
-        target_mask = util.get_text_field_mask(target_tokens)
-        loss = self._get_loss(logits, targets, target_mask)
+        # shape: (batch_size, num_decoding_steps)
+        predictions = torch.cat(step_predictions, 1)
 
-        return {"loss": loss}
+        output_dict = {"predictions": predictions}
+
+        if target_tokens:
+            # shape: (batch_size, num_decoding_steps, num_classes)
+            logits = torch.cat(step_logits, 1)
+
+            # Compute loss.
+            target_mask = util.get_text_field_mask(target_tokens)
+            loss = self._get_loss(logits, targets, target_mask)
+            output_dict["loss"] = loss
+
+        return output_dict
 
     def _forward_beam_search(self, state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Make forward pass during prediction using a beam search."""

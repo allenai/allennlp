@@ -6,6 +6,7 @@ import numpy
 import torch
 
 from allennlp.common.testing import ModelTestCase
+from allennlp.nn.beam_search import BeamSearch
 from allennlp.nn.util import sequence_cross_entropy_with_logits
 
 
@@ -77,3 +78,29 @@ class SimpleSeq2SeqTest(ModelTestCase):
         output_dict = self.model(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
         assert "predicted_tokens" in decode_output_dict
+
+    def test_greedy_decode_matches_beam_search(self):
+        # pylint: disable=protected-access
+        beam_search = BeamSearch(self.model._end_index, max_steps=self.model._max_decoding_steps, beam_size=1)
+        training_tensors = self.dataset.as_tensor_dict()
+
+        # Get greedy predictions from _forward_loop method of model.
+        state = self.model._encode(training_tensors["source_tokens"])
+        state = self.model._init_decoder_state(state)
+        output_dict_greedy = self.model._forward_loop(state)
+        output_dict_greedy = self.model.decode(output_dict_greedy)
+
+        # Get greedy predictions from beam search (beam size = 1).
+        state = self.model._encode(training_tensors["source_tokens"])
+        state = self.model._init_decoder_state(state)
+        batch_size = state["source_mask"].size()[0]
+        start_predictions = state["source_mask"].new_full((batch_size,), fill_value=self.model._start_index)
+        all_top_k_predictions, _ = beam_search.search(
+                start_predictions, state, self.model.take_step)
+        output_dict_beam_search = {
+                "predictions": all_top_k_predictions,
+        }
+        output_dict_beam_search = self.model.decode(output_dict_beam_search)
+
+        # Predictions from model._forward_loop and beam_search should match.
+        assert output_dict_greedy["predicted_tokens"] == output_dict_beam_search["predicted_tokens"]
