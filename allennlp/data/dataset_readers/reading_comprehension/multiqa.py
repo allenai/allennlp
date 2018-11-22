@@ -45,12 +45,14 @@ class MultiQAReader(DatasetReader):
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False,
                  num_context_answers: int = 0,
-                 max_context_size: int = 5000) -> None:
+                 max_context_size: int = 5000,
+                 use_document_titles:bool= False) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._num_context_answers = num_context_answers
         self._max_context_size = max_context_size
+        self._use_document_titles = use_document_titles
 
     @overrides
     def _read(self, file_path: str):
@@ -64,6 +66,7 @@ class MultiQAReader(DatasetReader):
                 dataset = dataset_json['data']
 
         logger.info("Reading the dataset")
+        skipped_context_count = 0
         for context in dataset['contexts']:
 
             # Processing each document separatly
@@ -75,11 +78,15 @@ class MultiQAReader(DatasetReader):
                 # tokenizing the whole document (title + all snippets concatinated)
                 ## TODO add document['rank']
                 # constracting single context by concatinating parts of the original context
-                paragraph += document['title'] + ' | ' + ' '.join(document['snippets']) + " || "
+                if self._use_document_titles:
+                    paragraph += document['title'] + ' | ' + ' '.join(document['snippets']) + " || "
+                    answer_starts_offsets.append({'title': offset})
+                    offset += len(document['title']) + 3  # we add 3 for the separator ' | '
+                else:
+                    paragraph += ' '.join(document['snippets']) + " || "
+                    answer_starts_offsets.append({})
 
                 # Computing answer_starts offsets:
-                answer_starts_offsets.append({'title': offset})
-                offset += len(document['title']) + 3  # we add 3 for the separator ' | '
                 for snippet_ind, snippet in enumerate(document['snippets']):
                     answer_starts_offsets[doc_ind][snippet_ind] = offset
                     offset += len(snippet)
@@ -109,31 +116,48 @@ class MultiQAReader(DatasetReader):
             metadata['answer_texts_list'] = answer_texts_list
 
             # calculate new answer starts for the new combined document
-            span_starts_list = [[] for qa in qas]
-            span_ends_list = [[] for qa in qas]
+            span_starts_list = {}
+            span_ends_list = {}
             is_correct_answer_list = [True for document in context['documents']]  # TODO update this
             for qa_ind, qa in enumerate(qas):
-                for answer in qa['answers']:
-                    for alias in answer['aliases']:
-                        for alias_start in alias['answer_starts']:
-                            # It's possible we didn't take all the contexts.
-                            if len(answer_starts_offsets) > alias_start[0]:
-                                answer_start_norm = answer_starts_offsets[alias_start[0]][alias_start[1]] + alias_start[2]
-                                span_starts_list[qa_ind].append(answer_start_norm)
-                                span_ends_list[qa_ind].append(answer_start_norm + len(alias['text']))
+                if qa['answer_type'] == 'multi_choice':
+                    answer_types = ['answers','distractor_answers']
+                else:
+                    answer_types = ['answers']
 
-                                # Sanity check: the alias text should be equal the text in answer_start in the paragraph
-                                import re
-                                x = re.match(r'\b{0}\b'.format(re.escape(alias['text'])),
-                                             paragraph[answer_start_norm:answer_start_norm + len(alias['text'])],
-                                             re.IGNORECASE)
-                                if x is None:
-                                    x=1
+                for answer_type in answer_types:
+                    span_starts_list[answer_type] = [[] for qa in qas]
+                    span_ends_list[answer_type] = [[] for qa in qas]
+                    for answer in qa['answers']:
+                        for alias in answer['aliases']:
+                            for alias_start in alias['answer_starts']:
+                                # It's possible we didn't take all the contexts.
+                                if len(answer_starts_offsets) > alias_start[0] and \
+                                        (alias_start[1]!='title' or self._use_document_titles):
+                                    answer_start_norm = answer_starts_offsets[alias_start[0]][alias_start[1]] + alias_start[2]
+                                    span_starts_list[answer_type][qa_ind].append(answer_start_norm)
+                                    span_ends_list[answer_type][qa_ind].append(answer_start_norm + len(alias['text']))
+
+                                    # Sanity check: the alias text should be equal the text in answer_start in the paragraph
+                                    import re
+                                    x = re.match(r'\b{0}\b'.format(re.escape(alias['text'])),
+                                                 paragraph[answer_start_norm:answer_start_norm + len(alias['text'])],
+                                                 re.IGNORECASE)
+                                    if x is None:
+                                        x=1
+
+            # If answer was not found in this question do not yield an instance
+            # (This could happen if we used part of the context or in unfiltered context versions)
+            if span_starts_list['answers'] == [[]]:
+                if skipped_context_count % 30 == 0:
+                    print('Number of contexts skipped = %d' % skipped_context_count)
+                skipped_context_count += 1
+                continue
 
             instance = self.text_to_instance(question_text_list,
                                              paragraph,
-                                             span_starts_list,
-                                             span_ends_list,
+                                             span_starts_list['answers'],
+                                             span_ends_list['answers'],
                                              tokenized_paragraph,
                                              metadata)
 
@@ -142,7 +166,7 @@ class MultiQAReader(DatasetReader):
             passage_offsets = [(token.idx, token.idx + len(token.text)) for token in tokenized_paragraph]
             instance.fields['metadata'].metadata['gold_answer_start_list'] = []
             instance.fields['metadata'].metadata['gold_answer_end_list'] = []
-            for span_char_start,span_char_end in zip(span_starts_list[0],span_ends_list[0]):
+            for span_char_start,span_char_end in zip(span_starts_list['answers'][0],span_ends_list['answers'][0]):
                 (span_start, span_end), error = util.char_span_to_token_span(passage_offsets, \
                                                                              (span_char_start, span_char_end))
 
@@ -151,17 +175,11 @@ class MultiQAReader(DatasetReader):
 
             # Multiple choice answer support. (all instance of other answers should be
             # contained in "multichoice_incorrect_answers", same format as "answers" field)
-            if 'multichoice_incorrect_answers' in qas[0]:
-                span_starts_list = [[answer['answer_start'] for answer in qa['multichoice_incorrect_answers']] for qa in qas]
-                span_ends_list = []
-                answer_texts_list = [[answer['text'] for answer in qa['multichoice_incorrect_answers']] for qa in qas]
-                for answer_starts, an_list in zip(span_starts_list, answer_texts_list):
-                    span_ends = [start + len(answer) for start, answer in zip(answer_starts, an_list)]
-                    span_ends_list.append(span_ends)
-
+            if qas[0]['answer_type'] == 'multi_choice':
                 instance.fields['metadata'].metadata['multichoice_incorrect_answers_start_list'] = []
                 instance.fields['metadata'].metadata['multichoice_incorrect_answers_end_list'] = []
-                for span_char_start, span_char_end in zip(span_starts_list[0], span_ends_list[0]):
+                for span_char_start, span_char_end in \
+                        zip(span_starts_list['distractor_answers'][0], span_ends_list['distractor_answers'][0]):
                     (span_start, span_end), error = util.char_span_to_token_span(passage_offsets, \
                                                                                  (span_char_start, span_char_end))
 
