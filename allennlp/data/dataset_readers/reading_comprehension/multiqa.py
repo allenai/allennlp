@@ -118,7 +118,6 @@ class MultiQAReader(DatasetReader):
             # calculate new answer starts for the new combined document
             span_starts_list = {}
             span_ends_list = {}
-            is_correct_answer_list = [True for document in context['documents']]  # TODO update this
             for qa_ind, qa in enumerate(qas):
                 if qa['answer_type'] == 'multi_choice':
                     answer_types = ['answers','distractor_answers']
@@ -128,7 +127,7 @@ class MultiQAReader(DatasetReader):
                 for answer_type in answer_types:
                     span_starts_list[answer_type] = [[] for qa in qas]
                     span_ends_list[answer_type] = [[] for qa in qas]
-                    for answer in qa['answers']:
+                    for answer in qa[answer_type]:
                         for alias in answer['aliases']:
                             for alias_start in alias['answer_starts']:
                                 # It's possible we didn't take all the contexts.
