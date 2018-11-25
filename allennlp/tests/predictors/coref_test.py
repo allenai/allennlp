@@ -13,12 +13,21 @@ class TestCorefPredictor(AllenNlpTestCase):
         predictor = Predictor.from_archive(archive, 'coreference-resolution')
 
         result = predictor.predict_json(inputs)
+        self.assert_predict_result(result)
 
+        document = ['This', 'is', 'a', 'single', 'string',
+                    'document', 'about', 'a', 'test', '.', 'Sometimes',
+                    'it', 'contains', 'coreferent', 'parts', '.']
+
+        result_doc_words = predictor.predict_tokenized(document)
+        self.assert_predict_result(result_doc_words)
+
+    @staticmethod
+    def assert_predict_result(result):
         document = result["document"]
         assert document == ['This', 'is', 'a', 'single', 'string',
                             'document', 'about', 'a', 'test', '.', 'Sometimes',
                             'it', 'contains', 'coreferent', 'parts', '.']
-
         clusters = result["clusters"]
         assert isinstance(clusters, list)
         for cluster in clusters:

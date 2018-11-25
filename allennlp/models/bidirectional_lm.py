@@ -8,6 +8,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.masked_layer_norm import MaskedLayerNorm
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
+from allennlp.modules.sampled_softmax_loss import SampledSoftmaxLoss
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
 from allennlp.nn.util import get_text_field_mask, remove_sentence_boundaries
 
@@ -20,45 +21,28 @@ class _SoftmaxLoss(torch.nn.Module):
     """
     def __init__(self,
                  num_words: int,
-                 embedding_dim: int,
-                 token_encoder: torch.nn.Parameter = None) -> None:
+                 embedding_dim: int) -> None:
         super().__init__()
 
-        self.tie_embeddings = token_encoder is not None
+        # TODO(joelgrus): implement tie_embeddings (maybe)
+        self.tie_embeddings = False
 
-        # Glorit init (std=(1.0 / sqrt(fan_in))
-        if self.tie_embeddings:
-            self.softmax_w = token_encoder
-            # +1 for shape to include padding dimension
-            self.softmax_b = torch.nn.Parameter(torch.zeros(num_words + 1))
-        else:
-            self.softmax_w = torch.nn.Parameter(
-                    torch.randn(embedding_dim, num_words) / np.sqrt(embedding_dim)
-            )
-            self.softmax_b = torch.nn.Parameter(torch.zeros(num_words))
+        self.softmax_w = torch.nn.Parameter(
+                torch.randn(embedding_dim, num_words) / np.sqrt(embedding_dim)
+        )
+        self.softmax_b = torch.nn.Parameter(torch.zeros(num_words))
 
     def forward(self, embeddings: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         # pylint: disable=arguments-differ
         # embeddings is size (n, embedding_dim)
         # targets is (batch_size, ) with the correct class id
         # Does not do any count normalization / divide by batch size
-        if self.tie_embeddings:
-            softmax_w = self.softmax_w.weight.t()
-        else:
-            softmax_w = self.softmax_w
-
         probs = torch.nn.functional.log_softmax(
-                torch.matmul(embeddings, softmax_w) + self.softmax_b,
+                torch.matmul(embeddings, self.softmax_w) + self.softmax_b,
                 dim=-1
         )
 
-        if self.tie_embeddings:
-            # need to add back in padding dim!
-            targets_ = targets + 1
-        else:
-            targets_ = targets
-
-        return torch.nn.functional.nll_loss(probs, targets_.long(), reduction="sum")
+        return torch.nn.functional.nll_loss(probs, targets.long(), reduction="sum")
 
 
 @Model.register('bidirectional-language-model')
@@ -95,6 +79,12 @@ class BidirectionalLanguageModel(Model):
         Typically the provided token indexes will be augmented with
         begin-sentence and end-sentence tokens. If this flag is True
         the corresponding embeddings will be removed from the return values.
+    num_samples: ``int``, optional (default: None)
+        If provided, the model will use ``SampledSoftmaxLoss``
+        with the specified number of samples. Otherwise, it will use
+        the full ``_SoftmaxLoss`` defined above.
+    sparse_embeddings: ``bool``, optional (default: False)
+        Passed on to ``SampledSoftmaxLoss`` if True.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -103,7 +93,9 @@ class BidirectionalLanguageModel(Model):
                  layer_norm: Optional[MaskedLayerNorm] = None,
                  dropout: float = None,
                  loss_scale: Union[float, str] = 1.0,
-                 remove_bos_eos: bool = True) -> None:
+                 remove_bos_eos: bool = True,
+                 num_samples: int = None,
+                 sparse_embeddings: bool = False) -> None:
         super().__init__(vocab)
         self._text_field_embedder = text_field_embedder
         self._layer_norm = layer_norm or (lambda x: x)
@@ -116,9 +108,15 @@ class BidirectionalLanguageModel(Model):
         # (or backward) direction.
         self._forward_dim = contextualizer.get_output_dim() // 2
 
-        # TODO(joelgrus): Allow SampledSoftmaxLoss here by configuration
-        self._softmax_loss = _SoftmaxLoss(num_words=vocab.get_vocab_size(),
-                                          embedding_dim=self._forward_dim)
+        # TODO(joelgrus): more sampled softmax configuration options, as needed.
+        if num_samples is not None:
+            self._softmax_loss = SampledSoftmaxLoss(num_words=vocab.get_vocab_size(),
+                                                    embedding_dim=self._forward_dim,
+                                                    num_samples=num_samples,
+                                                    sparse=sparse_embeddings)
+        else:
+            self._softmax_loss = _SoftmaxLoss(num_words=vocab.get_vocab_size(),
+                                              embedding_dim=self._forward_dim)
 
         self.register_buffer('_last_average_loss', torch.zeros(1))
 

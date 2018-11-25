@@ -131,6 +131,7 @@ class JustSpacesWordSplitter(WordSplitter):
 def _remove_spaces(tokens: List[spacy.tokens.Token]) -> List[spacy.tokens.Token]:
     return [token for token in tokens if not token.is_space]
 
+
 @WordSplitter.register('spacy')
 class SpacyWordSplitter(WordSplitter):
     """
@@ -153,6 +154,7 @@ class SpacyWordSplitter(WordSplitter):
     def split_words(self, sentence: str) -> List[Token]:
         # This works because our Token class matches spacy's.
         return _remove_spaces(self.spacy(sentence))
+
 
 @WordSplitter.register('openai')
 class OpenAISplitter(WordSplitter):
