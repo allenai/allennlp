@@ -61,7 +61,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._use_all_sql = use_all_sql
         self._use_all_queries = use_all_queries
-        self._use_prelinked_entities = world.links_entities_to_actions()
+        self.links_entities = False
         self._keep_if_unparsable = keep_if_unparseable
         if test_validation_splits_to_exclude is not None:
             self._cross_validation_split_to_exclude = str(test_validation_splits_to_exclude[0])
@@ -87,9 +87,11 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
             some of the text2sql datasets require cross validation, which means they are split
             up into many small files, for which you only want to exclude one.
         """
-        files = [p for p in glob.glob(file_path)
-                 if self._cross_validation_split_to_exclude not in os.path.basename(p)
-                    or self._test_split_to_exclude not in os.path.basename(p)]
+        files = [p for p in glob.glob(file_path)]
+        if self._cross_validation_split_to_exclude is not None:
+            files = [p for p in files
+                     if self._cross_validation_split_to_exclude not in os.path.basename(p)
+                     or self._test_split_to_exclude not in os.path.basename(p)]
         schema = read_dataset_schema(self._schema_path)
 
         for path in files:
@@ -101,7 +103,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
                                                             use_all_sql=self._use_all_sql,
                                                             remove_unneeded_aliases=True,
                                                             schema=schema):
-                linked_entities = sql_data.sql_variables if self._use_prelinked_entities else None
+                linked_entities = sql_data.sql_variables if not self.links_entities else None
                 instance = self.text_to_instance(sql_data.text_with_variables, linked_entities, sql_data.sql)
                 if instance is not None:
                     yield instance
@@ -118,7 +120,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
 
         action_sequence, all_actions, linking_scores = self._world.get_action_sequence_and_all_actions(query, sql,
                                                                                                        prelinked_entities)
-        if linking_scores is None and not self._use_prelinked_entities:
+        if linking_scores is None and self.links_entities:
             raise ConfigurationError("Prelinked entities were not used, but no linking scores were produced.")
 
         if action_sequence is None and self._keep_if_unparsable:
@@ -127,7 +129,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         elif action_sequence is None:
             return None
 
-        if not self._use_prelinked_entities:
+        if self.links_entities:
             fields["linking_scores"] = ArrayField(linking_scores)
 
         index_fields: List[Field] = []
