@@ -11,6 +11,7 @@ dist/
 
 .envrc
 .python-version
+.idea
 
 
 # jupyter notebooks
