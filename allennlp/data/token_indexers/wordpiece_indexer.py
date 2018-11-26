@@ -1,10 +1,10 @@
 # pylint: disable=no-self-use
-from typing import Dict, List
+from typing import Dict, List, Callable
 import logging
 
 from overrides import overrides
 
-from pytorch_pretrained_bert.tokenization import WordpieceTokenizer, BertTokenizer
+from pytorch_pretrained_bert.tokenization import BertTokenizer
 
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
@@ -13,27 +13,28 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer
 
 logger = logging.getLogger(__name__)
 
+# TODO(joelgrus): Figure out how to generate token_type_ids out of this token indexer.
 
-class BertIndexer(TokenIndexer[int]):
+class WordpieceIndexer(TokenIndexer[int]):
     """
-    A token indexer that does the wordpiece-tokenization required for BERT embeddings.
-    Most likely you are using one of the pretrained BERT models, in which case
-    you'll want to use the ``PretrainedBertIndexer`` subclass rather than this base class.
+    A token indexer that does the wordpiece-tokenization (e.g. for BERT embeddings).
+    If you are using one of the pretrained BERT models, you'll want to use the ``PretrainedBertIndexer``
+    subclass rather than this base class.
 
     Parameters
     ----------
-    vocab: ``Dict[str, int]``
+    vocab : ``Dict[str, int]``
         The mapping {wordpiece -> id}.  Note this is not an AllenNLP ``Vocabulary``.
-    wordpiece_tokenizer: ``WordpieceTokenizer``
-        The class that does the actual tokenization.
-    namespace: str, optional (default: "bert")
+    wordpiece_tokenizer : ``Callable[[str], List[str]]``
+        A function that does the actual tokenization.
+    namespace : str, optional (default: "wordpiece")
         The namespace in the AllenNLP ``Vocabulary`` into which the wordpieces
         will be loaded.
-    use_starting_offsets: bool, optional (default: False)
+    use_starting_offsets : bool, optional (default: False)
         By default, the "offsets" created by the token indexer correspond to the
         last wordpiece in each word. If ``use_starting_offsets`` is specified,
         they will instead correspond to the first wordpiece in each word.
-    max_pieces: int, optional (default: 512)
+    max_pieces : int, optional (default: 512)
         The BERT embedder uses positional embeddings and so has a corresponding
         maximum length for its input ids. Currently any inputs longer than this
         will be truncated. If this behavior is undesirable to you, you should
@@ -41,8 +42,8 @@ class BertIndexer(TokenIndexer[int]):
     """
     def __init__(self,
                  vocab: Dict[str, int],
-                 wordpiece_tokenizer: WordpieceTokenizer,
-                 namespace: str = "bert",
+                 wordpiece_tokenizer: Callable[[str], List[str]],
+                 namespace: str = "wordpiece",
                  use_starting_offsets: bool = False,
                  max_pieces: int = 512) -> None:
         self.vocab = vocab
@@ -84,7 +85,7 @@ class BertIndexer(TokenIndexer[int]):
         offset = 0 if self.use_starting_offsets else -1
 
         for token in tokens:
-            wordpieces = self.wordpiece_tokenizer.tokenize(token.text)
+            wordpieces = self.wordpiece_tokenizer(token.text)
             wordpiece_ids = [self.vocab[token] for token in wordpieces]
 
             # truncate and pray
@@ -134,7 +135,7 @@ class BertIndexer(TokenIndexer[int]):
 
 
 @TokenIndexer.register("bert-pretrained")
-class PretrainedBertIndexer(BertIndexer):
+class PretrainedBertIndexer(WordpieceIndexer):
     # pylint: disable=line-too-long
     """
     A ``TokenIndexer`` corresponding to a pretrained BERT model.
@@ -167,6 +168,7 @@ class PretrainedBertIndexer(BertIndexer):
                  max_pieces: int = 512) -> None:
         bert_tokenizer = BertTokenizer.from_pretrained(pretrained_model, do_lowercase)
         super().__init__(vocab=bert_tokenizer.vocab,
-                         wordpiece_tokenizer=bert_tokenizer.wordpiece_tokenizer,
+                         wordpiece_tokenizer=bert_tokenizer.wordpiece_tokenizer.tokenize,
+                         namespace="bert",
                          use_starting_offsets=use_starting_offsets,
                          max_pieces=max_pieces)

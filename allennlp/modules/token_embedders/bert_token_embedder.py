@@ -35,9 +35,7 @@ class BertEmbedder(TokenEmbedder):
     top_layer_only: ``bool``, optional (default = ``False``)
         If ``True``, then only return the top layer instead of apply the scalar mix.
     """
-    def __init__(self,
-                 bert_model: BertModel,
-                 top_layer_only: bool = False) -> None:
+    def __init__(self, bert_model: BertModel, top_layer_only: bool = False) -> None:
         super().__init__()
         self.bert_model = bert_model
         self.output_dim = bert_model.config.hidden_size
@@ -57,21 +55,24 @@ class BertEmbedder(TokenEmbedder):
         """
         Parameters
         ----------
-        input_ids: ``torch.LongTensor``
-            The wordpiece ids for each input sentence.
-        offsets: ``torch.LongTensor``, optional (default = None)
+        input_ids : ``torch.LongTensor``
+            The (batch_size, max_sequence_length) tensor of wordpiece ids.
+        offsets : ``torch.LongTensor``, optional
             The BERT embeddings are one per wordpiece. However it's possible/likely
             you might want one per original token. In that case, ``offsets``
-            should represent the indices of the last wordpiece for each original token.
+            represents the indices of the desired wordpiece for each original token.
+            Depending on how your token indexer is configured, this could be the
+            position of the last wordpiece for each token, or it could be the position
+            of the first wordpiece for each token.
 
-            That is, if you had the sentence "Definitely not", and if the corresponding
+            For example, if you had the sentence "Definitely not", and if the corresponding
             wordpieces were ["Def", "##in", "##ite", "##ly", "not"], then the input_ids
-            would be 5 wordpiece ids, and the offsets would be [3, 4]. If offsets are
-            provided, the returned tensor will contain the _last_ wordpiece embedding
-            for each token, and (in particular) will contain one embedding per token.
-            If offsets are not provided, the entire tensor of wordpiece embeddings
+            would be 5 wordpiece ids, and the "last wordpiece" offsets would be [3, 4].
+            If offsets are provided, the returned tensor will contain only the wordpiece
+            embeddings at those positions, and (in particular) will contain one embedding
+            per token. If offsets are not provided, the entire tensor of wordpiece embeddings
             will be returned.
-        token_type_ids: ``torch.LongTensor``, optional (default = None)
+        token_type_ids : ``torch.LongTensor``, optional
             If an input consists of two sentences (as in the BERT paper),
             tokens from the first sentence should have type 0 and tokens from
             the second sentence should have type 1.  If you don't provide this

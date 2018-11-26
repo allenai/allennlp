@@ -1,6 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import ModelTestCase
-from allennlp.data.token_indexers.bert_indexer import PretrainedBertIndexer
+from allennlp.data.token_indexers.wordpiece_indexer import PretrainedBertIndexer
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
 from allennlp.data.vocabulary import Vocabulary

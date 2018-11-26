@@ -14,7 +14,7 @@ allennlp.data.token_indexers
 * :ref:`TokenCharactersIndexer<token-characters-indexer>`
 * :ref:`ELMoTokenCharactersIndexer<elmo-indexer>`
 * :ref:`OpenaiTransformerBytePairIndexer<openai-transformer-byte-pair-indexer>`
-* :ref:`BertIndexer<bert-indexer>`
+* :ref:`WordpieceIndexer<wordpiece-indexer>`
 
 
 .. _token-indexer:
@@ -66,8 +66,8 @@ allennlp.data.token_indexers
    :show-inheritance:
 
 
-.. _bert-indexer:
-.. automodule:: allennlp.data.token_indexers.bert_indexer
+.. _wordpiece-indexer:
+.. automodule:: allennlp.data.token_indexers.wordpiece_indexer
    :members:
    :undoc-members:
    :show-inheritance:

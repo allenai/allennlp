@@ -7,7 +7,7 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.data.dataset import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers.bert_indexer import PretrainedBertIndexer
+from allennlp.data.token_indexers.wordpiece_indexer import PretrainedBertIndexer
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
 from allennlp.data.vocabulary import Vocabulary
@@ -124,10 +124,21 @@ class TestBertEmbedder(ModelTestCase):
 
         token_indexer = PretrainedBertIndexer("bert-base-uncased")
 
-        passage1 = "There were four major HDTV systems tested by SMPTE in the late 1970s, and in 1979 an SMPTE study group released A Study of High Definition Television Systems:"
+        passage1 = ("There were four major HDTV systems tested by SMPTE in the late 1970s, "
+                    "and in 1979 an SMPTE study group released A Study of High Definition Television Systems:")
         question1 = "Who released A Study of High Definition Television Systems?"
 
-        passage2 = """Broca, being what today would be called a neurosurgeon, had taken an interest in the pathology of speech. He wanted to localize the difference between man and the other animals, which appeared to reside in speech. He discovered the speech center of the human brain, today called Broca's area after him. His interest was mainly in Biological anthropology, but a German philosopher specializing in psychology, Theodor Waitz, took up the theme of general and social anthropology in his six-volume work, entitled Die Anthropologie der Naturvölker, 1859–1864. The title was soon translated as "The Anthropology of Primitive Peoples". The last two volumes were published posthumously."""
+        passage2 = ("Broca, being what today would be called a neurosurgeon, "
+                    "had taken an interest in the pathology of speech. He wanted "
+                    "to localize the difference between man and the other animals, "
+                    "which appeared to reside in speech. He discovered the speech "
+                    "center of the human brain, today called Broca's area after him. "
+                    "His interest was mainly in Biological anthropology, but a German "
+                    "philosopher specializing in psychology, Theodor Waitz, took up the "
+                    "theme of general and social anthropology in his six-volume work, "
+                    "entitled Die Anthropologie der Naturvölker, 1859–1864. The title was "
+                    """soon translated as "The Anthropology of Primitive Peoples". """
+                    "The last two volumes were published posthumously.")
         question2 = "What did Broca discover in the human brain?"
 
         from allennlp.data.dataset_readers.reading_comprehension.util import make_reading_comprehension_instance
