@@ -327,21 +327,24 @@ class Text2SqlParser(Model):
 
         actions_grouped_by_nonterminal: Dict[str, List[Tuple[ProductionRule, int]]] = defaultdict(list)
         for i, action in enumerate(possible_actions):
+            # Avoid adding actions which correspond to padding.
             if action.rule == "":
                 continue
-            if action.is_global_rule:
-                actions_grouped_by_nonterminal[action.nonterminal].append((action, i))
-            else:
-                raise ValueError("The sql parser doesn't support non-global actions yet.")
+            actions_grouped_by_nonterminal[action.nonterminal].append((action, i))
 
-        for key, production_rule_arrays in actions_grouped_by_nonterminal.items():
+        # Production rule arrays is a list of tuples (production_rule, action id).
+        for key, production_rules in actions_grouped_by_nonterminal.items():
             translated_valid_actions[key] = {}
             # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid
             # productions of that non-terminal.  We'll first split those productions by global vs.
             # linked action.
             global_actions = []
-            for production_rule_array, action_index in production_rule_arrays:
-                global_actions.append((production_rule_array.rule_id, action_index))
+            linked_actions = []
+            for production_rule, action_index in production_rules:
+                if production_rule.is_global_rule:
+                    global_actions.append((production_rule.rule_id, action_index))
+                else:
+                    linked_actions.append((production_rule.rule, action_index))
 
             if global_actions:
                 global_action_tensors, global_action_ids = zip(*global_actions)
