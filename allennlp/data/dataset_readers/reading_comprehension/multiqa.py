@@ -46,6 +46,7 @@ class MultiQAReader(DatasetReader):
                  lazy: bool = False,
                  num_context_answers: int = 0,
                  max_context_size: int = 5000,
+                 num_of_examples_to_sample: int = None,
                  use_document_titles:bool= False) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
@@ -53,6 +54,7 @@ class MultiQAReader(DatasetReader):
         self._num_context_answers = num_context_answers
         self._max_context_size = max_context_size
         self._use_document_titles = use_document_titles
+        self._num_of_examples_to_sample = num_of_examples_to_sample
 
     @overrides
     def _read(self, file_path: str):
@@ -67,7 +69,13 @@ class MultiQAReader(DatasetReader):
 
         logger.info("Reading the dataset")
         skipped_context_count = 0
-        for context in dataset['contexts']:
+
+        if self._num_of_examples_to_sample is not None:
+            contexts = dataset['contexts'][0:self._num_of_examples_to_sample]
+        else:
+            contexts = dataset['contexts']
+
+        for context in contexts:
 
             # Processing each document separatly
             paragraph = ''
@@ -116,8 +124,8 @@ class MultiQAReader(DatasetReader):
             metadata['answer_texts_list'] = answer_texts_list
 
             # calculate new answer starts for the new combined document
-            span_starts_list = {}
-            span_ends_list = {}
+            span_starts_list = {'answers':[[] for qa in qas],'distractor_answers':[[] for qa in qas]}
+            span_ends_list = {'answers':[[] for qa in qas],'distractor_answers':[[] for qa in qas]}
             for qa_ind, qa in enumerate(qas):
                 if qa['answer_type'] == 'multi_choice':
                     answer_types = ['answers','distractor_answers']
@@ -125,8 +133,8 @@ class MultiQAReader(DatasetReader):
                     answer_types = ['answers']
 
                 for answer_type in answer_types:
-                    span_starts_list[answer_type] = [[] for qa in qas]
-                    span_ends_list[answer_type] = [[] for qa in qas]
+                    #span_starts_list[answer_type] = [[] for qa in qas]
+                    #span_ends_list[answer_type] = [[] for qa in qas]
                     for answer in qa[answer_type]:
                         for alias in answer['aliases']:
                             for alias_start in alias['answer_starts']:
