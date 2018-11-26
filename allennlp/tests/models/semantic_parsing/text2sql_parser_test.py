@@ -20,7 +20,7 @@ class Text2SqlParserTest(ModelTestCase):
         world = PrelinkedText2SqlWorld(self.schema)
 
         sql = ['SELECT', 'COUNT', '(', '*', ')', 'FROM', 'LOCATION', ',', 'RESTAURANT', ';']
-        action_sequence, valid_actions, _ = world.get_action_sequence_and_all_actions(sql)
+        action_sequence, valid_actions, _ = world.get_action_sequence_and_all_actions([], sql)
 
         grammar_state = GrammarStatelet(['statement'],
                                         valid_actions,

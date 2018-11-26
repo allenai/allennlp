@@ -16,7 +16,7 @@ from allennlp.nn.initializers import InitializerApplicator
 from allennlp.nn.regularizers import RegularizerApplicator
 from allennlp.semparse.contexts.sql_context_utils import action_sequence_to_sql
 from allennlp.state_machines.states import GrammarBasedState
-from allennlp.state_machines.transition_functions import BasicTransitionFunction
+from allennlp.state_machines.transition_functions import LinkingTransitionFunction
 from allennlp.state_machines import BeamSearch
 from allennlp.state_machines.trainers import MaximumMarginalLikelihood
 from allennlp.state_machines.states import GrammarStatelet, RnnStatelet
@@ -95,12 +95,12 @@ class Text2SqlParser(Model):
 
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood(beam_size=1)
-        self._transition_function = BasicTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
-                                                            action_embedding_dim=action_embedding_dim,
-                                                            input_attention=input_attention,
-                                                            predict_start_type_separately=False,
-                                                            add_action_bias=self._add_action_bias,
-                                                            dropout=dropout)
+        self._transition_function = LinkingTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
+                                                              action_embedding_dim=action_embedding_dim,
+                                                              input_attention=input_attention,
+                                                              predict_start_type_separately=False,
+                                                              add_action_bias=self._add_action_bias,
+                                                              dropout=dropout)
         initializer(self)
 
     @overrides
