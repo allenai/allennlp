@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Tuple, Optional, Set
 from collections import defaultdict
 
 import difflib
@@ -7,6 +7,9 @@ import sqlparse
 from overrides import overrides
 import torch
 
+from allennlp.semparse.contexts.sql_context_utils import format_action
+from allennlp.semparse.contexts.text2sql_table_context import GLOBAL_DATASET_VARIABLE_TYPES
+from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRule
 from allennlp.models.model import Model
@@ -24,6 +27,15 @@ from allennlp.training.metrics import Average
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+
+def create_entity_type_map(types: Dict[str, Set[Tuple[str, str, str]]]) -> Dict[str, int]:
+
+    all_entity_types = []
+    for variable, column_producers in types.items():
+        for (table, _, column) in column_producers:
+            all_entity_types.append(format_action(f"{table}_{column}_value", f"{variable}"))
+
+    return {entity_type: i for i, entity_type in enumerate(all_entity_types)}
 
 @Model.register("text2sql_parser")
 class Text2SqlParser(Model):
@@ -51,6 +63,9 @@ class Text2SqlParser(Model):
     dropout : ``float``, optional (default=0)
         If greater than 0, we will apply dropout with this probability after all encoders (pytorch
         LSTMs do not apply dropout to their last layer).
+    entity_type_key : ``str``, optional, (default = None)
+        The string key to retrieve the entities which can be linked to. This corresponds to the
+        dataset name.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -62,6 +77,7 @@ class Text2SqlParser(Model):
                  input_attention: Attention,
                  add_action_bias: bool = True,
                  dropout: float = 0.0,
+                 entity_type_key: str = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
@@ -93,6 +109,18 @@ class Text2SqlParser(Model):
         torch.nn.init.normal_(self._first_action_embedding)
         torch.nn.init.normal_(self._first_attended_utterance)
 
+        if entity_type_key is not None:
+            entity_types = GLOBAL_DATASET_VARIABLE_TYPES.get(entity_type_key, None)
+            if entity_types is None:
+                raise ConfigurationError("Invalid entity_type_key - this should be the dataset name.")
+
+            self._entity_type_map = create_entity_type_map(entity_types)
+            num_entity_types = len(self._entity_type_map)
+            self._entity_type_decoder_embedding = Embedding(num_entity_types, action_embedding_dim)
+        else:
+            self._entity_type_decoder_embedding = None
+            self._entity_type_map = None
+
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood(beam_size=1)
         self._transition_function = LinkingTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
@@ -107,6 +135,7 @@ class Text2SqlParser(Model):
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 valid_actions: List[List[ProductionRule]],
+                linking_scores: torch.Tensor = None,
                 action_sequence: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
@@ -136,7 +165,7 @@ class Text2SqlParser(Model):
 
         # (batch_size, num_tokens, encoder_output_dim)
         encoder_outputs = self._dropout(self._encoder(embedded_utterance, mask))
-        initial_state = self._get_initial_state(encoder_outputs, mask, valid_actions)
+        initial_state = self._get_initial_state(encoder_outputs, mask, valid_actions, linking_scores)
 
         if action_sequence is not None:
             # Remove the trailing dimension (from ListField[ListField[IndexField]]).
@@ -215,7 +244,8 @@ class Text2SqlParser(Model):
     def _get_initial_state(self,
                            encoder_outputs: torch.Tensor,
                            mask: torch.Tensor,
-                           actions: List[List[ProductionRule]]) -> GrammarBasedState:
+                           actions: List[List[ProductionRule]],
+                           linking_scores: torch.Tensor = None) -> GrammarBasedState:
 
         batch_size = encoder_outputs.size(0)
         # This will be our initial hidden state and memory cell for the decoder LSTM.
@@ -241,8 +271,12 @@ class Text2SqlParser(Model):
                                                  self._first_attended_utterance,
                                                  encoder_output_list,
                                                  utterance_mask_list))
+        if linking_scores is None:
+            initial_grammar_state = [self._create_grammar_state(actions[i]) for i in range(batch_size)]
+        else:
+            initial_grammar_state = [self._create_grammar_state(actions[i], linking_scores[i])
+                                     for i in range(batch_size)]
 
-        initial_grammar_state = [self._create_grammar_state(actions[i]) for i in range(batch_size)]
 
         initial_state = GrammarBasedState(batch_indices=list(range(batch_size)),
                                           action_history=[[] for _ in range(batch_size)],
@@ -305,7 +339,9 @@ class Text2SqlParser(Model):
                 'action_similarity': self._action_similarity.get_metric(reset)
                 }
 
-    def _create_grammar_state(self, possible_actions: List[ProductionRule]) -> GrammarStatelet:
+    def _create_grammar_state(self,
+                              possible_actions: List[ProductionRule],
+                              linking_scores: torch.Tensor = None) -> GrammarStatelet:
         """
         This method creates the GrammarStatelet object that's used for decoding.  Part of creating
         that is creating the `valid_actions` dictionary, which contains embedded representations of
@@ -358,6 +394,28 @@ class Text2SqlParser(Model):
                 translated_valid_actions[key]['global'] = (global_input_embeddings,
                                                            global_output_embeddings,
                                                            list(global_action_ids))
+
+            if linked_actions and linking_scores is None and self._entity_type_decoder_embedding is not None:
+                raise ConfigurationError("The grammar has linked actions, but no linking scores were passed.")
+
+            # Entity map: Dict[str, int] - just maps from entities to their indices.
+            # entity_types - mapping from
+
+            if linked_actions:
+                linked_rules, linked_action_ids = zip(*linked_actions)
+                entity_ids = [self._entity_type_map[rule] for rule in linked_rules]
+                entity_linking_scores = linking_scores[entity_ids]
+
+                # Note here we are just using linking scores to get the new tensors on the right device.
+                entity_type_ids = linking_scores.new_tensor([entity_ids], dtype=torch.long)
+
+                entity_type_embeddings = self._entity_type_decoder_embedding(entity_type_ids)
+                entity_type_embeddings = linking_scores.new_tensor(entity_type_embeddings, dtype=torch.float)
+
+                translated_valid_actions[key]['linked'] = (entity_linking_scores,
+                                                           entity_type_embeddings,
+                                                           list(linked_action_ids))
+
         return GrammarStatelet(['statement'],
                                translated_valid_actions,
                                self.is_nonterminal,
