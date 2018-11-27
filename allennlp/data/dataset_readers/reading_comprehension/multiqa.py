@@ -58,22 +58,24 @@ class MultiQAReader(DatasetReader):
 
     @overrides
     def _read(self, file_path: str):
-        # if `file_path` is a URL, redirect to the cache
-        file_path = cached_path(file_path)
-        logger.info("Reading file at %s", file_path)
-
-        with zipfile.ZipFile(file_path, 'r') as myzip:
-            with myzip.open(myzip.namelist()[0]) as myfile:
-                dataset_json = json.load(myfile)
-                dataset = dataset_json['data']
-
         logger.info("Reading the dataset")
+
+        # supporting multi dataset training:
+        contexts = []
+        for single_file_path in file_path.split(','):
+            # if `file_path` is a URL, redirect to the cache
+            single_file_path = cached_path(single_file_path)
+            logger.info("Reading file at %s", single_file_path)
+
+            with zipfile.ZipFile(single_file_path, 'r') as myzip:
+                with myzip.open(myzip.namelist()[0]) as myfile:
+                    dataset_json = json.load(myfile)
+                    contexts += dataset_json['data']['contexts']
+
         skipped_context_count = 0
 
         if self._num_of_examples_to_sample is not None:
-            contexts = dataset['contexts'][0:self._num_of_examples_to_sample]
-        else:
-            contexts = dataset['contexts']
+            contexts = contexts[0:self._num_of_examples_to_sample]
 
         for context in contexts:
 
