@@ -86,9 +86,9 @@ class BertEmbedder(TokenEmbedder):
 
         # input_ids may have extra dimensions, so we reshape down to 2-d
         # before calling the BERT model and then reshape back at the end.
-        all_encoder_layers, _ = self.bert_model(util.make2d(input_ids),
-                                                util.make2d(input_mask),
-                                                util.make2d(token_type_ids))
+        all_encoder_layers, _ = self.bert_model(util.combine_initial_dims(input_ids),
+                                                util.combine_initial_dims(input_mask),
+                                                util.combine_initial_dims(token_type_ids))
         if self._scalar_mix is not None:
             mix = self._scalar_mix(all_encoder_layers, input_mask)
         else:
@@ -98,17 +98,17 @@ class BertEmbedder(TokenEmbedder):
 
         if offsets is None:
             # Resize to (batch_size, d1, ..., dn, sequence_length, embedding_dim)
-            return util.unmake2d(mix, input_ids.size())
+            return util.uncombine_initial_dims(mix, input_ids.size())
         else:
             # offsets is (batch_size, d1, ..., dn, orig_sequence_length)
-            offsets2d = util.make2d(offsets)
+            offsets2d = util.combine_initial_dims(offsets)
             # now offsets is (batch_size * d1 * ... * dn, orig_sequence_length)
             range_vector = util.get_range_vector(offsets2d.size(0),
                                                  device=util.get_device_of(mix)).unsqueeze(1)
             # selected embeddings is also (batch_size * d1 * ... * dn, orig_sequence_length)
             selected_embeddings = mix[range_vector, offsets2d]
 
-            return util.unmake2d(selected_embeddings, offsets.size())
+            return util.uncombine_initial_dims(selected_embeddings, offsets.size())
 
 
 @TokenEmbedder.register("bert-pretrained")

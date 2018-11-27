@@ -1291,32 +1291,30 @@ def clone(module: torch.nn.Module, num_copies: int) -> torch.nn.ModuleList:
     return torch.nn.ModuleList([copy.deepcopy(module) for _ in range(num_copies)])
 
 
-def make2d(inputs: torch.Tensor) -> torch.Tensor:
+def combine_initial_dims(tensor: torch.Tensor) -> torch.Tensor:
     """
     Given a (possibly higher order) tensor of ids with shape
-    (batch_size, d1, ..., dn, sequence_length)
-    Return a view that's (batch_size * d1 * ... * dn, sequence_length).
+    (d1, ..., dn, sequence_length)
+    Return a view that's (d1 * ... * dn, sequence_length).
+    If original tensor is 1-d or 2-d, return it as is.
     """
-    if inputs.dim() < 2:
-        raise ValueError("make2d only works on tensors that are 2-d or greater")
-    elif inputs.dim() > 2:
-        return inputs.view(-1, inputs.size(-1))
+    if tensor.dim() <= 2:
+        return tensor
     else:
-        return inputs
+        return tensor.view(-1, tensor.size(-1))
 
-def unmake2d(inputs: torch.Tensor, original_size: torch.Size) -> torch.Tensor:
+def uncombine_initial_dims(tensor: torch.Tensor, original_size: torch.Size) -> torch.Tensor:
     """
     Given a tensor of embeddings with shape
-    (batch_size * d1 * ... * dn, sequence_length, embedding_dim)
+    (d1 * ... * dn, sequence_length, embedding_dim)
     and the original shape
-    (batch_size, d1, ..., dn, sequence_length),
+    (d1, ..., dn, sequence_length),
     return the reshaped tensor of embeddings with shape
-    (batch_size, d1, ..., dn, sequence_length, embedding_dim)
+    (d1, ..., dn, sequence_length, embedding_dim).
+    If original size is 1-d or 2-d, return it as is.
     """
-    if len(original_size) < 2:
-        raise ValueError("unmake2d only works if original size is 2-d or greater")
-    elif len(original_size) > 2:
-        view_args = list(original_size) + [inputs.size(-1)]
-        return inputs.view(*view_args)
+    if len(original_size) <= 2:
+        return tensor
     else:
-        return inputs
+        view_args = list(original_size) + [tensor.size(-1)]
+        return tensor.view(*view_args)

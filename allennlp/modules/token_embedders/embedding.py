@@ -121,10 +121,11 @@ class Embedding(TokenEmbedder):
     @overrides
     def forward(self, inputs):  # pylint: disable=arguments-differ
         # inputs may have extra dimensions (batch_size, d1, ..., dn, sequence_length),
-        # but embedding expects (batch_size, sequence_length), so pass inputs to util.make2d
-        # (which is a no-op if there are no extra dimensions). Remember the original size.
+        # but embedding expects (batch_size, sequence_length), so pass inputs to
+        # util.combine_initial_dims (which is a no-op if there are no extra dimensions).
+        # Remember the original size.
         original_size = inputs.size()
-        inputs = util.make2d(inputs)
+        inputs = util.combine_initial_dims(inputs)
 
         embedded = embedding(inputs, self.weight,
                              max_norm=self.max_norm,
@@ -133,7 +134,7 @@ class Embedding(TokenEmbedder):
                              sparse=self.sparse)
 
         # Now (if necessary) add back in the extra dimensions.
-        embedded = util.unmake2d(embedded, original_size)
+        embedded = util.uncombine_initial_dims(embedded, original_size)
 
         if self._projection:
             projection = self._projection
