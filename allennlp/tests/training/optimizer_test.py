@@ -17,11 +17,11 @@ class TestOptimizer(AllenNlpTestCase):
         self.model_params = Params({
                 "text_field_embedder": {
                         "token_embedders": {
-                            "tokens": {
-                                    "type": "embedding",
-                                    "embedding_dim": 5
-                                    }
-                            }
+                                "tokens": {
+                                        "type": "embedding",
+                                        "embedding_dim": 5
+                                        }
+                                }
                         },
                 "encoder": {
                         "type": "lstm",
@@ -84,12 +84,12 @@ class TestDenseSparseAdam(AllenNlpTestCase):
         self.model_params = Params({
                 "text_field_embedder": {
                         "token_embedders": {
-                            "tokens": {
-                                    "type": "embedding",
-                                    "embedding_dim": 5,
-                                    "sparse": True
-                                    }
-                            }
+                                "tokens": {
+                                        "type": "embedding",
+                                        "embedding_dim": 5,
+                                        "sparse": True
+                                        }
+                                }
                         },
                 "encoder": {
                         "type": "lstm",
