@@ -21,7 +21,7 @@ import logging
 
 from flask import Flask, request, Response, jsonify, send_file
 
-from allennlp.common.configuration import configure, Config
+from allennlp.common.configuration import configure, Config, choices
 from allennlp.common.util import import_submodules
 from allennlp.service.server_simple import ServerError
 
@@ -55,8 +55,19 @@ def make_app(include_packages: Sequence[str] = ()) -> Flask:
         """
         return send_file('config_explorer.html')
 
+    @app.route('/api/choices/')
+    def api_choices() -> Response:  # pylint: disable=unused-variable
+        class_name = request.args.get('class', '')
+
+        choice5 = choices(class_name)
+
+        return jsonify({
+                "className": class_name,
+                "choices": choice5
+        })
+
     @app.route('/api/config/')
-    def api() -> Response:  # pylint: disable=unused-variable
+    def api_config() -> Response:  # pylint: disable=unused-variable
         class_name = request.args.get('class', '')
 
         config = configure(class_name)

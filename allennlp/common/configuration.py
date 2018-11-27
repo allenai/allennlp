@@ -418,6 +418,15 @@ def _valid_choices(cla55: type) -> Dict[str, str]:
 
     return choices
 
+def choices(full_path: str = '') -> List[str]:
+    parts = full_path.split(".")
+    class_name = parts[-1]
+    module_name = ".".join(parts[:-1])
+    module = importlib.import_module(module_name)
+    cla55 = getattr(module, class_name)
+    return list(_valid_choices(cla55).values())
+
+
 def configure(full_path: str = '') -> Union[Config, List[str]]:
     if not full_path:
         return BASE_CONFIG
@@ -427,8 +436,4 @@ def configure(full_path: str = '') -> Union[Config, List[str]]:
     module_name = ".".join(parts[:-1])
     module = importlib.import_module(module_name)
     cla55 = getattr(module, class_name)
-
-    if Registrable in getattr(cla55, '__bases__', ()):
-        return list(_valid_choices(cla55).values())
-    else:
-        return _auto_config(cla55)
+    return _auto_config(cla55)

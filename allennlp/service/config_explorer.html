@@ -394,6 +394,9 @@
                         <div class="tree">
                             <Config path={Immutable.List(['value'])} setData={this.setData} config={config} />
                         </div>
+                        <div class="complete">
+                            <p>{this.state.data.get('completed') ? "TRUE" : "FALSE"}</p>
+                        </div>
                         <JsonBox config={config} />
                     </div>
                 )
@@ -598,7 +601,7 @@
             let prefix = choices ? commonPrefix(choices) : null
 
             const getChoices = () => {
-                fetch(`${baseApi}/api/config/?class=${className}`)
+                fetch(`${baseApi}/api/choices/?class=${className}`)
                     .then(res => res.json())
                     .then(({ config, choices }) => {
                         if (choices) {
