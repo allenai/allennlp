@@ -1297,7 +1297,9 @@ def make2d(inputs: torch.Tensor) -> torch.Tensor:
     (batch_size, d1, ..., dn, sequence_length)
     Return a view that's (batch_size * d1 * ... * dn, sequence_length).
     """
-    if inputs.dim() > 2:
+    if inputs.dim() < 2:
+        raise ValueError("make2d only works on tensors that are 2-d or greater")
+    elif inputs.dim() > 2:
         return inputs.view(-1, inputs.size(-1))
     else:
         return inputs
@@ -1311,7 +1313,9 @@ def unmake2d(inputs: torch.Tensor, original_size: torch.Size) -> torch.Tensor:
     return the reshaped tensor of embeddings with shape
     (batch_size, d1, ..., dn, sequence_length, embedding_dim)
     """
-    if len(original_size) > 2:
+    if len(original_size) < 2:
+        raise ValueError("unmake2d only works if original size is 2-d or greater")
+    elif len(original_size) > 2:
         view_args = list(original_size) + [inputs.size(-1)]
         return inputs.view(*view_args)
     else:
