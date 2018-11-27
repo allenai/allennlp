@@ -850,3 +850,15 @@ class TestNnUtil(AllenNlpTestCase):
                 }
             ]
         })
+
+    def test_make_2d(self):
+        tensor = torch.randn(4, 10, 20, 17, 5)
+
+        tensor2d = util.make2d(tensor)
+        assert list(tensor2d.size()) == [4 * 10 * 20 * 17, 5]
+
+    def test_unmake_2d(self):
+        embedding2d = torch.randn(4 * 10 * 20 * 17 * 5, 12)
+
+        embedding = util.unmake2d(embedding2d, torch.Size((4, 10, 20, 17, 5)))
+        assert list(embedding.size()) == [4, 10, 20, 17, 5, 12]
