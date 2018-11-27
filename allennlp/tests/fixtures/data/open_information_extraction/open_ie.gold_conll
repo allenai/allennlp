@@ -184,3 +184,31 @@ train/train/01	0	40	8.95	XX	-	-	-	-	-	*	*	*	*	-
 train/train/01	0	41	%	XX	-	-	-	-	-	*	*)	*	*	-
 train/train/01	0	42	.	XX	-	-	-	-	-	*	*	*	*	-
 
+train/train/01	0	0	Georges	XX	-	-	-	-	-	*	*	(ARG0*	*	*	-
+train/train/01	0	1	Lechartier	XX	-	-	-	-	-	*	*	*)	*	*	-
+train/train/01	0	2	wrote	XX	-	-	-	-	-	*	*	(V*)	*	*	-
+train/train/01	0	3	:	XX	-	-	-	-	-	*	*	*	*	*	-
+train/train/01	0	4	"	XX	-	-	-	-	-	*	*	*	*	*	-
+train/train/01	0	5	The	XX	-	-	-	-	-	*	*	(ARG1*	(ARG0*	(BV*	-
+train/train/01	0	6	true	XX	-	-	-	-	-	*	*	*	*	*	-
+train/train/01	0	7	founder	XX	-	-	-	-	-	*	*	*	*	*)	-
+train/train/01	0	8	of	XX	-	-	-	-	-	*	*	*	*	(V*)	-
+train/train/01	0	9	anarchy	XX	-	-	-	-	-	*	*	*	*)	(ARG1*)	-
+train/train/01	0	10	was	XX	-	-	-	-	-	*	*	*	(V*)	*	-
+train/train/01	0	11	Jesus	XX	-	-	-	-	-	*	*	*	(ARG1*	(ARG0*	-
+train/train/01	0	12	Christ	XX	-	-	-	-	-	*	*	*	*)	*)	-
+train/train/01	0	13	and	XX	-	-	-	-	-	*	*	*	*	*	-
+train/train/01	0	14	 	XX	-	-	-	-	-	*	*	*	*	*	-
+train/train/01	0	15	...	XX	-	-	-	-	-	*	(ARG0*	*	*	*	-
+train/train/01	0	16	the	XX	-	-	-	-	-	*	*	*	*	*	-
+train/train/01	0	17	first	XX	-	-	-	-	-	*	*	*	*	*	-
+train/train/01	0	18	anarchist	XX	-	-	-	-	-	*	(BV*	*	*	*	-
+train/train/01	0	19	society	XX	-	-	-	-	-	*	(V*))	*	*	*	-
+train/train/01	0	20	was	XX	-	-	-	-	-	*	(ARG1*)	*	*	*	-
+train/train/01	0	21	that	XX	-	-	-	-	-	*	*	*	*	*	-
+train/train/01	0	22	of	XX	-	-	-	-	-	*	*	*	*	*	-
+train/train/01	0	23	the	XX	-	-	-	-	-	*	*	*	*	*	-
+train/train/01	0	24	apostles	XX	-	-	-	-	-	*	*)	*)	*	*	-
+train/train/01	0	25	"	XX	-	-	-	-	-	*	*	*	*	*	-
+train/train/01	0	26	.	XX	-	-	-	-	-	*	*	*	*	*	-
+
