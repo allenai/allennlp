@@ -1294,7 +1294,7 @@ def clone(module: torch.nn.Module, num_copies: int) -> torch.nn.ModuleList:
 def make2d(inputs: torch.Tensor) -> torch.Tensor:
     """
     Given a (possibly higher order) tensor of ids with shape
-        (batch_size, d1, ..., dn, sequence_length)
+    (batch_size, d1, ..., dn, sequence_length)
     Return a view that's (batch_size * d1 * ... * dn, sequence_length).
     """
     if inputs.dim() > 2:
@@ -1305,11 +1305,11 @@ def make2d(inputs: torch.Tensor) -> torch.Tensor:
 def unmake2d(inputs: torch.Tensor, original_size: torch.Size) -> torch.Tensor:
     """
     Given a tensor of embeddings with shape
-        (batch_size * d1 * ... * dn, sequence_length, embedding_dim)
+    (batch_size * d1 * ... * dn, sequence_length, embedding_dim)
     and the original shape
-        (batch_size, d1, ..., dn, sequence_length),
+    (batch_size, d1, ..., dn, sequence_length),
     return the reshaped tensor of embeddings with shape
-        (batch_size, d1, ..., dn, sequence_length, embedding_dim)
+    (batch_size, d1, ..., dn, sequence_length, embedding_dim)
     """
     if len(original_size) > 2:
         view_args = list(original_size) + [inputs.size(-1)]
