@@ -23,7 +23,7 @@ class TestPredict(AllenNlpTestCase):
     def setUp(self):
         super(TestPredict, self).setUp()
         self.bidaf_model_path = (self.FIXTURES_ROOT / "bidaf" /
-                                 "serialization")
+                                 "serialization" / "model.tar.gz")
         self.bidaf_data_path = self.FIXTURES_ROOT / 'data' / 'squad.json'
         self.tempdir = pathlib.Path(tempfile.mkdtemp())
         self.infile = self.tempdir / "inputs.txt"

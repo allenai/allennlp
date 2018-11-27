@@ -67,7 +67,7 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
                                   for name, parameter in original_model_parameters}
         # pylint: disable=line-too-long
         mml_model_archive_file = (self.FIXTURES_ROOT / "semantic_parsing" / "nlvr_direct_semantic_parser" /
-                                  "serialization")
+                                  "serialization" / "model.tar.gz")
         archive = load_archive(mml_model_archive_file)
         archived_model_parameters = archive.model.named_parameters()
         self.model._initialize_weights_from_archive(archive)
@@ -87,7 +87,7 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
     def test_get_vocab_index_mapping(self):
         # pylint: disable=line-too-long
         mml_model_archive_file = (self.FIXTURES_ROOT / "semantic_parsing" / "nlvr_direct_semantic_parser" /
-                                  "serialization")
+                                  "serialization" / "model.tar.gz")
         archive = load_archive(mml_model_archive_file)
         mapping = self.model._get_vocab_index_mapping(archive.model.vocab)
         expected_mapping = [(i, i) for i in range(16)]

@@ -13,7 +13,7 @@ class TestConstituencyParserPredictor(AllenNlpTestCase):
                 "sentence": "What a great test sentence.",
         }
 
-        archive = load_archive(self.FIXTURES_ROOT / 'constituency_parser' / 'serialization')
+        archive = load_archive(self.FIXTURES_ROOT / 'constituency_parser' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'constituency-parser')
 
         result = predictor.predict_json(inputs)
@@ -32,7 +32,7 @@ class TestConstituencyParserPredictor(AllenNlpTestCase):
                 {"sentence": "Here's another good, interesting one."}
         ]
 
-        archive = load_archive(self.FIXTURES_ROOT / 'constituency_parser' / 'serialization')
+        archive = load_archive(self.FIXTURES_ROOT / 'constituency_parser' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'constituency-parser')
         results = predictor.predict_batch_json(inputs)
 
@@ -57,7 +57,7 @@ class TestConstituencyParserPredictor(AllenNlpTestCase):
 
     def test_build_hierplane_tree(self):
         tree = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
-        archive = load_archive(self.FIXTURES_ROOT / 'constituency_parser' / 'serialization')
+        archive = load_archive(self.FIXTURES_ROOT / 'constituency_parser' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'constituency-parser')
 
         hierplane_tree = predictor._build_hierplane_tree(tree, 0, is_root=True)

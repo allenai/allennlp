@@ -10,7 +10,7 @@ class TestSrlPredictor(AllenNlpTestCase):
                 "sentence": "The squirrel wrote a unit test to make sure its nuts worked as designed."
         }
 
-        archive = load_archive(self.FIXTURES_ROOT / 'srl' / 'serialization')
+        archive = load_archive(self.FIXTURES_ROOT / 'srl' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'semantic-role-labeling')
 
         result = predictor.predict_json(inputs)
@@ -39,7 +39,7 @@ class TestSrlPredictor(AllenNlpTestCase):
         inputs = {
                 "sentence": "The squirrel wrote a unit test to make sure its nuts worked as designed."
         }
-        archive = load_archive(self.FIXTURES_ROOT / 'srl' / 'serialization')
+        archive = load_archive(self.FIXTURES_ROOT / 'srl' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'semantic-role-labeling')
         result = predictor.predict_batch_json([inputs, inputs])
         assert result[0] == result[1]
@@ -47,7 +47,7 @@ class TestSrlPredictor(AllenNlpTestCase):
     def test_prediction_with_no_verbs(self):
 
         input1 = {"sentence": "Blah no verb sentence."}
-        archive = load_archive(self.FIXTURES_ROOT / 'srl' / 'serialization')
+        archive = load_archive(self.FIXTURES_ROOT / 'srl' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'semantic-role-labeling')
         result = predictor.predict_json(input1)
         assert result == {'words': ['Blah', 'no', 'verb', 'sentence', '.'], 'verbs': []}

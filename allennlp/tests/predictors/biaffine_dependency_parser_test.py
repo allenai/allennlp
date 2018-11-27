@@ -12,7 +12,7 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
         }
 
         archive = load_archive(self.FIXTURES_ROOT / 'biaffine_dependency_parser'
-                               / 'serialization')
+                               / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'biaffine-dependency-parser')
 
         result = predictor.predict_json(inputs)
@@ -58,7 +58,7 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
         ]
 
         archive = load_archive(self.FIXTURES_ROOT / 'biaffine_dependency_parser'
-                               / 'serialization')
+                               / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'biaffine-dependency-parser')
 
         results = predictor.predict_batch_json(inputs)
@@ -77,7 +77,7 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
     def test_predictor_uses_dataset_reader_to_determine_pos_set(self):
         # pylint: disable=protected-access
         archive = load_archive(self.FIXTURES_ROOT / 'biaffine_dependency_parser'
-                               / 'serialization')
+                               / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'biaffine-dependency-parser')
 
         inputs = {

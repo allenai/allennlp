@@ -9,7 +9,7 @@ class TestAtisParserPredictor(AllenNlpTestCase):
                 "utterance": "show me the flights to seattle",
         }
 
-        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'atis' / 'serialization'
+        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'atis' / 'serialization' / 'model.tar.gz'
         archive = load_archive(archive_path)
         predictor = Predictor.from_archive(archive, 'atis-parser')
 
@@ -29,7 +29,7 @@ class TestAtisParserPredictor(AllenNlpTestCase):
                 "utterance": "show me flights to seattle"
         }
 
-        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'atis' / 'serialization'
+        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'atis' / 'serialization' / 'model.tar.gz'
         archive = load_archive(archive_path)
         predictor = Predictor.from_archive(archive, 'atis-parser')
 
@@ -42,7 +42,7 @@ class TestAtisParserPredictor(AllenNlpTestCase):
                 "utterance": "show me flights to seattle",
         }]
 
-        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'atis' / 'serialization'
+        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'atis' / 'serialization' / 'model.tar.gz'
         archive = load_archive(archive_path)
         predictor = Predictor.from_archive(archive, 'atis-parser')
 

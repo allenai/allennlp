@@ -25,7 +25,7 @@ class TestNlvrParserPredictor(AllenNlpTestCase):
 
     def test_predictor_with_coverage_parser(self):
         archive_dir = self.FIXTURES_ROOT / 'semantic_parsing' / 'nlvr_coverage_semantic_parser' / 'serialization'
-        archive = load_archive(archive_dir)
+        archive = load_archive(os.path.join(archive_dir, 'model.tar.gz'))
         predictor = Predictor.from_archive(archive, 'nlvr-parser')
 
         result = predictor.predict_json(self.inputs)
@@ -37,7 +37,7 @@ class TestNlvrParserPredictor(AllenNlpTestCase):
 
     def test_predictor_with_direct_parser(self):
         archive_dir = self.FIXTURES_ROOT / 'semantic_parsing' / 'nlvr_direct_semantic_parser' / 'serialization'
-        archive = load_archive(archive_dir)
+        archive = load_archive(os.path.join(archive_dir, 'model.tar.gz'))
         predictor = Predictor.from_archive(archive, 'nlvr-parser')
 
         result = predictor.predict_json(self.inputs)

@@ -9,7 +9,7 @@ class TestCorefPredictor(AllenNlpTestCase):
     def test_uses_named_inputs(self):
         inputs = {"document": "This is a single string document about a test. Sometimes it "
                               "contains coreferent parts."}
-        archive = load_archive(self.FIXTURES_ROOT / 'coref' / 'serialization')
+        archive = load_archive(self.FIXTURES_ROOT / 'coref' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'coreference-resolution')
 
         result = predictor.predict_json(inputs)
