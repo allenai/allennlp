@@ -6,13 +6,14 @@ import torch
 import torch.nn.functional as F
 from torch.nn.functional import nll_loss
 
-from allennlp.common import squad_eval
+from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
-from allennlp.modules.matrix_attention.linear_matrix_attention import LinearMatrixAttention
 from allennlp.modules.input_variational_dropout import InputVariationalDropout
+from allennlp.modules.matrix_attention.linear_matrix_attention import LinearMatrixAttention
 from allennlp.nn import InitializerApplicator, util
+from allennlp.tools import squad_eval
 from allennlp.training.metrics import Average, BooleanAccuracy, CategoricalAccuracy
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -92,6 +93,12 @@ class DialogQA(Model):
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(self._encoding_dim, 1))
         self._span_yesno_predictor = TimeDistributed(torch.nn.Linear(self._encoding_dim, 3))
         self._span_followup_predictor = TimeDistributed(self._followup_lin)
+
+        check_dimensions_match(phrase_layer.get_input_dim(),
+                               text_field_embedder.get_output_dim() +
+                               marker_embedding_dim * num_context_answers,
+                               "phrase layer input dim",
+                               "embedding dim + marker dim * num context answers")
 
         initializer(self)
 
@@ -270,10 +277,10 @@ class DialogQA(Model):
                                                                           repeated_passage_mask))
         self_attention_matrix = self._self_attention(residual_layer, residual_layer)
 
-        mask = repeated_passage_mask.resize(total_qa_count, passage_length, 1) \
-               * repeated_passage_mask.resize(total_qa_count, 1, passage_length)
+        mask = repeated_passage_mask.reshape(total_qa_count, passage_length, 1) \
+               * repeated_passage_mask.reshape(total_qa_count, 1, passage_length)
         self_mask = torch.eye(passage_length, passage_length, device=self_attention_matrix.device)
-        self_mask = self_mask.resize(1, passage_length, passage_length)
+        self_mask = self_mask.reshape(1, passage_length, passage_length)
         mask = mask * (1 - self_mask)
 
         self_attention_probs = util.masked_softmax(self_attention_matrix, mask)

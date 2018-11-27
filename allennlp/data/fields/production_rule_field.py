@@ -1,18 +1,26 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, NamedTuple
 
 import torch
 from overrides import overrides
 
+from allennlp.common.util import ScatterableList
 from allennlp.data.fields.field import Field
 from allennlp.data.vocabulary import Vocabulary
 
-ProductionRuleArray = Tuple[str, bool, Optional[torch.Tensor]]  # pylint: disable=invalid-name
+class ProductionRule(NamedTuple):
+    rule: str
+    is_global_rule: bool
+    rule_id: Optional[torch.LongTensor] = None
+    nonterminal: Optional[str] = None
+
+# This is just here for backward compatability.
+ProductionRuleArray = ProductionRule
 
 # mypy doesn't like that we're using a crazy data type - the data type we use here is _supposed_ to
-# be in the bounds of DataArray, but ProductionRuleArray definitely isn't.  TODO(mattg): maybe we
+# be in the bounds of DataArray, but ProductionRule definitely isn't.  TODO(mattg): maybe we
 # should find a better way to loosen those bounds, or let people extend them.  E.g., we could have
 # DataArray be a class, and let people subclass it, or something.
-class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
+class ProductionRuleField(Field[ProductionRule]):  # type: ignore
     """
     This ``Field`` represents a production rule from a grammar, like "S -> [NP, VP]", "N -> John",
     or "<b,c> -> [<a,<b,c>>, a]".
@@ -41,13 +49,12 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
     training instance.  A model using this field will have to manually batch together rule
     representations after splitting apart the global rules from the ``Instance`` rules.
 
-    In a model, this will get represented as a ``ProductionRuleArray``, which is defined above as
-    ``Tuple[str, bool, Optional[torch.Tensor]]``.  This is a tuple of ``(rule_string,
-    is_global_rule, [rule_id])``, where the ``rule_id`` ``Tensor``, if present, will have shape
-    ``(1,)``.  We don't do any batching of the ``Tensors``, so this gets passed to
-    ``Model.forward()`` as a ``List[ProductionRuleArray]``.  We pass along the rule string because
-    there isn't another way to recover it for instance-specific rules that do not make it into the
-    vocabulary.
+    In a model, this will get represented as a ``ProductionRule``, which is defined above.
+    This is a namedtuple of ``(rule_string, is_global_rule, [rule_id], nonterminal)``, where the
+    ``rule_id`` ``Tensor``, if present, will have shape ``(1,)``.  We don't do any batching of the
+    ``Tensors``, so this gets passed to ``Model.forward()`` as a ``List[ProductionRule]``.  We
+    pass along the rule string because there isn't another way to recover it for instance-specific
+    rules that do not make it into the vocabulary.
 
     Parameters
     ----------
@@ -60,12 +67,17 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
         The vocabulary namespace to use for the global production rules.  We use "rule_labels" by
         default, because we typically do not want padding and OOV tokens for these, and ending the
         namespace with "labels" means we don't get padding and OOV tokens.
+    nonterminal : ``str``, optional, default = None
+        The left hand side of the rule. Sometimes having this as separate part of the ``ProductionRule``
+        can deduplicate work.
     """
     def __init__(self,
                  rule: str,
                  is_global_rule: bool,
-                 vocab_namespace: str = 'rule_labels') -> None:
+                 vocab_namespace: str = 'rule_labels',
+                 nonterminal: str = None) -> None:
         self.rule = rule
+        self.nonterminal = nonterminal
         self.is_global_rule = is_global_rule
         self._vocab_namespace = vocab_namespace
         self._rule_id: int = None
@@ -86,13 +98,13 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
         return {}
 
     @overrides
-    def as_tensor(self, padding_lengths: Dict[str, int]) -> ProductionRuleArray:
+    def as_tensor(self, padding_lengths: Dict[str, int]) -> ProductionRule:
         # pylint: disable=unused-argument
         if self.is_global_rule:
             tensor = torch.LongTensor([self._rule_id])
         else:
             tensor = None
-        return (self.rule, self.is_global_rule, tensor)
+        return ProductionRule(self.rule, self.is_global_rule, tensor, self.nonterminal)
 
     @overrides
     def empty_field(self): # pylint: disable=no-self-use
@@ -102,6 +114,10 @@ class ProductionRuleField(Field[ProductionRuleArray]):  # type: ignore
         return ProductionRuleField(rule='', is_global_rule=False)
 
     @overrides
-    def batch_tensors(self, tensor_list: List[ProductionRuleArray]) -> ProductionRuleArray:
+    def batch_tensors(self, tensor_list: List[ProductionRule]) -> ScatterableList:  # type: ignore
         # pylint: disable=no-self-use
-        return tensor_list  # type: ignore
+        return ScatterableList(tensor_list)
+
+    def __str__(self) -> str:
+        return f"ProductionRuleField with rule: {self.rule} (is_global_rule: " \
+               f"{self.is_global_rule}) in namespace: '{self._vocab_namespace}'.'"

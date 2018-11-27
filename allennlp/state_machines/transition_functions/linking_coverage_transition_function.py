@@ -30,13 +30,16 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
     encoder_output_dim : ``int``
     action_embedding_dim : ``int``
     input_attention : ``Attention``
-    num_start_types : ``int``
     activation : ``Activation``, optional (default=relu)
         The activation that gets applied to the decoder LSTM input and to the action query.
     predict_start_type_separately : ``bool``, optional (default=True)
         If ``True``, we will predict the initial action (which is typically the base type of the
         logical form) using a different mechanism than our typical action decoder.  We basically
         just do a projection of the hidden state, and don't update the decoder RNN.
+    num_start_types : ``int``, optional (default=None)
+        If ``predict_start_type_separately`` is ``True``, this is the number of start types that
+        are in the grammar.  We need this so we can construct parameters with the right shape.
+        This is unused if ``predict_start_type_separately`` is ``False``.
     add_action_bias : ``bool``, optional (default=True)
         If ``True``, there has been a bias dimension added to the embedding of each action, which
         gets used when predicting the next action.  We add a dimension of ones to our predicted
@@ -47,9 +50,9 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
                  encoder_output_dim: int,
                  action_embedding_dim: int,
                  input_attention: Attention,
-                 num_start_types: int,
                  activation: Activation = Activation.by_name('relu')(),
                  predict_start_type_separately: bool = True,
+                 num_start_types: int = None,
                  add_action_bias: bool = True,
                  mixture_feedforward: FeedForward = None,
                  dropout: float = 0.0) -> None:
@@ -76,7 +79,7 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
                                       hidden_state: torch.Tensor,
                                       attention_weights: torch.Tensor,
                                       predicted_action_embeddings: torch.Tensor
-                                     ) -> Dict[int, List[Tuple[int, Any, Any, List[int]]]]:
+                                     ) -> Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]]:
         # In this section we take our predicted action embedding and compare it to the available
         # actions in our current state (which might be different for each group element).  For
         # computing action scores, we'll forget about doing batched / grouped computation, as it
@@ -87,7 +90,7 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
         group_size = len(state.batch_indices)
         actions = state.get_valid_actions()
 
-        batch_results: Dict[int, List[Tuple[int, torch.Tensor, torch.Tensor, List[int]]]] = defaultdict(list)
+        batch_results: Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]] = defaultdict(list)
         for group_index in range(group_size):
             instance_actions = actions[group_index]
             predicted_action_embedding = predicted_action_embeddings[group_index]
@@ -149,6 +152,7 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
             log_probs = state.score[group_index] + current_log_probs
             batch_results[state.batch_indices[group_index]].append((group_index,
                                                                     log_probs,
+                                                                    current_log_probs,
                                                                     output_action_embeddings,
                                                                     action_ids))
         return batch_results

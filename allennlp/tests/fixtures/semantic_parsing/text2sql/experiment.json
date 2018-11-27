@@ -1,0 +1,46 @@
+{
+  "dataset_reader": {
+    "type": "grammar_based_text2sql",
+    "database_file": "allennlp/tests/fixtures/data/text2sql/restaurants.db",
+    "schema_path": "allennlp/tests/fixtures/data/text2sql/restaurants-schema.csv"
+  },
+  "train_data_path": "allennlp/tests/fixtures/data/text2sql/restaurants_tiny.json",
+  "validation_data_path": "allennlp/tests/fixtures/data/text2sql/restaurants_tiny.json",
+  "model": {
+    "type": "text2sql_parser",
+    "utterance_embedder": {
+      "tokens": {
+        "type": "embedding",
+        "embedding_dim": 5,
+        "trainable": true
+      }
+    },
+    "action_embedding_dim": 10,
+    "encoder": {
+      "type": "lstm",
+      "input_size": 5,
+      "hidden_size": 7,
+      "bidirectional": true,
+      "num_layers": 1
+    },
+    "decoder_beam_search": {
+    "beam_size": 5
+    },
+    "max_decoding_steps": 10,
+    "input_attention": {"type": "dot_product"},
+    "dropout": 0.5
+  },
+  "iterator": {
+    "type": "basic",
+    "batch_size" : 4
+  },
+  "trainer": {
+    "num_epochs": 2,
+    "patience": 5,
+    "cuda_device": -1,
+    "optimizer": {
+      "type": "sgd",
+      "lr": 0.1
+    }
+  }
+}

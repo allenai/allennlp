@@ -44,7 +44,7 @@ class TestListField(AllenNlpTestCase):
         list_field = ListField([self.field1, self.field2, self.field3])
         list_field.index(self.vocab)
         lengths = list_field.get_padding_lengths()
-        assert lengths == {"num_fields": 3, "list_num_tokens": 5}
+        assert lengths == {"num_fields": 3, "list_words_length": 5, "list_num_tokens": 5}
 
     def test_list_field_can_handle_empty_text_fields(self):
         list_field = ListField([self.field1, self.field2, self.empty_text_field])
@@ -99,7 +99,7 @@ class TestListField(AllenNlpTestCase):
         list_field = ListField([self.field1, self.field2, self.field3])
         list_field.index(self.vocab)
         padding_lengths = list_field.get_padding_lengths()
-        padding_lengths["list_num_tokens"] = 7
+        padding_lengths["list_words_length"] = 7
         padding_lengths["num_fields"] = 5
         tensor_dict = list_field.as_tensor(padding_lengths)
         numpy.testing.assert_array_almost_equal(tensor_dict["words"][0].detach().cpu().numpy(),
@@ -181,3 +181,10 @@ class TestListField(AllenNlpTestCase):
     def test_printing_doesnt_crash(self):
         list_field = ListField([self.field1, self.field2])
         print(list_field)
+
+    def test_sequence_methods(self):
+        list_field = ListField([self.field1, self.field2, self.field3])
+
+        assert len(list_field) == 3
+        assert list_field[1] == self.field2
+        assert [f for f in list_field] == [self.field1, self.field2, self.field3]

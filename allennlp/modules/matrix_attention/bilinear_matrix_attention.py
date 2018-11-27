@@ -30,17 +30,26 @@ class BilinearMatrixAttention(MatrixAttention):
         If True, we add biases to the inputs such that the final computation
         is equivelent to the original bilinear matrix multiplication plus a
         projection of both inputs.
+    label_dim : ``int``, optional (default = 1)
+        The number of output classes. Typically in an attention setting this will be one,
+        but this parameter allows this class to function as an equivelent to ``torch.nn.Bilinear``
+        for matrices, rather than vectors.
     """
     def __init__(self,
                  matrix_1_dim: int,
                  matrix_2_dim: int,
                  activation: Activation = None,
-                 use_input_biases: bool = False) -> None:
+                 use_input_biases: bool = False,
+                 label_dim: int = 1) -> None:
         super().__init__()
         if use_input_biases:
             matrix_1_dim += 1
             matrix_2_dim += 1
-        self._weight_matrix = Parameter(torch.Tensor(matrix_1_dim, matrix_2_dim))
+
+        if label_dim == 1:
+            self._weight_matrix = Parameter(torch.Tensor(matrix_1_dim, matrix_2_dim))
+        else:
+            self._weight_matrix = Parameter(torch.Tensor(label_dim, matrix_1_dim, matrix_2_dim))
 
         self._bias = Parameter(torch.Tensor(1))
         self._activation = activation or Activation.by_name('linear')()
@@ -60,6 +69,10 @@ class BilinearMatrixAttention(MatrixAttention):
 
             matrix_1 = torch.cat([matrix_1, bias1], -1)
             matrix_2 = torch.cat([matrix_2, bias2], -1)
-        intermediate = torch.matmul(matrix_1.unsqueeze(1), self._weight_matrix.unsqueeze(0))
+
+        weight = self._weight_matrix
+        if weight.dim() == 2:
+            weight = weight.unsqueeze(0)
+        intermediate = torch.matmul(matrix_1.unsqueeze(1), weight)
         final = torch.matmul(intermediate, matrix_2.unsqueeze(1).transpose(2, 3))
         return self._activation(final.squeeze(1) + self._bias)

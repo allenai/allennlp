@@ -26,13 +26,27 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         options for byte encoding and other things.  The default here is to instantiate a
         ``CharacterTokenizer`` with its default parameters, which uses unicode characters and
         retains casing.
+    start_tokens : ``List[str]``, optional (default=``None``)
+        These are prepended to the tokens provided to ``tokens_to_indices``.
+    end_tokens : ``List[str]``, optional (default=``None``)
+        These are appended to the tokens provided to ``tokens_to_indices``.
+    min_padding_length: ``int``, optional (default=``0``)
+        We use this value as the minimum length of padding. Usually used with :class:``CnnEncoder``, its
+        value should be set to the maximum value of ``ngram_filter_sizes`` correspondingly.
     """
     # pylint: disable=no-self-use
     def __init__(self,
                  namespace: str = 'token_characters',
-                 character_tokenizer: CharacterTokenizer = CharacterTokenizer()) -> None:
+                 character_tokenizer: CharacterTokenizer = CharacterTokenizer(),
+                 start_tokens: List[str] = None,
+                 end_tokens: List[str] = None,
+                 min_padding_length: int = 0) -> None:
+        self._min_padding_length = min_padding_length
         self._namespace = namespace
         self._character_tokenizer = character_tokenizer
+
+        self._start_tokens = [Token(st) for st in (start_tokens or [])]
+        self._end_tokens = [Token(et) for et in (end_tokens or [])]
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -50,7 +64,7 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
                           vocabulary: Vocabulary,
                           index_name: str) -> Dict[str, List[List[int]]]:
         indices: List[List[int]] = []
-        for token in tokens:
+        for token in itertools.chain(self._start_tokens, tokens, self._end_tokens):
             token_indices: List[int] = []
             if token.text is None:
                 raise ConfigurationError('TokenCharactersIndexer needs a tokenizer that retains text')
@@ -67,7 +81,7 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
 
     @overrides
     def get_padding_lengths(self, token: List[int]) -> Dict[str, int]:
-        return {'num_token_characters': len(token)}
+        return {'num_token_characters': max(len(token), self._min_padding_length)}
 
     @overrides
     def get_padding_token(self) -> List[int]:

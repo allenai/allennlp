@@ -3,10 +3,14 @@ from typing import List
 
 from overrides import overrides
 import spacy
+import ftfy
+
+from pytorch_pretrained_bert.tokenization import BasicTokenizer as BertTokenizer
 
 from allennlp.common import Registrable
 from allennlp.common.util import get_spacy_model
 from allennlp.data.tokenizers.token import Token
+from allennlp.data.token_indexers.openai_transformer_byte_pair_indexer import text_standardize
 
 
 class WordSplitter(Registrable):
@@ -129,6 +133,7 @@ class JustSpacesWordSplitter(WordSplitter):
 def _remove_spaces(tokens: List[spacy.tokens.Token]) -> List[spacy.tokens.Token]:
     return [token for token in tokens if not token.is_space]
 
+
 @WordSplitter.register('spacy')
 class SpacyWordSplitter(WordSplitter):
     """
@@ -151,3 +156,42 @@ class SpacyWordSplitter(WordSplitter):
     def split_words(self, sentence: str) -> List[Token]:
         # This works because our Token class matches spacy's.
         return _remove_spaces(self.spacy(sentence))
+
+
+@WordSplitter.register('openai')
+class OpenAISplitter(WordSplitter):
+    """
+    For OpenAI transformer
+    """
+    def __init__(self):
+        self.spacy = get_spacy_model('en_core_web_sm', False, False, False)
+
+    @staticmethod
+    def _standardize(text):
+        return text_standardize(ftfy.fix_text(text))
+
+    @overrides
+    def batch_split_words(self, sentences: List[str]) -> List[List[Token]]:
+        standardized_sentences = [self._standardize(sentence) for sentence in sentences]
+        return [_remove_spaces(tokens)
+                for tokens in self.spacy.pipe(standardized_sentences, n_threads=-1)]
+
+    @overrides
+    def split_words(self, sentence: str) -> List[Token]:
+        # This works because our Token class matches spacy's.
+        return _remove_spaces(self.spacy(self._standardize(sentence)))
+
+
+@WordSplitter.register("bert-basic")
+class BertBasicWordSplitter(WordSplitter):
+    """
+    The ``BasicWordSplitter`` from the BERT implementation.
+    This is used to split a sentence into words.
+    Then the ``BertTokenIndexer`` converts each word into wordpieces.
+    """
+    def __init__(self, do_lower_case: bool = True) -> None:
+        self.basic_tokenizer = BertTokenizer(do_lower_case)
+
+    @overrides
+    def split_words(self, sentence: str) -> List[Token]:
+        return [Token(text) for text in self.basic_tokenizer.tokenize(sentence)]

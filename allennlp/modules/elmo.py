@@ -69,6 +69,10 @@ class Elmo(torch.nn.Module):
     keep_sentence_boundaries : ``bool``, optional, (default=False)
         If True, the representation of the sentence boundary tokens are
         not removed.
+    scalar_mix_parameters : ``List[int]``, optional, (default=None)
+        If not ``None``, use these scalar mix parameters to weight the representations
+        produced by different layers. These mixing weights are not updated during
+        training.
     module : ``torch.nn.Module``, optional, (default = None).
         If provided, then use this module instead of the pre-trained ELMo biLM.
         If using this option, then pass ``None`` for both ``options_file``
@@ -87,10 +91,11 @@ class Elmo(torch.nn.Module):
                  dropout: float = 0.5,
                  vocab_to_cache: List[str] = None,
                  keep_sentence_boundaries: bool = False,
+                 scalar_mix_parameters: List[float] = None,
                  module: torch.nn.Module = None) -> None:
         super(Elmo, self).__init__()
 
-        logging.info("Initializing ELMo")
+        logger.info("Initializing ELMo")
         if module is not None:
             if options_file is not None or weight_file is not None:
                 raise ConfigurationError(
@@ -106,7 +111,11 @@ class Elmo(torch.nn.Module):
         self._dropout = Dropout(p=dropout)
         self._scalar_mixes: Any = []
         for k in range(num_output_representations):
-            scalar_mix = ScalarMix(self._elmo_lstm.num_layers, do_layer_norm=do_layer_norm)
+            scalar_mix = ScalarMix(
+                    self._elmo_lstm.num_layers,
+                    do_layer_norm=do_layer_norm,
+                    initial_scalar_parameters=scalar_mix_parameters,
+                    trainable=scalar_mix_parameters is None)
             self.add_module('scalar_mix_{}'.format(k), scalar_mix)
             self._scalar_mixes.append(scalar_mix)
 
@@ -203,6 +212,7 @@ class Elmo(torch.nn.Module):
         do_layer_norm = params.pop_bool('do_layer_norm', False)
         keep_sentence_boundaries = params.pop_bool('keep_sentence_boundaries', False)
         dropout = params.pop_float('dropout', 0.5)
+        scalar_mix_parameters = params.pop('scalar_mix_parameters', None)
         params.assert_empty(cls.__name__)
 
         return cls(options_file=options_file,
@@ -211,7 +221,8 @@ class Elmo(torch.nn.Module):
                    requires_grad=requires_grad,
                    do_layer_norm=do_layer_norm,
                    keep_sentence_boundaries=keep_sentence_boundaries,
-                   dropout=dropout)
+                   dropout=dropout,
+                   scalar_mix_parameters=scalar_mix_parameters)
 
 
 def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:

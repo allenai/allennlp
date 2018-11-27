@@ -2,7 +2,7 @@
 A ``TextField`` represents a string of text, the kind that you might want to represent with
 standard word vectors, or pass through an LSTM.
 """
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Iterator
 import textwrap
 
 from overrides import overrides
@@ -43,6 +43,16 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         if not all([isinstance(x, (Token, SpacyToken)) for x in tokens]):
             raise ConfigurationError("TextFields must be passed Tokens. "
                                      "Found: {} with types {}.".format(tokens, [type(x) for x in tokens]))
+
+    # Sequence[Token] methods
+    def __iter__(self) -> Iterator[Token]:
+        return iter(self.tokens)
+
+    def __getitem__(self, idx: int) -> Token:
+        return self.tokens[idx]
+
+    def __len__(self) -> int:
+        return len(self.tokens)
 
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
@@ -97,15 +107,16 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
                 indexer_lengths[key] = max(x[key] if key in x else 0 for x in token_lengths)
             lengths.append(indexer_lengths)
 
-        indexer_sequence_lengths = {key: len(val) for key, val in self._indexed_tokens.items()}
-        # Get the padding lengths for sequence lengths.
-        if len(set(indexer_sequence_lengths.values())) == 1:
-            # This is the default case where all indexers return the same length.
-            # Keep the existing 'num_tokens' key for backward compatibility with existing config files.
-            padding_lengths = {'num_tokens': list(indexer_sequence_lengths.values())[0]}
-        else:
-            # The indexers return different lengths.
-            padding_lengths = indexer_sequence_lengths
+        padding_lengths = {}
+        num_tokens = set()
+        for indexer_name, token_list in self._indexed_tokens.items():
+            padding_lengths[f"{indexer_name}_length"] = len(token_list)
+            num_tokens.add(len(token_list))
+
+        # We don't actually use this for padding anywhere, but we used to.  We add this key back in
+        # so that older configs still work if they sorted by this key in a BucketIterator.  Taking
+        # the max of all of these should be fine for that purpose.
+        padding_lengths['num_tokens'] = max(num_tokens)
 
         # Get all keys which have been used for padding for each indexer and take the max if there are duplicates.
         padding_keys = {key for d in lengths for key in d.keys()}
@@ -120,18 +131,9 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
         tensors = {}
-        num_tokens = padding_lengths.get('num_tokens')
         for indexer_name, indexer in self._token_indexers.items():
-            if num_tokens is None:
-                # The indexers return different lengths.
-                # Get the desired_num_tokens for this indexer.
-                desired_num_tokens = {
-                        indexed_tokens_key: padding_lengths[indexed_tokens_key]
-                        for indexed_tokens_key in self._indexer_name_to_indexed_token[indexer_name]
-                }
-            else:
-                desired_num_tokens = {indexer_name: num_tokens}
-
+            desired_num_tokens = {indexed_tokens_key: padding_lengths[f"{indexed_tokens_key}_length"]
+                                  for indexed_tokens_key in self._indexer_name_to_indexed_token[indexer_name]}
             indices_to_pad = {indexed_tokens_key: self._indexed_tokens[indexed_tokens_key]
                               for indexed_tokens_key in self._indexer_name_to_indexed_token[indexer_name]}
             padded_array = indexer.pad_token_sequence(indices_to_pad,

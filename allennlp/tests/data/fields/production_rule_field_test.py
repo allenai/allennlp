@@ -41,7 +41,7 @@ class TestProductionRuleField(AllenNlpTestCase):
         field.index(self.vocab)
         tensor_tuple = field.as_tensor(field.get_padding_lengths())
         assert isinstance(tensor_tuple, tuple)
-        assert len(tensor_tuple) == 3
+        assert len(tensor_tuple) == 4
         assert tensor_tuple[0] == 'S -> [NP, VP]'
         assert tensor_tuple[1] is True
         assert_almost_equal(tensor_tuple[2].detach().cpu().numpy(), [self.s_rule_index])
@@ -50,7 +50,7 @@ class TestProductionRuleField(AllenNlpTestCase):
         field.index(self.vocab)
         tensor_tuple = field.as_tensor(field.get_padding_lengths())
         assert isinstance(tensor_tuple, tuple)
-        assert len(tensor_tuple) == 3
+        assert len(tensor_tuple) == 4
         assert tensor_tuple[0] == 'S -> [NP, VP]'
         assert tensor_tuple[1] is False
         assert tensor_tuple[2] is None
@@ -114,3 +114,7 @@ class TestProductionRuleField(AllenNlpTestCase):
         assert tensor_tuple[0] == ''
         assert tensor_tuple[1] is False
         assert tensor_tuple[2] is None
+
+    def test_production_rule_field_can_print(self):
+        field = ProductionRuleField('S -> [NP, VP]', is_global_rule=True)
+        print(field)
