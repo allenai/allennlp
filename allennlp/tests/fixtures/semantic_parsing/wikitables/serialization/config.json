@@ -1,0 +1,61 @@
+{
+    "dataset_reader": {
+        "type": "wikitables",
+        "dpd_output_directory": "allennlp/tests/fixtures/data/wikitables/dpd_output/",
+        "tables_directory": "allennlp/tests/fixtures/data/wikitables/"
+    },
+    "iterator": {
+        "type": "bucket",
+        "batch_size": 2,
+        "padding_noise": 0,
+        "sorting_keys": [
+            [
+                "question",
+                "num_tokens"
+            ]
+        ]
+    },
+    "model": {
+        "type": "wikitables_mml_parser",
+        "action_embedding_dim": 50,
+        "attention": {
+            "type": "dot_product"
+        },
+        "decoder_beam_search": {
+            "beam_size": 3
+        },
+        "encoder": {
+            "type": "lstm",
+            "hidden_size": 10,
+            "input_size": 50,
+            "num_layers": 1
+        },
+        "entity_encoder": {
+            "type": "boe",
+            "averaged": true,
+            "embedding_dim": 25
+        },
+        "max_decoding_steps": 200,
+        "question_embedder": {
+            "token_embedders": {
+                "tokens": {
+                    "type": "embedding",
+                    "embedding_dim": 25,
+                    "trainable": true
+                }
+            }
+        },
+        "tables_directory": "allennlp/tests/fixtures/data/wikitables/"
+    },
+    "train_data_path": "allennlp/tests/fixtures/data/wikitables/sample_data.examples",
+    "validation_data_path": "allennlp/tests/fixtures/data/wikitables/sample_data.examples",
+    "trainer": {
+        "cuda_device": -1,
+        "num_epochs": 2,
+        "optimizer": {
+            "type": "sgd",
+            "lr": 0.01
+        },
+        "patience": 10
+    }
+}

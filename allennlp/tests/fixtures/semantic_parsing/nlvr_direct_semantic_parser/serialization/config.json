@@ -1,0 +1,61 @@
+{
+    "dataset_reader": {
+        "type": "nlvr",
+        "output_agendas": false
+    },
+    "iterator": {
+        "type": "bucket",
+        "batch_size": 2,
+        "padding_noise": 0,
+        "sorting_keys": [
+            [
+                "sentence",
+                "num_tokens"
+            ]
+        ]
+    },
+    "model": {
+        "type": "nlvr_direct_parser",
+        "action_embedding_dim": 50,
+        "attention": {
+            "type": "dot_product"
+        },
+        "decoder_beam_search": {
+            "beam_size": 5
+        },
+        "dropout": 0.2,
+        "encoder": {
+            "type": "lstm",
+            "hidden_size": 10,
+            "input_size": 25,
+            "num_layers": 1
+        },
+        "max_decoding_steps": 20,
+        "sentence_embedder": {
+            "token_embedders": {
+                "tokens": {
+                    "type": "embedding",
+                    "embedding_dim": 25,
+                    "trainable": true
+                }
+            }
+        }
+    },
+    "train_data_path": "allennlp/tests/fixtures/data/nlvr/sample_processed_data.jsonl",
+    "validation_data_path": "allennlp/tests/fixtures/data/nlvr/sample_processed_data.jsonl",
+    "trainer": {
+        "cuda_device": -1,
+        "num_epochs": 1,
+        "optimizer": {
+            "type": "sgd",
+            "lr": 0.01
+        },
+        "patience": 2
+    },
+    "vocabulary": {
+        "non_padded_namespaces": [
+            "denotations",
+            "rule_labels"
+        ]
+    }
+}

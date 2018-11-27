@@ -16,7 +16,7 @@ class TestDialogQAPredictor(AllenNlpTestCase):
                                   "context": "One time I was writing a unit test,\
                                    and it succeeded on the first attempt."}]}
 
-        archive = load_archive(self.FIXTURES_ROOT / 'dialog_qa' / 'serialization' / 'model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / 'dialog_qa' / 'serialization')
         predictor = Predictor.from_archive(archive, 'dialog_qa')
 
         result = predictor.predict_json(inputs)
@@ -44,7 +44,7 @@ class TestDialogQAPredictor(AllenNlpTestCase):
                                    "context": "One time I was writing a unit test,\
                                     and it succeeded on the first attempt."}]}]
 
-        archive = load_archive(self.FIXTURES_ROOT / 'dialog_qa' / 'serialization' / 'model.tar.gz')
+        archive = load_archive(self.FIXTURES_ROOT / 'dialog_qa' / 'serialization')
         predictor = Predictor.from_archive(archive, 'dialog_qa')
 
         results = predictor.predict_batch_json(inputs)

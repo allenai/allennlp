@@ -1,0 +1,105 @@
+{
+    "dataset_reader": {
+        "type": "seq2seq",
+        "source_token_indexers": {
+            "dependency_label": {
+                "type": "dependency_label",
+                "namespace": "dependencies"
+            },
+            "ner_tags": {
+                "type": "ner_tag",
+                "namespace": "ner"
+            },
+            "pos_tags": {
+                "type": "pos_tag",
+                "namespace": "pos"
+            },
+            "tokens": {
+                "type": "single_id",
+                "namespace": "source_tokens"
+            }
+        },
+        "source_tokenizer": {
+            "type": "word",
+            "word_splitter": {
+                "type": "spacy",
+                "ner": true,
+                "parse": true,
+                "pos_tags": true
+            }
+        },
+        "target_token_indexers": {
+            "tokens": {
+                "namespace": "target_tokens"
+            }
+        },
+        "target_tokenizer": {
+            "type": "word"
+        }
+    },
+    "iterator": {
+        "type": "bucket",
+        "batch_size": 80,
+        "padding_noise": 0,
+        "sorting_keys": [
+            [
+                "source_tokens",
+                "num_tokens"
+            ]
+        ]
+    },
+    "model": {
+        "type": "simple_seq2seq",
+        "attention": {
+            "type": "bilinear",
+            "matrix_dim": 10,
+            "vector_dim": 10
+        },
+        "beam_size": 5,
+        "encoder": {
+            "type": "lstm",
+            "hidden_size": 10,
+            "input_size": 47,
+            "num_layers": 1
+        },
+        "max_decoding_steps": 20,
+        "source_embedder": {
+            "token_embedders": {
+                "dependency_label": {
+                    "type": "embedding",
+                    "embedding_dim": 10,
+                    "vocab_namespace": "dependencies"
+                },
+                "ner_tags": {
+                    "type": "embedding",
+                    "embedding_dim": 7,
+                    "vocab_namespace": "ner"
+                },
+                "pos_tags": {
+                    "type": "embedding",
+                    "embedding_dim": 5,
+                    "vocab_namespace": "pos"
+                },
+                "tokens": {
+                    "type": "embedding",
+                    "embedding_dim": 25,
+                    "trainable": true,
+                    "vocab_namespace": "source_tokens"
+                }
+            }
+        },
+        "target_embedding_dim": 30,
+        "target_namespace": "target_tokens"
+    },
+    "train_data_path": "allennlp/tests/fixtures/data/seq2seq_copy.tsv",
+    "validation_data_path": "allennlp/tests/fixtures/data/seq2seq_copy.tsv",
+    "trainer": {
+        "cuda_device": -1,
+        "num_epochs": 2,
+        "optimizer": {
+            "type": "adam",
+            "lr": 0.01
+        },
+        "patience": 10
+    }
+}

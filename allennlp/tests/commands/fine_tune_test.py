@@ -14,7 +14,7 @@ from allennlp.models import load_archive
 class TestFineTune(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.model_archive = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
+        self.model_archive = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization')
         self.config_file = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'experiment.json')
         self.serialization_dir = str(self.TEST_DIR / 'fine_tune')
 

@@ -11,7 +11,7 @@ class TestSimpleSeq2SeqPredictor(AllenNlpTestCase):
         }
 
         archive = load_archive(self.FIXTURES_ROOT / 'encoder_decoder' / 'simple_seq2seq' /
-                               'serialization' / 'model.tar.gz')
+                               'serialization')
         predictor = Predictor.from_archive(archive, 'simple_seq2seq')
 
         result = predictor.predict_json(inputs)

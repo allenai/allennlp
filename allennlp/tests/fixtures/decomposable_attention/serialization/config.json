@@ -1,0 +1,72 @@
+{
+    "dataset_reader": {
+        "type": "snli",
+        "token_indexers": {
+            "tokens": {
+                "type": "single_id",
+                "lowercase_tokens": true
+            }
+        }
+    },
+    "iterator": {
+        "type": "bucket",
+        "batch_size": 40,
+        "padding_noise": 0,
+        "sorting_keys": [
+            [
+                "premise",
+                "num_tokens"
+            ],
+            [
+                "hypothesis",
+                "num_tokens"
+            ]
+        ]
+    },
+    "model": {
+        "type": "decomposable_attention",
+        "aggregate_feedforward": {
+            "activations": "linear",
+            "hidden_dims": 3,
+            "input_dim": 4,
+            "num_layers": 1
+        },
+        "attend_feedforward": {
+            "activations": "relu",
+            "hidden_dims": 2,
+            "input_dim": 2,
+            "num_layers": 1
+        },
+        "compare_feedforward": {
+            "activations": "relu",
+            "hidden_dims": 2,
+            "input_dim": 4,
+            "num_layers": 1
+        },
+        "similarity_function": {
+            "type": "dot_product"
+        },
+        "text_field_embedder": {
+            "token_embedders": {
+                "tokens": {
+                    "type": "embedding",
+                    "embedding_dim": 300,
+                    "pretrained_file": "allennlp/tests/fixtures/embeddings/glove.6B.300d.sample.txt.gz",
+                    "projection_dim": 2,
+                    "trainable": false
+                }
+            }
+        }
+    },
+    "train_data_path": "allennlp/tests/fixtures/data/snli.jsonl",
+    "validation_data_path": "allennlp/tests/fixtures/data/snli.jsonl",
+    "trainer": {
+        "cuda_device": -1,
+        "num_epochs": 1,
+        "optimizer": {
+            "type": "adadelta",
+            "lr": 1
+        },
+        "patience": 5
+    }
+}

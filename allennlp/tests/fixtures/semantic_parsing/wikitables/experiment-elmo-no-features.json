@@ -18,13 +18,15 @@
   "model": {
     "type": "wikitables_mml_parser",
     "question_embedder": {
-      "elmo":{
-       "type": "elmo_token_embedder",
-       "options_file": "allennlp/tests/fixtures/elmo/options.json",
-       "weight_file": "allennlp/tests/fixtures/elmo/lm_weights.hdf5",
-       "do_layer_norm": false,
-       "dropout": 0.5
-     }
+      "token_embedders": {
+        "elmo":{
+           "type": "elmo_token_embedder",
+           "options_file": "allennlp/tests/fixtures/elmo/options.json",
+           "weight_file": "allennlp/tests/fixtures/elmo/lm_weights.hdf5",
+           "do_layer_norm": false,
+           "dropout": 0.5
+        }
+      }
     },
     "action_embedding_dim": 50,
     "encoder": {
