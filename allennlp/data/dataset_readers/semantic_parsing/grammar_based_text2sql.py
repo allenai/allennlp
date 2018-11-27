@@ -91,7 +91,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         if self._cross_validation_split_to_exclude is not None:
             files = [p for p in files
                      if self._cross_validation_split_to_exclude not in os.path.basename(p)
-                     or self._test_split_to_exclude not in os.path.basename(p)]
+                     and self._test_split_to_exclude not in os.path.basename(p)]
         schema = read_dataset_schema(self._schema_path)
 
         for path in files:
