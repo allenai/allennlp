@@ -3,34 +3,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 
-from typing import List
-import logging
-from pprint import pprint
-from pprint import pformat
-from docopt import docopt
-from collections import defaultdict
-from operator import itemgetter
-from collections import namedtuple
-import regex
-from tqdm import tqdm
-from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
-from allennlp.data.tokenizers import WordTokenizer
 import argparse
-
-Extraction = namedtuple("Extraction",  # Open IE extraction
-                        ["sent",       # Sentence in which this extraction appears
-                         "toks",       # spaCy toks
-                         "arg1",       # Subject
-                         "rel",        # Relation
-                         "args2",      # A list of arguments after the predicate
-                         "confidence"] # Confidence in this extraction
-)
-
-Element = namedtuple("Element",    # An element (predicate or argument) in an Open IE extraction
-                     ["elem_type", # Predicate or argument ID
-                      "span",      # The element's character span in the sentence
-                      "text"]      # The textual representation of this element
-)
 
 def main(inp_fn: str,
          out_fn: str) -> None:
