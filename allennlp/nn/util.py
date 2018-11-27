@@ -5,6 +5,7 @@ Assorted utilities for working with neural networks in AllenNLP.
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar
 import logging
+import copy
 import math
 import warnings
 
@@ -1284,3 +1285,7 @@ def add_positional_features(tensor: torch.Tensor,
         # to add a row of zeros to make up the difference.
         sinusoids = torch.cat([sinusoids, sinusoids.new_zeros(timesteps, 1)], 1)
     return tensor + sinusoids.unsqueeze(0)
+
+def clone(module: torch.nn.Module, num_copies: int) -> torch.nn.ModuleList:
+    "Produce N identical layers."
+    return torch.nn.ModuleList([copy.deepcopy(module) for _ in range(num_copies)])

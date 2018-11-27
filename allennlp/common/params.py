@@ -351,13 +351,30 @@ class Params(MutableMapping):
         return value
 
     @staticmethod
-    def from_file(params_file: str, params_overrides: str = "") -> 'Params':
+    def from_file(params_file: str, params_overrides: str = "", ext_vars: dict = None) -> 'Params':
         """
         Load a `Params` object from a configuration file.
+
+        Parameters
+        ----------
+        params_file : ``str``
+            The path to the configuration file to load.
+        params_overrides : ``str``, optional
+            A dict of overrides that can be applied to final object.
+            e.g. {"model.embedding_dim": 10}
+        ext_vars : ``dict``, optional
+            Our config files are Jsonnet, which allows specifying external variables
+            for later substitution. Typically we substitute these using environment
+            variables; however, you can also specify them here, in which case they
+            take priority over environment variables.
+            e.g. {"HOME_DIR": "/Users/allennlp/home"}
         """
+        if ext_vars is None:
+            ext_vars = {}
+
         # redirect to cache, if necessary
         params_file = cached_path(params_file)
-        ext_vars = dict(os.environ)
+        ext_vars = {**dict(os.environ), **ext_vars}
 
         file_dict = json.loads(evaluate_file(params_file, ext_vars=ext_vars))
 

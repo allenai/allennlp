@@ -41,8 +41,33 @@ class SemanticRoleLabelerPredictor(Predictor):
         -------
         A dictionary representation of the semantic roles in the sentence.
         """
-        return self.predict_json({"sentence" : sentence})
+        return self.predict_json({"sentence": sentence})
 
+    def predict_tokenized(self, tokenized_sentence: List[str]) -> JsonDict:
+        """
+        Predicts the semantic roles of the supplied sentence tokens and returns a dictionary
+        with the results.
+
+        Parameters
+        ----------
+        tokenized_sentence, ``List[str]``
+            The sentence tokens to parse via semantic role labeling.
+
+        Returns
+        -------
+        A dictionary representation of the semantic roles in the sentence.
+        """
+        spacy_doc = self._tokenizer.spacy.tokenizer.tokens_from_list(tokenized_sentence)
+        for pipe in filter(None, self._tokenizer.spacy.pipeline):
+            pipe[1](spacy_doc)
+
+        tokens = [token for token in spacy_doc]
+        instances = self.tokens_to_instances(tokens)
+
+        if not instances:
+            return sanitize({"verbs": [], "words": tokens})
+
+        return self.predict_instances(instances)
 
     @staticmethod
     def make_srl_string(words: List[str], tags: List[str]) -> str:
@@ -71,6 +96,17 @@ class SemanticRoleLabelerPredictor(Predictor):
     def _json_to_instance(self, json_dict: JsonDict):
         raise NotImplementedError("The SRL model uses a different API for creating instances.")
 
+    def tokens_to_instances(self, tokens):
+        words = [token.text for token in tokens]
+        instances: List[Instance] = []
+        for i, word in enumerate(tokens):
+            if word.pos_ == "VERB":
+                verb_labels = [0 for _ in words]
+                verb_labels[i] = 1
+                instance = self._dataset_reader.text_to_instance(tokens, verb_labels)
+                instances.append(instance)
+        return instances
+
     def _sentence_to_srl_instances(self, json_dict: JsonDict) -> List[Instance]:
         """
         The SRL model has a slightly different API from other models, as the model is run
@@ -92,15 +128,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         """
         sentence = json_dict["sentence"]
         tokens = self._tokenizer.split_words(sentence)
-        words = [token.text for token in tokens]
-        instances: List[Instance] = []
-        for i, word in enumerate(tokens):
-            if word.pos_ == "VERB":
-                verb_labels = [0 for _ in words]
-                verb_labels[i] = 1
-                instance = self._dataset_reader.text_to_instance(tokens, verb_labels)
-                instances.append(instance)
-        return instances
+        return self.tokens_to_instances(tokens)
 
     @overrides
     def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
@@ -178,6 +206,21 @@ class SemanticRoleLabelerPredictor(Predictor):
 
         return sanitize(return_dicts)
 
+    def predict_instances(self, instances: List[Instance]) -> JsonDict:
+        outputs = self._model.forward_on_instances(instances)
+
+        results = {"verbs": [], "words": outputs[0]["words"]}
+        for output in outputs:
+            tags = output['tags']
+            description = self.make_srl_string(output["words"], tags)
+            results["verbs"].append({
+                    "verb": output["verb"],
+                    "description": description,
+                    "tags": tags,
+            })
+
+        return sanitize(results)
+
     @overrides
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         """
@@ -198,16 +241,4 @@ class SemanticRoleLabelerPredictor(Predictor):
         if not instances:
             return sanitize({"verbs": [], "words": self._tokenizer.split_words(inputs["sentence"])})
 
-        outputs = self._model.forward_on_instances(instances)
-
-        results = {"verbs": [], "words": outputs[0]["words"]}
-        for output in outputs:
-            tags = output['tags']
-            description = self.make_srl_string(output["words"], tags)
-            results["verbs"].append({
-                    "verb": output["verb"],
-                    "description": description,
-                    "tags": tags,
-            })
-
-        return sanitize(results)
+        return self.predict_instances(instances)

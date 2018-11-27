@@ -81,7 +81,6 @@ class FindLearningRate(Subcommand):
                                required=True,
                                type=str,
                                help='The directory in which to save results.')
-
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
@@ -100,7 +99,7 @@ class FindLearningRate(Subcommand):
                                help='number of mini-batches to run Learning rate finder')
         subparser.add_argument('--stopping-factor',
                                type=float,
-                               default=4.0,
+                               default=None,
                                help='stop the search when the current loss exceeds the best loss recorded by '
                                     'multiple of stopping factor')
         subparser.add_argument('--linear',
@@ -171,7 +170,12 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
 
     prepare_environment(params)
 
-    check_for_gpu(params.get('trainer').get('cuda_device', -1))
+    cuda_device = params.params.get('trainer').get('cuda_device', -1)
+    if isinstance(cuda_device, list):
+        for device in cuda_device:
+            check_for_gpu(device)
+    else:
+        check_for_gpu(cuda_device)
 
     all_datasets = datasets_from_params(params)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))

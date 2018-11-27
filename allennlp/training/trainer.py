@@ -493,6 +493,9 @@ class Trainer(Registrable):
             self.optimizer.zero_grad()
 
             loss = self.batch_loss(batch, for_training=True)
+            if torch.isnan(loss):
+                raise ValueError("nan loss encountered")
+
             loss.backward()
 
             train_loss += loss.item()
