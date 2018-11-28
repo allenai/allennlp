@@ -72,16 +72,17 @@ class MultiQAReader(DatasetReader):
                     dataset_json = json.load(myfile)
                     contexts += dataset_json['data']['contexts']
 
-        skipped_context_count = 0
+        skipped_qa_count = 0
+        all_qa_count = 0
 
         if self._num_of_examples_to_sample is not None:
             contexts = contexts[0:self._num_of_examples_to_sample]
 
-        for context in contexts:
+        for context_ind,context in enumerate(contexts):
 
             # Processing each document separatly
             paragraph = ''
-            tokenized_document_list = []
+            tokenized_paragraph = []
             answer_starts_offsets = []
             offset = 0
             for doc_ind, document in enumerate(context['documents']):
@@ -89,12 +90,20 @@ class MultiQAReader(DatasetReader):
                 ## TODO add document['rank']
                 # constracting single context by concatinating parts of the original context
                 if self._use_document_titles:
-                    paragraph += document['title'] + ' | ' + ' '.join(document['snippets']) + " || "
+                    test_to_add =  document['title'] + ' | ' + ' '.join(document['snippets']) + " || "
                     answer_starts_offsets.append({'title': offset})
                     offset += len(document['title']) + 3  # we add 3 for the separator ' | '
                 else:
-                    paragraph += ' '.join(document['snippets']) + " || "
+                    text_to_add = ' '.join(document['snippets']) + " || "
                     answer_starts_offsets.append({})
+
+                # Stop when context is larger than max size.
+                tokens_to_add  = self._tokenizer.tokenize(text_to_add)
+                if len(tokenized_paragraph) + len(tokens_to_add) > self._max_context_size:
+                    break
+
+                tokenized_paragraph += tokens_to_add
+                paragraph += text_to_add
 
                 # Computing answer_starts offsets:
                 for snippet_ind, snippet in enumerate(document['snippets']):
@@ -102,17 +111,18 @@ class MultiQAReader(DatasetReader):
                     offset += len(snippet)
                 offset += 4 # for " || "
 
-                if offset != len(paragraph):
-                    x=1
 
-                # Stop when context is larger than max size.
-                if len(paragraph)>self._max_context_size:
-                    break
-
-            tokenized_paragraph = self._tokenizer.tokenize(paragraph)
+            # Discarding context that are too long (when len is 0 that means we breaked from context loop)
+            all_qa_count += len(context['qas'])
+            if len(tokenized_paragraph) > self._max_context_size or len(tokenized_paragraph) == 0:
+                skipped_qa_count += len(context['qas'])
+                if context_ind % 30 == 0:
+                    print('Fraction of QA remaining = %f' % ((all_qa_count - skipped_qa_count) / all_qa_count))
+                continue
 
             # a list of question/answers
             qas = context['qas']
+
 
             # Adding Metadata
             metadata = {}
