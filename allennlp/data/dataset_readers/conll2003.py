@@ -1,4 +1,4 @@
-from typing import Dict, List, Sequence, Iterable
+from typing import Dict, List, Sequence, Iterable, Optional
 import itertools
 import logging
 
@@ -38,7 +38,7 @@ class Conll2003DatasetReader(DatasetReader):
     and '-DOCSTART- -X- -X- O' indicating the end of each article,
     and converts it into a ``Dataset`` suitable for sequence tagging.
 
-    This dataset reader expects the input to be in the Conll2003 standard IOB1 coding
+    This dataset reader expects the input to be in the Conll 2003 standard IOB1 coding
     scheme. In the IOB1 scheme, I is a token inside a span, O is a token outside a span
     and B is the beginning of span immediately following another span of the same type.
 
@@ -67,7 +67,6 @@ class Conll2003DatasetReader(DatasetReader):
         specified here.
     convert_to_coding_scheme: ``str``, optional (default=``None``)
         Specifies the coding scheme for ``ner_labels`` and ``chunk_labels``.
-        A valid option is ``BIOUL``.
         The default ``None`` maintains the original IOB1 scheme in the CoNLL 2003 NER data.
         The ``BIOUL`` option recodes the data into the BIOUL scheme.
     label_namespace: ``str``, optional (default=``labels``)
@@ -81,7 +80,7 @@ class Conll2003DatasetReader(DatasetReader):
                  tag_label: str = "ner",
                  feature_labels: Sequence[str] = (),
                  lazy: bool = False,
-                 convert_to_coding_scheme: str = None,
+                 convert_to_coding_scheme: Optional[str] = None,
                  label_namespace: str = "labels") -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
@@ -134,7 +133,7 @@ class Conll2003DatasetReader(DatasetReader):
         instance_fields: Dict[str, Field] = {'tokens': sequence}
         instance_fields["metadata"] = MetadataField({"words": [x.text for x in tokens]})
 
-        # Recode the labels to BIOUL
+        # Recode the labels if necessary
         if self.convert_to_coding_scheme == "BIOUL":
             coded_chunks = to_bioul(chunk_tags,
                                     encoding=self._original_coding_scheme) if chunk_tags is not None else None
