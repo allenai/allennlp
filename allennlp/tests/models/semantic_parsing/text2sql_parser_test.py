@@ -29,3 +29,15 @@ class Text2SqlParserTest(ModelTestCase):
         for action in action_sequence:
             grammar_state = grammar_state.take_action(action)
         assert grammar_state._nonterminal_stack == [] # pylint: disable=protected-access
+
+
+class LinkingText2SqlParserTest(ModelTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.set_up_model(str(self.FIXTURES_ROOT / "semantic_parsing" / "text2sql" / "experiment_linking.json"),
+                          str(self.FIXTURES_ROOT / "data" / "text2sql" / "restaurants_tiny.json"))
+        self.schema = str(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
+
+    def test_model_can_train_save_and_load(self):
+        self.ensure_model_can_train_save_and_load(self.param_file)

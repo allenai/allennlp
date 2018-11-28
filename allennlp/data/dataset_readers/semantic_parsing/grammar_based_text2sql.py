@@ -14,7 +14,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.dataset_readers.dataset_utils import text2sql_utils
-from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld
+from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld, PrelinkedText2SqlWorld
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -61,7 +61,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._use_all_sql = use_all_sql
         self._use_all_queries = use_all_queries
-        self.links_entities = False
+        self.needs_prelinked_entities = isinstance(world, PrelinkedText2SqlWorld)
         self._keep_if_unparsable = keep_if_unparseable
         if test_validation_splits_to_exclude is not None:
             self._cross_validation_split_to_exclude = str(test_validation_splits_to_exclude[0])
@@ -103,7 +103,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
                                                             use_all_sql=self._use_all_sql,
                                                             remove_unneeded_aliases=True,
                                                             schema=schema):
-                linked_entities = sql_data.sql_variables if not self.links_entities else None
+                linked_entities = sql_data.sql_variables if self.needs_prelinked_entities else None
                 instance = self.text_to_instance(sql_data.text_with_variables, linked_entities, sql_data.sql)
                 if instance is not None:
                     yield instance
@@ -120,8 +120,6 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
 
         action_sequence, all_actions, linking_scores = self._world.get_action_sequence_and_all_actions(query, sql,
                                                                                                        prelinked_entities)
-        if linking_scores is None and self.links_entities:
-            raise ConfigurationError("Prelinked entities were not used, but no linking scores were produced.")
 
         if action_sequence is None and self._keep_if_unparsable:
             print("Parse error")
@@ -129,7 +127,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         elif action_sequence is None:
             return None
 
-        if self.links_entities:
+        if linking_scores is not None:
             fields["linking_scores"] = ArrayField(linking_scores)
 
         index_fields: List[Field] = []

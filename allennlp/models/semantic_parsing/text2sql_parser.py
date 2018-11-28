@@ -395,7 +395,7 @@ class Text2SqlParser(Model):
                                                            global_output_embeddings,
                                                            list(global_action_ids))
 
-            if linked_actions and linking_scores is None and self._entity_type_decoder_embedding is not None:
+            if linked_actions and (linking_scores is None or self._entity_type_decoder_embedding is None):
                 raise ConfigurationError("The grammar has linked actions, but no linking scores were passed.")
 
             # Entity map: Dict[str, int] - just maps from entities to their indices.
