@@ -90,12 +90,9 @@ class MultiQAReader(DatasetReader):
                 ## TODO add document['rank']
                 # constracting single context by concatinating parts of the original context
                 if self._use_document_titles:
-                    test_to_add =  document['title'] + ' | ' + ' '.join(document['snippets']) + " || "
-                    answer_starts_offsets.append({'title': offset})
-                    offset += len(document['title']) + 3  # we add 3 for the separator ' | '
+                    text_to_add =  document['title'] + ' | ' + ' '.join(document['snippets']) + " || "
                 else:
                     text_to_add = ' '.join(document['snippets']) + " || "
-                    answer_starts_offsets.append({})
 
                 # Stop when context is larger than max size.
                 tokens_to_add  = self._tokenizer.tokenize(text_to_add)
@@ -106,10 +103,23 @@ class MultiQAReader(DatasetReader):
                 paragraph += text_to_add
 
                 # Computing answer_starts offsets:
+                if self._use_document_titles:
+                    answer_starts_offsets.append({'title': offset})
+                    offset += len(document['title']) + 3  # we add 3 for the separator ' | '
+                else:
+                    answer_starts_offsets.append({})
+
                 for snippet_ind, snippet in enumerate(document['snippets']):
                     answer_starts_offsets[doc_ind][snippet_ind] = offset
                     offset += len(snippet)
+
+                    # ' '. adds extra space between the snippets.
+                    if len(document['snippets'])>1 and snippet_ind < len(document['snippets'])-1:
+                        offset += 1
                 offset += 4 # for " || "
+
+                if offset != len(paragraph):
+                    raise ValueError()
 
 
             # Discarding context that are too long (when len is 0 that means we breaked from context loop)
@@ -119,6 +129,10 @@ class MultiQAReader(DatasetReader):
                 if context_ind % 30 == 0:
                     logger.info('Fraction of QA remaining = %f', ((all_qa_count - skipped_qa_count) / all_qa_count))
                 continue
+
+            # we need to tokenize all the paragraph (again) because previous tokens start the offset count
+            # from 0 for each document... # TODO find a better way to do this...
+            tokenized_paragraph = self._tokenizer.tokenize(paragraph)
 
             # a list of question/answers
             qas = context['qas']
@@ -152,7 +166,8 @@ class MultiQAReader(DatasetReader):
                             for alias_start in alias['answer_starts']:
                                 # It's possible we didn't take all the contexts.
                                 if len(answer_starts_offsets) > alias_start[0] and \
-                                        (alias_start[1]!='title' or self._use_document_titles):
+                                        alias_start[1] in answer_starts_offsets[alias_start[0]] and  \
+                                        (alias_start[1] != 'title' or self._use_document_titles):
                                     answer_start_norm = answer_starts_offsets[alias_start[0]][alias_start[1]] + alias_start[2]
                                     span_starts_list[answer_type][qa_ind].append(answer_start_norm)
                                     span_ends_list[answer_type][qa_ind].append(answer_start_norm + len(alias['text']))
@@ -163,7 +178,8 @@ class MultiQAReader(DatasetReader):
                                                  paragraph[answer_start_norm:answer_start_norm + len(alias['text'])],
                                                  re.IGNORECASE)
                                     if x is None:
-                                        x=1
+                                        if (alias['text'] != paragraph[answer_start_norm:answer_start_norm + len(alias['text'])]):
+                                            raise ValueError("answers and paragraph not aligned!")
 
             # If answer was not found in this question do not yield an instance
             # (This could happen if we used part of the context or in unfiltered context versions)
