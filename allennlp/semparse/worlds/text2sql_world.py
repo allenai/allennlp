@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Set
 from copy import deepcopy
 import json
 import os
@@ -6,13 +6,14 @@ import os
 from parsimonious import Grammar
 from parsimonious.exceptions import ParseError
 from nltk import ngrams, bigrams
+import numpy
 
 from allennlp.common.registrable import Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.semparse.contexts.sql_context_utils import SqlVisitor
 from allennlp.semparse.contexts.sql_context_utils import format_grammar_string, initialize_valid_actions
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
-from allennlp.semparse.contexts.text2sql_table_context import GRAMMAR_DICTIONARY
+from allennlp.semparse.contexts.text2sql_table_context import GRAMMAR_DICTIONARY, GLOBAL_DATASET_VARIABLE_TYPES
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_tables
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_global_values
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_to_be_variable_free
@@ -67,6 +68,15 @@ class Text2SqlWorld(Registrable):
 #     return string_linking_scores
 
 
+def create_entity_type_to_rule_id_map(types: Dict[str, Set[Tuple[str, str, str]]]) -> List[str]:
+
+    all_entity_types = []
+    for variable, column_producers in types.items():
+        for _ in column_producers:
+            all_entity_types.append(variable)
+    return all_entity_types
+
+
 @Text2SqlWorld.register("prelinked")
 class PrelinkedText2SqlWorld(Text2SqlWorld):
     """
@@ -90,6 +100,7 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
                                             for column in table}
 
         self.dataset_name = os.path.basename(schema_path).split("-")[0]
+        self.variable_type_to_rule_id = create_entity_type_to_rule_id_map(GLOBAL_DATASET_VARIABLE_TYPES[self.dataset_name])
         self.use_untyped_entities = use_untyped_entities
         self.link_entities_to_actions = link_entities_to_actions
 
@@ -107,10 +118,12 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
 
 
         prelinked_entities = prelinked_entities or {}
+        linking_scores = None
         if self.use_untyped_entities:
             update_grammar_values_with_variables(grammar_with_context, prelinked_entities)
         elif self.link_entities_to_actions:
             update_grammar_with_linked_typed_variables(grammar_with_context, prelinked_entities, self.dataset_name)
+            linking_scores = self._get_linking_scores(question)
         else:
             update_grammar_with_typed_variables(grammar_with_context, prelinked_entities, self.dataset_name)
 
@@ -128,7 +141,7 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
         except ParseError:
             action_sequence = None
 
-        return action_sequence, sorted_actions, None
+        return action_sequence, sorted_actions, linking_scores
 
     def _initialize_grammar_dictionary(self, grammar_dictionary: Dict[str, List[str]]) -> Dict[str, List[str]]:
         # Add all the table and column names to the grammar.
@@ -153,6 +166,19 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
     def links_entities_to_actions(self) -> bool:
         return self.link_entities_to_actions
 
+    def _get_linking_scores(self, question: List[str]):
+
+        linking_scores = []
+        for entity in self.variable_type_to_rule_id:
+            this_entity_scores = []
+            for word in question:
+                if word == entity:
+                    this_entity_scores.append(1)
+                else:
+                    this_entity_scores.append(0)
+            linking_scores.append(this_entity_scores)
+
+        return numpy.array(linking_scores)
 
 @Text2SqlWorld.register("linking")
 class LinkingText2SqlWorld(Text2SqlWorld):

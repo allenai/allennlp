@@ -1,5 +1,7 @@
 # pylint: disable=too-many-lines,invalid-name
 
+import numpy
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.text2sql_world import PrelinkedText2SqlWorld, LinkingText2SqlWorld
 
@@ -135,7 +137,13 @@ class TestText2SqlWorld(AllenNlpTestCase):
 
         entities = {"city_name0": {"text": "San fran", "type": "location"},
                     "name0": {"text": "Matt Gardinios Pizza", "type": "restaurant"}}
-        action_sequence, actions, _ = world.get_action_sequence_and_all_actions(self.question, sql, entities)
+        question = ["How", "many", "name0", "places", "in", "city_name0"]
+        action_sequence, actions, linking_scores = world.get_action_sequence_and_all_actions(question,
+                                                                                             sql, entities)
+        correct_linking = numpy.zeros([7, 6])
+        correct_linking[0, 5] = 1
+        correct_linking[1, 2] = 1
+        numpy.testing.assert_array_equal(linking_scores, correct_linking)
         assert 'LOCATION_CITY_NAME_value -> ["\'city_name0\'"]' in actions
         assert 'LOCATION_CITY_NAME_value -> ["\'city_name0\'"]' in action_sequence
         assert 'RESTAURANT_NAME_value -> ["\'name0\'"]' in actions

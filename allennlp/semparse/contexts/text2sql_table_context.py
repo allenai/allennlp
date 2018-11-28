@@ -4,12 +4,9 @@ A ``Text2SqlTableContext`` represents the SQL context in which an utterance appe
 for the any of the text2sql datasets, with the grammar and the valid actions.
 """
 from typing import List, Dict, Tuple, Set
-from sqlite3 import Cursor
 from collections import defaultdict
 
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import TableColumn
-from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_numeric_type
-from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import column_has_string_type
 
 GRAMMAR_DICTIONARY = {}
 GRAMMAR_DICTIONARY["statement"] = ['(query ws ";")', '(query ws)']
@@ -200,13 +197,14 @@ GLOBAL_DATASET_VARIABLE_TYPES: Dict[str, Dict[str, Set[Tuple[str, str, str]]]] =
                     'keyphrasename0': {('KEYPHRASE', '.', 'KEYPHRASENAME')},
                     'keyphrasename1': {('KEYPHRASE', '.', 'KEYPHRASENAME')},
                     'venuename0': {('VENUE', '.', 'VENUENAME')},
+                    'venuename1': {('VENUE', '.', 'VENUENAME')},
                     '1': {('.', 'KEYPHRASEID', ')'), ('.', 'KEYPHRASENAME', ')')},
                     '2': {('.', 'AUTHORID', ')'), ('.', 'VENUEID', ')')},
                     'datasetname0': {('DATASET', '.', 'DATASETNAME')},
                     'datasetname1': {('DATASET', '.', 'DATASETNAME')},
                     'title0': {('PAPER', '.', 'TITLE')},
-                    'YEAR(CURDATE())': {('PAPER', '.', 'YEAR')},
-                    'misc0': {('YEAR', '>=', 'YEAR(CURDATE())'), ('.', 'PAPERID', ')'), ('YEAR', '==', 'YEAR(CURDATE())'), ('.', 'CITEDPAPERID', ')'), ('.', 'CITINGPAPERID', ')')},
+                    #'YEAR(CURDATE())': {('PAPER', '.', 'YEAR')},
+                    #'misc0': {('YEAR', '>=', 'YEAR(CURDATE())'), ('.', 'PAPERID', ')'), ('YEAR', '==', 'YEAR(CURDATE())'), ('.', 'CITEDPAPERID', ')'), ('.', 'CITINGPAPERID', ')')},
                     'journalname0': {('JOURNAL', '.', 'JOURNALNAME')},
                     '0': {('PAPER', '.', 'JOURNALID')},
                     'year0': {('PAPER', '.', 'YEAR')},
@@ -276,7 +274,6 @@ GLOBAL_DATASET_VARIABLE_TYPES: Dict[str, Dict[str, Set[Tuple[str, str, str]]]] =
                  'state_code1': {('CITY', '.', 'STATE_CODE')},
                  'booking_class1': {('CLASS_OF_SERVICE', '.', 'BOOKING_CLASS')},
                  'transport_type1': {('GROUND_SERVICE', '.', 'TRANSPORT_TYPE')}}
-
 }
 
 
@@ -300,22 +297,6 @@ def update_grammar_with_tables(grammar_dictionary: Dict[str, List[str]],
         grammar_dictionary['col_ref'] = sorted_columns + ['table_name']
     else:
         grammar_dictionary['column_name'] = sorted_columns
-
-def update_grammar_with_table_values(grammar_dictionary: Dict[str, List[str]],
-                                     schema: Dict[str, List[TableColumn]],
-                                     cursor: Cursor) -> None:
-
-    for table_name, columns in schema.items():
-        for column in columns:
-            cursor.execute(f'SELECT DISTINCT {table_name}.{column.name} FROM {table_name}')
-            results = [x[0] for x in cursor.fetchall()]
-            if column_has_string_type(column):
-                productions = sorted([f'"{str(result)}"' for result in results], reverse=True)
-                grammar_dictionary["string"].extend(productions)
-            elif column_has_numeric_type(column):
-                productions = sorted([f'"{str(result)}"' for result in results], reverse=True)
-                grammar_dictionary["number"].extend(productions)
-
 
 def update_grammar_with_global_values(grammar_dictionary: Dict[str, List[str]], dataset_name: str):
 
@@ -375,6 +356,8 @@ def remove_number_and_string_types(grammar_dictionary: Dict[str, List[str]]) -> 
     del grammar_dictionary["string"]
     del grammar_dictionary["number"]
 
+# TODO(Mark): De-duplicate the below so they don't get out of sync.
+
 def update_grammar_with_typed_variables(grammar_dictionary: Dict[str, List[str]],
                                         prelinked_entities: Dict[str, Dict[str, str]],
                                         dataset_name: str) -> None:
@@ -387,20 +370,23 @@ def update_grammar_with_typed_variables(grammar_dictionary: Dict[str, List[str]]
         column_producers: Set[Tuple[str, str, str]] = dataset_type_mapping.get(variable, set())
 
         if not column_producers:
-            print(f"Warning -{variable} not found in mapping.")
+            print(f"Warning - {variable} not found in mapping.")
         for producer in column_producers:
             table, _, column = producer
 
             if not variable in GLOBAL_DATASET_VALUES.get(dataset_name, []):
                 binary_ops.append(f'("{table}" ws "." ws "{column}" wsp binaryop wsp  "\'{variable}\'")')
+                if dataset_name == "atis":
+                    binary_ops.append(f'( "(" ws "{table}" ws "." ws "{column}" wsp binaryop wsp  "\'{variable}\'" ws ")")')
             else:
                 binary_ops.append(f'("{table}" ws "." ws "{column}" wsp binaryop wsp  "{variable}")')
+                if dataset_name == "atis":
+                    binary_ops.append(f'( "(" ws "{table}" ws "." ws "{column}" wsp binaryop wsp  "{variable}" ws ")")')
 
         # TODO update the signatures for binary, tertiary and in_exprs here.
         grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
 
     grammar_dictionary["expr"] = sorted(binary_ops, reverse=True) + grammar_dictionary["expr"]
-
 
 def update_grammar_with_linked_typed_variables(grammar_dictionary: Dict[str, List[str]],
                                                prelinked_entities: Dict[str, Dict[str, str]],
@@ -409,12 +395,14 @@ def update_grammar_with_linked_typed_variables(grammar_dictionary: Dict[str, Lis
     dataset_type_mapping = GLOBAL_DATASET_VARIABLE_TYPES[dataset_name]
 
     binary_ops = []
+    values_to_add = set()
     terminal_values: Dict[str, List[str]] = defaultdict(list)
     for variable, _ in prelinked_entities.items():
         column_producers: Set[Tuple[str, str, str]] = dataset_type_mapping.get(variable, set())
 
         if not column_producers:
             print(f"Warning -{variable} not found in mapping.")
+            values_to_add.add(f'"\'{variable}\'"')
         for producer in column_producers:
             table, _, column = producer
 
@@ -424,8 +412,10 @@ def update_grammar_with_linked_typed_variables(grammar_dictionary: Dict[str, Lis
             else:
                 terminal_values[f"{table}_{column}_value"].append(f"{variable}")
 
+            values_to_add.add(f'{table}_{column}_value')
+
         # TODO update the signatures for binary, tertiary and in_exprs here.
-        grammar_dictionary["value"] = [f'{table}_{column}_value'] + grammar_dictionary["value"]
+    grammar_dictionary["value"] = sorted(list(values_to_add), reverse=True)+ grammar_dictionary["value"]
 
     for nonterminal, values in terminal_values.items():
         grammar_dictionary[nonterminal] = values
