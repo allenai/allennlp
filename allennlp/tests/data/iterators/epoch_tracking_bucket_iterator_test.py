@@ -1,4 +1,4 @@
-from allennlp.data.iterators import EpochTrackingBucketIterator
+from allennlp.data.iterators import BucketIterator
 from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
 
@@ -7,7 +7,7 @@ class EpochTrackingBucketIteratorTest(IteratorTest):
         # The super class creates a self.instances field and populates it with some instances with
         # TextFields.
         super(EpochTrackingBucketIteratorTest, self).setUp()
-        self.iterator = EpochTrackingBucketIterator(sorting_keys=[["text", "num_tokens"]])
+        self.iterator = BucketIterator(sorting_keys=[["text", "num_tokens"]], track_epoch=True)
         self.iterator.index_with(self.vocab)
         # We'll add more to create a second dataset.
         self.more_instances = [
