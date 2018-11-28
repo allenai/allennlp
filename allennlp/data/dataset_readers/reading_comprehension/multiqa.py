@@ -117,7 +117,7 @@ class MultiQAReader(DatasetReader):
             if len(tokenized_paragraph) > self._max_context_size or len(tokenized_paragraph) == 0:
                 skipped_qa_count += len(context['qas'])
                 if context_ind % 30 == 0:
-                    print('Fraction of QA remaining = %f' % ((all_qa_count - skipped_qa_count) / all_qa_count))
+                    logger.info('Fraction of QA remaining = %f', ((all_qa_count - skipped_qa_count) / all_qa_count))
                 continue
 
             # a list of question/answers
@@ -168,9 +168,9 @@ class MultiQAReader(DatasetReader):
             # If answer was not found in this question do not yield an instance
             # (This could happen if we used part of the context or in unfiltered context versions)
             if span_starts_list['answers'] == [[]]:
-                if skipped_context_count % 30 == 0:
-                    print('Number of contexts skipped = %d' % skipped_context_count)
-                skipped_context_count += 1
+                skipped_qa_count += len(context['qas'])
+                if context_ind % 30 == 0:
+                    logger.info('Fraction of QA remaining = %f', ((all_qa_count - skipped_qa_count) / all_qa_count))
                 continue
 
             instance = self.text_to_instance(question_text_list,
