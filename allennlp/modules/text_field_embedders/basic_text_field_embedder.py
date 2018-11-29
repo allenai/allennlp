@@ -1,5 +1,4 @@
 from typing import Dict, List
-import warnings
 
 import torch
 from overrides import overrides

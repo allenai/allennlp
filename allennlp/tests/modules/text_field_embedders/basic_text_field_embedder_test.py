@@ -89,19 +89,17 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         options_file = str(elmo_fixtures_path / 'options.json')
         weight_file = str(elmo_fixtures_path / 'lm_weights.hdf5')
         params = Params({
-                "token_embedders": {
-                        "words": {
-                                "type": "embedding",
-                                "num_embeddings": 20,
-                                "embedding_dim": 2,
-                                },
-                        "elmo": {
-                                "type": "elmo_token_embedder",
-                                "options_file": options_file,
-                                "weight_file": weight_file
-                                },
-                        "embedder_to_indexer_map": {"words": ["words"], "elmo": ["elmo", "words"]}
-                        }
+                "words": {
+                        "type": "embedding",
+                        "num_embeddings": 20,
+                        "embedding_dim": 2,
+                        },
+                "elmo": {
+                        "type": "elmo_token_embedder",
+                        "options_file": options_file,
+                        "weight_file": weight_file
+                        },
+                "embedder_to_indexer_map": {"words": ["words"], "elmo": ["elmo", "words"]}
                 })
         token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
         inputs = {
@@ -110,28 +108,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 }
         token_embedder(inputs)
 
-    def test_old_from_params_new_from_params(self):
-
-        old_params = Params({
-                "token_embedders": {
-                        "words1": {
-                                "type": "embedding",
-                                "embedding_dim": 2
-                                },
-                        "words2": {
-                                "type": "embedding",
-                                "embedding_dim": 5
-                                },
-                        "words3": {
-                                "type": "embedding",
-                                "embedding_dim": 3
-                                }
-                        }
-                })
-
-        with pytest.warns(DeprecationWarning):
-            BasicTextFieldEmbedder.from_params(params=old_params, vocab=self.vocab)
-
+    def test_new_from_params(self):
         new_params = Params({
                 "token_embedders": {
                         "words1": {
