@@ -18,17 +18,19 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         self.vocab.add_token_to_namespace("3")
         self.vocab.add_token_to_namespace("4")
         params = Params({
-                "words1": {
-                        "type": "embedding",
-                        "embedding_dim": 2
-                        },
-                "words2": {
-                        "type": "embedding",
-                        "embedding_dim": 5
-                        },
-                "words3": {
-                        "type": "embedding",
-                        "embedding_dim": 3
+                "token_embedders": {
+                        "words1": {
+                                "type": "embedding",
+                                "embedding_dim": 2
+                                },
+                        "words2": {
+                                "type": "embedding",
+                                "embedding_dim": 5
+                                },
+                        "words3": {
+                                "type": "embedding",
+                                "embedding_dim": 3
+                                }
                         }
                 })
         self.token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
@@ -54,23 +56,25 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
 
     def test_forward_works_on_higher_order_input(self):
         params = Params({
-                "words": {
-                        "type": "embedding",
-                        "num_embeddings": 20,
-                        "embedding_dim": 2,
-                        },
-                "characters": {
-                        "type": "character_encoding",
-                        "embedding": {
-                                "embedding_dim": 4,
-                                "num_embeddings": 15,
+                "token_embedders": {
+                        "words": {
+                                "type": "embedding",
+                                "num_embeddings": 20,
+                                "embedding_dim": 2,
                                 },
-                        "encoder": {
-                                "type": "cnn",
-                                "embedding_dim": 4,
-                                "num_filters": 10,
-                                "ngram_filter_sizes": [3],
-                                },
+                        "characters": {
+                                "type": "character_encoding",
+                                "embedding": {
+                                        "embedding_dim": 4,
+                                        "num_embeddings": 15,
+                                        },
+                                "encoder": {
+                                        "type": "cnn",
+                                        "embedding_dim": 4,
+                                        "num_filters": 10,
+                                        "ngram_filter_sizes": [3],
+                                        },
+                                }
                         }
                 })
         token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
@@ -105,7 +109,6 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         token_embedder(inputs)
 
     def test_old_from_params_new_from_params(self):
-
         old_params = Params({
                 "words1": {
                         "type": "embedding",
@@ -121,8 +124,9 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                         }
                 })
 
+        # Allow loading the parameters in the old format
         with pytest.warns(DeprecationWarning):
-            BasicTextFieldEmbedder.from_params(params=old_params, vocab=self.vocab)
+            old_embedder = BasicTextFieldEmbedder.from_params(params=old_params, vocab=self.vocab)
 
         new_params = Params({
                 "token_embedders": {
@@ -141,5 +145,8 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                         }
                 })
 
-        token_embedder = BasicTextFieldEmbedder.from_params(params=new_params, vocab=self.vocab)
-        assert token_embedder(self.inputs).size() == (1, 4, 10)
+        # But also allow loading the parameters in the new format
+        new_embedder = BasicTextFieldEmbedder.from_params(params=new_params, vocab=self.vocab)
+        assert old_embedder._token_embedders.keys() == new_embedder._token_embedders.keys() #pylint: disable=protected-access
+
+        assert new_embedder(self.inputs).size() == (1, 4, 10)
