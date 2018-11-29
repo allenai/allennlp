@@ -97,3 +97,25 @@ class TestBucketIterator(IteratorTest):
                      for instance in batch.instances]
             )
             assert batch_sequence_length * len(batch.instances) <= 9
+
+    def test_iterator_tracks_epochs_per_dataset(self):
+        # The super class creates a self.instances field and populates it with some instances with
+        # TextFields.
+        iterator = BucketIterator(sorting_keys=[["text", "num_tokens"]], track_epoch=True)
+        iterator.index_with(self.vocab)
+
+        # We'll add more to create a second dataset.
+        more_instances = [
+                self.create_instance(["this", "is", "a", "sentence"]),
+                self.create_instance(["this", "is", "in", "the", "second", "dataset"]),
+                self.create_instance(["so", "is", "this", "one"])
+                ]
+        generated_dataset1 = list(iterator(self.instances, num_epochs=2))
+        generated_dataset2 = list(iterator(more_instances, num_epochs=2))
+
+        # First dataset has five sentences. See ``IteratorTest.setUp``
+        assert generated_dataset1[0]["epoch_num"] == [0, 0, 0, 0, 0]
+        assert generated_dataset1[1]["epoch_num"] == [1, 1, 1, 1, 1]
+        # Second dataset has three sentences.
+        assert generated_dataset2[0]["epoch_num"] == [0, 0, 0]
+        assert generated_dataset2[1]["epoch_num"] == [1, 1, 1]
