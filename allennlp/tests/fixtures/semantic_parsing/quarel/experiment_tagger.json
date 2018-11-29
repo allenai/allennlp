@@ -26,10 +26,12 @@
     "dropout": 0.2,
     "include_start_end_transitions": false,
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 25,
-        "trainable": false
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "embedding_dim": 25,
+          "trainable": false
+        }
       }
     },
     "encoder": {

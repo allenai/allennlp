@@ -24,17 +24,18 @@
                 "tokens": ["tokens"],
                 "openai_transformer": ["openai_transformer", "openai_transformer-offsets"]
             },
-
-            "tokens": {
-                "type": "embedding",
-                "embedding_dim": 50
-            },
-            "openai_transformer": {
-                "type": "openai_transformer_embedder",
-                "transformer": {
-                    "model_path": "https://s3-us-west-2.amazonaws.com/allennlp/models/openai-transformer-lm-2018.07.23.tar.gz"
+            "token_embedders": {
+                "tokens": {
+                    "type": "embedding",
+                    "embedding_dim": 50
                 },
+                "openai_transformer": {
+                    "type": "openai_transformer_embedder",
+                    "transformer": {
+                        "model_path": "https://s3-us-west-2.amazonaws.com/allennlp/models/openai-transformer-lm-2018.07.23.tar.gz"
+                    },
 
+                }
             }
         },
         "encoder": {

@@ -24,10 +24,12 @@
     "use_entities": true,
     "num_linking_features": 0,
     "question_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 25,
-        "trainable": false
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "embedding_dim": 25,
+          "trainable": false
+        }
       }
     },
     "entity_similarity_mode": "weighted_dot_product",

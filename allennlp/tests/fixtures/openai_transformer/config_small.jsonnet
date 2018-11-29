@@ -25,19 +25,21 @@
                 "tokens": ["tokens"],
                 "openai_transformer": ["openai_transformer", "openai_transformer-offsets"]
             },
-            "tokens": {
-                "type": "embedding",
-                "embedding_dim": 10
-            },
-            "openai_transformer": {
-                "type": "openai_transformer_embedder",
-                "transformer": {
-                    "model_path": "allennlp/tests/fixtures/openai_transformer/transformer_small.tar.gz",
-                    "embedding_dim": 10,
-                    "num_heads": 2,
-                    "num_layers": 2,
-                    "vocab_size": 50,
-                    "n_ctx": 50
+            "token_embedders": {
+                "tokens": {
+                    "type": "embedding",
+                    "embedding_dim": 10
+                },
+                "openai_transformer": {
+                    "type": "openai_transformer_embedder",
+                    "transformer": {
+                        "model_path": "allennlp/tests/fixtures/openai_transformer/transformer_small.tar.gz",
+                        "embedding_dim": 10,
+                        "num_heads": 2,
+                        "num_layers": 2,
+                        "vocab_size": 50,
+                        "n_ctx": 50
+                    }
                 }
             }
         },

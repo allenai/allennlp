@@ -23,10 +23,12 @@
     "use_entities": true,
     "num_linking_features": 0,
     "question_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 25,
-        "trainable": false
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "embedding_dim": 25,
+          "trainable": false
+        }
       }
     },
     "action_embedding_dim": 20,

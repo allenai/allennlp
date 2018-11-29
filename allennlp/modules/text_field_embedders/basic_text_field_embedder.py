@@ -118,6 +118,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             }
 
         else:
+            raise RuntimeError
             # Warn that the original behavior is deprecated
             warnings.warn(DeprecationWarning("the token embedders for BasicTextFieldEmbedder should now "
                                              "be specified as a dict under the 'token_embedders' key, "
