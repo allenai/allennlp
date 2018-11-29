@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Union, Iterable, Iterator, List, Optional, Tuple, Deque
-from collections import defaultdict, deque
+from collections import defaultdict
 import itertools
 import math
 import random
