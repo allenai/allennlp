@@ -409,11 +409,8 @@ class Text2SqlParser(Model):
 
                 # Note here we are just using linking scores to get the new tensors on the right device.
                 entity_type_ids = linking_scores.new_tensor([entity_ids], dtype=torch.long)
-                print("entity_type ids: ", entity_type_ids.size())
                 entity_type_embeddings = self._entity_type_decoder_embedding(entity_type_ids)
-                print("entity_type embeddings: ", entity_type_embeddings.size())
                 entity_type_embeddings = linking_scores.new_tensor(entity_type_embeddings, dtype=torch.float).squeeze(1)
-                print("entity_type embeddings: ", entity_type_embeddings.size())
 
                 translated_valid_actions[key]['linked'] = (entity_linking_scores,
                                                            entity_type_embeddings,
