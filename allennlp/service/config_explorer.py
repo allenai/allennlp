@@ -21,7 +21,7 @@ import logging
 
 from flask import Flask, request, Response, jsonify, send_file
 
-from allennlp.common.configuration import configure, Config, choices
+from allennlp.common.configuration import configure, choices
 from allennlp.common.util import import_submodules
 from allennlp.service.server_simple import ServerError
 
@@ -55,32 +55,58 @@ def make_app(include_packages: Sequence[str] = ()) -> Flask:
         """
         return send_file('config_explorer.html')
 
-    @app.route('/api/choices/')
-    def api_choices() -> Response:  # pylint: disable=unused-variable
-        class_name = request.args.get('class', '')
-
-        choice5 = choices(class_name)
-
-        return jsonify({
-                "className": class_name,
-                "choices": choice5
-        })
-
     @app.route('/api/config/')
     def api_config() -> Response:  # pylint: disable=unused-variable
+        """
+        There are basically two things that can happen here.
+        If this method is called with a ``Registrable`` class (e.g. ``Model``),
+        it should return the list of possible ``Model`` subclasses.
+        If it is called with an instantiable subclass (e.g. ``CrfTagger``),
+        is should return the config for that subclass.
+
+        This is complicated by the fact that some Registrable base classes
+        (e.g. Vocabulary, Trainer) are _themselves_ instantiable.
+
+        We handle this in two ways: first, we insist that the first case
+        include an extra ``get_choices`` parameter. That is, if you call
+        this method for ``Trainer`` with get_choices=true, you get the list
+        of Trainer subclasses. If you call it without that extra flag, you
+        get the config for the class itself.
+
+        There are basically two UX situations in which this API is called.
+        The first is when you have a dropdown list of choices (e.g. Model types)
+        and you select one. Such an API request is made *without* the get_choices flag,
+        which means that the config is returned *even if the class in question
+        is a Registrable class that has subclass choices*.
+
+        The second is when you click a "Configure" button, which configures
+        a class that may (e.g. ``Model``) or may not (e.g. ``FeedForward``)
+        have registrable subclasses. In this case the API request is made
+        with the "get_choices" flag, but will return the corresponding config
+        object if no choices are available (e.g. in the ``FeedForward``) case.
+
+        This is not elegant, but it works.
+        """
         class_name = request.args.get('class', '')
+        get_choices = request.args.get('get_choices', None)
 
+        # Get the configuration for this class name
         config = configure(class_name)
+        try:
+            # May not have choices
+            choice5 = choices(class_name)
+        except ValueError:
+            choice5 = []
 
-        if isinstance(config, Config):
+        if get_choices and choice5:
             return jsonify({
                     "className": class_name,
-                    "config": config.to_json()
+                    "choices": choice5
             })
         else:
             return jsonify({
                     "className": class_name,
-                    "choices": config
+                    "config": config.to_json()
             })
 
     return app
@@ -96,6 +122,14 @@ _HTML = """
     <style>
         * {
             font-family: sans-serif;
+        }
+
+        .needs-attention {
+            color: red;
+        }
+
+        .known-issues {
+            font-size: small;
         }
 
         .fa-times,
@@ -307,6 +341,7 @@ _HTML = """
 
         const baseApi = ''
 
+
         // A configItem is optional if it has a default value
         const isOptional = (configItem) => configItem.get('defaultValue') !== undefined
 
@@ -348,7 +383,7 @@ _HTML = """
                 const args = annotation.get('args')
 
                 if (origin === '?') {
-                    // No type annotation, this is probably a PyTorch type.
+                    // No type annotation, this is probably PyTorch code.
                     // just use our best guess.
                     return bestGuess(value)
                 }
@@ -534,13 +569,37 @@ _HTML = """
                         </div>
                         <NeedsAttention keys={keysNeedingAttention(this.state.data)}/>
                         <JsonBox config={config} />
+                        <KnownIssues />
                     </div>
                 )
             }
         }
 
+        // Caveat for known issues
+        const KnownIssues = () => (
+            <div class="known-issues">
+                <h3>Known Issues</h3>
+                <ul>
+                    <li>For the most part this doesn't handle union types correctly.
+                        For example, if an argument is annotated as <pre>Union[int, Dict[str, int]]</pre>
+                        we don't currently have a control for that, and you'll have to fill in that part of the JSON
+                        yourself.</li>
+                </ul>
+            </div>
+        )
+
         // Component that shows keys that need attention
         const NeedsAttention = ({keys}) => {
+            if (keys.length) {
+                return (
+                    <div class="needs-attention">
+                        Some items need attention, see the red exclamation marks above!
+                    </div>
+                )
+            } else {
+                return null
+            }
+            /*
             const renderedKeys = keys.map((key) => <li class="needs-attention-key">{key}</li>)
             const header = keys.length ? <h3>Items that need attention:</h3> : null
             return (
@@ -551,6 +610,7 @@ _HTML = """
                     </ul>
                 </div>
             )
+            */
         }
 
         // Component that displays the JSON-rendered config file
@@ -761,6 +821,7 @@ _HTML = """
         const Configurator = ({ path, item, setData }) => {
             const annotation = item.get('annotation')
             const className = annotation.get('origin')
+            const registrable = item.get('registrable')
 
             // User-supplied
             const choices = item.get('choices')
@@ -770,7 +831,7 @@ _HTML = """
             let prefix = choices ? commonPrefix(choices) : null
 
             const getChoices = () => {
-                fetch(`${baseApi}/api/choices/?class=${className}`)
+                fetch(`${baseApi}/api/config/?class=${className}&get_choices=true`)
                     .then(res => res.json())
                     .then(({ config, choices }) => {
                         if (choices) {
@@ -935,5 +996,4 @@ _HTML = """
 </body>
 
 </html>
-
 """

@@ -9,6 +9,14 @@
             font-family: sans-serif;
         }
 
+        .needs-attention {
+            color: red;
+        }
+
+        .known-issues {
+            font-size: small;
+        }
+
         .fa-times,
         .fa-plus {
             margin-top: 2px;
@@ -218,6 +226,7 @@
 
         const baseApi = ''
 
+
         // A configItem is optional if it has a default value
         const isOptional = (configItem) => configItem.get('defaultValue') !== undefined
 
@@ -259,7 +268,7 @@
                 const args = annotation.get('args')
 
                 if (origin === '?') {
-                    // No type annotation, this is probably a PyTorch type.
+                    // No type annotation, this is probably PyTorch code.
                     // just use our best guess.
                     return bestGuess(value)
                 }
@@ -445,13 +454,37 @@
                         </div>
                         <NeedsAttention keys={keysNeedingAttention(this.state.data)}/>
                         <JsonBox config={config} />
+                        <KnownIssues />
                     </div>
                 )
             }
         }
 
+        // Caveat for known issues
+        const KnownIssues = () => (
+            <div class="known-issues">
+                <h3>Known Issues</h3>
+                <ul>
+                    <li>For the most part this doesn't handle union types correctly.
+                        For example, if an argument is annotated as <pre>Union[int, Dict[str, int]]</pre>
+                        we don't currently have a control for that, and you'll have to fill in that part of the JSON
+                        yourself.</li>
+                </ul>
+            </div>
+        )
+
         // Component that shows keys that need attention
         const NeedsAttention = ({keys}) => {
+            if (keys.length) {
+                return (
+                    <div class="needs-attention">
+                        Some items need attention, see the red exclamation marks above!
+                    </div>
+                )
+            } else {
+                return null
+            }
+            /*
             const renderedKeys = keys.map((key) => <li class="needs-attention-key">{key}</li>)
             const header = keys.length ? <h3>Items that need attention:</h3> : null
             return (
@@ -462,6 +495,7 @@
                     </ul>
                 </div>
             )
+            */
         }
 
         // Component that displays the JSON-rendered config file
@@ -672,6 +706,7 @@
         const Configurator = ({ path, item, setData }) => {
             const annotation = item.get('annotation')
             const className = annotation.get('origin')
+            const registrable = item.get('registrable')
 
             // User-supplied
             const choices = item.get('choices')
@@ -681,7 +716,7 @@
             let prefix = choices ? commonPrefix(choices) : null
 
             const getChoices = () => {
-                fetch(`${baseApi}/api/choices/?class=${className}`)
+                fetch(`${baseApi}/api/config/?class=${className}&get_choices=true`)
                     .then(res => res.json())
                     .then(({ config, choices }) => {
                         if (choices) {

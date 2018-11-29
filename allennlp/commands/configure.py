@@ -49,5 +49,5 @@ def _run_wizard(args: argparse.Namespace) -> None:
     CORS(app)
 
     http_server = WSGIServer(('0.0.0.0', args.port), app)
-    print(f"serving Config Explorer on port {args.port}")
+    print(f"serving Config Explorer {args.port}")
     http_server.serve_forever()

@@ -57,13 +57,14 @@ class TestConfigExplorer(AllenNlpTestCase):
         assert items[0] == {
                 "name": "dataset_reader",
                 "configurable": True,
+                "registrable": True,
                 "comment": "specify your dataset reader here",
                 "annotation": {'origin': "allennlp.data.dataset_readers.dataset_reader.DatasetReader"}
         }
 
 
     def test_choices(self):
-        response = self.client.get('/api/config/?class=allennlp.data.dataset_readers.dataset_reader.DatasetReader')
+        response = self.client.get('/api/config/?class=allennlp.data.dataset_readers.dataset_reader.DatasetReader&get_choices=true')
         data = json.loads(response.get_data())
 
         assert "allennlp.data.dataset_readers.reading_comprehension.squad.SquadReader" in data["choices"]
@@ -76,6 +77,28 @@ class TestConfigExplorer(AllenNlpTestCase):
         items = config['items']
         assert config['type'] == 'srl'
         assert items[0]["name"] == "token_indexers"
+
+    def test_instantiable_registrable(self):
+        response = self.client.get('/api/config/?class=allennlp.data.vocabulary.Vocabulary')
+        data = json.loads(response.get_data())
+        assert 'config' in data
+        assert 'choices' not in data
+
+        response = self.client.get('/api/config/?class=allennlp.data.vocabulary.Vocabulary&get_choices=true')
+        data = json.loads(response.get_data())
+        assert 'config' not in data
+        assert 'choices' in data
+
+    def test_get_choices_failover(self):
+        """
+        Tests that if we try to get_choices on a non-registrable class
+        it just fails back to the config.
+        """
+        response = self.client.get('/api/config/?class=allennlp.modules.feedforward.FeedForward&get_choices=true')
+        data = json.loads(response.get_data())
+        assert 'config' in data
+        assert 'choices' not in data
+
 
     def test_torch_class(self):
         response = self.client.get('/api/config/?class=torch.optim.rmsprop.RMSprop')
@@ -101,7 +124,7 @@ class TestConfigExplorer(AllenNlpTestCase):
         assert any(item["name"] == "batch_first" for item in items)
 
     def test_initializers(self):
-        response = self.client.get('/api/config/?class=allennlp.nn.initializers.Initializer')
+        response = self.client.get('/api/config/?class=allennlp.nn.initializers.Initializer&get_choices=true')
         data = json.loads(response.get_data())
 
         assert 'torch.nn.init.constant_' in data["choices"]
@@ -116,7 +139,7 @@ class TestConfigExplorer(AllenNlpTestCase):
         assert any(item["name"] == "a" for item in items)
 
     def test_regularizers(self):
-        response = self.client.get('/api/config/?class=allennlp.nn.regularizers.regularizer.Regularizer')
+        response = self.client.get('/api/config/?class=allennlp.nn.regularizers.regularizer.Regularizer&get_choices=true')
         data = json.loads(response.get_data())
 
         assert 'allennlp.nn.regularizers.regularizers.L1Regularizer' in data["choices"]
@@ -151,7 +174,7 @@ class TestConfigExplorer(AllenNlpTestCase):
         app = make_app()
         app.testing = True
         client = app.test_client()
-        response = client.get('/api/config/?class=allennlp.predictors.predictor.Predictor')
+        response = client.get('/api/config/?class=allennlp.predictors.predictor.Predictor&get_choices=true')
         data = json.loads(response.get_data())
         assert "allennlp.predictors.bidaf.BidafPredictor" in data["choices"]
         assert "configexplorer.predictor.BidafPredictor" not in data["choices"]
@@ -160,7 +183,7 @@ class TestConfigExplorer(AllenNlpTestCase):
         app = make_app(['configexplorer'])
         app.testing = True
         client = app.test_client()
-        response = client.get('/api/config/?class=allennlp.predictors.predictor.Predictor')
+        response = client.get('/api/config/?class=allennlp.predictors.predictor.Predictor&get_choices=true')
         data = json.loads(response.get_data())
         assert "allennlp.predictors.bidaf.BidafPredictor" in data["choices"]
         assert "configexplorer.predictor.BidafPredictor" in data["choices"]
