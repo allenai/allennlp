@@ -110,18 +110,18 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
 
     def test_old_from_params_new_from_params(self):
         old_params = Params({
-                    "words1": {
-                            "type": "embedding",
-                            "embedding_dim": 2
-                            },
-                    "words2": {
-                            "type": "embedding",
-                            "embedding_dim": 5
-                            },
-                    "words3": {
-                            "type": "embedding",
-                            "embedding_dim": 3
-                            }
+                "words1": {
+                        "type": "embedding",
+                        "embedding_dim": 2
+                        },
+                "words2": {
+                        "type": "embedding",
+                        "embedding_dim": 5
+                        },
+                "words3": {
+                        "type": "embedding",
+                        "embedding_dim": 3
+                        }
                 })
 
         # Allow loading the parameters in the old format
