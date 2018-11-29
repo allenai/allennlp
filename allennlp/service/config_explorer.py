@@ -1,6 +1,6 @@
 """
 This is a tiny webapp for generating configuration stubs for your models.
-It's very hacky and very experimental, so don't rely on it for anything important.
+It's still experimental.
 
 ```
 python -m allennlp.service.config_explorer
@@ -284,11 +284,12 @@ _HTML = """
         The API returns objects that look like the following:
 
         ConfigItem = {
-        name : str
-        annotation : List[str]
-        configurable : bool
-        defaultValue : str
-        comment : str
+            name : str
+            annotation : List[str]
+            configurable : bool
+            defaultValue : str
+            comment : str
+        }
 
         Config = {
             type: str
@@ -337,14 +338,18 @@ _HTML = """
         // Recursively convert the provided value to JSON
         const jsonify = (value, annotation, configurable, optional) => {
             if (!value && optional) {
+                // No value and optional => undefined
                 return undefined
             } else if (configurable) {
+                // configurable => call configToJson
                 return configToJson(value)
             } else {
                 const origin = annotation.get('origin')
                 const args = annotation.get('args')
 
                 if (origin === '?') {
+                    // No type annotation, this is probably a PyTorch type.
+                    // just use our best guess.
                     return bestGuess(value)
                 }
                 if (origin === 'Dict') {
@@ -354,6 +359,7 @@ _HTML = """
                     const dict = {}
                     let nonEmpty = false;
 
+                    // if value is defined, it's a list of key-value pairs
                     (value || Immutable.List()).forEach((entry) => {
                         const entryKey = entry.get("key")
                         const entryValue = entry.get("value")
@@ -383,6 +389,12 @@ _HTML = """
                 } else if (origin === 'str') {
                     const keep = (value && value.length) || !optional
                     return keep ? (value || '') : undefined
+                } else if (origin === 'Tuple') {
+                    const ary = args.map((arg, i) => {
+                        const elt = jsonify(value[i], arg, false, optional)
+                        return elt
+                    })
+                    return ary
                 } else {
                     console.log("unknown type " + annotation.toJS())
                     return undefined
@@ -448,6 +460,39 @@ _HTML = """
             }
         }
 
+        // Walk the config and return a list of keys that need attention.
+        const keysNeedingAttention = (node) => {
+            const name = node.get('name')
+
+            // If we're not top-level, we use "{name}." as a prefix
+            // for the child keys.
+            const prefix = name ? name + "." : ''
+
+            // The keys that need attention.
+            let keys = []
+
+            // If this is configurable and has children,
+            if (node.get('configurable') && node.get('value')) {
+                // look at each child,
+                node.getIn(['value', 'items']).forEach((item) => {
+                    // recursively find its keys that need attention,
+                    keysNeedingAttention(item).forEach((key) => {
+                        // and add the prefix.
+                        keys.push(prefix + key)
+                    })
+                })
+            }
+
+            // If we already know that e.g. "model.text_field_embedder" needs attention,
+            // then we don't want to also say that "model" needs attention; however, if
+            // "model" does need attention and it has no children yet, we do want to include it.
+            if (!keys.length && !node.get('completed')) {
+                keys.push(name)
+            }
+
+            return keys
+        }
+
         // Top-level component
         class App extends React.Component {
             constructor() {
@@ -461,8 +506,11 @@ _HTML = """
             }
 
             setData(fn) {
+                // Get old data
                 const { data } = this.state
+                // apply the transformation and mark things as complete
                 const newData = markComplete(fn(data))
+                // and set the state with the new data
                 return this.setState({ data: newData })
             }
 
@@ -472,21 +520,37 @@ _HTML = """
                     .then(res => res.json())
                     .then(({ config }) => {
                         const data = Immutable.Map({ configurable: true, value: Immutable.fromJS(config) })
-                        this.setState({ data: data })
+                        this.setState({ data: markComplete(data) })
                     })
             }
 
             render() {
                 const config = this.state.data.get('value')
+
                 return (
                     <div class="wizard">
                         <div class="tree">
                             <Config path={Immutable.List(['value'])} setData={this.setData} config={config} />
                         </div>
+                        <NeedsAttention keys={keysNeedingAttention(this.state.data)}/>
                         <JsonBox config={config} />
                     </div>
                 )
             }
+        }
+
+        // Component that shows keys that need attention
+        const NeedsAttention = ({keys}) => {
+            const renderedKeys = keys.map((key) => <li class="needs-attention-key">{key}</li>)
+            const header = keys.length ? <h3>Items that need attention:</h3> : null
+            return (
+                <div class="needs-attention">
+                    {header}
+                    <ul>
+                        {renderedKeys}
+                    </ul>
+                </div>
+            )
         }
 
         // Component that displays the JSON-rendered config file
@@ -552,9 +616,28 @@ _HTML = """
                 return <Dict path={path} item={item} setData={setData} />
             } else if (origin === 'List' || origin == 'Sequence' || (origin == 'Tuple' && args.size == 2 && args.get(2) === '...')) {
                 return <List path={path} item={item} setData={setData} />
+            } else if (origin === 'Tuple' && args.size == 2) {
+                return <Pair path={path} item={item} setData={setData} />
             } else {
                 return <TextInput path={path} item={item} setData={setData} />
             }
+        }
+
+        const Pair = ({ path, item, setData }) => {
+            const pairValues = item.get('value') || [undefined, undefined]
+
+            const onChange = (i) => evt => {
+                const newValues = pairValues.slice(0)
+                newValues[i] = evt.target.value
+                setData(config => config.setIn(path.push('value'), newValues))
+            }
+
+            return (
+                <span>
+                    <input type="text" value={pairValues[0]} onChange={onChange(0)} />
+                    <input type="text" value={pairValues[1]} onChange={onChange(1)} />
+                </span>
+            )
         }
 
         class Tooltip extends React.Component {
@@ -687,7 +770,7 @@ _HTML = """
             let prefix = choices ? commonPrefix(choices) : null
 
             const getChoices = () => {
-                fetch(`${baseApi}/api/config/?class=${className}`)
+                fetch(`${baseApi}/api/choices/?class=${className}`)
                     .then(res => res.json())
                     .then(({ config, choices }) => {
                         if (choices) {
@@ -852,4 +935,5 @@ _HTML = """
 </body>
 
 </html>
+
 """

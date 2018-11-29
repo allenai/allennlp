@@ -1,19 +1,21 @@
 """
-The ``configure`` subcommand generates a stub configuration for
-the specified class (or for the top level configuration if no class specified).
+The ``configure`` subcommand launches a webapp that helps you
+generate an AllenNLP configuration file.
 
 .. code-block:: bash
 
     $ allennlp configure --help
-    usage: allennlp configure [-h] [class]
 
-    Generate a configuration stub for a specific class (or for config as a whole if [class] is omitted).
+    usage: allennlp configure [-h] [--port PORT]
+                            [--include-package INCLUDE_PACKAGE]
 
-    positional arguments:
-    class
+    Run the configuration wizard
 
     optional arguments:
     -h, --help            show this help message and exit
+    --port PORT           port to serve the wizard on
+    --include-package INCLUDE_PACKAGE
+                            additional packages to include
 """
 
 import argparse
