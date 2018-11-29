@@ -10,7 +10,7 @@ from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.token_embedders import Embedding
 from allennlp.modules import FeedForward
-from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, SpanPruner
+from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, Pruner
 from allennlp.modules.span_extractors import SelfAttentiveSpanExtractor, EndpointSpanExtractor
 from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
 from allennlp.training.metrics import MentionRecall, ConllCorefScores
@@ -81,7 +81,7 @@ class CoreferenceResolver(Model):
         feedforward_scorer = torch.nn.Sequential(
                 TimeDistributed(mention_feedforward),
                 TimeDistributed(torch.nn.Linear(mention_feedforward.get_output_dim(), 1)))
-        self._mention_pruner = SpanPruner(feedforward_scorer)
+        self._mention_pruner = Pruner(feedforward_scorer)
         self._antecedent_scorer = TimeDistributed(torch.nn.Linear(antecedent_feedforward.get_output_dim(), 1))
 
         self._endpoint_span_extractor = EndpointSpanExtractor(context_layer.get_output_dim(),
