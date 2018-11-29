@@ -78,44 +78,43 @@ class TestBucketIterator(IteratorTest):
 
     def test_bucket_iterator_maximum_samples_per_batch(self):
         iterator = BucketIterator(
-                batch_size=3, padding_noise=0,
+                batch_size=3,
+                padding_noise=0,
                 sorting_keys=[('text', 'num_tokens')],
                 maximum_samples_per_batch=['num_tokens', 9]
         )
         iterator.index_with(self.vocab)
         batches = list(iterator._create_batches(self.instances, shuffle=False))
+        stats = self.get_batches_stats(batches)
 
         # ensure all instances are in a batch
-        grouped_instances = [batch.instances for batch in batches]
-        num_instances = sum(len(group) for group in grouped_instances)
-        assert num_instances == len(self.instances)
+        assert stats['total_instances'] == len(self.instances)
 
-        # ensure all batches are sufficiently small
-        for batch in batches:
-            batch_sequence_length = max(
-                    [instance.get_padding_lengths()['text']['num_tokens']
-                     for instance in batch.instances]
-            )
-            assert batch_sequence_length * len(batch.instances) <= 9
+        # ensure correct batch sizes
+        assert stats['batch_lengths'] == [2, 2, 1]
 
-    def test_iterator_tracks_epochs_per_dataset(self):
-        # The super class creates a self.instances field and populates it with some instances with
-        # TextFields.
-        iterator = BucketIterator(sorting_keys=[["text", "num_tokens"]], track_epoch=True)
+        # ensure correct sample sizes (<= 9)
+        assert stats['sample_sizes'] == [6, 8, 9]
+
+    def test_maximum_samples_per_batch_packs_tightly(self):
+        token_counts = [10, 4, 3]
+        test_instances = self.create_instances_from_token_counts(token_counts)
+
+        iterator = BucketIterator(
+                batch_size=3,
+                padding_noise=0,
+                sorting_keys=[('text', 'num_tokens')],
+                maximum_samples_per_batch=['num_tokens', 11]
+        )
         iterator.index_with(self.vocab)
+        batches = list(iterator._create_batches(test_instances, shuffle=False))
+        stats = self.get_batches_stats(batches)
 
-        # We'll add more to create a second dataset.
-        more_instances = [
-                self.create_instance(["this", "is", "a", "sentence"]),
-                self.create_instance(["this", "is", "in", "the", "second", "dataset"]),
-                self.create_instance(["so", "is", "this", "one"])
-                ]
-        generated_dataset1 = list(iterator(self.instances, num_epochs=2))
-        generated_dataset2 = list(iterator(more_instances, num_epochs=2))
+        # ensure all instances are in a batch
+        assert stats['total_instances'] == len(test_instances)
 
-        # First dataset has five sentences. See ``IteratorTest.setUp``
-        assert generated_dataset1[0]["epoch_num"] == [0, 0, 0, 0, 0]
-        assert generated_dataset1[1]["epoch_num"] == [1, 1, 1, 1, 1]
-        # Second dataset has three sentences.
-        assert generated_dataset2[0]["epoch_num"] == [0, 0, 0]
-        assert generated_dataset2[1]["epoch_num"] == [1, 1, 1]
+        # ensure correct batch sizes
+        assert stats['batch_lengths'] == [2, 1]
+
+        # ensure correct sample sizes (<= 11)
+        assert stats['sample_sizes'] == [8, 10]
