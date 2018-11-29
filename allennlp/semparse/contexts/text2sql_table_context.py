@@ -198,8 +198,6 @@ GLOBAL_DATASET_VARIABLE_TYPES: Dict[str, Dict[str, Set[Tuple[str, str, str]]]] =
                     'keyphrasename1': {('KEYPHRASE', '.', 'KEYPHRASENAME')},
                     'venuename0': {('VENUE', '.', 'VENUENAME')},
                     'venuename1': {('VENUE', '.', 'VENUENAME')},
-                    '1': {('.', 'KEYPHRASEID', ')'), ('.', 'KEYPHRASENAME', ')')},
-                    '2': {('.', 'AUTHORID', ')'), ('.', 'VENUEID', ')')},
                     'datasetname0': {('DATASET', '.', 'DATASETNAME')},
                     'datasetname1': {('DATASET', '.', 'DATASETNAME')},
                     'title0': {('PAPER', '.', 'TITLE')},

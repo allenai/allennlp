@@ -403,15 +403,15 @@ class Text2SqlParser(Model):
 
             if linked_actions:
                 linked_rules, linked_action_ids = zip(*linked_actions)
-
                 entity_ids = [self._entity_type_map[rule] for rule in linked_rules]
+                # shape (num_relevant_entities, sentence_length)
                 entity_linking_scores = linking_scores[entity_ids]
 
                 # Note here we are just using linking scores to get the new tensors on the right device.
-                entity_type_ids = linking_scores.new_tensor([entity_ids], dtype=torch.long)
+                entity_type_ids = linking_scores.new_tensor(entity_ids, dtype=torch.long)
                 entity_type_embeddings = self._entity_type_decoder_embedding(entity_type_ids)
                 entity_type_embeddings = linking_scores.new_tensor(entity_type_embeddings, dtype=torch.float)
-                entity_type_embeddings = entity_type_embeddings.squeeze(1)
+                entity_type_embeddings = entity_type_embeddings
 
                 translated_valid_actions[key]['linked'] = (entity_linking_scores,
                                                            entity_type_embeddings,
