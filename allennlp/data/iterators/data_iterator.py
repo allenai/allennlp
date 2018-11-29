@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Union, Iterable, Iterator, List, Optional, Tuple
-from collections import defaultdict
+from collections import defaultdict, deque
 import itertools
 import math
 import random
@@ -225,19 +225,33 @@ class DataIterator(Registrable):
             yield list(iterator)
 
 
-    def _ensure_batch_is_sufficiently_small(self, batch_instances: Iterable[Instance]) -> List[List[Instance]]:
+    def _ensure_batch_is_sufficiently_small(
+            self,
+            batch_instances: Iterable[Instance],
+            excess: deque) -> List[List[Instance]]:
         """
         If self._maximum_samples_per_batch is specified, then split the batch into smaller
         sub-batches if it exceeds the maximum size.
+
+        Any excess passed in will be used first. When the method returns excess will have been populated with instances
+        from the end of batch_instances that do not consist of more than _maximum_samples_per_batch samples or
+        _batch_size instances. It is the caller's responsibility to output these, which may, of course, be done in part
+        with subsequent calls to this method.
         """
         if self._maximum_samples_per_batch is None:
+            assert not excess
             return [list(batch_instances)]
 
-        # check if we need to break into smaller chunks
         key, limit = self._maximum_samples_per_batch
+
+        batches = []
+        batch = []
         padding_length = -1
-        list_batch_instances = list(batch_instances)
-        for instance in list_batch_instances:
+
+        excess.extend(batch_instances)
+        while excess:
+            instance = excess.popleft()
+
             if self.vocab is not None:
                 # we index here to ensure that shape information is available,
                 # as in some cases (with self._maximum_samples_per_batch)
@@ -251,20 +265,24 @@ class DataIterator(Registrable):
                 except KeyError:
                     pass
 
-        if padding_length * len(list_batch_instances) > limit:
-            # need to shrink
-            num_samples = padding_length * len(list_batch_instances)
-            num_shrunk_batches = math.ceil(num_samples / float(limit))
-            shrunk_batch_size = math.ceil(len(list_batch_instances) / num_shrunk_batches)
-            shrunk_batches = []
-            start = 0
-            while start < len(list_batch_instances):
-                end = start + shrunk_batch_size
-                shrunk_batches.append(list_batch_instances[start:end])
-                start = end
-            return shrunk_batches
-        else:
-            return [list_batch_instances]
+            proposed_batch_size = len(batch) + 1
+
+            # Adding the current instance would exceed the batch size or sample size.
+            if proposed_batch_size >= self._batch_size or padding_length * proposed_batch_size > limit:
+                # Output the already existing batch
+                batches.append(batch)
+
+                # Put the current instance back, reset state.
+                excess.appendleft(instance)
+                batch = []
+                padding_length = -1
+            else:
+                batch.append(instance)
+
+        # Keep the current batch as excess.
+        excess.extend(batch)
+
+        return batches
 
 
     def get_num_batches(self, instances: Iterable[Instance]) -> int:
