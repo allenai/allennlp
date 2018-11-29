@@ -230,13 +230,15 @@ class DataIterator(Registrable):
             batch_instances: Iterable[Instance],
             excess: deque) -> List[List[Instance]]:
         """
-        If self._maximum_samples_per_batch is specified, then split the batch into smaller
-        sub-batches if it exceeds the maximum size.
+        If self._maximum_samples_per_batch is specified, then split the batch
+        into smaller sub-batches if it exceeds the maximum size.
 
-        Any excess passed in will be used first. When the method returns excess will have been populated with instances
-        from the end of batch_instances that do not consist of more than _maximum_samples_per_batch samples or
-        _batch_size instances. It is the caller's responsibility to output these, which may, of course, be done in part
-        with subsequent calls to this method.
+        Any excess passed in will be used first. When the method returns excess
+        will have been populated with instances from the end of batch_instances
+        that do not consist of more than _maximum_samples_per_batch samples or
+        _batch_size instances. It is the caller's responsibility to output
+        these, which may, of course, be done in part with subsequent calls to
+        this method.
         """
         if self._maximum_samples_per_batch is None:
             assert not excess

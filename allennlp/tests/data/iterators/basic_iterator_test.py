@@ -57,15 +57,15 @@ class IteratorTest(AllenNlpTestCase):
         sample_sizes = []
         for batch in batches:
             batch_sequence_length = max(
-                [instance.get_padding_lengths()['text']['num_tokens']
-                 for instance in batch.instances]
+                    [instance.get_padding_lengths()['text']['num_tokens']
+                     for instance in batch.instances]
             )
             sample_sizes.append(batch_sequence_length * len(batch.instances))
 
         return {
-            "batch_lengths": group_lengths,
-            "total_instances": sum(group_lengths),
-            "sample_sizes": sample_sizes
+                "batch_lengths": group_lengths,
+                "total_instances": sum(group_lengths),
+                "sample_sizes": sample_sizes
         }
 
     def assert_instances_are_correct(self, candidate_instances):
@@ -259,11 +259,12 @@ class TestBasicIterator(IteratorTest):
             assert stats['sample_sizes'] == [8, 3, 9, 1]
 
     def test_maximum_samples_per_batch_packs_tightly(self):
+        # pylint: disable=protected-access
         token_counts = [10, 4, 3]
         test_instances = self.create_instances_from_token_counts(token_counts)
 
         iterator = BasicIterator(
-            batch_size=3, maximum_samples_per_batch=['num_tokens', 11]
+                batch_size=3, maximum_samples_per_batch=['num_tokens', 11]
         )
         iterator.index_with(self.vocab)
         batches = list(iterator._create_batches(test_instances, shuffle=False))

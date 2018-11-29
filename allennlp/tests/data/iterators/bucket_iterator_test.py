@@ -78,7 +78,8 @@ class TestBucketIterator(IteratorTest):
 
     def test_bucket_iterator_maximum_samples_per_batch(self):
         iterator = BucketIterator(
-                batch_size=3, padding_noise=0,
+                batch_size=3,
+                padding_noise=0,
                 sorting_keys=[('text', 'num_tokens')],
                 maximum_samples_per_batch=['num_tokens', 9]
         )
@@ -100,9 +101,10 @@ class TestBucketIterator(IteratorTest):
         test_instances = self.create_instances_from_token_counts(token_counts)
 
         iterator = BucketIterator(
-            batch_size=3, padding_noise=0,
-            sorting_keys=[('text', 'num_tokens')],
-            maximum_samples_per_batch=['num_tokens', 11]
+                batch_size=3,
+                padding_noise=0,
+                sorting_keys=[('text', 'num_tokens')],
+                maximum_samples_per_batch=['num_tokens', 11]
         )
         iterator.index_with(self.vocab)
         batches = list(iterator._create_batches(test_instances, shuffle=False))
