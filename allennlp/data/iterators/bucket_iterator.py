@@ -1,7 +1,7 @@
 import logging
 import random
 from collections import deque
-from typing import List, Tuple, Iterable, cast, Dict
+from typing import List, Tuple, Iterable, cast, Dict, Deque
 
 from overrides import overrides
 
@@ -117,7 +117,7 @@ class BucketIterator(DataIterator):
                                             self._padding_noise)
 
             batches = []
-            excess: deque = deque()
+            excess: Deque[Instance] = deque()
             for batch_instances in lazy_groups_of(iter(instance_list), self._batch_size):
                 for possibly_smaller_batches in self._ensure_batch_is_sufficiently_small(batch_instances, excess):
                     batches.append(Batch(possibly_smaller_batches))

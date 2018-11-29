@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Union, Iterable, Iterator, List, Optional, Tuple
+from typing import Dict, Union, Iterable, Iterator, List, Optional, Tuple, Deque
 from collections import defaultdict, deque
 import itertools
 import math
@@ -228,17 +228,25 @@ class DataIterator(Registrable):
     def _ensure_batch_is_sufficiently_small(
             self,
             batch_instances: Iterable[Instance],
-            excess: deque) -> List[List[Instance]]:
+            excess: Deque[Instance]) -> List[List[Instance]]:
         """
         If self._maximum_samples_per_batch is specified, then split the batch
         into smaller sub-batches if it exceeds the maximum size.
 
-        Any excess passed in will be used first. When the method returns excess
-        will have been populated with instances from the end of batch_instances
-        that do not consist of more than _maximum_samples_per_batch samples or
-        _batch_size instances. It is the caller's responsibility to output
-        these, which may, of course, be done in part with subsequent calls to
-        this method.
+        Parameters
+        ----------
+        batch_instances : ``Iterable[Instance]``
+            A candidate batch.
+        excess : ``Deque[Instance]``
+            Instances that were not sufficient to form an entire batch
+            previously. They will be used as part of the first sub-batch. This
+            will be populated with instances from the end of batch_instances
+            that do not consist of more than self._maximum_samples_per_batch
+            samples or self._batch_size instances. It is the caller's
+            responsibility to place these in a batch too, which may, of course,
+            be done in part with subsequent calls to this method.
+
+            WARNING: Mutated in place!
         """
         if self._maximum_samples_per_batch is None:
             assert not excess

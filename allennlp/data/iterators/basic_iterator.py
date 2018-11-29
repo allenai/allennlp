@@ -1,5 +1,5 @@
 from collections import deque
-from typing import Iterable
+from typing import Iterable, Deque
 import logging
 import random
 
@@ -24,7 +24,7 @@ class BasicIterator(DataIterator):
             if shuffle:
                 random.shuffle(instance_list)
             iterator = iter(instance_list)
-            excess: deque = deque()
+            excess: Deque[Instance] = deque()
             # Then break each memory-sized list into batches.
             for batch_instances in lazy_groups_of(iterator, self._batch_size):
                 for possibly_smaller_batches in self._ensure_batch_is_sufficiently_small(batch_instances, excess):
