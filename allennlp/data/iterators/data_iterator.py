@@ -49,10 +49,11 @@ class DataIterator(Registrable):
     track_epoch : ``bool``, optional, (default = False)
         If true, each instance will get a ``MetadataField`` containing the epoch number.
     maximum_samples_per_batch : ``Tuple[str, int]``, (default = None)
-        If specified, then is a tuple (padding_key, limit) and we will
-        shrink the batch size for very long sequences such that
-        batch_size * sequence_length <= limit where sequence_length is given
-        by the padding_key.
+        If specified, then is a tuple (padding_key, limit) and we will ensure
+        that every batch is such that batch_size * sequence_length <= limit
+        where sequence_length is given by the padding_key. This is done by
+        moving excess instances to the next batch (as opposed to dividing a
+        large batch evenly) and should result in a fairly tight packing.
     """
     default_implementation = 'bucket'
 
