@@ -70,6 +70,9 @@ if __name__ == "__main__":
                 'semantic_parsing/nlvr_coverage_semantic_parser',
                 'semantic_parsing/nlvr_direct_semantic_parser',
                 'semantic_parsing/wikitables',
+                'semantic_parsing/quarel',
+                'semantic_parsing/quarel/zeroshot',
+                'semantic_parsing/quarel/tagger',
                 'semantic_parsing/atis',
                 'srl',
         ]

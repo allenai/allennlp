@@ -1,0 +1,32 @@
+@@UNKNOWN@@
+<a,<a,<a,n>>> -> infer
+<a,<a,a>> -> and
+<r,<w,a>> -> acceleration
+<r,<w,a>> -> amountSweat
+<r,<w,a>> -> apparentSize
+<r,<w,a>> -> breakability
+<r,<w,a>> -> brightness
+<r,<w,a>> -> distance
+<r,<w,a>> -> exerciseIntensity
+<r,<w,a>> -> flexibility
+<r,<w,a>> -> friction
+<r,<w,a>> -> gravity
+<r,<w,a>> -> heat
+<r,<w,a>> -> loudness
+<r,<w,a>> -> mass
+<r,<w,a>> -> smoothness
+<r,<w,a>> -> speed
+<r,<w,a>> -> strength
+<r,<w,a>> -> thickness
+<r,<w,a>> -> time
+<r,<w,a>> -> weight
+@start@ -> n
+a -> [<a,<a,a>>, a, a]
+a -> [<r,<w,a>>, r, w]
+n -> [<a,<a,<a,n>>>, a, a, a]
+r -> high
+r -> higher
+r -> low
+r -> lower
+w -> world1
+w -> world2

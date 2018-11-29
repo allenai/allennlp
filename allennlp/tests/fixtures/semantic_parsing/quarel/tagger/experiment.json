@@ -51,7 +51,7 @@
       "type": "adam"
     },
     "validation_metric": "+f1-measure-overall",
-    "num_epochs": 10,
+    "num_epochs": 1,
     "grad_norm": 5.0,
     "patience": 25,
     "cuda_device": -1
