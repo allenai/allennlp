@@ -429,7 +429,7 @@ def _valid_choices(cla55: type) -> Dict[str, str]:
     Return a mapping {registered_name -> subclass_name}
     for the registered subclasses of `cla55`.
     """
-    choices: Dict[str, str] = {}
+    valid_choices: Dict[str, str] = {}
 
     if cla55 not in Registrable._registry:
         raise ValueError(f"{cla55} is not a known Registrable class")
@@ -439,9 +439,9 @@ def _valid_choices(cla55: type) -> Dict[str, str]:
         if isinstance(subclass, (_Seq2SeqWrapper, _Seq2VecWrapper)):
             subclass = subclass._module_class
 
-        choices[name] = full_name(subclass)
+        valid_choices[name] = full_name(subclass)
 
-    return choices
+    return valid_choices
 
 def choices(full_path: str = '') -> List[str]:
     parts = full_path.split(".")
@@ -452,7 +452,7 @@ def choices(full_path: str = '') -> List[str]:
     return list(_valid_choices(cla55).values())
 
 
-def configure(full_path: str = '') -> Union[Config, List[str]]:
+def configure(full_path: str = '') -> Config:
     if not full_path:
         return BASE_CONFIG
 
