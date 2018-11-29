@@ -170,6 +170,8 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
 
     def _get_linking_scores(self, question: List[str]):
 
+        # TODO: Here we should link to only the correct type.
+        # We know the type!
         linking_scores = []
         for entity in self.variable_type_to_rule_id:
             this_entity_scores = []
