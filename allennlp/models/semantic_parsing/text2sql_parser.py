@@ -33,7 +33,7 @@ def create_entity_type_map(types: Dict[str, Set[Tuple[str, str, str]]]) -> Dict[
     all_entity_types = []
     for variable, column_producers in types.items():
         for (table, _, column) in column_producers:
-            all_entity_types.append(format_action(f"{table}_{column}_value", f"{variable}"))
+            all_entity_types.append(format_action(f"{table}_{column}_value", f'"\'{variable}\'"'))
 
     return {entity_type: i for i, entity_type in enumerate(all_entity_types)}
 
@@ -403,14 +403,17 @@ class Text2SqlParser(Model):
 
             if linked_actions:
                 linked_rules, linked_action_ids = zip(*linked_actions)
+
                 entity_ids = [self._entity_type_map[rule] for rule in linked_rules]
                 entity_linking_scores = linking_scores[entity_ids]
 
                 # Note here we are just using linking scores to get the new tensors on the right device.
                 entity_type_ids = linking_scores.new_tensor([entity_ids], dtype=torch.long)
-
+                print("entity_type ids: ", entity_type_ids.size())
                 entity_type_embeddings = self._entity_type_decoder_embedding(entity_type_ids)
+                print("entity_type embeddings: ", entity_type_embeddings.size())
                 entity_type_embeddings = linking_scores.new_tensor(entity_type_embeddings, dtype=torch.float)
+                print("entity_type embeddings: ", entity_type_embeddings.size())
 
                 translated_valid_actions[key]['linked'] = (entity_linking_scores,
                                                            entity_type_embeddings,
