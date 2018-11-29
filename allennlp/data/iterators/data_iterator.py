@@ -246,8 +246,8 @@ class DataIterator(Registrable):
 
         key, limit = self._maximum_samples_per_batch
 
-        batches = []
-        batch = []
+        batches: List[List[Instance]] = []
+        batch: List[Instance] = []
         padding_length = -1
 
         excess.extend(batch_instances)
