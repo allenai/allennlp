@@ -16,9 +16,11 @@ class TestOptimizer(AllenNlpTestCase):
         vocab = Vocabulary.from_instances(self.instances)
         self.model_params = Params({
                 "text_field_embedder": {
-                        "tokens": {
-                                "type": "embedding",
-                                "embedding_dim": 5
+                        "token_embedders": {
+                                "tokens": {
+                                        "type": "embedding",
+                                        "embedding_dim": 5
+                                        }
                                 }
                         },
                 "encoder": {

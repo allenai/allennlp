@@ -18,17 +18,19 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         self.vocab.add_token_to_namespace("3")
         self.vocab.add_token_to_namespace("4")
         params = Params({
-                "words1": {
-                        "type": "embedding",
-                        "embedding_dim": 2
-                        },
-                "words2": {
-                        "type": "embedding",
-                        "embedding_dim": 5
-                        },
-                "words3": {
-                        "type": "embedding",
-                        "embedding_dim": 3
+                "token_embedders": {
+                        "words1": {
+                                "type": "embedding",
+                                "embedding_dim": 2
+                                },
+                        "words2": {
+                                "type": "embedding",
+                                "embedding_dim": 5
+                                },
+                        "words3": {
+                                "type": "embedding",
+                                "embedding_dim": 3
+                                }
                         }
                 })
         self.token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
@@ -54,23 +56,25 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
 
     def test_forward_works_on_higher_order_input(self):
         params = Params({
-                "words": {
-                        "type": "embedding",
-                        "num_embeddings": 20,
-                        "embedding_dim": 2,
-                        },
-                "characters": {
-                        "type": "character_encoding",
-                        "embedding": {
-                                "embedding_dim": 4,
-                                "num_embeddings": 15,
+                "token_embedders": {
+                        "words": {
+                                "type": "embedding",
+                                "num_embeddings": 20,
+                                "embedding_dim": 2,
                                 },
-                        "encoder": {
-                                "type": "cnn",
-                                "embedding_dim": 4,
-                                "num_filters": 10,
-                                "ngram_filter_sizes": [3],
-                                },
+                        "characters": {
+                                "type": "character_encoding",
+                                "embedding": {
+                                        "embedding_dim": 4,
+                                        "num_embeddings": 15,
+                                        },
+                                "encoder": {
+                                        "type": "cnn",
+                                        "embedding_dim": 4,
+                                        "num_filters": 10,
+                                        "ngram_filter_sizes": [3],
+                                        },
+                                }
                         }
                 })
         token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
@@ -85,17 +89,19 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         options_file = str(elmo_fixtures_path / 'options.json')
         weight_file = str(elmo_fixtures_path / 'lm_weights.hdf5')
         params = Params({
-                "words": {
-                        "type": "embedding",
-                        "num_embeddings": 20,
-                        "embedding_dim": 2,
-                        },
-                "elmo": {
-                        "type": "elmo_token_embedder",
-                        "options_file": options_file,
-                        "weight_file": weight_file
-                        },
-                "embedder_to_indexer_map": {"words": ["words"], "elmo": ["elmo", "words"]}
+                "token_embedders": {
+                        "words": {
+                                "type": "embedding",
+                                "num_embeddings": 20,
+                                "embedding_dim": 2,
+                                },
+                        "elmo": {
+                                "type": "elmo_token_embedder",
+                                "options_file": options_file,
+                                "weight_file": weight_file
+                                },
+                        "embedder_to_indexer_map": {"words": ["words"], "elmo": ["elmo", "words"]}
+                        }
                 })
         token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
         inputs = {
@@ -107,17 +113,19 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
     def test_old_from_params_new_from_params(self):
 
         old_params = Params({
-                "words1": {
-                        "type": "embedding",
-                        "embedding_dim": 2
-                        },
-                "words2": {
-                        "type": "embedding",
-                        "embedding_dim": 5
-                        },
-                "words3": {
-                        "type": "embedding",
-                        "embedding_dim": 3
+                "token_embedders": {
+                        "words1": {
+                                "type": "embedding",
+                                "embedding_dim": 2
+                                },
+                        "words2": {
+                                "type": "embedding",
+                                "embedding_dim": 5
+                                },
+                        "words3": {
+                                "type": "embedding",
+                                "embedding_dim": 3
+                                }
                         }
                 })
 
