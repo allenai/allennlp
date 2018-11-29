@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Set
+from typing import List, Tuple, Dict, Set, Optional
 from copy import deepcopy
 import json
 import os
@@ -28,7 +28,7 @@ class Text2SqlWorld(Registrable):
     def get_action_sequence_and_all_actions(self,
                                             question: List[str],
                                             query: List[str] = None,
-                                            prelinked_entities: Dict[str, Dict[str, str]] = None) -> Tuple[List[str], List[str]]: # pylint: disable=line-too-long
+                                            prelinked_entities: Dict[str, Dict[str, str]] = None) -> Tuple[List[str], List[str], Optional[numpy.ndarray]]: # pylint: disable=line-too-long
         raise NotImplementedError
 
     def is_global_rule(self, nonterminal: str) -> bool:
@@ -100,9 +100,11 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
                                             for column in table}
 
         self.dataset_name = os.path.basename(schema_path).split("-")[0]
-        self.variable_type_to_rule_id = create_entity_type_to_rule_id_map(GLOBAL_DATASET_VARIABLE_TYPES[self.dataset_name])
         self.use_untyped_entities = use_untyped_entities
         self.link_entities_to_actions = link_entities_to_actions
+
+        variable_types = GLOBAL_DATASET_VARIABLE_TYPES[self.dataset_name]
+        self.variable_type_to_rule_id = create_entity_type_to_rule_id_map(variable_types)
 
         if link_entities_to_actions and use_untyped_entities:
             raise ConfigurationError("To link entities to actions, you cannot use untyped entities.")
@@ -113,7 +115,7 @@ class PrelinkedText2SqlWorld(Text2SqlWorld):
     def get_action_sequence_and_all_actions(self,
                                             question: List[str], # pylint: disable=unused-argument
                                             query: List[str] = None,
-                                            prelinked_entities: Dict[str, Dict[str, str]] = None) -> Tuple[List[str], List[str]]: # pylint: disable=line-too-long
+                                            prelinked_entities: Dict[str, Dict[str, str]] = None) -> Tuple[List[str], List[str], Optional[numpy.ndarray]]: # pylint: disable=line-too-long
         grammar_with_context = deepcopy(self.base_grammar_dictionary)
 
 
@@ -217,7 +219,7 @@ class LinkingText2SqlWorld(Text2SqlWorld):
     def get_action_sequence_and_all_actions(self,
                                             question: List[str],
                                             query: List[str] = None,
-                                            prelinked_entities: Dict[str, Dict[str, str]] = None) -> Tuple[List[str], List[str]]: # pylint: disable=line-too-long
+                                            prelinked_entities: Dict[str, Dict[str, str]] = None) -> Tuple[List[str], List[str], Optional[numpy.ndarray]]: # pylint: disable=line-too-long
         grammar_with_context = deepcopy(self.base_grammar_dictionary)
 
         if prelinked_entities is not None:

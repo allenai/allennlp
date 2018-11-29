@@ -7,7 +7,6 @@ import os
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
-from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, Field, ProductionRuleField, ListField, IndexField, ArrayField
 from allennlp.data.instance import Instance
@@ -118,12 +117,12 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         tokens = TextField([Token(t) for t in query], self._token_indexers)
         fields["tokens"] = tokens
 
-        action_sequence, all_actions, linking_scores = self._world.get_action_sequence_and_all_actions(query, sql,
-                                                                                                       prelinked_entities)
+        result = self._world.get_action_sequence_and_all_actions(query, sql, prelinked_entities)
+        action_sequence, all_actions, linking_scores = result
 
         if action_sequence is None and self._keep_if_unparsable:
             print("Parse error")
-            action_sequence: List[str] = []
+            action_sequence = []
         elif action_sequence is None:
             return None
 

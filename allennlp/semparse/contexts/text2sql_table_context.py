@@ -203,8 +203,6 @@ GLOBAL_DATASET_VARIABLE_TYPES: Dict[str, Dict[str, Set[Tuple[str, str, str]]]] =
                     'datasetname0': {('DATASET', '.', 'DATASETNAME')},
                     'datasetname1': {('DATASET', '.', 'DATASETNAME')},
                     'title0': {('PAPER', '.', 'TITLE')},
-                    #'YEAR(CURDATE())': {('PAPER', '.', 'YEAR')},
-                    #'misc0': {('YEAR', '>=', 'YEAR(CURDATE())'), ('.', 'PAPERID', ')'), ('YEAR', '==', 'YEAR(CURDATE())'), ('.', 'CITEDPAPERID', ')'), ('.', 'CITINGPAPERID', ')')},
                     'journalname0': {('JOURNAL', '.', 'JOURNALNAME')},
                     '0': {('PAPER', '.', 'JOURNALID')},
                     'year0': {('PAPER', '.', 'YEAR')},
@@ -376,19 +374,15 @@ def update_grammar_with_typed_variables(grammar_dictionary: Dict[str, List[str]]
 
             if not variable in GLOBAL_DATASET_VALUES.get(dataset_name, []):
                 binary_ops.append(f'("{table}" ws "." ws "{column}" wsp binaryop wsp  "\'{variable}\'")')
-                if dataset_name == "atis":
-                    binary_ops.append(f'( "(" ws "{table}" ws "." ws "{column}" wsp binaryop wsp  "\'{variable}\'" ws ")")')
             else:
                 binary_ops.append(f'("{table}" ws "." ws "{column}" wsp binaryop wsp  "{variable}")')
-                if dataset_name == "atis":
-                    binary_ops.append(f'( "(" ws "{table}" ws "." ws "{column}" wsp binaryop wsp  "{variable}" ws ")")')
 
         # TODO update the signatures for binary, tertiary and in_exprs here.
         grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
 
     grammar_dictionary["expr"] = sorted(binary_ops, reverse=True) + grammar_dictionary["expr"]
 
-def update_grammar_with_linked_typed_variables(grammar_dictionary: Dict[str, List[str]],
+def update_grammar_with_linked_typed_variables(grammar_dictionary: Dict[str, List[str]], # pylint: disable=invalid-name
                                                prelinked_entities: Dict[str, Dict[str, str]],
                                                dataset_name: str) -> None:
 
