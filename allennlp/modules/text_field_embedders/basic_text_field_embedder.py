@@ -118,10 +118,25 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             }
 
         else:
-            # Warn that the original behavior is deprecated
-            warnings.warn(DeprecationWarning("the token embedders for BasicTextFieldEmbedder should now "
-                                             "be specified as a dict under the 'token_embedders' key, "
-                                             "not as top-level key-value pairs"))
+            # While we would like to discourage the original behavior, we don't have a deprecation
+            # warning because we still follow it throughout our test fixtures and full models.
+            #
+            # The token embedders for BasicTextFieldEmbedder should now be specified as a dict
+            # under the 'token_embedders' key.  For example, instead of:
+            #
+            #     "tokens": {
+            #         "type": "embedding",
+            #         "embedding_dim": 50
+            #     }
+            #
+            # You should have:
+            #
+            #     "token_embedders": {
+            #         "tokens": {
+            #             "type": "embedding",
+            #             "embedding_dim": 50
+            #         }
+            #     }
 
             token_embedders = {}
             keys = list(params.keys())
