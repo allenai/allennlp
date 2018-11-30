@@ -405,7 +405,8 @@ class TestNnUtil(AllenNlpTestCase):
         for i in range(5):
             transition_matrix[i, i] = float("-inf")
         indices, _ = util.viterbi_decode(sequence_logits, transition_matrix)
-        assert indices == [4, 3, 4, 3, 4, 3]
+        # Both of these sequences are equally likely
+        assert indices in ([4, 3, 4, 3, 4, 3], [3, 4, 3, 4, 3, 4])
 
         # Test that unbalanced pairwise potentials break ties
         # between paths with equal unary potentials.
@@ -421,6 +422,7 @@ class TestNnUtil(AllenNlpTestCase):
         transition_matrix = torch.zeros([5, 5])
         transition_matrix[4, 4] = -10
         transition_matrix[4, 3] = -10
+        transition_matrix[3, 4] = -10
         indices, _ = util.viterbi_decode(sequence_logits, transition_matrix)
         assert indices == [3, 3, 3, 3, 3, 3]
 
@@ -449,6 +451,7 @@ class TestNnUtil(AllenNlpTestCase):
         transition_matrix = torch.zeros([5, 5])
         transition_matrix[4, 4] = -10
         transition_matrix[4, 3] = -2
+        transition_matrix[3, 4] = -2
         # The 1st, 4th and 5th sequence elements are observed - they should be
         # equal to 2, 0 and 4. The last tag should be equal to 3, because although
         # the penalty for transitioning to the 4th tag is -2, the unary potential
@@ -515,7 +518,7 @@ class TestNnUtil(AllenNlpTestCase):
 
         vector_loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, average=None)
         # Batch has one completely padded row, so divide by 4.
-        assert loss.data.numpy() == vector_loss.data.sum() / 4
+        assert loss.data.numpy() == vector_loss.sum().item() / 4
 
     def test_sequence_cross_entropy_with_logits_averages_token_correctly(self):
         # test token average is the same as multiplying the per-batch loss
@@ -534,7 +537,7 @@ class TestNnUtil(AllenNlpTestCase):
         vector_loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, batch_average=False)
         total_token_loss = (vector_loss * weights.float().sum(dim=-1)).sum()
         average_token_loss = (total_token_loss / weights.float().sum()).detach()
-        assert_almost_equal(loss.detach()[0], average_token_loss[0])
+        assert_almost_equal(loss.detach().item(), average_token_loss.item())
 
     def test_replace_masked_values_replaces_masked_values_with_finite_value(self):
         tensor = torch.FloatTensor([[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]])
