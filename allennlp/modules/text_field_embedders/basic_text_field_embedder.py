@@ -73,9 +73,13 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
                 # token embedder keys are a strict subset of text field input keys.
                 message = (f"Your text field is generating more keys ({list(input_keys)}) "
                            f"than you have token embedders ({list(embedder_keys)}. "
-                           f"Most likely you need to add allow_unmatched_keys = True "
-                           f"(and possibly an embedder_to_indexer_map) to your "
-                           f"BasicTextFieldEmbedder configuration")
+                           f"If you are using a token embedder that requires multiple keys "
+                           f"(for example, the OpenAI Transformer embedder or the BERT embedder) "
+                           f"you need to add allow_unmatched_keys = True "
+                           f"(and likely an embedder_to_indexer_map) to your "
+                           f"BasicTextFieldEmbedder configuration. "
+                           f"Otherwise, you should check that there is a 1:1 embedding "
+                           f"between your token indexers and token embedders.")
                 raise ConfigurationError(message)
 
             elif self._token_embedders.keys() != text_field_input.keys():
