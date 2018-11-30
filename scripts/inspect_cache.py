@@ -4,14 +4,14 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 from allennlp.common.file_utils import filename_to_url
-from allennlp.common.file_utils import DATASET_CACHE
+from allennlp.common.file_utils import CACHE_DIRECTORY
 
-print(f"Looking for datasets in {DATASET_CACHE}...")
-if not os.path.exists(DATASET_CACHE):
+print(f"Looking for datasets in {CACHE_DIRECTORY}...")
+if not os.path.exists(CACHE_DIRECTORY):
     print('Directory does not exist.')
     print('No cached datasets found.')
 
-cached_files = os.listdir(DATASET_CACHE)
+cached_files = os.listdir(CACHE_DIRECTORY)
 
 if not cached_files:
     print('Directory is empty.')

@@ -11,10 +11,12 @@
   "model": {
     "type": "nlvr_coverage_parser",
     "sentence_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 25,
-        "trainable": true
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "embedding_dim": 25,
+          "trainable": true
+        }
       }
     },
     "action_embedding_dim": 50,
@@ -35,7 +37,8 @@
     "penalize_non_agenda_actions": true
   },
   "iterator": {
-    "type": "epoch_tracking_bucket",
+    "type": "bucket",
+    "track_epoch": true,
     "sorting_keys": [["sentence", "num_tokens"]],
     "padding_noise": 0.0,
     "batch_size" : 2

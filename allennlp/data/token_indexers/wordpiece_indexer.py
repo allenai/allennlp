@@ -133,6 +133,14 @@ class WordpieceIndexer(TokenIndexer[int]):
         return {key: pad_sequence_to_length(val, desired_num_tokens[key])
                 for key, val in tokens.items()}
 
+    @overrides
+    def get_keys(self, index_name: str) -> List[str]:
+        """
+        We need to override this because the indexer generates multiple keys.
+        """
+        # pylint: disable=no-self-use
+        return [index_name, f"{index_name}-offsets", "mask"]
+
 
 @TokenIndexer.register("bert-pretrained")
 class PretrainedBertIndexer(WordpieceIndexer):
