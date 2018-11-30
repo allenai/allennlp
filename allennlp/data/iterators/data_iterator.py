@@ -156,9 +156,8 @@ class DataIterator(Registrable):
 
                     yield tensor_dict
 
-        # Store the next epoch
-        self._epochs[key] = epoch + 1
-
+            # Increment epoch tracker
+            self._epochs[key] = epoch + 1
 
     def _take_instances(self,
                         instances: Iterable[Instance],
