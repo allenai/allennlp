@@ -120,8 +120,6 @@ class DataIterator(Registrable):
             epochs = range(starting_epoch, starting_epoch + num_epochs)
 
         for epoch in epochs:
-            self._epochs[key] = epoch
-
             if self._cache_instances and key in self._cache:
                 # Serve the results from the cache.
                 tensor_dicts = self._cache[key]
@@ -157,6 +155,9 @@ class DataIterator(Registrable):
                         self._cache[key].append(tensor_dict)
 
                     yield tensor_dict
+
+            # Increment epoch tracker
+            self._epochs[key] = epoch + 1
 
     def _take_instances(self,
                         instances: Iterable[Instance],
