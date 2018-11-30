@@ -64,13 +64,28 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         return output_dim
 
     def forward(self, text_field_input: Dict[str, torch.Tensor], num_wrapping_dims: int = 0) -> torch.Tensor:
-        if self._token_embedders.keys() != text_field_input.keys():
-            if not self._allow_unmatched_keys:
+        embedder_keys = self._token_embedders.keys()
+        input_keys = text_field_input.keys()
+
+        # Check for unmatched keys
+        if not self._allow_unmatched_keys:
+            if embedder_keys < input_keys:
+                # token embedder keys are a strict subset of text field input keys.
+                message = (f"Your text field is generating more keys ({list(input_keys)}) "
+                           f"than you have token embedders ({list(embedder_keys)}. "
+                           f"Most likely you need to add allow_unmatched_keys = True "
+                           f"(and possibly an embedder_to_indexer_map) to your "
+                           f"BasicTextFieldEmbedder configuration")
+                raise ConfigurationError(message)
+
+            elif self._token_embedders.keys() != text_field_input.keys():
+                # some other mismatch
                 message = "Mismatched token keys: %s and %s" % (str(self._token_embedders.keys()),
                                                                 str(text_field_input.keys()))
                 raise ConfigurationError(message)
+
         embedded_representations = []
-        keys = sorted(self._token_embedders.keys())
+        keys = sorted(embedder_keys)
         for key in keys:
             # If we pre-specified a mapping explictly, use that.
             if self._embedder_to_indexer_map is not None:
