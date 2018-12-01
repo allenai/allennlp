@@ -32,8 +32,6 @@ class CnnHighwayEncoder(Seq2VecEncoder):
     projection_location: str, optional (default = 'after_highway')
         Where to apply the projection layer. Valid values are
         'after_highway', 'after_cnn', and None.
-    do_layer_norm: bool, optional (default = False)
-        If True, we apply ``LayerNorm`` to the final encoded result.
     """
     def __init__(self,
                  embedding_dim: int,

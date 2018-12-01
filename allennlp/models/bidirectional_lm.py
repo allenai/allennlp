@@ -67,8 +67,8 @@ class BidirectionalLanguageModel(Model):
     contextualizer: ``Seq2SeqEncoder``
         Used to "contextualize" the embeddings. As described above,
         this encoder must not cheat by peeking ahead.
-    layer_norm: ``MaskedLayerNorm``, optional (default: None)
-        If provided, is applied to the noncontextualized embeddings
+    do_layer_norm: bool, optional (default = False)
+        If True, we apply ``MaskedLayerNorm`` to the noncontextualized embeddings
         before they're fed to the contextualizer.
     dropout: ``float``, optional (default: None)
         If specified, dropout is applied to the contextualized embeddings.
@@ -91,7 +91,7 @@ class BidirectionalLanguageModel(Model):
                  vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  contextualizer: Seq2SeqEncoder,
-                 layer_norm: Optional[MaskedLayerNorm] = None,
+                 do_layer_norm: bool = False
                  dropout: float = None,
                  loss_scale: Union[float, str] = 1.0,
                  remove_bos_eos: bool = True,
