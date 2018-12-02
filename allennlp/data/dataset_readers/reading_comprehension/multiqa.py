@@ -121,6 +121,9 @@ class MultiQAReader(DatasetReader):
                 if offset != len(paragraph):
                     raise ValueError()
 
+            # we need to tokenize all the paragraph (again) because previous tokens start the offset count
+            # from 0 for each document... # TODO find a better way to do this...
+            tokenized_paragraph = self._tokenizer.tokenize(paragraph)
 
             # Discarding context that are too long (when len is 0 that means we breaked from context loop)
             all_qa_count += len(context['qas'])
@@ -130,9 +133,7 @@ class MultiQAReader(DatasetReader):
                     logger.info('Fraction of QA remaining = %f', ((all_qa_count - skipped_qa_count) / all_qa_count))
                 continue
 
-            # we need to tokenize all the paragraph (again) because previous tokens start the offset count
-            # from 0 for each document... # TODO find a better way to do this...
-            tokenized_paragraph = self._tokenizer.tokenize(paragraph)
+
 
             # a list of question/answers
             qas = context['qas']
@@ -185,7 +186,7 @@ class MultiQAReader(DatasetReader):
             # (This could happen if we used part of the context or in unfiltered context versions)
             if span_starts_list['answers'] == [[]]:
                 skipped_qa_count += len(context['qas'])
-                if context_ind % 30 == 0:
+                if context_ind % 20 == 0:
                     logger.info('Fraction of QA remaining = %f', ((all_qa_count - skipped_qa_count) / all_qa_count))
                 continue
 
