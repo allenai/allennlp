@@ -11,10 +11,12 @@
   "model": {
     "type": "nlvr_direct_parser",
     "sentence_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 25,
-        "trainable": true
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "embedding_dim": 25,
+          "trainable": true
+        }
       }
     },
     "action_embedding_dim": 50,

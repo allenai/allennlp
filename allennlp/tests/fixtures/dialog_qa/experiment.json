@@ -20,19 +20,21 @@
     "num_context_answers": 2,
     "marker_embedding_dim": 5,
     "text_field_embedder": {
-      "token_characters": {
-        "type": "character_encoding",
-        "embedding": {
-          "num_embeddings": 262,
-          "embedding_dim": 20
-        },
-        "encoder": {
-          "type": "cnn",
-          "embedding_dim": 20,
-          "num_filters": 10,
-          "ngram_filter_sizes": [5]
-        },
-        "dropout": 0.2
+      "token_embedders": {
+        "token_characters": {
+          "type": "character_encoding",
+          "embedding": {
+            "num_embeddings": 262,
+            "embedding_dim": 20
+          },
+          "encoder": {
+            "type": "cnn",
+            "embedding_dim": 20,
+            "num_filters": 10,
+            "ngram_filter_sizes": [5]
+          },
+          "dropout": 0.2
+        }
       }
     },
     "phrase_layer": {

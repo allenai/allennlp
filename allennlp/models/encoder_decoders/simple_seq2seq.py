@@ -17,6 +17,7 @@ from allennlp.models.model import Model
 from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
 from allennlp.nn.beam_search import BeamSearch
+from allennlp.training.metrics import BLEU
 
 
 @Model.register("simple_seq2seq")
@@ -64,6 +65,8 @@ class SimpleSeq2Seq(Model):
         using target side ground truth labels.  See the following paper for more information:
         `Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks. Bengio et al.,
         2015 <https://arxiv.org/abs/1506.03099>`_.
+    use_bleu : ``bool``, optional (default = True)
+        If True, the BLEU metric will be calculated during validation.
     """
 
     def __init__(self,
@@ -76,7 +79,8 @@ class SimpleSeq2Seq(Model):
                  beam_size: int = None,
                  target_namespace: str = "tokens",
                  target_embedding_dim: int = None,
-                 scheduled_sampling_ratio: float = 0.) -> None:
+                 scheduled_sampling_ratio: float = 0.,
+                 use_bleu: bool = True) -> None:
         super(SimpleSeq2Seq, self).__init__(vocab)
         self._target_namespace = target_namespace
         self._scheduled_sampling_ratio = scheduled_sampling_ratio
@@ -85,6 +89,17 @@ class SimpleSeq2Seq(Model):
         # end symbol as a way to indicate the end of the decoded sequence.
         self._start_index = self.vocab.get_token_index(START_SYMBOL, self._target_namespace)
         self._end_index = self.vocab.get_token_index(END_SYMBOL, self._target_namespace)
+
+        if use_bleu:
+            pad_index = self.vocab.get_token_index(self.vocab._padding_token, self._target_namespace)  # pylint: disable=protected-access
+            self._bleu = BLEU(exclude_indices={pad_index, self._end_index, self._start_index})
+        else:
+            self._bleu = None
+
+        # At prediction time, we use a beam search to find the most likely sequence of target tokens.
+        beam_size = beam_size or 1
+        self._max_decoding_steps = max_decoding_steps
+        self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
 
         # Dense embedding of source vocab tokens.
         self._source_embedder = source_embedder
@@ -131,14 +146,6 @@ class SimpleSeq2Seq(Model):
         # We project the hidden state from the decoder into the output vocabulary space
         # in order to get log probabilities of each target token, at each time step.
         self._output_projection_layer = Linear(self._decoder_output_dim, num_classes)
-
-        # At prediction time, we can use a beam search to find the most likely sequence of target tokens.
-        # If the beam_size parameter is not given, we'll just use a greedy search (equivalent to beam_size = 1).
-        self._max_decoding_steps = max_decoding_steps
-        if beam_size is not None:
-            self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
-        else:
-            self._beam_search = None
 
     def take_step(self,
                   last_predictions: torch.Tensor,
@@ -202,18 +209,28 @@ class SimpleSeq2Seq(Model):
         -------
         Dict[str, torch.Tensor]
         """
-        state = self._init_encoded_state(source_tokens)
+        state = self._encode(source_tokens)
 
-        if target_tokens or not self._beam_search:
-            # The _forward_loop decodes the input sequence and computes the loss during training
-            # and validation. During prediction, it does a greedy decode, which we only want to use
-            # if beam search is disabled.
-            return self._forward_loop(state, target_tokens=target_tokens)
+        if target_tokens:
+            state = self._init_decoder_state(state)
+            # The `_forward_loop` decodes the input sequence and computes the loss during training
+            # and validation.
+            output_dict = self._forward_loop(state, target_tokens)
+        else:
+            output_dict = {}
 
-        # TODO: Run beam search whenever self.training is False so that we can get
-        # metrics during validation. Since we haven't implemented custom metrics yet,
-        # it only makes sense to run the beam search during prediction.
-        return self._forward_beam_search(state)
+        if not self.training:
+            state = self._init_decoder_state(state)
+            predictions = self._forward_beam_search(state)
+            output_dict.update(predictions)
+            if target_tokens and self._bleu:
+                # shape: (batch_size, beam_size, max_sequence_length)
+                top_k_predictions = output_dict["predictions"]
+                # shape: (batch_size, max_predicted_sequence_length)
+                best_predictions = top_k_predictions[:, 0, :]
+                self._bleu(best_predictions, target_tokens["tokens"])
+
+        return output_dict
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -246,48 +263,43 @@ class SimpleSeq2Seq(Model):
         output_dict["predicted_tokens"] = all_predicted_tokens
         return output_dict
 
-    def _init_encoded_state(self, source_tokens: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        """
-        Initialize the encoded state to be passed to the first decoding time step.
-        """
+    def _encode(self, source_tokens: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         # shape: (batch_size, max_input_sequence_length, encoder_input_dim)
         embedded_input = self._source_embedder(source_tokens)
-
-        batch_size, _, _ = embedded_input.size()
-
         # shape: (batch_size, max_input_sequence_length)
         source_mask = util.get_text_field_mask(source_tokens)
-
         # shape: (batch_size, max_input_sequence_length, encoder_output_dim)
         encoder_outputs = self._encoder(embedded_input, source_mask)
-
-        # shape: (batch_size, encoder_output_dim)
-        final_encoder_output = util.get_final_encoder_states(
-                encoder_outputs,
-                source_mask,
-                self._encoder.is_bidirectional())
-
-        # Initialize the decoder hidden state with the final output of the encoder.
-        # shape: (batch_size, decoder_output_dim)
-        decoder_hidden = final_encoder_output
-
-        # shape: (batch_size, decoder_output_dim)
-        decoder_context = encoder_outputs.new_zeros(batch_size, self._decoder_output_dim)
-
-        state = {
+        return {
                 "source_mask": source_mask,
                 "encoder_outputs": encoder_outputs,
-                "decoder_hidden": decoder_hidden,
-                "decoder_context": decoder_context
         }
 
+    def _init_decoder_state(self, state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        batch_size = state["source_mask"].size(0)
+        # shape: (batch_size, encoder_output_dim)
+        final_encoder_output = util.get_final_encoder_states(
+                state["encoder_outputs"],
+                state["source_mask"],
+                self._encoder.is_bidirectional())
+        # Initialize the decoder hidden state with the final output of the encoder.
+        # shape: (batch_size, decoder_output_dim)
+        state["decoder_hidden"] = final_encoder_output
+        # shape: (batch_size, decoder_output_dim)
+        state["decoder_context"] = state["encoder_outputs"].new_zeros(batch_size, self._decoder_output_dim)
         return state
-
 
     def _forward_loop(self,
                       state: Dict[str, torch.Tensor],
                       target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
-        """Make forward pass during training or do greedy search during prediction."""
+        """
+        Make forward pass during training or do greedy search during prediction.
+
+        Notes
+        -----
+        We really only use the predictions from the method to test that beam search
+        with a beam size of 1 gives the same results.
+        """
         # shape: (batch_size, max_input_sequence_length)
         source_mask = state["source_mask"]
 
@@ -310,7 +322,6 @@ class SimpleSeq2Seq(Model):
         last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index)
 
         step_logits: List[torch.Tensor] = []
-        step_probabilities: List[torch.Tensor] = []
         step_predictions: List[torch.Tensor] = []
         for timestep in range(num_decoding_steps):
             if self.training and torch.rand(1).item() < self._scheduled_sampling_ratio:
@@ -334,39 +345,27 @@ class SimpleSeq2Seq(Model):
             # shape: (batch_size, num_classes)
             class_probabilities = F.softmax(output_projections, dim=-1)
 
-            # list of tensors, shape: (batch_size, 1, num_classes)
-            step_probabilities.append(class_probabilities.unsqueeze(1))
-
             # shape (predicted_classes): (batch_size,)
             _, predicted_classes = torch.max(class_probabilities, 1)
 
             # shape (predicted_classes): (batch_size,)
             last_predictions = predicted_classes
 
-            # list of tensors, shape: (batch_size, 1)
             step_predictions.append(last_predictions.unsqueeze(1))
 
-        # shape: (batch_size, num_decoding_steps, num_classes)
-        logits = torch.cat(step_logits, 1)
-
-        # shape: (batch_size, num_decoding_steps, num_classes)
-        class_probabilities = torch.cat(step_probabilities, 1)
-
         # shape: (batch_size, num_decoding_steps)
-        all_predictions = torch.cat(step_predictions, 1)
+        predictions = torch.cat(step_predictions, 1)
 
-        output_dict = {
-                "logits": logits,
-                "class_probabilities": class_probabilities,
-                "predictions": all_predictions,
-        }
+        output_dict = {"predictions": predictions}
 
-        # Compute loss.
         if target_tokens:
+            # shape: (batch_size, num_decoding_steps, num_classes)
+            logits = torch.cat(step_logits, 1)
+
+            # Compute loss.
             target_mask = util.get_text_field_mask(target_tokens)
             loss = self._get_loss(logits, targets, target_mask)
             output_dict["loss"] = loss
-            # TODO: Define metrics.
 
         return output_dict
 
@@ -490,3 +489,10 @@ class SimpleSeq2Seq(Model):
         relevant_mask = target_mask[:, 1:].contiguous()
 
         return util.sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask)
+
+    @overrides
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        all_metrics: Dict[str, float] = {}
+        if self._bleu and not self.training:
+            all_metrics.update(self._bleu.get_metric(reset=reset))
+        return all_metrics
