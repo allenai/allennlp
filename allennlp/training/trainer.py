@@ -658,6 +658,7 @@ class Trainer(Registrable):
                 self._tensorboard.add_validation_scalar(name, val_metric, epoch)
 
         # Alon addition - elastic logs
+        # Training logs are saved in training and validation under the training final results
         elastic_train_metrics = train_metrics.copy()
         if val_metrics != {}:
             elastic_train_metrics = {'training/' + k: v for k, v in elastic_train_metrics.items()}
@@ -666,15 +667,21 @@ class Trainer(Registrable):
             elastic_train_metrics.update({'batch_num_total': epoch})
         elastic_train_metrics.update({'experiment_name': '/'.join(self._serialization_dir.split('/')[-2:])})
 
+
         if val_metrics == {}:
             if elastic_train_metrics['batch_num_total'] % 50 == 1:
                 ElasticLogger().write_log('INFO', 'train_metric', context_dict=elastic_train_metrics)
         else:
             ElasticLogger().write_log('INFO', 'train_metric', context_dict=elastic_train_metrics)
+
             elastic_val_metrics = val_metrics.copy()
             elastic_val_metrics = {'validation/' + k: v for k, v in elastic_val_metrics.items()}
             elastic_val_metrics.update({'epoch': epoch})
             elastic_val_metrics.update({'experiment_name': '/'.join(self._serialization_dir.split('/')[-2:])})
+            elastic_val_metrics.update(
+                {'optimizer': str(type(self.optimizer)), 'serialization_dir': self._serialization_dir, \
+                 'target_number_of_epochs': self._num_epochs, 'iterator_type': self.iterator.default_implementation})
+            elastic_val_metrics.update(self.optimizer.defaults)
             ElasticLogger().write_log('INFO', 'val_metric', context_dict=elastic_val_metrics)
 
     def _metrics_to_console(self,  # pylint: disable=no-self-use
